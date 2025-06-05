@@ -1,0 +1,621 @@
+package rfid
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/reeceappling/goUtils/v2/utils"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"image/jpeg"
+	"image/png"
+	"mime/multipart"
+	"net/http"
+	"reflect"
+	"slices"
+	"strings"
+	"time"
+)
+
+// TODO: PERMS in requests at agarBatch and below
+// TODO: clean() on any gets/lists
+// TODO: perms on any requests that could cause problems
+
+// TODO: any GETs need to be run through the perms
+
+var (
+	_ CollectionItem = Project{}
+	_ CollectionItem = Sale{}
+)
+
+type CollectionItem interface {
+	CollectionName() string
+	EntryTypeField() *string // "entryType" field. Non-nil for main collection items
+	Decode(*mongo.SingleResult) (CollectionItem, error)
+	clean() CollectionItem
+}
+
+var (
+	_ fruiter = FruitingChamber{}
+	_ fruiter = Bag{}
+)
+
+type JsonString[T any] string // TODO: USE ME
+
+func (str JsonString[T]) AsType() (T, error) {
+	var out T
+	err := json.Unmarshal([]byte(str), &out)
+	return out, err
+}
+
+type fruiter interface {
+	basicFruit() Fruit
+}
+
+func initializeDb(ctx context.Context) error {
+	// Db will auto-create if it does not exist
+	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	collNames, err := db.ListCollectionNames(ctx, bson.D{})
+	if err != nil {
+		return err
+	}
+	// Create all collections that don't already exist
+	for _, name := range []string{
+		mainCollectionName,
+		agarBatchCollectionName,
+		agarRecipesCollectionName,
+		fruitsCollName,
+		jarRecipesCollectionName,
+		lcRecipesCollectionName,
+		pcRunCollectionName,
+		speciesCollectionName,
+		sporePrintCollectionName,
+		subSpeciesCollectionName,
+		substrateRecipesCollectionName,
+		transfersCollName,
+	} {
+		// Create if needed
+		if !slices.Contains(collNames, name) {
+			err = db.CreateCollection(ctx, name)
+			if err != nil {
+				return err
+			}
+		}
+
+	}
+	return nil
+}
+
+var lastUpdatedIndexModel = mongo.IndexModel{
+	Keys:    bson.D{{"lastUpdated", -1}},
+	Options: options.Index().SetName("lastUpdated"),
+}
+
+// TODO: HOW TO SORT AND STUFF IS BELOW
+
+func filterByEntryType(entryType string) bson.D { // TODO: fixMe (USE ME)
+	return bson.D{{"entryType", entryType}}
+}
+
+func and() bson.D { // TODO: use me elsewhere (USE ME)
+	operators := bson.A{
+		bson.D{{"type", "Oolong"}},
+		bson.D{{"rating", 7}},
+	}
+	return bson.D{{"$and", operators}}
+}
+
+//// TODO: searching in a specific index
+//func latestNUpdatedB(ctx context.Context) error { // TODO: fixMe
+//	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+//	//indx := // TODO: use correct index
+//	opts := options.Find().SetHint(
+//		mongo.IndexModel{Keys: bson.D{{"transfersOut", 1}}}, // TODO: ????????????
+//		)
+//	coll := db.Collection(fruitsCollName)
+//	_, err := coll.Find(ctx, bson.D{}, opts)
+//	return err
+//	//coll.UpdateByID(ctx, bson.D{{"_id": "someId"}}, ) // TODO: use this
+//}
+
+func withUpdateNow() primitive.E {
+	return primitive.E{
+		Key:   "lastUpdated",
+		Value: unixTime(time.Now().UnixMilli()),
+	}
+}
+
+func updateTogether() bson.D {
+	return []primitive.E{withUpdateNow()}
+}
+
+// TODO: HOW TO SORT AND STUFF IS ABOVE
+
+//// TODO: FIX
+//func getLatestN(ctx context.Context, collectionName string, n int64) ([]interface, error) { // TODO: reimplement/use
+//	opts := &options.FindOptions{
+//		AllowDiskUse:        nil, // TODO:???
+//		AllowPartialResults: nil,
+//		BatchSize:           nil,
+//		Collation:           nil,
+//		Comment:             nil,
+//		CursorType:          nil,
+//		Hint:                nil, // TODO: something here?
+//		Limit:               &n,
+//		Max:                 nil,
+//		MaxAwaitTime:        nil,
+//		MaxTime:             nil,
+//		Min:                 nil,
+//		NoCursorTimeout:     nil,
+//		OplogReplay:         nil,
+//		Projection:          nil,
+//		ReturnKey:           nil,
+//		ShowRecordID:        utils.Pointer(true), // TODO: ensure ok
+//		Skip:                nil,
+//		Snapshot:            nil,
+//		Sort:                nil, // TODO: this
+//		Let:                 nil,
+//	}
+//	//opts = opts.SetHint() // TODO: FIXME
+//	opts = opts.SetSort(bson.D{{"$natural", -1 }}) /* TODO: sort newest to oldest */
+//	opts.SetLimit(n)
+//	ctx.Value(mongoClientContextKey).(*mongo.Client).
+//		Database(dbName).
+//		Collection(collectionName).Find(ctx, bson.D{{}}
+//
+//}
+
+func Initialize(ctx context.Context) error { // TODO: use me!
+	for i, initializer := range map[string]func(context.Context) error{
+		"db": initializeDb,
+		// Initialize Collections with predefined items
+		"agar Recipe":      initializeAgarRecipes,
+		"jar Recipe":       initializeJarRecipes,
+		"lc Recipe":        initializeLcRecipes,
+		"substrate Recipe": initializeSubstrates,
+		"species":          initializeSpecies,
+		"subspecies":       initializeSubspecies,
+		// Initialize main collections
+		"mainCollection (general)": initializeMainCollection,
+		"bags":                     initializeBags,
+		"fruiting chamber":         initializeFruitingChamber,
+		"jars":                     initializeJars,
+		"LCs":                      initializeLCs,
+		"mss":                      initializeMSS,
+		"plate":                    initializePlates,
+		"slant":                    initializeSlants,
+		"stasis tube":              initializeStasisTubes,
+		// Initialize alt collections
+		"agar batch":  initializeAgarBatches,
+		"fruit":       initializeFruits,
+		"pc run":      initializePCRun,
+		"spore print": initializeSporePrints,
+		"transfer":    initializeTransfers,
+		"users":       initializeUsers,
+	} {
+		if err := initializer(ctx); err != nil {
+			return errors.Join(fmt.Errorf(`%s initializer failed`, i), err)
+		}
+	}
+	println(fmt.Sprintf(`test plate can be found at /view/plate/%s`, string(exPlate.asBase58())))
+	println(fmt.Sprintf(`test pcRun can be found at /view/pcRun/%s`, string(exAltId.base58Bytes())))
+	return nil
+}
+
+func simplifyUpdates(elementsGroup ...bson.E) bson.D { // TODO: USE THIS
+	return elementsGroup
+}
+
+func simpleUpdate(key string, value interface{}) bson.E {
+	return bson.E{Key: key, Value: value}
+}
+
+func simplePointerUpdate[T any](mods []bson.E, key string, ptr *T) []bson.E {
+	if ptr == nil {
+		return mods
+	}
+	out := append(mods, simpleUpdate(key, ptr))
+	return out
+}
+
+// TODO: USE THIS IN UPDATES!
+func latestPicUpdate(latestPicPtrsForEachGroup []*PicWithNotes) []bson.E {
+	out := []bson.E{}
+	NonNilPics := utils.NonNil(latestPicPtrsForEachGroup)
+	if len(NonNilPics) == 0 {
+		return out
+	}
+	latest := NonNilPics[0]
+	for i := 1; i < len(NonNilPics); i++ {
+		toCheck := NonNilPics[i]
+		if toCheck.Time > latest.Time {
+			latest = toCheck
+		}
+	}
+	return append(out, simpleUpdate("mostRecentImage", latest))
+}
+
+func finishUpdate(ctx context.Context, coll *mongo.Collection, mods []bson.E, id any) error { // TODO: is just error ok?
+	if len(mods) == 0 {
+		return nil
+	}
+	mods = append(mods, withUpdate(nil))
+	res, err := coll.UpdateByID(ctx, id, mods)
+	if err != nil {
+		return err
+	}
+	switch res.ModifiedCount {
+	case 0:
+		return errors.New("not found") // TODO: move
+	case 1:
+		return nil
+	default:
+		return errors.New("modified more than 1 entry")
+	}
+}
+
+func pushToArray[T any](fieldName string, vals ...T) bson.D {
+	switch len(vals) {
+	case 1:
+		return bson.D{{
+			"$push", bson.D{{fieldName, vals[0]}},
+		}}
+	case 0:
+		return bson.D{}
+	default:
+		return bson.D{{"$push", bson.D{{fieldName, bson.D{{"$each", vals}}}}}} // TODO: ensure this works
+	}
+}
+
+func addNotes(notes ...Note) bson.D {
+	return pushToArray("notes", notes...)
+}
+
+func withUpdate(t *time.Time) bson.E {
+	return bson.E{"lastUpdated", unixTime(utils.Default(t, time.Now()).UnixMilli())}
+}
+
+func withItemsRemoved[T any](field string, items ...T) bson.D { // TODO: use when needed !!!!!!!!!!!!!
+	itemsEquality := make([]bson.E, len(items))
+	for i, item := range items {
+		itemsEquality[i] = bson.E{"$eq", item}
+	}
+
+	//{ "$pull": { <field1>: <value|condition>, <field2>: <value|condition>, ... } }
+	return bson.D{{"$pull", bson.D{{field, itemsEquality}}}}
+}
+
+func newSimpleIndex(indexName, key string, descending, sparse, unique bool) mongo.IndexModel {
+	keyElement := bson.E{Key: key, Value: 1}
+	if descending {
+		keyElement.Value = -1
+	}
+	return mongo.IndexModel{
+		Keys: bson.D{keyElement},
+		Options: options.Index().
+			SetName(indexName).
+			SetSparse(sparse).
+			SetUnique(unique),
+	}
+}
+
+func indicesSame(a, b mongo.IndexModel) bool { // TODO: use?
+	return (a.Keys.(bson.D)[0].Key == b.Keys.(bson.D)[0].Key) && reflect.DeepEqual(a.Options, b.Options)
+}
+
+func stringsToNotes(notes []string, when ...time.Time) []Note {
+	thisTime := unixTime(time.Now().UnixMilli())
+	if len(when) > 0 {
+		thisTime = unixTime(when[0].UnixMilli())
+	}
+	return sliceutils.Map(notes, func(s string) Note {
+		return Note{
+			Time: thisTime,
+			Note: s,
+		}
+	})
+}
+
+var ErrInvalidEntryType = errors.New("invalid entry type")
+
+func entryTypeFor(inp string) (CollectionItem, error) {
+	switch strings.ToLower(inp) {
+	case "bag",
+		"bags":
+		return Bag{}, nil
+	case "box", "fruitingchamber", "chamber", "fruiting chamber",
+		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
+		return FruitingChamber{}, nil
+	case "jar", "grainjar", "grain jar",
+		"jars", "grainjars", "grain jars":
+		return GrainJar{}, nil
+	case "lc", "liquidculture", "liquid culture",
+		"lcs", "liquidcultures", "liquid cultures":
+		return LiquidCulture{}, nil
+	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
+		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
+		return MSS{}, nil
+	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
+		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
+		return Plate{}, nil
+	case "slant", "slants":
+		return Slant{}, nil
+	case "stasistube", "stasis tube", "stasis", "tube",
+		"stasistubes", "stasis tubes", "tubes":
+		return StasisTube{}, nil
+	case "agarbatch", "agar batch",
+		"agarbatches", "agar batches":
+		return AgarBatch{}, nil
+	case "agarrecipe", "agar recipe",
+		"agarrecipes", "agar recipes":
+		return AgarRecipe{}, nil
+	case "fruit",
+		"fruits":
+		return Fruit{}, nil
+	case "jarrecipe", "jar recipe",
+		"jarrecipes", "jar recipes":
+		return JarRecipe{}, nil
+	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
+		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
+		return LCRecipe{}, nil
+	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
+		"pcruns", "pc runs", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
+		return PCRun{}, nil
+	case "species":
+		return Species{}, nil
+	case "subspecies":
+		return Subspecies{}, nil
+	case "sporeprint", "spore print", "print",
+		"sporeprints", "spore prints", "prints":
+		return SporePrint{}, nil
+	case "substrate", "substraterecipe", "substrate recipe",
+		"substrates", "substraterecipes", "substrate recipes":
+		return SubstrateRecipe{}, nil
+	case "transfer", "xfer",
+		"transfers", "xfers":
+		return Transfer{}, nil
+	// TODO: SALE! PROJECT
+	default:
+		return nil, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name"))
+	}
+}
+
+// TODO: use?
+func getStandardEntries(ctx context.Context, variant string) (out []byte, err error) {
+	entryType, err := entryTypeFor(variant)
+	if err != nil {
+		return
+	}
+	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+		Database(dbName).
+		Collection(entryType.CollectionName()).
+		Find(ctx, bson.D{{"standard", true}})
+	if err != nil {
+		return
+	}
+	results, err := getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType))
+	if err != nil {
+		return
+	}
+	return json.Marshal(results)
+}
+
+func getCollectionItemsFromCursor(ctx context.Context, cursor *mongo.Cursor, entryType reflect.Type) ([]CollectionItem, error) {
+	var results []CollectionItem
+	i := 0
+	for {
+		if cursor.TryNext(ctx) {
+			result := reflect.New(reflect.TypeOf(entryType))
+			if err := cursor.Decode(&result); err != nil {
+				return nil, err
+			}
+			resultCollItem, ok := result.Interface().(CollectionItem)
+			if !ok {
+				return nil, fmt.Errorf(`invalid collection result at index %d. THIS SHOULD NEVER HAPPEN`, i)
+			}
+			results = append(results, resultCollItem)
+			continue
+		}
+		cursorClosed := cursor.ID() == 0
+		if cursorClosed && i == 0 {
+			return nil, mongo.ErrNoDocuments
+		}
+		if err := cursor.Err(); err != nil {
+			return nil, err
+		}
+		if cursorClosed {
+			break
+		}
+	}
+	return results, nil
+}
+
+type picWithNotesForm struct {
+	Time  unixTime
+	Img   string
+	Notes AllEntries[Note]
+}
+
+type contamForm struct {
+	Time      unixTime
+	Confirmed bool
+	Bacteria  bool
+	Mold      bool
+	Notes     AllEntries[Note]
+	Location  *string // MAY OR MAY NOT EXIST ON RESPONSE
+}
+
+func compareContamUpdate(a contamForm, b Contamination) (equal bool) {
+	if a.Confirmed != b.Confirmed || a.Mold != b.Mold || a.Bacteria != b.Bacteria || len(a.Notes.New) > 0 {
+		return false
+	}
+	for i, updatedNote := range a.Notes.Existing {
+		if DataStripped(updatedNote) != b.Notes[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func compareImageUpdate(a picWithNotesForm, b PicWithNotes) (equal bool) {
+	if len(a.Notes.New) > 0 {
+		return false
+	}
+	for i, updatedNote := range a.Notes.Existing {
+		if DataStripped(updatedNote) != b.Notes[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func setUnsetUnequalPointers[T comparable](key string, update *T, current *T, modsIn bson.D) bson.D {
+	if (update == nil && current == nil) || ((update != nil && current != nil) && (*(update)) == (*(current))) {
+		return modsIn
+	}
+	out := modsIn
+	if update != nil {
+		out = append(out, bson.E{"$set", bson.D{{key, *update}}})
+	} else {
+		out = append(out, bson.E{"$unset", bson.D{{key, 1}}})
+	}
+	return out
+}
+
+func WithImageChanges(currentMods bson.D, fieldName string, outImages SplitEntries[picWithNotesForm, PicWithNotes], currentPics []PicWithNotes) (bson.D, error) {
+	mods, err := WithExistingEntriesChange(currentMods, fieldName, outImages.Existing, currentPics, compareImageUpdate)
+	if err != nil {
+		return bson.D{}, err
+	}
+	mods = append(mods, pushToArray(fieldName, outImages.New...)...)
+	return mods, nil
+}
+
+func WithContamChanges(currentMods bson.D, fieldName string, outContams SplitEntries[contamForm, Contamination], currentContams []Contamination) (bson.D, error) {
+	mods, err := WithExistingEntriesChange(currentMods, fieldName, outContams.Existing, currentContams, compareContamUpdate)
+	if err != nil {
+		return bson.D{}, err
+	}
+	mods = append(mods, pushToArray(fieldName, outContams.New...)...)
+	return mods, nil
+}
+
+func WithNotesUpdate(currentMods bson.D, updatedEntries AllEntries[Note], existing []Note) (mods bson.D, err error) {
+	return WithEntriesChanges(currentMods, "notes", updatedEntries, existing, func(a, b Note) bool {
+		return a.Note == b.Note
+	})
+}
+
+// WithEntriesChanges Is to be used with notes, and things formatted like them (no image-holders)
+func WithEntriesChanges[T any](currentMods bson.D, id string, updatedEntries AllEntries[T], existing []T, areEqual func(a, b T) bool) (mods bson.D, err error) {
+	mods, err = WithExistingEntriesChange(currentMods, id, updatedEntries.Existing, existing, areEqual)
+	if err != nil {
+		return nil, err
+	}
+	// add new items
+	mods = append(mods, pushToArray("notes", updatedEntries.New...)...)
+	return mods, nil
+}
+
+// WithExistingEntriesChange is to be used with Images, Contams, etc
+func WithExistingEntriesChange[T, U any](currentMods bson.D, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) (mods bson.D, err error) {
+	mods = currentMods
+	// INCOMING SIZE MUST BE THE SAME!
+	if len(existing) != len(updatedExisting) {
+		err = errors.New("incorrect amount of incoming existing " + id + "s")
+	}
+	// Do changes
+	removals := []bson.E{}
+	chgs := []bson.E{}
+	for i, newExisting := range updatedExisting {
+		if newExisting.disabled {
+			removals = append(removals, bson.E{fmt.Sprintf(`%s.%d`, id, i), 1})
+			continue
+		}
+		if !areEqual(newExisting.data, existing[i]) {
+			chgs = append(chgs, bson.E{fmt.Sprintf(`%s.%d`, id, i), newExisting.data})
+		}
+	}
+	// Changes first if exist
+	if len(chgs) > 0 {
+		mods = append(mods, bson.E{"$set", chgs})
+	}
+	// Removals second if exist
+	if len(removals) > 0 {
+		mods = append(mods, bson.E{"$unset", removals})
+	}
+	return mods, nil
+}
+
+func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, error) {
+	// Get field bytes as an image
+	img, err := jpeg.Decode(p)
+	if err != nil {
+		img, err = png.Decode(p)
+		if err != nil {
+			http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
+			return nil, err
+		}
+	}
+	buf := new(bytes.Buffer)
+	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG??????
+	if err != nil {
+		http.Error(w, "failed to encode image to save! "+err.Error(), http.StatusInternalServerError)
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func handleWriteErr(err error, w http.ResponseWriter) {
+	println("failed to write! " + err.Error()) // TODO: SOMETHING HERE!
+}
+
+func handleFileDeleteErr(err error) {
+	println("failed to delete file! " + err.Error()) // TODO: SOMETHING HERE!
+}
+
+var (
+	exAltId              = altCollIdForint(0)
+	exampleTime          = unixTime(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC).UnixMilli())
+	exampleSpecies       = "beech"
+	exampleSubspecies    = utils.Pointer("brown beech")
+	exGenSinceSpore      = Generation(2)
+	exGenSinceFruitSpore = Generation(1)
+	exParentType         = "plate"
+	exPlate              = mainCollIdForint(idTestPlate)
+	exAlts               = []alternateCollectionId{exAltId, exAltId}
+	exProj               = "TestProject"
+	exProjects           = []string{exProj, exProj}
+	exBool               = utils.Pointer(true)
+	exPicLoc             = "test.jpg"
+	exPic                = PicWithNotes{
+		Time:     exampleTime,
+		Location: imageLocation(exPicLoc),
+		Notes:    exampleNotes(),
+	}
+	exPics = []PicWithNotes{exPic, exPic}
+	ec     = Contamination{
+		Time:      exampleTime,
+		Confirmed: false,
+		Bacteria:  false,
+		Mold:      true,
+		Location:  (*imageLocation)(&exPicLoc),
+		Notes:     exampleNotes(),
+	}
+	exContams = []Contamination{ec, ec}
+)
+
+func exampleNotes() []Note {
+	return []Note{{
+		Time: exampleTime,
+		Note: "example note A",
+	}, {
+		Time: exampleTime,
+		Note: "example note B",
+	}}
+}

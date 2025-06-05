@@ -1,0 +1,16 @@
+FROM golang:latest AS builder
+#FROM --platform=linux/arm64 golang:latest AS builder
+
+WORKDIR /app
+COPY mushApi server
+
+FROM alpine:latest
+#FROM --platform=linux/arm64 alpine:latest
+WORKDIR /root/s
+COPY --from=builder /app/server .
+RUN chmod 777 server
+COPY initDB/mongo-init.js docker-entrypoint-initdb.d/mongo-init.js
+EXPOSE 443
+# TODO: remove 80?
+EXPOSE 80
+CMD ["./server"]

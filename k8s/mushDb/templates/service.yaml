@@ -1,0 +1,88 @@
+{{/*apiVersion: v1*/}}
+{{/*kind: Service*/}}
+{{/*metadata:*/}}
+{{/*  name: {{ include "mushDb.fullname" . }}*/}}
+{{/*  labels:*/}}
+{{/*    {{- include "mushDb.labels" . | nindent 4 }}*/}}
+{{/*spec:*/}}
+{{/*  type: {{ .Values.service.type }}*/}}
+{{/*  ports:*/}}
+{{/*    - port: {{ .Values.service.port }}*/}}
+{{/*      targetPort: http*/}}
+{{/*      protocol: TCP*/}}
+{{/*      name: http*/}}
+{{/*  selector:*/}}
+{{/*    {{- include "mushDb.selectorLabels" . | nindent 4 }}*/}}
+{{/*---*/}}
+kind: Service
+apiVersion: v1
+metadata:
+  name: api
+  namespace: {{ include "mushDb.resolvedNamespace" . }}
+  labels:
+    app: {{ include "mushDb.applicationName" . }}
+spec:
+  selector:
+    app:  {{ include "mushDb.applicationName" . }} # TODO: ok?
+  ports:
+    - name: https
+      port: 443
+      targetPort: https-api
+    - name: http
+      port: 80
+      targetPort: http-api
+  type: ClusterIP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: web
+  namespace: {{ include "mushDb.resolvedNamespace" . }}
+  labels:
+    app: {{ include "mushDb.applicationName" . }}
+spec:
+  selector:
+    app:  {{ include "mushDb.applicationName" . }} # TODO: ok?
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http-web
+  type: ClusterIP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: db
+  namespace: {{ include "mushDb.resolvedNamespace" . }}
+  labels:
+    app: {{ include "mushDb.applicationName" . }}
+{{/*  annotations:*/}}
+{{/*    version: v1.0*/}}
+spec:
+  selector:
+    app: {{ include "mushDb.applicationName" . }} # TODO: ok?
+  ports:
+    - name: mongo
+      port: 27017
+      targetPort: dbport
+  type: ClusterIP
+---
+### Define a Service for application
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mushDb.name"}}}-external-load-balancer
+  namespace:  {{ include "mushDb.resolvedNamespace" . }}
+spec:
+  selector:
+    app:  {{ include "mushDb.applicationName" . }} # TODO: ok?
+  ports:
+    - protocol: TCP
+      port: 80         # exposed port number (TODO: ON WHAT?)
+      targetPort: 80   # forworded port number into application (TODO: ON WHAT?)
+{{/*      nodePort: 30080  # mapped port number in the cluster (TODO: ON WHAT?)*/}}
+    - protocol: TCP
+      port: 443         # exposed port number (TODO: ON WHAT?)
+      targetPort: 443   # forworded port number into application (TODO: ON WHAT?)
+{{/*      nodePort: 30443   # mapped port number in the cluster (TODO: ON WHAT?)*/}}
+  type: LoadBalancer

@@ -1,0 +1,353 @@
+package rfid
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"github.com/reeceappling/mushDb/rfid/pics"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"io"
+	"net/http"
+	"reflect"
+	"time"
+)
+
+const transfersCollName = "transfers"
+
+var transferReasons = map[transferReason]string{ // TODO: USE!
+	"old":           "parent was old, needed more room to grow",
+	"contamination": "parent was contaminated",
+	// TODO: more
+}
+
+type Transfer struct {
+	Id          alternateCollectionId `bson:"_id" json:"_id"`
+	From        string                `bson:"from" json:"from"`
+	To          string                `bson:"to" json:"to"` // fruit, sporePrint are both alt
+	FromType    string                `json:"fromType"`     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
+	ToType      string                `json:"toType"`
+	Date        unixTime              `bson:"date" json:"date"`
+	Reason      transferReason        `bson:"reason" json:"reason"`
+	FromImage   *imageLocation        `bson:"fromImage,omitempty" json:"fromImage,omitempty"`
+	ToImage     *imageLocation        `bson:"toImage,omitempty" json:"toImage,omitempty"`
+	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
+	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+}
+
+func (t Transfer) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
+	out := t
+	err := decodeItem(&out, encoded)
+	return out, err
+}
+
+func (t Transfer) clean() CollectionItem {
+	out := t
+	// TODO: Change species
+	// TODO: change subspecies
+	// TODO: remove parentType and Parent
+	// TODO: remove projects
+	// TODO: remove pic notes
+	// TODO: remove mostRecentImage notes
+	// TODO: remove flushes notes
+	// TODO: remove notes
+	return out
+}
+
+func (t Transfer) EntryTypeField() *string {
+	return nil
+}
+
+func (t Transfer) CollectionName() string {
+	return transfersCollName
+}
+
+func getGeneticItem(ctx mongo.SessionContext, entryType string, id string) (geneticSource, error) {
+	b58id := Base58Str(id)
+	if tempItem, exists := mainCollMap[entryType]; exists {
+		mcId, err := b58id.toMainCollectionId()
+		if err != nil {
+			return nil, errors.Join(errors.New("invalid mainCollectionId"), err)
+		}
+		out, err := GetMainCollectionItem(ctx, mcId, tempItem)
+		if err != nil {
+			return nil, errors.Join(errors.New("failed to get main coll item genetic item"), err)
+		}
+		return out, nil
+	}
+	acId, err := b58id.toAltCollectionId()
+	if err != nil {
+		return nil, errors.Join(errors.New("invalid altCollectionId"), err)
+	}
+	outType, exists := map[string]AltCollectionItem{
+		"fruit":      Fruit{},
+		"sporePrint": SporePrint{},
+	}[entryType]
+	if !exists {
+		return nil, errors.Join(errors.New("invalid entry type"), err)
+	}
+	coll := ctx.Client().Database(dbName).Collection(outType.CollectionName())
+	err = coll.FindOne(ctx, bson.D{{"_id", acId}}).Decode(&outType)
+	if err != nil {
+		return nil, err
+	}
+	return outType.(geneticSource), nil
+}
+
+func initializeTransfers(ctx context.Context) error {
+	// Indices
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(transfersCollName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		newSimpleIndex("from", "from", true, false, false),
+		newSimpleIndex("to", "to", true, false, false),
+		//From (likely no index)   string         `bson:"from" json:"from"` // TODO: ok?
+		//To (no need for index) MainCollectionId `bson:"to" json:"to"`
+		//FromType (likely no index)   string         `bson:"from" json:"from"` // TODO: ok?
+		//ToType (no need for index) MainCollectionId `bson:"to" json:"to"`
+		newSimpleIndex("date", "date", true, false, false),
+		newSimpleIndex("reason", "reason", false, false, false),
+		//FromImage (no index)
+		//ToImage (no index)
+		//Notes (no index unless tags)
+		lastUpdatedIndexModel,
+	})
+	if err != nil {
+		return err
+	}
+	// If test agar batch does not exist, then create it
+	existingEntry := Transfer{}
+	fromTo := string(exPlate.asBase58()) // TODO: ensure ok
+	testItem := Transfer{
+		Id:          exAltId,
+		From:        fromTo,
+		To:          fromTo,
+		FromType:    exParentType,
+		ToType:      exParentType,
+		Date:        exampleTime,
+		Reason:      "TRANSFER REASON HERE",
+		FromImage:   (*imageLocation)(&exPicLoc),
+		ToImage:     (*imageLocation)(&exPicLoc),
+		Notes:       exampleNotes(),
+		LastUpdated: exampleTime,
+	}
+	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+	if err == nil {
+		if reflect.DeepEqual(existingEntry, testItem) {
+			return nil
+		}
+	}
+	return renameMe(ctx, coll, exAltId, testItem, existingEntry)
+}
+
+type createTransferRequest struct {
+	From     Base58Str `json:"from,omitempty"`
+	To       Base58Str `json:"to,omitempty"`
+	FromType string    `json:"fromType,omitempty"`
+	ToType   string    `json:"toType,omitempty"`
+	Reason   string    `json:"reason,omitempty"`
+	// FromImage == 'picFrom'
+	// ToImage == 'picTo'
+	Notes []Note `json:"notes,omitempty"`
+}
+
+func createTransferHandler(w http.ResponseWriter, r *http.Request) {
+	data := createTransferRequest{}
+	id := newAlternateCollectionId()
+	b58id := id.base58()
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
+	defer r.Body.Close()
+	reader, err := r.MultipartReader()
+	if err != nil {
+		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	p1, err := reader.NextPart()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer p1.Close()
+	// Process text (or object)
+	bs, errr := io.ReadAll(p1)
+	if errr != nil {
+		err = errr
+		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// PARSE INTO CORRECT DATA FORMAT
+	err = json.Unmarshal(bs, &data)
+	if err != nil {
+		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Get any images
+	var (
+		fromPic *string
+		toPic   *string
+	)
+	picsSaved := []string{}
+	defer func() {
+		if err != nil {
+			errDel := pics.DeleteFiles(r.Context(), picsSaved...)
+			if errDel != nil {
+				handleFileDeleteErr(errDel)
+			}
+		}
+	}()
+	for {
+		// Go to next part or break
+		p, err := reader.NextPart()
+		if err != nil {
+			if err != io.EOF {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			break
+		}
+		fieldBytes, errr := multipartToImageBytes(p, w)
+		if errr != nil {
+			// Already wrote
+			return
+		}
+		newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "transfer", string(b58id), "img")
+		if err != nil {
+			http.Error(w, "failed to save image", http.StatusBadRequest)
+			return
+		}
+		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
+		switch p.FileName() {
+		case "picFrom":
+			if fromPic != nil {
+				http.Error(w, "too many from images", http.StatusBadRequest)
+				return
+			}
+			fromPic = &newFileNameWithPrefixPath
+		case "picTo":
+			if toPic != nil {
+				http.Error(w, "too many dest images", http.StatusBadRequest)
+				return
+			}
+			toPic = &newFileNameWithPrefixPath
+		default:
+			http.Error(w, "invalid image name!", http.StatusBadRequest)
+			return
+		}
+	}
+	parentId, err := data.From.Base2Bytes()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	childId, err := data.To.Base2Bytes()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		now := unixTime(time.Now().UnixMilli())
+		db := ctx.Client().Database(dbName)
+		coll := db.Collection(transfersCollName)
+		// Get parent and child items
+		parent, errr := getGeneticItem(ctx, data.FromType, string(parentId))
+		if errr != nil {
+			http.Error(w, "failed to get parent item: "+errr.Error(), http.StatusBadRequest)
+			return nil, nil
+		}
+		child, errr := getGeneticItem(ctx, data.ToType, string(childId))
+		if errr != nil {
+			http.Error(w, "failed to get child item: "+errr.Error(), http.StatusBadRequest)
+			return nil, nil
+		}
+		// Create Transfer
+		xfer := Transfer{
+			Id:          id,
+			From:        string(parentId),
+			To:          string(childId),
+			FromType:    data.FromType,
+			ToType:      data.ToType,
+			Date:        now,
+			Reason:      transferReason(data.Reason), // TODO: ENSURE OK!
+			FromImage:   (*imageLocation)(fromPic),
+			ToImage:     (*imageLocation)(toPic),
+			Notes:       data.Notes,
+			LastUpdated: now,
+		}
+		_, err := coll.InsertOne(ctx, xfer)
+		if err != nil {
+			http.Error(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
+			return nil, nil
+		}
+
+		if err = parent.setTransferParent(ctx, xfer); err != nil {
+			http.Error(w, "failed to set transfer parent: "+err.Error(), http.StatusInternalServerError)
+			return nil, nil
+		}
+
+		if err = child.setTransferChild(ctx, xfer, parent); err != nil {
+			http.Error(w, "failed to set transfer child: "+err.Error(), http.StatusInternalServerError)
+			return nil, nil
+		}
+		return w.Write(id.base58Bytes())
+	})
+	if err != nil {
+		handleWriteErr(err, w)
+	}
+}
+
+type updateTransferRequest struct {
+	Notes AllEntries[Note] `json:"notes,omitempty"`
+}
+
+func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
+	b58Id := Base58Str(r.PathValue("id"))
+	defer r.Body.Close()
+	bs, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	req := updateTransferRequest{}
+	err = json.Unmarshal(bs, &req)
+	if err != nil {
+		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id, err := b58Id.toAltCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		coll := ctx.Client().Database(dbName).Collection(transfersCollName)
+		existing, err := GetAltCollectionItemInTxn(ctx, id.String(), Transfer{})
+		if err != nil {
+			stat := http.StatusInternalServerError
+			if err == mongo.ErrNoDocuments {
+				stat = http.StatusNotFound
+			}
+			http.Error(w, err.Error(), stat)
+			return nil, nil
+		}
+		mods := bson.D{}
+		// Do note changes
+		mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return nil, nil
+		}
+		if len(mods) == 0 {
+			http.Error(w, "no changes made", http.StatusBadRequest)
+			return nil, nil
+		}
+		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", existing.Id}}, mods)
+		err = result.Err()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return nil, nil
+		}
+		return w.Write([]byte(b58Id))
+	})
+	if err != nil {
+		handleWriteErr(err, w)
+	}
+}
