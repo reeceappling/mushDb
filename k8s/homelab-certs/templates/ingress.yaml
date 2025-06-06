@@ -1,43 +1,40 @@
-{{- if .Values.ingress.enabled -}}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "homelab-certs.fullname" . }}
-  labels:
-    {{- include "homelab-certs.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
+  name: http-ingress-tls # TODO: ok?
 spec:
-  {{- with .Values.ingress.className }}
-  ingressClassName: {{ . }}
-  {{- end }}
-  {{- if .Values.ingress.tls }}
-  tls:
-    {{- range .Values.ingress.tls }}
-    - hosts:
-        {{- range .hosts }}
-        - {{ . | quote }}
-        {{- end }}
-      secretName: {{ .secretName }}
-    {{- end }}
-  {{- end }}
   rules:
-    {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
-      http:
+    - http:
         paths:
-          {{- range .paths }}
-          - path: {{ .path }}
-            {{- with .pathType }}
-            pathType: {{ . }}
-            {{- end }}
+          - path: /
+            pathType: Prefix
             backend:
               service:
-                name: {{ include "homelab-certs.fullname" $ }}
+                name: some-service
                 port:
-                  number: {{ $.Values.service.port }}
-          {{- end }}
-    {{- end }}
-{{- end }}
+                  number: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cluster-ingress # TODO: ok?
+  annotations:
+    cert-manager.io/cluster-issuer: lets-encrypt # TODO: ENSURE MATCHES ISSUER
+spec:
+  tls:
+    - hosts:
+        - home.appli.ng # TODO: FIX
+      secretName: http-ingress-tls
+  rules:
+    - host: home.appli.ng # TODO: FIX match above?
+      http:
+        paths:
+          - path: /
+            pathType: Prefix # TODO: WAS Exact
+            backend:
+              service:
+                name: SERVICE_NAME # TODO: FIX
+                port:
+                  number: 443  # TODO: ENSURE OK
+
+
