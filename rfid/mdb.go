@@ -243,7 +243,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi").
 		SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(5 * time.Second). // TODO: no?
-		SetTimeout(30 * time.Second) // TODO: no?
+		SetTimeout(30 * time.Second)        // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {

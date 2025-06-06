@@ -49,12 +49,6 @@ handle_options() {
   done
 }
 
-# Ensure script called with only 1 arg
-if [ "$#" != "1" ]; then
-  echo "this script cannot use more than 1 argument"
-  exit 1
-fi
-
 # Setup cleanup function
 ORIGINAL_DIR=$(pwd)
 function cleanup {
@@ -97,7 +91,8 @@ case $1 in
     ;;
 
   *)
-    echo "invalid build argument"
+    echo "invalid build target"
+    exit 1
     ;;
 esac
 
