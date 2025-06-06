@@ -6,9 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
-	//"github.com/reeceappling/randomGoStuff/homeServer/rfid"
-	//"github.com/reeceappling/mushDb/rfid/pics"
-	//"github.com/reeceappling/randomGoStuff/homeServer/rfid/websocketSessions"
+	"github.com/reeceappling/goUtils/v2/logging"
+	"github.com/reeceappling/mushDb/rfid"
+	"github.com/reeceappling/mushDb/rfid/pics"
+	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -34,6 +35,7 @@ const (
 )
 
 func setupDb() (ctx context.Context, client *mongo.Client, err error) {
+	log := logging.GetLogger(ctx)
 	dbUser, dbPass := os.Getenv("MONGO_INITDB_USERNAME"), os.Getenv("MONGO_INITDB_PASSWORD")
 	if dbUser == "" {
 		err = errors.New("no MONGO_INITDB_USERNAME env var found")
@@ -43,25 +45,23 @@ func setupDb() (ctx context.Context, client *mongo.Client, err error) {
 		err = errors.New("no MONGO_INITDB_PASSWORD env var found")
 		return
 	}
-	println("Connecting to database") // TODO: ok?
-	ctx, err = rfid.NewMongoDbClient(ctx, dbUser, dbPass, dbHostName, dbPort)
+	log.Info("Connecting to database")
+	ctx, client, err = rfid.NewMongoDbClient(ctx, dbUser, dbPass, dbHostName, dbPort)
 	if err != nil {
-		err = errors.Join(errors.New("failed to create MongoDB client"), err)
-		return
+		return ctx, nil, errors.Join(errors.New("failed to create MongoDB client"), err)
 	}
-	println("Initializing DB") // TODO: ok?
+	log.Info("Initializing DB") // TODO: ok?
 	if err = rfid.Initialize(ctx); err != nil {
-		err = errors.Join(errors.New("failed to initialize database"), err)
-		return
+		return ctx, nil, errors.Join(errors.New("failed to initialize database"), err)
 	}
-	client = rfid.GetMongoClient(ctx)
-	return
+	return ctx, rfid.GetMongoClient(ctx), nil
 }
 
 func main() {
-
 	var err error
 	ctx := context.Background()
+
+	// TODO: setup logger
 
 	// Get non-db env vars
 	clusterSecret := os.Getenv("RFID_SECRET")

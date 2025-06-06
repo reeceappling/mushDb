@@ -208,7 +208,7 @@ autoIndexId	Boolean	(Optional) If true, automatically create index on _id field.
 */
 
 // TODO: auth mechanisms https://www.mongodb.com/docs/drivers/go/current/fundamentals/auth/
-func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPort int) (context.Context, error) {
+func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPort int) (context.Context, *mongo.Client, error) {
 	//credential := options.Credential{
 	//	Username: usern,
 	//	Password: pass,
@@ -243,11 +243,11 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi").
 		SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(5 * time.Second). // TODO: no?
-		SetTimeout(30 * time.Second)        // TODO: no?
+		SetTimeout(30 * time.Second) // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
-		return ctx, errors.Join(errors.New("failed to connect to db"), err)
+		return ctx, nil, errors.Join(errors.New("failed to connect to db"), err)
 	}
 	println("Testing connection")
 	err = client.Ping(ctx, nil)
@@ -255,7 +255,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		panic("Ping failed to " + uri + " ... " + err.Error())
 	}
 	println("Client connected to db at " + uri)
-	return context.WithValue(ctx, mongoClientContextKey, client), nil
+	return context.WithValue(ctx, mongoClientContextKey, client), client, nil
 
 	// TODO: ? return mongoClientForURI(ctx, uri)
 }
