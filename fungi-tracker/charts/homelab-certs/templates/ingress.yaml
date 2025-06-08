@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: http-ingress-tls # TODO: ok?
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: some-service
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cluster-ingress # TODO: ok?
+  annotations:
+    cert-manager.io/cluster-issuer: lets-encrypt # TODO: ENSURE MATCHES ISSUER
+spec:
+  tls:
+    - hosts:
+        - home.appli.ng # TODO: FIX
+      secretName: http-ingress-tls
+  rules:
+    - host: home.appli.ng # TODO: FIX match above?
+      http:
+        paths:
+          - path: /
+            pathType: Prefix # TODO: WAS Exact
+            backend:
+              service:
+                name: api
+                port:
+                  number: 80
+
+

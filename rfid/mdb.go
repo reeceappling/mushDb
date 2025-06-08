@@ -224,10 +224,15 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 	//}
 	//return context.WithValue(ctx, mongoClientContextKey, client), nil
 	//var DBName = "testDbName" // TODO: FIXME!
-	hostAndPort := fmt.Sprintf("%s:%d", dbHostName, dbPort)
+	// TODO: FIX DB HOSTNAME
+	hostAndPort := dbHostName
+	if dbPort != 0 {
+		hostAndPort = fmt.Sprintf("%s:%d", dbHostName, dbPort)
+	}
+
 	//uri := fmt.Sprintf("mongodb://%s", hostAndPort)
-	uri := fmt.Sprintf("mongodb://%s:%s@%s/mushDb", usern, pass, hostAndPort) // TODO: NAME OF DB
-	println("creating client to " + uri)                                      // TODO: deleteMe
+	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
+	println("creating client to " + uri)                               // TODO: deleteMe
 
 	// TODO: SET UP INITIAL USER IF USER DOES NOT EXIST!
 	// TODO: THIS SHOULD BE DONE VIA: https://stackoverflow.com/questions/42912755/how-to-create-a-db-for-mongodb-container-on-start-up
@@ -237,21 +242,30 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		ApplyURI(uri).
 		SetDirect(true).
 		//SetHosts([]string{hostAndPort}).
-		SetServerSelectionTimeout(time.Second * 30).
-		//SetAuth(options.Credential{Username: "admin", Password: "admin"}).
+		SetServerSelectionTimeout(time.Second * 20).
+		//SetAuth(options.Credential{Username: usern, Password: pass}). // TODO: get rid of?
 		//SetAuth(options.Credential{Username: usern, Password: pass}).
 		//SetAppName("mainApi").
 		SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(5 * time.Second). // TODO: no?
-		SetTimeout(30 * time.Second)        // TODO: no?
+		SetTimeout(10 * time.Second)        // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return ctx, nil, errors.Join(errors.New("failed to connect to db"), err)
 	}
-	println("Testing connection")
-	err = client.Ping(ctx, nil)
-	if err != nil {
+	connOk := false
+	for i := 0; i < 5; i++ {
+		println(fmt.Sprintf(`Testing connection attempt no.%d`, i))
+		err = client.Ping(ctx, nil)
+		if err != nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		connOk = true
+		break
+	}
+	if !connOk {
 		panic("Ping failed to " + uri + " ... " + err.Error())
 	}
 	println("Client connected to db at " + uri)

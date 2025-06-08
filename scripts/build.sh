@@ -53,10 +53,10 @@ handle_options() {
 ORIGINAL_DIR=$(pwd)
 function cleanup {
   cd $ORIGINAL_DIR
-  rm  -r /tmp/foo
 }
 trap cleanup EXIT
 
+# TODO: use next line or delete
 makeBinDir() {
     mkdir bin
 }
@@ -67,20 +67,30 @@ cd "$SCRIPT_DIR"
 cd ../
 REPO_DIR=$(pwd)
 
-
-TO_BUILD=
 case $1 in
   "api")
     rm -f bin/mushApi
-    go build -o bin/mushApi ./rfid
+    echo "compiling api"
+    GOOS=linux GOARCH=arm64 go build -o bin/mushApi .
     chmod 0777 bin/mushApi
-    # TODO: remove old docker image?
-    docker build -t mushDb:latest -f DockerfileApi
+    # Remove old image
+    echo "removing old image"
+    docker rmi mush-api:latest
+    echo "building api image mush-api:latest"
+    docker build -t mush-api:latest -f ./DockerfileApi .
+    rm -f bin/mushApi
     ;;
 
   "web")
     cd rfid/client
-    docker build -t mushWeb:latest -f Dockerfile
+    # Remove old image
+    echo "removing old image"
+    docker rmi mush-web:latest
+    echo "setting build args"
+    export MAIN_API_EXTERNAL_HOST=home.appli.ng
+    export MAIN_API_INTERNAL_HOST=localhost:80
+    echo "building webserver image mush-web:latest"
+    docker build -t mush-web:latest -f ./Dockerfile --build-arg MAIN_API_EXTERNAL_HOST --build-arg MAIN_API_INTERNAL_HOST .
     ;;
 
   "rfid")

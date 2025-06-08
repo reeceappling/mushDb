@@ -1,0 +1,23 @@
+# DefaultValues for mushDb
+nodeSelector: {
+  mushroomNode: main
+}
+
+localPort: 80
+
+dbPath: "/etc/fix/me"
+picsPath: "/etc/fix/me"
+dbRoot:
+  username: ""
+  password: ""
+dbUser:
+  username: "" # TODO: FIXME
+  password: "" # TODO: FIXME
+dbName: "mushDb"
+rfidSecret: "" # TODO: FIXME
+externalhost: "your-external-hostname"  # TODO: FIXME?
+applicationNameOverride: ""
+# TODO: FIX!
+# TODO: all new below!
+dbhostname: "localhost"
+dbPort: 27017

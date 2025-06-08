@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-configmap
+data:
+  mongo.conf: |
+    storage:
+      dbPath: /data/db
+  ensure-users.js: |
+    const adminDb = db.getSiblingDB('admin');
+    adminDb.createUser({user:{{ quote .Values.dbRoot.username }},pwd:{{ quote .Values.dbRoot.password }},roles:[{role:"userAdminAnyDatabase", db:"admin"}]});
+    adminDb.createUser({user:{{ quote .Values.dbUser.username }},pwd:{{ quote .Values.dbUser.password }},roles:[{role:"readWrite", db:{{ quote .Values.dbName }}}]});

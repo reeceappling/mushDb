@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
-	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/mushDb/rfid"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
@@ -25,18 +24,16 @@ import (
 	"time"
 )
 
-const (
-	apiSecurePort = 443
-	apiPort       = 80
-	dbPort        = 27017
-	webHostPort   = 3000
-	dbHostName    = "mushroom-db"  // K8s service
-	webHostName   = "mushroom-web" // K8s service
-)
+func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, err error) {
+	dbHostName := os.Getenv("DB_HOST_NAME")
+	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
+	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
+	dbHostPort, err := strconv.Atoi(os.Getenv("DB_HOST_PORT"))
+	if err != nil {
+		println(errors.Join(errors.New("no db port configured on env var DB_HOST_PORT"), err).Error())
+		dbHostPort = 0
+	}
 
-func setupDb() (ctx context.Context, client *mongo.Client, err error) {
-	log := logging.GetLogger(ctx)
-	dbUser, dbPass := os.Getenv("MONGO_INITDB_USERNAME"), os.Getenv("MONGO_INITDB_PASSWORD")
 	if dbUser == "" {
 		err = errors.New("no MONGO_INITDB_USERNAME env var found")
 		return
@@ -45,17 +42,21 @@ func setupDb() (ctx context.Context, client *mongo.Client, err error) {
 		err = errors.New("no MONGO_INITDB_PASSWORD env var found")
 		return
 	}
-	log.Info("Connecting to database")
-	ctx, client, err = rfid.NewMongoDbClient(ctx, dbUser, dbPass, dbHostName, dbPort)
+
+	println("Connecting to database")
+	ctx, client, err = rfid.NewMongoDbClient(ctxIn, dbUser, dbPass, dbHostName, dbHostPort)
 	if err != nil {
 		return ctx, nil, errors.Join(errors.New("failed to create MongoDB client"), err)
 	}
-	log.Info("Initializing DB") // TODO: ok?
+	println("Initializing DB") // TODO: ok?
 	if err = rfid.Initialize(ctx); err != nil {
 		return ctx, nil, errors.Join(errors.New("failed to initialize database"), err)
 	}
+	println("DB setup and connection complete!")
 	return ctx, rfid.GetMongoClient(ctx), nil
 }
+
+var conf *oauth2.Config
 
 func main() {
 	var err error
@@ -65,10 +66,18 @@ func main() {
 
 	// Get non-db env vars
 	clusterSecret := os.Getenv("RFID_SECRET")
-	certFileName := os.Getenv("SERVER_CERT_FILENAME") // TODO: GET RID OF THIS?
-	keyFileName := os.Getenv("SERVER_KEY_FILENAME")   // TODO: GET RID OF THIS?
+	if clusterSecret == "" {
+		panic("env var missing for RFID_SECRET")
+	}
+	conf = &oauth2.Config{
+		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),         // TODO: CONFIGURE IN HELM
+		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),     // TODO: CONFIGURE IN  HELM
+		RedirectURL:  "http://localhost:3728/auth/callback", // TODO: fixme?
+		Scopes:       []string{"email", "profile"},          // TODO: one more?
+		Endpoint:     google.Endpoint,
+	}
 
-	ctx, client, err := setupDb()
+	ctx, client, err := setupDb(ctx)
 	if err != nil {
 		panic("Error setting up db: " + err.Error()) // TODO: ok?
 	}
@@ -79,15 +88,16 @@ func main() {
 		}
 	}()
 
-	doTLS := certFileName != "" && keyFileName != ""
-	port := apiPort
-	if doTLS {
-		port = apiSecurePort
+	webHostName := envVarOrDefault("WEB_HOST_INTERNAL", "localhost") // Can have port if not hosting on 80      // TODO: CONFIGURE
+	ingressPort, err := strconv.Atoi(os.Getenv("API_PORT"))
+	if err != nil {
+		println("No api port configured, defaulting to port 80")
+		ingressPort = 80
 	}
 
 	// Set up server
 	srv := &http.Server{
-		Addr:              ":" + strconv.Itoa(port),
+		Addr:              ":" + strconv.Itoa(ingressPort),
 		ReadHeaderTimeout: 10 * time.Second, // TODO: ensure ok, was 30?
 	}
 
@@ -159,9 +169,23 @@ func main() {
 	passthroughConfig := newPassthroughHandlerConfig().
 		useHttps(false).
 		withHost(webHostName).
-		withPort(webHostPort).
 		withCookies(true).
 		withHeaders(true)
+	webHostPortStr := os.Getenv("WEB_HOST_INTERNAL_PORT") // TODO: CONFIGURE
+	webHostPort := 3000
+	if webHostPortStr != "" {
+		webHostPort, err = strconv.Atoi(webHostPortStr)
+		if err != nil {
+			panic("invalid internal web host port: " + webHostPortStr)
+		}
+		passthroughConfig.withPort(webHostPort)
+	} else {
+		println("No/invalid web host port specified, defaulting to 3000")
+	}
+
+	http.Handle("/", rootHandler)
+	// TODO: maybe create a more readable middleware setup???
+
 	webProxyHandler := newPassthroughHandler(passthroughConfig)
 	http.Handle("/login", ctxMiddleware(handleLogin(webProxyHandler))) // GET=view, POST=do
 	http.Handle("/_next", ctxMiddleware(webProxyHandler))              // TODO: CHANGE ROOT?
@@ -177,8 +201,8 @@ func main() {
 		return ctxMiddleware(internalAuthMiddleware(next))
 	}
 	//http.Handle("/db/get/rfid/{id}", getRfidHandler())             // TODO: GET RID OF???             // TODO: ensure this works for base58s
-	http.Handle("/db/get/{endpt}/{id}", ctxInternalAuthMiddleware(getAnyCollectionHandler()))                    // TODO: GET RID OF??? // TODO: make this work for base58 mains as well
-	http.Handle("/db/get/image/{imageName...}", ctxInternalAuthMiddleware(picPathMiddleware(getImageHandler()))) // TODO: "/db/get/image/{imageName}" vs "/db/image/{imageName}"
+	http.Handle("/db/get/{endpt}/{id}", ctxInternalAuthMiddleware(getAnyCollectionHandler())) // TODO: GET RID OF??? // TODO: make this work for base58 mains as well
+	http.Handle(fmt.Sprintf(`%s{%s...}`, imagesEndpoint, imageSubPathKey), ctxInternalAuthMiddleware(picPathMiddleware(getImageHandler())))
 	// Creation handlers
 	http.Handle("/db/create/{variant}", ctxInternalAuthMiddleware(rfidMiddleware(rfid.HandleCreate())))
 	// update handlers
@@ -192,39 +216,32 @@ func main() {
 	//http.Handle("/db/list/latest/{variant}", rfid.ListNewestEntriesHandler()) // TODO: maybe unnecessary?
 	// listAllStandard handlers
 	//http.Handle("/db/list/standard/{variant}", rfid.ListStandardEntriesHandler()) // TODO: maybe unnecessary?
-
-	println("Listening on port " + strconv.Itoa(port))
-	if doTLS {
-		if err = srv.ListenAndServeTLS("/tls/"+certFileName, "/tls/"+keyFileName); err != nil {
-			panic("failed to listen and serve TLS: " + err.Error())
-		}
-	} else {
-		if certFileName+keyFileName != "" {
-			println("certFile or keyFile exists for TLS, but not both! Falling back to http (but still port 443)") // TODO: ok?
-		}
-		if err = srv.ListenAndServe(); err != nil {
-			panic("failed to listen and serve for http: " + err.Error())
-		}
+	if err = srv.ListenAndServe(); err != nil {
+		panic("failed to listen and serve for http: " + err.Error())
 	}
+	//println("Listening on port " + strconv.Itoa(ingressPort))
+	//if doTLS {
+	//	if err = srv.ListenAndServeTLS("/tls/"+certFileName, "/tls/"+keyFileName); err != nil {
+	//		panic("failed to listen and serve TLS: " + err.Error())
+	//	}
+	//} else {
+	//	if certFileName+keyFileName != "" {
+	//		println("certFile or keyFile exists for TLS, but not both! Falling back to http (but still port 443)") // TODO: ok?
+	//	}
+	//
+	//}
 	if err != nil {
 		panic("ERROR CLOSING SERVER " + err.Error())
 	}
 }
 
-func loadEnvFileToString(infoType, envVar string, currentErr error) (string, error) {
-	path := os.Getenv(envVar)
-	if path == "" {
-		return "", errors.Join(currentErr, errors.New(infoType+" secret env var must be present"))
+func envVarOrDefault(varName, defaultResult string) string {
+	result := os.Getenv(varName)
+	if result == "" {
+		println("env var " + varName + " missing, defaulting to " + defaultResult)
+		return defaultResult
 	}
-	strBytes, err := os.ReadFile(path)
-	if err != nil {
-		return "", errors.Join(currentErr, fmt.Errorf(`Error getting %s bytes: %s`, infoType, err.Error()))
-	}
-	out := string(strBytes)
-	if len(out) == 0 {
-		return "", errors.Join(currentErr, fmt.Errorf(`%s string must have a nonzero length`, infoType))
-	}
-	return out, currentErr
+	return result
 }
 
 func handleLogin(viewHandler http.HandlerFunc) http.Handler {
@@ -238,7 +255,7 @@ func handleLogin(viewHandler http.HandlerFunc) http.Handler {
 			// TODO: THIS! USER LOGS IN!
 			http.Error(w, "NOT IMPLEMENTED YET IN handleLogin", http.StatusServiceUnavailable)
 		default:
-			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			http.Error(w, "Unsupported http request method: "+http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		}
 
 	})
@@ -369,10 +386,12 @@ func setupFilePathMiddleware(filePath string) func(next http.Handler) http.Handl
 	}
 }
 
+const imageSubPathKey = "imageSubPath"
+const imagesEndpoint = "/db/images/" // MUST match PicsEndpoint in PicWithNotes.tsx
 func getImageHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		imgSubPath := r.PathValue("imageName")
+		imgSubPath := r.PathValue(imageSubPathKey)
 		if imgSubPath == "" {
 			http.Error(w, "image name must not be blank", http.StatusBadRequest)
 			return
@@ -383,7 +402,7 @@ func getImageHandler() http.Handler {
 				http.Error(w, "image not found", http.StatusNotFound)
 				return
 			}
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Error retrieving image. "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		_, err = w.Write(bytes)
@@ -393,14 +412,12 @@ func getImageHandler() http.Handler {
 	})
 }
 
-func rootHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := w.Write([]byte("an apple a day: from " + r.URL.Path)) //nolint:errcheck // TODO: DO WE EVEN WANT THE ROOT TO RESPOND?
-		if err != nil {
-			rfid.HandleHttpWriteError(err)
-		}
-	})
-}
+var rootHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	_, err := w.Write([]byte("an apple a day: from " + r.URL.Path)) //nolint:errcheck // TODO: DO WE EVEN WANT THE ROOT TO RESPOND?
+	if err != nil {
+		rfid.HandleHttpWriteError(err)
+	}
+})
 
 //func getRfidHandler() http.Handler {
 //	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -694,14 +711,6 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		println("failed to write writer result", err)
 	}
-}
-
-var conf = &oauth2.Config{
-	ClientID:     "3855348093-0gjadmag1na9u3ttjkd36riot14hiq3a.apps.googleusercontent.com", // TODO: os.GETENV
-	ClientSecret: "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",                                    // TODO: GETENV
-	RedirectURL:  "http://localhost:3728/auth/callback",                                    // TODO: fixme?
-	Scopes:       []string{"email", "profile"},                                             // TODO: one more?
-	Endpoint:     google.Endpoint,
 }
 
 func GoogleAuthCallbackHandler(w http.ResponseWriter, r *http.Request) {

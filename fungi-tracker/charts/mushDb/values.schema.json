@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Values",
+  "type": "object",
+  "required": [
+    "dbPath",
+    "picsPath",
+    "dbRoot",
+    "dbUser",
+    "rfidSecret",
+    "externalhost",
+    "localPort",
+    "nodeSelector"
+  ],
+  "properties": {
+    "dbName": {"type": "string"},
+    "dbPath": {"type": "string","format": "absolutePath"},
+    "dbRoot": {
+      "type": "object",
+      "required": [
+        "username",
+        "password"
+      ],
+      "properties": {
+        "username": {"type": "string"},
+        "passwword": {"type": "string"}
+      }
+    },
+    "dbUser": {
+      "type": "object",
+      "required": [
+        "username",
+        "password"
+      ],
+      "properties": {
+        "username": {"type": "string"},
+        "passwword": {"type": "string"}
+      }
+    },
+    "picsPath": {"type": "string","format": "absolutePath"},
+    "rfidSecret": {"type": "string"},
+    "applicationNameOverride": {"type": "string"},
+    "externalhost": {
+      "description": "Either a domain, or a domain with a port",
+      "type": "string"
+    },
+    "nodeSelector": {"type": "object"}
+  }
+}

@@ -1,0 +1,20 @@
+### Define an Ingress to connect with the Service
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: public-ingress
+  labels:
+    mushroomNode: main
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.externalhost }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: api
+                port:
+                  number: 443
+            path: /
+            pathType: Prefix
