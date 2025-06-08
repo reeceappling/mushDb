@@ -4,13 +4,15 @@
   "type": "object",
   "required": [
     "dbPath",
-    "picsPath",
+    "picsPathAbsolute",
     "dbRoot",
     "dbUser",
     "rfidSecret",
     "externalhost",
     "localPort",
-    "nodeSelector"
+    "nodeSelector",
+    "googleClientId",
+    "googleClientSecret"
   ],
   "properties": {
     "dbName": {"type": "string"},
@@ -37,7 +39,9 @@
         "passwword": {"type": "string"}
       }
     },
-    "picsPath": {"type": "string","format": "absolutePath"},
+    "picsPathAbsolute": {"type": "string","format": "absolutePath"},
+    "googleClientId": {"type":  "string"},
+    "googleClientSecret": {"type":  "string"},
     "rfidSecret": {"type": "string"},
     "applicationNameOverride": {"type": "string"},
     "externalhost": {

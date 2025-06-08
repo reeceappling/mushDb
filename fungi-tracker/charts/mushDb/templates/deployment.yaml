@@ -27,18 +27,16 @@ spec:
             - name: http-api
               containerPort: 80
           volumeMounts:
-            - name: test-storage
-              mountPath: "/tmp/k8sTesting"
             - name: mushroom-images-storage
-              mountPath: "/pics"
+              # TODO: next line must match go and tsx
+              mountPath: {{ quote .Values.picsPathAbsolute }}
           env:
             # TODO: delete next vars DIR_TO_CHECK and FILE_TO_CHECK later
-            - name: "DIR_TO_CHECK"
-              value: "/tmp/k8sTesting"
-            - name: "FILE_TO_CHECK"
-              value: "toCheck.txt"
+            - name: "PICS_PATH"
+              # TODO: next line must match go and tsx and above
+              value: {{ quote .Values.picsPathAbsolute }}
             - name: "API_PORT"
-              value: "80"
+              value: {{ .Values.localPort | default 80 | quote }}
             - name: "MONGO_INITDB_USERNAME"
               value: {{ .Values.dbRoot.username }}
             - name: "MONGO_INITDB_PASSWORD"
@@ -55,6 +53,10 @@ spec:
               value: {{ .Values.webserverInternalHost | default "localhost" | quote }}
             - name: "WEB_HOST_INTERNAL_PORT"
               value: {{ .Values.webserverInternalPort | default "3000" | quote }}
+            - name: "GOOGLE_CLIENT_ID"
+              value: {{ quote .Values.googleClientId }}
+            - name: "GOOGLE_CLIENT_SECRET"
+              value: {{ quote .Values.googleClientSecret }}
         - name: web
           image: mush-web:latest
           imagePullPolicy: Never
@@ -159,7 +161,7 @@ spec:
   accessModes:
     - "ReadWriteMany"
   hostPath:
-    path: {{ quote .Values.picsPath }}
+    path: {{ quote .Values.picsPathAbsolute }}
     type: "DirectoryOrCreate"
 ---
 apiVersion: v1
@@ -186,6 +188,7 @@ spec:
     - "ReadWriteMany"
   resources:
     requests:
+      # TODO: reevaluate
       storage: "1Gi"
 ---
 apiVersion: v1
@@ -199,36 +202,5 @@ spec:
     - "ReadWriteMany"
   resources:
     requests:
-      storage: "1Gi"
----
-# TODO: delete later
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: "test-pv"
-  labels:
-    type: "local"
-spec:
-  storageClassName: mush-host-sc
-  capacity:
-    storage: "1Gi"
-  accessModes:
-    - "ReadWriteMany"
-  hostPath:
-    path: "/tmp/testHost"
-    type: "Directory"
----
-# TODO: delete later
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: "test-storage"
-spec:
-  storageClassName: mush-host-sc
-  volumeName: "test-pv"
-{{/*  storageClassName: "test-manual"*/}}
-  accessModes:
-    - "ReadWriteMany"
-  resources:
-    requests:
+      # TODO: reevaluate
       storage: "1Gi"

@@ -28,7 +28,8 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 	dbHostName := os.Getenv("DB_HOST_NAME")
 	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
 	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
-	dbHostPort, err := strconv.Atoi(os.Getenv("DB_HOST_PORT"))
+	dbHostPortStr := os.Getenv("DB_HOST_PORT")
+	dbHostPort, err := strconv.Atoi(dbHostPortStr)
 	if err != nil {
 		println(errors.Join(errors.New("no db port configured on env var DB_HOST_PORT"), err).Error())
 		dbHostPort = 0
@@ -65,14 +66,20 @@ func main() {
 	// TODO: setup logger
 
 	// Get non-db env vars
+	// TODO: make sure any paths do not overlap
+	picsPath := os.Getenv("PICS_PATH") // TODO: k8s path vs container path
+	if picsPath == "" {
+		panic("env var missing for PICS_PATH")
+	}
 	clusterSecret := os.Getenv("RFID_SECRET")
 	if clusterSecret == "" {
 		panic("env var missing for RFID_SECRET")
 	}
+	googId, googSecret := os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET")
 	conf = &oauth2.Config{
-		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),         // TODO: CONFIGURE IN HELM
-		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),     // TODO: CONFIGURE IN  HELM
-		RedirectURL:  "http://localhost:3728/auth/callback", // TODO: fixme?
+		ClientID:     googId,
+		ClientSecret: googSecret,
+		RedirectURL:  "https://localhost:443/auth/callback", // TODO: localhost ok? probably not
 		Scopes:       []string{"email", "profile"},          // TODO: one more?
 		Endpoint:     google.Endpoint,
 	}
@@ -136,7 +143,7 @@ func main() {
 	mgr := websocketSessions.NewSessionManager(&cleanupFreq, clusterSecret)
 	defer mgr.Cleanup()
 	rfidMiddleware := mgr.Middleware()
-	picPathMiddleware := setupFilePathMiddleware("/pics") // TODO: ensure matches k8s
+	picPathMiddleware := setupFilePathMiddleware(picsPath) // TODO: ensure matches k8s
 	// SETUP AUTH MIDDLEWARE!!!!!
 	webAuthMiddleware, internalAuthMiddleware := placeholderMiddleware, placeholderMiddleware // TODO: what is internal even doing???
 	ctxMiddleware := func(next http.Handler) http.HandlerFunc {
@@ -188,8 +195,9 @@ func main() {
 
 	webProxyHandler := newPassthroughHandler(passthroughConfig)
 	http.Handle("/login", ctxMiddleware(handleLogin(webProxyHandler))) // GET=view, POST=do
-	http.Handle("/_next", ctxMiddleware(webProxyHandler))              // TODO: CHANGE ROOT?
-	http.Handle("/", ctxMiddleware(webProxyHandler))                   // TODO: CHANGE ROOT?
+	// TODO: auth callback? /auth/callback
+	http.Handle("/_next", ctxMiddleware(webProxyHandler)) // TODO: CHANGE ROOT?
+	http.Handle("/", ctxMiddleware(webProxyHandler))      // TODO: CHANGE ROOT?
 	ctxWebAuthMiddleware := func(next http.Handler) http.HandlerFunc {
 		return ctxMiddleware(webAuthMiddleware(next))
 	}

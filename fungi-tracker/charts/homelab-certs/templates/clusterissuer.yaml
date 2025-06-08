@@ -5,7 +5,6 @@ metadata:
 spec:
   acme:
     email: {{ .Values.email }}
-    # TODO: IS THE NEXT LINE OK?
     server: https://acme-v02.api.letsencrypt.org/directory
     privateKeySecretRef:
       # Secret resource that will be used to store the account's private key.

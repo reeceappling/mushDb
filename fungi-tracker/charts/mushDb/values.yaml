@@ -6,7 +6,7 @@ nodeSelector: {
 localPort: 80
 
 dbPath: "/etc/fix/me"
-picsPath: "/etc/fix/me"
+picsPathAbsolute: "/etc/fix/me"
 dbRoot:
   username: ""
   password: ""
@@ -15,9 +15,11 @@ dbUser:
   password: "" # TODO: FIXME
 dbName: "mushDb"
 rfidSecret: "" # TODO: FIXME
-externalhost: "your-external-hostname"  # TODO: FIXME?
+externalhost: "your-external-hostname.com"  # TODO: FIXME?
 applicationNameOverride: ""
 # TODO: FIX!
 # TODO: all new below!
 dbhostname: "localhost"
 dbPort: 27017
+googleClientId: "CLIENT_ID_HERE"
+googleClientSecret: "GOOGLE_CLIENT_SECRET_HERE"
