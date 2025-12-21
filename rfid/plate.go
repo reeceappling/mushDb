@@ -6,42 +6,37 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"github.com/reeceappling/goUtils/v2/utils/slices"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
 	"reflect"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const PlateSourceType = "plate"
 
 type Plate struct { // TODO: CACHE RESPONSES?!!!!!
-	EntryType            string                  `bson:"entryType" json:"entryType"`
-	Id                   MainCollectionId        `bson:"_id" json:"_id"`
-	Agar                 *alternateCollectionId  `bson:"agar,omitempty" json:"agar,omitempty"` // TODO: handle now a pointer // TODO: likely will not exist for pre-existing // TODO: CHANGE TO UNKNOWN AS DEFAULT???
-	CreationDate         unixTime                `bson:"creationDate" json:"creationDate"`
-	Species              *string                 `bson:"species,omitempty" json:"species,omitempty"`
-	SubSpecies           *string                 `bson:"subSpecies,omitempty" json:"subSpecies,omitempty"`
-	Innoc                *alternateCollectionId  `bson:"innoc,omitempty" json:"innoc,omitempty"`
-	GenSinceSpore        *Generation             `bson:"genSpore,omitempty" json:"genSpore,omitempty"`
-	GenSinceFruitOrSpore *Generation             `bson:"genFruitOrSpore,omitempty" json:"genFruitOrSpore,omitempty"`
-	TransfersOut         []alternateCollectionId `bson:"transfersOut,omitempty" json:"transfersOut,omitempty"`
-	ParentType           *string                 `bson:"parentType,omitempty" json:"parentType,omitempty"` // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	Parent               *string                 `bson:"parent,omitempty" json:"parent,omitempty"`         // TODO: IS THIS BASE58 or normal? // TODO: can be from any MainCollection, or a fruit alt (cloning)
-	Projects             []string                `bson:"projects,omitempty" json:"projects,omitempty"`
-	Pics                 []PicWithNotes          `bson:"pics,omitempty" json:"pics,omitempty"`
-	Contaminations       []Contamination         `bson:"contamination,omitempty" json:"contamination,omitempty"`
-	KnownFruitable       *bool                   `bson:"knownFruitable,omitempty" json:"knownFruitable,omitempty"` // TODO: handle being yes if clone, among other yeses
-	Sale                 *alternateCollectionId  `bson:"sale,omitempty" json:"sale,omitempty"`
-	Disposed             *unixTime               `bson:"disposed,omitempty" json:"disposed,omitempty"`
-	MostRecentImage      *PicWithNotes           `bson:"mostRecentImage,omitempty" json:"mostRecentImage,omitempty"`
-	Notes                []Note                  `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated          unixTime                `bson:"lastUpdated" json:"lastUpdated"`
+	EntryTypeStructField
+	MainCollectionIdField
+	AgarBatchField // TODO: will be empty for preexisting
+	CreationDateField
+	SpeciesOptionalField
+	SubspeciesOptionalField
+	InnocField
+	GenerationsFields
+	TransfersOutField
+	ParentTypeField           // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	BinaryOptionalParentField // TODO: binary serverside, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
+	PicsField
+	ContaminationsField
+	KnownFruitableField // TODO: handle being yes if clone, among other yeses
+	SaleField
+	DisposedField
+	MostRecentImageField
+	NotesField
+	LastUpdatedField
+	PermsField
 }
 
 func (p Plate) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -50,30 +45,13 @@ func (p Plate) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	return out, err
 }
 
-func (p Plate) clean() CollectionItem {
-	out := p
-	// TODO: Change species
-	// TODO: change subspecies
-	// TODO: remove parentType and Parent
-	// TODO: remove projects
-	// TODO: remove pic notes
-	// TODO: remove mostRecentImage notes
-	// TODO: remove flushes notes
-	// TODO: remove notes
-	return out
-}
-
-func (p Plate) DbId() string {
-	return p.Id.dbIdStr()
-}
-
-func (p Plate) projects() []string {
-	return p.Projects
-}
-
 func (p Plate) GeneticInfoAsParent() (GeneticParentInfo, error) {
-	//TODO implement me
-	panic("implement me")
+	return GeneticParentInfo{
+		SpeciesOptionalField:    SpeciesOptionalField{p.Species},
+		SubspeciesOptionalField: p.SubspeciesOptionalField,
+		KnownFruitableField:     p.KnownFruitableField,
+		GenerationsFields:       p.GenerationsFields,
+	}, nil
 }
 
 func (p Plate) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
@@ -85,74 +63,45 @@ func (p Plate) SourceType() string {
 }
 
 func (p Plate) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
-	upd := pushToArray("transfersOut", xfer.Id)
+	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+	if err != nil {
+		return err
+	}
 	res, err := ctx.Client().Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, p.Id, upd)
 	if err != nil {
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("Parent not found for transfer update. Should never happen!")
+		return ErrNoParentModifiedForTransfer
 	}
 	return nil
 }
 
 func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
-	parentInfo, err := from.GeneticInfoAsParent()
+	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
 	}
-	if parentInfo.Species == nil {
-		return errors.New("parent must have a species")
-	}
-	var genSpore *Generation = nil
-	var genFruitSpore *Generation = nil
-	switch from.SourceType() {
-	case MssSourceType:
-		genSpore = utils.Pointer(Generation(0))
-		genFruitSpore = utils.Pointer(Generation(0))
-	case FruitSourceType:
-		genSpore = parentInfo.GensSinceSpore
-		genFruitSpore = utils.Pointer(Generation(0))
-	default:
-		genSpore = parentInfo.GensSinceSpore.Next()
-		genFruitSpore = parentInfo.GensSinceFruitOrSpore.Next()
-	}
-	upd := bson.D{bson.E{"$set", bson.D{
-		{"innoc", xfer.Id},
-		{"lastUpdated", xfer.LastUpdated},
-		{"parentType", xfer.FromType},
-		{"parent", from.DbId()},            // TODO: ENSURE OK!
-		{"genSpore", genSpore},             // TODO: ensure works with ptr
-		{"genFruitOrSpore", genFruitSpore}, // TODO: ensure works with ptr
-		{"species", *parentInfo.Species},
-		{"projects", from.projects()},
-		{"lastUpdated", xfer.LastUpdated},
-	}}}
-
-	pics := []PicWithNotes{}
-	if xfer.ToImage != nil {
-		pic := PicWithNotes{
-			Time:     xfer.Date,
-			Location: *xfer.ToImage,
-			Notes:    []Note{},
-		}
-		pics = []PicWithNotes{pic}
-		upd = append(upd, bson.E{"$set", bson.D{{"mostRecentImage", pic}}})
-	}
-	upd = append(upd, bson.E{"$set", bson.D{{"pics", pics}}})
-	if parentInfo.KnownFruitable != nil {
-		upd = append(upd, bson.E{"$set", bson.D{{"knownFruitable", *parentInfo.KnownFruitable}}})
-	}
-
-	if parentInfo.Subspecies != nil {
-		upd = append(upd, bson.E{"$set", bson.D{{"subSpecies", *parentInfo.Subspecies}}}) // TODO: ensure ok
+	upd, err := xfer.
+		PicsModsForChild().
+		withInnoc(xfer).
+		withParentType(&xfer.FromType).
+		withParent(utils.Pointer(from.DbId())).
+		withGens(genSpore, genFruitSpore).
+		withSpecies(parentInfo.Species).
+		withSubspecies(parentInfo.SubSpecies).
+		withKnownFruitable(parentInfo.KnownFruitable).
+		withLastUpdated(xfer.LastUpdated).
+		Finalized()
+	if err != nil {
+		return ErrFailedToFinalizeMods
 	}
 	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, p.Id, upd)
 	if err != nil {
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("Parent not found for transfer update. Should never happen!") // TODO: MAKE VAR
+		return ErrNoParentModifiedForTransfer
 	}
 	return nil
 }
@@ -165,44 +114,6 @@ func (p Plate) CollectionName() string {
 	return mainCollectionName
 }
 
-func (p Plate) id() []byte {
-	return p.Id[:]
-}
-
-func (p Plate) knownFruitable() bool {
-	return *p.KnownFruitable // TODO: ensure not nil
-}
-
-func (p Plate) children(ctx context.Context) ([]geneticSource, error) { // TODO: DO WE EVEN NEED THIS?
-	out, db, xferColl := initializeChildrenMethod(ctx)
-	mainColl := db.Collection(mainCollectionName)
-	for _, xferId := range p.TransfersOut {
-		xfer, err := getTransferById(ctx, xferColl, xferId)
-		if err != nil {
-			return nil, err
-		}
-		item := mainColl.FindOne(ctx, bson.D{{"_id", xfer.To}}) // TODO: find multiple?
-		raw, err := item.Raw()
-		if err != nil {
-			return nil, err
-		}
-		child, err := rawEntryTypeConversion(raw)
-		if err != nil {
-			return nil, err
-		}
-		err = item.Decode(&child)
-		if err != nil {
-			return nil, errors.Join(errors.New("failed to decode child"), err)
-		}
-		out = append(out, child)
-	}
-	return out, nil
-}
-
-func (p Plate) idAsStr() string {
-	return p.Id.dbIdStr()
-}
-
 func initializePlates(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(mainCollectionName)
@@ -210,27 +121,28 @@ func initializePlates(ctx context.Context) error {
 	existingEntry := Plate{}
 	testId := mainCollIdForint(idTestPlate)
 	testItem := Plate{
-		EntryType:            *existingEntry.EntryTypeField(),
-		Id:                   testId,
-		Agar:                 &exAltId,
-		CreationDate:         exampleTime,
-		Species:              &exampleSpecies,
-		SubSpecies:           exampleSubspecies,
-		Innoc:                &exAltId,
-		GenSinceSpore:        &exGenSinceSpore,
-		GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		TransfersOut:         exAlts,
-		ParentType:           &exParentType,
-		Parent:               utils.Pointer(string(testId.asBase58())), // TODO: ok?
-		Projects:             exProjects,
-		Pics:                 exPics,
-		Contaminations:       exContams,
-		KnownFruitable:       exBool,
-		Sale:                 &exAltId,
-		Disposed:             &exampleTime,
-		MostRecentImage:      &exPics[0],
-		Notes:                exampleNotes(),
-		LastUpdated:          exampleTime,
+		EntryTypeStructField:    EntryTypeStructField{*existingEntry.EntryTypeField()},
+		MainCollectionIdField:   MainCollectionIdField{testId},
+		AgarBatchField:          AgarBatchField{&exAltId},
+		CreationDateField:       CreationDateField{exampleTime},
+		SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
+		SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
+		InnocField:              InnocField{&exAltId}, // TODO: multiple?
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{&exGenSinceSpore},
+			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+		},
+		TransfersOutField:         TransfersOutField{exAlts},
+		ParentTypeField:           ParentTypeField{&exParentType},
+		BinaryOptionalParentField: BinaryOptionalParentField{utils.Pointer(testId.ToBinaryCollectionId())}, // TODO: ok? // TODO: multiple?
+		PicsField:                 PicsField{exPics},
+		ContaminationsField:       ContaminationsField{exContams},
+		KnownFruitableField:       KnownFruitableField{exBool},
+		SaleField:                 SaleField{&exAltId},
+		DisposedField:             DisposedField{&exampleTime},
+		MostRecentImageField:      MostRecentImageField{&exPics[0]},
+		NotesField:                NotesField{exampleNotes()},
+		LastUpdatedField:          LastUpdatedField{exampleTime},
 	}
 	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
@@ -238,12 +150,12 @@ func initializePlates(ctx context.Context) error {
 			return nil
 		}
 	}
-	return renameMe(ctx, coll, testId, testItem, existingEntry)
+	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
 }
 
 type createPlateRequest struct {
-	agarBatch  alternateCollectionId
-	writeTagTo *string
+	AgarBatch AlternateCollectionId `json:"agarBatch"`
+	WriteTagToField
 }
 
 func createPlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -253,7 +165,6 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	b58id := id.asBase58()
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -265,27 +176,35 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.writeTagTo, id)
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	now := unixTime(time.Now().UnixMilli())
+	now := unixTimeForNow()
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
-		_, err := coll.
-			InsertOne(ctx, Plate{
-				EntryType:    "plate",
-				Id:           id,
-				Agar:         &data.agarBatch,
-				CreationDate: now,
-				LastUpdated:  now,
-			})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+		toInsert := Plate{
+			EntryTypeStructField:  EntryTypeStructField{"plate"},
+			MainCollectionIdField: MainCollectionIdField{id},
+			AgarBatchField:        AgarBatchField{AgarBatch: &data.AgarBatch},
+			CreationDateField:     CreationDateField{now},
+			LastUpdatedField:      LastUpdatedField{now},
+			// No Perms here for basic plates
 		}
-		return w.Write([]byte(b58id))
+		_, err = toInsert.AgarBatchField.Get(ctx)
+		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
+			return DbTxnStdErr(w, "agar batch field missing: "+err.Error(), http.StatusInternalServerError)
+		}
+		_, err = coll.InsertOne(ctx, toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -293,48 +212,51 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updatePlateRequest struct {
-	KnownFruitable *bool
-	Sale           *alternateCollectionId
-	Disposed       *unixTime
-	Projects       []string
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
-	Contams        SplitEntries[contamForm, ContaminationLessLocation]
-	WriteTagTo     *string
+	KnownFruitableField
+	SaleField
+	DisposedField
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
+	Contams SplitEntries[contamForm, ContaminationLessLocation]
+	WriteTagToField
+	PermsField
 }
 
 func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 	return resolvedUpdatePlateRequest{
-		KnownFruitable: upr.KnownFruitable,
-		Sale:           upr.Sale,
-		Disposed:       upr.Disposed,
-		Projects:       upr.Projects,
-		Notes:          upr.Notes,
-		Images: SplitEntries[picWithNotesForm, PicWithNotes]{
-			Existing: upr.Images.Existing,
-			New: slices.Map(upr.Images.New, func(i PicWithNotesLessLocation) PicWithNotes {
-				return i.asPicWithNotes(nil)
-			}),
-		},
-		Contams: SplitEntries[contamForm, Contamination]{
-			Existing: upr.Contams.Existing,
-			New: slices.Map(upr.Contams.New, func(i ContaminationLessLocation) Contamination {
-				return i.asContamination(nil)
-			}),
-		},
-		WriteTagTo: upr.WriteTagTo,
+		KnownFruitableField: upr.KnownFruitableField,
+		SaleField:           upr.SaleField,
+		DisposedField:       upr.DisposedField,
+		Notes:               upr.Notes,
+		Images:              imageUpdates(upr.Images),
+		Contams:             contamUpdates(upr.Contams),
+		WriteTagToField:     upr.WriteTagToField,
+		PermsField:          upr.PermsField,
 	}
 }
 
+func (mods resolvedUpdatePlateRequest) modsFor(existing Plate) (bson.D, error) {
+	return NewMods().
+		updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
+		updateSaleIfNeeded(mods.Sale, existing.Sale).
+		updateDisposedIfNeeded(mods.Disposed, existing.Disposed).
+		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updatePicsIfNeeded(mods.Images, existing.Pics).
+		updateContamsIfNeeded(mods.Contams, existing.Contaminations).
+		updatePermsIfNeeded(mods.Perms, existing.Perms).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+}
+
 type resolvedUpdatePlateRequest struct {
-	KnownFruitable *bool
-	Sale           *alternateCollectionId
-	Disposed       *unixTime
-	Projects       []string
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams        SplitEntries[contamForm, Contamination]
-	WriteTagTo     *string
+	KnownFruitableField
+	SaleField
+	DisposedField
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	WriteTagToField
+	PermsField // TODO: new
 }
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -344,30 +266,9 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
-	defer r.Body.Close()
-	reader, err := r.MultipartReader()
+	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	p1, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer p1.Close()
-	// Process text (or object)
-	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		// Already written
 		return
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -375,71 +276,10 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Get any images
-	newPics := map[int]string{}
-	newContams := map[int]string{}
-	picsSaved := []string{}
-	defer func() {
-		if err != nil {
-			errDel := pics.DeleteFiles(r.Context(), picsSaved...)
-			if errDel != nil {
-				handleFileDeleteErr(errDel)
-			}
-		}
-	}()
-	for {
-		// Go to next part or break
-		p, err := reader.NextPart()
-		if err != nil {
-			if err != io.EOF {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			break
-		}
-		fileName := p.FileName()
-		if fileName == "" {
-			http.Error(w, "file name is empty for what should have been an image", http.StatusBadRequest)
-			return
-		}
-		// Process file
-		parts := strings.Split(fileName, "-")
-		if len(parts) != 2 {
-			http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
-			return
-		}
-		num, errr := strconv.Atoi(parts[1])
-		if errr != nil {
-			err = errr
-			http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
-			return
-		}
-		fieldBytes, err := multipartToImageBytes(p, w)
-		if err != nil {
-			// Already wrote
-			return
-		}
-		switch parts[0] {
-		case "newPic":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "plate", string(b58Id), "img")
-			if err != nil {
-				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			newPics[num] = newFileNameWithPrefixPath
-		case "newContam":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "plate", string(b58Id), "contam")
-			if err != nil {
-				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			newContams[num] = newFileNameWithPrefixPath
-		default:
-			http.Error(w, "invalid picture name", http.StatusBadRequest)
-			return
-		}
+	newPics, newContams, _, err := getMultipartImages(r.Context(), "jar", w, reader, b58Id)
+	if err != nil {
+		// Already wrotw
+		return
 	}
 
 	// CHECK THAT ALL NEW PICS EXIST
@@ -462,72 +302,59 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		// go get current plate
-		current := Plate{}
-		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&current)
+		existing := Plate{}
+		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		if speciesIsSpecial(ctx, current.Species) && !userIsAdmin(ctx) { // TODO: DO THIS EVERYWHERE!
-			http.Error(w, "not permitted to modify", http.StatusForbidden)
-			return nil, nil
+		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+			return DbTxnStdErr(w, "failed to validate user permissions, old or new: "+err.Error(), http.StatusBadRequest)
 		}
-		upd := bson.D{}
-		// Compare KF
-		upd = setUnsetUnequalPointers("knownFruitable", out.KnownFruitable, current.KnownFruitable, upd)
-		// Compare SALE
-		upd = setUnsetUnequalPointers("sale", out.Sale, current.Sale, upd)
-		// Compare PROJECTS
-		upd = setProjectsIfUnequal(upd, out.Projects, current.Projects)
-		// Compare DISPOSED
-		upd = setUnsetUnequalPointers("disposed", out.Disposed, current.Disposed, upd)
-		// Do note changes
-		mods, err := WithNotesUpdate(bson.D{}, out.Notes, current.Notes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-
-		// Compare Images
-		mods, err = WithExistingEntriesChange(mods, "pics", out.Images.Existing, current.Pics, compareImageUpdate)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-		mods = append(mods, pushToArray("pics", out.Images.New...)...)
-
-		// Compare Contams
-		mods, err = WithExistingEntriesChange(mods, "contamination", out.Contams.Existing, current.Contaminations, compareContamUpdate)
-		mods = append(mods, pushToArray("contamination", out.Contams.New...)...)
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
-		// write updates to db
-
-		res := coll.FindOneAndUpdate(ctx, bson.D{{"_id", id}}, mods)
-		if err = res.Err(); err != nil {
-			http.Error(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
-		}
-		return w.Write([]byte(b58Id))
+		upd, err := out.modsFor(existing)
+		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates!!!!!!!
 	})
 	if err != nil {
 		handleWriteErr(err, w)
 	}
 }
 
+func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) (any, error) {
+	if err != nil {
+		return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+	}
+	if len(upd) == 0 {
+		return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+	}
+	// write updates to db
+	bsonId := bson.D{{"_id", id}}
+	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
+	if err != nil {
+		return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+	}
+	err = coll.FindOne(ctx, bsonId).Decode(&existing)
+	if err != nil {
+		return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+	}
+	bsOut, err := json.Marshal(existing)
+	if err != nil {
+		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+	}
+	return w.Write(bsOut)
+}
+
 type importPlateRequest struct {
-	Created        unixTime
-	Species        string
-	Subspecies     *string
-	KnownFruitable *bool
-	Generation     *int
+	CreationDateField
+	SpeciesField
+	SubspeciesOptionalField
+	KnownFruitableField
+	Generation *int
 	// pic as "img"
-	WriteTagTo *string
+	WriteTagToField
+	PermsField
 }
 
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	data := importPlateRequest{}
 	id, err := generateMainCollectionId(r.Context())
 	if err != nil {
@@ -535,30 +362,13 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b58id := id.asBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
-	defer r.Body.Close()
-	reader, err := r.MultipartReader()
+	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
+		// Already written
 		return
 	}
-	p1, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer p1.Close()
-	// Process text (or object)
-	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
-		http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
+	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+		http.Error(w, "user cannot write perms: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -567,7 +377,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Try to get pic if exists
-	picsSaved := []string{}
+	picsSaved := []string{} // TODO: do this streamlined with the multipart function
 	defer func() {
 		if err != nil {
 			err = pics.DeleteFiles(r.Context(), picsSaved...)
@@ -604,16 +414,12 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTime(time.Now().UnixMilli())
+		now := unixTimeForNow()
 		importedPic = &PicWithNotes{
-			Time:     now,
-			Location: imageLocation(newFileNameWithPrefixPath),
-			Notes:    []Note{},
+			Time:       now,
+			Location:   imageLocation(newFileNameWithPrefixPath),
+			NotesField: NotesField{[]Note{}},
 		}
-	}
-	if speciesIsSpecial(r.Context(), &data.Species) && !userIsAdmin(r.Context()) { // TODO: DO THIS EVERYWHERE!
-		http.Error(w, "not permitted to modify", http.StatusForbidden)
-		return
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {
@@ -623,27 +429,40 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	out := Plate{
-		EntryType:            "plate",
-		Id:                   id,
-		CreationDate:         data.Created,
-		Species:              &data.Species,
-		SubSpecies:           data.Subspecies,
-		GenSinceSpore:        gen,
-		GenSinceFruitOrSpore: gen,
-		Pics:                 pix,
-		KnownFruitable:       data.KnownFruitable,
-		MostRecentImage:      importedPic,
-		LastUpdated:          unixTime(time.Now().UnixMilli()),
-	}
+
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
-		_, err := coll.InsertOne(ctx, out)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+		finalPerms := data.Perms
+		if data.Perms != nil {
+			spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+			if err != nil {
+				return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			}
+			finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: DO MAXIMAL PERMS WITH data.Perms if not allWrite?
 		}
-		return w.Write([]byte(id.asBase58()))
+
+		toInsert := Plate{
+			EntryTypeStructField:    EntryTypeStructField{"plate"},
+			MainCollectionIdField:   id.IdField(),
+			CreationDateField:       data.CreationDateField,
+			SpeciesOptionalField:    data.SpeciesField.AsOptional(),
+			SubspeciesOptionalField: data.SubspeciesOptionalField,
+			GenerationsFields:       GenerationsFieldFor(gen),
+			PicsField:               PicsField{pix},
+			KnownFruitableField:     data.KnownFruitableField,
+			MostRecentImageField:    MostRecentImageField{importedPic},
+			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+			PermsField:              PermsField{finalPerms},
+		}
+		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		_, err := coll.InsertOne(ctx, toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 
 	if err != nil {

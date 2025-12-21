@@ -13,9 +13,6 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -24,22 +21,22 @@ const (
 )
 
 type Fruit struct { // KnownFruitable is always true for this, // creation date field is id
-	Id            alternateCollectionId   `bson:"_id" json:"_id"`
-	HarvestDate   unixTime                `bson:"harvestDate" json:"harvestDate"`
-	Species       string                  `bson:"species" json:"species"`
-	SubSpecies    *string                 `bson:"subSpecies,omitempty" json:"subSpecies,omitempty"`
-	GenSinceSpore *Generation             `bson:"genSpore,omitempty" json:"genSpore,omitempty"`
-	TransfersOut  []alternateCollectionId `bson:"transfersOut,omitempty" json:"transfersOut,omitempty"` // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
-	Prints        []alternateCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
-	ParentType    *string                 `bson:"parentType,omitempty" json:"parentType,omitempty"`
-	// parent can be "store, outside, or a mainCollectionId"
-	Parent          *MainCollectionId `bson:"parent,omitempty" json:"parent,omitempty"` // NONEXISTENT MEANS FROM STORE or outside???
-	Projects        []string          `bson:"projects,omitempty" json:"projects,omitempty"`
-	Pics            []PicWithNotes    `bson:"pics" json:"pics"`
-	Disposed        *unixTime         `bson:"disposed,omitempty" json:"disposed,omitempty"`
-	MostRecentImage *PicWithNotes     `bson:"mostRecentImage,omitempty" json:"mostRecentImage,omitempty"`
-	Notes           []Note            `bson:"notes"  json:"notes"`
-	LastUpdated     unixTime          `bson:"lastUpdated" json:"lastUpdated"`
+	AlternateCollectionIdField
+	CreationDateField // This is harvest date
+	SpeciesField
+	SubspeciesOptionalField
+	GenSporeField
+	TransfersOutField                         // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	Prints            []AlternateCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
+	ParentTypeField
+	// parent can be "store, outside, or a mainCollectionId (box/bag)"
+	MainCollectionOptionalParentField /* TODO: new, make sure fixed everywhere */ // NONEXISTENT MEANS FROM STORE or outside???
+	PicsField
+	DisposedField
+	MostRecentImageField
+	NotesField
+	LastUpdatedField
+	PermsField
 }
 
 func (f Fruit) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -48,34 +45,15 @@ func (f Fruit) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	return out, err
 }
 
-func (f Fruit) clean() CollectionItem {
-	out := f
-	// TODO: Change species
-	// TODO: change subspecies
-	// TODO: remove parentType and Parent
-	// TODO: remove projects
-	// TODO: remove pic notes
-	// TODO: remove mostRecentImage notes
-	// TODO: remove flushes notes
-	// TODO: remove notes
-	return out
-}
-
-func (f Fruit) DbId() string {
-	return alternateCollectionId(f.Id).String()
-}
-
-func (f Fruit) projects() []string {
-	return f.Projects
-}
-
 func (f Fruit) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
-		Species:               &f.Species,
-		Subspecies:            f.SubSpecies,
-		KnownFruitable:        utils.Pointer(true),
-		GensSinceSpore:        f.GenSinceSpore,
-		GensSinceFruitOrSpore: utils.Pointer(Generation(0)),
+		SpeciesOptionalField:    SpeciesOptionalField{&f.Species},
+		SubspeciesOptionalField: f.SubspeciesOptionalField,
+		KnownFruitableField:     KnownFruitableField{utils.Pointer(true)},
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{f.GenSinceSpore},
+			GenSinceFruitOrSpore: utils.Pointer(Generation(0)),
+		},
 	}, nil
 }
 
@@ -88,40 +66,40 @@ func (f Fruit) SourceType() string {
 }
 
 func (f Fruit) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
-	upd := pushToArray("transfersOut", xfer.Id)
+	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+	if err != nil {
+		return err
+	}
 	res, err := ctx.Client().Database(dbName).Collection(fruitsCollName).UpdateByID(ctx, f.Id, upd)
 	if err != nil {
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("Parent not found for transfer update. Should never happen!")
+		return ErrNoParentModifiedForTransfer
 	}
 	return nil
 }
 
 func (f Fruit) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
-	return errors.New("fruits are invalid transfer children")
+	// Transferring TO a fruit is not a thing
+	return errors.New("fruits are invalid transfer children, must be created from a fruiter, or imported")
 }
 
 func (f Fruit) EntryTypeField() *string {
 	return nil
 }
 
-func (f Fruit) altId() alternateCollectionId {
-	return alternateCollectionId(f.Id)
-}
+//func (f Fruit) altId() AlternateCollectionId {
+//	return AlternateCollectionId(f.Id)
+//}
+//
+//func (f Fruit) id() []byte {
+//	return f.Id[:]
+//}
 
-func (f Fruit) id() []byte {
-	return f.Id[:]
-}
-
-func (f Fruit) knownFruitable() bool {
-	return true
-}
-
-func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId alternateCollectionId) error {
+func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId AlternateCollectionId) error {
 	// update fruit
-	res, err := ctx.Client().Database(dbName).Collection(fruitsCollName).UpdateByID(ctx, f.Id, pushToArray("prints", printId))
+	res, err := ctx.Client().Database(dbName).Collection(fruitsCollName).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId))
 	if err != nil {
 		return err
 	}
@@ -131,32 +109,23 @@ func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId alternateCollecti
 	return nil
 }
 
+func (f Fruit) addSale(ctx mongo.SessionContext, printId AlternateCollectionId) error {
+	// TODO; get rid of?
+	// update fruit
+	//res, err := f.Collection(ctx).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId)) // TODO: ADD A SALE IF POSSIBLE
+	//if err != nil {
+	//	return err
+	//}
+	//if res.ModifiedCount != 1 {
+	//	return errors.New("invalid result") // TODO: ok?
+	//}
+	//return nil
+	panic("implement me")
+	return nil
+}
+
 func (f Fruit) CollectionName() string {
 	return fruitsCollName
-}
-
-func (f Fruit) children(ctx context.Context) ([]geneticSource, error) {
-	out := []geneticSource{}
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	xferColl := db.Collection(transfersCollName)
-	mainColl := db.Collection(mainCollectionName)
-	for _, xferId := range f.TransfersOut {
-		var xfer Transfer
-		var dish Plate
-		if err := xferColl.FindOne(ctx, bson.D{{"_id", xferId}}).Decode(&xfer); err != nil {
-			return nil, errors.Join(errors.New("failed to retrieve and decode transfer by id"), err)
-		}
-		if err := mainColl.FindOne(ctx, bson.D{{"_id", xfer.To}}).Decode(&dish); err != nil {
-			return nil, errors.Join(errors.New("failed to retrieve and decode dish"), err)
-		}
-		out = append(out, dish)
-	}
-	return out, nil
-}
-
-func (f Fruit) idAsStr() string {
-	bs := [12]byte(f.Id)
-	return string(bs[:])
 }
 
 func initializeFruits(ctx context.Context) error {
@@ -166,13 +135,13 @@ func initializeFruits(ctx context.Context) error {
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("transfersOut", "transfersOut", false, true, false),
+		transfersOutIndexModel,
 		newSimpleIndex("harvestDate", "harvestDate", true, false, false),
 		newSimpleIndex("prints", "prints", false, true, false),
 		newSimpleIndex("parent", "parent", false, false, false),         // TODO: nil is store or outside?
 		newSimpleIndex("parentType", "parentType", false, false, false), // TODO: nil is store or outside?
 		newSimpleIndex("genSpore", "genSpore", true, true, false),
-		newSimpleIndex("projects", "projects", false, false, false),
+		projectsIndexModel,
 		//Pics (no index)
 		newSimpleIndex("disposed", "disposed", false, true, false),
 		//MostRecentImage (no index)
@@ -185,21 +154,20 @@ func initializeFruits(ctx context.Context) error {
 	// If test agar batch does not exist, then create it
 	existingEntry := Fruit{}
 	testItem := Fruit{
-		Id:              exAltId,
-		HarvestDate:     exampleTime,
-		Species:         "beech",
-		SubSpecies:      utils.Pointer("brown beech"),
-		GenSinceSpore:   &exGenSinceSpore,
-		TransfersOut:    exAlts,
-		Prints:          exAlts,
-		ParentType:      &exParentType,
-		Parent:          &exPlate,
-		Projects:        exProjects,
-		Pics:            exPics,
-		Disposed:        &exampleTime,
-		MostRecentImage: &exPics[0],
-		Notes:           exampleNotes(),
-		LastUpdated:     exampleTime,
+		AlternateCollectionIdField:        AlternateCollectionIdField{exAltId},
+		CreationDateField:                 CreationDateField{exampleTime},
+		SpeciesField:                      SpeciesField{testEntryStringId},
+		SubspeciesOptionalField:           SubspeciesOptionalField{utils.Pointer(testEntryStringId)},
+		GenSporeField:                     GenSporeField{&exGenSinceSpore},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		Prints:                            exAlts,
+		ParentTypeField:                   ParentTypeField{&exParentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+		PicsField:                         PicsField{exPics},
+		DisposedField:                     DisposedField{&exampleTime},
+		MostRecentImageField:              MostRecentImageField{&exPics[0]},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -207,134 +175,50 @@ func initializeFruits(ctx context.Context) error {
 			return nil
 		}
 	}
-	return renameMe(ctx, coll, exAltId, testItem, existingEntry)
+	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 }
 
 type createFruitRequest struct {
-	ParentId    Base58Str
+	ParentId    MainCollectionId
 	ParentType  string
 	HarvestDate unixTime
-	Projects    []string
-	Notes       []Note                     `json:"notes,omitempty"`
-	Pics        []PicWithNotesLessLocation // newPic-1
+	NotesField
+	Pics []PicWithNotesLessLocation // newPic-1
 }
 
 func (req createFruitRequest) reform() createFruitResolved {
 	return createFruitResolved{
-		ParentId:    req.ParentId,
-		ParentType:  req.ParentType,
-		HarvestDate: req.HarvestDate,
-		Projects:    req.Projects,
-		Notes:       req.Notes,
-		Pics: sliceutils.Map(req.Pics, func(i PicWithNotesLessLocation) PicWithNotes {
+		MainCollectionParentField: MainCollectionParentField{req.ParentId},
+		ParentType:                req.ParentType,
+		HarvestDate:               req.HarvestDate,
+		NotesField:                NotesField{req.Notes},
+		PicsField: PicsField{sliceutils.Map(req.Pics, func(i PicWithNotesLessLocation) PicWithNotes {
 			return PicWithNotes{
-				Time:     i.Time,
-				Location: "",
-				Notes:    i.Notes,
+				Time:       i.Time,
+				Location:   "",
+				NotesField: NotesField{i.Notes},
 			}
-		}),
+		})},
 	}
 }
 
 type createFruitResolved struct {
-	ParentId    Base58Str
-	ParentType  string
-	HarvestDate unixTime
-	Projects    []string
-	Notes       []Note         `json:"notes,omitempty"`
-	Pics        []PicWithNotes // newPic-1
+	MainCollectionParentField        // TODO: used to be ParentId
+	ParentType                string // TODO: swap out for normal parentType
+	HarvestDate               unixTime
+	NotesField
+	PicsField  // newPic-1
+	PermsField // TODO: FIX THIS
 }
 
 func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FORMAT WITH DATA FIRST!
-	data, dataParsed := createFruitRequest{}, false
+	data := createFruitRequest{}
 	id := newAlternateCollectionId()
-	b58id := id.base58()
+	b58Id := id.asBase58()
 	defer r.Body.Close()
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
-	reader, err := r.MultipartReader()
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	p, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	newPics := map[int]string{}
-	picsSaved := []string{}
-	defer func() {
-		if err != nil {
-			errDel := pics.DeleteFiles(r.Context(), picsSaved...)
-			if errDel != nil {
-				handleFileDeleteErr(errDel)
-			}
-		}
-	}()
-	for {
-		fileName := p.FileName()
-
-		if isFile := fileName != ""; isFile {
-			// Process file
-			parts := strings.Split(fileName, "-")
-			if len(parts) != 2 {
-				http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
-				return
-			}
-			num, errr := strconv.Atoi(parts[1])
-			if errr != nil {
-				err = errr
-				http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
-				return
-			}
-			fieldBytes, err := multipartToImageBytes(p, w)
-			if err != nil {
-				// Already wrote
-				return
-			}
-			switch parts[0] {
-			case "newPic":
-				newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "fruit", string(b58id), "img")
-				if err != nil {
-					http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
-					return
-				}
-				picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-				newPics[num] = newFileNameWithPrefixPath
-			default:
-				http.Error(w, "invalid picture name", http.StatusBadRequest)
-				return
-			}
-		} else {
-			// Process text (or object)
-			bs, errr := io.ReadAll(p)
-			if errr != nil {
-				err = errr
-				http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			// PARSE INTO CORRECT DATA FORMAT
-			err = json.Unmarshal(bs, &data)
-			if err != nil {
-				http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			dataParsed = true
-		}
-
-		// Go to next part or break
-		p, err = reader.NextPart()
-		if err != nil {
-			if err != io.EOF {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			break
-		}
-	}
-
-	if !dataParsed {
-		http.Error(w, "no data found on form!", http.StatusBadRequest)
+		// Already wrote
 		return
 	}
 	// CHECK THAT ALL NEW PICS EXIST
@@ -353,54 +237,49 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
 		// go get parent
-		parentId, err := data.ParentId.toMainCollectionId()
+		parent, err := GetMainCollectionItemInTxn(ctx, data.ParentId, nil)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "parent not found: "+err.Error(), http.StatusNotFound)
 		}
-		parent, err := GetMainCollectionItemInTxn(ctx, parentId, nil)
-		if err != nil {
-			http.Error(w, "parent not found: "+err.Error(), http.StatusNotFound)
-			return nil, nil
+		parentPerms := parent.Permissions()
+		if err = parentPerms.ValidateUserCanWrite(ctx); err != nil {
+			return DbTxnStdErr(w, "user not able to modify parent entry: "+err.Error(), http.StatusBadRequest)
 		}
 		parentGenetics, err := parent.GeneticInfoAsParent()
 		if err != nil {
-			http.Error(w, "parent genetics error: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, "parent genetics error: "+err.Error(), http.StatusInternalServerError)
 		}
 		var mri *PicWithNotes = nil
 		if len(out.Pics) > 0 {
 			mri = &(out.Pics[len(out.Pics)-1])
 		}
-		if speciesIsSpecial(r.Context(), parentGenetics.Species) && !userIsAdmin(r.Context()) { // TODO: DO THIS EVERYWHERE!
-			http.Error(w, "not permitted to modify", http.StatusForbidden)
-			return nil, nil
+		if parentGenetics.Species == nil {
+			return DbTxnStdErr(w, "parent species was nil", http.StatusInternalServerError)
+		}
+		toInsert := Fruit{
+			AlternateCollectionIdField:        AlternateCollectionIdField{id},
+			CreationDateField:                 CreationDateField{out.HarvestDate},
+			SpeciesField:                      SpeciesField{*parentGenetics.Species},
+			SubspeciesOptionalField:           parentGenetics.SubspeciesOptionalField,
+			GenSporeField:                     parentGenetics.GenSporeField,
+			ParentTypeField:                   ParentTypeField{&out.ParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.ParentId},
+			PicsField:                         PicsField{out.Pics},
+			MostRecentImageField:              MostRecentImageField{mri},
+			NotesField:                        NotesField{out.Notes},
+			LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
+			PermsField:                        PermsField{parentPerms},
 		}
 		// Write new fruit to db
-		res, err := db.Collection(fruitsCollName).InsertOne(ctx, Fruit{
-			Id:              alternateCollectionId(id),
-			HarvestDate:     out.HarvestDate,
-			Species:         *parentGenetics.Species,
-			SubSpecies:      parentGenetics.Subspecies,
-			GenSinceSpore:   parentGenetics.GensSinceSpore,
-			ParentType:      &out.ParentType,
-			Parent:          &parentId,
-			Projects:        out.Projects,
-			Pics:            out.Pics,
-			MostRecentImage: mri,
-			Notes:           out.Notes,
-			LastUpdated:     unixTime(time.Now().UnixMilli()),
-		})
+		_, err = db.Collection(fruitsCollName).InsertOne(ctx, toInsert)
 		if err != nil {
-			http.Error(w, "error writing: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, "error writing: "+err.Error(), http.StatusInternalServerError)
 		}
-		idOut, ok := res.InsertedID.(alternateCollectionId)
-		if !ok {
-			http.Error(w, "could not find written id", http.StatusInternalServerError)
-			return nil, nil
+		bs, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write(idOut.base58Bytes())
+		return w.Write(bs)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -408,31 +287,41 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 }
 
 type updateFruitRequest struct {
-	Disposed *unixTime `json:"disposed,omitempty"`
-	Projects []string  `json:"projects,omitempty"`
-	Notes    AllEntries[Note]
-	Images   SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
+	DisposedField
+	Notes  AllEntries[Note]
+	Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
+	PermsField
 }
 
 func (upr updateFruitRequest) reform() resolvedUpdateFruitRequest {
 	return resolvedUpdateFruitRequest{
-		Disposed: upr.Disposed,
-		Projects: upr.Projects,
-		Notes:    upr.Notes,
+		DisposedField: upr.DisposedField,
+		Notes:         upr.Notes,
 		Images: SplitEntries[picWithNotesForm, PicWithNotes]{
 			Existing: upr.Images.Existing,
 			New: sliceutils.Map(upr.Images.New, func(i PicWithNotesLessLocation) PicWithNotes {
 				return i.asPicWithNotes(nil)
 			}),
 		},
+		PermsField: upr.PermsField,
 	}
 }
 
 type resolvedUpdateFruitRequest struct {
-	Disposed *unixTime `json:"disposed,omitempty"`
-	Projects []string  `json:"projects,omitempty"`
-	Notes    AllEntries[Note]
-	Images   SplitEntries[picWithNotesForm, PicWithNotes] //"newPic-1"
+	DisposedField
+	Notes  AllEntries[Note]
+	Images SplitEntries[picWithNotesForm, PicWithNotes] //"newPic-1"
+	PermsField
+}
+
+func (out resolvedUpdateFruitRequest) modsFor(existing Fruit) (bson.D, error) {
+	return NewMods().
+		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
+		updateNotesIfNeeded(out.Notes, existing.Notes).
+		updatePicsIfNeeded(out.Images, existing.Pics).
+		updatePermsIfNeeded(out.Perms, existing.Perms).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
@@ -442,85 +331,10 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
-	defer r.Body.Close()
-	reader, err := r.MultipartReader()
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
+		// Already wrote
 		return
-	}
-	p1, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer p1.Close()
-	// Process text (or object)
-	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Do pics if exists!
-	newPics := map[int]string{}
-	picsSaved := []string{}
-	defer func() {
-		if err != nil {
-			errDel := pics.DeleteFiles(r.Context(), picsSaved...)
-			if errDel != nil {
-				handleFileDeleteErr(errDel)
-			}
-		}
-	}()
-
-	for {
-		// Go to next part or error
-		p, err := reader.NextPart()
-		if err != nil {
-			if err != io.EOF {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			break
-		}
-		fileName := p.FileName()
-		// Process file
-		parts := strings.Split(fileName, "-")
-		if len(parts) != 2 {
-			http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
-			return
-		}
-		num, errr := strconv.Atoi(parts[1])
-		if errr != nil {
-			err = errr
-			http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
-			return
-		}
-		fieldBytes, err := multipartToImageBytes(p, w)
-		if err != nil {
-			// Already wrote
-			return
-		}
-		switch parts[0] {
-		case "newPic":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "fruit", string(b58Id), "img")
-			if err != nil {
-				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			newPics[num] = newFileNameWithPrefixPath
-		default:
-			http.Error(w, "invalid picture name. Should never occur", http.StatusInternalServerError)
-			return
-		}
 	}
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
@@ -537,47 +351,17 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(fruitsCollName)
 		// go get current plate
-		current := Fruit{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&current)
+		existing := &Fruit{AlternateCollectionIdField: AlternateCollectionIdField{id}}
+		err = Refresh(ctx, existing)
 		if err != nil {
-			http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-		if speciesIsSpecial(ctx, &current.Species) && !userIsAdmin(ctx) { // TODO: DO THIS EVERYWHERE!
-			http.Error(w, "not permitted to modify", http.StatusForbidden)
-			return nil, nil
-		}
-		upd := bson.D{}
-		// Compare Projects
-		upd = setProjectsIfUnequal(upd, out.Projects, current.Projects)
-		// Compare DISPOSED
-		upd = setUnsetUnequalPointers("disposed", out.Disposed, current.Disposed, upd)
-		// Do note changes
-		mods, err := WithNotesUpdate(bson.D{}, out.Notes, current.Notes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 
-		// Compare Images
-		mods, err = WithImageChanges(mods, "pics", out.Images, current.Pics)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
+		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil { // TODO: PERMS VALIDATION FOR UPDATE
+			return DbTxnStdErr(w, "cannot modify: "+err.Error(), http.StatusUnauthorized)
 		}
-
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
-
-		// write updates to db
-		res := coll.FindOneAndUpdate(ctx, bson.D{{"_id", id}}, mods)
-		if err = res.Err(); err != nil {
-			http.Error(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
-		}
-		return w.Write([]byte(b58Id))
+		upd, err := out.modsFor(*existing)
+		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: DO THIS EVERYWHERE!
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -585,18 +369,19 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importFruitRequest struct {
-	ParentType string // "store" or "outside"
-	Species    string
-	Subspecies *string
-	Notes      []Note
+	ParentType string // "store" or "outside" // TODO: FIX?
+	SpeciesField
+	SubspeciesOptionalField
+	NotesField
+	PermsField // TODO: new, use
 	// image as "img"
 }
 
-func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO!!!!!!
+func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?????
 	data := importFruitRequest{}
 	id := newAlternateCollectionId()
-	b58id := id.base58()
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
+	b58id := id.asBase58()
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
@@ -616,13 +401,12 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO!
 			}
 		}
 	}()
-	// var maxSize int64 = 32 << 20 // TODO: IS THIS OK? DO WE NEED THIS?
 	var importedPic *PicWithNotes = nil
 	dataProcessed := false
 	filesProcessed := 0
 	for {
 		fileName := p.FileName()
-		defer p.Close() // TODO: ensure close?
+		defer p.Close()
 
 		if isFile := fileName != ""; isFile {
 			if filesProcessed > 0 {
@@ -641,11 +425,11 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO!
 				return
 			}
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			now := unixTime(time.Now().UnixMilli())
+			now := unixTimeForNow()
 			importedPic = &PicWithNotes{
-				Time:     now,
-				Location: imageLocation(newFileNameWithPrefixPath),
-				Notes:    []Note{},
+				Time:       now,
+				Location:   imageLocation(newFileNameWithPrefixPath),
+				NotesField: NotesField{[]Note{}},
 			}
 			filesProcessed++
 		} else {
@@ -680,36 +464,47 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO!
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if speciesIsSpecial(r.Context(), &data.Species) && !userIsAdmin(r.Context()) { // TODO: DO THIS EVERYWHERE!
-		http.Error(w, "not permitted to modify", http.StatusForbidden)
-		return
-	}
-	var gen = (*Generation)(utils.Pointer(1)) // TODO: ok?
+
+	var gen = (*Generation)(utils.Pointer(0))
 	pix := []PicWithNotes{}
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	now := unixTime(time.Now().UnixMilli())
+	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	if err != nil {
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+	}
+	finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
+	if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil {
+		http.Error(w, "user cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	now := unixTimeForNow()
+
 	out := Fruit{
-		Id:              alternateCollectionId(id),
-		HarvestDate:     unixTime(time.Now().UnixMilli()),
-		Species:         data.Species,
-		SubSpecies:      data.Subspecies,
-		GenSinceSpore:   gen,
-		ParentType:      &data.ParentType,
-		Pics:            pix,
-		MostRecentImage: importedPic,
-		Notes:           data.Notes,
-		LastUpdated:     now,
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		CreationDateField:          CreationDateField{unixTimeForNow()},
+		SpeciesField:               data.SpeciesField,
+		SubspeciesOptionalField:    data.SubspeciesOptionalField,
+		GenSporeField:              GenSporeField{gen},
+		ParentTypeField:            ParentTypeField{&data.ParentType},
+		PicsField:                  PicsField{pix},
+		MostRecentImageField:       MostRecentImageField{importedPic},
+		NotesField:                 NotesField{data.Notes},
+		LastUpdatedField:           LastUpdatedField{now},
+		PermsField:                 data.PermsField,
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(fruitsCollName)
-		_, err := coll.InsertOne(ctx, out)
+		_, err = coll.InsertOne(ctx, out)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write(id.base58Bytes())
+		bs, err := json.Marshal(out)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bs)
 	})
 	if err != nil {
 		handleWriteErr(err, w)

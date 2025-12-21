@@ -3,13 +3,14 @@ package rfid
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"reflect"
 	sliceutils "slices"
-	"time"
 )
 
 const lcRecipesCollectionName = "lcRecipes"
@@ -17,33 +18,40 @@ const lcRecipesCollectionName = "lcRecipes"
 // TODO: AgarRecipe, JarRecipe, LcRecipe now have additiveMeasurements. Account for those everywhere
 // TODO: ensure standard LC recipes are accessible
 
-type LCRecipe struct { // TODO: add most recently updated field, add creation date field
-	Id          alternateCollectionId `bson:"_id" json:"_id"`
-	Name        string                `bson:"name" json:"name"`       // TODO: ENSURE THIS IS PROPERLY SET EVERYWHERE AND INDEXED
-	Liquids     []liquid              `bson:"liquids" json:"liquids"` // TapWater, DistilledWater, GrainWater (Oat, etc)
-	Nutrients   []nutrientMeasurement `bson:"nutrients" json:"nutrients"`
-	Standard    bool                  `bson:"standard" json:"standard"` // If this is a standard recipe // TODO: account for this
-	Sugars      []sugarMeasurement    `bson:"sugars,omitempty" json:"sugars,omitempty"`
-	Additives   []additiveMeasurement `bson:"additives,omitempty" json:"additives,omitempty"` // TODO: ACCOUNT FOR THIS EVERYWHERE!
-	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+type LcRecipe struct {
+	AlternateCollectionIdField
+	NameField    // TODO: ENSURE THIS IS PROPERLY SET EVERYWHERE AND INDEXED
+	LiquidsField // TapWater, DistilledWater, GrainWater (Oat,
+	NutrientsField
+	StandardField // Whether or not this is a standard recipe
+	SugarsField
+	AdditivesField
+	NotesField
+	LastUpdatedField
 }
 
-func (recipe LCRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
+type LcRecipeField struct {
+	Recipe AlternateCollectionId `bson:"recipe" json:"recipe"`
+}
+
+func (field LcRecipeField) Get(ctx context.Context) (out LcRecipe, err error) {
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(lcRecipesCollectionName).FindOne(ctx, bson.M{
+		"_id": field.Recipe,
+	}).Decode(&out)
+	return out, err
+}
+
+func (recipe LcRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := recipe
 	err := decodeItem(&out, encoded)
 	return out, err
 }
 
-func (recipe LCRecipe) clean() CollectionItem {
-	return recipe
-}
-
-func (recipe LCRecipe) EntryTypeField() *string {
+func (recipe LcRecipe) EntryTypeField() *string {
 	return nil
 }
 
-func (recipe LCRecipe) CollectionName() string {
+func (recipe LcRecipe) CollectionName() string {
 	return lcRecipesCollectionName
 }
 
@@ -54,9 +62,10 @@ func initializeLcRecipes(ctx context.Context) error {
 		newSimpleIndex("name", "name", false, false, false),
 		newSimpleIndex("liquids", "liquids.name", false, false, false),
 		newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
+		newSimpleIndex("standard", "standard", true, false, false),
 		newSimpleIndex("sugars", "sugars.type", false, false, false),
 		newSimpleIndex("additives", "additives.additive", false, false, false),
-		newSimpleIndex("standard", "standard", true, false, false),
+
 		//Notes (no index for now unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -64,41 +73,41 @@ func initializeLcRecipes(ctx context.Context) error {
 		return err
 	}
 	inserted, updated := 0, 0
-	allWater := []liquid{Water.AsLiquid()}
-	allLME := []nutrientMeasurement{{
+	allWater := LiquidsField{[]liquid{Water.AsLiquid()}}
+	allLME := NutrientsField{[]nutrientMeasurement{{
 		Nutrient: LME,
 		Amount:   0.667,
 		Unit:     "g/pt",
-	}}
-	for _, recipe := range []LCRecipe{
+	}}}
+	for _, recipe := range []LcRecipe{
 		// LME LC - Light Malt Extract LC
 		{
-			Id:        alternateCollectionId(altCollIdForint(idMeaLC)), // TODO: this
-			Liquids:   allWater,
-			Nutrients: allLME,
-			Sugars:    nil,
-			Additives: nil,
-			Standard:  true,
-			Notes: []Note{
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idMeaLC)},
+			LiquidsField:               allWater,
+			NutrientsField:             allLME,
+			SugarsField:                SugarsField{},
+			AdditivesField:             AdditivesField{},
+			StandardField:              StandardField{true},
+			NotesField: NotesField{[]Note{
 				builtInNote("0.667g nutes per pint jar"),
-			},
+			}},
 		},
 		// Sugary LME LC
 		{
-			Id:        alternateCollectionId(altCollIdForint(idMeaSugLC)), // TODO: this
-			Liquids:   allWater,
-			Nutrients: allLME,
-			Sugars: []sugarMeasurement{{
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idMeaSugLC)},
+			LiquidsField:               allWater,
+			NutrientsField:             allLME,
+			SugarsField: SugarsField{[]sugarMeasurement{{
 				Type:   Honey,
 				Amount: 2.0,
 				Unit:   "drops/pt",
-			}},
-			Additives: nil,
-			Standard:  true,
-			Notes:     []Note{},
+			}}},
+			AdditivesField: AdditivesField{},
+			StandardField:  StandardField{true},
+			NotesField:     NotesField{[]Note{}},
 		},
 	} {
-		var existing LCRecipe
+		var existing LcRecipe
 		err := coll.FindOne(ctx, bson.D{{"_id", recipe.Id}}).Decode(&existing)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
@@ -175,20 +184,55 @@ func initializeLcRecipes(ctx context.Context) error {
 			updated++
 		}
 	}
+	// Add test entry
+	existingEntry := LcRecipe{}
+	testItem := LcRecipe{
+		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		NameField:                  NameField{"testJarRecipeName"},
+		StandardField:              StandardField{false},
+		NutrientsField: NutrientsField{[]nutrientMeasurement{
+			{
+				Nutrient: LME,
+				Amount:   1,
+				Unit:     "kg",
+			},
+			{
+				Nutrient: Potato,
+				Amount:   8,
+				Unit:     "ug",
+			},
+		}},
+		SugarsField: SugarsField{[]sugarMeasurement{
+			newSugarMeasurement(Honey, 1, "large drop per quart jar"),
+		}},
+		AdditivesField: AdditivesField{[]additiveMeasurement{
+			newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
+			newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
+		}},
+		NotesField:       NotesField{exampleNotes()},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+	}
+	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+	if err == nil {
+		if reflect.DeepEqual(existingEntry, testItem) {
+			return nil
+		}
+	}
+	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 	if inserted+updated > 0 {
 		println(fmt.Sprintf(`LC recipes: inserted %d, updated %d`, inserted, updated))
 	}
-	return nil
+	return err
 }
 
 type createLcRecipeRequest struct {
-	Name      string `bson:"name" json:"name"`
-	Standard  bool   `bson:"standard" json:"standard"` // If this is a standard recipe
-	Liquids   []liquid
-	Nutrients []nutrientMeasurement `bson:"nutrients,omitempty" json:"nutrients,omitempty"` // Per grain jar
-	Sugars    []sugarMeasurement    `bson:"sugars,omitempty" json:"sugars,omitempty"`       // Per grain jar
-	Additives []additiveMeasurement `bson:"additives,omitempty" json:"additives,omitempty"`
-	Notes     []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
+	NameField
+	StandardField // If this is a standard recipe
+	LiquidsField
+	NutrientsField
+	SugarsField
+	AdditivesField
+	NotesField
 }
 
 func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -203,29 +247,36 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
+	if err = errors.Join(
+		req.LiquidsField.Validate(),
+		req.NutrientsField.Validate(),
+		req.SugarsField.Validate(),
+		req.AdditivesField.Validate(),
+	); err != nil {
+		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
+	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(lcRecipesCollectionName)
-		res, err := coll.InsertOne(r.Context(), LCRecipe{
-			Id:          alternateCollectionId(id),
-			Name:        req.Name,
-			Standard:    req.Standard,
-			Liquids:     req.Liquids,
-			Nutrients:   req.Nutrients,
-			Sugars:      req.Sugars,
-			Additives:   req.Additives,
-			Notes:       req.Notes,
-			LastUpdated: unixTime(time.Now().UnixMilli()),
-		})
+		toInsert := LcRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{id},
+			NameField:                  req.NameField,
+			StandardField:              req.StandardField,
+			LiquidsField:               req.LiquidsField,
+			NutrientsField:             req.NutrientsField,
+			SugarsField:                req.SugarsField,
+			AdditivesField:             req.AdditivesField,
+			NotesField:                 req.NotesField,
+			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		}
+		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		altId, ok := res.InsertedID.(alternateCollectionId)
-		if !ok {
-			http.Error(w, "bad id out, should never happen", http.StatusInternalServerError)
-			return nil, nil
+		bs, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write(altId.base58Bytes())
+		return w.Write(bs)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -233,9 +284,9 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateLcRecipeRequest struct {
-	Name     string           `json:"name"`
-	Standard bool             `json:"standard"`
-	Notes    AllEntries[Note] `json:"notes"`
+	NameField
+	StandardField
+	Notes AllEntries[Note] `json:"notes"`
 }
 
 func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -257,7 +308,7 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	existing, err := GetAltCollectionItem(r.Context(), id.String(), LCRecipe{})
+	existing, err := GetAltCollectionItem(r.Context(), id, LcRecipe{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -266,35 +317,35 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	if !ableToModify(r.Context()) { // TODO: DO THIS EVERYWHERE!
-		http.Error(w, "not permitted to modify", http.StatusForbidden)
+	upd, err := NewMods().
+		updateNameIfNeeded(req.Name, existing.Name).
+		updateStandardIfNeeded(req.Standard, existing.Standard).
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+	if err != nil {
+		http.Error(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	mods := bson.D{}
-	// change name if needed
-	if req.Name != existing.Name {
-		mods = bson.D{{"$set", bson.D{{"name", req.Name}}}}
-	}
-	// change standard if needed
-	if req.Standard != existing.Standard {
-		mods = bson.D{{"$set", bson.D{{"standard", req.Standard}}}}
-	}
-	// Do note changes
-	mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-	if len(mods) == 0 {
+	if len(upd) == 0 {
 		http.Error(w, "no changes made", http.StatusBadRequest)
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		// TODO: turn everything in this txn into its own func????
 		coll := ctx.Client().Database(dbName).Collection(lcRecipesCollectionName)
-		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", existing.Id}}, mods)
-		err := result.Err()
+		bsonId := bson.D{{"_id", existing.Id}}
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		err = coll.FindOne(ctx, bsonId).Decode(&existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bs, err = json.Marshal(existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write([]byte(b58Id))
 	})

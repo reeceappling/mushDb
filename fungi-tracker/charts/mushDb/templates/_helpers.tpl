@@ -72,3 +72,13 @@ Create the namespace
 {{- define "mushDb.resolvedNamespace" -}}
 {{ .Values.namespaceOverride | default "mush-db" }}
 {{- end}}
+{{/*
+Resolve the database image to use depending on whether AVX is allowed
+*/}}
+{{- define "mushDb.dbImage" -}}
+{{- if eq .Values.withoutAVXCpu true }}
+{{- "public.ecr.aws/flakybitnet/mongodb/server:8.0.10-fb1" }}
+{{- else }}
+{{- "mongo:8-noble" }}
+{{- end}}
+{{- end}}

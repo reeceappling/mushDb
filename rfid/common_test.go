@@ -52,12 +52,12 @@ func TestCommon(t *testing.T) {
 			assert.NoError(t, err)
 			now := time.Now()
 			before := now.AddDate(0, 0, -1)
-			nowUnix := unixTime(now.UnixMilli())
+			nowUnix := unixTimeFor(now)
 			_, err = coll.InsertOne(ctx, Plate{
-				EntryType: "plate",
-				Id:        id,
+				EntryTypeStructField:  EntryTypeStructField{"plate"},
+				MainCollectionIdField: MainCollectionIdField{id},
 				Notes: []Note{
-					{Time: unixTime(before.UnixMilli()), Note: "preexisting"},
+					{Time: unixTimeFor(before), Note: "preexisting"},
 				},
 			})
 			assert.NoError(t, err)

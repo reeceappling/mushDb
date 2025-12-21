@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"github.com/reeceappling/goUtils/v2/utils/slices"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,33 +14,31 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const StasisTubeSourceType = "stasisTube"
 
 type StasisTube struct { // TODO: instructions somewhere?
-	EntryType            string                  `bson:"entryType" json:"entryType"`
-	Id                   MainCollectionId        `bson:"_id" json:"_id"`
-	PcRun                alternateCollectionId   `bson:"pcRun" json:"pcRun"` // probably won't exist for pre-existing tubes (imports=="unknown")
-	CreationDate         unixTime                `bson:"creationDate" json:"creationDate"`
-	Species              *string                 `bson:"species,omitempty" json:"species,omitempty"`
-	SubSpecies           *string                 `bson:"subSpecies,omitempty" json:"subSpecies,omitempty"`
-	Innoc                *alternateCollectionId  `bson:"innoc,omitempty" json:"innoc,omitempty"`
-	GenSinceSpore        *Generation             `bson:"genSpore,omitempty" json:"genSpore,omitempty"`
-	GenSinceFruitOrSpore *Generation             `bson:"genFruitOrSpore,omitempty" json:"genFruitOrSpore,omitempty"`
-	TransfersOut         []alternateCollectionId `bson:"transfersOut,omitempty" json:"transfersOut,omitempty"`
-	ParentType           *string                 `bson:"parentType,omitempty" json:"parentType,omitempty"` // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	Parent               *MainCollectionId       `bson:"parent,omitempty" json:"parent,omitempty"`
-	Projects             []string                `bson:"projects,omitempty" json:"projects,omitempty"`
-	Pics                 []PicWithNotes          `bson:"pics,omitempty" json:"pics,omitempty"`
-	Contaminations       []Contamination         `bson:"contamination,omitempty" json:"contamination,omitempty"`
-	KnownFruitable       *bool                   `bson:"knownFruitable,omitempty" json:"knownFruitable,omitempty"`
-	Sale                 *alternateCollectionId  `bson:"sale,omitempty" json:"sale,omitempty"`
-	Disposed             *unixTime               `bson:"disposed,omitempty" json:"disposed,omitempty"`
-	MostRecentImage      *PicWithNotes           `bson:"mostRecentImage,omitempty" json:"mostRecentImage,omitempty"`
-	Notes                []Note                  `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated          unixTime                `bson:"lastUpdated" json:"lastUpdated"`
+	EntryTypeStructField // always stasisTube
+	MainCollectionIdField
+	PcRunOptionalField // probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
+	CreationDateField
+	SpeciesOptionalField
+	SubspeciesOptionalField
+	InnocField
+	GenerationsFields
+	TransfersOutField
+	ParentTypeField // TODO: must be plate, slant, or purchased
+	MainCollectionOptionalParentField
+	PicsField
+	ContaminationsField
+	KnownFruitableField
+	SaleField
+	DisposedField
+	MostRecentImageField
+	NotesField
+	LastUpdatedField
+	PermsField
 }
 
 func (s StasisTube) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -50,30 +47,12 @@ func (s StasisTube) Decode(encoded *mongo.SingleResult) (CollectionItem, error) 
 	return out, err
 }
 
-func (s StasisTube) clean() CollectionItem {
-	out := s
-	// TODO: Change species
-	// TODO: change subspecies
-	// TODO: remove parentType and Parent
-	// TODO: remove projects
-	// TODO: remove pic notes
-	// TODO: remove mostRecentImage notes
-	// TODO: remove flushes notes
-	// TODO: remove notes
-	return out
-}
-
-func (s StasisTube) DbId() string {
-	return s.Id.dbIdStr()
-}
-
-func (s StasisTube) projects() []string {
-	return s.Projects
+func (s StasisTube) projects() []projectName {
+	return s.Perms.Projects.Ids
 }
 
 func (s StasisTube) GeneticInfoAsParent() (GeneticParentInfo, error) {
-	//TODO implement me
-	panic("implement me")
+	return GeneticParentInfo{}, nil
 }
 
 func (s StasisTube) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
@@ -85,67 +64,38 @@ func (s StasisTube) SourceType() string {
 }
 
 func (s StasisTube) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
-	upd := pushToArray("transfersOut", xfer.Id)
+	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+	if err != nil {
+		return err
+	}
 	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("Parent not found for transfer update. Should never happen!")
+		return ErrNoParentModifiedForTransfer
 	}
 	return nil
 }
 
 func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
-	parentInfo, err := from.GeneticInfoAsParent()
+	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
 	}
-	if parentInfo.Species == nil {
-		return errors.New("parent must have a species")
-	}
-	var genSpore *Generation = nil
-	var genFruitSpore *Generation = nil
-	switch from.SourceType() {
-	case MssSourceType:
-		genSpore = utils.Pointer(Generation(0))
-		genFruitSpore = utils.Pointer(Generation(0))
-	case FruitSourceType:
-		genSpore = parentInfo.GensSinceSpore
-		genFruitSpore = utils.Pointer(Generation(0))
-	default:
-		genSpore = parentInfo.GensSinceSpore.Next()
-		genFruitSpore = parentInfo.GensSinceFruitOrSpore.Next()
-	}
-	upd := bson.D{bson.E{"$set", bson.D{
-		{"innoc", xfer.Id},
-		{"lastUpdated", xfer.LastUpdated},
-		{"parentType", xfer.FromType},
-		{"parent", from.DbId()},            // TODO: ENSURE OK!
-		{"genSpore", genSpore},             // TODO: ensure works with ptr
-		{"genFruitOrSpore", genFruitSpore}, // TODO: ensure works with ptr
-		{"species", *parentInfo.Species},
-		{"projects", from.projects()},
-		{"lastUpdated", xfer.LastUpdated},
-	}}}
-
-	pics := []PicWithNotes{}
-	if xfer.ToImage != nil {
-		pic := PicWithNotes{
-			Time:     xfer.Date,
-			Location: *xfer.ToImage,
-			Notes:    []Note{},
-		}
-		pics = []PicWithNotes{pic}
-		upd = append(upd, bson.E{"$set", bson.D{{"mostRecentImage", pic}}})
-	}
-	upd = append(upd, bson.E{"$set", bson.D{{"pics", pics}}})
-	if parentInfo.KnownFruitable != nil {
-		upd = append(upd, bson.E{"$set", bson.D{{"knownFruitable", *parentInfo.KnownFruitable}}})
-	}
-
-	if parentInfo.Subspecies != nil {
-		upd = append(upd, bson.E{"$set", bson.D{{"subSpecies", *parentInfo.Subspecies}}}) // TODO: ensure ok
+	upd, err := xfer.
+		PicsModsForChild().
+		withInnoc(xfer).
+		withParentType(&xfer.FromType).
+		withParent(utils.Pointer(from.DbId())).
+		withGens(genSpore, genFruitSpore).
+		withSpecies(parentInfo.Species).
+		withSubspecies(parentInfo.SubSpecies).
+		withKnownFruitable(parentInfo.KnownFruitable).
+		withLastUpdated(xfer.LastUpdated).
+		Finalized()
+	if err != nil {
+		return ErrFailedToFinalizeMods
 	}
 	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
@@ -169,18 +119,6 @@ func (s StasisTube) id() []byte {
 	return s.Id[:]
 }
 
-func (s StasisTube) knownFruitable() bool {
-	return *s.KnownFruitable // TODO: ensure not nil
-}
-
-func (s StasisTube) children(ctx context.Context) ([]geneticSource, error) { // TODO: same as some others (slant, MSS, etc)
-	return childrenOnlyToPlate(ctx, s.TransfersOut)
-}
-
-func (s StasisTube) idAsStr() string {
-	return s.Id.dbIdStr()
-}
-
 func initializeStasisTubes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(mainCollectionName)
@@ -188,26 +126,27 @@ func initializeStasisTubes(ctx context.Context) error {
 	existingEntry := StasisTube{}
 	testId := mainCollIdForint(idTestStasis)
 	testItem := StasisTube{
-		EntryType:            *existingEntry.EntryTypeField(),
-		Id:                   testId,
-		CreationDate:         exampleTime,
-		Species:              &exampleSpecies,
-		SubSpecies:           exampleSubspecies,
-		Innoc:                &exAltId,
-		GenSinceSpore:        &exGenSinceSpore,
-		GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		TransfersOut:         exAlts,
-		ParentType:           &exParentType,
-		Parent:               &exPlate,
-		Projects:             exProjects,
-		Pics:                 exPics,
-		Contaminations:       exContams,
-		KnownFruitable:       exBool,
-		Sale:                 &exAltId,
-		Disposed:             &exampleTime,
-		MostRecentImage:      &exPics[0],
-		Notes:                exampleNotes(),
-		LastUpdated:          exampleTime,
+		EntryTypeStructField:    EntryTypeStructField{*existingEntry.EntryTypeField()},
+		MainCollectionIdField:   MainCollectionIdField{testId},
+		CreationDateField:       CreationDateField{exampleTime},
+		SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
+		SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
+		InnocField:              InnocField{&exAltId},
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{&exGenSinceSpore},
+			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+		},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		ParentTypeField:                   ParentTypeField{&exParentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+		PicsField:                         PicsField{exPics},
+		ContaminationsField:               ContaminationsField{exContams},
+		KnownFruitableField:               KnownFruitableField{exBool},
+		SaleField:                         SaleField{&exAltId},
+		DisposedField:                     DisposedField{&exampleTime},
+		MostRecentImageField:              MostRecentImageField{&exPics[0]},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
 	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
@@ -215,12 +154,12 @@ func initializeStasisTubes(ctx context.Context) error {
 			return nil
 		}
 	}
-	return renameMe(ctx, coll, testId, testItem, existingEntry)
+	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
 }
 
 type createStasisTubeRequest struct {
-	PcRun      Base58Str
-	WriteTagTo *string
+	PcRunField
+	WriteTagToField
 }
 
 func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
@@ -230,7 +169,6 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	b58id := id.asBase58()
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -247,27 +185,28 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	runId, err := data.PcRun.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "failed to resolve agar batch ID: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	now := unixTime(time.Now().UnixMilli())
+	now := unixTimeForNow()
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
-		_, err = coll.
-			InsertOne(ctx, StasisTube{
-				EntryType:    "stasisTube",
-				Id:           id,
-				PcRun:        runId,
-				CreationDate: now,
-				LastUpdated:  now,
-			})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+		toInsert := StasisTube{
+			EntryTypeStructField:  EntryTypeStructField{"stasisTube"},
+			MainCollectionIdField: MainCollectionIdField{id},
+			PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
+			CreationDateField:     CreationDateField{now},
+			LastUpdatedField:      LastUpdatedField{now},
 		}
-		return w.Write([]byte(b58id))
+		if _, err := toInsert.PcRunOptionalField.Get(ctx); err != nil && !errors.Is(err, ErrMissingOptionalField) {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		_, err = coll.InsertOne(ctx, toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -275,48 +214,38 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateStasisTubeRequest struct {
-	KnownFruitable *bool
-	Sale           *alternateCollectionId
-	Disposed       *unixTime
-	Projects       []string
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
-	Contams        SplitEntries[contamForm, ContaminationLessLocation]
-	WriteTagTo     *string
+	KnownFruitableField
+	SaleField
+	DisposedField
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
+	Contams SplitEntries[contamForm, ContaminationLessLocation]
+	WriteTagToField
+	PermsField
 }
 
 func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 	return resolvedUpdateStasisTubeRequest{
-		KnownFruitable: upr.KnownFruitable,
-		Sale:           upr.Sale,
-		Disposed:       upr.Disposed,
-		Projects:       upr.Projects,
-		Notes:          upr.Notes,
-		Images: SplitEntries[picWithNotesForm, PicWithNotes]{
-			Existing: upr.Images.Existing,
-			New: slices.Map(upr.Images.New, func(i PicWithNotesLessLocation) PicWithNotes {
-				return i.asPicWithNotes(nil)
-			}),
-		},
-		Contams: SplitEntries[contamForm, Contamination]{
-			Existing: upr.Contams.Existing,
-			New: slices.Map(upr.Contams.New, func(i ContaminationLessLocation) Contamination {
-				return i.asContamination(nil)
-			}),
-		},
-		WriteTagTo: upr.WriteTagTo,
+		KnownFruitableField: upr.KnownFruitableField,
+		SaleField:           upr.SaleField,
+		DisposedField:       upr.DisposedField,
+		Notes:               upr.Notes,
+		Images:              imageUpdates(upr.Images),
+		Contams:             contamUpdates(upr.Contams),
+		WriteTagToField:     upr.WriteTagToField,
+		PermsField:          upr.PermsField,
 	}
 }
 
 type resolvedUpdateStasisTubeRequest struct {
-	KnownFruitable *bool
-	Sale           *alternateCollectionId
-	Disposed       *unixTime
-	Projects       []string
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams        SplitEntries[contamForm, Contamination]
-	WriteTagTo     *string
+	KnownFruitableField
+	SaleField // TODO: validate exists
+	DisposedField
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	WriteTagToField
+	PermsField
 }
 
 func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
@@ -326,9 +255,9 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
-	reader, err := r.MultipartReader()
+	reader, err := r.MultipartReader() // TODO: do streamlined
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
 		return
@@ -443,71 +372,69 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		db := ctx.Client().Database(dbName)
+		coll := db.Collection(mainCollectionName)
 		// go get current stasisTube
-		current := StasisTube{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&current)
+		existing := StasisTube{}
+		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		if speciesIsSpecial(ctx, current.Species) && !userIsAdmin(ctx) { // TODO: DO THIS EVERYWHERE!
-			http.Error(w, "not permitted to modify", http.StatusForbidden)
-			return nil, nil
+		if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
+			if err = db.Collection(salesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
+				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed
+			}
 		}
-		upd := bson.D{}
-		// Compare KF
-		upd = setUnsetUnequalPointers("knownFruitable", out.KnownFruitable, current.KnownFruitable, upd)
-		// Compare SALE
-		upd = setUnsetUnequalPointers("sale", out.Sale, current.Sale, upd)
-		// Compare DISPOSED
-		upd = setUnsetUnequalPointers("disposed", out.Disposed, current.Disposed, upd)
-		// Compare PROJECTS
-		upd = setProjectsIfUnequal(upd, out.Projects, current.Projects)
-		// Do note changes
-		mods, err := WithNotesUpdate(bson.D{}, out.Notes, current.Notes)
+		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+			return DbTxnStdErr(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
+		}
+		upd, err := NewMods(). // TODO: exactly the same as plate, ok?
+					updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
+					updateSaleIfNeeded(out.Sale, existing.Sale).
+					updateDisposedIfNeeded(out.Disposed, existing.Disposed).
+					updateNotesIfNeeded(out.Notes, existing.Notes).
+					updatePicsIfNeeded(out.Images, existing.Pics).
+					updateContamsIfNeeded(out.Contams, existing.Contaminations).
+					updatePermsIfNeeded(out.Perms, existing.Perms). // TODO: update sessions with perms updates
+					updateLastUpdatedIfNeeded().
+					Finalized()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+		}
+		if len(upd) == 0 {
+			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
 		}
 
-		// Compare Images
-		mods, err = WithExistingEntriesChange(mods, "pics", out.Images.Existing, current.Pics, compareImageUpdate)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-		mods = append(mods, pushToArray("pics", out.Images.New...)...)
-
-		// Compare Contams
-		mods, err = WithExistingEntriesChange(mods, "contamination", out.Contams.Existing, current.Contaminations, compareContamUpdate)
-		mods = append(mods, pushToArray("contamination", out.Contams.New...)...)
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
 		// write updates to db
-
-		res := coll.FindOneAndUpdate(ctx, bson.D{{"_id", id}}, mods)
-		if err = res.Err(); err != nil {
-			http.Error(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
+		bsonId := bson.D{{"_id", id}}
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
+		if err != nil {
+			return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write([]byte(b58Id))
+		err = coll.FindOne(ctx, bsonId).Decode(&existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
-		// TODO: WRITE ERR
+		handleWriteErr(err, w)
 	}
 }
 
 type importStasisTubeRequest struct {
-	Created        unixTime
-	Species        string
-	Subspecies     *string
-	KnownFruitable *bool
-	Generation     *int
+	CreationDateField
+	SpeciesField
+	SubspeciesOptionalField
+	KnownFruitableField
+	Generation *int
 	// pic as "img"
-	WriteTagTo *string
+	WriteTagToField
+	PermsField // TODO: new
 }
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
@@ -518,31 +445,15 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	b58id := id.asBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
+	reader, err := multipartReaderForRequest(r, w, &data)
+	if err != nil {
+		// Already written
+		return
+	}
 	defer r.Body.Close()
-	reader, err := r.MultipartReader()
-	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	p1, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer p1.Close()
-	// Process text (or object)
-	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
-		http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
-		return
+	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+		http.Error(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
+		return // TODO: ok? check species or no?
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
@@ -550,7 +461,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Try to get pic if exists
-	picsSaved := []string{}
+	picsSaved := []string{} // TODO: do streamlined
 	defer func() {
 		if err != nil {
 			err = pics.DeleteFiles(r.Context(), picsSaved...)
@@ -585,16 +496,12 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTime(time.Now().UnixMilli())
+		now := unixTimeForNow()
 		importedPic = &PicWithNotes{
-			Time:     now,
-			Location: imageLocation(newFileNameWithPrefixPath),
-			Notes:    []Note{},
+			Time:       now,
+			Location:   imageLocation(newFileNameWithPrefixPath),
+			NotesField: NotesField{[]Note{}},
 		}
-	}
-	if speciesIsSpecial(r.Context(), &data.Species) && !userIsAdmin(r.Context()) { // TODO: DO THIS EVERYWHERE!
-		http.Error(w, "not permitted to modify", http.StatusForbidden)
-		return
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {
@@ -604,27 +511,43 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	out := StasisTube{
-		EntryType:            "stasisTube",
-		Id:                   id,
-		CreationDate:         data.Created,
-		Species:              &data.Species,
-		SubSpecies:           data.Subspecies,
-		GenSinceSpore:        gen,
-		GenSinceFruitOrSpore: gen,
-		Pics:                 pix,
-		KnownFruitable:       data.KnownFruitable,
-		MostRecentImage:      importedPic,
-		LastUpdated:          unixTime(time.Now().UnixMilli()),
-	}
+
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
-		_, err = coll.InsertOne(ctx, out)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+		finalPerms := data.Perms
+		if data.Perms != nil {
+			spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+			if err != nil {
+				return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			}
+			finalPerms = minimalPermsBetween(spec, subsp)
+		} else {
+			if err = finalPerms.ValidateUserCanWrite(ctx); err != nil { // TODO: do this on others
+				return DbTxnStdErr(w, err.Error(), http.StatusUnauthorized) // TODO: ok?
+			}
 		}
-		return w.Write([]byte(id.asBase58()))
+		toInsert := StasisTube{
+			EntryTypeStructField:    EntryTypeStructField{"stasisTube"},
+			MainCollectionIdField:   MainCollectionIdField{id},
+			CreationDateField:       data.CreationDateField,
+			SpeciesOptionalField:    data.SpeciesField.AsOptional(),
+			SubspeciesOptionalField: data.SubspeciesOptionalField,
+			GenerationsFields:       GenerationsFieldFor(gen),
+			PicsField:               PicsField{pix},
+			KnownFruitableField:     data.KnownFruitableField,
+			MostRecentImageField:    MostRecentImageField{importedPic},
+			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+			PermsField:              PermsField{finalPerms},
+		}
+		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		_, err = coll.InsertOne(ctx, toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)

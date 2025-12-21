@@ -17,33 +17,98 @@ import (
 	"strings"
 )
 
+// TODO: new are this, sporeSwab, agarBottle, plugs
+
+// Naming convention "{ParentLCID}-#"
+
+func parseName()
+
 const (
-	SporePrintSourceType     = "sporePrint"
-	sporePrintCollectionName = "sporePrints"
-	sporePrintIdPrefix       = "sp"
+	lcSyringeSourceType     = "lcSyringe"
+	lcSyringeCollectionName = "lcSyringes"
+	lcSyringeIdPrefix       = "LCS"
 )
 
-type SporePrint struct {
+type LcSyringeID string
+
+func (s LcSyringeID) MarshalJSON() ([]byte, error) {
+	if len(s) == RfidByteSize {
+		// Purchased LC syringes
+		return json.Marshal(MainCollectionId([]byte(s)[0:RfidByteSize]))
+	}
+	// Created LC syringes
+	// TODO: validate s[9:]
+	return []byte(fmt.Sprintf(`"%s-%s"`, string(MainCollectionId([]byte(s)[0:8]).base58Bytes()), s[9:])), nil
+}
+
+func (id *LcSyringeID) UnmarshalJSON(bs []byte) (err error) {
+	parts := strings.Split(string(bs), "-")
+	switch len(parts) {
+	case 1: // Purchased
+		// TODO: TEST
+		// TODO: does this expect double quotes to come in with it?
+		mainCollId, err := Base58Str(string(bs)).toMainCollectionId()
+		if err != nil {
+			return err
+		}
+		*id = LcSyringeID(mainCollId.dbIdStr())
+	case 2: // Created
+		// TODO: TEST
+		// TODO: does this expect double quotes to come in with it?
+		binaryParentId, err := Base58Str(parts[0]).toMainCollectionId()
+		if err != nil {
+			return err
+		}
+		// TODO: validate parts[1] is a number
+		*id = LcSyringeID(string(binaryParentId[:]) + "-" + parts[1])
+	default:
+		return errors.New("invalid LcSyringeID")
+	}
+	return nil
+}
+
+func (s LcSyringeID) ID() (LcSyringeIdInMemory, error) {
+	parts := strings.Split(string(s), "-")
+	num, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return LcSyringeIdInMemory{}, err
+	}
+	return LcSyringeIdInMemory{
+		parent: AlternateCollectionId([]byte(parts[0])),
+		number: num,
+	}, nil
+}
+
+type LcSyringeIdInMemory struct {
+	parent AlternateCollectionId
+	number int
+}
+
+func (s LcSyringeIdInMemory) DbId() LcSyringeIDInDB {
+	return LcSyringeIDInDB(s.parent.String() + "-" + strconv.Itoa(s.number))
+}
+
+type LcSyringe struct {
 	AlternateCollectionIdField
-	// Parent is always either fruit, or purchased
-	AlternateCollectionOptionalParentField // TODO: handle now a pointer       // TODO: likely won't exist for pre-existing
-	CreationDateField                      // Print or receive date
+	// Parent is always either purchased (nil), LC, or LcSyringe
+	MainCollectionOptionalParentField // TODO: likely won't exist for pre-existing
+	CreationDateField                 // create or receive date
 	SpeciesField
 	SubspeciesOptionalField
-	PicsField
 	SaleField
+	// TODO: add contaminated field?
+	TransfersOutField
 	DisposedField
-	MostRecentImageField
 	NotesField
 	LastUpdatedField
 	PermsField
 }
 
-func (sw SporePrint) projects() []projectName {
+func (sw LcSyringe) projects() []projectName {
 	return sw.Perms.Projects.Ids
 }
 
-func (sw SporePrint) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (sw LcSyringe) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
 	// TODO: can this even occur?
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
@@ -59,7 +124,7 @@ func (sw SporePrint) setTransferParent(ctx mongo.SessionContext, xfer Transfer) 
 	return nil
 }
 
-func (sw SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (sw LcSyringe) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	// TODO: can this happen????? should always be from a fruit right?
 	// This is a special case because it will always be 0-gen
 	parentInfo, err := from.GeneticInfoAsParent()
@@ -70,7 +135,7 @@ func (sw SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, f
 		return errors.New("parent must have a species")
 	}
 	if from.SourceType() != FruitSourceType {
-		errors.New("only fruits are supported as a transfer source type into sporePrints")
+		errors.New("only fruits are supported as a transfer source type into Syringes")
 	}
 	upd, err := xfer.
 		PicsModsForChild().
@@ -90,13 +155,13 @@ func (sw SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, f
 	return nil
 }
 
-func (sw SporePrint) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
+func (sw LcSyringe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := sw
 	err := decodeItem(&out, encoded)
 	return out, err
 }
 
-func (sw SporePrint) GeneticInfoAsParent() (GeneticParentInfo, error) {
+func (sw LcSyringe) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: sw.SubspeciesOptionalField,
@@ -104,48 +169,63 @@ func (sw SporePrint) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	}, nil
 }
 
-func (sw SporePrint) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
+func (sw LcSyringe) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
-func (sw SporePrint) SourceType() string {
-	return SporePrintSourceType
+func (sw LcSyringe) SourceType() string {
+	return lcSyringeSourceType
 }
 
-func (sw SporePrint) EntryTypeField() *string {
+func (sw LcSyringe) EntryTypeField() *string {
 	return nil
 }
 
-func (sw SporePrint) altId() AlternateCollectionId {
+func (sw LcSyringe) altId() AlternateCollectionId {
 	return AlternateCollectionId(sw.Id)
 }
 
-func (sw SporePrint) id() []byte {
+func (sw LcSyringe) id() []byte {
 	return sw.Id[:]
 }
 
-//func (sp SporePrint) knownFruitable() bool {
+//func (sp LcSyringe) knownFruitable() bool {
 //	return false
 //}
 
-func (sw SporePrint) prefix() string {
-	return sporePrintIdPrefix
+func (sw LcSyringe) prefix() string {
+	return lcSyringeIdPrefix
 }
 
-func (sw SporePrint) CollectionName() string {
-	return sporePrintCollectionName
+func (sw LcSyringe) CollectionName() string {
+	return lcSyringeCollectionName
 }
 
-func initializeSporePrints(ctx context.Context) error {
+func initializeSyringes(ctx context.Context) error { // TODO; this
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sporePrintCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(lcSyringeCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		//AlternateCollectionIdField
+		//SubType string // spore or LC
+		//// Parent is always either purchased (nil), LC, or LcSyringe
+		//AlternateCollectionOptionalParentField // TODO: handle now a pointer       // TODO: likely won't exist for pre-existing
+		//CreationDateField                      // create or receive date
+		//SpeciesField
+		//SubspeciesOptionalField
+		//SaleField
+		//TransfersOutField
+		//DisposedField
+		//// TODO: projects?
+		//NotesField
+		//LastUpdatedField
+		//PermsField
+		newSimpleIndex("subType", "subType", false, false, false),
 		newSimpleIndex("parent", "parent", false, false, false),
-		newSimpleIndex("printDate", "printDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
+		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
 		projectsIndexModel,
-		saleIndexModel, // TODO: use everywhere
+		newSimpleIndex("sale", "sale", false, true, false),
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -153,19 +233,18 @@ func initializeSporePrints(ctx context.Context) error {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := SporePrint{}
-	testItem := SporePrint{
-		AlternateCollectionIdField:             AlternateCollectionIdField{exAltId},
-		AlternateCollectionOptionalParentField: AlternateCollectionOptionalParentField{&exAltId},
-		CreationDateField:                      exampleTime.asCreationDate(),
-		SpeciesField:                           SpeciesField{testEntryStringId},
-		SubspeciesOptionalField:                SubspeciesOptionalField{&testEntryStringId},
-		PicsField:                              PicsField{exPics},
-		SaleField:                              SaleField{&exAltId},
-		DisposedField:                          DisposedField{&exampleTime},
-		MostRecentImageField:                   MostRecentImageField{utils.Pointer(exPics[0])},
-		NotesField:                             NotesField{exampleNotes()},
-		LastUpdatedField:                       LastUpdatedField{exampleTime},
+	existingEntry := LcSyringe{}
+	testItem := LcSyringe{
+		AlternateCollectionIdField:        AlternateCollectionIdField{exAltId},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exLC},
+		CreationDateField:                 exampleTime.asCreationDate(),
+		SpeciesField:                      SpeciesField{testEntryStringId},
+		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+		SaleField:                         SaleField{&exAltId},
+		DisposedField:                     DisposedField{&exampleTime},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		PermsField:                        PermsField{}, // TODO: fix
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -176,14 +255,14 @@ func initializeSporePrints(ctx context.Context) error {
 	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 }
 
-type createSporePrintRequest struct {
+type createSyringeRequest struct {
 	FruitId AlternateCollectionId `bson:"fruitId" json:"fruitId"`
 	NotesField
 	Pics []PicWithNotesLessLocation //"newPic-1"
 }
 
-func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
-	return resolvedCreateSporePrintRequest{
+func (upr createSyringeRequest) reform() resolvedCreateSyringeRequest {
+	return resolvedCreateSyringeRequest{
 		FruitId:    upr.FruitId,
 		NotesField: upr.NotesField,
 		PicsField: PicsField{slices.Map(upr.Pics, func(i PicWithNotesLessLocation) PicWithNotes {
@@ -192,14 +271,15 @@ func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
 	}
 }
 
-type resolvedCreateSporePrintRequest struct {
+type resolvedCreateSyringeRequest struct {
+	// TODO: spore print id or lc id
 	FruitId AlternateCollectionId `bson:"fruitId" json:"fruitId"`
 	NotesField
 	PicsField
 }
 
-func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
-	data := createSporePrintRequest{}
+func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
+	data := createSyringeRequest{}
 	id := newAlternateCollectionId()
 	b58Id := id.asBase58()
 	defer r.Body.Close()
@@ -272,7 +352,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		switch parts[0] {
 		case "newPic":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "sporePrint", string(b58Id), "img")
+			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "LcSyringe", string(b58Id), "img")
 			if err != nil {
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
 				return
@@ -298,41 +378,33 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, txErr := doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
-		parent := Fruit{}
+		parent := LiquidCulture{} // TODO: not fruit
 		err = db.Collection(fruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 
 		now := unixTimeForNow()
-		spid := id
-		var mri *PicWithNotes = nil
-		if len(out.Pics) > 0 {
-			lastPic := out.Pics[len(out.Pics)-1]
-			mri = &lastPic
-		}
-		toInsert := SporePrint{
-			AlternateCollectionIdField:             AlternateCollectionIdField{spid},
-			AlternateCollectionOptionalParentField: AlternateCollectionOptionalParentField{&parent.Id},
-			CreationDateField:                      now.asCreationDate(),
-			SpeciesField:                           parent.SpeciesField,
-			SubspeciesOptionalField:                parent.SubspeciesOptionalField,
-			PicsField:                              out.PicsField,
-			MostRecentImageField:                   MostRecentImageField{mri},
-			NotesField:                             NotesField{out.Notes},
-			LastUpdatedField:                       LastUpdatedField{now},
+		toInsert := LcSyringe{
+			AlternateCollectionIdField:        AlternateCollectionIdField{id},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+			CreationDateField:                 now.asCreationDate(),
+			SpeciesField:                      SpeciesField{Species: *parent.Species},
+			SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+			NotesField:                        NotesField{out.Notes},
+			LastUpdatedField:                  LastUpdatedField{now},
 			// Do not check permissions, just pass parent perms to child
 			PermsField: PermsField{parent.Perms},
 		}
-		_, err = db.Collection(sporePrintCollectionName).InsertOne(ctx, toInsert)
+		_, err = db.Collection(lcSyringeCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		// Update fruit with new print id
-		err = parent.addSporePrint(ctx, spid)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
+		// TODO: Update LC with new syringe???
+		//err = parent.addSyringe(ctx, spid)
+		//if err != nil {
+		//	return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		//}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -344,30 +416,23 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type updateSporePrintRequest struct {
+type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
 	Notes AllEntries[Note]
-	Pics  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	PermsField
 }
 
-func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
-	return resolvedUpdateSporePrintRequest{
+func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
+	return resolvedUpdateSyringeRequest{
 		SaleField:     upr.SaleField,
 		DisposedField: upr.DisposedField,
 		Notes:         upr.Notes,
-		Pics: SplitEntries[picWithNotesForm, PicWithNotes]{
-			Existing: upr.Pics.Existing,
-			New: slices.Map(upr.Pics.New, func(i PicWithNotesLessLocation) PicWithNotes {
-				return i.asPicWithNotes(nil)
-			}),
-		},
-		PermsField: PermsField{upr.Perms},
+		PermsField:    PermsField{upr.Perms},
 	}
 }
 
-type resolvedUpdateSporePrintRequest struct {
+type resolvedUpdateSyringeRequest struct {
 	SaleField
 	DisposedField
 	Notes AllEntries[Note]
@@ -375,35 +440,22 @@ type resolvedUpdateSporePrintRequest struct {
 	PermsField
 }
 
-func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
-	data := updateSporePrintRequest{}
+func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
+	data := updateSyringeRequest{}
 	b58Id := Base58Str(r.PathValue("id")) // TODO: ensure ok
 	id, err := b58Id.toMainCollectionId()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "sporePrint", &data, b58Id)
-	if err != nil {
-		// Already wrote
-		return
-	}
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
 	out := data.reform()
-	for i, _ := range data.Pics.New {
-		loc, exists := newPics[i]
-		if !exists {
-			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
-			return
-		}
-		out.Pics.New[i].Location = imageLocation(loc)
-	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(sporePrintCollectionName)
-		// go get current sporePrint
-		existing := SporePrint{}
+		coll := ctx.Client().Database(dbName).Collection(lcSyringeCollectionName)
+		// go get current LcSyringe
+		existing := LcSyringe{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
@@ -415,7 +467,6 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			updateSaleIfNeeded(out.Sale, existing.Sale).
 			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
 			updateNotesIfNeeded(data.Notes, existing.Notes).
-			updatePicsIfNeeded(out.Pics, existing.Pics).
 			updatePermsIfNeeded(data.Perms, existing.Perms). // TODO: ok?
 			updateLastUpdatedIfNeeded().
 			Finalized()
@@ -447,7 +498,7 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type importSporePrintRequest struct {
+type importSyringeRequest struct {
 	CreationDateField
 	SpeciesField
 	SubspeciesOptionalField
@@ -456,27 +507,13 @@ type importSporePrintRequest struct {
 	PermsField
 }
 
-func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
-	data := importSporePrintRequest{}
+func importSyringeHandler(w http.ResponseWriter, r *http.Request) {
+	data := importSyringeRequest{}
 	id := newAlternateCollectionId()
-	b58id := id.asBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
-	reader, err := r.MultipartReader() // TODO: do streamlined
-	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	p1, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer p1.Close()
 	// Process text (or object)
-	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
+	bs, err := io.ReadAll(r.Body)
+	if err != nil {
 		http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -489,56 +526,6 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 		http.Error(w, "user cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 		return
-	}
-	// Try to get pic if exists
-	picsSaved := []string{}
-	defer func() {
-		if err != nil {
-			errDel := pics.DeleteFiles(r.Context(), picsSaved...)
-			if err != nil {
-				handleFileDeleteErr(errDel)
-			}
-		}
-	}()
-	now := unixTimeForNow()
-	// Go to next part, if exists to get image
-	var importedPic *PicWithNotes = nil
-	p, err := reader.NextPart()
-	if err != nil {
-		if err != io.EOF {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		fileName := p.FileName()
-		defer p.Close()
-		if fileName != "img" {
-			http.Error(w, "invalid image name", http.StatusBadRequest)
-			return
-		}
-		// Process file
-		fieldBytes, err := multipartToImageBytes(p, w)
-		if err != nil {
-			// Already wrote
-			return
-		}
-		newFileNameWithPrefixPath, errr := pics.SaveFile(r.Context(), fieldBytes, "sporePrint", string(b58id), "img")
-		if errr != nil {
-			err = errr
-			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-
-		importedPic = &PicWithNotes{
-			Time:       now,
-			Location:   imageLocation(newFileNameWithPrefixPath),
-			NotesField: NotesField{[]Note{}},
-		}
-	}
-	pix := []PicWithNotes{}
-	if importedPic != nil {
-		pix = []PicWithNotes{*importedPic}
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
@@ -556,18 +543,16 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		toInsert := SporePrint{
+		toInsert := LcSyringe{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
 			CreationDateField:          data.CreationDateField,
 			SpeciesField:               data.SpeciesField,
 			SubspeciesOptionalField:    data.SubspeciesOptionalField,
-			PicsField:                  PicsField{pix},
-			MostRecentImageField:       MostRecentImageField{importedPic},
 			NotesField:                 data.NotesField,
 			LastUpdatedField:           LastUpdatedFieldForNow(),
 			PermsField:                 PermsField{finalPerms},
 		}
-		coll := ctx.Client().Database(dbName).Collection(sporePrintCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(lcSyringeCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)

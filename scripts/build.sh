@@ -71,14 +71,15 @@ case $1 in
   "api")
     rm -f bin/mushApi
     echo "compiling api"
-    GOOS=linux GOARCH=arm64 go build -o bin/mushApi .
+    # go build -o bin/mushApi .
+    GOOS=linux GOARCH=arm64 go build -v -x -o bin/mushApi .
     chmod 0777 bin/mushApi
     # Remove old image
     echo "removing old image"
     docker rmi mush-api:latest
     echo "building api image mush-api:latest"
     docker build -t mush-api:latest -f ./DockerfileApi .
-    rm -f bin/mushApi
+    # rm -f bin/mushApi
     ;;
 
   "web")

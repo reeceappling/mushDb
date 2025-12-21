@@ -6,9 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/reeceappling/goUtils/v2/logging"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/rfid"
+	"github.com/reeceappling/mushDb/rfid/perms"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
+	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/shared"
+	"github.com/ulule/limiter/v3"
+	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
+	"github.com/ulule/limiter/v3/drivers/store/memory"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -60,27 +68,40 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 var conf *oauth2.Config
 
 func main() {
+	// TODO: MAKE SURE TO STORE USERID ON COOKIES AS WELL?
 	var err error
 	ctx := context.Background()
 
-	// TODO: setup logger
+	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
+	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
+
+	// TODO: make sure logger is set up correctly
+	log := logging.LoggerFactoryFor("mush-api-go") // TODO: ok name?
+	ctx = logging.SetLogger(ctx, log)
+	ctx = logging.SetSugaredLogger(ctx, log.Sugar())
 
 	// Get non-db env vars
-	// TODO: make sure any paths do not overlap
-	picsPath := os.Getenv("PICS_PATH") // TODO: k8s path vs container path
-	if picsPath == "" {
-		panic("env var missing for PICS_PATH")
-	}
 	clusterSecret := os.Getenv("RFID_SECRET")
 	if clusterSecret == "" {
 		panic("env var missing for RFID_SECRET")
 	}
 	googId, googSecret := os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET")
+	apiProtocol := strings.ToLower(os.Getenv("MAIN_API_EXTERNAL_PROTOCOL"))
+	MAIN_API_EXTERNAL_HOST := os.Getenv("MAIN_API_EXTERNAL_HOST")
+	apiPort, err := strconv.Atoi(os.Getenv("API_PORT"))
+	if err != nil {
+		println("No api port configured, defaulting to port 80")
+		apiPort = 80
+	}
+	tempPortStr := "" // TODO: ensure ok
+	if (apiProtocol == "https" && apiPort != 443) || (apiProtocol == "http" && apiPort != 80) {
+		tempPortStr = fmt.Sprintf(`:%d`, apiPort)
+	}
 	conf = &oauth2.Config{
 		ClientID:     googId,
 		ClientSecret: googSecret,
-		RedirectURL:  "https://localhost:443/auth/callback", // TODO: localhost ok? probably not
-		Scopes:       []string{"email", "profile"},          // TODO: one more?
+		RedirectURL:  apiProtocol + "://" + MAIN_API_EXTERNAL_HOST + tempPortStr + "/auth/callback",
+		Scopes:       []string{"email", "profile"},
 		Endpoint:     google.Endpoint,
 	}
 
@@ -96,15 +117,10 @@ func main() {
 	}()
 
 	webHostName := envVarOrDefault("WEB_HOST_INTERNAL", "localhost") // Can have port if not hosting on 80      // TODO: CONFIGURE
-	ingressPort, err := strconv.Atoi(os.Getenv("API_PORT"))
-	if err != nil {
-		println("No api port configured, defaulting to port 80")
-		ingressPort = 80
-	}
 
 	// Set up server
 	srv := &http.Server{
-		Addr:              ":" + strconv.Itoa(ingressPort),
+		Addr:              ":" + strconv.Itoa(apiPort),
 		ReadHeaderTimeout: 10 * time.Second, // TODO: ensure ok, was 30?
 	}
 
@@ -139,34 +155,19 @@ func main() {
 	println("Creating Middleware")
 	// TODO: NEXT.JS LOGS! WEBPACK IS GETTING TRAPPED BY MAIN SERVER! WEBSERVER ENV VARS!
 	// Setup middlewares
+	const loginPath = "/login" // TODO: REENABLE
 	cleanupFreq := 2 * time.Minute
 	mgr := websocketSessions.NewSessionManager(&cleanupFreq, clusterSecret)
 	defer mgr.Cleanup()
-	rfidMiddleware := mgr.Middleware()
-	picPathMiddleware := setupFilePathMiddleware(picsPath) // TODO: ensure matches k8s
-	// SETUP AUTH MIDDLEWARE!!!!!
-	webAuthMiddleware, internalAuthMiddleware := placeholderMiddleware, placeholderMiddleware // TODO: what is internal even doing???
-	ctxMiddleware := func(next http.Handler) http.HandlerFunc {
-		return func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r.WithContext(ctx)) // TODO: ok?
-		}
+	ctx, rateLimiter, rfidMiddleware, picPathMiddleware, webAuthMiddleware, _ /*internalAuthMiddleware*/, ctxInternalAuthMiddleware, ctxMiddleware, ctxRfidMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, dbUser, dbPass)
+	if err != nil {
+		panic("Error setting up middleware: " + err.Error())
 	}
-
-	//const loginPath = "/login" // TODO: REENABLE
-	//ctx = rfid.SetupAuthenticatorOnContext(ctx, utils.Pointer(time.Minute*5), utils.Pointer(time.Hour*2), dbUser, dbPass)
-	//svc, _ := rfid.GetAuthService(ctx) // TODO: reenable
-	//webAuthMiddleware := svc.AuthOrRedirectMiddleware(loginPath, dbUser, dbPass) // TODO: reenable
-	//internalAuthMiddleware := svc.AuthOrDenyMiddleware(dbUser, dbPass) // TODO: reenable
 
 	// RFID HANDLERS
-
 	println("Defining endpoints")
-	// TODO: DO THESE NEED ANY AUTHENTICATION?
-	ctxRfidMiddleware := func(next http.Handler) http.HandlerFunc {
-		return ctxMiddleware(rfidMiddleware(next))
-	}
 	// Must be publicly available?
-	http.HandleFunc("/rfid/ws", ctxRfidMiddleware(wsServerHandler))
+	http.HandleFunc("/rfid/ws", ctxRfidMiddleware(http.HandlerFunc(websocketSessions.ServerHandler)))
 	// Can be internal to docker network
 	http.HandleFunc("/rfid/read/{readerName}", ctxRfidMiddleware(rfidReadHandler))   // TODO: OUTPUT IS BASE 2! // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 	http.HandleFunc("/rfid/write/{writerName}", ctxRfidMiddleware(rfidWriteHandler)) // TODO: INPUT IS BASE58(?) OUTPUT IS BASE 2! // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
@@ -185,40 +186,49 @@ func main() {
 		if err != nil {
 			panic("invalid internal web host port: " + webHostPortStr)
 		}
-		passthroughConfig.withPort(webHostPort)
+		passthroughConfig = passthroughConfig.withPort(webHostPort)
 	} else {
 		println("No/invalid web host port specified, defaulting to 3000")
 	}
 
-	http.Handle("/", rootHandler)
 	// TODO: maybe create a more readable middleware setup???
-
 	webProxyHandler := newPassthroughHandler(passthroughConfig)
-	http.Handle("/login", ctxMiddleware(handleLogin(webProxyHandler))) // GET=view, POST=do
+	http.Handle("/login", rateLimiter(ctxMiddleware(handleLogin(webProxyHandler, dbUser, dbPass))))         // GET=view, POST=do
+	http.Handle("/signup", rateLimiter(ctxMiddleware(rfid.SignupHandler(webProxyHandler, dbUser, dbPass)))) // GET=view, POST=do
+	http.Handle("/confirmSignup/{token}", rateLimiter(ctxMiddleware(rfid.ConfirmSignupHandler)))
 	// TODO: auth callback? /auth/callback
 	http.Handle("/_next", ctxMiddleware(webProxyHandler)) // TODO: CHANGE ROOT?
 	http.Handle("/", ctxMiddleware(webProxyHandler))      // TODO: CHANGE ROOT?
 	ctxWebAuthMiddleware := func(next http.Handler) http.HandlerFunc {
 		return ctxMiddleware(webAuthMiddleware(next))
 	}
-	http.Handle("/import/{variant}", ctxWebAuthMiddleware(webProxyHandler))
-	http.Handle("/new/{variant}", ctxWebAuthMiddleware(webProxyHandler))
-	http.Handle("/view/{variant}/{entryId}", ctxWebAuthMiddleware(webProxyHandler))
+	http.Handle("/import/{variant}", ctxWebAuthMiddleware(webProxyHandler))         // TODO: GET import is here
+	http.Handle("/new/{variant}", ctxWebAuthMiddleware(webProxyHandler))            // TODO: GET new item is here
+	http.Handle("/view/{variant}/{entryId}", ctxWebAuthMiddleware(webProxyHandler)) // TODO: GET view item is here
 
-	ctxInternalAuthMiddleware := func(next http.Handler) http.HandlerFunc {
-		return ctxMiddleware(internalAuthMiddleware(next))
-	}
+	// Sensor data endpoints
+	http.Handle("/sensorData/{nodeName}", rfid.GetSensorDataHandler())           // TODO: middleware?
+	http.Handle("/sensorDataSince/{nodeName}", rfid.GetSensorDataSinceHandler()) // TODO: middleware?
+	http.Handle("/addSensorData/{nodeName}", rfid.AddSensorDataHandler())        // TODO: middleware?
+
+	// TODO: ADMIN STUFF
+	// TODO: user-viewer/editor for admin
+	// TODO: need to be able to create new users
+
 	//http.Handle("/db/get/rfid/{id}", getRfidHandler())             // TODO: GET RID OF???             // TODO: ensure this works for base58s
-	http.Handle("/db/get/{endpt}/{id}", ctxInternalAuthMiddleware(getAnyCollectionHandler())) // TODO: GET RID OF??? // TODO: make this work for base58 mains as well
+	http.Handle("/db/get/{endpt}/{id}", rateLimiter(ctxInternalAuthMiddleware(getAnyCollectionHandler()))) // TODO: GET RID OF??? // TODO: make this work for base58 mains as well
 	http.Handle(fmt.Sprintf(`%s{%s...}`, imagesEndpoint, imageSubPathKey), ctxInternalAuthMiddleware(picPathMiddleware(getImageHandler())))
 	// Creation handlers
-	http.Handle("/db/create/{variant}", ctxInternalAuthMiddleware(rfidMiddleware(rfid.HandleCreate())))
+	http.Handle("/db/create/{variant}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.HandleCreate()))))
 	// update handlers
-	http.Handle("/db/update/{endpt}/{id}", ctxInternalAuthMiddleware(rfidMiddleware(rfid.UpdateById())))
+	http.Handle("/db/update/{endpt}/{id}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.UpdateById())))) // TODO: THIS SHOULD BE PATCH REQUEST?
 	// import handlers
-	http.Handle("/db/import/{endpt}", ctxInternalAuthMiddleware(rfidMiddleware(rfid.ImportHandler())))
+	http.Handle("/db/import/{endpt}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.ImportHandler()))))
 	// List handlers
-	http.Handle("/db/list/{variant}", ctxInternalAuthMiddleware(rfid.ListEntriesHandler())) // TODO: needs fixing
+	http.Handle("/db/list/{variant}", ctxInternalAuthMiddleware(rfid.ListEntriesHandler()))           // TODO: needs fixing
+	http.Handle("/sessionUserProjects", ctxInternalAuthMiddleware(rfid.SessionUserProjectsHandler())) // TODO: GetPermsMiddleware?
+	http.Handle("/userIdFor", ctxInternalAuthMiddleware(rfid.UserIdForNameOrEmail()))                 // TODO: GetPermsMiddleware?
+	http.Handle("/options/{optionsType}", rfid.GetOptionsHandler)                                     // TODO: any options here?
 
 	// lastN handlers
 	//http.Handle("/db/list/latest/{variant}", rfid.ListNewestEntriesHandler()) // TODO: maybe unnecessary?
@@ -227,20 +237,53 @@ func main() {
 	if err = srv.ListenAndServe(); err != nil {
 		panic("failed to listen and serve for http: " + err.Error())
 	}
-	//println("Listening on port " + strconv.Itoa(ingressPort))
-	//if doTLS {
-	//	if err = srv.ListenAndServeTLS("/tls/"+certFileName, "/tls/"+keyFileName); err != nil {
-	//		panic("failed to listen and serve TLS: " + err.Error())
-	//	}
-	//} else {
-	//	if certFileName+keyFileName != "" {
-	//		println("certFile or keyFile exists for TLS, but not both! Falling back to http (but still port 443)") // TODO: ok?
-	//	}
-	//
-	//}
 	if err != nil {
 		panic("ERROR CLOSING SERVER " + err.Error())
 	}
+}
+
+func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManager, loginPath, dbUser, dbPass string) (
+	ctx context.Context,
+	rateLimiter, rfidMiddleware, picsPathMiddleware, webAuthMiddleware, internalAuthMiddleware func(http.Handler) http.Handler,
+	ctxInternalAuthMiddleware, ctxMiddleware, ctxRfidMiddleware func(http.Handler) http.HandlerFunc,
+	err error) {
+	//rateLimitCount, rateLimitPeriod := int64(150), 5*time.Minute // TODO: reenable for prod
+	rateLimitCount, rateLimitPeriod := int64(150), time.Minute
+	// Rate limiter
+	rate := limiter.Rate{ // TODO: TURN
+		Period: rateLimitPeriod,
+		Limit:  rateLimitCount,
+	}
+	rateLimiterStorage := memory.NewStore()
+	rateLimiterMiddleware := stdlib.NewMiddleware(limiter.New(rateLimiterStorage, rate, limiter.WithTrustForwardHeader(true)))
+	rateLimiter = rateLimiterMiddleware.Handler
+	// PicsPath and rfid middleware
+	picsPath := os.Getenv("PICS_PATH")
+	if picsPath == "" {
+		panic("env var missing for PICS_PATH")
+	}
+	rfidMiddleware = mgr.Middleware()
+	picsPathMiddleware = setupFilePathMiddleware(picsPath)
+	// Auth Middleware
+	webAuthMiddleware, internalAuthMiddleware = placeholderMiddleware, placeholderMiddleware // TODO: what is internal even doing???
+	// TODO: DO THESE NEED ANY AUTHENTICATION?
+	//ctx = rfid.SetupAuthenticatorOnContext(ctx, utils.Pointer(time.Minute*5), utils.Pointer(time.Hour*2), dbUser, dbPass)
+	//svc, _ := rfid.GetAuthService(ctx)                                               // TODO: reenable
+	//webAuthMiddleware := svc.AuthOrRedirectMiddleware(loginPath, dbUser, dbPass) // TODO: reenable
+	//internalAuthMiddleware := svc.AuthOrDenyMiddleware(dbUser, dbPass)           // TODO: reenable
+	ctxMiddleware = func(next http.Handler) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r.WithContext(ctx)) // TODO: ok?
+		}
+	}
+	ctxRfidMiddleware = func(next http.Handler) http.HandlerFunc {
+		return ctxMiddleware(rfidMiddleware(next))
+	}
+	ctxInternalAuthMiddleware = func(next http.Handler) http.HandlerFunc {
+		return ctxMiddleware(internalAuthMiddleware(next))
+	}
+
+	return
 }
 
 func envVarOrDefault(varName, defaultResult string) string {
@@ -252,16 +295,73 @@ func envVarOrDefault(varName, defaultResult string) string {
 	return result
 }
 
-func handleLogin(viewHandler http.HandlerFunc) http.Handler {
+type loginRequest struct {
+	Username   string `json:"username"`
+	HashedPass string `json:"hashedPass"`
+}
+
+func handleLogin(viewHandler http.HandlerFunc, rootUser, rootPass string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			viewHandler.ServeHTTP(w, r)
 		case http.MethodPost:
-			// TODO: HANDLE USERNAME/PASSWORD
+			time.Sleep(3 * time.Second) // TODO: Make user wait for login, lower likelihood of attack
+			//viewHandler.ServeHTTP(w, r) // TODO: is this ok?
+			defer r.Body.Close()
+			bs, err := io.ReadAll(r.Body)
+			if err != nil {
+				// TODO: something here
+			}
+			var userInfo loginRequest
+			err = json.Unmarshal(bs, &userInfo)
+			if err != nil {
+				// TODO: SOMETHING HERE
+			}
+			var sessionId rfid.SessionId
+			// If user is rootUser, try to login as root admin
+			if userInfo.Username == rootUser {
+				hashedRootPass, err := rfid.HashPassword("", rootPass)
+				if err != nil {
+					http.Error(w, "invalid login credentials: "+err.Error(), http.StatusInternalServerError)
+					return
+				}
+				if hashedRootPass == userInfo.HashedPass {
+					// Login as root
+					sessionId, err = rfid.LoginRoot(r.Context())
+				} else {
+					err = errors.New("invalid credentials")
+				}
+			} else {
+				sessionId, err = rfid.LoginUserPass(r.Context(), userInfo.Username, userInfo.HashedPass)
+			}
+			if err != nil {
+				http.Error(w, "invalid login credentials: "+err.Error(), http.StatusForbidden)
+				return // TODO: handle this
+			}
 			// TODO: HANDLE GOOGLE
-			// TODO: THIS! USER LOGS IN!
-			http.Error(w, "NOT IMPLEMENTED YET IN handleLogin", http.StatusServiceUnavailable)
+			// RETURN NEW SESSION ID AS TEXT RESPONSE WITH 201 status!
+			http.SetCookie(w, &http.Cookie{
+				Name:        "",
+				Value:       "",
+				Quoted:      false,
+				Path:        "",
+				Domain:      "",
+				Expires:     time.Time{},
+				RawExpires:  "",
+				MaxAge:      0,
+				Secure:      false,
+				HttpOnly:    false,
+				SameSite:    0,
+				Partitioned: false,
+				Raw:         "",
+				Unparsed:    nil,
+			})
+			w.WriteHeader(http.StatusAccepted)
+			_, err = w.Write([]byte(sessionId))
+			if err != nil {
+				println("failed to write response: " + err.Error())
+			}
 		default:
 			http.Error(w, "Unsupported http request method: "+http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		}
@@ -328,20 +428,28 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 		for key, vals := range r.Header {
 			req.Header.Set(key, vals[0])
 		}
-		// SET AUTH PERMS HEADER IF EXISTS
-		perms := rfid.GetAuthInfo(ctx)
-		if len(perms.Opts) != 0 {
-			req.Header.Set(rfid.AuthPermsContextHeaderKey, perms.Opts.OptsAsString())
+		// Set session header if exists
+		perms, err := rfid.GetAuthInfo(ctx)
+		if err == nil && perms.Opts != nil { // TODO: THIS IS EW
+			optsBytes, err := json.Marshal(perms.Opts)
+			if err != nil {
+				// TODO: something here?
+			}
+			req.Header.Set(rfid.AuthPermsContextHeaderKey, string(optsBytes))
 		}
 		for _, c := range r.Cookies() {
 			req.AddCookie(c)
 		}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
+			println("passthrough failure, " + err.Error())
 			http.Error(w, "Failed to do "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			println(fmt.Sprintf("passthrough failure, status: %s, status code: %d", resp.Status, resp.StatusCode))
+		}
 
 		// RELAY HEADERS AS NEEDED
 		// TODO: REMOVE AUTH PERMS HEADERS
@@ -350,7 +458,7 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 		}
 
 		//http.SetCookie(w, &http.Cookie{
-		//	Name:        "ApplingSession",
+		//	Username:        "ApplingSession",
 		//	Value:       "",
 		//	Quoted:      false,
 		//	Path:        "",
@@ -369,21 +477,27 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 		w.WriteHeader(resp.StatusCode)
 		out, err := io.ReadAll(resp.Body)
 		if err != nil {
-			http.Error(w, "Failed to read from http "+err.Error(), http.StatusInternalServerError)
+			errMsg := "Failed to read from http " + err.Error()
+			println(errMsg)
+			http.Error(w, errMsg, http.StatusInternalServerError)
 			return
 		}
-		_, err = w.Write(out)
-		if err != nil {
-			panic("failed to write response")
+		if _, err = w.Write(out); err != nil {
+			println("failed to write response")
 		}
 	}
 }
 
-func placeholderMiddleware(next http.Handler) http.HandlerFunc { // TODO: DELETEME!!!!!!!
-	return func(w http.ResponseWriter, r *http.Request) {
-		//w.Header().Set(rfid.AuthPermsContextHeaderKey, rfid.MaxAuthInfo.Opts.OptsAsString()) // TODO: necessary?
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), rfid.AuthPermsContextHeaderKey, rfid.MaxAuthInfo.Opts.OptsAsString())))
-	}
+func placeholderMiddleware(next http.Handler) http.Handler { // TODO: DELETEME!!!!!!!
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r.WithContext(rfid.SetAuthInfo(r.Context(), rfid.AuthInfo{
+			Id: rfid.AlternateCollectionId(primitive.ObjectID{}),
+			Opts: &rfid.UserPermsResolved{
+				Admin:    utils.Pointer(true),
+				Projects: nil,
+			},
+		})))
+	})
 }
 
 func setupFilePathMiddleware(filePath string) func(next http.Handler) http.Handler {
@@ -397,7 +511,8 @@ func setupFilePathMiddleware(filePath string) func(next http.Handler) http.Handl
 const imageSubPathKey = "imageSubPath"
 const imagesEndpoint = "/db/images/" // MUST match PicsEndpoint in PicWithNotes.tsx
 func getImageHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// TODO: make sure authed?
 		ctx := r.Context()
 		imgSubPath := r.PathValue(imageSubPathKey)
 		if imgSubPath == "" {
@@ -418,6 +533,7 @@ func getImageHandler() http.Handler {
 			rfid.HandleHttpWriteError(err)
 		}
 	})
+	return rfid.GetPermsMiddleware(handler)
 }
 
 var rootHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -427,67 +543,112 @@ var rootHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *h
 	}
 })
 
-//func getRfidHandler() http.Handler {
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		ctx := r.Context()
-//		id := r.PathValue("id")
-//		idBytes := []byte(id)
-//		if len(idBytes) != rfid.RfidByteSize {
-//			http.Error(w, "invalid id format. Must be 8 bytes", http.StatusBadRequest)
-//			return
-//		}
-//		item, err := rfid.GetMainCollectionItem(ctx, [rfid.RfidByteSize]byte(idBytes), nil) // TODO: WONT WORK
-//		if err != nil {
-//			if errors.Is(err, mongo.ErrNoDocuments) {
-//				http.Error(w, "not found", http.StatusNotFound)
+//	func getRfidHandler() http.Handler {
+//		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//			ctx := r.Context()
+//			id := r.PathValue("id")
+//			idBytes := []byte(id)
+//			if len(idBytes) != rfid.RfidByteSize {
+//				http.Error(w, "invalid id format. Must be 8 bytes", http.StatusBadRequest)
 //				return
 //			}
-//			http.Error(w, "failed to retrieve item", http.StatusInternalServerError)
-//			return
-//		}
-//		out, err := json.Marshal(item)
-//		if err != nil {
-//			http.Error(w, "failed to marshal item", http.StatusInternalServerError)
-//			return
-//		}
+//			item, err := rfid.GetMainCollectionItem(ctx, [rfid.RfidByteSize]byte(idBytes), nil) // TODO: WONT WORK
+//			if err != nil {
+//				if errors.Is(err, mongo.ErrNoDocuments) {
+//					http.Error(w, "not found", http.StatusNotFound)
+//					return
+//				}
+//				http.Error(w, "failed to retrieve item", http.StatusInternalServerError)
+//				return
+//			}
+//			out, err := json.Marshal(item)
+//			if err != nil {
+//				http.Error(w, "failed to marshal item", http.StatusInternalServerError)
+//				return
+//			}
 //
-//		_, err = w.Write(out)
-//		if err != nil {
-//			rfid.HandleHttpWriteError(err)
-//		}
-//	})
-//}
+//			_, err = w.Write(out)
+//			if err != nil {
+//				rfid.HandleHttpWriteError(err)
+//			}
+//		})
+//	}
+type clientServerStringConverter struct {
+	toClient, toServer func(client string) utils.ErrAnd[string]
+}
+
+var base58Converter = clientServerStringConverter{
+	toClient: func(binaryIdStr string) utils.ErrAnd[string] {
+		out, err := rfid.Base2BytesToBase58([]byte(binaryIdStr))
+		if err != nil {
+			return utils.TandErr("", err)
+		}
+		return utils.ErrAndT(string(out))
+	},
+	toServer: func(b58id string) utils.ErrAnd[string] {
+		bs, err := rfid.Base58Str(b58id).Base2Bytes()
+		if err != nil {
+			return utils.TandErr("", err)
+		}
+		return utils.ErrAndT(string(bs))
+	},
+}
+var spacedNameConverter = clientServerStringConverter{
+	toClient: func(spaced string) utils.ErrAnd[string] {
+		// Take spaces and make them underscores?
+		return utils.ErrAndT(strings.ReplaceAll(spaced, " ", "_"))
+	},
+	toServer: func(underscored string) utils.ErrAnd[string] {
+		// replace underscores with spaces
+		return utils.ErrAndT(strings.ReplaceAll(underscored, "_", " "))
+	},
+}
+
+type itemTypeWithIdConverter struct {
+	item      rfid.AltCollectionItem
+	converter clientServerStringConverter
+}
 
 func getAnyCollectionHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		authinfo, err := rfid.GetAuthInfo(ctx)
+		if err != nil {
+			http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 		id := strings.ReplaceAll(r.PathValue("id"), "_", " ") // TODO: replace all underscores with spaces, for things like "chicken of the woods"
 		endpt := r.PathValue("endpt")
 		var bytes []byte
-		if item, exists := map[string]rfid.AltCollectionItem{
-			"agarBatch":  rfid.AgarBatch{},
-			"agarRecipe": rfid.AgarRecipe{},
-			"fruit":      rfid.Fruit{},
-			"jarRecipe":  rfid.JarRecipe{},
-			"lcRecipe":   rfid.LCRecipe{},
-			//"user":"", // TODO: probably don't need
-			"pcRun":           rfid.PCRun{},
-			"project":         rfid.Project{},
-			"sale":            rfid.Sale{},
-			"species":         rfid.Species{},
-			"sporePrint":      rfid.SporePrint{},
-			"subspecies":      rfid.Subspecies{},
-			"substrateRecipe": rfid.SubstrateRecipe{},
-			"transfer":        rfid.Transfer{},
+		if itemType, exists := map[string]itemTypeWithIdConverter{
+			"agarBatch":       {rfid.AgarBatch{}, base58Converter},
+			"agarRecipe":      {rfid.AgarRecipe{}, base58Converter}, // TODO: what about search by name?
+			"fruit":           {rfid.Fruit{}, base58Converter},
+			"jarRecipe":       {rfid.JarRecipe{}, base58Converter}, // TODO: what about search by name?
+			"lcRecipe":        {rfid.LcRecipe{}, base58Converter},  // TODO: what about search by name?
+			"pcRun":           {rfid.PCRun{}, base58Converter},
+			"project":         {rfid.Project{}, spacedNameConverter},
+			"sale":            {rfid.Sale{}, base58Converter},
+			"species":         {rfid.Species{}, spacedNameConverter}, // TODO: search by other names?
+			"sporePrint":      {rfid.SporePrint{}, base58Converter},
+			"subspecies":      {rfid.Subspecies{}, spacedNameConverter},  // TODO: search by other names?
+			"substrateRecipe": {rfid.SubstrateRecipe{}, base58Converter}, // TODO: what about search by name?
+			"transfer":        {rfid.Transfer{}, base58Converter},
+			"user":            {rfid.User{}, base58Converter}, // TODO: MAKE SURE USER IS ONLY GOTTEN BY ADMIN // TODO: search by other things than id?
 		}[endpt]; exists {
-			out, err := rfid.GetAltCollectionItem(ctx, id, item) // TODO: modify output for special species
+			serverFormattedId := itemType.converter.toServer(id)
+			if serverFormattedId.Err != nil {
+				http.Error(w, "failed to convert id: "+serverFormattedId.Err.Error(), http.StatusBadRequest)
+				return
+			}
+			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId([]byte(serverFormattedId.Item)), itemType.item) // TODO: fix
 			if err != nil {
-				http.Error(w, "failed to get alt collection item: "+err.Error(), http.StatusInternalServerError)
+				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			bytes, err = json.Marshal(out)
 			if err != nil {
-				http.Error(w, "failed to marshal item", http.StatusInternalServerError)
+				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 				return
 			}
 		} else {
@@ -509,75 +670,29 @@ func getAnyCollectionHandler() http.Handler {
 				}
 				out, err := rfid.GetMainCollectionItem(ctx, *mainCollId, mainCollItem)
 				if err != nil {
-					http.Error(w, "failed to get main collection item: "+err.Error(), http.StatusInternalServerError)
+					http.Error(w, "failed to get main collection itemType: "+err.Error(), http.StatusInternalServerError)
+					return
+				}
+				if out.Permissions().PermissionFor(authinfo) == perms.None {
+					http.Error(w, "no perms on mainCollItem for user", http.StatusForbidden)
 					return
 				}
 				bytes, err = json.Marshal(out)
 				if err != nil {
-					http.Error(w, "failed to marshal item: "+err.Error(), http.StatusInternalServerError)
+					http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 					return
 				}
 			}
-			// If not a main collection item, try for alt
+			// If not a main collection itemType, try for alt
 		}
-		_, err := w.Write(bytes)
+		_, err = w.Write(bytes)
 		if err != nil {
 			rfid.HandleHttpWriteError(err)
 		}
 		return
 	})
+	return rfid.GetPermsMiddleware(handler)
 }
-
-var wsServerHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	mgr := websocketSessions.GetSessionManager(r.Context())
-	if mgr == nil {
-		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
-		return
-	}
-	conn, errUpgr := upgrader.Upgrade(w, r, nil)
-	if errUpgr != nil {
-		fmt.Println("Error upgrading connection:", errUpgr)
-	}
-	defer conn.Close()
-
-	//try to read signup message
-	msgType, msgBytes, err := conn.ReadMessage()
-	if err != nil {
-		fmt.Println("Error reading from websocket:", err)
-		return
-	}
-	if msgType != websocket.BinaryMessage {
-		fmt.Println("Error reading from websocket: message type was not binary:", msgType)
-		return
-	}
-	msg := websocketSessions.SocketMessage{}
-	if err = json.Unmarshal(msgBytes, &msg); err != nil {
-		fmt.Println("Error unmarshalling from websocket:", err)
-		return
-	}
-	if msg.Type != websocketSessions.MessageTypeSignup {
-		fmt.Println("Error signing up, initial message received is of wrong type")
-		return
-	}
-	req := &websocketSessions.SignupRequest{}
-	err = json.Unmarshal(msg.Data, req)
-	if err != nil {
-		fmt.Println("Error unmarshalling signup request on server:", err)
-		return
-	}
-	timeBtwnChecks := 30 * time.Second                        // TODO: ok?
-	maxFailures := 1                                          // TODO: ok?
-	requestTimeout := 10 * time.Second                        // TODO: ok?
-	sessionTimeout := 5 * time.Minute                         // TODO: ok?
-	ctx, sessionCancelFunc := context.WithCancel(r.Context()) // TODO: ensure this cancelFunc is being used correctly
-	newSession := websocketSessions.NewSession(conn, &sessionTimeout, &requestTimeout, &timeBtwnChecks, &maxFailures)
-	err = mgr.Add(sessionCancelFunc, newSession, *req)
-	if err != nil {
-		fmt.Println("Error adding websocket session:", err)
-		return
-	}
-	_ = <-ctx.Done() // Keep request alive until ready to close connection
-})
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -640,7 +755,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	readerName := websocketSessions.RfidReaderName(r.PathValue("readerName"))
+	readerName := shared.RfidReaderName(r.PathValue("readerName"))
 	binaryUID, err := mgr.ReadRfid(readerName)
 	if err != nil {
 		// TODO: what type of error?
@@ -657,9 +772,10 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 
 type writeTagRequest struct {
 	Secret string
-	Data   []byte
+	Data   []byte // TODO: make sure we're ok with this being []byte
 }
 
+// TODO: consider moving to reader/writer side?
 var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	mgr := websocketSessions.GetSessionManager(r.Context())
@@ -681,7 +797,6 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	writerName := websocketSessions.RfidReaderName(r.PathValue("writerName"))
 	bodyIn, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "unable to read request body: "+err.Error(), http.StatusBadRequest)
@@ -706,8 +821,8 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	writerName := shared.RfidReaderName(r.PathValue("writerName"))
 	toWrite := [8]byte(req.Data)
-
 	if err = mgr.WriteRfid(writerName, toWrite); err != nil {
 		// TODO: what type of error?
 		http.Error(w, err.Error(), http.StatusInternalServerError)

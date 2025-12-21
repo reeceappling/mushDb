@@ -9,26 +9,54 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"time"
 )
 
 const salesCollectionName = "sales"
 
+var (
+	_ Sellable = &Bag{}
+	_ Sellable = &Fruit{}
+	_ Sellable = &FruitingChamber{}
+	_ Sellable = &GrainJar{}
+	_ Sellable = &LiquidCulture{}
+	_ Sellable = &MSS{}
+	_ Sellable = &Plate{}
+	_ Sellable = &Slant{}
+	_ Sellable = &SporePrint{}
+	_ Sellable = &SporeSwab{}
+	_ Sellable = &StasisTube{}
+	_ Sellable = &SporePrint{}
+)
+
+type Sellable interface {
+	AddSale() error
+}
+
+type SaleField struct { // TODO: sales is multiple only for LC!
+	Sale *AlternateCollectionId `bson:"sale,omitempty" json:"sale,omitempty"`
+}
+
+type SalesField struct { // TODO: sales is multiple only for LC, sporeSwab, and pegs!
+	Sales []AlternateCollectionId `bson:"sales,omitempty" json:"sales,omitempty"`
+}
+
+func (field SalesField) AddSale() {
+	// TODO: IMPL AND USE
+}
+
 type Sale struct {
-	Lot         alternateCollectionId `bson:"_id" json:"_id"` // Lot number
-	SaleDate    unixTime              `bson:"saleDate" json:"saleDate"`
-	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+	AlternateCollectionIdField
+	//Lot               AlternateCollectionId `bson:"_id" json:"_id"` // Lot number // TODO: REMOVED
+	CreationDateField // This is sale date
+	NotesField
+	LastUpdatedField
+	PermsField
 }
 
 func (s Sale) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := s
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (s Sale) clean() CollectionItem {
-	return s
 }
 
 func (s Sale) CollectionName() string {
@@ -39,7 +67,7 @@ func (s Sale) EntryTypeField() *string {
 	return nil
 }
 
-func initializeSales(ctx context.Context) error { // TODO: USE!!!!
+func initializeSales(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(salesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
@@ -52,10 +80,10 @@ func initializeSales(ctx context.Context) error { // TODO: USE!!!!
 	// If test agar batch does not exist, then create it
 	existingEntry := Sale{}
 	testItem := Sale{
-		Lot:         exAltId,
-		SaleDate:    exampleTime,
-		Notes:       exampleNotes(),
-		LastUpdated: exampleTime,
+		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		CreationDateField:          exampleTime.asCreationDate(),
+		NotesField:                 NotesField{exampleNotes()},
+		LastUpdatedField:           LastUpdatedField{exampleTime},
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -77,10 +105,17 @@ func initializeSales(ctx context.Context) error { // TODO: USE!!!!
 }
 
 type createSaleRequest struct {
-	Notes []Note `json:"notes"`
+	Items []SoldItem
+	NotesField
+}
+
+type SoldItem struct {
+	Type string // TODO: fix
+	ID   string
 }
 
 func createSaleHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: PERMISSIONS! REUSE THEM FROM PARENT
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -93,20 +128,24 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
 		coll := db.Collection(salesCollectionName)
-		now := unixTime(time.Now().UnixMilli())
+		now := unixTimeForNow()
 		id := newAlternateCollectionId()
-		_, err = coll.InsertOne(r.Context(), Sale{
-			Lot:         alternateCollectionId(id),
-			SaleDate:    now,
-			Notes:       req.Notes,
-			LastUpdated: now,
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+		toInsert := Sale{
+			AlternateCollectionIdField: AlternateCollectionIdField{id},
+			CreationDateField:          unixTimeForNow().asCreationDate(),
+			NotesField:                 req.NotesField,
+			LastUpdatedField:           LastUpdatedField{now},
+			PermsField:                 PermsField{nil}, // TODO: THIS!!!!!!!!!!!!!
 		}
-		_, err = w.Write(id.base58Bytes())
-		return nil, err
+		_, err = coll.InsertOne(r.Context(), toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -115,6 +154,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateSaleRequest struct {
 	Notes AllEntries[Note]
+	PermsField
 }
 
 func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
@@ -146,27 +186,36 @@ func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			http.Error(w, err.Error(), stat)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		mods := bson.D{}
-		// Do note changes
-		mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
+		if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
+			return DbTxnStdErr(w, "bad overlapping perms for user: "+err.Error(), http.StatusBadRequest)
+		}
+		upd, err := NewMods().
+			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updatePermsIfNeeded(req.Perms, existing.Perms).
+			updateLastUpdatedIfNeeded().
+			Finalized()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
+		if len(upd) == 0 {
+			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
 		}
-		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", b58Id}}, mods)
-		err = result.Err()
+		bsonId := bson.D{{"_id", id}}
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		_, err = w.Write([]byte(b58Id))
-		return nil, err
+		err = coll.FindOne(ctx, bsonId).Decode(&existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)

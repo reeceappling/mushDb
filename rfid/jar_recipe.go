@@ -1,39 +1,51 @@
 package rfid
 
+// TODO: JAR RECIPE BATCH (soaked? simmered/time?)
+
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"reflect"
 	sliceutils "slices"
-	"time"
 )
 
 const jarRecipesCollectionName = "jarRecipes"
 
+type JarRecipeField struct {
+	Recipe *AlternateCollectionId `bson:"recipe,omitempty" json:"recipe,omitempty"`
+}
+
+func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) {
+	if field.Recipe == nil {
+		return out, ErrMissingOptionalField
+	}
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(jarRecipesCollectionName).
+		FindOne(ctx, bson.M{"_id": *field.Recipe}).Decode(&out)
+	return
+}
+
 type JarRecipe struct {
-	Id          alternateCollectionId `bson:"_id" json:"_id"`
-	Name        string                `bson:"name" json:"name"`
-	Grain       grain                 `bson:"grain" json:"grain"`
-	Standard    bool                  `bson:"standard" json:"standard"`                       // If this is a standard recipe
-	Nutrients   []nutrientMeasurement `bson:"nutrients,omitempty" json:"nutrients,omitempty"` // Per grain jar
-	Sugars      []sugarMeasurement    `bson:"sugars,omitempty" json:"sugars,omitempty"`       // Per grain jar
-	Additives   []additiveMeasurement `bson:"additives,omitempty" json:"additives,omitempty"`
-	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+	AlternateCollectionIdField
+	NameField
+	Grain          grain `bson:"grain" json:"grain"` // TODO: multiple? grain percentages
+	StandardField                                    // If this is a standard recipe
+	NutrientsField                                   // Per grain jar?
+	SugarsField                                      // Per grain jar?
+	AdditivesField                                   // Per grain jar?
+	NotesField
+	LastUpdatedField
 }
 
 func (recipe JarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := recipe
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (recipe JarRecipe) clean() CollectionItem {
-	return recipe
 }
 
 func (recipe JarRecipe) EntryTypeField() *string {
@@ -65,37 +77,37 @@ func initializeJarRecipes(ctx context.Context) error {
 	inserted, updated := 0, 0
 	for _, recipe := range []JarRecipe{
 		{
-			Name:     "Popcorn",
-			Id:       alternateCollectionId(altCollIdForint(idJarPop)),
-			Grain:    Popcorn,
-			Standard: true,
-			Notes: []Note{
+			NameField:                  NameField{"Popcorn"},
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarPop)},
+			Grain:                      Popcorn,
+			StandardField:              StandardField{true},
+			NotesField: NotesField{[]Note{
 				builtInNote("Typically pretty expensive comparably to oats"),
-			},
+			}},
 		},
 		{
-			Name:     "Oats",
-			Id:       alternateCollectionId(altCollIdForint(idJarOat)),
-			Grain:    Oats,
-			Standard: true,
-			Notes:    nil,
+			NameField:                  NameField{"Oats"},
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOat)},
+			Grain:                      Oats,
+			StandardField:              StandardField{true},
+			NotesField:                 NotesField{},
 		},
 		{
-			Name:     "Oats with standard additives",
-			Id:       alternateCollectionId(altCollIdForint(idJarOatWithVermGypsum)),
-			Grain:    Oats,
-			Standard: true,
-			Sugars: []sugarMeasurement{
+			NameField:                  NameField{"Oats with standard additives"},
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOatWithVermGypsum)},
+			Grain:                      Oats,
+			StandardField:              StandardField{true},
+			SugarsField: SugarsField{[]sugarMeasurement{
 				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
-			},
-			Additives: []additiveMeasurement{
+			}},
+			AdditivesField: AdditivesField{[]additiveMeasurement{
 				newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
 				newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
-			},
-			Notes: []Note{
+			}},
+			NotesField: NotesField{[]Note{
 				builtInNote("Gypsum helps grains to not stick, and adds calcium and sulfur"),
 				builtInNote("Vermioculite should be added after oats are boiled"),
-			},
+			}},
 		},
 	} {
 		var existing JarRecipe
@@ -167,20 +179,56 @@ func initializeJarRecipes(ctx context.Context) error {
 			updated++
 		}
 	}
+	// If test jar recipe does not exist, then create it
+	existingEntry := JarRecipe{}
+	testItem := JarRecipe{
+		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		NameField:                  NameField{"testJarRecipeName"},
+		Grain:                      BirdSeed,
+		StandardField:              StandardField{false},
+		NutrientsField: NutrientsField{[]nutrientMeasurement{
+			{
+				Nutrient: LME,
+				Amount:   1,
+				Unit:     "kg",
+			},
+			{
+				Nutrient: Potato,
+				Amount:   8,
+				Unit:     "ug",
+			},
+		}},
+		SugarsField: SugarsField{[]sugarMeasurement{
+			newSugarMeasurement(Honey, 1, "large drop per quart jar"),
+		}},
+		AdditivesField: AdditivesField{[]additiveMeasurement{
+			newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
+			newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
+		}},
+		NotesField:       NotesField{exampleNotes()},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+	}
+	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+	if err == nil {
+		if reflect.DeepEqual(existingEntry, testItem) {
+			return nil
+		}
+	}
+	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 	if inserted+updated > 0 { // TODO: ok?
 		println(fmt.Sprintf(`Jar recipes: inserted %d, updated %d`, inserted, updated))
 	}
-	return nil
+	return err
 }
 
 type createJarRecipeRequest struct {
-	Name      string                `bson:"name" json:"name"`
-	Grain     grain                 `bson:"grain" json:"grain"`
-	Standard  bool                  `bson:"standard" json:"standard"`                       // If this is a standard recipe
-	Nutrients []nutrientMeasurement `bson:"nutrients,omitempty" json:"nutrients,omitempty"` // Per grain jar
-	Sugars    []sugarMeasurement    `bson:"sugars,omitempty" json:"sugars,omitempty"`       // Per grain jar
-	Additives []additiveMeasurement `bson:"additives,omitempty" json:"additives,omitempty"`
-	Notes     []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
+	NameField
+	Grain         grain `bson:"grain" json:"grain"`
+	StandardField       // If this is a standard recipe
+	NutrientsField
+	SugarsField
+	AdditivesField
+	NotesField
 }
 
 func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -195,30 +243,37 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := newAlternateCollectionId()
+	if err := errors.Join( // TODO: do this on all other recipes and stuff
+		req.Grain.Validate(),
+		req.NutrientsField.Validate(),
+		req.SugarsField.Validate(),
+		req.AdditivesField.Validate(),
+	); err != nil {
+		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(jarRecipesCollectionName)
-		res, err := coll.InsertOne(r.Context(), JarRecipe{
-			Id:          alternateCollectionId(id),
-			Name:        req.Name,
-			Grain:       req.Grain,
-			Standard:    req.Standard,
-			Nutrients:   req.Nutrients,
-			Sugars:      req.Sugars,
-			Additives:   req.Additives,
-			Notes:       req.Notes,
-			LastUpdated: unixTime(time.Now().UnixMilli()),
-		})
+		toInsert := JarRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
+			NameField:                  NameField{req.Name},
+			Grain:                      req.Grain,
+			StandardField:              StandardField{req.Standard},
+			NutrientsField:             NutrientsField{req.Nutrients},
+			SugarsField:                SugarsField{req.Sugars},
+			AdditivesField:             AdditivesField{req.Additives},
+			NotesField:                 NotesField{req.Notes},
+			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		}
+		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		altId, ok := res.InsertedID.(alternateCollectionId)
-		if !ok {
-			http.Error(w, "id fail, should never happen", http.StatusInternalServerError)
-			return nil, nil
+		bs, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write(altId.base58Bytes())
+		return w.Write(bs)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -226,9 +281,9 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateJarRecipeRequest struct {
-	Name     string           `json:"name"`
-	Standard bool             `json:"standard"`
-	Notes    AllEntries[Note] `json:"notes"`
+	NameField
+	StandardField
+	Notes AllEntries[Note] `json:"notes"`
 }
 
 func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: txn?
@@ -250,7 +305,7 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	existing, err := GetAltCollectionItem(r.Context(), id.String(), JarRecipe{})
+	existing, err := GetAltCollectionItem(r.Context(), id, JarRecipe{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -259,39 +314,39 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	if !ableToModify(r.Context()) { // TODO: DO THIS EVERYWHERE!
-		http.Error(w, "not permitted to modify", http.StatusForbidden)
+	// TODO: make and/or validate grain changes?
+	upd, err := NewMods().
+		updateNameIfNeeded(req.Name, existing.Name).
+		updateStandardIfNeeded(req.Standard, existing.Standard).
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		Finalized()
+	if err != nil {
+		http.Error(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	mods := bson.D{}
-	// change name if needed
-	if req.Name != existing.Name {
-		mods = bson.D{{"$set", bson.D{{"name", req.Name}}}}
-	}
-	// change standard if needed
-	if req.Standard != existing.Standard {
-		mods = bson.D{{"$set", bson.D{{"standard", req.Standard}}}}
-	}
-	// Do note changes
-	mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-	if len(mods) == 0 {
+	if len(upd) == 0 {
 		http.Error(w, "no changes made", http.StatusBadRequest)
 		return
 	}
+
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(jarRecipesCollectionName)
-		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", existing.Id}}, mods)
-		err := result.Err()
+		bsonId := bson.D{{"_id", existing.Id}}
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write([]byte(b58Id))
+		err = coll.FindOne(ctx, bsonId).Decode(&existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bs, err = json.Marshal(existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bs)
 	})
 	if err != nil {
-		handleWriteErr(err, w)
+		HandleHttpWriteError(err)
 	}
 }

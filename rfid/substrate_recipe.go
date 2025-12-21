@@ -8,29 +8,36 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"reflect"
 	sliceutils "slices"
-	"time"
 )
 
-const substrateRecipesCollectionName = "subRecipes"
+const substrateRecipesCollectionName = "substrateRecipes"
+
+type SubstrateRecipeField struct {
+	Substrate AlternateCollectionId `bson:"recipe" json:"recipe"`
+}
+
+func (field SubstrateRecipeField) Get(ctx context.Context) (out SubstrateRecipe, err error) {
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pcRunCollectionName).FindOne(ctx, bson.M{
+		"_id": field.Substrate,
+	}).Decode(&out)
+	return out, err
+}
 
 type SubstrateRecipe struct {
-	Id          alternateCollectionId `bson:"_id" json:"_id"`
-	Name        string                `bson:"name" json:"name"`         // TODO: ensure indexed and properly handled
-	Standard    bool                  `bson:"standard" json:"standard"` // If this is a standard recipe // TODO: account for this
-	Aliases     []string              `bson:"aliases,omitempty" json:"aliases,omitempty"`
-	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"` // TODO: ingredients in notes
-	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+	AlternateCollectionIdField
+	NameField
+	StandardField
+	AliasesField // TODO: make sure no duplicates
+	NotesField   // TODO: ingredients in notes
+	LastUpdatedField
 }
 
 func (recipe SubstrateRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := recipe
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (recipe SubstrateRecipe) clean() CollectionItem {
-	return recipe
 }
 
 func (recipe SubstrateRecipe) EntryTypeField() *string {
@@ -59,24 +66,24 @@ func initializeSubstrates(ctx context.Context) error {
 	for _, recipe := range []SubstrateRecipe{
 		// Coir
 		{
-			Name:     "Coir",
-			Aliases:  []string{},
-			Id:       alternateCollectionId(altCollIdForint(idCoir)), // TODO: this
-			Standard: true,
-			Notes: []Note{
+			NameField:                  NameField{"Coir"},
+			AliasesField:               AliasesField{[]string{}},
+			AlternateCollectionIdField: altCollIdFieldForint(idCoir),
+			StandardField:              StandardField{true},
+			NotesField: NotesField{[]Note{
 				{
 					Time: ogTime,
 					Note: "roughly 40g dry coir, 1 cup H20 per quart",
 				},
-			},
+			}},
 		},
 		// Coir and Vermiculite
 		{
-			Name:     "CVG",
-			Aliases:  []string{"Coir with Vermiculite"},
-			Id:       alternateCollectionId(altCollIdForint(idCoirVerm)), // TODO: this
-			Standard: true,
-			Notes: []Note{
+			NameField:                  NameField{"CVG"},
+			AliasesField:               AliasesField{[]string{"Coir with Vermiculite"}},
+			AlternateCollectionIdField: altCollIdFieldForint(idCoirVerm),
+			StandardField:              StandardField{true},
+			NotesField: NotesField{[]Note{
 				{
 					Time: ogTime,
 					Note: "Recipe: roughly 40g dry coir, up to 1/2 cup vermiculite, 1 cup H20 per quart",
@@ -85,19 +92,19 @@ func initializeSubstrates(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Vermiculite helps to keep more moisture in the substrate over time",
 				},
-			},
+			}},
 		},
 		{
-			Name:     "HWFP",
-			Aliases:  []string{"Hardwood Fuel Pellets"},
-			Id:       alternateCollectionId(altCollIdForint(idWoodPellets)), // TODO: this
-			Standard: true,
-			Notes: []Note{
+			NameField:                  NameField{"HWFP"},
+			AliasesField:               AliasesField{[]string{"Hardwood Fuel Pellets"}},
+			AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
+			StandardField:              StandardField{true},
+			NotesField: NotesField{[]Note{
 				{
 					Time: ogTime,
 					Note: "Roughly equal parts wood pellets and water (maybe less water. Do less at first to ensure field capacity)",
 				},
-			},
+			}},
 		},
 	} {
 		var existing SubstrateRecipe
@@ -137,17 +144,34 @@ func initializeSubstrates(ctx context.Context) error {
 			updated++
 		}
 	}
-	if inserted+updated > 0 { // TODO: ok?
-		println(fmt.Sprintf(`Substrate recipes: inserted %d, updated %d`, inserted, updated))
+	// Add test entry
+	existingEntry := SubstrateRecipe{}
+	testItem := SubstrateRecipe{
+		AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
+		NameField:                  NameField{testEntryStringId},
+		StandardField:              StandardField{false},
+		AliasesField:               AliasesField{[]string{"testSubstrate", "example substrate"}}, // TODO: search by aliases?
+		NotesField:                 NotesField{exampleNotes()},
+		LastUpdatedField:           LastUpdatedField{exampleTime},
 	}
-	return nil
+	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+	if err == nil {
+		if reflect.DeepEqual(existingEntry, testItem) {
+			return nil
+		}
+	}
+	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	if inserted+updated > 0 {
+		println(fmt.Sprintf(`SubstrateRecipe: inserted %d, updated %d`, inserted, updated))
+	}
+	return err
 }
 
 type createSubstrateRecipeRequest struct {
-	Name     string   `bson:"name" json:"name"`
-	Aliases  []string `json:"aliases,omitempty"`
-	Standard bool     `json:"standard"` // If this is a standard recipe
-	Notes    []Note   `json:"notes,omitempty"`
+	NameField
+	AliasesField
+	StandardField // If this is a standard recipe
+	NotesField
 }
 
 func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -164,19 +188,23 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	id := newAlternateCollectionId()
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(substrateRecipesCollectionName)
-		_, err := coll.InsertOne(r.Context(), SubstrateRecipe{
-			Id:          alternateCollectionId(id),
-			Name:        req.Name,
-			Aliases:     req.Aliases,
-			Standard:    req.Standard,
-			Notes:       req.Notes,
-			LastUpdated: unixTime(time.Now().UnixMilli()),
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+		toInsert := SubstrateRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{id},
+			NameField:                  req.NameField,
+			AliasesField:               req.AliasesField,
+			StandardField:              req.StandardField,
+			NotesField:                 req.NotesField,
+			LastUpdatedField:           LastUpdatedFieldForNow(),
 		}
-		return w.Write(id.base58Bytes())
+		_, err = coll.InsertOne(r.Context(), toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -184,10 +212,10 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSubstrateRecipeRequest struct {
-	Name     string           `bson:"name" json:"name"`
-	Aliases  []string         `json:"aliases,omitempty"`
-	Standard bool             `json:"standard"` // If this is a standard recipe
-	Notes    AllEntries[Note] `json:"notes"`
+	NameField
+	AliasesField
+	StandardField
+	Notes AllEntries[Note] `json:"notes"`
 }
 
 func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -211,42 +239,38 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(substrateRecipesCollectionName)
-		existing, err := GetAltCollectionItemInTxn(ctx, id.String(), SubstrateRecipe{})
+		existing, err := GetAltCollectionItemInTxn(ctx, id, SubstrateRecipe{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			http.Error(w, err.Error(), stat)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		mods := bson.D{}
-		// change name if needed
-		if req.Name != existing.Name {
-			mods = bson.D{{"$set", bson.D{{"name", req.Name}}}}
-		}
-		// aliases
-		mods = setStringArrayIfUnequal(mods, req.Aliases, existing.Aliases, "aliases")
-		// change standard if needed
-		if req.Standard != existing.Standard {
-			mods = bson.D{{"$set", bson.D{{"standard", req.Standard}}}}
-		}
-		// Do note changes
-		mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
+		upd, err := NewMods().
+			updateNameIfNeeded(req.Name, existing.Name).
+			updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: make sure no duplicates?
+			updateStandardIfNeeded(req.Standard, existing.Standard).
+			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updateLastUpdatedIfNeeded().
+			Finalized()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			return DbTxnStdErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
 		}
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
-		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", existing.Id}}, mods)
-		err = result.Err()
+		bsonId := bson.D{{"_id", existing.Id}}
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write([]byte(b58Id))
+		err = coll.FindOne(ctx, bsonId).Decode(&existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)

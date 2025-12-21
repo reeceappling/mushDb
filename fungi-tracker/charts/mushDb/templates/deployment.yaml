@@ -31,7 +31,6 @@ spec:
               # TODO: next line must match go and tsx
               mountPath: {{ quote .Values.picsPathAbsolute }}
           env:
-            # TODO: delete next vars DIR_TO_CHECK and FILE_TO_CHECK later
             - name: "PICS_PATH"
               # TODO: next line must match go and tsx and above
               value: {{ quote .Values.picsPathAbsolute }}
@@ -61,10 +60,10 @@ spec:
           image: mush-web:latest
           imagePullPolicy: Never
           ports:
-            - name: http-web
+            - name: http-web # TODO: the image likely needs env vars?
               containerPort: 3000
         - name: mush-db
-          image: mongo:8-noble
+          image: {{ include "mushDb.dbImage" . }}
           imagePullPolicy: IfNotPresent
           args: ["--dbpath","/data/db"]
           ports:
@@ -113,8 +112,7 @@ metadata:
 provisioner: microk8s.io/hostpath
 reclaimPolicy: Retain
 allowVolumeExpansion: true
-volumeBindingMode: Immediate
-{{/*volumeBindingMode: WaitForFirstConsumer*/}}
+volumeBindingMode: WaitForFirstConsumer
 ---
 apiVersion: v1
 kind: PersistentVolume

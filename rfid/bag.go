@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"github.com/reeceappling/goUtils/v2/utils/slices"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -14,39 +13,46 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"strconv"
-	"strings"
-	"time"
 )
 
-const BagSourceType = "bag"
+const (
+	BagSourceType = "bag"
+	bagIdPrefix   = "BG"
+)
+
+type SubstrateBatchOptionalField struct { // TODO: MOVE
+	SubstrateBatch *AlternateCollectionId `bson:"substrateBatch,omitempty" json:"substrateBatch,omitempty"`
+}
 
 type Bag struct {
-	EntryType            string                  `bson:"entryType" json:"entryType"`
-	Id                   MainCollectionId        `bson:"_id" json:"_id"`
-	Substrate            alternateCollectionId   `bson:"recipe" json:"recipe"`
-	PcRun                *alternateCollectionId  `bson:"pcRun,omitempty" json:"pcRun,omitempty"` // this may not exist for pre-existing bags
-	FilterSize           string                  `bson:"filterSize" json:"filterSize"`
-	CreationDate         unixTime                `bson:"creationDate" json:"creationDate"`
-	GenSinceSpore        *Generation             `bson:"genSpore,omitempty" json:"genSpore,omitempty"`
-	GenSinceFruitOrSpore *Generation             `bson:"genFruitOrSpore,omitempty" json:"genFruitOrSpore,omitempty"`
-	SealDate             *unixTime               `bson:"sealDate,omitempty" json:"sealDate,omitempty"`             // set on transfer in
-	KnownFruitable       *bool                   `bson:"knownFruitable,omitempty" json:"knownFruitable,omitempty"` // set on transfer in, or once fruited
-	Species              *string                 `bson:"species,omitempty" json:"species,omitempty"`               // set on transfer in
-	SubSpecies           *string                 `bson:"subSpecies,omitempty" json:"subSpecies,omitempty"`         // set on transfer in
-	Innoc                *alternateCollectionId  `bson:"innoc,omitempty" json:"innoc,omitempty"`                   // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOut         []alternateCollectionId `bson:"transfersOut,omitempty" json:"transfersOut,omitempty"`     // Set on transfer out
-	ParentType           *string                 `bson:"parentType,omitempty" json:"parentType,omitempty"`
-	Parent               *MainCollectionId       `bson:"parent,omitempty" json:"parent,omitempty"` // Set on transfer in
-	Projects             []string                `bson:"projects,omitempty" json:"projects,omitempty"`
-	Pics                 []PicWithNotes          `bson:"pics,omitempty" json:"pics,omitempty"`                   // Updated independently
-	Contaminations       []Contamination         `bson:"contamination,omitempty" json:"contamination,omitempty"` // Updated independently
-	MostRecentImage      *PicWithNotes           `bson:"mostRecentImage,omitempty" json:"mostRecentImage,omitempty"`
-	Flushes              []PicWithNotes          `bson:"flushes,omitempty" json:"flushes,omitempty"` // Updated independently
-	Sale                 *alternateCollectionId  `bson:"sale,omitempty" json:"sale,omitempty"`
-	Disposed             *unixTime               `bson:"disposed,omitempty" json:"disposed,omitempty"`
-	Notes                []Note                  `bson:"notes,omitempty" json:"notes,omitempty"` // Updated independently
-	LastUpdated          unixTime                `bson:"lastUpdated" json:"lastUpdated"`
+	EntryTypeStructField
+	MainCollectionIdField
+	SubstrateRecipeField
+	SubstrateBatchOptionalField // TODO: NEW! HANDLE
+	PcRunOptionalField          // this may not exist for pre-existing bags
+	//Size int // TODO: unsure what to do here
+	FilterSize string `bson:"filterSize" json:"filterSize"`
+	CreationDateField
+	GenerationsFields
+	SealDate                  *unixTime `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                        // Initial wetness (refer to scale on field struct) // TODO: new
+	KnownFruitableField                 // set on transfer in, or once fruited
+	SpeciesOptionalField                // set on transfer in
+	SubspeciesOptionalField             // set on transfer in
+	InnocField                          // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                   // Set on transfer out
+	ParentTypeField                     // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	BinaryOptionalParentField           // Set on transfer in
+	PicsField                           // Updated independently
+	ContaminationsField                 // Updated independently
+	MostRecentImageField
+	FlushesField // Updated independently
+	SaleField
+	DisposedField
+
+	NotesField // Updated independently
+	LastUpdatedField
+	PermsField
 }
 
 func (b Bag) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -55,34 +61,12 @@ func (b Bag) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	return out, err
 }
 
-func (b Bag) clean() CollectionItem {
-	out := b
-	// TODO: Change species
-	// TODO: change subspecies
-	// TODO: remove parentType and Parent
-	// TODO: remove projects
-	// TODO: remove pic notes
-	// TODO: remove mostRecentImage notes
-	// TODO: remove flushes notes
-	// TODO: remove notes
-	return out
-}
-
-func (b Bag) DbId() string {
-	return b.Id.dbIdStr()
-}
-
-func (b Bag) projects() []string {
-	return b.Projects
-}
-
 func (b Bag) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
-		Species:               b.Species,
-		Subspecies:            b.SubSpecies,
-		KnownFruitable:        b.KnownFruitable,
-		GensSinceSpore:        b.GenSinceSpore,
-		GensSinceFruitOrSpore: b.GenSinceFruitOrSpore,
+		SpeciesOptionalField:    SpeciesOptionalField{b.Species},
+		SubspeciesOptionalField: SubspeciesOptionalField{b.SubSpecies},
+		KnownFruitableField:     KnownFruitableField{b.KnownFruitable},
+		GenerationsFields:       b.GenerationsFields,
 	}, nil
 }
 
@@ -95,75 +79,47 @@ func (b Bag) SourceType() string {
 }
 
 func (b Bag) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
-	upd := pushToArray("transfersOut", xfer.Id)
+	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+	if err != nil {
+		return err
+	}
 	res, err := ctx.Client().Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, b.Id, upd)
 	if err != nil {
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("Parent not found for transfer update. Should never happen!")
+		return ErrNoParentModifiedForTransfer
 	}
 	return nil
 }
 
 func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
-	parentInfo, err := from.GeneticInfoAsParent()
+	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
 	}
-	if parentInfo.Species == nil {
-		return errors.New("parent must have a species")
-	}
-	var genSpore *Generation = nil
-	var genFruitSpore *Generation = nil
-	switch from.SourceType() {
-	case MssSourceType:
-		genSpore = utils.Pointer(Generation(0))
-		genFruitSpore = utils.Pointer(Generation(0))
-	case FruitSourceType:
-		genSpore = parentInfo.GensSinceSpore
-		genFruitSpore = utils.Pointer(Generation(0))
-	default:
-		genSpore = parentInfo.GensSinceSpore.Next()
-		genFruitSpore = parentInfo.GensSinceFruitOrSpore.Next()
-	}
-	upd := bson.D{bson.E{"$set", bson.D{
-		{"innoc", xfer.Id},
-		{"lastUpdated", xfer.LastUpdated},
-		{"parentType", xfer.FromType},
-		{"parent", from.DbId()},            // TODO: ENSURE OK!
-		{"genSpore", genSpore},             // TODO: ensure works with ptr
-		{"genFruitOrSpore", genFruitSpore}, // TODO: ensure works with ptr
-		{"species", *parentInfo.Species},
-		{"projects", from.projects()},
-		{"sealDate", xfer.LastUpdated},
-		{"lastUpdated", xfer.LastUpdated},
-	}}}
-
-	pics := []PicWithNotes{}
-	if xfer.ToImage != nil {
-		pic := PicWithNotes{
-			Time:     xfer.Date,
-			Location: *xfer.ToImage,
-			Notes:    []Note{},
-		}
-		pics = []PicWithNotes{pic}
-		upd = append(upd, bson.E{"$set", bson.D{{"mostRecentImage", pic}}})
-	}
-	upd = append(upd, bson.E{"$set", bson.D{{"pics", pics}}})
-	if parentInfo.KnownFruitable != nil {
-		upd = append(upd, bson.E{"$set", bson.D{{"knownFruitable", *parentInfo.KnownFruitable}}})
-	}
-
-	if parentInfo.Subspecies != nil {
-		upd = append(upd, bson.E{"$set", bson.D{{"subSpecies", *parentInfo.Subspecies}}})
+	upd, err := xfer.
+		PicsModsForChild().
+		Set("sealDate", xfer.LastUpdated).
+		withInnoc(xfer).
+		withParentType(utils.Pointer(xfer.FromType)).
+		withParent(utils.Pointer(from.DbId())).
+		withGens(genSpore, genFruitSpore).
+		withSpecies(parentInfo.Species).
+		withSubspecies(parentInfo.SubSpecies).
+		withKnownFruitable(parentInfo.KnownFruitable).
+		updatePermsIfNeeded(xfer.Perms, b.Perms).
+		withLastUpdated(xfer.LastUpdated).
+		Finalized()
+	if err != nil {
+		return ErrFailedToFinalizeMods
 	}
 	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, b.Id, upd)
 	if err != nil {
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("Parent not found for transfer update. Should never happen!") // TODO: MAKE VAR
+		return ErrNoParentModifiedForTransfer
 	}
 	return nil
 }
@@ -180,37 +136,16 @@ func (b Bag) id() []byte {
 	return b.Id[:]
 }
 
-func (b Bag) knownFruitable() bool {
-	return *b.KnownFruitable // TODO: ensure not nil
-}
-
-func (b Bag) newFruit(ctx context.Context, pics []PicWithNotes, notes ...Note) error {
-	return newFruitFromFruiter(ctx, b, pics, notes...)
-}
-
 func (b Bag) basicFruit() Fruit {
-	var gen *Generation = nil
-	if b.GenSinceSpore != nil {
-		gen = utils.Pointer((*b.GenSinceSpore) + 1) // TODO: +1 here ok?
-	}
 	return Fruit{
-		Id:            alternateCollectionId(primitive.NewObjectID()),
-		Species:       *b.Species,
-		SubSpecies:    b.SubSpecies,
-		Parent:        &b.Id,
-		GenSinceSpore: gen,
-		ParentType:    utils.Pointer("bag"),
-		Projects:      b.Projects,
-		LastUpdated:   unixTime(time.Now().UnixMilli()),
+		AlternateCollectionIdField:        AlternateCollectionIdField{AlternateCollectionId(primitive.NewObjectID())},
+		SpeciesField:                      SpeciesField{*b.Species},
+		SubspeciesOptionalField:           b.SubspeciesOptionalField,
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&b.Id},
+		GenSporeField:                     GenSporeField{b.GenSinceSpore.Next()},
+		ParentTypeField:                   ParentTypeField{utils.Pointer("bag")},
+		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
 	}
-}
-
-func (b Bag) children(ctx context.Context) ([]geneticSource, error) { // TODO: needed?
-	return childrenAreOnlyFruits(ctx, b.TransfersOut)
-}
-
-func (b Bag) idAsStr() string {
-	return b.Id.dbIdStr()
 }
 
 func initializeBags(ctx context.Context) error {
@@ -220,31 +155,32 @@ func initializeBags(ctx context.Context) error {
 	existingEntry := Bag{}
 	testId := mainCollIdForint(idTestBag)
 	testItem := Bag{
-		EntryType:            *existingEntry.EntryTypeField(),
-		Id:                   testId,
-		Substrate:            exAltId,
-		PcRun:                &exAltId,
-		FilterSize:           "5nm",
-		CreationDate:         exampleTime,
-		GenSinceSpore:        &exGenSinceSpore,
-		GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		SealDate:             &exampleTime,
-		KnownFruitable:       exBool,
-		Species:              &exampleSpecies,
-		SubSpecies:           exampleSubspecies,
-		Innoc:                &exAltId,
-		TransfersOut:         exAlts,
-		ParentType:           &exParentType,
-		Parent:               &exPlate,
-		Projects:             exProjects,
-		Pics:                 exPics,
-		Contaminations:       exContams,
-		MostRecentImage:      &exPics[0],
-		Flushes:              exPics,
-		Sale:                 &exAltId,
-		Disposed:             &exampleTime,
-		Notes:                exampleNotes(),
-		LastUpdated:          exampleTime,
+		EntryTypeStructField:  EntryTypeStructField{*existingEntry.EntryTypeField()},
+		MainCollectionIdField: MainCollectionIdField{testId},
+		SubstrateRecipeField:  SubstrateRecipeField{exAltId},
+		PcRunOptionalField:    PcRunOptionalField{&exAltId},
+		FilterSize:            "5nm",
+		CreationDateField:     CreationDateField{exampleTime},
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{&exGenSinceSpore},
+			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+		},
+		SealDate:                  &exampleTime,
+		KnownFruitableField:       KnownFruitableField{exBool},
+		SpeciesOptionalField:      SpeciesOptionalField{&testEntryStringId},
+		SubspeciesOptionalField:   SubspeciesOptionalField{&testEntryStringId},
+		InnocField:                InnocField{&exAltId},
+		TransfersOutField:         TransfersOutField{exAlts},
+		ParentTypeField:           ParentTypeField{&exParentType},
+		BinaryOptionalParentField: BinaryOptionalParentField{utils.Pointer(exPlate.ToBinaryCollectionId())},
+		PicsField:                 PicsField{exPics},
+		ContaminationsField:       ContaminationsField{exContams},
+		MostRecentImageField:      MostRecentImageField{&exPics[0]},
+		FlushesField:              FlushesField{exPics},
+		SaleField:                 SaleField{&exAltId},
+		DisposedField:             DisposedField{&exampleTime},
+		NotesField:                NotesField{exampleNotes()},
+		LastUpdatedField:          LastUpdatedField{exampleTime},
 	}
 	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
@@ -252,16 +188,16 @@ func initializeBags(ctx context.Context) error {
 			return nil
 		}
 	}
-	return renameMe(ctx, coll, testId, testItem, existingEntry)
+	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
 }
 
 type createBagRequest struct {
-	Recipe       Base58Str // substrate recipe
-	PcRun        Base58Str
-	FilterSize   string
-	CreationDate unixTime
-	Notes        []Note `json:"notes,omitempty"`
-	WriteTagTo   *string
+	SubstrateRecipeField // substrate recipe
+	PcRunField
+	FilterSize string // TODO: validate?
+	CreationDateField
+	NotesField
+	WriteTagToField
 }
 
 func createBagHandler(w http.ResponseWriter, r *http.Request) {
@@ -271,7 +207,6 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	b58id := id.asBase58()
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -288,34 +223,36 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	recipeId, err := data.Recipe.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "failed to resolve substrate recipe ID: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	pcRunId, err := data.PcRun.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "failed to resolve substrate recipe ID: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	now := unixTime(time.Now().UnixMilli())
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
-		_, err := coll.InsertOne(ctx, Bag{
-			EntryType:    "bag",
-			Id:           id,
-			Substrate:    recipeId,
-			PcRun:        &pcRunId,
-			FilterSize:   data.FilterSize,
-			CreationDate: data.CreationDate,
-			Notes:        data.Notes,
-			LastUpdated:  now,
-		})
+		// Validate
+		_, err = data.PcRunField.Get(ctx)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
 		}
-		return w.Write([]byte(b58id))
+		_, err = data.SubstrateRecipeField.Get(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, "Substrate recipe validation failure: "+err.Error(), http.StatusBadRequest)
+		}
+		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		toInsert := Bag{
+			EntryTypeStructField:  EntryTypeStructField{"bag"},
+			MainCollectionIdField: MainCollectionIdField{id},
+			SubstrateRecipeField:  data.SubstrateRecipeField,
+			PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
+			FilterSize:            data.FilterSize,
+			CreationDateField:     data.CreationDateField,
+			NotesField:            data.NotesField,
+			LastUpdatedField:      LastUpdatedFieldForNow(),
+		}
+		_, err := coll.InsertOne(ctx, toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -323,55 +260,56 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateBagRequest struct {
-	KnownFruitable *bool                  `json:"knownFruitable,omitempty"`
-	Sale           *alternateCollectionId `json:"sale,omitempty"`
-	Disposed       *unixTime              `json:"disposed,omitempty"`
-	Projects       []string               `json:"projects,omitempty"`
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
-	Contams        SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
-	Flushes        SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
-	WriteTagTo     *string
+	KnownFruitableField
+	SaleField
+	DisposedField
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
+	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
+	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
+	WriteTagToField
+	PermsField
 }
 
 func (upr updateBagRequest) reform() resolvedUpdateBagRequest {
 	return resolvedUpdateBagRequest{
-		KnownFruitable: upr.KnownFruitable,
-		Sale:           upr.Sale,
-		Disposed:       upr.Disposed,
-		Projects:       upr.Projects,
-		Notes:          upr.Notes,
-		Images: SplitEntries[picWithNotesForm, PicWithNotes]{
-			Existing: upr.Images.Existing,
-			New: slices.Map(upr.Images.New, func(i PicWithNotesLessLocation) PicWithNotes {
-				return i.asPicWithNotes(nil)
-			}),
-		},
-		Contams: SplitEntries[contamForm, Contamination]{
-			Existing: upr.Contams.Existing,
-			New: slices.Map(upr.Contams.New, func(i ContaminationLessLocation) Contamination {
-				return i.asContamination(nil)
-			}),
-		},
-		Flushes: SplitEntries[picWithNotesForm, PicWithNotes]{
-			Existing: upr.Flushes.Existing,
-			New: slices.Map(upr.Flushes.New, func(i PicWithNotesLessLocation) PicWithNotes {
-				return i.asPicWithNotes(nil)
-			}),
-		},
+		KnownFruitableField: upr.KnownFruitableField,
+		SaleField:           upr.SaleField,
+		DisposedField:       upr.DisposedField,
+		Notes:               upr.Notes,
+		Images:              imageUpdates(upr.Images),
+		Contams:             contamUpdates(upr.Contams),
+		Flushes:             imageUpdates(upr.Flushes),
+		PermsField:          upr.PermsField,
 	}
 }
 
 type resolvedUpdateBagRequest struct {
-	KnownFruitable *bool
-	Sale           *alternateCollectionId
-	Disposed       *unixTime
-	Projects       []string
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams        SplitEntries[contamForm, Contamination]
-	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
+	KnownFruitableField
+	SaleField
+	DisposedField
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsField
 }
+
+func (out resolvedUpdateBagRequest) modsFor(current Bag) (bson.D, error) {
+	return NewMods().
+		updateKnownFruitableIfNeeded(out.KnownFruitable, current.KnownFruitable).
+		updateSaleIfNeeded(out.Sale, current.Sale).
+		updateDisposedIfNeeded(out.Disposed, current.Disposed).
+		updateNotesIfNeeded(out.Notes, current.Notes).
+		updatePicsIfNeeded(out.Images, current.Pics).
+		updateContamsIfNeeded(out.Contams, current.Contaminations).
+		updateFlushesIfNeeded(out.Flushes, current.Flushes).
+		updatePermsIfNeeded(out.Perms, current.Perms).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+}
+
+const maxMultipartRequestSize = 32<<20 + 1024 // TODO: is this max size ok?
 
 func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateBagRequest{}
@@ -380,28 +318,9 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
-	reader, err := r.MultipartReader()
+	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	p, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	// Process text (or object)
-	bs, errr := io.ReadAll(p)
-	if errr != nil {
-		err = errr
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		// Already written
 		return
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -409,80 +328,10 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Get any images
-	newPics := map[int]string{}
-	newContams := map[int]string{}
-	newFlushes := map[int]string{}
-	picsSaved := []string{}
-	defer func() {
-		if err != nil {
-			errDel := pics.DeleteFiles(r.Context(), picsSaved...)
-			if errDel != nil {
-				handleFileDeleteErr(errDel)
-			}
-		}
-	}()
-	for {
-		// Go to next part or break
-		p, err = reader.NextPart()
-		if err != nil {
-			if err != io.EOF {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			break
-		}
-		fileName := p.FileName()
-		if fileName == "" {
-			http.Error(w, "file name is empty for what should have been an image", http.StatusBadRequest)
-			return
-		}
-		// Process file
-		parts := strings.Split(fileName, "-")
-		if len(parts) != 2 {
-			http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
-			return
-		}
-		num, errr := strconv.Atoi(parts[1])
-		if errr != nil {
-			err = errr
-			http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
-			return
-		}
-		fieldBytes, err := multipartToImageBytes(p, w)
-		if err != nil {
-			// Already wrote
-			return
-		}
-		switch parts[0] {
-		case "newPic":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "bag", string(b58Id), "img")
-			if err != nil {
-				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			newPics[num] = newFileNameWithPrefixPath
-		case "newContam":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "bag", string(b58Id), "contam")
-			if err != nil {
-				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			newContams[num] = newFileNameWithPrefixPath
-		case "newFlush":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "bag", string(b58Id), "flush")
-			if err != nil {
-				http.Error(w, "failed to save new flush: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			newFlushes[num] = newFileNameWithPrefixPath
-		default:
-			http.Error(w, "invalid picture name. Should never occur", http.StatusInternalServerError)
-			return
-		}
+	newPics, newContams, newFlushes, err := getMultipartImages(r.Context(), "bag", w, reader, b58Id)
+	if err != nil {
+		// Already wrotw
+		return
 	}
 
 	// CHECK THAT ALL NEW PICS EXIST
@@ -514,64 +363,17 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		// go get current plate
-		current := Bag{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&current)
+		existing := Bag{}
+		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 
-		if speciesIsSpecial(ctx, current.Species) && !userIsAdmin(ctx) { // TODO: DO THIS EVERYWHERE!
-			http.Error(w, "not permitted to modify", http.StatusForbidden)
-			return nil, nil
+		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+			return DbTxnStdErr(w, "overlapping perms for user err: "+err.Error(), http.StatusUnauthorized)
 		}
-		upd := bson.D{}
-		// Compare KF
-		upd = setUnsetUnequalPointers("knownFruitable", out.KnownFruitable, current.KnownFruitable, upd)
-		// Compare SALE
-		upd = setUnsetUnequalPointers("sale", out.Sale, current.Sale, upd)
-		// Compare DISPOSED
-		upd = setUnsetUnequalPointers("disposed", out.Disposed, current.Disposed, upd)
-		// Do note changes
-		mods, err := WithNotesUpdate(bson.D{}, out.Notes, current.Notes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-
-		// Compare Images
-		mods, err = WithImageChanges(mods, "pics", out.Images, current.Pics)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-
-		// Compare Contams
-		mods, err = WithContamChanges(mods, "contamination", out.Contams, current.Contaminations)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-
-		// Compare Flushes
-		mods, err = WithImageChanges(mods, "flushes", out.Flushes, current.Flushes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
-
-		// write updates to db
-		res := coll.FindOneAndUpdate(ctx, bson.D{{"_id", id}}, mods)
-		if err = res.Err(); err != nil {
-			http.Error(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
-		}
-		return w.Write([]byte(b58Id))
+		upd, err := out.modsFor(existing)
+		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: DO THIS EVERYWHERE!
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -579,15 +381,16 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importBagRequest struct {
-	SealDate       unixTime  // Also becomes creation date
-	Recipe         Base58Str // Substrate recipe
-	FilterSize     string
-	Species        string
-	Subspecies     *string
-	Generation     *int
-	KnownFruitable *bool
-	WriteTagTo     *string
+	CreationDateField              // TODO: MAKE OPTIONAL?
+	SubstrateRecipeField           // TODO: MAKE OPTIONAL
+	FilterSize              string // TODO: MAKE OPTIONAL
+	SpeciesField                   // TODO: Check species perms too
+	SubspeciesOptionalField        // TODO: check perms and validate
+	Generation              *int
+	KnownFruitableField
+	WriteTagToField
 	// image as "img"
+	PermsField // TODO: new
 }
 
 func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FRUITING CHAMBER
@@ -598,7 +401,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 		return
 	}
 	b58id := id.asBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
@@ -621,12 +424,13 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 	var importedPic *PicWithNotes = nil
 	dataProcessed := false
 	filesProcessed := 0
-	for {
+	for { // TODO: FIX THIS MULTIPART READER
 		fileName := p.FileName()
 		defer p.Close()
 		if isFile := fileName != ""; isFile {
 			if filesProcessed == 1 {
-				// TODO: ERROR! DONT CREATE MORE THAN 1 IMAGE!
+				http.Error(w, "only allowed to create 1 image on import: "+err.Error(), http.StatusBadRequest)
+				return
 			}
 			// Process file
 			fieldBytes, err := multipartToImageBytes(p, w)
@@ -641,11 +445,11 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 				return
 			}
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			now := unixTime(time.Now().UnixMilli())
+			now := unixTimeForNow()
 			importedPic = &PicWithNotes{
-				Time:     now,
-				Location: imageLocation(newFileNameWithPrefixPath),
-				Notes:    []Note{},
+				Time:       now,
+				Location:   imageLocation(newFileNameWithPrefixPath),
+				NotesField: NotesField{[]Note{}},
 			}
 			filesProcessed++
 		} else {
@@ -680,8 +484,14 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if speciesIsSpecial(r.Context(), &data.Species) && !userIsAdmin(r.Context()) { // TODO: DO THIS EVERYWHERE!
-		http.Error(w, "not permitted to modify", http.StatusForbidden)
+	spec, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	if err != nil {
+		http.Error(w, "failed to get spec/subsp: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	finalPerms := minimalPermsBetween(data.Perms, spec, subsp) // TODO: subsp ptr ok here?
+	if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil {
+		http.Error(w, "user cannot write these perms: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -693,44 +503,47 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 	if data.Generation != nil {
 		gen = (*Generation)(data.Generation)
 	}
-	recipeId, err := data.Recipe.toAltCollectionId()
-	if err != nil {
-		// TODO: THIS!
-	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
 	out := Bag{
-		EntryType:            "bag",
-		Id:                   id,
-		Substrate:            recipeId,
-		PcRun:                nil,
-		FilterSize:           data.FilterSize,
-		CreationDate:         data.SealDate,
-		GenSinceSpore:        gen,
-		GenSinceFruitOrSpore: gen,
-		SealDate:             &data.SealDate,
-		KnownFruitable:       data.KnownFruitable,
-		Species:              &data.Species,
-		SubSpecies:           data.Subspecies,
-		Pics:                 pix,
-		Contaminations:       nil,
-		MostRecentImage:      importedPic,
-		Flushes:              nil,
-		Sale:                 nil,
-		Disposed:             nil,
-		Notes:                nil,
-		LastUpdated:          unixTime(time.Now().UnixMilli()),
-	}
+		EntryTypeStructField:    EntryTypeStructField{"bag"},
+		MainCollectionIdField:   MainCollectionIdField{id},
+		SubstrateRecipeField:    data.SubstrateRecipeField,
+		PcRunOptionalField:      PcRunOptionalField{},
+		FilterSize:              data.FilterSize,
+		CreationDateField:       data.CreationDateField,
+		GenerationsFields:       GenerationsFieldFor(gen),
+		SealDate:                &data.CreationDate,
+		KnownFruitableField:     data.KnownFruitableField,
+		SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
+		SubspeciesOptionalField: data.SubspeciesOptionalField,
+		PicsField:               PicsField{pix},
+		ContaminationsField:     ContaminationsField{},
+		MostRecentImageField:    MostRecentImageField{importedPic},
+		FlushesField:            FlushesField{},
+		SaleField:               SaleField{},
+		DisposedField:           DisposedField{},
+		NotesField:              NotesField{},
+		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+		PermsField:              PermsField{finalPerms}, // TODO: ALSO USE SPEC/SUBS PERMS!
+	} // TODO: update sessions (and projects?) with perm updates?
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		_, err = data.SubstrateRecipeField.Get(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, "substrate recipe retrieval error: "+err.Error(), http.StatusInternalServerError)
+		}
 		_, err := coll.InsertOne(ctx, out)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write([]byte(id.asBase58()))
+		bs, err := json.Marshal(out)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bs)
 	})
 	if err != nil {
 		handleWriteErr(err, w)

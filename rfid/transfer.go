@@ -7,51 +7,50 @@ import (
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/exp/maps"
 	"io"
 	"net/http"
 	"reflect"
-	"time"
 )
 
 const transfersCollName = "transfers"
 
-var transferReasons = map[transferReason]string{ // TODO: USE!
-	"old":           "parent was old, needed more room to grow",
-	"contamination": "parent was contaminated",
-	// TODO: more
+type TransfersOutField struct {
+	TransfersOut []AlternateCollectionId `bson:"transfersOut,omitempty" json:"transfersOut,omitempty"`
+}
+
+type InnocField struct { // TODO: multi-innocs?
+	Innoc *AlternateCollectionId `bson:"innoc,omitempty" json:"innoc,omitempty"`
+}
+
+type transferReason string
+
+var transferReasons = map[transferReason]string{
+	"outgrew":      "outgrew plate",
+	"contaminated": "parent was contaminated",
+	"sectoring":    "transferring a specific sector",
+	// TODO: more?
 }
 
 type Transfer struct {
-	Id          alternateCollectionId `bson:"_id" json:"_id"`
-	From        string                `bson:"from" json:"from"`
-	To          string                `bson:"to" json:"to"` // fruit, sporePrint are both alt
-	FromType    string                `json:"fromType"`     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
-	ToType      string                `json:"toType"`
-	Date        unixTime              `bson:"date" json:"date"`
-	Reason      transferReason        `bson:"reason" json:"reason"`
-	FromImage   *imageLocation        `bson:"fromImage,omitempty" json:"fromImage,omitempty"`
-	ToImage     *imageLocation        `bson:"toImage,omitempty" json:"toImage,omitempty"`
-	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+	AlternateCollectionIdField
+	From              BinaryCollectionId `bson:"from" json:"from"`
+	To                BinaryCollectionId `bson:"to" json:"to"` // fruit, sporePrint are both alt
+	FromType          string             `json:"fromType"`     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
+	ToType            string             `json:"toType"`
+	CreationDateField                    // TODO; changed from date to creationDate
+	Reason            transferReason     `bson:"reason" json:"reason"`
+	FromImage         *imageLocation     `bson:"fromImage,omitempty" json:"fromImage,omitempty"`
+	ToImage           *imageLocation     `bson:"toImage,omitempty" json:"toImage,omitempty"`
+	NotesField
+	LastUpdatedField
+	PermsField
 }
 
 func (t Transfer) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := t
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (t Transfer) clean() CollectionItem {
-	out := t
-	// TODO: Change species
-	// TODO: change subspecies
-	// TODO: remove parentType and Parent
-	// TODO: remove projects
-	// TODO: remove pic notes
-	// TODO: remove mostRecentImage notes
-	// TODO: remove flushes notes
-	// TODO: remove notes
-	return out
 }
 
 func (t Transfer) EntryTypeField() *string {
@@ -62,8 +61,23 @@ func (t Transfer) CollectionName() string {
 	return transfersCollName
 }
 
-func getGeneticItem(ctx mongo.SessionContext, entryType string, id string) (geneticSource, error) {
-	b58id := Base58Str(id)
+func (t Transfer) PicsModsForChild() *Mods {
+	if t.ToImage == nil {
+		return NewMods()
+	}
+	pic := PicWithNotes{
+		Time:       t.CreationDate,
+		Location:   *t.ToImage,
+		NotesField: NotesField{[]Note{}},
+	}
+	return NewMods().
+		withMostRecentImage(&pic).
+		withPics([]PicWithNotes{pic})
+}
+
+// Perms have not been checked when this runs yet // TODO: ?
+func getGeneticItem(ctx mongo.SessionContext, entryType string, binaryId BinaryCollectionId) (geneticSource, error) {
+	b58id := binaryId.asBase58()
 	if tempItem, exists := mainCollMap[entryType]; exists {
 		mcId, err := b58id.toMainCollectionId()
 		if err != nil {
@@ -100,9 +114,9 @@ func initializeTransfers(ctx context.Context) error {
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("from", "from", true, false, false),
 		newSimpleIndex("to", "to", true, false, false),
-		//From (likely no index)   string         `bson:"from" json:"from"` // TODO: ok?
+		//From (likely no index)   string         `bson:"from" json:"from"`
 		//To (no need for index) MainCollectionId `bson:"to" json:"to"`
-		//FromType (likely no index)   string         `bson:"from" json:"from"` // TODO: ok?
+		//FromType (likely no index)   string         `bson:"from" json:"from"`
 		//ToType (no need for index) MainCollectionId `bson:"to" json:"to"`
 		newSimpleIndex("date", "date", true, false, false),
 		newSimpleIndex("reason", "reason", false, false, false),
@@ -116,19 +130,20 @@ func initializeTransfers(ctx context.Context) error {
 	}
 	// If test agar batch does not exist, then create it
 	existingEntry := Transfer{}
-	fromTo := string(exPlate.asBase58()) // TODO: ensure ok
+	from := exPlate.ToBinaryCollectionId()
+	to := exJar.ToBinaryCollectionId()
 	testItem := Transfer{
-		Id:          exAltId,
-		From:        fromTo,
-		To:          fromTo,
-		FromType:    exParentType,
-		ToType:      exParentType,
-		Date:        exampleTime,
-		Reason:      "TRANSFER REASON HERE",
-		FromImage:   (*imageLocation)(&exPicLoc),
-		ToImage:     (*imageLocation)(&exPicLoc),
-		Notes:       exampleNotes(),
-		LastUpdated: exampleTime,
+		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		From:                       from,
+		To:                         to,
+		FromType:                   "plate",
+		ToType:                     "jar",
+		CreationDateField:          CreationDateField{exampleTime},
+		Reason:                     "A_REASONABLE_TRANSFER_REASON",
+		FromImage:                  (*imageLocation)(&exPicLoc),
+		ToImage:                    (*imageLocation)(&exPicLoc),
+		NotesField:                 NotesField{exampleNotes()},
+		LastUpdatedField:           LastUpdatedField{exampleTime},
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -136,27 +151,27 @@ func initializeTransfers(ctx context.Context) error {
 			return nil
 		}
 	}
-	return renameMe(ctx, coll, exAltId, testItem, existingEntry)
+	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 }
 
 type createTransferRequest struct {
-	From     Base58Str `json:"from,omitempty"`
-	To       Base58Str `json:"to,omitempty"`
-	FromType string    `json:"fromType,omitempty"`
-	ToType   string    `json:"toType,omitempty"`
-	Reason   string    `json:"reason,omitempty"`
+	From     BinaryCollectionId `json:"from,omitempty"` // TODO: check all other requests that accept bytes, will likely need to be this
+	To       BinaryCollectionId `json:"to,omitempty"`
+	FromType string             `json:"fromType,omitempty"`
+	ToType   string             `json:"toType,omitempty"`
+	Reason   string             `json:"reason,omitempty"`
 	// FromImage == 'picFrom'
 	// ToImage == 'picTo'
-	Notes []Note `json:"notes,omitempty"`
+	NotesField
 }
 
 func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	data := createTransferRequest{}
 	id := newAlternateCollectionId()
-	b58id := id.base58()
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+1024) // TODO: is this max size ok?
+	b58id := id.asBase58()
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
-	reader, err := r.MultipartReader()
+	reader, err := r.MultipartReader() // TODO: do streamlined
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
 		return
@@ -233,61 +248,61 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	parentId, err := data.From.Base2Bytes()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	childId, err := data.To.Base2Bytes()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	parentId := data.From
+	childId := data.To
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		now := unixTime(time.Now().UnixMilli())
+		now := unixTimeForNow()
 		db := ctx.Client().Database(dbName)
-		coll := db.Collection(transfersCollName)
 		// Get parent and child items
-		parent, errr := getGeneticItem(ctx, data.FromType, string(parentId))
+		parent, errr := getGeneticItem(ctx, data.FromType, parentId)
 		if errr != nil {
-			http.Error(w, "failed to get parent item: "+errr.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to get parent item: "+errr.Error(), http.StatusBadRequest)
 		}
-		child, errr := getGeneticItem(ctx, data.ToType, string(childId))
+		child, errr := getGeneticItem(ctx, data.ToType, childId)
 		if errr != nil {
-			http.Error(w, "failed to get child item: "+errr.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to get child item: "+errr.Error(), http.StatusBadRequest)
+		}
+
+		finalPerms := minimalPermsBetween(parent.Permissions(), child.Permissions())
+		if !finalPerms.Valid() {
+			return DbTxnStdErr(w, "invalid new permissions!", http.StatusBadRequest)
+		}
+		if finalPerms.ValidateUserCanWrite(ctx) != nil {
+			return DbTxnStdErr(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusBadRequest)
 		}
 		// Create Transfer
 		xfer := Transfer{
-			Id:          id,
-			From:        string(parentId),
-			To:          string(childId),
-			FromType:    data.FromType,
-			ToType:      data.ToType,
-			Date:        now,
-			Reason:      transferReason(data.Reason), // TODO: ENSURE OK!
-			FromImage:   (*imageLocation)(fromPic),
-			ToImage:     (*imageLocation)(toPic),
-			Notes:       data.Notes,
-			LastUpdated: now,
+			AlternateCollectionIdField: AlternateCollectionIdField{id},
+			From:                       parentId,
+			To:                         childId,
+			FromType:                   data.FromType,
+			ToType:                     data.ToType,
+			CreationDateField:          CreationDateField{now},
+			Reason:                     transferReason(data.Reason),
+			FromImage:                  (*imageLocation)(fromPic),
+			ToImage:                    (*imageLocation)(toPic),
+			NotesField:                 data.NotesField,
+			LastUpdatedField:           LastUpdatedFieldForNow(),
+			PermsField:                 PermsField{finalPerms},
 		}
-		_, err := coll.InsertOne(ctx, xfer)
+		_, err = db.Collection(transfersCollName).InsertOne(ctx, xfer)
 		if err != nil {
-			http.Error(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
 		}
 
 		if err = parent.setTransferParent(ctx, xfer); err != nil {
-			http.Error(w, "failed to set transfer parent: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to set transfer parent: "+err.Error(), http.StatusInternalServerError)
 		}
 
 		if err = child.setTransferChild(ctx, xfer, parent); err != nil {
-			http.Error(w, "failed to set transfer child: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, "failed to set transfer child: "+err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write(id.base58Bytes())
+
+		bsOut, err := json.Marshal(xfer)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -296,6 +311,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateTransferRequest struct {
 	Notes AllEntries[Note] `json:"notes,omitempty"`
+	PermsField
 }
 
 func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
@@ -319,35 +335,46 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(transfersCollName)
-		existing, err := GetAltCollectionItemInTxn(ctx, id.String(), Transfer{})
+		existing, err := GetAltCollectionItemInTxn(ctx, id, Transfer{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			http.Error(w, err.Error(), stat)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		mods := bson.D{}
-		// Do note changes
-		mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
+		restrictivePerms := minimalPermsBetween(existing.Perms, req.Perms) // TODO: make sure to use this (restrictive perms var) everywhere needed
+		if err = restrictivePerms.ValidateUserCanWrite(ctx); err != nil {
+			return DbTxnStdErr(w, "permission denied for overlapping perms: "+err.Error(), http.StatusUnauthorized)
+		}
+		upd, err := NewMods().
+			updateNotesIfNeeded(req.Notes, existing.Notes). // TODO: make sure this works the way we want
+			updatePermsIfNeeded(restrictivePerms, existing.Perms).
+			updateLastUpdatedIfNeeded().
+			Finalized()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
 		}
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
-		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", existing.Id}}, mods)
-		err = result.Err()
+		bsonId := bson.D{{"_id", existing.Id}}
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write([]byte(b58Id))
+		err = coll.FindOne(ctx, bsonId).Decode(&existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
 	}
+}
+
+func getAllTransferReasonsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
+	writeAsJson(w, maps.Keys(transferReasons))
 }

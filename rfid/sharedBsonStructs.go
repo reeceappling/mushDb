@@ -1,19 +1,45 @@
 package rfid
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/rfid/perms"
 	"go.mongodb.org/mongo-driver/bson"
+	"net/http"
+	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 )
 
-const dbName = "mushDb" // TODO: changeMe? GRAB FROM ENV VARS????
+var dbName string
+
+func init() {
+	var ok bool = true
+	dbName, ok = os.LookupEnv("MONGO_INITDB_DATABASE")
+	if !ok {
+		panic("missing env var MONGO_INITDB_DATABASE")
+	}
+}
+
 const mainCollectionName = "mainCollection"
 
 type imageLocation string
-type unixTime int64
+type unixTime int64 // unixMilli!
+
+func unixTimeFor(t time.Time) unixTime {
+	return unixTime(t.UnixMilli())
+}
+func unixTimeForNow() unixTime {
+	return unixTimeFor(time.Now())
+}
+
+func (t unixTime) asCreationDate() CreationDateField {
+	return CreationDateField{t}
+}
 
 var (
 	_ subdocWithImage = PicWithNotes{}
@@ -25,44 +51,76 @@ type subdocWithImage interface {
 	getPicWithNotes() *PicWithNotes
 }
 
-func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes { // TODO: use
-	var out *PicWithNotes = nil
-	latestTime := unixTime(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
-	for _, subdoc := range possibleSubdocs {
-		pwn := subdoc.getPicWithNotes()
-		if pwn.Time > latestTime {
-			latestTime = pwn.Time
-			out = pwn
+//func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes { // TODO: use?
+//	var out *PicWithNotes = nil
+//	latestTime := unixTime(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
+//	for _, subdoc := range possibleSubdocs {
+//		pwn := subdoc.getPicWithNotes()
+//		if pwn.Time > latestTime {
+//			latestTime = pwn.Time
+//			out = pwn
+//		}
+//	}
+//	return out
+//}
+
+//type AgarPour struct {
+//	Date       unixTime              `bson:"date" json:"date"`
+//	Wateriness string                `bson:"wateriness,omitempty" json:"wateriness,omitempty"`
+//	PourTempF  int                   `bson:"pourTempF" json:"pourTempF"`
+//	Recipe     AlternateCollectionId `bson:"recipe" json:"recipe"` // This is from batch
+//	Batch      AlternateCollectionId `bson:"batch" json:"batch"`
+//	NotesField // TODO: account for this, used to be []Note
+//}
+
+type PicsField struct { // TODO: use where needed
+	Pics []PicWithNotes `bson:"pics,omitempty" json:"pics,omitempty"`
+}
+
+type FlushesField struct { // TODO: use where needed
+	Flushes []PicWithNotes `bson:"flushes,omitempty" json:"flushes,omitempty"`
+}
+
+type MostRecentImageField struct { // TODO: use where needed
+	MostRecentImage *PicWithNotes `bson:"mostRecentImage,omitempty" json:"mostRecentImage,omitempty"`
+}
+
+type PicWithNotes struct {
+	Time       unixTime      `bson:"time" json:"time"`
+	Location   imageLocation `bson:"location" json:"location"`
+	NotesField               // TODO: account for this, used to be []Note
+}
+
+func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes {
+	out := make([]PicWithNotes, len(inp))
+	for i, pic := range inp {
+		out[i] = PicWithNotes{
+			Time:       pic.Time,
+			Location:   pic.Location,
+			NotesField: NotesField{[]Note{}},
 		}
 	}
 	return out
 }
 
-type AgarPour struct {
-	Date       unixTime              `bson:"date" json:"date"`
-	Wateriness string                `bson:"wateriness,omitempty" json:"wateriness,omitempty"`
-	PourTempF  int                   `bson:"pourTempF" json:"pourTempF"`
-	Recipe     alternateCollectionId `bson:"recipe" json:"recipe"` // This is from batch
-	Batch      alternateCollectionId `bson:"batch" json:"batch"`
-	Notes      []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-}
-
-type PicWithNotes struct {
-	Time     unixTime      `bson:"time" json:"time"`
-	Location imageLocation `bson:"location" json:"location"`
-	Notes    []Note        `bson:"notes,omitempty" json:"notes,omitempty"`
+func (pwn PicWithNotes) withoutNotes() PicWithNotes {
+	return PicWithNotes{
+		Time:       pwn.Time,
+		Location:   pwn.Location,
+		NotesField: NotesField{[]Note{}},
+	}
 }
 
 type PicWithNotesLessLocation struct {
-	Time  unixTime `bson:"time" json:"time"`
-	Notes []Note   `bson:"notes,omitempty" json:"notes,omitempty"`
+	Time       unixTime `bson:"time" json:"time"`
+	NotesField          // TODO: account for this, used to be []Note
 }
 
 func (p PicWithNotesLessLocation) asPicWithNotes(location *string) PicWithNotes {
 	return PicWithNotes{
-		Time:     p.Time,
-		Location: imageLocation(utils.Default(location, "")),
-		Notes:    p.Notes,
+		Time:       p.Time,
+		Location:   imageLocation(utils.Default(location, "")),
+		NotesField: p.NotesField,
 	}
 }
 
@@ -70,31 +128,35 @@ func (p PicWithNotes) getPicWithNotes() *PicWithNotes {
 	return &p
 }
 
+type ContaminationsField struct { // TODO: ensure handled properly everywhere
+	Contaminations []Contamination `bson:"contamination,omitempty" json:"contamination,omitempty"`
+}
+
 type Contamination struct {
-	Time      unixTime       `bson:"time" json:"time"` // TODO: NEW! HANDLE EVERYWHERE!
-	Confirmed bool           `bson:"confirmed" json:"confirmed"`
-	Bacteria  bool           `bson:"bacteria" json:"bacteria"`
-	Mold      bool           `bson:"mold" json:"mold"`
-	Location  *imageLocation `bson:"location,omitempty" json:"location,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
-	Notes     []Note         `bson:"notes,omitempty" json:"notes,omitempty"`       // TODO: NEW! HANDLE EVERYWHERE!
+	Time       unixTime       `bson:"time" json:"time"` // TODO: NEW! HANDLE EVERYWHERE!
+	Confirmed  bool           `bson:"confirmed" json:"confirmed"`
+	Bacteria   bool           `bson:"bacteria" json:"bacteria"`
+	Mold       bool           `bson:"mold" json:"mold"`
+	Location   *imageLocation `bson:"location,omitempty" json:"location,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
+	NotesField                // TODO: account for this, used to be []Note       // TODO: NEW! HANDLE EVERYWHERE!
 }
 
 type ContaminationLessLocation struct {
-	Time      unixTime `bson:"time" json:"time"` // TODO: NEW! HANDLE EVERYWHERE!
-	Confirmed bool     `bson:"confirmed" json:"confirmed"`
-	Bacteria  bool     `bson:"bacteria" json:"bacteria"`
-	Mold      bool     `bson:"mold" json:"mold"`
-	Notes     []Note   `bson:"notes,omitempty" json:"notes,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
+	Time       unixTime `bson:"time" json:"time"` // TODO: NEW! HANDLE EVERYWHERE!
+	Confirmed  bool     `bson:"confirmed" json:"confirmed"`
+	Bacteria   bool     `bson:"bacteria" json:"bacteria"`
+	Mold       bool     `bson:"mold" json:"mold"`
+	NotesField          // TODO: account for this, used to be []Note // TODO: NEW! HANDLE EVERYWHERE!
 }
 
 func (c ContaminationLessLocation) asContamination(location *imageLocation) Contamination {
 	return Contamination{
-		Time:      c.Time,
-		Confirmed: c.Confirmed,
-		Bacteria:  c.Bacteria,
-		Mold:      c.Mold,
-		Location:  location,
-		Notes:     c.Notes,
+		Time:       c.Time,
+		Confirmed:  c.Confirmed,
+		Bacteria:   c.Bacteria,
+		Mold:       c.Mold,
+		Location:   location,
+		NotesField: c.NotesField,
 	}
 }
 
@@ -103,9 +165,9 @@ func (c Contamination) getPicWithNotes() *PicWithNotes {
 		return nil
 	}
 	return &PicWithNotes{
-		Time:     c.Time,
-		Location: *c.Location,
-		Notes:    c.Notes,
+		Time:       c.Time,
+		Location:   *c.Location,
+		NotesField: c.NotesField,
 	}
 }
 
@@ -123,11 +185,17 @@ func (l liquid) withPct(pct float64) liquid {
 
 type fluid string
 
+var fluids = []fluid{Water, DistilledWater, GrainWater}
+
 var (
 	Water          = fluid("water")
 	DistilledWater = fluid("distilledWater")
 	GrainWater     = fluid("grain water")
 )
+
+func getAllFluidsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
+	writeAsJson(w, fluids)
+}
 
 func (f fluid) AsLiquid(pct ...float64) liquid {
 	val := 100.0
@@ -141,16 +209,16 @@ func (f fluid) AsLiquid(pct ...float64) liquid {
 	}
 }
 
-type notesGroup []Note
-
-func (notes notesGroup) GenerationIfExists() *int { // TODO: USE THIS
-	for _, note := range notes {
-		if out := note.GenerationIfExists(); out != nil {
-			return out
-		}
-	}
-	return nil
-}
+//type notesGroup []Note
+//
+//func (notes notesGroup) GenerationIfExists() *int {
+//	for _, note := range notes {
+//		if out := note.GenerationIfExists(); out != nil {
+//			return out
+//		}
+//	}
+//	return nil
+//}
 
 type Note struct {
 	Time unixTime `bson:"time" json:"time"`
@@ -172,19 +240,19 @@ func (n Note) GenerationIfExists() *int {
 	return &out
 }
 
-func newGenerationNote(n int) Note { // TODO: USE THIS!!!!
-	return Note{
-		Time: unixTime(time.Now().UnixMilli()),
-		Note: fmt.Sprintf(`Generation: %d`, n),
-	}
-}
-
-func newAltSourceNote(src string) Note { // TODO: USE THIS!!!!
-	return Note{
-		Time: unixTime(time.Now().UnixMilli()),
-		Note: fmt.Sprintf(`Sample Source: %s`, src),
-	}
-}
+//func newGenerationNote(n int) Note {
+//	return Note{
+//		Time: unixTimeForNow(),
+//		Note: fmt.Sprintf(`Generation: %d`, n),
+//	}
+//}
+//
+//func newAltSourceNote(src string) Note {
+//	return Note{
+//		Time: unixTimeForNow(),
+//		Note: fmt.Sprintf(`Sample Source: %s`, src),
+//	}
+//}
 
 // TODO:  // TODO: THIS!
 // TODO: altSource (outside, store, etc) notes // TODO: THIS?
@@ -197,18 +265,25 @@ type nutrientMeasurement struct {
 
 type nutrient string
 
+var nutrients = []nutrient{LME, Potato} // TODO: ADD MEASUREMENT UNITS TO THIS (or each?)
 var (
-	LME    nutrient = "light malt extract" // TODO: ok?
-	Potato nutrient = "potato flakes"      // TODO: ok?
+	LME    nutrient = "light malt extract"
+	Potato nutrient = "potato flakes"
 )
 
+func getAllNutrientsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
+	writeAsJson(w, nutrients)
+}
+
 type sugarMeasurement struct {
-	Type   sugar   `bson:"type" json:"type"`     // Sugar Name
+	Type   sugar   `bson:"type" json:"type"`     // Sugar Username
 	Amount float64 `bson:"amount" json:"amount"` // Amount per 1L agar
 	Unit   string  `bson:"unit" json:"unit"`
 }
 
 type sugar string
+
+var sugars = []sugar{Dextrose, Honey, MapleSyrup}
 
 func newSugarMeasurement(add sugar, amount float64, unit string) sugarMeasurement {
 	return sugarMeasurement{
@@ -224,13 +299,40 @@ var (
 	MapleSyrup sugar = "maple syrup"
 )
 
+func getAllSugarsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
+	writeAsJson(w, sugars)
+}
+
 type grain string
+
+var grains = []grain{Oats, Popcorn, BirdSeed}
+
+func (g grain) Validate() error {
+	if !slices.Contains(grains, g) {
+		return errors.New("invalid grain")
+	}
+	return nil
+}
 
 var (
 	Oats     grain = "oats"
 	Popcorn  grain = "popcorn"
 	BirdSeed grain = "birdseed"
 )
+
+func getAllGrainsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
+	writeAsJson(w, grains)
+}
+
+func writeAsJson(w http.ResponseWriter, obj any) {
+	bs, err := json.Marshal(obj)
+	if err != nil {
+		http.Error(w, "failed to marshal output: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bs)
+	handleWriteErr(err, w)
+}
 
 type additiveMeasurement struct {
 	Additive additive `bson:"additive" json:"additive"` // Nutrient name
@@ -248,18 +350,27 @@ func newAdditiveMeasurement(add additive, amount float64, unit string) additiveM
 
 type colorant string
 
+var colorants = []colorant{clearColor, black, blue, yellow, orange, red}
+
+func getAllColorantsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
+	writeAsJson(w, colorants)
+}
+
 var (
-	clear  colorant = "clear"
-	black  colorant = "black"
-	blue   colorant = "blue"
-	yellow colorant = "yellow"
+	clearColor colorant = "Clear"
+	black      colorant = "Black"
+	blue       colorant = "Blue"
+	yellow     colorant = "Yellow"
+	orange     colorant = "Orange"
+	red        colorant = "Red" // MOST REDS ARE FUNGICIDAL
 )
 
 var colors = map[string]colorant{
-	string(clear):  clear,
-	string(black):  black,
-	string(blue):   blue,
-	string(yellow): yellow,
+	string(clearColor): clearColor,
+	string(black):      black,
+	string(blue):       blue,
+	string(yellow):     yellow,
+	string(orange):     orange,
 }
 
 func ValidColor(c colorant) bool {
@@ -268,24 +379,36 @@ func ValidColor(c colorant) bool {
 }
 
 type additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
+var additives = []additive{Vermiculite, Perlite, Gypsum}
 var (
 	Vermiculite additive = "vermiculite"
 	Perlite     additive = "perlite"
 	Gypsum      additive = "gypsum"
 )
 
+func getAllAdditivesHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
+	writeAsJson(w, additives)
+}
+
 type antibiotic string
 
+var antibiotics = []antibiotic{HydrogenPeroxide, Doxycycline}
+
 var (
-	HydrogenPeroxide            = "HydrogenPeroxide"
+	HydrogenPeroxide antibiotic = "HydrogenPeroxide"
 	Doxycycline      antibiotic = "doxycycline"
 )
 
-var antibioticDosages = map[antibiotic]string{ // TODO: USE THIS!
-	Doxycycline: "N/A", // TODO: figure out measurements
+func getAllAntibioticsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
+	writeAsJson(w, antibiotics)
 }
 
-type Generation int // TODO: fixMe, do sinceSpores and sinceClone
+var antibioticDosages = map[antibiotic]string{ // TODO: USE THIS!
+	Doxycycline:      "unknown as of right now", // TODO: figure out measurements
+	HydrogenPeroxide: "unknown as of right now", // TODO: figure out measurements
+}
+
+type Generation int
 
 func (gen *Generation) Next() *Generation {
 	if gen == nil {
@@ -295,33 +418,391 @@ func (gen *Generation) Next() *Generation {
 	return &nextGen
 }
 
-type changes []bson.E
-
-func blankChanges() changes {
-	return changes{}
+func NewMods() *Mods {
+	return &Mods{}
 }
 
-func (chg changes) addIf(doChange bool, key string, newValue interface{}) changes {
-	out := changes{}
-	copy(out, chg)
-	if doChange {
-		out = append(out, bson.E{key, newValue})
+type Mods struct { // TODO: USE THIS FOR ALL CREATES, IMPORTS, AND UPDATES
+	err    error    // TODO: SKIP WHEN THIS IS NON-NIL
+	unsets []bson.E // Key, "" // TODO: ?
+	sets   []bson.E // Key, value
+	pushes []bson.E // FieldName, valueToPush
+	pulls  []bson.E //{ "$pull": { <field1>: <value|condition>, <field2>: <value|condition>, ... } }
+	// TODO: more?
+}
+
+func (upd *Mods) Add(sets, unsets, pushes, pulls []bson.E) *Mods {
+	if sets != nil && len(sets) > 0 {
+		upd.sets = append(upd.sets, sets...)
 	}
-	return out
-}
-
-func (chg changes) resolve() bson.D {
-	return bson.D(chg)
-}
-
-func areSame[T comparable](a, b []T) bool {
-	if len(a) != len(b) {
-		return false
+	if unsets != nil && len(unsets) > 0 {
+		upd.unsets = append(upd.unsets, unsets...)
 	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
+	if pushes != nil && len(pushes) > 0 {
+		upd.pushes = append(upd.pushes, pushes...)
+	}
+	if pulls != nil && len(pulls) > 0 {
+		upd.pulls = append(upd.pulls, pulls...)
+	}
+	return upd
+}
+
+func (upd *Mods) Set(key string, value interface{}) *Mods { // TODO: interface ok?
+	upd.sets = append(upd.sets, bson.E{Key: key, Value: value})
+	return upd
+}
+func (upd *Mods) SetNew(key string, value interface{}) { // TODO: interface ok?
+	upd.sets = append(upd.sets, bson.E{Key: key, Value: value})
+}
+
+//func (upd *Mods) UpdatePointerIfNeeded(key string, future, current *interface{}) *Mods {
+//	return updatePointerIfNeeded(upd, key, future, current)
+//}
+
+func (upd *Mods) UpdateValueIfNeeded(key string, future, current interface{}) *Mods { // TODO: interface ok?
+	return updateValueIfNeeded(upd, key, future, current)
+}
+
+func (upd *Mods) Unset(key string) *Mods {
+	upd.unsets = append(upd.unsets, bson.E{Key: key, Value: ""}) // TODO: "" ok here?
+	return upd
+}
+
+func (upd *Mods) Push(key string, value interface{}) *Mods { // TODO: interface ok? or slice?
+	upd.pushes = append(upd.pushes, bson.E{Key: key, Value: value})
+	return upd
+}
+
+// TODO: write what this actually does here!
+func (upd *Mods) pushBson(pushValues ...bson.E) *Mods { // TODO: make sure ok
+	if len(pushValues) == 0 {
+		return upd
+	}
+	upd.pushes = append(upd.pushes, pushValues...)
+	return upd
+}
+
+func (upd *Mods) Pull(key string, value interface{}) *Mods { // TODO: interface ok? or slice?
+	upd.pulls = append(upd.pulls, bson.E{Key: key, Value: value})
+	return upd
+}
+
+func (upd *Mods) IsEmpty() bool {
+	return upd == nil || len(upd.sets)+len(upd.unsets)+len(upd.pushes)+len(upd.pulls) == 0
+}
+
+func (upd *Mods) Finalized() (bson.D, error) { // TODO: validate this works as intended (is bson.D ok?)
+	if upd.err != nil {
+		return nil, upd.err
+	}
+	out := bson.D{}
+	if upd.sets != nil && len(upd.sets) != 0 {
+		out = append(out, bson.E{"$set", upd.sets})
+	}
+	if upd.pushes != nil && len(upd.pushes) != 0 {
+		out = append(out, bson.E{"$push", upd.pushes})
+	}
+	if upd.pulls != nil && len(upd.pulls) != 0 {
+		out = append(out, bson.E{"$pull", upd.pulls})
+	}
+	if upd.unsets != nil && len(upd.unsets) != 0 {
+		out = append(out, bson.E{"$unset", upd.unsets})
+	}
+	return out, nil
+}
+
+func (upd *Mods) addTransferOut(xferId AlternateCollectionId) *Mods {
+	return upd.Push("transfersOut", xferId) // TODO: will this work for nonexisting field?
+}
+
+func (upd *Mods) addSaleToSales(saleId AlternateCollectionId, currentSales []AlternateCollectionId) *Mods { // TODO; USE!
+	// TODO: ENSURE NOT ALREADY EXISTS
+	return upd.Push("sales", saleId) // TODO: will this work for nonexisting field?
+}
+func (upd *Mods) addOnlySale(saleId AlternateCollectionId) *Mods { // TODO; USE!
+	// TODO: ensure the sale did not already exist first
+	return upd.Push("sale", saleId) // TODO: will this work for nonexisting field?
+}
+
+func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
+	futureIsEmpty := future == nil || len(future) == 0
+	existingIsEmpty := existing == nil || len(existing) == 0
+	if existingIsEmpty {
+		if futureIsEmpty {
+			// Do nothing
+			return upd
+		}
+		// future is not empty, so set it
+		return upd.Set("aliases", future)
+	}
+	if futureIsEmpty {
+		return upd.Unset("aliases") // unset aliases
+	}
+	if len(future) != len(existing) {
+		return upd.Set("aliases", future)
+	}
+	for i := 0; i < len(future); i++ {
+		if !slices.Contains(existing, future[i]) {
+			return upd.Set("aliases", future)
 		}
 	}
-	return true
+	return upd
 }
+
+func (upd *Mods) updateDisposedIfNeeded(future, existing *unixTime) *Mods {
+	return updatePointerIfNeeded(upd, "disposed", future, existing) // TODO: ok if this can be rolled back????
+}
+
+func (upd *Mods) updateKnownFruitableIfNeeded(future, existing *bool) *Mods {
+	return updatePointerIfNeeded(upd, "knownFruitable", future, existing)
+}
+
+func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {
+	return updatePointerIfNeeded(upd, "confirmedClean", future, existing)
+}
+
+func (upd *Mods) updateLastUpdatedIfNeeded() *Mods {
+	if upd.IsEmpty() {
+		return upd
+	}
+	return upd.Set("lastUpdated", unixTimeFor(time.Now()))
+}
+
+func (upd *Mods) updateNameIfNeeded(future, existing string) *Mods {
+	return updateValueIfNeeded(upd, "name", future, existing)
+}
+
+func (upd *Mods) updateNotesIfNeeded(updatedEntries AllEntries[Note], existing []Note) *Mods { // TODO: make sure this always works the way we want it to!!! // TODO: lower-down notes?
+	if upd.err != nil {
+		return upd
+	}
+	// TODO: main id is "notes"?
+	upd = WithExistingEntriesChangeNew(upd, "notes", updatedEntries.Existing, existing, NotesEqual) // TODO: rename
+	if upd.err != nil {
+		return upd
+	}
+	// add new items
+	return upd.pushBson(pushToArrayNew("notes", updatedEntries.New)...)
+}
+
+func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+	if upd.err != nil {
+		return upd
+	}
+	// TODO: make sure fieldName is all that is needed. What if this field is embedded?
+	upd = WithExistingEntriesChangeNew(upd, fieldName, updatedEntries.Existing, existing, compareImageUpdate) // TODO: rename
+	if upd.err != nil {
+		return upd
+	}
+	// add new items
+	return upd.pushBson(pushToArrayNew(fieldName, updatedEntries.New)...)
+}
+
+func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+	return upd.updatePwnIfNeeded("pics", updatedEntries, existing)
+}
+
+func (upd *Mods) updateFlushesIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+	return upd.updatePwnIfNeeded("flushes", updatedEntries, existing)
+}
+
+func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, Contamination], existing []Contamination) *Mods {
+	if upd.err != nil {
+		return upd
+	}
+	upd = WithExistingEntriesChangeNew(upd, "contamination", updatedEntries.Existing, existing, compareContamUpdate) // TODO: rename
+	if upd.err != nil {
+		return upd
+	}
+	// add new items
+	return upd.pushBson(pushToArrayNew("contamination", updatedEntries.New)...)
+}
+
+func (upd *Mods) updatePermsIfNeeded(future, existing *Perms) *Mods { // TODO: interface ok? or slice?
+	if upd.err != nil {
+		return upd
+	}
+	if future.ExactMatch(existing) {
+		return upd
+	}
+	if future.Blanket == perms.Write {
+		return upd.Unset("perms")
+	}
+	return upd.Set("perms", unixTimeFor(time.Now()))
+}
+
+func (upd *Mods) updateSaleIfNeeded(future, existing *AlternateCollectionId) *Mods {
+	return updatePointerIfNeeded(upd, "sale", future, existing)
+}
+
+// TODO: Only used on LC?
+func (upd *Mods) updateSalesIfNeeded(future, existing []AlternateCollectionId) *Mods { // TODO: validate works as intended (Should this be structured like notes?)
+	if upd.err != nil {
+		return upd
+	}
+	if len(future) != len(existing) {
+		return upd.Set("sales", future)
+	}
+	for i, sale := range future {
+		if string(sale[:]) != string(existing[i][:]) {
+			return upd.Set("sales", future)
+		}
+	}
+	return upd
+}
+
+func (upd *Mods) updateStandardIfNeeded(future, existing bool) *Mods {
+	return updateValueIfNeeded(upd, "standard", future, existing)
+}
+
+func (upd *Mods) withGens(genSpore, genFruitSpore *Generation) *Mods {
+	out := setPointerIfNonNil(upd, "genSpore", genSpore)
+	return setPointerIfNonNil(out, "genFruitOrSpore", genFruitSpore)
+}
+
+func (upd *Mods) withInnoc(xfer Transfer) *Mods {
+	return upd.Set("innoc", xfer.Id)
+}
+func (upd *Mods) withKnownFruitable(knownFruitable *bool) *Mods {
+	return setPointerIfNonNil(upd, "knownFruitable", knownFruitable)
+}
+func (upd *Mods) withLastUpdated(lastUpdatedTime unixTime) *Mods {
+	return upd.Set("lastUpdated", lastUpdatedTime)
+}
+func (upd *Mods) withMostRecentImage(parentType *PicWithNotes) *Mods {
+	return setPointerIfNonNil(upd, "mostRecentImage", parentType)
+}
+func (upd *Mods) withParentType(parentType *string) *Mods {
+	return setPointerIfNonNil(upd, "parentType", parentType)
+}
+func (upd *Mods) withParent(parentId *BinaryCollectionId) *Mods {
+	return setPointerIfNonNil(upd, "parent", parentId)
+}
+func (upd *Mods) withPics(pics []PicWithNotes) *Mods {
+	if len(pics) == 0 {
+		return upd
+	}
+	return upd.Set("pics", pics) // TODO: will this work if it does not exist yet?
+}
+func (upd *Mods) withSpecies(species *string) *Mods {
+	return setPointerIfNonNil(upd, "species", species)
+}
+func (upd *Mods) withSubspecies(subsp *string) *Mods {
+	return setPointerIfNonNil(upd, "subSpecies", subsp) // TODO: make sure string is correct!!!
+}
+
+func setPointerIfNonNil[T any](upd *Mods, fieldName string, val *T) *Mods {
+	if val == nil {
+		return upd
+	}
+	return upd.Set(fieldName, *val)
+}
+
+func updateValueIfNeeded[T comparable](upd *Mods, fieldName string, future, existing T) *Mods {
+	if upd.err != nil {
+		return upd
+	}
+	if future == existing {
+		// Do nothing
+		return upd
+	}
+	return upd.Set(fieldName, future)
+}
+func updateValueIfNeededNew[T comparable](upd *Mods, fieldName string, future, existing T) {
+	if upd.err != nil || future == existing {
+		return
+	}
+	upd.Set(fieldName, future)
+}
+func updatePointerIfNeeded[T comparable](upd *Mods, fieldName string, future, existing *T) *Mods {
+	if upd.err != nil {
+		return upd
+	}
+	futureIsNil := future == nil
+	existingIsNil := existing == nil
+	if futureIsNil {
+		if existingIsNil {
+			return upd
+		}
+		return upd.Unset(fieldName)
+	}
+	if existingIsNil {
+		return upd.Set(fieldName, *future)
+	}
+	return updateValueIfNeeded(upd, fieldName, *future, *existing)
+}
+func updatePointerIfNeededNew[T comparable](upd *Mods, fieldName string, future, existing *T) *Mods {
+	if upd.err != nil {
+		return upd
+	}
+	futureIsNil := future == nil
+	existingIsNil := existing == nil
+	if futureIsNil {
+		if existingIsNil {
+			return upd
+		}
+		return upd.Unset(fieldName)
+	}
+	if existingIsNil {
+		return upd.Set(fieldName, *future)
+	}
+	return updateValueIfNeeded(upd, fieldName, *future, *existing)
+}
+
+var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	opt := r.PathValue("optionsType")
+	var toWrite any
+	switch strings.ToLower(opt) {
+	case "colors", "color",
+		"colorants", "colorant":
+		toWrite = colorants
+		break
+	case "liquids", "liquid",
+		"fluids", "fluid":
+		toWrite = fluids
+		break
+	case "nutrients", "nutrient":
+		toWrite = nutrients
+		break
+	case "sugars", "sugar":
+		toWrite = sugars
+		break
+	case "grains", "grain":
+		toWrite = grains
+		break
+	case "additives", "additive":
+		toWrite = additives
+		break
+	case "antibiotics", "antibiotic":
+		toWrite = antibiotics
+		break
+	case strings.ToLower("transferReasons"), strings.ToLower("transferReason"):
+		toWrite = transferReasons
+		break
+	default:
+		http.Error(w, fmt.Sprintf(`invalid option provided: "%s" is not one of [color,liquid,nutrient,sugar,grain,additive,transferReason]`, opt), http.StatusBadRequest)
+		return
+	}
+	writeAsJson(w, toWrite)
+}
+
+//type changes []bson.E
+//
+//func (upd changes)
+//
+//func blankChanges() changes {
+//	return changes{}
+//}
+//
+//func (chg changes) addIf(doChange bool, key string, newValue interface{}) changes {
+//	out := changes{}
+//	copy(out, chg)
+//	if doChange {
+//		out = append(out, bson.E{key, newValue})
+//	}
+//	return out
+//}
+//
+//func (chg changes) resolve() bson.D {
+//	return bson.D(chg)
+//}

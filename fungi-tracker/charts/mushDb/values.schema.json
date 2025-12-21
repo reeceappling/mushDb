@@ -48,6 +48,10 @@
       "description": "Either a domain, or a domain with a port",
       "type": "string"
     },
-    "nodeSelector": {"type": "object"}
+    "nodeSelector": {"type": "object"},
+    "withoutAVXCpu": {
+      "type":  "boolean",
+      "description": "Set this to true if you're using an older CPU that does not support AVX via SIMD"
+    }
   }
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/exp/slices"
 	"net/http"
 	"strconv"
 )
@@ -13,33 +14,33 @@ var (
 	_ AltCollectionItem = PCRun{}
 	_ AltCollectionItem = AgarBatch{}
 	_ AltCollectionItem = AgarRecipe{}
-	_ AltCollectionItem = LCRecipe{}
+	_ AltCollectionItem = LcRecipe{}
 	_ AltCollectionItem = JarRecipe{}
 	_ AltCollectionItem = SubstrateRecipe{}
 	_ AltCollectionItem = Transfer{}
 	_ AltCollectionItem = Fruit{}
-	_ AltCollectionItem = Species{}    // TODO: this is a str id case
-	_ AltCollectionItem = Subspecies{} // TODO: this is a str id case
+	_ AltCollectionItem = Species{}    // this is a str id case
+	_ AltCollectionItem = Subspecies{} // this is a str id case
 	_ AltCollectionItem = SporePrint{}
 	_ AltCollectionItem = Project{}
 	_ AltCollectionItem = Sale{}
-
-	//_ AltCollectionItem = User{} // TODO: wtf to do with this
+	_ AltCollectionItem = User{}
+	_ AltCollectionItem = LcSyringe{}
+	_ AltCollectionItem = Plugs{}
+	_ AltCollectionItem = SporeSwab{}
 )
 
 type AltCollectionItem interface {
 	CollectionItem
 }
 
-type transferReason string // TODO: this (outgrew, contam, etc)
-
-func ListEntriesHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
+func ListEntriesHandler() http.Handler {
+	handler := func(w http.ResponseWriter, r *http.Request) {
 		// TODO: DEPENDING ON VARIANT, EITHER DO LATEST OR LATEST AND STANDARD!!!!!
 
 		var maxResults int = 10             // TODO: ENSURE OK!
 		requested := r.PathValue("variant") // TODO: ENSURE OK!
+		doStandardToo := slices.Contains([]string{"agarRecipe", "jarRecipe", "lcRecipe", "substrateRecipe"}, requested)
 
 		if maxNum := r.URL.Query().Get("n"); maxNum != "" { // TODO: ENSURE OK!
 			n, err := strconv.Atoi(maxNum)
@@ -51,6 +52,7 @@ func ListEntriesHandler() http.HandlerFunc {
 		}
 
 		// TODO: parallelize?
+		outObj := map[string]any{}
 		latestEntries, err := getLastNEntries(r.Context(), requested, true, maxResults)
 		if err != nil {
 			if !errors.Is(err, mongo.ErrNoDocuments) {
@@ -64,22 +66,28 @@ func ListEntriesHandler() http.HandlerFunc {
 				http.Error(w, "Unexpected latest marshalling error: "+err.Error(), http.StatusInternalServerError)
 			}
 		}
+		outObj["latest"] = latestEntries
 		// TODO: DEPENDING ON VARIANT, MAY RETURN HERE!
 
 		// TODO: parallelize?
-		stdEntries, err := getStandardEntries(r.Context(), requested)
-		if err != nil {
-			if !errors.Is(err, mongo.ErrNoDocuments) {
-				code := http.StatusInternalServerError
-				http.Error(w, err.Error(), code)
-				return
-			}
-			stdEntries, err = json.Marshal([]string{})
+		// TODO: only for agarRecipe, jarRecipe, lcRecipe, substrateRecipe
+
+		if doStandardToo {
+			stdEntries, err := getStandardEntries(r.Context(), requested)
 			if err != nil {
-				http.Error(w, "Unexpected standard marshalling error: "+err.Error(), http.StatusInternalServerError)
+				if !errors.Is(err, mongo.ErrNoDocuments) {
+					code := http.StatusInternalServerError
+					http.Error(w, err.Error(), code)
+					return
+				}
+				stdEntries, err = json.Marshal([]string{})
+				if err != nil {
+					http.Error(w, "Unexpected standard marshalling error: "+err.Error(), http.StatusInternalServerError)
+				}
 			}
+			outObj["standard"] = stdEntries
 		}
-		outObj := map[string]any{"standard": stdEntries, "latest": latestEntries}
+
 		out, err := json.Marshal(outObj)
 		if err != nil {
 			http.Error(w, "Unexpected output marshalling error: "+err.Error(), http.StatusInternalServerError)
@@ -88,10 +96,11 @@ func ListEntriesHandler() http.HandlerFunc {
 			HandleHttpWriteError(err)
 		}
 	}
+	return GetPermsMiddleware(handler)
 }
 
-func ListNewestEntriesHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func ListNewestEntriesHandler() http.Handler {
+	handler := func(w http.ResponseWriter, r *http.Request) {
 		var maxResults int = 10
 		requested := r.PathValue("variant")
 
@@ -126,10 +135,11 @@ func ListNewestEntriesHandler() http.HandlerFunc {
 			HandleHttpWriteError(err)
 		}
 	}
+	return GetPermsMiddleware(handler)
 }
 
 func HandleHttpWriteError(err error) {
-	println("http write errors are currently unhandled! Err: " + err.Error()) // TODO: THIS!!!!!!!!
+	println("http write errors are currently unhandled! Err: " + err.Error())
 }
 
 func ListStandardEntriesHandler() http.HandlerFunc {

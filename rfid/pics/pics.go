@@ -30,8 +30,7 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 		}
 		fileNameWithPrefixPath := resolvedPrefix + name.String()
 		whereToWrite := filePath + fileNameWithPrefixPath
-		_, err = os.Stat(whereToWrite)
-		if err != nil {
+		if _, err = os.Stat(whereToWrite); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				return fileNameWithPrefixPath, os.WriteFile(whereToWrite, bs, 0666)
 			}
@@ -40,7 +39,7 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 			continue
 		}
 	}
-	return "", errors.New("Failed to find a new fileName")
+	return "", errors.New("failed to find a new fileName")
 }
 
 func DeleteFiles(ctx context.Context, filenamesWithPrefixPaths ...string) error {
@@ -49,7 +48,7 @@ func DeleteFiles(ctx context.Context, filenamesWithPrefixPaths ...string) error 
 	for _, filenameWithPrefixPath := range filenamesWithPrefixPaths {
 		err := os.Remove(homeDir + filenameWithPrefixPath)
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) { // TODO: ensure this is ok
+			if errors.Is(err, os.ErrNotExist) {
 				continue
 			}
 			errOut = errors.Join(errOut, err)

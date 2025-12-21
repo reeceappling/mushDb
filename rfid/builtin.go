@@ -3,7 +3,8 @@ package rfid
 import "time"
 
 const (
-	idLmea = iota
+	idTestingOnly = iota
+	idLmea
 	idPda
 	idWaterAgar
 	idMeaLC
@@ -25,9 +26,11 @@ const (
 	idTestSlant
 	idTestStasis
 	idTestLC
+	idTestBottle
+	idTestBatch
 )
 
-var ogTime = unixTime(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local).UnixMilli())
+var ogTime = unixTimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))
 
 func builtInNote(note string) Note {
 	return Note{
@@ -35,12 +38,18 @@ func builtInNote(note string) Note {
 		Note: note,
 	}
 }
-func altCollIdForint(i int) alternateCollectionId {
-	z := byte(0)
-	return [12]byte{z, z, z, z, z, z, z, z, z, z, z, uint8(i)}
+func altCollIdForint(i int) AlternateCollectionId { // TODO: FIX FOR uint8 overflow
+	return [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, uint8(i)}
 }
 
-func mainCollIdForint(i int) MainCollectionId {
-	z := byte(0)
-	return [8]byte{z, z, z, z, z, z, z, uint8(i)}
+func altCollIdFieldForint(i int) AlternateCollectionIdField {
+	return AlternateCollectionIdField{altCollIdForint(i)}
+}
+
+func mainCollIdForint(i int) MainCollectionId { // TODO: FIX FOR uint8 overflow
+	return [8]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)}
+}
+
+func mainCollIdFieldForint(i int) MainCollectionIdField {
+	return MainCollectionIdField{mainCollIdForint(i)}
 }

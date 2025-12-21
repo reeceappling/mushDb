@@ -1,0 +1,159 @@
+version: '3.8'
+services:
+#  ingress:
+#    image: caddy:2-alpine # or caddy:2 for a larger image
+#    container_name: caddy
+#    restart: unless-stopped
+#    ports:
+#      - "81:80"  # HTTP
+#      - "444:443" # HTTPS
+#    volumes:
+#      - ./Caddyfile:/etc/caddy/Caddyfile:ro # Mount your Caddyfile
+#      - caddy-data:/data # Persistent storage for certificates and data # TODO: FIX
+#    environment:
+#      # Optional: Define environment variables for Caddyfile templating
+#      # For example, to set the domain and email for automatic HTTPS
+#      DOMAIN: ${CADDY_DOMAIN?error} #yourdomain.com
+#      EMAIL: ${CADDY_EMAIL?error} #"your@email.com"
+#  cloudflare-ddns: # TODO: docker-compose --env-file ./env/.env.dev up
+#    image: timothyjmiller/cloudflare-ddns:latest
+#    container_name: cloudflare-ddns
+#    security_opt:
+#      - no-new-privileges:true
+#    network_mode: 'host'
+#    restart: unless-stopped
+#    environment:
+#      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?error}
+#      CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL:?error}
+#      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:?error}
+#      CF_DDNS_API_TOKEN: ${CLOUDFLARE_API_TOKEN:?error}
+#      CF_DDNS_EMAIL: ${CLOUDFLARE_EMAIL:?error}
+#      CF_DDNS_ZONE_ID: ${CLOUDFLARE_ZONE_ID:?error}
+#      # TODO: unsure what next 2 do
+#      PUID: 1000 # TODO: ????
+#      PGID: 1000 # TODO: ????
+#    configs:
+#      - source: config.json # TODO: ensure api key correct
+#        target: /config.json
+  api:
+    image: mush-api:latest
+    restart: unless-stopped
+    build:
+      context: ./
+      dockerfile: ./DockerfileApi
+      tags:
+        - "mush-api:latest"
+    environment:
+      PICS_PATH: "/images"
+      API_PORT: "80"
+      MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-http}
+      MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
+      MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
+      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
+      RFID_SECRET: ${RFID_SECRET:?error}
+      DB_HOST_PORT: "27017"
+      DB_HOST_NAME: "mushdb"
+      WEB_HOST_INTERNAL: "web"
+      WEB_HOST_INTERNAL_PORT: "3000"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?error}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?error}
+    volumes:
+      - pictures:/images
+#  web:
+#    image: mush-web:latest
+#    restart: unless-stopped
+#    build:
+#      context: ./rfid/client
+#      dockerfile: ./Dockerfile
+#      args:
+#        MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-http}
+#        MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
+#        MAIN_API_EXTERNAL_PORT: ${MAIN_API_EXTERNAL_PORT:-80}
+#        MAIN_API_INTERNAL_HOST: "api"
+#      tags:
+#        - "mush-web:latest"
+#    environment:
+#      NEXT_PRIVATE_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL:-http}://api"
+#      NEXT_PUBLIC_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL:-http}://${MAIN_API_EXTERNAL_HOST:-localhost}"
+  mushdb:
+    image: mongo:4
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?error}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?error}
+      MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
+      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
+    command: [--auth]
+    volumes:
+      - mongodb-data:/data/db
+      - ./initDB:/docker-entrypoint-initdb.d
+#  grafana:
+#    image: grafana/grafana:latest
+#    restart: unless-stopped
+#    volumes:
+#      - grafana-data:/var/lib/grafana:rw
+#    #ports:
+#    #  - 3000:3000 # TODO: FIX
+#    environment:
+#      - GF_SERVER_ROOT_URL=http://localhost:3000 # TODO: Adjust if accessing from a different domain/IP
+#      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?error} # TODO: do
+#      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?error} # TODO: run with password
+#      - GF_LOG_LEVEL=debug # TODO: debug vs info
+#      #- GF_LOG_MODE="console"
+#      - GF_PLUGINS_PREINSTALL=grafana-mongodb-datasource,grafana-worldmap-panel,grafana-clock-panel,grafana-piechart-panel
+#      - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
+
+volumes:
+  pictures:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOCAL_IMAGES_DIR:?error}
+      o: bind
+  mongodb-data:
+#    driver: local
+#    driver_opts:
+#      type: none
+#      device: ${LOCAL_DB_DIR:?error}
+#      o: bind
+  grafana-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOCAL_GRAFANA_DIR:?error} # TODO: ADD
+      o: bind
+  caddy-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./caddy/data # TODO: ok?
+      o: bind
+configs:
+  config.json: # TODO: generate via template?
+    content: |
+      {
+        "cloudflare": [
+          {
+            "authentication": {
+              "api_token": "${CLOUDFLARE_API_TOKEN:?error}",
+            },
+            "zone_id": "${CLOUDFLARE_ZONE_ID:?error}",
+            "subdomains": [
+              {
+                "name": "",
+                "proxied": false
+              },
+              {
+                "name": "home",
+                "proxied": false
+              }
+            ]
+          }
+        ],
+        "a": false,
+        "aaaa": true,
+        "purgeUnknownRecords": true,
+        "ttl": 120
+      }

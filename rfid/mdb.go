@@ -24,25 +24,32 @@ const (
 )
 
 var (
-	_ idAsDbStr = Fruit{}           // Sec // TODO: may not be needed
-	_ idAsDbStr = LiquidCulture{}   // Prim
-	_ idAsDbStr = GrainJar{}        // Prim
-	_ idAsDbStr = Plate{}           // Prim
-	_ idAsDbStr = Slant{}           // Prim
-	_ idAsDbStr = StasisTube{}      // Prim
-	_ idAsDbStr = Bag{}             // Prim
-	_ idAsDbStr = FruitingChamber{} // Prim
-	_ idAsDbStr = MSS{}
+	ErrInvalidByteLength = errors.New("invalid id bytes length")
 )
 
-type idAsDbStr interface { // TODO: THIS?
-	idAsStr() string
-}
-type Base58Str string // TODO: need a way to ensure we can get both b58 version and byte version
+//var (
+//	_ idAsDbStr = Fruit{}           // Alt
+//	_ idAsDbStr = LiquidCulture{}   // Prim
+//	_ idAsDbStr = GrainJar{}        // Prim
+//	_ idAsDbStr = Plate{}           // Prim
+//	_ idAsDbStr = Slant{}           // Prim
+//	_ idAsDbStr = StasisTube{}      // Prim
+//	_ idAsDbStr = Bag{}             // Prim
+//	_ idAsDbStr = FruitingChamber{} // Prim
+//	_ idAsDbStr = MSS{}
+//)
 
-// TODO: make sure everywhere this is called is using it correctly
-func (b58str Base58Str) Base58Bytes() []byte {
-	return []byte(b58str)
+//	type idAsDbStr interface {
+//		idAsStr() string
+//	}
+type Base58Str string
+
+func (b58str Base58Str) ToBinaryCollectionId() (BinaryCollectionId, error) {
+	bs, err := b58str.Base2Bytes()
+	if err != nil {
+		return "", err
+	}
+	return BinaryCollectionId(bs), nil
 }
 
 // ConvertBase10StringToLittleEndianBytes converts a base-10 string to little-endian bytes.
@@ -76,54 +83,103 @@ func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
 		return out, err
 	}
 	if len(bs) != RfidByteSize {
-		return MainCollectionId{}, errors.New("FIXME") // TODO: this
+		return MainCollectionId{}, ErrInvalidByteLength
 	}
 	return MainCollectionId(bs), nil
 }
 
-func (b58str Base58Str) toAltCollectionId() (alternateCollectionId, error) {
+func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
 	out := [12]byte{}
 	bs, err := b58str.Base2Bytes()
 	if err != nil {
 		return out, err
 	}
 	if len(bs) != 12 {
-		return alternateCollectionId{}, errors.New("string was not an alt collection id") // TODO: this
+		return AlternateCollectionId{}, ErrInvalidByteLength
 	}
-	return alternateCollectionId(bs), nil
+	return AlternateCollectionId(bs), nil
 }
 
-// Tested, working
+// Tested, working // TODO: remove comment
 func Base2BytesToBase58(littleEndianBytes []byte) (Base58Str, error) {
 	if len(littleEndianBytes)%4 != 0 {
-		return "", errors.New("invalid tag data length") // TODO: unnecesary?
+		return "", ErrInvalidByteLength // TODO: unnecesary?
 	}
-	baseTenStr := new(big.Int).SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10)
-	println(baseTenStr) // TODO: delete
-	encoded, err := base58.BitcoinEncoding.Encode([]byte(baseTenStr))
+	baseTenStr := []byte(new(big.Int).SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10))
+	encoded, err := base58.BitcoinEncoding.Encode(baseTenStr)
 	if err != nil {
 		return "", errors.Join(errors.New("base58 encoding fault"), err)
 	}
 	return Base58Str(encoded), nil
 }
 
+type BinaryCollectionId string // THIS IS ALWAYS IN BINARY FORMAT SERVERSIDE
+
+func (id BinaryCollectionId) asBase58() Base58Str {
+	b58bs, _ := Base2BytesToBase58(id.Bytes())
+	return b58bs
+}
+
+func (id BinaryCollectionId) AsMainCollectionId() (MainCollectionId, error) {
+	bs := []byte(id)
+	if len(bs) != RfidByteSize {
+		return MainCollectionId{}, ErrInvalidByteLength
+	}
+	return MainCollectionId(bs), nil
+}
+
+func (id BinaryCollectionId) AsAltCollectionId() (AlternateCollectionId, error) {
+	bs := []byte(id)
+	if len(bs) != 12 {
+		return AlternateCollectionId{}, ErrInvalidByteLength
+	}
+	return AlternateCollectionId(bs), nil
+}
+
+func (id BinaryCollectionId) Bytes() []byte {
+	return []byte(id)
+}
+
+func (id BinaryCollectionId) ToBase58Bytes() []byte {
+	return []byte(id.asBase58())
+}
+
+func (id BinaryCollectionId) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, id.asBase58())), nil
+}
+
+func (id *BinaryCollectionId) UnmarshalJSON(bs []byte) (err error) {
+	*id, err = Base58Str(bs).ToBinaryCollectionId()
+	return err
+}
+
 const RfidByteSize = 8
 
 type MainCollectionId [RfidByteSize]byte
 
+func (id MainCollectionId) base58Bytes() []byte {
+	return []byte(id.asBase58())
+}
+
+func (id MainCollectionId) ToBinaryCollectionId() BinaryCollectionId {
+	return BinaryCollectionId(id.dbIdStr())
+}
+
 func (id MainCollectionId) MarshalJSON() ([]byte, error) {
-	marshalling := [RfidByteSize]byte(id)
-	println("Marshalling " + string(marshalling[0:]))
+	//marshalling := [RfidByteSize]byte(id)
+	//println("Marshalling " + string(marshalling[0:]))
 	bs58 := id.asBase58()
-	println(bs58) // TODO: DELETEME
+	//println(bs58) // TODO: CLEANUP
 	out := []byte(`"` + string(bs58) + `"`)
-	println("Marshalled: " + string(out)) // TODO: DEL
+	//println("Marshalled: " + string(out))
 	return out, nil
 }
 
 func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
 	var b58Str string
-	err := json.Unmarshal(bs, &b58Str)
+	if err := json.Unmarshal(bs, &b58Str); err != nil {
+		return err
+	}
 	val, err := Base58Str(b58Str).toMainCollectionId()
 	if err != nil {
 		return err
@@ -136,36 +192,40 @@ func (id MainCollectionId) dbIdStr() string { // Returns Most efficient string
 	bytes := [RfidByteSize]byte(id)
 	return string(bytes[:])
 }
-func (id MainCollectionId) asBase58() Base58Str {
-	arr := [RfidByteSize]byte(id)
-	bs := arr[0:]
-	println("bytes asBase58 preBase: " + string(bs))
-	out, err := Base2BytesToBase58(bs)
-	if err != nil {
-		errOut := "Error getting MainCollId str " + err.Error()
-		println(errOut)
-		panic(errOut) // TODO: EW, GET RID OF
+func (id MainCollectionId) asBase58() Base58Str { // TODO: make sure that everywhere this is used, it is being used properly, and doesnt need to be in binary format
+	return id.ToBinaryCollectionId().asBase58() // TODO: make sure ok
+	//arr := [RfidByteSize]byte(id)
+	//bs := arr[:]
+	//println("bytes asBase58 preBase: " + string(bs)) // TODO: remove
+	//out, err := Base2BytesToBase58(bs)
+	//if err != nil {
+	//	errOut := "Error getting MainCollId str " + err.Error()
+	//	println(errOut) // TODO: remove
+	//	panic(errOut) // TODO: EW, GET RID OF
+	//}
+	//println("bytes asBase58 out: " + string(out)) // TODO: remove
+	//return out
+}
+func (id MainCollectionId) IdField() MainCollectionIdField { // Returns Most efficient string
+	return MainCollectionIdField{id}
+}
+
+type AlternateCollectionId primitive.ObjectID // == [12]byte
+
+func (id AlternateCollectionId) ToBinaryCollectionId() BinaryCollectionId {
+	return BinaryCollectionId(id.String())
+}
+
+func (id AlternateCollectionId) MarshalJSON() ([]byte, error) { // Turn to base58 before outputting
+	return []byte(`"` + string(id.base58Bytes()) + `"`), nil
+}
+
+func (id *AlternateCollectionId) UnmarshalJSON(bs []byte) error { // Turn from base58 to server-type (binary)
+	var b58Str Base58Str
+	if err := json.Unmarshal(bs, &b58Str); err != nil {
+		return err
 	}
-	println("bytes asBase58 out: " + string(out))
-	return out
-}
-
-type alternateCollectionId primitive.ObjectID // == [12]byte
-
-func (id alternateCollectionId) MarshalJSON() ([]byte, error) {
-	marshalling := [12]byte(id)
-	println("Marshalling " + string(marshalling[0:]))
-	bs58 := id.base58Bytes()
-	println(bs58) // TODO: DELETEME
-	out := []byte(`"` + string(bs58) + `"`)
-	println("Marshalled: " + string(out)) // TODO: DEL
-	return out, nil
-}
-
-func (id *alternateCollectionId) UnmarshalJSON(bs []byte) error {
-	var b58Str string
-	err := json.Unmarshal(bs, &b58Str)
-	val, err := Base58Str(b58Str).toAltCollectionId()
+	val, err := b58Str.toAltCollectionId()
 	if err != nil {
 		return err
 	}
@@ -173,11 +233,11 @@ func (id *alternateCollectionId) UnmarshalJSON(bs []byte) error {
 	return nil
 }
 
-func (id alternateCollectionId) String() string {
+func (id AlternateCollectionId) String() string {
 	return string(id[:])
 }
 
-func (id alternateCollectionId) base58() Base58Str {
+func (id AlternateCollectionId) asBase58() Base58Str {
 	out, err := Base2BytesToBase58(id[:])
 	if err != nil {
 		panic("Error getting AltCollId str " + err.Error())
@@ -186,12 +246,15 @@ func (id alternateCollectionId) base58() Base58Str {
 	return out
 }
 
-func (id alternateCollectionId) base58Bytes() []byte {
-	return []byte(id.base58())
+func (id AlternateCollectionId) base58Bytes() []byte {
+	return []byte(id.asBase58())
+}
+func (id AlternateCollectionId) asIdField() AlternateCollectionIdField {
+	return AlternateCollectionIdField{id}
 }
 
-func newAlternateCollectionId() alternateCollectionId {
-	return alternateCollectionId(primitive.NewObjectID())
+func newAlternateCollectionId() AlternateCollectionId {
+	return AlternateCollectionId(primitive.NewObjectID())
 }
 
 /*
@@ -209,24 +272,8 @@ autoIndexId	Boolean	(Optional) If true, automatically create index on _id field.
 
 // TODO: auth mechanisms https://www.mongodb.com/docs/drivers/go/current/fundamentals/auth/
 func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPort int) (context.Context, *mongo.Client, error) {
-	//credential := options.Credential{
-	//	Username: usern,
-	//	Password: pass,
-	//}
-	//if len(authDb) > 0 {
-	//	credential.AuthSource = authDb[0] // TODO: was "<authenticationDb>", defaults to "admin"
-	//}
-	//dbUri := fmt.Sprintf("mongodb://%s:%d", dbHostName, dbPort) // TODO: was "mongodb://<hostname>:<port>"
-	//clientOpts := options.Client().ApplyURI(dbUri).SetAuth(credential)
-	//client, err := mongo.Connect(context.TODO(), clientOpts)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//return context.WithValue(ctx, mongoClientContextKey, client), nil
-	//var DBName = "testDbName" // TODO: FIXME!
-	// TODO: FIX DB HOSTNAME
 	hostAndPort := dbHostName
-	if dbPort != 0 {
+	if dbPort != 0 && dbPort != 27017 {
 		hostAndPort = fmt.Sprintf("%s:%d", dbHostName, dbPort)
 	}
 
@@ -246,7 +293,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAuth(options.Credential{Username: usern, Password: pass}). // TODO: get rid of?
 		//SetAuth(options.Credential{Username: usern, Password: pass}).
 		//SetAppName("mainApi").
-		SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
+		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(5 * time.Second). // TODO: no?
 		SetTimeout(10 * time.Second)        // TODO: no?
 	// TODO: ANY MORE?
@@ -266,12 +313,12 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		break
 	}
 	if !connOk {
-		panic("Ping failed to " + uri + " ... " + err.Error())
+		errConn := errors.New("Ping failed to " + uri)
+		return ctx, nil, errors.Join(errConn, err)
+
 	}
 	println("Client connected to db at " + uri)
 	return context.WithValue(ctx, mongoClientContextKey, client), client, nil
-
-	// TODO: ? return mongoClientForURI(ctx, uri)
 }
 
 func mongoClientForURI(ctx context.Context, uri string) (context.Context, error) {
@@ -287,7 +334,7 @@ func mongoClientForURI(ctx context.Context, uri string) (context.Context, error)
 	}
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		panic("Ping failed to " + uri)
+		return ctx, errors.Join(errors.New("Ping failed to "+uri), err)
 	}
 	println("Client connected to db at " + uri)
 	return context.WithValue(ctx, mongoClientContextKey, client), nil
@@ -311,10 +358,13 @@ func doTxn(ctx context.Context, txnFunc func(ctx mongo.SessionContext) (interfac
 	txnOptions := options.Transaction().SetWriteConcern(writeconcern.Majority()) // TODO: other concerns?
 	result, err := session.WithTransaction(ctx, txnFunc, txnOptions)
 	if err != nil {
+		if errors.Is(err, ErrInTxnAlreadyTriedToWrite) {
+			return result, session.AbortTransaction(ctx)
+		}
 		newErr := errors.New("failed to execute transaction") // TODO: move
-		err = errors.Join(err, newErr)
+		return result, errors.Join(err, newErr, session.AbortTransaction(ctx))
 	}
-	return result, err
+	return result, errors.Join(session.CommitTransaction(ctx), err)
 }
 
 func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, error) {
@@ -344,6 +394,10 @@ func generateMainCollectionId(ctx context.Context) (MainCollectionId, error) {
 	return ids[0], nil
 }
 
+//func getLastNEntriesForType[T]() { // TODO: do this
+//
+//}
+
 func getLastNEntries(ctx context.Context, variant string, updated bool, nresults int) ([]byte, error) {
 	entryType, err := entryTypeFor(variant)
 	if err != nil {
@@ -351,7 +405,7 @@ func getLastNEntries(ctx context.Context, variant string, updated bool, nresults
 	}
 	findBson := bson.D{{}}
 	if etf := entryType.EntryTypeField(); etf != nil {
-		findBson = bson.D{{"entryType", *etf}} // TODO: ensure ok?
+		findBson = bson.D{{"entryType", *etf}} // TODO: ensure ok (dont like this)
 	}
 	sortField := "$natural"
 	if updated {
@@ -379,10 +433,6 @@ func getLastNEntries(ctx context.Context, variant string, updated bool, nresults
 
 func HandleCreate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !ableToModify(r.Context()) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
-		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
 			"agarBatch":       createAgarBatchHandler,
@@ -411,15 +461,11 @@ func HandleCreate() http.HandlerFunc {
 		if !exists {
 			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
 		}
-		handler.ServeHTTP(w, r)
+		GetPermsMiddleware(handler).ServeHTTP(w, r)
 	}
 }
 func ImportHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !ableToModify(r.Context()) {
-			http.Error(w, "Forbidden", http.StatusForbidden)
-			return
-		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
 			"bag":             importBagHandler,
@@ -436,16 +482,12 @@ func ImportHandler() http.HandlerFunc {
 		if !exists {
 			http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
 		}
-		handler.ServeHTTP(w, r)
+		GetPermsMiddleware(handler).ServeHTTP(w, r)
 	}
 }
 
 func UpdateById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !ableToModify(r.Context()) { // TODO: remove all other uses of ableToModify?
-			http.Error(w, "User does not have update permissions", http.StatusForbidden)
-			return
-		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
 			"agarBatch":       updateAgarBatchHandler,
@@ -469,58 +511,44 @@ func UpdateById() http.HandlerFunc {
 			"subspecies":      updateSubspeciesHandler,
 			"substrateRecipe": updateSubstrateRecipeHandler,
 			"transfer":        updateTransferHandler,
-			//"User":"", // TODO: probably don't need
+			"ser":             updateUserHandler,
 		}[endpt]
 		if !exists {
 			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
 		}
-		handler.ServeHTTP(w, r)
+		GetPermsMiddleware(handler).ServeHTTP(w, r)
 	}
 }
 
-func speciesIsSpecial(ctx context.Context, sp *string) bool { // TODO: rename, move?
-	if sp == nil {
-		return false
-	}
-	// TODO: check against all special species
-	// TODO: Hold special species in map? slice?
-	// TODO: update special species on db updates
-	return false // TODO: CHANGE!
-}
+//func userIsAdmin(ctx context.Context) bool {
+//	authinfo, err := GetAuthInfo(ctx)
+//	return err == nil && authinfo.Opts != nil && authinfo.Opts.Admin != nil && *authinfo.Opts.Admin
+//}
 
-func userIsAdmin(ctx context.Context) bool {
-	return GetAuthInfo(ctx).Opts.Contains(MaxAuthKey)
-}
-
-func ableToModify(ctx context.Context) bool {
-	perms := GetAuthInfo(ctx)
-	for _, key := range []string{MaxAuthKey, ChangeKey} {
-		if perms.Opts.Contains(key) {
-			return true
-		}
-	}
-	return false
-}
-
-func setStringArrayIfUnequal(upd bson.D, new []string, current []string, key string) bson.D {
+func setStringArrayIfUnequal(upd *Mods, new []string, current []string, key string) *Mods {
 	out := upd
 	if len(new) != len(current) {
-		out = append(out, bson.E{"$set", bson.D{{key, new}}})
+		out.Set(key, new)
 		return out
 	}
 	for i := 0; i < len(current); i++ {
 		if !slices.Contains(new, current[i]) {
-			out = append(out, bson.E{"$set", bson.D{{key, new}}})
+			out.Set(key, new)
 			return out
 		}
 	}
 	return out
 }
 
-func setProjectsIfUnequal(upd bson.D, new []string, current []string) bson.D {
-	return setStringArrayIfUnequal(upd, new, current, "projects")
+func projectsAsStrings(projs []projectName) []string {
+	out := make([]string, len(projs))
+	for i := 0; i < len(projs); i++ {
+		out[i] = string(projs[i])
+	}
+	return out
 }
-func setSalesIfUnequal(upd bson.D, new []alternateCollectionId, current []alternateCollectionId) bson.D {
+
+func setSalesIfUnequal(upd bson.D, new []AlternateCollectionId, current []AlternateCollectionId) bson.D {
 	out := upd
 	if len(new) != len(current) {
 		out = append(out, bson.E{"$set", bson.D{{"sales", new}}})
@@ -534,3 +562,47 @@ func setSalesIfUnequal(upd bson.D, new []alternateCollectionId, current []altern
 	}
 	return out
 }
+
+func DbTxnStdErr(w http.ResponseWriter, txt string, status int) (interface{}, error) {
+	http.Error(w, txt, status)
+	return nil, ErrInTxnAlreadyTriedToWrite
+}
+
+//func HandleFIXME() http.HandlerFunc { // TODO: handle permissions on all handlers
+//	return func(w http.ResponseWriter, r *http.Request) {
+//		switch r.Method {
+//		case http.MethodGet: // Viewing pages (incl signup?)or other gets (entries, images, sessionUserProjects
+//		case http.MethodPost: // TODO: creating new things?
+//		case http.MethodPatch: // TODO: updating things
+//		}
+//		endpt := r.PathValue("endpt")
+//		handler, exists := map[string]http.HandlerFunc{
+//			"agarBatch":       createAgarBatchHandler,
+//			"agarRecipe":      createAgarRecipeHandler,
+//			"bag":             createBagHandler,
+//			"lc":              createLiquidCultureHandler,
+//			"lcRecipe":        createLcRecipeHandler,
+//			"fruit":           createFruitHandler,
+//			"fruitingChamber": createFruitingChamberHandler,
+//			"jar":             createJarHandler,
+//			"jarRecipe":       createJarRecipeHandler,
+//			"mss":             createMssHandler,
+//			"pcRun":           createPcRunHandler,
+//			"plate":           createPlateHandler,
+//			"project":         createProjectHandler,
+//			"sale":            createSaleHandler,
+//			"slant":           createSlantHandler,
+//			"species":         createSpeciesHandler,
+//			"sporePrint":      createSporePrintHandler,
+//			"stasisTube":      createStasisTubeHandler,
+//			"subspecies":      createSubspeciesHandler,
+//			"substrateRecipe": createSubstrateRecipeHandler,
+//			"transfer":        createTransferHandler,
+//			//"User":"", // TODO: probably don't need
+//		}[endpt]
+//		if !exists {
+//			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
+//		}
+//		GetPermsMiddleware(handler).ServeHTTP(w, r)
+//	}
+//}

@@ -10,34 +10,42 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"reflect"
 	"slices"
 	"time"
 )
 
 const agarRecipesCollectionName = "agarRecipes"
 
+type AgarRecipeField struct {
+	AgarRecipe AlternateCollectionId `bson:"agarRecipe" json:"agarRecipe"` // TODO: FIX, USED TO BE Recipe and recipe
+}
+
+func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error) {
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarRecipesCollectionName).FindOne(ctx, bson.M{
+		"_id": field.AgarRecipe,
+	}).Decode(&out)
+	return out, err
+}
+
 type AgarRecipe struct {
-	Id          alternateCollectionId `bson:"_id" json:"_id"`
-	Name        string                `bson:"name" json:"name"`
-	Liquids     []liquid              `bson:"liquids" json:"liquids"`   // TapWater, DistilledWater, GrainWater (Oat, etc)
-	Agar        int                   `bson:"agar" json:"agar"`         // agar grams per 1L
-	Standard    bool                  `bson:"standard" json:"standard"` // If this is a standard recipe
-	Nutrients   []nutrientMeasurement `bson:"nutrients,omitempty" json:"nutrients,omitempty"`
-	Sugars      []sugarMeasurement    `bson:"sugars,omitempty" json:"sugars,omitempty"`
-	Additives   []additiveMeasurement `bson:"additives,omitempty" json:"additives,omitempty"`
-	Antibiotics []antibiotic          `bson:"antibiotics,omitempty" json:"antibiotics,omitempty"`
-	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+	AlternateCollectionIdField
+	NameField
+	LiquidsField
+	Agar          int `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField     // If this is a standard recipe
+	NutrientsField
+	SugarsField
+	AdditivesField
+	AntibioticsField
+	NotesField
+	LastUpdatedField
 }
 
 func (recipe AgarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := recipe
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (recipe AgarRecipe) clean() CollectionItem {
-	return recipe
 }
 
 func (recipe AgarRecipe) EntryTypeField() *string {
@@ -49,53 +57,63 @@ func (recipe AgarRecipe) CollectionName() string {
 }
 
 type NewAgarRecipeRequest struct {
-	Name        string `json:"name"`
-	Standard    *bool  `json:"standard,omitempty"`
-	Liquids     []liquid
-	AgarGPerL   int
-	Nutrients   []nutrientMeasurement
-	Sugars      []sugarMeasurement
-	Additives   []additiveMeasurement
-	Antibiotics []antibiotic
-	Notes       []string
+	NameField
+	StandardField
+	LiquidsField
+	AgarGPerL int
+	NutrientsField
+	SugarsField
+	AdditivesField
+	AntibioticsField          // TODO: make sure to put dosages in notes
+	Notes            []string // TODO: these are just strings?
 }
 
 func (req NewAgarRecipeRequest) asRecipe() AgarRecipe {
 	now := time.Now()
 	return AgarRecipe{
-		Id:          alternateCollectionId(newAlternateCollectionId()),
-		Name:        req.Name,
-		Agar:        req.AgarGPerL,
-		Liquids:     req.Liquids,
-		Nutrients:   req.Nutrients,
-		Sugars:      req.Sugars,
-		Additives:   req.Additives,
-		Antibiotics: req.Antibiotics,
-		Standard:    utils.Default(req.Standard, false),
-		Notes:       stringsToNotes(req.Notes, now),
-		LastUpdated: unixTime(now.UnixMilli()),
+		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
+		NameField:                  req.NameField,
+		Agar:                       req.AgarGPerL,
+		LiquidsField:               req.LiquidsField,
+		NutrientsField:             req.NutrientsField,
+		SugarsField:                req.SugarsField,
+		AdditivesField:             req.AdditivesField,
+		AntibioticsField:           req.AntibioticsField,
+		StandardField:              req.StandardField,
+		NotesField:                 NotesField{stringsToNotes(req.Notes, now)},
+		LastUpdatedField:           LastUpdatedField{unixTimeFor(now)},
 	}
 }
 
-func newAgarRecipe(ctx mongo.SessionContext, req AgarRecipe) utils.Result[alternateCollectionId] {
+func newAgarRecipe(ctx mongo.SessionContext, req AgarRecipe) utils.Result[AgarRecipe] {
 	res, err := ctx.Client().Database(dbName).Collection(agarRecipesCollectionName).InsertOne(ctx, req)
 	if err != nil {
-		return utils.ErroredResult[alternateCollectionId](err)
+		return utils.ErroredResult[AgarRecipe](err)
 	}
 	if res == nil {
-		return utils.ErroredResult[alternateCollectionId](errors.New("empty response when adding recipe"))
+		return utils.ErroredResult[AgarRecipe](errors.New("empty response when adding recipe"))
 	}
-	out, ok := res.InsertedID.(alternateCollectionId)
+	id, ok := res.InsertedID.(AlternateCollectionId)
 	if !ok {
-		return utils.ErroredResult[alternateCollectionId](errors.New("failed to resolve new agar recipe ID"))
+		return utils.ErroredResult[AgarRecipe](errors.New("failed to resolve new agar recipe ID"))
 	}
-	return utils.SuccessfulResult(alternateCollectionId(out))
+	req.Id = id
+	return utils.SuccessfulResult(req)
 }
 
 type updateAgarRecipeRequest struct {
-	Name     string           `json:"name"`
-	Standard bool             `json:"standard"`
-	Notes    AllEntries[Note] `json:"notes"`
+	NameField
+	StandardField
+	Notes AllEntries[Note] `json:"notes"`
+}
+
+func (req updateAgarRecipeRequest) modsFor(existing AgarRecipe) (bson.D, error) {
+	return NewMods().
+		updateNameIfNeeded(req.Name, existing.Name).
+		updateStandardIfNeeded(req.Standard, existing.Standard).
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -119,45 +137,16 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(agarRecipesCollectionName)
-		existing, err := GetAltCollectionItem(ctx, id.String(), AgarRecipe{})
+		existing, err := GetAltCollectionItem(ctx, id, AgarRecipe{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			http.Error(w, err.Error(), stat)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		if !ableToModify(ctx) { // TODO: DO THIS EVERYWHERE!
-			http.Error(w, "not permitted to modify", http.StatusForbidden)
-			return nil, nil
-		}
-		mods := bson.D{}
-		// change name if needed
-		if req.Name != existing.Name {
-			mods = bson.D{{"$set", bson.D{{"name", req.Name}}}}
-		}
-		// change standard if needed
-		if req.Standard != existing.Standard {
-			mods = bson.D{{"$set", bson.D{{"standard", req.Standard}}}}
-		}
-		// Do note changes
-		mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
-		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", existing.Id}}, mods)
-		err = result.Err()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
-		}
-		return w.Write([]byte(b58Id))
+		upd, err := req.modsFor(existing)
+		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -168,7 +157,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(agarRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false),
+		newSimpleIndex("name", "name", false, false, false), // TODO: names unique?
 		newSimpleIndex("liquids", "liquids.name", false, false, false),
 		newSimpleIndex("agar", "agar", true, false, false),
 		newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
@@ -185,82 +174,82 @@ func initializeAgarRecipes(ctx context.Context) error {
 	inserted, updated := 0, 0
 	for _, recipe := range []AgarRecipe{
 		{
-			Name:    "LMEA - Light Malt Extract Agar",
-			Id:      altCollIdForint(idLmea),
-			Liquids: []liquid{Water.AsLiquid()},
-			Agar:    20,
-			Nutrients: []nutrientMeasurement{
+			NameField:                  NameField{"LMEA - Light Malt Extract Agar"},
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
+			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
+			Agar:                       20,
+			NutrientsField: NutrientsField{[]nutrientMeasurement{
 				{
 					Nutrient: LME,
 					Amount:   20,
 					Unit:     "g",
 				},
-			},
-			Sugars:   nil,
-			Standard: true,
-			Notes:    nil,
+			}},
+			SugarsField:   SugarsField{},
+			StandardField: StandardField{true},
+			NotesField:    NotesField{},
 		},
 		{
-			Name:    "PDA - Potato Dextrose Agar",
-			Id:      altCollIdForint(idPda),
-			Liquids: []liquid{Water.AsLiquid()},
-			Agar:    20,
-			Nutrients: []nutrientMeasurement{{
+			NameField:                  NameField{"PDA - Potato Dextrose Agar"},
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idPda)},
+			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
+			Agar:                       20,
+			NutrientsField: NutrientsField{[]nutrientMeasurement{{
 				Nutrient: Potato,
 				Amount:   18,
 				Unit:     "g",
-			}},
-			Sugars: []sugarMeasurement{{
+			}}},
+			SugarsField: SugarsField{[]sugarMeasurement{{
 				Type:   Dextrose,
 				Amount: 1,
 				Unit:   "g",
-			}},
-			Standard: true,
-			Notes:    nil,
+			}}},
+			StandardField: StandardField{true},
+			NotesField:    NotesField{},
 		},
 		{
-			Name:      "Water Agar",
-			Id:        altCollIdForint(idWaterAgar),
-			Liquids:   []liquid{Water.AsLiquid()},
-			Agar:      20,
-			Nutrients: nil,
-			Sugars:    nil,
-			Standard:  true,
-			Notes:     nil,
+			NameField:                  NameField{"Water Agar"},
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idWaterAgar)},
+			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
+			Agar:                       20,
+			NutrientsField:             NutrientsField{},
+			SugarsField:                SugarsField{},
+			StandardField:              StandardField{true},
+			NotesField:                 NotesField{},
 		},
 		{
-			Name: "Grain Water Agar",
-			Id:   altCollIdForint(idGrainWaterAgar),
-			Liquids: []liquid{
+			NameField:                  NameField{"Grain Water Agar"},
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idGrainWaterAgar)},
+			LiquidsField: LiquidsField{[]liquid{
 				GrainWater.AsLiquid().withPct(50.0),
 				DistilledWater.AsLiquid().withPct(50.0),
-			},
-			Agar:      20,
-			Nutrients: nil,
-			Sugars:    nil,
-			Standard:  true,
-			Notes: []Note{
+			}},
+			Agar:           20,
+			NutrientsField: NutrientsField{},
+			SugarsField:    SugarsField{},
+			StandardField:  StandardField{true},
+			NotesField: NotesField{[]Note{
 				builtInNote("Grain water also acts as a nutrient source"),
-			},
+			}},
 		},
 		{
-			Name:    "Antibiotic Agar",
-			Id:      altCollIdForint(idAntibioticAgar),
-			Liquids: []liquid{DistilledWater.AsLiquid()},
-			Agar:    20,
-			Nutrients: []nutrientMeasurement{
+			NameField:                  NameField{"Antibiotic Agar"},
+			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idAntibioticAgar)},
+			LiquidsField:               LiquidsField{[]liquid{DistilledWater.AsLiquid()}},
+			Agar:                       20,
+			NutrientsField: NutrientsField{[]nutrientMeasurement{
 				{
 					Nutrient: LME,
 					Amount:   20,
 					Unit:     "g",
 				},
-			},
-			Sugars:      nil,
-			Antibiotics: []antibiotic{Doxycycline},
-			Standard:    true,
-			Notes: []Note{
+			}},
+			SugarsField:      SugarsField{},
+			AntibioticsField: AntibioticsField{[]antibiotic{Doxycycline}},
+			StandardField:    StandardField{true},
+			NotesField: NotesField{[]Note{
 				builtInNote("50mg doxycycline per ?????"),
-			},
+			}},
 		},
 	} {
 		var existing AgarRecipe
@@ -279,12 +268,12 @@ func initializeAgarRecipes(ctx context.Context) error {
 		}
 		// If exists, ensure it is the same as it was. Add notes if necessary
 		update := false
-		if len(recipe.Liquids) != len(existing.Liquids) {
+		if len(recipe.LiquidsField.Liquids) != len(existing.LiquidsField.Liquids) {
 			update = true
 		} else {
 			// if any liquids are different, replace all liquids
-			for i, liq := range recipe.Liquids {
-				if liq != existing.Liquids[i] {
+			for i, liq := range recipe.LiquidsField.Liquids {
+				if liq != existing.LiquidsField.Liquids[i] {
 					update = true
 					break
 				}
@@ -295,12 +284,12 @@ func initializeAgarRecipes(ctx context.Context) error {
 		}
 		// Nutrients
 		if !update {
-			if len(recipe.Nutrients) != len(existing.Nutrients) {
+			if len(recipe.NutrientsField.Nutrients) != len(existing.NutrientsField.Nutrients) {
 				update = true
 			} else {
 				// if any nutrients are different, replace
-				for i, nut := range recipe.Nutrients {
-					if nut != existing.Nutrients[i] {
+				for i, nut := range recipe.NutrientsField.Nutrients {
+					if nut != existing.NutrientsField.Nutrients[i] {
 						update = true
 						break
 					}
@@ -310,12 +299,12 @@ func initializeAgarRecipes(ctx context.Context) error {
 
 		// Sugars
 		if !update {
-			if len(recipe.Sugars) != len(existing.Sugars) {
+			if len(recipe.SugarsField.Sugars) != len(existing.SugarsField.Sugars) {
 				update = true
 			} else {
 				// if any sugars are different, replace
-				for i, s := range recipe.Sugars {
-					if s != existing.Sugars[i] {
+				for i, s := range recipe.SugarsField.Sugars {
+					if s != existing.SugarsField.Sugars[i] {
 						update = true
 						break
 					}
@@ -343,22 +332,81 @@ func initializeAgarRecipes(ctx context.Context) error {
 			updated++
 		}
 	}
+	existingEntry := AgarRecipe{}
+	testItem := AgarRecipe{
+		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		NameField:                  NameField{testEntryStringId},
+		LiquidsField: LiquidsField{[]liquid{
+			Water.AsLiquid().withPct(40.0),
+			DistilledWater.AsLiquid().withPct(60.0),
+		}},
+		Agar:          20,
+		StandardField: StandardField{false},
+		NutrientsField: NutrientsField{[]nutrientMeasurement{
+			{
+				Nutrient: LME,
+				Amount:   19,
+				Unit:     "g",
+			},
+			{
+				Nutrient: Potato,
+				Amount:   2,
+				Unit:     "g",
+			},
+		}},
+		SugarsField: SugarsField{[]sugarMeasurement{{
+			Type:   Dextrose,
+			Amount: 1,
+			Unit:   "g",
+		}, {
+			Type:   Honey,
+			Amount: 2,
+			Unit:   "g",
+		}}},
+		AdditivesField: AdditivesField{[]additiveMeasurement{
+			{
+				Additive: Vermiculite,
+				Amount:   0.2,
+				Unit:     "lb",
+			},
+			{
+				Additive: Perlite,
+				Amount:   0.7,
+				Unit:     "tons",
+			},
+			{
+				Additive: Gypsum,
+				Amount:   1,
+				Unit:     "pinch",
+			},
+		}},
+		AntibioticsField: AntibioticsField{[]antibiotic{Doxycycline, HydrogenPeroxide}},
+		NotesField:       NotesField{exampleNotes()},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+	}
+	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+	if err == nil {
+		if reflect.DeepEqual(existingEntry, testItem) {
+			return nil
+		}
+	}
+	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 	if inserted+updated > 0 {
 		println(fmt.Sprintf(`Agar recipes: inserted %d, updated %d`, inserted, updated))
 	}
-	return nil
+	return err
 }
 
 type createAgarRecipeRequest struct {
-	Name        string                `json:"name"`
-	Standard    bool                  `json:"standard"`
-	Agar        int                   `json:"agar"`
-	Liquids     []liquid              `json:"liquids"`
-	Nutrients   []nutrientMeasurement `json:"nutrients,omitempty"`
-	Sugars      []sugarMeasurement    `json:"sugars,omitempty"`
-	Additives   []additiveMeasurement `json:"additives,omitempty"`
-	Antibiotics []antibiotic          `json:"antibiotics,omitempty"`
-	Notes       []Note                `json:"notes,omitempty"`
+	NameField
+	StandardField
+	Agar int `json:"agar"`
+	LiquidsField
+	NutrientsField
+	SugarsField
+	AdditivesField
+	AntibioticsField
+	NotesField
 }
 
 func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -374,28 +422,41 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := newAlternateCollectionId()
 	entry := AgarRecipe{
-		Id:          id,
-		Name:        req.Name,
-		Liquids:     req.Liquids,
-		Agar:        req.Agar,
-		Standard:    req.Standard,
-		Nutrients:   req.Nutrients,
-		Sugars:      req.Sugars,
-		Additives:   req.Additives,
-		Antibiotics: req.Antibiotics,
-		Notes:       req.Notes,
-		LastUpdated: unixTime(time.Now().UnixMilli()),
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		NameField:                  req.NameField,
+		LiquidsField:               req.LiquidsField,
+		Agar:                       req.Agar,
+		StandardField:              req.StandardField,
+		NutrientsField:             req.NutrientsField,
+		SugarsField:                req.SugarsField,
+		AdditivesField:             req.AdditivesField,
+		AntibioticsField:           req.AntibioticsField,
+		NotesField:                 req.NotesField,
+		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		result := newAgarRecipe(ctx, entry)
 		if result.Err != nil {
-			http.Error(w, "Agar batch creation failure: "+result.Err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, "Agar batch creation failure: "+result.Err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write(id.base58Bytes())
+		bs, errr := json.Marshal(result.Item)
+		if errr != nil {
+			return DbTxnStdErr(w, errr.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bs)
 	})
 
 	if err != nil {
 		handleWriteErr(err, w)
 	}
+}
+
+func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) { // TODO: USE ME
+	out := AgarRecipe{}
+	err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+		Database(dbName).
+		Collection(agarRecipesCollectionName).
+		FindOne(ctx, bson.M{"name": name}).
+		Decode(&out)
+	return out, err
 }

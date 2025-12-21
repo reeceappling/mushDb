@@ -19,6 +19,10 @@ var (
 	_ MainCollectionItem = MSS{}             // generally only goes to plate
 )
 
+type CollectionId interface { // TODO; USE????
+	MainCollectionId | AlternateCollectionId // TODO: DELETEME
+}
+
 type MainCollectionItem interface {
 	CollectionItem
 	geneticSource
@@ -51,7 +55,7 @@ func simpleInsertMainColl(ctx context.Context, item interface{}) (*MainCollectio
 	return &res, nil
 }
 
-func getTransferById(ctx context.Context, xferColl *mongo.Collection, id alternateCollectionId) (*Transfer, error) {
+func getTransferById(ctx context.Context, xferColl *mongo.Collection, id AlternateCollectionId) (*Transfer, error) {
 	var xfer Transfer
 	out := &xfer
 	xferResult := xferColl.FindOne(ctx, bson.D{{"_id", id}})
@@ -77,8 +81,8 @@ var mainCollMap = map[string]MainCollectionItem{
 	"plate":           Plate{},
 	"slant":           Slant{},
 	"stasisTube":      StasisTube{},
-	"bag":             Bag{},             // TODO: consider moving to alt
-	"fruitingChamber": FruitingChamber{}, // TODO: consider moving to alt
+	"bag":             Bag{},
+	"fruitingChamber": FruitingChamber{},
 	"mss":             MSS{},
 }
 
@@ -96,31 +100,30 @@ func rawEntryTypeConversion(raw bson.Raw) (MainCollectionItem, error) {
 	return child, nil
 }
 
-func childrenOnlyToPlate(ctx context.Context, xferIds []alternateCollectionId) ([]geneticSource, error) {
-	out, db, xferColl := initializeChildrenMethod(ctx)
-	mainColl := db.Collection(mainCollectionName)
-	for _, xferId := range xferIds {
-		xfer, err := getTransferById(ctx, xferColl, xferId)
-		if err != nil {
-			return nil, err
-		}
-		var dish Plate // TODO: only goes to plate
-		item := mainColl.FindOne(ctx, bson.D{{"_id", xfer.To}})
-		if err = item.Err(); err != nil {
-			return nil, errors.Join(errors.New("failed to find plate by id"), err)
-		}
-		if err = item.Decode(&dish); err != nil {
-			return nil, errors.Join(errors.New("failed to decode plate"), err)
-		}
-		out = append(out, dish)
-	}
-	return out, nil
-}
+//func childrenOnlyToPlate(ctx context.Context, xferIds []AlternateCollectionId) ([]geneticSource, error) {
+//	out, db, xferColl := initializeChildrenMethod(ctx)
+//	mainColl := db.Collection(mainCollectionName)
+//	for _, xferId := range xferIds {
+//		xfer, err := getTransferById(ctx, xferColl, xferId)
+//		if err != nil {
+//			return nil, err
+//		}
+//		var dish Plate
+//		item := mainColl.FindOne(ctx, bson.D{{"_id", xfer.To}})
+//		if err = item.Err(); err != nil {
+//			return nil, errors.Join(errors.New("failed to find plate by id"), err)
+//		}
+//		if err = item.Decode(&dish); err != nil {
+//			return nil, errors.Join(errors.New("failed to decode plate"), err)
+//		}
+//		out = append(out, dish)
+//	}
+//	return out, nil
+//}
 
-func childrenAreOnlyFruits(ctx context.Context, xferIds []alternateCollectionId) ([]geneticSource, error) {
-	// TODO: this
-	panic("not implemented")
-}
+//func childrenAreOnlyFruits(ctx context.Context, xferIds []AlternateCollectionId) ([]geneticSource, error) {
+//	panic("not implemented")
+//}
 
 func initializeMainCollection(ctx context.Context) error {
 	// Indices
@@ -150,7 +153,7 @@ func initializeMainCollection(ctx context.Context) error {
 		newSimpleIndex("sale", "sale", true, true, false),   // All but LC
 		newSimpleIndex("sales", "sales", true, true, false), // LC Only
 		newSimpleIndex("disposed", "disposed", true, true, false),
-		newSimpleIndex("projects", "projects", false, false, false),
+		projectsIndexModel,
 		// mostRecentImage (no index)
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,

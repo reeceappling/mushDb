@@ -8,27 +8,49 @@ import (
 	"io"
 	"net/http"
 	"reflect"
-	"time"
 )
 
-const pcRunCollectionName = "pcRuns"
-
-type PCRun struct { // TODO: add most recently updated field, add creation date field
-	Id          alternateCollectionId `bson:"_id" json:"_id"`
-	Date        unixTime              `bson:"date" json:"date"`
-	RunTime     string                `bson:"runtime" json:"runtime"`
-	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+type PcRunField struct {
+	PcRun AlternateCollectionId `bson:"pcRun" json:"pcRun"`
 }
 
-func (run PCRun) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := run
-	err := decodeItem(&out, encoded)
+func (field PcRunField) Get(ctx context.Context) (out PCRun, err error) {
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pcRunCollectionName).FindOne(ctx, bson.M{
+		"_id": field.PcRun,
+	}).Decode(&out)
 	return out, err
 }
 
-func (run PCRun) clean() CollectionItem {
-	return run
+func (field PcRunField) asOptional() PcRunOptionalField {
+	return PcRunOptionalField{&field.PcRun}
+}
+
+type PcRunOptionalField struct {
+	PcRun *AlternateCollectionId `bson:"pcRun,omitempty" json:"pcRun,omitempty"`
+}
+
+func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) {
+	if field.PcRun == nil {
+		err = ErrMissingOptionalField
+		return
+	}
+	return PcRunField{*field.PcRun}.Get(ctx)
+}
+
+const pcRunCollectionName = "pcRuns"
+
+type PCRun struct {
+	AlternateCollectionIdField
+	CreationDateField     //TODO: USED TO BE date, is now CreationDate
+	RunTimeMinutes    int `bson:"runtimeMinutes" json:"runtimeMinutes"` // todo; used to just be runtime, also used to be string
+	NotesField
+	LastUpdatedField
+}
+
+func (run PCRun) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
+	out := PCRun{}
+	err := decodeItem(&out, encoded)
+	return out, err
 }
 
 func (run PCRun) EntryTypeField() *string {
@@ -48,18 +70,17 @@ func initializePCRun(ctx context.Context) error {
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
-	// TODO: project, sale, sporePrint
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
 	existingEntry := PCRun{}
 	testItem := PCRun{
-		Id:          exAltId,
-		Date:        exampleTime,
-		RunTime:     "1 hour",
-		Notes:       exampleNotes(),
-		LastUpdated: exampleTime,
+		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		CreationDateField:          CreationDateField{exampleTime},
+		RunTimeMinutes:             60,
+		NotesField:                 NotesField{exampleNotes()},
+		LastUpdatedField:           LastUpdatedField{exampleTime},
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -67,13 +88,13 @@ func initializePCRun(ctx context.Context) error {
 			return nil
 		}
 	}
-	return renameMe(ctx, coll, exAltId, testItem, existingEntry)
+	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 }
 
 type createPcRunRequest struct {
-	CreationDate unixTime
-	RunTime      string
-	Notes        []Note `json:"notes,omitempty"`
+	CreationDateField
+	RunTimeMinutes int
+	NotesField
 }
 
 func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
@@ -89,24 +110,31 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if req.RunTimeMinutes < 15 {
+		http.Error(w, "runtime must be greater than 15", http.StatusBadRequest)
+	}
 	id := newAlternateCollectionId()
 
-	entry := PCRun{
-		Id:          id,
-		Date:        req.CreationDate,
-		RunTime:     req.RunTime, // TODO: VALIDATE
-		Notes:       req.Notes,
-		LastUpdated: unixTime(time.Now().UnixMilli()),
+	toInsert := PCRun{
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		CreationDateField:          req.CreationDateField,
+		RunTimeMinutes:             req.RunTimeMinutes,
+		NotesField:                 req.NotesField,
+		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(pcRunCollectionName)
-		_, err := coll.InsertOne(ctx, entry)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
-		}
-		return w.Write(id.base58Bytes())
-	})
+	ctx := r.Context()
+	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+	_, err = client.Database(dbName).Collection(pcRunCollectionName).InsertOne(ctx, toInsert)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest) // TODO: 400 ok?
+		return
+	}
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError) // TODO: 400 ok?
+		return
+	}
+	_, err = w.Write(bsOut)
 	if err != nil {
 		handleWriteErr(err, w)
 	}
@@ -135,7 +163,7 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	existing, err := GetAltCollectionItem(r.Context(), id.String(), PCRun{})
+	existing, err := GetAltCollectionItem(r.Context(), id, PCRun{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -144,31 +172,34 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	if !ableToModify(r.Context()) { // TODO: DO THIS EVERYWHERE!
-		http.Error(w, "not permitted to modify", http.StatusForbidden)
-		return
-	}
-	mods := bson.D{}
-	// Do note changes
-	mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if len(mods) == 0 {
-		http.Error(w, "no changes made", http.StatusBadRequest)
-		return
-	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(pcRunCollectionName)
-		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", existing.Id}}, mods)
-		if err := result.Err(); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+		upd, err := NewMods().
+			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updateLastUpdatedIfNeeded().
+			Finalized()
+		if err != nil {
+			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write([]byte(b58Id))
+		if len(upd) == 0 {
+			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+		}
+		bsonId := bson.D{{"_id", existing.Id}}
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		err = coll.FindOne(ctx, bsonId).Decode(&existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
-		// TODO: WHAT HERE?
+		HandleHttpWriteError(err)
 	}
 }

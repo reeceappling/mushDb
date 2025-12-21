@@ -13,5 +13,5 @@ cd "$SCRIPT_DIR"
 cd ../
 REPO_DIR=$(pwd)
 
-cp initDB/mongo-init.js /tmp/mush/mongo-init.js
-echo "moved db init script to /tmp/mush/mongo-init.js"
+#cp initDB/mongo-init.js /tmp/mush/mongo-init.js
+#echo "moved db init script to /tmp/mush/mongo-init.js"

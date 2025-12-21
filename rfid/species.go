@@ -3,6 +3,7 @@ package rfid
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,36 +11,39 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	sliceutils "slices"
-	"time"
 )
 
 const speciesCollectionName = "species"
 
+type SpeciesField struct {
+	Species string `bson:"species" json:"species"`
+}
+
+func (field SpeciesField) AsOptional() SpeciesOptionalField {
+	val := field.Species
+	return SpeciesOptionalField{&val}
+}
+
+type SpeciesOptionalField struct {
+	Species *string `bson:"species,omitempty" json:"species,omitempty"`
+}
+
 type Species struct {
-	Name              string                `bson:"_id" json:"_id"` // THIS IS THE COMMON NAME
-	ScientificName    string                `bson:"scientificName" json:"scientificName"`
-	Aliases           []string              `bson:"aliases,omitempty" json:"aliases,omitempty"`
-	Has               bool                  `bson:"has" json:"has"` // TODO: ENSURE THIS IS SET UP RIGHT!!!!!
-	StandardSubstrate alternateCollectionId `bson:"standardSubstrate,omitempty" json:"standardSubstrate,omitempty"`
-	Notes             []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated       unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+	NameIdField           // THIS IS THE COMMON NAME
+	ScientificName string `bson:"scientificName" json:"scientificName"`
+	AliasesField
+	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate,omitempty" json:"standardSubstrate,omitempty"`
+	NotesField
+	LastUpdatedField
+	PermsField
 }
 
 func (sp Species) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := sp
-	err := decodeItem(&out, encoded)
+	err := decodeItem(&out, encoded) // TODO: likely wont work
 	return out, err
-}
-
-func (sp Species) clean() CollectionItem {
-	out := sp
-	// TODO: Change name
-	// TODO: Change scientificName
-	// TODO: Change aliases
-	// TODO: Change has?
-	// TODO: Change notes
-	return out
 }
 
 func (sp Species) EntryTypeField() *string {
@@ -49,6 +53,23 @@ func (sp Species) EntryTypeField() *string {
 func (sp Species) CollectionName() string {
 	return speciesCollectionName
 }
+
+const shiitakeName = "Shiitake"
+const shiitakeSciName = "Lentinula edodes"
+
+var shiitakeNotes = NotesField{[]Note{{
+	Time: ogTime,
+	Note: "Colonization conditions: Hardwood sawdust with 15% bran, or pegs into a log. Indirect sun 8-12hrs. 80-90% humidity, 60-68degF, and regular FAE",
+},
+	{
+		Time: ogTime,
+		Note: "Fruiting conditions: Needs roughly 3mo incubation, damage block to encourage fruiting.",
+	},
+	{
+		Time: ogTime,
+		Note: "Best Agar: LMEA",
+	},
+}}
 
 func initializeSpecies(ctx context.Context) error {
 	// Indices
@@ -65,17 +86,16 @@ func initializeSpecies(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: OTHER SPECIES
 	inserted, updated := 0, 0
-	woodPelletsId := alternateCollectionId(altCollIdForint(idWoodPellets))
+	woodPelletsId := altCollIdForint(idWoodPellets)
 	for _, species := range []Species{
 		// King Oyester
 		{
-			Name:              "king oyster",
+			NameIdField:       NameIdField{"king oyster"},
 			ScientificName:    "Pleurotus Eryngii",
-			Aliases:           nil,
+			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
-			Notes: []Note{
+			NotesField: NotesField{[]Note{
 				{
 					Time: ogTime,
 					Note: "Colonization conditions: FIXME",
@@ -88,14 +108,14 @@ func initializeSpecies(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
 				}},
-		},
+			}},
 		// Pink Oyster
 		{
-			Name:              "pink oyster", // TODO: this
+			NameIdField:       NameIdField{"Pink Oyster"},
 			ScientificName:    "Pleurotus Djamor",
-			Aliases:           nil,
+			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
-			Notes: []Note{{
+			NotesField: NotesField{[]Note{{
 				Time: ogTime,
 				Note: "Colonization conditions: FIXME",
 			},
@@ -107,14 +127,14 @@ func initializeSpecies(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
 				}},
-		},
+			}},
 		// Enoki
 		{
-			Name:              "enoki", // TODO: this
+			NameIdField:       NameIdField{"Enoki"},
 			ScientificName:    "Flammulina filiformis",
-			Aliases:           nil,
+			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
-			Notes: []Note{{
+			NotesField: NotesField{[]Note{{
 				Time: ogTime,
 				Note: "Colonization conditions: FIXME",
 			},
@@ -126,33 +146,22 @@ func initializeSpecies(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
 				}},
-		},
+			}},
 		// Shiitake
 		{
-			Name:              "shiitake", // TODO: this
-			ScientificName:    "Lentinula edodes",
-			Aliases:           nil,
+			NameIdField:       NameIdField{shiitakeName},
+			ScientificName:    shiitakeSciName,
+			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
-			Notes: []Note{{
-				Time: ogTime,
-				Note: "Colonization conditions: Hardwood sawdust with 15% bran, or pegs into a log. Indirect sun 8-12hrs. 80-90% humidity, 60-68degF, and regular FAE",
-			},
-				{
-					Time: ogTime,
-					Note: "Fruiting conditions: Needs roughly 3mo incubation, damage block to encourage fruiting.",
-				},
-				{
-					Time: ogTime,
-					Note: "Best Agar: LMEA",
-				}},
+			NotesField:        shiitakeNotes,
 		},
 		// Maitake, Hen of the Woods
 		{
-			Name:              "maitake", // TODO: this
+			NameIdField:       NameIdField{"Maitake"},
 			ScientificName:    "Grifola frondosa",
-			Aliases:           []string{"hen of the woods"},
+			AliasesField:      AliasesField{[]string{"hen of the woods"}},
 			StandardSubstrate: woodPelletsId,
-			Notes: []Note{{
+			NotesField: NotesField{[]Note{{
 				Time: ogTime,
 				Note: "Colonization conditions: FIXME",
 			},
@@ -168,17 +177,18 @@ func initializeSpecies(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
 				}},
-		},
+			}},
 		// Beech
 		{ // TODO: WHITE AND BROWN
-			Name:              "beech", // TODO: this
-			ScientificName:    "",      // TODO: this
-			Aliases:           []string{"hen of the woods"},
+			NameIdField:       NameIdField{"Beech"},
+			ScientificName:    "", // TODO: this
+			AliasesField:      AliasesField{[]string{"hen of the woods"}},
 			StandardSubstrate: woodPelletsId,
-			Notes: []Note{{
-				Time: ogTime,
-				Note: "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin",
-			},
+			NotesField: NotesField{[]Note{
+				{
+					Time: ogTime,
+					Note: "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin",
+				},
 				{
 					Time: ogTime,
 					Note: "50-60DegF, 80-90RH, FAE",
@@ -186,14 +196,14 @@ func initializeSpecies(ctx context.Context) error {
 				{
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
-				}},
+				},
+			}},
 		},
 	} {
 		var existing Species
 		err = coll.FindOne(ctx, bson.D{{"_id", species.Name}}).Decode(&existing)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
-				println("ERROR WAS NOT ERRNODOCS") // TODO: deleteme
 				return err
 			}
 			// if not exists, add it to the db
@@ -204,7 +214,6 @@ func initializeSpecies(ctx context.Context) error {
 			inserted++
 			continue
 		}
-		println("NO ERROR, UPDATING") // TODO: this
 		// If exists, ensure it is the same as it was. Add notes if necessary
 		update := false
 		if species.ScientificName != existing.ScientificName {
@@ -254,19 +263,36 @@ func initializeSpecies(ctx context.Context) error {
 			updated++
 		}
 	}
-	if inserted+updated > 0 { // TODO: ok?
-		println(fmt.Sprintf(`Species entries: inserted %d, updated %d`, inserted, updated))
+	// Add test entry
+	existingEntry := Species{}
+	testItem := Species{
+		NameIdField:       NameIdField{testEntryStringId},
+		ScientificName:    "examplius speciesus",
+		AliasesField:      AliasesField{[]string{"testSpecies", "example species"}},
+		StandardSubstrate: exAltId,
+		NotesField:        NotesField{exampleNotes()},
+		LastUpdatedField:  LastUpdatedField{exampleTime},
 	}
-	return nil
+	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+	if err == nil {
+		if reflect.DeepEqual(existingEntry, testItem) {
+			return nil
+		}
+	}
+	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	if inserted+updated > 0 {
+		println(fmt.Sprintf(`Species: inserted %d, updated %d`, inserted, updated))
+	}
+	return err
 }
 
 type createSpeciesRequest struct {
-	Name           string    `json:"name"`
-	ScientificName string    `json:"scientificName"`
-	Aliases        []string  `json:"aliases,omitempty"`
-	Have           bool      `json:"have"`
-	Sub            Base58Str `json:"sub"`
-	Notes          []Note    `json:"notes,omitempty"`
+	NameField
+	ScientificName string `json:"scientificName"`
+	AliasesField
+	SubstrateRecipeField // TODO: tag used to be "sub" is now "recipe"
+	NotesField
+	PermsField
 }
 
 func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -279,43 +305,51 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	subId, err := req.Sub.toAltCollectionId() // TODO: CONFIRM EXISTS
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err = req.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+		http.Error(w, "can not write with provided perms: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(speciesCollectionName)
-		_, err = coll.InsertOne(r.Context(), Species{
-			Name:              req.Name,
-			ScientificName:    req.ScientificName,
-			Aliases:           req.Aliases,
-			Has:               req.Have,
-			StandardSubstrate: alternateCollectionId(subId),
-			Notes:             req.Notes,
-			LastUpdated:       unixTime(time.Now().UnixMilli()),
-		})
+		db := ctx.Client().Database(dbName)
+		err = db.Collection(substrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write([]byte(req.Name))
+		coll := ctx.Client().Database(dbName).Collection(speciesCollectionName)
+		toInsert := Species{
+			NameIdField:       NameIdField{req.Name},
+			ScientificName:    req.ScientificName,
+			AliasesField:      req.AliasesField,
+			StandardSubstrate: req.Substrate,
+			NotesField:        req.NotesField,
+			LastUpdatedField:  LastUpdatedField{unixTimeForNow()},
+			PermsField:        req.PermsField,
+		}
+		_, err = coll.InsertOne(r.Context(), toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
-		// TODO: handle write failure
+		handleWriteErr(err, w)
 	}
 }
 
 type updateSpeciesRequest struct {
-	Substrate Base58Str        `json:"substrate"`
-	Notes     AllEntries[Note] `json:"notes,omitempty"`
-	Aliases   []string         `json:"aliases,omitempty"`
-	Have      bool             `json:"have"`
+	Substrate AlternateCollectionId `json:"standardSubstrate"`
+	Notes     AllEntries[Note]      `json:"notes,omitempty"`
+	AliasesField
+	PermsField
 }
 
 func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	urlEncodedSpeciesName := r.PathValue("id")
-	speciesName, err := url.QueryUnescape(urlEncodedSpeciesName)
+	speciesName, err := url.QueryUnescape(urlEncodedSpeciesName) // TODO: make sure we are doing this right!
 	if err != nil {
 		http.Error(w, "failed to decode species name from url: "+err.Error(), http.StatusBadRequest)
 		return
@@ -333,51 +367,71 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(speciesCollectionName)
-		existing, err := GetAltCollectionItemInTxn(ctx, speciesName, Species{})
+		db := ctx.Client().Database(dbName)
+		coll := db.Collection(speciesCollectionName)
+		existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically
 		if err != nil {
 			stat := http.StatusInternalServerError
-			if err == mongo.ErrNoDocuments {
+			if errors.Is(err, mongo.ErrNoDocuments) {
 				stat = http.StatusNotFound
 			}
-			http.Error(w, err.Error(), stat)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		// TODO: HOW TO HANDLE MODIFYING SPECIAL SPECIES?
-		reqStandardSubstrate, err := req.Substrate.toAltCollectionId() // TODO: check exists
+		if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
+			return DbTxnStdErr(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusBadRequest)
+		}
+		upd, err := NewMods().
+			UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
+			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updateAliasesIfNeeded(req.Aliases, existing.Aliases).
+			updatePermsIfNeeded(req.Perms, existing.Perms). // TODO: validate?
+			Finalized()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return nil, nil
+			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
-		mods := bson.D{}
-		// change substrate if needed
-		if alternateCollectionId(reqStandardSubstrate) != existing.StandardSubstrate {
-			mods = bson.D{{"$set", bson.D{{"standardSubstrate", reqStandardSubstrate}}}}
+		if req.Substrate.asBase58() != existing.StandardSubstrate.asBase58() {
+			err = db.Collection(substrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
+			if err != nil {
+				return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			}
 		}
-		// Do note changes
-		mods, err = WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
+		if len(upd) == 0 {
+			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+		}
+		bsonId := bson.D{{"_id", speciesName}}
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		// Do alias changes
-		mods = setStringArrayIfUnequal(mods, req.Aliases, existing.Aliases, "aliases")
-		// Do have changes
-		if req.Have != existing.Has {
-			mods = append(mods, bson.E{"$set", bson.D{{"has", reqStandardSubstrate}}}) // TODO: ensure ok! May be HAVE elsewhere!
-		}
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
-		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", speciesName}}, mods)
-		err = result.Err()
+		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		return w.Write([]byte(speciesName))
+		bsOut, err := json.Marshal(existing)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
 	})
 	if err != nil {
-		// TODO: WRITE ERR
+		handleWriteErr(err, w)
 	}
+}
+
+func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
+	sp := Species{}
+	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	err := db.Collection(speciesCollectionName).FindOne(ctx, bson.D{{"_id", speciesName}}).Decode(&sp)
+	if err != nil {
+		return sp, nil, err
+	}
+	if subspeciesName == nil {
+		return sp, nil, nil
+	}
+	subsp := Subspecies{}
+	err = db.Collection(subSpeciesCollectionName).FindOne(ctx, bson.D{{"_id", *subspeciesName}}).Decode(&subsp)
+	if err != nil {
+		return sp, nil, err
+	}
+	return sp, &subsp, nil
 }

@@ -14,28 +14,44 @@ import (
 	"time"
 )
 
-// TODO: SPORE SWAB?!?!?!?!
+// TODO: project.go and user.go anonymous fields handling
+
+// TODO: AltCollIDs are being json un/marshalled to base58! DONT use binary on the client side (check again, think done)
+
+// TODO: FIX ALL REQUESTS AND HANDLERS FOR IMPORTS, UPDATES, and CREATES
+
+// TODO: SPORE SWABS?!?!?!?!
+// TODO: PEGS?????!!?!?!?! Oak, Poplar, Bamboo
 
 const agarBatchCollectionName = "agarBatches"
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
-	Id    alternateCollectionId `bson:"_id" json:"_id"`
-	PcRun alternateCollectionId `bson:"pcRun,omitempty" json:"pcRun,omitempty"`
-	// Recipe is the id of the Agar Recipe used
-	Recipe      alternateCollectionId `bson:"recipe" json:"recipe"`
-	Color       colorant              `bson:"color" json:"color"`
-	Notes       []Note                `bson:"notes,omitempty" json:"notes,omitempty"`
-	LastUpdated unixTime              `bson:"lastUpdated" json:"lastUpdated"`
+	AlternateCollectionIdField
+	PcRunField
+	AgarRecipeField
+	Color colorant `bson:"color" json:"color"`
+	NotesField
+	LastUpdatedField
+}
+
+type AgarBatchField struct {
+	AgarBatch *AlternateCollectionId `bson:"agarBatch,omitempty" json:"agarBatch,omitempty"`
+}
+
+func (field AgarBatchField) Get(ctx context.Context) (out AgarBatch, err error) {
+	if field.AgarBatch == nil {
+		return out, ErrMissingOptionalField
+	}
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarBatchCollectionName).FindOne(ctx, bson.M{
+		"_id": *field.AgarBatch,
+	}).Decode(&out)
+	return out, err
 }
 
 func (batch AgarBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := batch
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (batch AgarBatch) clean() CollectionItem {
-	return batch
 }
 
 func (batch AgarBatch) EntryTypeField() *string {
@@ -47,50 +63,50 @@ func (batch AgarBatch) CollectionName() string {
 }
 
 type NewAgarBatchRequest struct {
-	PcRunId string // alt coll ID
-	Recipe  string // alt coll ID
-	Color   *string
-	Notes   []string
+	PcRunField
+	AgarRecipeField
+	Color *string
+	Notes []string
 }
 
 func (req NewAgarBatchRequest) asAgarBatch() (AgarBatch, error) {
-	pcRunId, err := StandardizeAltCollectionId(req.PcRunId)
-	if err != nil {
-		return AgarBatch{}, errors.New("invalid PC Run ID")
-	}
-	recipe, err := StandardizeAltCollectionId(req.Recipe)
-	if err != nil {
-		return AgarBatch{}, errors.New("invalid Recipe ID")
-	}
-	c := utils.Default(req.Color, string(clear))
+	c := utils.Default(req.Color, string(clearColor))
 	colorSelected, exists := colors[c]
 	if !exists {
 		return AgarBatch{}, errors.New("invalid color")
 	}
 	return AgarBatch{
-		Id:          alternateCollectionId(primitive.NewObjectID()),
-		PcRun:       *pcRunId,
-		Recipe:      alternateCollectionId(*recipe),
-		Color:       colorSelected,
-		Notes:       stringsToNotes(req.Notes, time.Now()),
-		LastUpdated: unixTime(time.Now().UnixMilli()),
+		AlternateCollectionIdField: AlternateCollectionIdField{Id: AlternateCollectionId(primitive.NewObjectID())},
+		PcRunField:                 req.PcRunField,
+		AgarRecipeField:            req.AgarRecipeField,
+		Color:                      colorSelected,
+		NotesField:                 NotesField{stringsToNotes(req.Notes, time.Now())},
+		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 	}, nil
 }
 
-func newAgarBatch(ctx mongo.SessionContext, batch AgarBatch) (*alternateCollectionId, error) {
+func newAgarBatch(ctx mongo.SessionContext, batch AgarBatch) (*AgarBatch, error) {
 	out, err := ctx.Client().Database(dbName).Collection(agarBatchCollectionName).InsertOne(ctx, batch)
 	if err != nil {
 		return nil, err
 	}
-	res, ok := out.InsertedID.(alternateCollectionId)
+	res, ok := out.InsertedID.(AlternateCollectionId)
 	if !ok {
 		return nil, errors.New("failed to convert to primitive.ObjectID")
 	}
-	return &res, err
+	batch.Id = res
+	return &batch, err
 }
 
 type updateAgarBatchRequest struct {
 	Notes AllEntries[Note] `json:"notes"`
+}
+
+func (req updateAgarBatchRequest) modsFor(existing AgarBatch) (bson.D, error) {
+	return NewMods().
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
@@ -112,40 +128,18 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		existing, err := GetAltCollectionItemInTxn(ctx, id.String(), AgarBatch{})
+		coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarBatchCollectionName)
+		existing, err := GetAltCollectionItemInTxn(ctx, id, AgarBatch{})
 		if err != nil {
 			stat := http.StatusInternalServerError
-			if err == mongo.ErrNoDocuments {
+			if errors.Is(err, mongo.ErrNoDocuments) {
 				stat = http.StatusNotFound
 			}
 			http.Error(w, err.Error(), stat)
-			return nil, nil
-
+			return nil, ErrInTxnAlreadyTriedToWrite
 		}
-		if !ableToModify(ctx) { // TODO: DO THIS EVERYWHERE!
-			http.Error(w, "not permitted to modify", http.StatusForbidden)
-			return nil, nil
-		}
-		// Do note changes
-		mods, err := WithNotesUpdate(bson.D{}, req.Notes, existing.Notes)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-		if len(mods) == 0 {
-			http.Error(w, "no changes made", http.StatusBadRequest)
-			return nil, nil
-		}
-		coll := ctx.Value(mongoClientContextKey).(*mongo.Client).
-			Database(dbName).
-			Collection(agarBatchCollectionName)
-		result := coll.
-			FindOneAndUpdate(ctx, bson.D{{"_id", existing.Id}}, mods)
-		err = result.Err()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return nil, nil
-		}
-		return w.Write(alternateCollectionId(existing.Id).base58Bytes())
+		upd, err := req.modsFor(existing)
+		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)
 	})
 
 	if err != nil {
@@ -167,14 +161,15 @@ func initializeAgarBatches(ctx context.Context) error {
 		return err
 	}
 	// If test agar batch does not exist, then create it
+	testAltId := altCollIdForint(0)
 	existingEntry := AgarBatch{}
 	testItem := AgarBatch{
-		Id:          exAltId,
-		PcRun:       altCollIdForint(0),
-		Recipe:      altCollIdForint(idLmea),
-		Color:       clear,
-		Notes:       exampleNotes(),
-		LastUpdated: exampleTime,
+		AlternateCollectionIdField: AlternateCollectionIdField{Id: exAltId},
+		PcRunField:                 PcRunField{testAltId},
+		AgarRecipeField:            AgarRecipeField{testAltId},
+		Color:                      clearColor,
+		NotesField:                 NotesField{exampleNotes()},
+		LastUpdatedField:           LastUpdatedField{exampleTime},
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -182,14 +177,14 @@ func initializeAgarBatches(ctx context.Context) error {
 			return nil
 		}
 	}
-	return renameMe(ctx, coll, exAltId, testItem, existingEntry)
+	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 }
 
 type createAgarBatchRequest struct {
-	Color  colorant  `json:"color"`
-	PcRun  Base58Str `json:"pcRun"`
-	Recipe Base58Str `json:"recipe"`
-	Notes  []Note    `json:"notes,omitempty"`
+	Color colorant `json:"color"`
+	PcRunField
+	AgarRecipeField
+	NotesField
 }
 
 func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
@@ -204,34 +199,40 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	pcRun, err := req.PcRun.toAltCollectionId()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-	recipe, err := req.Recipe.toAltCollectionId()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	id := alternateCollectionId(newAlternateCollectionId())
+	id := newAlternateCollectionId()
 	if !ValidColor(req.Color) {
 		http.Error(w, "Invalid agar color!", http.StatusBadRequest)
 		return
 	}
+
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		out, err := newAgarBatch(ctx, AgarBatch{
-			Id:          id,
-			PcRun:       pcRun,
-			Recipe:      alternateCollectionId(recipe),
-			Color:       req.Color,
-			Notes:       req.Notes,
-			LastUpdated: unixTime(time.Now().UnixMilli()),
-		})
+		// Validate fields
+		_, err = req.PcRunField.Get(ctx)
 		if err != nil {
-			http.Error(w, "Agar batch creation failure: "+err.Error(), http.StatusInternalServerError)
-			return nil, nil
+			return DbTxnStdErr(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
 		}
-		return w.Write(alternateCollectionId(*out).base58Bytes())
+		_, err = req.AgarRecipeField.Get(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
+		}
+
+		newBatch := AgarBatch{
+			AlternateCollectionIdField: AlternateCollectionIdField{id},
+			PcRunField:                 req.PcRunField,
+			AgarRecipeField:            req.AgarRecipeField,
+			Color:                      req.Color,
+			NotesField:                 req.NotesField,
+			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		}
+		batch, err := newAgarBatch(ctx, newBatch)
+		if err != nil {
+			return DbTxnStdErr(w, "Agar batch creation failure: "+err.Error(), http.StatusInternalServerError)
+		}
+		bs, err := json.Marshal(*batch)
+		if err != nil {
+			return DbTxnStdErr(w, "Agar batch marshal failure: "+err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bs)
 	})
 	if err != nil {
 		handleWriteErr(err, w)
