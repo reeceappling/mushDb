@@ -17,17 +17,6 @@ import (
 
 const agarRecipesCollectionName = "agarRecipes"
 
-type AgarRecipeField struct {
-	AgarRecipe AlternateCollectionId `bson:"agarRecipe" json:"agarRecipe"` // TODO: FIX, USED TO BE Recipe and recipe
-}
-
-func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarRecipesCollectionName).FindOne(ctx, bson.M{
-		"_id": field.AgarRecipe,
-	}).Decode(&out)
-	return out, err
-}
-
 type AgarRecipe struct {
 	AlternateCollectionIdField
 	NameField
@@ -160,11 +149,11 @@ func initializeAgarRecipes(ctx context.Context) error {
 		newSimpleIndex("name", "name", false, false, false), // TODO: names unique?
 		newSimpleIndex("liquids", "liquids.name", false, false, false),
 		newSimpleIndex("agar", "agar", true, false, false),
+		standardIndexModel,
 		newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
 		newSimpleIndex("sugars", "sugars.type", false, false, false),
 		newSimpleIndex("additives", "additives.additive", false, false, false),
 		newSimpleIndex("antibiotics", "antibiotics", false, false, false),
-		newSimpleIndex("standard", "standard", true, false, false),
 		//Notes (not indexed, unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -458,5 +447,16 @@ func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) {
 		Collection(agarRecipesCollectionName).
 		FindOne(ctx, bson.M{"name": name}).
 		Decode(&out)
+	return out, err
+}
+
+type AgarRecipeField struct {
+	AgarRecipe AlternateCollectionId `bson:"agarRecipe" json:"agarRecipe"` // TODO: FIX, USED TO BE Recipe and recipe
+}
+
+func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error) {
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarRecipesCollectionName).FindOne(ctx, bson.M{
+		"_id": field.AgarRecipe,
+	}).Decode(&out)
 	return out, err
 }

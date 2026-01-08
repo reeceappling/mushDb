@@ -8,7 +8,6 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
@@ -16,26 +15,28 @@ import (
 )
 
 const (
+	FruitingChamberCollectionName = "fruitingChambers" // TODO: USE
+
 	FruitingChamberSourceType = "fruitingChamber"
 	fruitingChamberIdPrefix   = "FC"
 )
 
-type FruitingChamber struct {
-	EntryTypeStructField
+// TODO: HANDLE MULTIPLE GRAIN INPUTS FOR MONOTUBS (DO MONOTUBS LATER)
+type FruitingChamber struct { // TODO: SHOEBOX
 	MainCollectionIdField
+	CreationDateField
 	SubstrateRecipeField
 	SubstrateBatchOptionalField         // TODO: new! use!
-	CupsGrain                   int     `bson:"cupsGrain" json:"cupsGrain"`                           // TODO: new! use!
+	CupsGrain                   float64 `bson:"cupsGrain" json:"cupsGrain"`                           // TODO: new! use!
 	MixedSubstratePerGrain      float64 `bson:"mixedSubstratePerGrain" json:"mixedSubstratePerGrain"` // for a 1:1:0.5 box this will be 1  // TODO: new! use!
 	CasingPerGrain              float64 `bson:"casingPerGrain" json:"casingPerGrain"`                 // No casing==0, half casing per grain == 0.5 // TODO: new! use!
-	CreationDateField
 	SpeciesOptionalField
 	SubspeciesOptionalField
 	InnocField
 	GenerationsFields
 	TransfersOutField
-	ParentTypeField // can be nil, most (main), or some (alt) like lcSyringe // TODO: NEW! HANDLE! nil == mainCollectionType (or purchased?), can also be MSS or clone! // TODO: INDEX????
-	BinaryOptionalParentField
+	ParentTypeField                   // can be nil, most (main), or some (alt) like lcSyringe // TODO: NEW! HANDLE! nil == mainCollectionType (or purchased?), can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField // TODO: used to be binaryOptional
 	PicsField
 	ContaminationsField
 	FlushesField
@@ -45,17 +46,17 @@ type FruitingChamber struct {
 	DisposedField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
+}
+
+func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
+	return errors.New("fc cannot be transferred (unsure if this is ok)")
 }
 
 func (f FruitingChamber) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := f
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (f FruitingChamber) projects() []projectName {
-	return f.Perms.ProjectPerms().Ids
 }
 
 func (f FruitingChamber) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -80,7 +81,7 @@ func (f FruitingChamber) setTransferParent(ctx mongo.SessionContext, xfer Transf
 	if err != nil {
 		return err
 	}
-	res, err := ctx.Client().Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, f.Id, upd)
+	res, err := ctx.Client().Database(dbName).Collection(FruitingChamberCollectionName).UpdateByID(ctx, f.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -90,6 +91,7 @@ func (f FruitingChamber) setTransferParent(ctx mongo.SessionContext, xfer Transf
 	return nil
 }
 
+// TODO: create box via jar instead
 func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
@@ -116,13 +118,13 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
-		updatePermsIfNeeded(xfer.Perms, f.Perms).
+		//updatePermsIfNeeded(xfer.Perms, f.Perms).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
 		return errors.New("failed to finalize") // TODO: ok?
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, f.Id, upd)
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName).UpdateByID(ctx, f.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -140,52 +142,86 @@ func (f FruitingChamber) CollectionName() string {
 	return mainCollectionName
 }
 
-func (f FruitingChamber) basicFruit() Fruit {
-	return Fruit{
-		AlternateCollectionIdField:        AlternateCollectionIdField{AlternateCollectionId(primitive.NewObjectID())},
-		SpeciesField:                      SpeciesField{*f.Species}, // TODO: ensure pointer is not nil
-		SubspeciesOptionalField:           f.SubspeciesOptionalField,
-		GenSporeField:                     GenSporeField{f.GenSinceSpore.Next()},
-		ParentTypeField:                   ParentTypeField{utils.Pointer(FruitingChamberSourceType)},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Id},
-		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
-	}
-}
+//func (f FruitingChamber) basicFruit() Fruit {
+//	return Fruit{
+//		MainCollectionIdField:        MainCollectionIdField{MainCollectionId(primitive.NewObjectID())},
+//		SpeciesField:                      SpeciesField{*f.Species}, // TODO: ensure pointer is not nil
+//		SubspeciesOptionalField:           f.SubspeciesOptionalField,
+//		GenSporeField:                     GenSporeField{f.GenSinceSpore.Next()},
+//		ParentTypeField:                   ParentTypeField{utils.Pointer(FruitingChamberSourceType)},
+//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Id},
+//		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
+//	}
+//}
 
 func initializeFruitingChamber(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(mainCollectionName)
-	// If test agar batch does not exist, then create it
+	coll := db.Collection(FruitingChamberCollectionName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		creationDateIndexModel,
+		newSimpleIndex("recipe", "recipe", false, false, false), // TODO: this is harvest date
+		newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
+		//newSimpleIndex("cupsGrain","cupsGrain", false, false, false),
+		//newSimpleIndex("mixedSubstratePerGrain","mixedSubstratePerGrain", false, false, false),
+		//newSimpleIndex("casingPerGrain","casingPerGrain", false, false, false),
+		newSimpleIndex("species", "species", false, true, false),
+		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("innoc", "innoc", false, true, false),
+		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		transfersOutIndexModel,
+		// TODO: prints
+		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		//Pics (no index)
+		//TODO: Contams
+		// Flushes
+		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		// MostRecentImage
+		saleIndexModel,
+		newSimpleIndex("disposed", "disposed", false, true, false),
+		//Notes (no index) (maybe later with tags?)
+		lastUpdatedIndexModel,
+		// TODO: projectsIndexModel,
+	})
+	if err != nil {
+		return err
+	}
+	// If test FC does not exist, then create it
 	existingEntry := FruitingChamber{}
 	testId := mainCollIdForint(idTestFC)
 	xfer := exAltId
 	plateId := mainCollIdForint(idTestPlate)
 	testItem := FruitingChamber{
-		EntryTypeStructField:  EntryTypeStructField{*existingEntry.EntryTypeField()},
-		MainCollectionIdField: MainCollectionIdField{testId},
-		SubstrateRecipeField:  SubstrateRecipeField{exAltId},
-		CreationDateField:     CreationDateField{exampleTime},
+
+		MainCollectionIdField:       MainCollectionIdField{testId},
+		SubstrateRecipeField:        SubstrateRecipeField{exAltId},
+		SubstrateBatchOptionalField: SubstrateBatchOptionalField{}, // TODO: ADD ME
+		CupsGrain:                   4,                             // quart
+		MixedSubstratePerGrain:      1.0,                           // 1:1 grain:subsMixed
+		CasingPerGrain:              0.5,                           // Half casing per grain
+		CreationDateField:           CreationDateField{exampleTime},
 		GenerationsFields: GenerationsFields{
 			GenSporeField:        GenSporeField{&exGenSinceSpore},
 			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
 		},
-		KnownFruitableField:       KnownFruitableField{exBool},
-		SpeciesOptionalField:      SpeciesOptionalField{&exampleSpecies},
-		SubspeciesOptionalField:   SubspeciesOptionalField{exampleSubspecies},
-		InnocField:                InnocField{&xfer},
-		TransfersOutField:         TransfersOutField{exAlts},
-		ParentTypeField:           ParentTypeField{&exParentType},
-		BinaryOptionalParentField: BinaryOptionalParentField{utils.Pointer(plateId.ToBinaryCollectionId())},
-		PicsField:                 PicsField{exPics},
-		ContaminationsField:       ContaminationsField{exContams},
-		MostRecentImageField:      MostRecentImageField{&exPics[0]},
-		FlushesField:              FlushesField{exPics},
-		SaleField:                 SaleField{utils.Pointer(exAltId)},
-		DisposedField:             DisposedField{}, // TODO: dispose of it in tests?
-		NotesField:                NotesField{exampleNotes()},
-		LastUpdatedField:          LastUpdatedField{exampleTime},
+		KnownFruitableField:               KnownFruitableField{exBool},
+		SpeciesOptionalField:              SpeciesOptionalField{&exampleSpecies},
+		SubspeciesOptionalField:           SubspeciesOptionalField{exampleSubspecies},
+		InnocField:                        InnocField{&xfer},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		ParentTypeField:                   ParentTypeField{&exParentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&plateId},
+		PicsField:                         PicsField{exPics},
+		ContaminationsField:               ContaminationsField{exContams},
+		MostRecentImageField:              MostRecentImageField{&exPics[0]},
+		FlushesField:                      FlushesField{exPics},
+		SaleField:                         SaleField{utils.Pointer(exAltId)},
+		DisposedField:                     DisposedField{}, // TODO: dispose of it in tests?
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil
@@ -195,15 +231,18 @@ func initializeFruitingChamber(ctx context.Context) error {
 }
 
 type createFruitingChamberRequest struct {
-	Recipe AlternateCollectionId // substrate recipe
-	CreationDateField
+	Recipe              AlternateCollectionId // substrate recipe // TODO: do not use this. Pull from batch
+	SubstrateBatchField                       // TODO: USE ME
+	ParentJar           MainCollectionId      // TODO: USE ME
+	MixedSubstrateCups  float64
+	CasingCups          float64
 	NotesField
 	WriteTagToField
 }
 
 func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := createFruitingChamberRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -221,25 +260,37 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		parentJar, err := LookupGrainJar(ctx, data.ParentJar)
+		if err != nil {
+			return DbTxnStdErr(w, "failed to resolve parent jar"+err.Error(), http.StatusBadRequest)
+		}
+
+		// TODO: figure out cupSize of grain
+		coll := ctx.Client().Database(dbName).Collection(FruitingChamberCollectionName)
 		now := unixTimeForNow()
 		_, err = SubstrateRecipeField{data.Recipe}.Get(ctx)
 		if err != nil {
 			return DbTxnStdErr(w, "invalid substrate recipe: "+err.Error(), http.StatusBadRequest)
 		}
-		err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+		err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 		if err != nil {
 			return DbTxnStdErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := FruitingChamber{
-			EntryTypeStructField:  EntryTypeStructField{"fruitingChamber"},
-			MainCollectionIdField: MainCollectionIdField{id},
-			SubstrateRecipeField:  SubstrateRecipeField{data.Recipe},
-			CreationDateField:     CreationDateField{data.CreationDate},
-			NotesField:            NotesField{data.Notes},
-			LastUpdatedField:      LastUpdatedField{now},
+			MainCollectionIdField:  MainCollectionIdField{id},
+			SubstrateRecipeField:   SubstrateRecipeField{data.Recipe},
+			CupsGrain:              float64(parentJar.SizeCups),
+			MixedSubstratePerGrain: data.MixedSubstrateCups / float64(parentJar.SizeCups), // TODO: ensure ok
+			CasingPerGrain:         data.CasingCups / float64(parentJar.SizeCups),         // TODO: ensure ok
+			CreationDateField:      CreationDateField{now},
+			NotesField:             NotesField{data.Notes},
+			LastUpdatedField:       LastUpdatedField{now},
 		}
-		_, err := coll.InsertOne(ctx, toInsert)
+		err = addToIdMapCollectionInTxn(ctx, id.ToBinaryCollectionId(), toInsert.SourceType())
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -258,17 +309,20 @@ type importFruitingChamberRequest struct {
 	SubstrateRecipeField
 	CreationDateField
 	SpeciesField
+	GrainCups      float64  // TODO: USE
+	SubstrateRatio *float64 // TODO: USE
+	CasingRatio    *float64 // TODO: USE
 	SubspeciesOptionalField
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	PermsField // TODO: SHOULD WE CHECK SPECIES AND SUBSPECIES?
+	//PermsField // TODO: SHOULD WE CHECK SPECIES AND SUBSPECIES?
 	// image as "img"
 }
 
 func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitingChamberRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -353,25 +407,28 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError) // TODO: normalize
-		return
-	}
-	finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
-	if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil { // TODO: maybe dont do this?
-		http.Error(w, "user cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError) // TODO: normalize
+	//	return
+	//}
+	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
+	//if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil { // TODO: maybe dont do this?
+	//	http.Error(w, "user cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		out := FruitingChamber{
-			EntryTypeStructField:    EntryTypeStructField{"fruitingChamber"},
-			MainCollectionIdField:   MainCollectionIdField{id},
-			SubstrateRecipeField:    data.SubstrateRecipeField,
-			CreationDateField:       CreationDateField{data.CreationDate},
-			SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
-			SubspeciesOptionalField: data.SubspeciesOptionalField,
+			MainCollectionIdField:       MainCollectionIdField{id},
+			SubstrateRecipeField:        data.SubstrateRecipeField,
+			SubstrateBatchOptionalField: SubstrateBatchOptionalField{nil}, // Unknown for imports
+			CreationDateField:           CreationDateField{data.CreationDate},
+			CupsGrain:                   data.GrainCups,
+			MixedSubstratePerGrain:      utils.Default(data.SubstrateRatio, 1.0),
+			CasingPerGrain:              utils.Default(data.CasingRatio, 0.5),
+			SpeciesOptionalField:        SpeciesOptionalField{&data.Species},
+			SubspeciesOptionalField:     data.SubspeciesOptionalField,
 			GenerationsFields: GenerationsFields{
 				GenSporeField:        GenSporeField{gen},
 				GenSinceFruitOrSpore: gen,
@@ -380,7 +437,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:  data.KnownFruitableField,
 			MostRecentImageField: MostRecentImageField{importedPic},
 			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-			PermsField:           finalPerms.asField(),
+			//PermsField:           finalPerms.asField(),
 		}
 		_, err = data.SubstrateRecipeField.Get(ctx)
 		if err != nil {
@@ -415,7 +472,7 @@ type updateFruitingChamberRequest struct {
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
 	WriteTagToField
-	PermsField
+	//PermsField
 }
 
 func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRequest {
@@ -427,7 +484,7 @@ func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRe
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		Flushes:             imageUpdates(upr.Flushes),
-		PermsField:          upr.PermsField,
+		//PermsField:          upr.PermsField,
 	}
 }
 
@@ -435,11 +492,11 @@ type resolvedUpdateFruitingChamberRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes      AllEntries[Note]
-	Images     SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams    SplitEntries[contamForm, Contamination]
-	Flushes    SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsField // TODO: new
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
+	//PermsField // TODO: new
 }
 
 func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
@@ -505,9 +562,9 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 			}
 		}
-		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "overlapping perms invalid for user: "+err.Error(), http.StatusBadRequest)
-		}
+		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "overlapping perms invalid for user: "+err.Error(), http.StatusBadRequest)
+		//}
 		upd, err := NewMods().
 			updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
 			updateSaleIfNeeded(out.Sale, existing.Sale).
@@ -516,7 +573,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			updatePicsIfNeeded(out.Images, existing.Pics).
 			updateContamsIfNeeded(out.Contams, existing.Contaminations).
 			updateFlushesIfNeeded(out.Flushes, existing.Flushes).
-			updatePermsIfNeeded(out.Perms, existing.Perms).
+			//updatePermsIfNeeded(out.Perms, existing.Perms).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)

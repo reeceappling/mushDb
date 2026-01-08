@@ -25,6 +25,25 @@ import (
 var ErrNoParentModifiedForTransfer = errors.New("parent not found for transfer update. Shouldnt occur")
 var ErrMissingOptionalField = errors.New("missing optional field")
 var ErrFailedToFinalizeMods = errors.New("failed to finalize mods")
+var ErrInTxnAlreadyTriedToWrite = errors.New("transaction failed, response has been written already") // TODO: do already
+
+var sourceTypeCollections = map[string]string{
+	BagSourceType:             BagsCollectionName,
+	FruitSourceType:           fruitsCollName,
+	FruitingChamberSourceType: FruitingChamberCollectionName,
+	GrainJarSourceType:        GrainJarCollectionName,
+	LcSourceType:              LCCollectionName,
+	lcSyringeSourceType:       lcSyringeCollectionName,
+	MssSourceType:             MssCollectionName,
+	PlateSourceType:           PlatesCollectionName,
+	PlugSourceType:            PlugsCollectionName,
+	SlantSourceType:           SlantsCollectionName,
+	SporePrintSourceType:      sporePrintCollectionName,
+	SporeSwabSourceType:       sporeSwabCollectionName,
+	StasisTubeSourceType:      StasisTubeCollectionName,
+}
+
+// TODO: ALL CREATION ENDPOINTS
 
 var (
 	_ CollectionItem = Project{}
@@ -38,15 +57,15 @@ type CollectionItem interface { // TODO: ADD USER TO THIS?
 	StringId() string
 }
 
-var (
-	_ fruiter = FruitingChamber{}
-	_ fruiter = Bag{}
-)
-
-type fruiter interface {
-	basicFruit() Fruit
-	Permissioned
-}
+//var (
+//	_ fruiter = FruitingChamber{}
+//	_ fruiter = Bag{}
+//)
+//
+//type fruiter interface {
+//	basicFruit() Fruit
+//	Permissioned
+//}
 
 func initializeDb(ctx context.Context) error {
 	// Db will auto-create if it does not exist
@@ -86,9 +105,15 @@ var lastUpdatedIndexModel = mongo.IndexModel{
 	Keys:    bson.D{{"lastUpdated", -1}},
 	Options: options.Index().SetName("lastUpdated"),
 }
+var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
 var projectsIndexModel = newSimpleIndex("projects", "perms.projects.ids", false, true, false)
 var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
 var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false)
+var creationDateIndexModel = newSimpleIndex("creationDate", "createDate", true, false, false)
+var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false)
+
+// TODO: ensure aliases are PER ALIAS
+var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false)
 
 // TODO: HOW TO SORT AND STUFF IS BELOW
 
@@ -184,19 +209,21 @@ func Initialize(ctx context.Context) error { // TODO: use me!
 		"plate":                    initializePlates,
 		"slant":                    initializeSlants,
 		"stasis tube":              initializeStasisTubes,
-		// Initialize alt collections
-		"agar batch":  initializeAgarBatches,
+		"spore swabs":              initializeSporeSwabs,
+		"spore syringes":           initializeSyringes,
+		// Initialize new main collections
 		"fruit":       initializeFruits,
-		"pc run":      initializePCRun,
 		"spore print": initializeSporePrints,
-		"sales":       initializeSales,
-		"transfer":    initializeTransfers,
 		"plugs":       initializePlugs,
-		"spore swabs": initializeSporeSwabs,
-		"syringes":    initializeSyringes,
+		// Initialize alt collections
+		"agar batch": initializeAgarBatches,
+		"pc run":     initializePCRun,
+		"sales":      initializeSales,
+		"transfer":   initializeTransfers,
+
 		// Other collections
 		"projects": initializeProjects,
-		"users":    initializeUsers, // TODO: THIS
+		// initialize users
 		// TODO: initialize others (Syringes, swabs, pegs, bottles)
 	} {
 		if err := initializer(ctx); err != nil {
@@ -660,6 +687,7 @@ func handleFileDeleteErr(err error) {
 var (
 	testEntryStringId    = "testEntry"
 	exAltId              = altCollIdForint(0)
+	exFruitId            = mainCollIdForint(idTestFruit)
 	exampleTime          = unixTimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
 	exampleSpecies       = "beech"
 	exampleSubspecies    = utils.Pointer("brown beech")
@@ -671,11 +699,14 @@ var (
 	exBottle             = altCollIdForint(idTestBottle)
 	exBatch              = altCollIdForint(idTestBatch)
 	exJar                = mainCollIdForint(idTestJar)
+	exSporePrint         = mainCollIdForint(idTestSp)
 	exFC                 = mainCollIdForint(idTestFC)
 	exLC                 = mainCollIdForint(idTestLC)
 	exMSS                = mainCollIdForint(idTestMSS)
+	exPlugId             = mainCollIdForint(idTestPlug)
 	exSlant              = mainCollIdForint(idTestSlant)
 	exStasis             = mainCollIdForint(idTestStasis)
+	exSwabId             = mainCollIdForint(idTestSwab)
 	exAlts               = []AlternateCollectionId{exAltId, exAltId}
 	exProj               = projectName(testEntryStringId)
 	exProjects           = []projectName{exProj, exProj}

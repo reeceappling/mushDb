@@ -18,16 +18,16 @@ import (
 )
 
 const (
-	SporePrintSourceType     = "sporePrint"
 	sporePrintCollectionName = "sporePrints"
+	SporePrintSourceType     = "sporePrint"
 	sporePrintIdPrefix       = "sp"
 )
 
 type SporePrint struct {
-	AlternateCollectionIdField
+	MainCollectionIdField // TODO: was alt
 	// Parent is always either fruit, or purchased
-	AlternateCollectionOptionalParentField // TODO: handle now a pointer       // TODO: likely won't exist for pre-existing
-	CreationDateField                      // Print or receive date
+	MainCollectionOptionalParentField // TODO: handle now a pointer // TODO: used to be an altCollId       // TODO: likely won't exist for pre-existing
+	CreationDateField                 // Print or receive date
 	SpeciesField
 	SubspeciesOptionalField
 	PicsField
@@ -36,11 +36,15 @@ type SporePrint struct {
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
 }
 
-func (sw SporePrint) projects() []projectName {
-	return sw.Perms.Projects.Ids
+func (sw SporePrint) Innoculatable() bool {
+	return false
+}
+
+func (sw SporePrint) CanTransferTo(dst geneticSource) error {
+	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
 
 func (sw SporePrint) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
@@ -116,9 +120,9 @@ func (sw SporePrint) EntryTypeField() *string {
 	return nil
 }
 
-func (sw SporePrint) altId() AlternateCollectionId {
-	return AlternateCollectionId(sw.Id)
-}
+//func (sw SporePrint) altId() AlternateCollectionId {
+//	return AlternateCollectionId(sw.Id)
+//}
 
 func (sw SporePrint) id() []byte {
 	return sw.Id[:]
@@ -141,11 +145,14 @@ func initializeSporePrints(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sporePrintCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("parent", "parent", false, false, false),
-		newSimpleIndex("printDate", "printDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
+		newSimpleIndex("printDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		projectsIndexModel,
-		saleIndexModel, // TODO: use everywhere
+		// Pics
+		// TODO: projectsIndexModel,
+		saleIndexModel,
+		disposedIndexModel,
+		// MostRecentImage
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -155,17 +162,17 @@ func initializeSporePrints(ctx context.Context) error {
 	// If test agar batch does not exist, then create it
 	existingEntry := SporePrint{}
 	testItem := SporePrint{
-		AlternateCollectionIdField:             AlternateCollectionIdField{exAltId},
-		AlternateCollectionOptionalParentField: AlternateCollectionOptionalParentField{&exAltId},
-		CreationDateField:                      exampleTime.asCreationDate(),
-		SpeciesField:                           SpeciesField{testEntryStringId},
-		SubspeciesOptionalField:                SubspeciesOptionalField{&testEntryStringId},
-		PicsField:                              PicsField{exPics},
-		SaleField:                              SaleField{&exAltId},
-		DisposedField:                          DisposedField{&exampleTime},
-		MostRecentImageField:                   MostRecentImageField{utils.Pointer(exPics[0])},
-		NotesField:                             NotesField{exampleNotes()},
-		LastUpdatedField:                       LastUpdatedField{exampleTime},
+		MainCollectionIdField:             MainCollectionIdField{exSporePrint},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exFruitId},
+		CreationDateField:                 exampleTime.asCreationDate(),
+		SpeciesField:                      SpeciesField{testEntryStringId},
+		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+		PicsField:                         PicsField{exPics},
+		SaleField:                         SaleField{&exAltId},
+		DisposedField:                     DisposedField{&exampleTime},
+		MostRecentImageField:              MostRecentImageField{utils.Pointer(exPics[0])},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -200,7 +207,11 @@ type resolvedCreateSporePrintRequest struct {
 
 func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSporePrintRequest{}
-	id := newAlternateCollectionId()
+	id, err := newMainCollectionId(r.Context())
+	if err != nil {
+		http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	b58Id := id.asBase58()
 	defer r.Body.Close()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
@@ -298,6 +309,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, txErr := doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
+		// TODO: add spore print to mapCollection
 		parent := Fruit{}
 		err = db.Collection(fruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
 		if err != nil {
@@ -312,17 +324,17 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			mri = &lastPic
 		}
 		toInsert := SporePrint{
-			AlternateCollectionIdField:             AlternateCollectionIdField{spid},
-			AlternateCollectionOptionalParentField: AlternateCollectionOptionalParentField{&parent.Id},
-			CreationDateField:                      now.asCreationDate(),
-			SpeciesField:                           parent.SpeciesField,
-			SubspeciesOptionalField:                parent.SubspeciesOptionalField,
-			PicsField:                              out.PicsField,
-			MostRecentImageField:                   MostRecentImageField{mri},
-			NotesField:                             NotesField{out.Notes},
-			LastUpdatedField:                       LastUpdatedField{now},
+			MainCollectionIdField:             MainCollectionIdField{spid},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+			CreationDateField:                 now.asCreationDate(),
+			SpeciesField:                      parent.SpeciesField,
+			SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+			PicsField:                         out.PicsField,
+			MostRecentImageField:              MostRecentImageField{mri},
+			NotesField:                        NotesField{out.Notes},
+			LastUpdatedField:                  LastUpdatedField{now},
 			// Do not check permissions, just pass parent perms to child
-			PermsField: PermsField{parent.Perms},
+			//PermsField: PermsField{parent.Perms},
 		}
 		_, err = db.Collection(sporePrintCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
@@ -349,7 +361,7 @@ type updateSporePrintRequest struct {
 	DisposedField
 	Notes AllEntries[Note]
 	Pics  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
-	PermsField
+	//PermsField
 }
 
 func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
@@ -363,7 +375,7 @@ func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 				return i.asPicWithNotes(nil)
 			}),
 		},
-		PermsField: PermsField{upr.Perms},
+		//PermsField: PermsField{upr.Perms},
 	}
 }
 
@@ -372,7 +384,7 @@ type resolvedUpdateSporePrintRequest struct {
 	DisposedField
 	Notes AllEntries[Note]
 	Pics  SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsField
+	//PermsField
 }
 
 func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
@@ -408,15 +420,15 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
-		}
+		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
+		//}
 		upd, err := NewMods().
 			updateSaleIfNeeded(out.Sale, existing.Sale).
 			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
 			updateNotesIfNeeded(data.Notes, existing.Notes).
 			updatePicsIfNeeded(out.Pics, existing.Pics).
-			updatePermsIfNeeded(data.Perms, existing.Perms). // TODO: ok?
+			//updatePermsIfNeeded(data.Perms, existing.Perms). // TODO: ok?
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
@@ -453,12 +465,16 @@ type importSporePrintRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	// pic as "img"
-	PermsField
+	//PermsField
 }
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporePrintRequest{}
-	id := newAlternateCollectionId()
+	id, err := newMainCollectionId(r.Context())
+	if err != nil {
+		http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
@@ -486,10 +502,10 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "user cannot write with these perms: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "user cannot write with these perms: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 	// Try to get pic if exists
 	picsSaved := []string{}
 	defer func() {
@@ -542,30 +558,31 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		finalPerms := data.Perms
-		if data.Perms != nil {
-			spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
-			if err != nil {
-				return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
-			}
-			finalPerms = minimalPermsBetween(spec, subsp)
-			// TODO: add user perms if provided, as well as make user author?
-			if !finalPerms.Valid() {
-				// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
-				return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
-			}
-		}
+		// TODO: add print to mapColl
+		//finalPerms := data.Perms
+		//if data.Perms != nil {
+		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+		//	if err != nil {
+		//		return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//	}
+		//	finalPerms = minimalPermsBetween(spec, subsp)
+		//	// TODO: add user perms if provided, as well as make user author?
+		//	if !finalPerms.Valid() {
+		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
+		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//	}
+		//}
 
 		toInsert := SporePrint{
-			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			CreationDateField:          data.CreationDateField,
-			SpeciesField:               data.SpeciesField,
-			SubspeciesOptionalField:    data.SubspeciesOptionalField,
-			PicsField:                  PicsField{pix},
-			MostRecentImageField:       MostRecentImageField{importedPic},
-			NotesField:                 data.NotesField,
-			LastUpdatedField:           LastUpdatedFieldForNow(),
-			PermsField:                 PermsField{finalPerms},
+			MainCollectionIdField:   MainCollectionIdField{id},
+			CreationDateField:       data.CreationDateField,
+			SpeciesField:            data.SpeciesField,
+			SubspeciesOptionalField: data.SubspeciesOptionalField,
+			PicsField:               PicsField{pix},
+			MostRecentImageField:    MostRecentImageField{importedPic},
+			NotesField:              data.NotesField,
+			LastUpdatedField:        LastUpdatedFieldForNow(),
+			//PermsField:              PermsField{finalPerms},
 		}
 		coll := ctx.Client().Database(dbName).Collection(sporePrintCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)

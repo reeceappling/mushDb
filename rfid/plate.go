@@ -12,12 +12,15 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"slices"
 )
 
-const PlateSourceType = "plate"
+const (
+	PlatesCollectionName = "plates" // TODO: USE
+	PlateSourceType      = "plate"
+)
 
 type Plate struct { // TODO: CACHE RESPONSES?!!!!!
-	EntryTypeStructField
 	MainCollectionIdField
 	AgarBatchField // TODO: will be empty for preexisting
 	CreationDateField
@@ -26,8 +29,8 @@ type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	InnocField
 	GenerationsFields
 	TransfersOutField
-	ParentTypeField           // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	BinaryOptionalParentField // TODO: binary serverside, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
+	ParentTypeField                   // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField // TODO: was binary, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
 	PicsField
 	ContaminationsField
 	KnownFruitableField // TODO: handle being yes if clone, among other yeses
@@ -36,7 +39,14 @@ type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
+}
+
+func (p Plate) CanTransferTo(dst geneticSource) error {
+	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
+		return errors.New("plates cannot transfer to " + dst.SourceType())
+	}
+	return nil
 }
 
 func (p Plate) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -117,11 +127,35 @@ func (p Plate) CollectionName() string {
 func initializePlates(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(mainCollectionName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
+		creationDateIndexModel,
+		newSimpleIndex("species", "species", false, true, false),
+		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("innoc", "innoc", false, true, false),
+		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		transfersOutIndexModel,
+		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+
+		//Pics (no index)
+		// TODO: Contams
+		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		saleIndexModel,
+		disposedIndexModel,
+		// MostRecentImage
+		//Notes (no index) (maybe later with tags?)
+		lastUpdatedIndexModel,
+		// TODO: projectsIndexModel,
+	})
+	if err != nil {
+		return err
+	}
 	// If test agar batch does not exist, then create it
 	existingEntry := Plate{}
 	testId := mainCollIdForint(idTestPlate)
 	testItem := Plate{
-		EntryTypeStructField:    EntryTypeStructField{*existingEntry.EntryTypeField()},
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		AgarBatchField:          AgarBatchField{&exAltId},
 		CreationDateField:       CreationDateField{exampleTime},
@@ -132,17 +166,17 @@ func initializePlates(ctx context.Context) error {
 			GenSporeField:        GenSporeField{&exGenSinceSpore},
 			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
 		},
-		TransfersOutField:         TransfersOutField{exAlts},
-		ParentTypeField:           ParentTypeField{&exParentType},
-		BinaryOptionalParentField: BinaryOptionalParentField{utils.Pointer(testId.ToBinaryCollectionId())}, // TODO: ok? // TODO: multiple?
-		PicsField:                 PicsField{exPics},
-		ContaminationsField:       ContaminationsField{exContams},
-		KnownFruitableField:       KnownFruitableField{exBool},
-		SaleField:                 SaleField{&exAltId},
-		DisposedField:             DisposedField{&exampleTime},
-		MostRecentImageField:      MostRecentImageField{&exPics[0]},
-		NotesField:                NotesField{exampleNotes()},
-		LastUpdatedField:          LastUpdatedField{exampleTime},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		ParentTypeField:                   ParentTypeField{&exParentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&testId}, // TODO: ok? // TODO: multiple?
+		PicsField:                         PicsField{exPics},
+		ContaminationsField:               ContaminationsField{exContams},
+		KnownFruitableField:               KnownFruitableField{exBool},
+		SaleField:                         SaleField{&exAltId},
+		DisposedField:                     DisposedField{&exampleTime},
+		MostRecentImageField:              MostRecentImageField{&exPics[0]},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
 	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
@@ -160,7 +194,7 @@ type createPlateRequest struct {
 
 func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 	data := createPlateRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -185,7 +219,6 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		toInsert := Plate{
-			EntryTypeStructField:  EntryTypeStructField{"plate"},
 			MainCollectionIdField: MainCollectionIdField{id},
 			AgarBatchField:        AgarBatchField{AgarBatch: &data.AgarBatch},
 			CreationDateField:     CreationDateField{now},
@@ -219,7 +252,7 @@ type updatePlateRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	Contams SplitEntries[contamForm, ContaminationLessLocation]
 	WriteTagToField
-	PermsField
+	//PermsField
 }
 
 func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
@@ -231,7 +264,7 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		WriteTagToField:     upr.WriteTagToField,
-		PermsField:          upr.PermsField,
+		//PermsField:          upr.PermsField,
 	}
 }
 
@@ -243,7 +276,7 @@ func (mods resolvedUpdatePlateRequest) modsFor(existing Plate) (bson.D, error) {
 		updateNotesIfNeeded(mods.Notes, existing.Notes).
 		updatePicsIfNeeded(mods.Images, existing.Pics).
 		updateContamsIfNeeded(mods.Contams, existing.Contaminations).
-		updatePermsIfNeeded(mods.Perms, existing.Perms).
+		//updatePermsIfNeeded(mods.Perms, existing.Perms).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -256,7 +289,7 @@ type resolvedUpdatePlateRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	WriteTagToField
-	PermsField // TODO: new
+	//PermsField // TODO: new
 }
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -307,9 +340,9 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "failed to validate user permissions, old or new: "+err.Error(), http.StatusBadRequest)
-		}
+		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "failed to validate user permissions, old or new: "+err.Error(), http.StatusBadRequest)
+		//}
 		upd, err := out.modsFor(existing)
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates!!!!!!!
 	})
@@ -350,13 +383,13 @@ type importPlateRequest struct {
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	PermsField
+	//PermsField
 }
 
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data := importPlateRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -367,10 +400,10 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
-	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "user cannot write perms: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "user cannot write perms: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -431,17 +464,16 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		finalPerms := data.Perms
-		if data.Perms != nil {
-			spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
-			if err != nil {
-				return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-			}
-			finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: DO MAXIMAL PERMS WITH data.Perms if not allWrite?
-		}
+		//finalPerms := data.Perms
+		//if data.Perms != nil {
+		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+		//	if err != nil {
+		//		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		//	}
+		//	finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: DO MAXIMAL PERMS WITH data.Perms if not allWrite?
+		//}
 
 		toInsert := Plate{
-			EntryTypeStructField:    EntryTypeStructField{"plate"},
 			MainCollectionIdField:   id.IdField(),
 			CreationDateField:       data.CreationDateField,
 			SpeciesOptionalField:    data.SpeciesField.AsOptional(),
@@ -451,7 +483,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:     data.KnownFruitableField,
 			MostRecentImageField:    MostRecentImageField{importedPic},
 			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-			PermsField:              PermsField{finalPerms},
+			//PermsField:              PermsField{finalPerms},
 		}
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		_, err := coll.InsertOne(ctx, toInsert)

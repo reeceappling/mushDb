@@ -17,19 +17,6 @@ import (
 
 const speciesCollectionName = "species"
 
-type SpeciesField struct {
-	Species string `bson:"species" json:"species"`
-}
-
-func (field SpeciesField) AsOptional() SpeciesOptionalField {
-	val := field.Species
-	return SpeciesOptionalField{&val}
-}
-
-type SpeciesOptionalField struct {
-	Species *string `bson:"species,omitempty" json:"species,omitempty"`
-}
-
 type Species struct {
 	NameIdField           // THIS IS THE COMMON NAME
 	ScientificName string `bson:"scientificName" json:"scientificName"`
@@ -37,12 +24,12 @@ type Species struct {
 	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate,omitempty" json:"standardSubstrate,omitempty"`
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
 }
 
 func (sp Species) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := sp
-	err := decodeItem(&out, encoded) // TODO: likely wont work
+	out := Species{}
+	err := decodeItem(&out, encoded)
 	return out, err
 }
 
@@ -76,7 +63,7 @@ func initializeSpecies(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(speciesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("scientificName", "scientificName", false, false, true),
-		newSimpleIndex("aliases", "aliases", false, true, false),
+		aliasesIndexModel,
 		//BackupSpecies (likely no index)      *string           `bson:"backupSpecies,omitempty" json:"backupSpecies,omitempty"` // a species that is similar to this one, somehow
 		newSimpleIndex("standardSubstrate", "standardSubstrate", false, true, false),
 		//Notes (no index) (maybe later with tags?)
@@ -226,19 +213,6 @@ func initializeSpecies(ctx context.Context) error {
 			update = true
 			species.Aliases = finalAliases.ToSlice()
 		}
-		//// Backup species
-		//if !update {
-		//	switch utils.CountNotNil(species.BackupSpecies, existing.BackupSpecies) {
-		//	case 1:
-		//		update = true
-		//	case 2:
-		//		if *species.BackupSpecies != *existing.BackupSpecies {
-		//			update = true
-		//		}
-		//	default:
-		//		// Do nothing
-		//	}
-		//}
 		if !update && existing.StandardSubstrate != species.StandardSubstrate {
 			update = true
 		}
@@ -292,7 +266,7 @@ type createSpeciesRequest struct {
 	AliasesField
 	SubstrateRecipeField // TODO: tag used to be "sub" is now "recipe"
 	NotesField
-	PermsField
+	//PermsField
 }
 
 func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -305,10 +279,10 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	if err = req.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "can not write with provided perms: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	//if err = req.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "can not write with provided perms: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
 		err = db.Collection(substrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
@@ -323,7 +297,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 			StandardSubstrate: req.Substrate,
 			NotesField:        req.NotesField,
 			LastUpdatedField:  LastUpdatedField{unixTimeForNow()},
-			PermsField:        req.PermsField,
+			//PermsField:        req.PermsField,
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
@@ -344,7 +318,7 @@ type updateSpeciesRequest struct {
 	Substrate AlternateCollectionId `json:"standardSubstrate"`
 	Notes     AllEntries[Note]      `json:"notes,omitempty"`
 	AliasesField
-	PermsField
+	//PermsField
 }
 
 func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -377,14 +351,14 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusBadRequest)
-		}
+		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusBadRequest)
+		//}
 		upd, err := NewMods().
 			UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
 			updateNotesIfNeeded(req.Notes, existing.Notes).
 			updateAliasesIfNeeded(req.Aliases, existing.Aliases).
-			updatePermsIfNeeded(req.Perms, existing.Perms). // TODO: validate?
+			//updatePermsIfNeeded(req.Perms, existing.Perms). // TODO: validate?
 			Finalized()
 		if err != nil {
 			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
@@ -418,6 +392,11 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func getSpecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
+	// TODO: DO THIS! ALSO ALLOW SEARCHING VIA SCIENTIFIC NAME OR ALIASES
+	panic("not yet implemented")
+}
+
 func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
 	sp := Species{}
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
@@ -434,4 +413,17 @@ func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspecies
 		return sp, nil, err
 	}
 	return sp, &subsp, nil
+}
+
+type SpeciesField struct {
+	Species string `bson:"species" json:"species"`
+}
+
+func (field SpeciesField) AsOptional() SpeciesOptionalField {
+	val := field.Species
+	return SpeciesOptionalField{&val}
+}
+
+type SpeciesOptionalField struct {
+	Species *string `bson:"species,omitempty" json:"species,omitempty"`
 }

@@ -11,6 +11,8 @@ noCommit-*
 
 # Test binary, built with `go test -c`
 *.test
+# (non-example) env vars
+env/.env.*
 
 # Code coverage profiles and other test artifacts
 *.out
@@ -34,3 +36,28 @@ go.work.sum
 
 # built binaries
 bin/*
+
+# temp getRidOf?
+caddy
+aaa_tempMightMoveBack
+certbot
+cloudflare
+grafana
+html
+nginx
+nginx/*
+old
+rfid/secrets
+rfid/sessions
+test
+tests
+sessions
+transferred
+Caddyfile
+NOTES.txtOLD
+
+# old charts
+fungi-tracker
+k8s
+letsencrypt
+

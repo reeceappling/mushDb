@@ -29,8 +29,8 @@ type SubstrateRecipe struct {
 	AlternateCollectionIdField
 	NameField
 	StandardField
-	AliasesField // TODO: make sure no duplicates
-	NotesField   // TODO: ingredients in notes
+	AliasesField // must be unique everywhere
+	NotesField   // ingredients in notes
 	LastUpdatedField
 }
 
@@ -53,8 +53,8 @@ func initializeSubstrates(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(substrateRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, true),
-		newSimpleIndex("aliases", "aliases", false, true, false),
-		newSimpleIndex("standard", "standard", true, false, false),
+		standardIndexModel,
+		aliasesIndexModel,
 		//Notes (no index unless tags)
 		//LastUpdated
 		lastUpdatedIndexModel,
@@ -249,7 +249,7 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		upd, err := NewMods().
 			updateNameIfNeeded(req.Name, existing.Name).
-			updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: make sure no duplicates?
+			updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: make sure no duplicates
 			updateStandardIfNeeded(req.Standard, existing.Standard).
 			updateNotesIfNeeded(req.Notes, existing.Notes).
 			updateLastUpdatedIfNeeded().

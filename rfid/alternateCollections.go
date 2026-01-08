@@ -18,16 +18,14 @@ var (
 	_ AltCollectionItem = JarRecipe{}
 	_ AltCollectionItem = SubstrateRecipe{}
 	_ AltCollectionItem = Transfer{}
-	_ AltCollectionItem = Fruit{}
+	_ AltCollectionItem = Fruit{}      // TODO: main or alt?
 	_ AltCollectionItem = Species{}    // this is a str id case
 	_ AltCollectionItem = Subspecies{} // this is a str id case
-	_ AltCollectionItem = SporePrint{}
+
 	_ AltCollectionItem = Project{}
 	_ AltCollectionItem = Sale{}
-	_ AltCollectionItem = User{}
-	_ AltCollectionItem = LcSyringe{}
-	_ AltCollectionItem = Plugs{}
-	_ AltCollectionItem = SporeSwab{}
+	//_ AltCollectionItem = User{}
+	_ AltCollectionItem = SubstrateBatch{}
 )
 
 type AltCollectionItem interface {
@@ -96,7 +94,8 @@ func ListEntriesHandler() http.Handler {
 			HandleHttpWriteError(err)
 		}
 	}
-	return GetPermsMiddleware(handler)
+	return http.HandlerFunc(handler)
+	//return GetPermsMiddleware(handler)
 }
 
 func ListNewestEntriesHandler() http.Handler {
@@ -135,7 +134,8 @@ func ListNewestEntriesHandler() http.Handler {
 			HandleHttpWriteError(err)
 		}
 	}
-	return GetPermsMiddleware(handler)
+	return http.HandlerFunc(handler)
+	//return GetPermsMiddleware(handler)
 }
 
 func HandleHttpWriteError(err error) {

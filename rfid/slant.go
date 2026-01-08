@@ -12,12 +12,15 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"slices"
 )
 
-const SlantSourceType = "slant"
+const (
+	SlantsCollectionName = "plates" // TODO: USE
+	SlantSourceType      = "slant"
+)
 
 type Slant struct {
-	EntryTypeStructField // TODO: remove all of these
 	MainCollectionIdField
 	AgarBatchField // TODO: will be empty for preexisting
 	// TODO: account for stickType field
@@ -28,8 +31,8 @@ type Slant struct {
 	InnocField
 	GenerationsFields
 	TransfersOutField
-	ParentTypeField           // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	BinaryOptionalParentField // TODO: binary serverside, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
+	ParentTypeField                   // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField // TODO: binary serverside, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
 	PicsField
 	ContaminationsField
 	KnownFruitableField // TODO: handle being yes if clone, among other yeses
@@ -38,7 +41,14 @@ type Slant struct {
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
+}
+
+func (s Slant) CanTransferTo(dst geneticSource) error {
+	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
+		return errors.New("plates cannot transfer to " + dst.SourceType())
+	}
+	return nil
 }
 
 type slantStick string // TODO: rename
@@ -65,7 +75,7 @@ func (s Slant) GeneticInfoAsParent() (GeneticParentInfo, error) {
 }
 
 func (s Slant) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
-	return Plate(s).generation()
+	return s.GenSinceSpore, s.GenSinceFruitOrSpore
 }
 
 func (s Slant) SourceType() string {
@@ -101,7 +111,7 @@ func (s Slant) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
-		updatePermsIfNeeded(xfer.Perms, s.Perms). // TODO: make sure perms are on all setTransferChild
+		//updatePermsIfNeeded(xfer.Perms, s.Perms). // TODO: make sure perms are on all setTransferChild
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -132,11 +142,36 @@ func (s Slant) id() []byte {
 func initializeSlants(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(mainCollectionName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
+		newSimpleIndex("stickType", "stickType", false, true, false),
+		creationDateIndexModel,
+		newSimpleIndex("species", "species", false, true, false),
+		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("innoc", "innoc", false, true, false),
+		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		transfersOutIndexModel,
+		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+
+		//Pics (no index)
+		// TODO: Contams
+		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		saleIndexModel,
+		disposedIndexModel,
+		// MostRecentImage
+		//Notes (no index) (maybe later with tags?)
+		lastUpdatedIndexModel,
+		// TODO: projectsIndexModel,
+	})
+	if err != nil {
+		return err
+	}
 	// If test agar batch does not exist, then create it
 	existingEntry := Slant{}
 	testId := mainCollIdForint(idTestSlant)
 	testItem := Slant{
-		EntryTypeStructField:    EntryTypeStructField{*existingEntry.EntryTypeField()},
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		AgarBatchField:          AgarBatchField{&exAltId},
 		CreationDateField:       CreationDateField{exampleTime},
@@ -147,19 +182,19 @@ func initializeSlants(ctx context.Context) error {
 			GenSporeField:        GenSporeField{&exGenSinceSpore},
 			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
 		},
-		TransfersOutField:         TransfersOutField{exAlts},
-		ParentTypeField:           ParentTypeField{&exParentType},
-		BinaryOptionalParentField: BinaryOptionalParentField{utils.Pointer(exPlate.ToBinaryCollectionId())},
-		PicsField:                 PicsField{exPics},
-		ContaminationsField:       ContaminationsField{exContams},
-		KnownFruitableField:       KnownFruitableField{exBool},
-		SaleField:                 SaleField{&exAltId},
-		DisposedField:             DisposedField{&exampleTime},
-		MostRecentImageField:      MostRecentImageField{&exPics[0]},
-		NotesField:                NotesField{exampleNotes()},
-		LastUpdatedField:          LastUpdatedField{exampleTime},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		ParentTypeField:                   ParentTypeField{&exParentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+		PicsField:                         PicsField{exPics},
+		ContaminationsField:               ContaminationsField{exContams},
+		KnownFruitableField:               KnownFruitableField{exBool},
+		SaleField:                         SaleField{&exAltId},
+		DisposedField:                     DisposedField{&exampleTime},
+		MostRecentImageField:              MostRecentImageField{&exPics[0]},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil
@@ -168,11 +203,15 @@ func initializeSlants(ctx context.Context) error {
 	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
 }
 
-type createSlantRequest createPlateRequest
+type createSlantRequest struct {
+	AgarBatch AlternateCollectionId `json:"agarBatch"`
+	StickType *string               `json:"stickType,omitempty"`
+	WriteTagToField
+}
 
 func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSlantRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -196,10 +235,10 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 
 	now := unixTimeForNow()
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		toInsert := Plate{
-			EntryTypeStructField:  EntryTypeStructField{"slant"},
+		toInsert := Slant{
 			MainCollectionIdField: MainCollectionIdField{id},
 			AgarBatchField:        AgarBatchField{&data.AgarBatch},
+			StickType:             data.StickType,
 			CreationDateField:     CreationDateField{now},
 			LastUpdatedField:      LastUpdatedField{now},
 			// No Perms here for basic plates
@@ -208,7 +247,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
 			return DbTxnStdErr(w, "agar batch field missing: "+err.Error(), http.StatusInternalServerError)
 		}
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SlantsCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -237,7 +276,7 @@ func (upr updateSlantRequest) reform() resolvedUpdateSlantRequest {
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		WriteTagToField:     upr.WriteTagToField,
-		PermsField:          upr.PermsField,
+		//PermsField:          upr.PermsField,
 	}
 }
 
@@ -293,9 +332,9 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "bad overlapping perms for user:"+err.Error(), http.StatusBadRequest)
-		}
+		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "bad overlapping perms for user:"+err.Error(), http.StatusBadRequest)
+		//}
 		upd, err := NewMods().
 			updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
 			updateSaleIfNeeded(out.Sale, existing.Sale). // TODO: update to a different endpoint if possible
@@ -303,7 +342,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 			updateNotesIfNeeded(out.Notes, existing.Notes).
 			updatePicsIfNeeded(out.Images, existing.Pics).
 			updateContamsIfNeeded(out.Contams, existing.Contaminations).
-			updatePermsIfNeeded(out.Perms, existing.Perms).
+			//updatePermsIfNeeded(out.Perms, existing.Perms).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
@@ -334,19 +373,20 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importSlantRequest struct {
-	CreationDateField // TODO: was creationTime
+	CreationDateField         // TODO: was creationTime
+	StickType         *string `json:"stickType,omitempty"`
 	SpeciesField
 	SubspeciesOptionalField
 	KnownFruitableField
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	PermsField
+	//PermsField
 }
 
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSlantRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -378,10 +418,10 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "user cannot write to provided perms: "+err.Error(), http.StatusBadRequest)
-		return // TODO MAKE SURE TO ONLY TAKE SPECIES OVERLAP WITH REQUEST?
-	}
+	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "user cannot write to provided perms: "+err.Error(), http.StatusBadRequest)
+	//	return // TODO MAKE SURE TO ONLY TAKE SPECIES OVERLAP WITH REQUEST?
+	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -442,17 +482,17 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		finalPerms := data.Perms
-		if data.Perms != nil {
-			spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
-			if err != nil {
-				return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
-			}
-			finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: maximal with perms if nonWrite
-		}
+		//finalPerms := data.Perms
+		//if data.Perms != nil {
+		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+		//	if err != nil {
+		//		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//	}
+		//	finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: maximal with perms if nonWrite
+		//}
 		toInsert := Slant{
-			EntryTypeStructField:    EntryTypeStructField{"slant"},
 			MainCollectionIdField:   MainCollectionIdField{id},
+			StickType:               data.StickType,
 			CreationDateField:       data.CreationDateField,
 			SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
 			SubspeciesOptionalField: data.SubspeciesOptionalField,
@@ -464,7 +504,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:  data.KnownFruitableField,
 			MostRecentImageField: MostRecentImageField{importedPic},
 			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-			PermsField:           PermsField{finalPerms},
+			//PermsField:           PermsField{finalPerms},
 		}
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)

@@ -12,14 +12,17 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 )
 
-const StasisTubeSourceType = "stasisTube"
+const (
+	StasisTubeCollectionName = "stasisTubes" // TODO: USE
+	StasisTubeSourceType     = "stasisTube"
+)
 
 type StasisTube struct { // TODO: instructions somewhere?
-	EntryTypeStructField // always stasisTube
 	MainCollectionIdField
 	PcRunOptionalField // probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
 	CreationDateField
@@ -38,17 +41,20 @@ type StasisTube struct { // TODO: instructions somewhere?
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
+}
+
+func (s StasisTube) CanTransferTo(dst geneticSource) error {
+	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
+		return errors.New("stasis tubes cannot transfer to " + dst.SourceType())
+	}
+	return nil
 }
 
 func (s StasisTube) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := s
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (s StasisTube) projects() []projectName {
-	return s.Perms.Projects.Ids
 }
 
 func (s StasisTube) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -122,11 +128,34 @@ func (s StasisTube) id() []byte {
 func initializeStasisTubes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(mainCollectionName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		newSimpleIndex("pcRun", "pcRun", false, true, false),
+		creationDateIndexModel,
+		newSimpleIndex("species", "species", false, true, false),
+		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("innoc", "innoc", false, true, false),
+		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		transfersOutIndexModel,
+		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		//Pics (no index)
+		// TODO: Contams
+		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		saleIndexModel,
+		disposedIndexModel,
+		// MostRecentImage
+		//Notes (no index) (maybe later with tags?)
+		lastUpdatedIndexModel,
+		// TODO: projectsIndexModel,
+	})
+	if err != nil {
+		return err
+	}
 	// If test agar batch does not exist, then create it
 	existingEntry := StasisTube{}
 	testId := mainCollIdForint(idTestStasis)
 	testItem := StasisTube{
-		EntryTypeStructField:    EntryTypeStructField{*existingEntry.EntryTypeField()},
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		CreationDateField:       CreationDateField{exampleTime},
 		SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
@@ -164,7 +193,7 @@ type createStasisTubeRequest struct {
 
 func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := createStasisTubeRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -189,7 +218,6 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		toInsert := StasisTube{
-			EntryTypeStructField:  EntryTypeStructField{"stasisTube"},
 			MainCollectionIdField: MainCollectionIdField{id},
 			PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
 			CreationDateField:     CreationDateField{now},
@@ -221,7 +249,7 @@ type updateStasisTubeRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	Contams SplitEntries[contamForm, ContaminationLessLocation]
 	WriteTagToField
-	PermsField
+	//PermsField
 }
 
 func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
@@ -233,7 +261,7 @@ func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		WriteTagToField:     upr.WriteTagToField,
-		PermsField:          upr.PermsField,
+		//PermsField:          upr.PermsField,
 	}
 }
 
@@ -245,7 +273,7 @@ type resolvedUpdateStasisTubeRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	WriteTagToField
-	PermsField
+	//PermsField
 }
 
 func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
@@ -385,9 +413,9 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed
 			}
 		}
-		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
-		}
+		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
+		//}
 		upd, err := NewMods(). // TODO: exactly the same as plate, ok?
 					updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
 					updateSaleIfNeeded(out.Sale, existing.Sale).
@@ -395,9 +423,9 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 					updateNotesIfNeeded(out.Notes, existing.Notes).
 					updatePicsIfNeeded(out.Images, existing.Pics).
 					updateContamsIfNeeded(out.Contams, existing.Contaminations).
-					updatePermsIfNeeded(out.Perms, existing.Perms). // TODO: update sessions with perms updates
-					updateLastUpdatedIfNeeded().
-					Finalized()
+			//updatePermsIfNeeded(out.Perms, existing.Perms). // TODO: update sessions with perms updates
+			updateLastUpdatedIfNeeded().
+			Finalized()
 		if err != nil {
 			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
@@ -434,12 +462,12 @@ type importStasisTubeRequest struct {
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	PermsField // TODO: new
+	//PermsField // TODO: new
 }
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importStasisTubeRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -451,10 +479,10 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
-		return // TODO: ok? check species or no?
-	}
+	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
+	//	return // TODO: ok? check species or no?
+	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -513,20 +541,19 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		finalPerms := data.Perms
-		if data.Perms != nil {
-			spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
-			if err != nil {
-				return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-			}
-			finalPerms = minimalPermsBetween(spec, subsp)
-		} else {
-			if err = finalPerms.ValidateUserCanWrite(ctx); err != nil { // TODO: do this on others
-				return DbTxnStdErr(w, err.Error(), http.StatusUnauthorized) // TODO: ok?
-			}
-		}
+		//finalPerms := data.Perms
+		//if data.Perms != nil {
+		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+		//	if err != nil {
+		//		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		//	}
+		//	finalPerms = minimalPermsBetween(spec, subsp)
+		//} else {
+		//	if err = finalPerms.ValidateUserCanWrite(ctx); err != nil { // TODO: do this on others
+		//		return DbTxnStdErr(w, err.Error(), http.StatusUnauthorized) // TODO: ok?
+		//	}
+		//}
 		toInsert := StasisTube{
-			EntryTypeStructField:    EntryTypeStructField{"stasisTube"},
 			MainCollectionIdField:   MainCollectionIdField{id},
 			CreationDateField:       data.CreationDateField,
 			SpeciesOptionalField:    data.SpeciesField.AsOptional(),
@@ -536,7 +563,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:     data.KnownFruitableField,
 			MostRecentImageField:    MostRecentImageField{importedPic},
 			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-			PermsField:              PermsField{finalPerms},
+			//PermsField:              PermsField{finalPerms},
 		}
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)

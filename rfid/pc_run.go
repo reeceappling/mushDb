@@ -10,33 +10,6 @@ import (
 	"reflect"
 )
 
-type PcRunField struct {
-	PcRun AlternateCollectionId `bson:"pcRun" json:"pcRun"`
-}
-
-func (field PcRunField) Get(ctx context.Context) (out PCRun, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pcRunCollectionName).FindOne(ctx, bson.M{
-		"_id": field.PcRun,
-	}).Decode(&out)
-	return out, err
-}
-
-func (field PcRunField) asOptional() PcRunOptionalField {
-	return PcRunOptionalField{&field.PcRun}
-}
-
-type PcRunOptionalField struct {
-	PcRun *AlternateCollectionId `bson:"pcRun,omitempty" json:"pcRun,omitempty"`
-}
-
-func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) {
-	if field.PcRun == nil {
-		err = ErrMissingOptionalField
-		return
-	}
-	return PcRunField{*field.PcRun}.Get(ctx)
-}
-
 const pcRunCollectionName = "pcRuns"
 
 type PCRun struct {
@@ -65,7 +38,8 @@ func initializePCRun(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pcRunCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("date", "date", true, false, false),
+		creationDateIndexModel,
+		// TODO: newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
 		//RunTime (likely no index)    string                `bson:"runtime" json:"runtime"`
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
@@ -110,8 +84,8 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if req.RunTimeMinutes < 15 {
-		http.Error(w, "runtime must be greater than 15", http.StatusBadRequest)
+	if req.RunTimeMinutes < 10 {
+		http.Error(w, "runtime must be greater than 10 minutes", http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
 
@@ -202,4 +176,31 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		HandleHttpWriteError(err)
 	}
+}
+
+type PcRunField struct {
+	PcRun AlternateCollectionId `bson:"pcRun" json:"pcRun"`
+}
+
+func (field PcRunField) Get(ctx context.Context) (out PCRun, err error) {
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pcRunCollectionName).FindOne(ctx, bson.M{
+		"_id": field.PcRun,
+	}).Decode(&out)
+	return out, err
+}
+
+func (field PcRunField) asOptional() PcRunOptionalField {
+	return PcRunOptionalField{&field.PcRun}
+}
+
+type PcRunOptionalField struct {
+	PcRun *AlternateCollectionId `bson:"pcRun,omitempty" json:"pcRun,omitempty"`
+}
+
+func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) {
+	if field.PcRun == nil {
+		err = ErrMissingOptionalField
+		return
+	}
+	return PcRunField{*field.PcRun}.Get(ctx)
 }

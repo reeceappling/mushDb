@@ -5,14 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
-	"github.com/reeceappling/mushDb/rfid/perms"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"mime/multipart"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 )
@@ -93,13 +91,13 @@ func GetMainCollectionItemInTxn(ctx mongo.SessionContext, id MainCollectionId, o
 		}
 	}
 	err = encodedResult.Decode(&out)
-	authinfo, err := GetAuthInfo(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if out.Permissions().PermissionFor(authinfo) == perms.None {
-		err = errors.New("no perms on getMainCollItemInTxn")
-	}
+	//authinfo, err := GetAuthInfo(ctx)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//if out.Permissions().PermissionFor(authinfo) == perms.None {
+	//	err = errors.New("no perms on getMainCollItemInTxn")
+	//}
 	return
 }
 
@@ -116,20 +114,20 @@ func GetAltCollectionItem[T AltCollectionItem](ctx context.Context, id Alternate
 	if err != nil {
 		return out, err
 	}
-	authInfo, err := GetAuthInfo(ctx)
-	if err != nil {
-		return out, err
-	}
-	if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
-		temp, ok := interface{}(out).(Permissioned)
-		if !ok {
-			return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
-		}
-
-		if temp.Permissions().PermissionFor(authInfo) == perms.None {
-			return out, errors.New("no permission")
-		}
-	}
+	//authInfo, err := GetAuthInfo(ctx)
+	//if err != nil {
+	//	return out, err
+	//}
+	//if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
+	//	temp, ok := interface{}(out).(Permissioned)
+	//	if !ok {
+	//		return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
+	//	}
+	//
+	//	if temp.Permissions().PermissionFor(authInfo) == perms.None {
+	//		return out, errors.New("no permission")
+	//	}
+	//}
 	return out, nil
 }
 
@@ -146,20 +144,20 @@ func GetAltCollectionItemInTxn[T AltCollectionItem](ctx mongo.SessionContext, id
 	if err != nil {
 		return out, err
 	}
-	authInfo, err := GetAuthInfo(ctx)
-	if err != nil {
-		return out, err
-	}
-	if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
-		temp, ok := interface{}(out).(Permissioned)
-		if !ok {
-			return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
-		}
-
-		if temp.Permissions().PermissionFor(authInfo) == perms.None {
-			return out, errors.New("no permission")
-		}
-	}
+	//authInfo, err := GetAuthInfo(ctx)
+	//if err != nil {
+	//	return out, err
+	//}
+	//if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
+	//	temp, ok := interface{}(out).(Permissioned)
+	//	if !ok {
+	//		return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
+	//	}
+	//
+	//	if temp.Permissions().PermissionFor(authInfo) == perms.None {
+	//		return out, errors.New("no permission")
+	//	}
+	//}
 	return out, nil
 }
 
@@ -176,21 +174,21 @@ func GetSpeciesNameInTxn(ctx mongo.SessionContext, name string) (out Species, er
 	if err != nil {
 		return out, err
 	}
-	authInfo, err := GetAuthInfo(ctx)
-	if err != nil {
-		return out, err
-	}
-	out.Permissions()
-	if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
-		temp, ok := interface{}(out).(Permissioned)
-		if !ok {
-			return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
-		}
-
-		if temp.Permissions().PermissionFor(authInfo) == perms.None {
-			return out, errors.New("no permission")
-		} // TODO: pull this out
-	}
+	//authInfo, err := GetAuthInfo(ctx)
+	//if err != nil {
+	//	return out, err
+	//}
+	//out.Permissions()
+	//if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
+	//	temp, ok := interface{}(out).(Permissioned)
+	//	if !ok {
+	//		return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
+	//	}
+	//
+	//	if temp.Permissions().PermissionFor(authInfo) == perms.None {
+	//		return out, errors.New("no permission")
+	//	} // TODO: pull this out
+	//}
 	return out, nil
 }
 

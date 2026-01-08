@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"github.com/reeceappling/mushDb/rfid/perms"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 	"os"
@@ -360,6 +359,7 @@ var (
 	clearColor colorant = "Clear"
 	black      colorant = "Black"
 	blue       colorant = "Blue"
+	green      colorant = "Green"
 	yellow     colorant = "Yellow"
 	orange     colorant = "Orange"
 	red        colorant = "Red" // MOST REDS ARE FUNGICIDAL
@@ -369,6 +369,7 @@ var colors = map[string]colorant{
 	string(clearColor): clearColor,
 	string(black):      black,
 	string(blue):       blue,
+	string(green):      green,
 	string(yellow):     yellow,
 	string(orange):     orange,
 }
@@ -618,18 +619,18 @@ func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, C
 	return upd.pushBson(pushToArrayNew("contamination", updatedEntries.New)...)
 }
 
-func (upd *Mods) updatePermsIfNeeded(future, existing *Perms) *Mods { // TODO: interface ok? or slice?
-	if upd.err != nil {
-		return upd
-	}
-	if future.ExactMatch(existing) {
-		return upd
-	}
-	if future.Blanket == perms.Write {
-		return upd.Unset("perms")
-	}
-	return upd.Set("perms", unixTimeFor(time.Now()))
-}
+//func (upd *Mods) updatePermsIfNeeded(future, existing *Perms) *Mods { // TODO: interface ok? or slice?
+//	if upd.err != nil {
+//		return upd
+//	}
+//	if future.ExactMatch(existing) {
+//		return upd
+//	}
+//	if future.Blanket == perms.Write {
+//		return upd.Unset("perms")
+//	}
+//	return upd.Set("perms", unixTimeFor(time.Now()))
+//}
 
 func (upd *Mods) updateSaleIfNeeded(future, existing *AlternateCollectionId) *Mods {
 	return updatePointerIfNeeded(upd, "sale", future, existing)

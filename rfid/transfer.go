@@ -23,6 +23,10 @@ type InnocField struct { // TODO: multi-innocs?
 	Innoc *AlternateCollectionId `bson:"innoc,omitempty" json:"innoc,omitempty"`
 }
 
+func (in InnocField) Innoculatable() bool {
+	return in.Innoc == nil
+}
+
 type transferReason string
 
 var transferReasons = map[transferReason]string{
@@ -32,19 +36,19 @@ var transferReasons = map[transferReason]string{
 	// TODO: more?
 }
 
-type Transfer struct {
+type Transfer struct { // TODO: does not include multi-jar transfers from jars to monotubs
 	AlternateCollectionIdField
-	From              BinaryCollectionId `bson:"from" json:"from"`
-	To                BinaryCollectionId `bson:"to" json:"to"` // fruit, sporePrint are both alt
-	FromType          string             `json:"fromType"`     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
-	ToType            string             `json:"toType"`
+	From              []MainCollectionId `bson:"from" json:"from"` // TODO: THIS USED TO NOT BE A SLICE
+	To                MainCollectionId   `bson:"to" json:"to"`     // fruit is mainCollectionId
+	FromType          string             `json:"fromType"`         //sourceType     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
+	ToType            string             `json:"toType"`           //sourceType
 	CreationDateField                    // TODO; changed from date to creationDate
 	Reason            transferReason     `bson:"reason" json:"reason"`
 	FromImage         *imageLocation     `bson:"fromImage,omitempty" json:"fromImage,omitempty"`
 	ToImage           *imageLocation     `bson:"toImage,omitempty" json:"toImage,omitempty"`
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
 }
 
 func (t Transfer) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -76,14 +80,10 @@ func (t Transfer) PicsModsForChild() *Mods {
 }
 
 // Perms have not been checked when this runs yet // TODO: ?
-func getGeneticItem(ctx mongo.SessionContext, entryType string, binaryId BinaryCollectionId) (geneticSource, error) {
-	b58id := binaryId.asBase58()
-	if tempItem, exists := mainCollMap[entryType]; exists {
-		mcId, err := b58id.toMainCollectionId()
-		if err != nil {
-			return nil, errors.Join(errors.New("invalid mainCollectionId"), err)
-		}
-		out, err := GetMainCollectionItem(ctx, mcId, tempItem)
+func getGeneticItem(ctx mongo.SessionContext, entryType string, id MainCollectionId) (geneticSource, error) {
+	b58id := id.asBase58()
+	if tempItem, exists := mainCollMap[entryType]; exists { // TODO: no longer need this
+		out, err := GetMainCollectionItem(ctx, id, tempItem) // TODO: use multiple collections here!
 		if err != nil {
 			return nil, errors.Join(errors.New("failed to get main coll item genetic item"), err)
 		}
@@ -112,14 +112,14 @@ func initializeTransfers(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(transfersCollName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("from", "from", true, false, false),
-		newSimpleIndex("to", "to", true, false, false),
-		//From (likely no index)   string         `bson:"from" json:"from"`
-		//To (no need for index) MainCollectionId `bson:"to" json:"to"`
-		//FromType (likely no index)   string         `bson:"from" json:"from"`
-		//ToType (no need for index) MainCollectionId `bson:"to" json:"to"`
-		newSimpleIndex("date", "date", true, false, false),
-		newSimpleIndex("reason", "reason", false, false, false),
+		// TODO: UNSURE WHICH INDICES ARE NEEDED
+		// TODO: ensure from index indexes all of the child ids
+		// TODO: newSimpleIndex("from", "from", true, false, false),
+		// TODO: newSimpleIndex("to", "to", true, false, false),
+		// TODO: newSimpleIndex("fromType", "fromType", false, false, false),
+		// TODO: newSimpleIndex("toType", "toType", false, false, false),
+		creationDateIndexModel,
+		// TODO: newSimpleIndex("reason", "reason", false, false, false),
 		//FromImage (no index)
 		//ToImage (no index)
 		//Notes (no index unless tags)
@@ -130,12 +130,11 @@ func initializeTransfers(ctx context.Context) error {
 	}
 	// If test agar batch does not exist, then create it
 	existingEntry := Transfer{}
-	from := exPlate.ToBinaryCollectionId()
-	to := exJar.ToBinaryCollectionId()
+	// TODO: also create many-to-one monotub test transfer
 	testItem := Transfer{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		From:                       from,
-		To:                         to,
+		From:                       []MainCollectionId{exPlate},
+		To:                         exJar,
 		FromType:                   "plate",
 		ToType:                     "jar",
 		CreationDateField:          CreationDateField{exampleTime},
@@ -155,11 +154,11 @@ func initializeTransfers(ctx context.Context) error {
 }
 
 type createTransferRequest struct {
-	From     BinaryCollectionId `json:"from,omitempty"` // TODO: check all other requests that accept bytes, will likely need to be this
-	To       BinaryCollectionId `json:"to,omitempty"`
-	FromType string             `json:"fromType,omitempty"`
-	ToType   string             `json:"toType,omitempty"`
-	Reason   string             `json:"reason,omitempty"`
+	From     MainCollectionId `json:"from,omitempty"` // TODO: check all other requests that accept bytes, will likely need to be this
+	To       MainCollectionId `json:"to,omitempty"`
+	FromType string           `json:"fromType,omitempty"`
+	ToType   string           `json:"toType,omitempty"`
+	Reason   string           `json:"reason,omitempty"`
 	// FromImage == 'picFrom'
 	// ToImage == 'picTo'
 	NotesField
@@ -254,26 +253,29 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		now := unixTimeForNow()
 		db := ctx.Client().Database(dbName)
 		// Get parent and child items
-		parent, errr := getGeneticItem(ctx, data.FromType, parentId)
+		parent, errr := getGeneticItem(ctx, data.FromType, data.From)
 		if errr != nil {
 			return DbTxnStdErr(w, "failed to get parent item: "+errr.Error(), http.StatusBadRequest)
 		}
-		child, errr := getGeneticItem(ctx, data.ToType, childId)
+		child, errr := getGeneticItem(ctx, data.ToType, data.To)
 		if errr != nil {
 			return DbTxnStdErr(w, "failed to get child item: "+errr.Error(), http.StatusBadRequest)
 		}
+		if err = parent.CanTransferTo(child); err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusBadRequest)
+		}
 
-		finalPerms := minimalPermsBetween(parent.Permissions(), child.Permissions())
-		if !finalPerms.Valid() {
-			return DbTxnStdErr(w, "invalid new permissions!", http.StatusBadRequest)
-		}
-		if finalPerms.ValidateUserCanWrite(ctx) != nil {
-			return DbTxnStdErr(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusBadRequest)
-		}
+		//finalPerms := minimalPermsBetween(parent.Permissions(), child.Permissions())
+		//if !finalPerms.Valid() {
+		//	return DbTxnStdErr(w, "invalid new permissions!", http.StatusBadRequest)
+		//}
+		//if finalPerms.ValidateUserCanWrite(ctx) != nil {
+		//	return DbTxnStdErr(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusBadRequest)
+		//}
 		// Create Transfer
 		xfer := Transfer{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			From:                       parentId,
+			From:                       []MainCollectionId{parentId},
 			To:                         childId,
 			FromType:                   data.FromType,
 			ToType:                     data.ToType,
@@ -283,7 +285,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			ToImage:                    (*imageLocation)(toPic),
 			NotesField:                 data.NotesField,
 			LastUpdatedField:           LastUpdatedFieldForNow(),
-			PermsField:                 PermsField{finalPerms},
+			//PermsField:                 PermsField{finalPerms},
 		}
 		_, err = db.Collection(transfersCollName).InsertOne(ctx, xfer)
 		if err != nil {
@@ -311,7 +313,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateTransferRequest struct {
 	Notes AllEntries[Note] `json:"notes,omitempty"`
-	PermsField
+	//PermsField
 }
 
 func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
@@ -343,13 +345,13 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		restrictivePerms := minimalPermsBetween(existing.Perms, req.Perms) // TODO: make sure to use this (restrictive perms var) everywhere needed
-		if err = restrictivePerms.ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "permission denied for overlapping perms: "+err.Error(), http.StatusUnauthorized)
-		}
+		//restrictivePerms := minimalPermsBetween(existing.Perms, req.Perms) // TODO: make sure to use this (restrictive perms var) everywhere needed
+		//if err = restrictivePerms.ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "permission denied for overlapping perms: "+err.Error(), http.StatusUnauthorized)
+		//}
 		upd, err := NewMods().
 			updateNotesIfNeeded(req.Notes, existing.Notes). // TODO: make sure this works the way we want
-			updatePermsIfNeeded(restrictivePerms, existing.Perms).
+			//updatePermsIfNeeded(restrictivePerms, existing.Perms).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

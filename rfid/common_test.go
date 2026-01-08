@@ -48,7 +48,7 @@ func TestCommon(t *testing.T) {
 	t.Run("DB helper functions", func(t *testing.T) {
 		t.Run("pushToArray", func(t *testing.T) {
 			coll := db.Collection(mainCollectionName)
-			id, err := generateMainCollectionId(ctx)
+			id, err := newMainCollectionId(ctx)
 			assert.NoError(t, err)
 			now := time.Now()
 			before := now.AddDate(0, 0, -1)

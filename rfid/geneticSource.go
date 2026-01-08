@@ -27,11 +27,14 @@ var (
 	_ geneticSource = &FruitingChamber{}
 	_ geneticSource = &GrainJar{}
 	_ geneticSource = &LiquidCulture{}
+	_ geneticSource = &LcSyringe{}
 	_ geneticSource = &MSS{}
 	_ geneticSource = &Plate{}
+	_ geneticSource = &PlugsJar{}
 	_ geneticSource = &Slant{}
-	_ geneticSource = &StasisTube{}
 	_ geneticSource = &SporePrint{} // TODO: sporeSwab?
+	_ geneticSource = &SporeSwab{}  // TODO: sporeSwab?
+	_ geneticSource = &StasisTube{}
 )
 
 type geneticSource interface {
@@ -41,7 +44,9 @@ type geneticSource interface {
 	setTransferParent(ctx mongo.SessionContext, xfer Transfer) error
 	setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error
 	generation() (sinceSpore *Generation, sinceSporeOrClone *Generation)
-	Permissioned // TODO: get rid of?
+	//Permissioned // TODO: get rid of?
+	CanTransferTo(dst geneticSource) error
+	Innoculatable() bool
 }
 
 func childGensForParent(parent geneticSource) (parentInfo GeneticParentInfo, genSpore, genFruitSpore *Generation, err error) {

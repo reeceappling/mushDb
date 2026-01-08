@@ -2,24 +2,27 @@ package rfid
 
 import (
 	"context"
+	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"reflect"
+	"slices"
 )
 
 // TODO: this whole thing whenever we need to
 
 const (
+	PlugsCollectionName = "plugs" // TODO: USE
 	PlugSourceType      = "plug"
 	plugsCollectionName = "plugs"
 	plugIdPrefix        = "pl"
 )
 
-type Plugs struct { // TODO: do this whole file! This should be an alt, not a main, due to multi-sales
+type PlugsJar struct { // TODO: do this whole file! This should be an alt, not a main, due to multi-sales
 	// TODO; any more?
-	AlternateCollectionIdField
-	ParentTypeField           // None, plugs, jars, lcSyringe, plate, slant, etc (both alt and main
-	BinaryOptionalParentField // TODO: empty=bought, from plugs, jar, LC, plate/slant
+	MainCollectionIdField             // TODO: was alt
+	ParentTypeField                   // TODO: get rid of these?           // None, plugs, jars, lcSyringe, plate, slant, etc (both alt and main
+	MainCollectionOptionalParentField // TODO: empty=bought, from plugs, jar, LC, plate/slant
 	CreationDateField
 	DowelTypes []Dowel `bson:"dowelTypes" json:"dowelTypes"`
 	SpeciesOptionalField
@@ -27,19 +30,46 @@ type Plugs struct { // TODO: do this whole file! This should be an alt, not a ma
 	InnocField
 	PcRunField // TODO: created before innoculation
 	SalesField
-	DisposedField
+	DisposedField // Also changed once all pegs are sold/used?
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
 
 	// TODO: this whole thing whenever we need to
 }
 
-func (pl Plugs) EntryTypeField() *string {
+func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
+	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
+		return errors.New("plugs cannot transfer to " + dst.SourceType())
+	}
 	return nil
 }
 
-func (pl Plugs) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
+func (pl PlugsJar) SourceType() string {
+	return PlugSourceType
+}
+
+func (pl PlugsJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+	// TODO: MUST BE AGAR OR BAG
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pl PlugsJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (pl PlugsJar) EntryTypeField() *string {
+	return nil
+}
+
+func (pl PlugsJar) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := pl
 	err := decodeItem(&out, encoded) // TODO: likely wont work
 	return out, err
@@ -79,15 +109,11 @@ const (
 	meter = "m"
 )
 
-func (pl Plugs) CollectionName() string {
-	return plugsCollectionName
+func (pl PlugsJar) CollectionName() string {
+	return PlugsCollectionName
 }
 
-func (pl Plugs) projects() []projectName {
-	return pl.Perms.Projects.Ids
-}
-
-func (pl Plugs) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (pl PlugsJar) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
 	// TODO: can this even occur?
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
@@ -108,12 +134,20 @@ func initializePlugs(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(plugsCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		// TODO: which indices are needed?
-		//newSimpleIndex("parent", "parent", false, false, false),
-		//newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
-		//newSimpleIndex("species", "species", false, false, false),
-		//newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		projectsIndexModel,
-		//saleIndexModel,
+		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		creationDateIndexModel,
+		// TODO: DOWEL TYPES
+		newSimpleIndex("dowelTypes", "dowelTypes.wood", false, false, false),
+		newSimpleIndex("dowelSizes", "dowelTypes.radius", false, false, false),
+		newSimpleIndex("species", "species", false, true, false),
+		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("innoc", "innoc", false, true, false),
+		newSimpleIndex("pcRun", "pcRun", false, false, false),
+		// TODO: ensure sales index is for each item!
+		newSimpleIndex("sales", "sales", false, true, false),
+		disposedIndexModel,
+		// TODO: PROJECTS
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -121,24 +155,24 @@ func initializePlugs(ctx context.Context) error {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := Plugs{}
-	testItem := Plugs{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		ParentTypeField:            ParentTypeField{
+	existingEntry := PlugsJar{}
+	testItem := PlugsJar{
+		MainCollectionIdField: MainCollectionIdField{exPlugId},
+		ParentTypeField:       ParentTypeField{
 			// TODO; FIX!
 		},
-		BinaryOptionalParentField: BinaryOptionalParentField{}, // TODO; FIX
-		CreationDateField:         exampleTime.asCreationDate(),
-		DowelTypes:                nil, // TODO; FIX
-		SpeciesOptionalField:      SpeciesOptionalField{&testEntryStringId},
-		SubspeciesOptionalField:   SubspeciesOptionalField{&testEntryStringId},
-		InnocField:                InnocField{}, // TODO; FIX
-		PcRunField:                PcRunField{}, // TODO; FIX
-		SalesField:                SalesField{[]AlternateCollectionId{exAltId}},
-		DisposedField:             DisposedField{&exampleTime},
-		NotesField:                NotesField{exampleNotes()},
-		LastUpdatedField:          LastUpdatedField{exampleTime},
-		PermsField:                PermsField{}, // TODO; FIX
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+		CreationDateField:                 exampleTime.asCreationDate(),
+		DowelTypes:                        nil, // TODO; FIX
+		SpeciesOptionalField:              SpeciesOptionalField{&testEntryStringId},
+		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+		InnocField:                        InnocField{}, // TODO; FIX
+		PcRunField:                        PcRunField{}, // TODO; FIX
+		SalesField:                        SalesField{[]AlternateCollectionId{exAltId}},
+		DisposedField:                     DisposedField{&exampleTime},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		//PermsField:                        PermsField{}, // TODO; FIX
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {

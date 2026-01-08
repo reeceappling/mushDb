@@ -15,17 +15,15 @@ import (
 )
 
 const (
-	LcSourceType = "lc"
-	LCIdPrefix   = "LC" // TODO: USE
+	LCCollectionName = "LCJars" // TODO: USE
+	LcSourceType     = "lc"
+	LCIdPrefix       = "LC" // TODO: USE
 )
 
 type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
-	EntryTypeStructField
 	MainCollectionIdField
 	PcRunOptionalField // likely won't exist for pre-existing or purchased
-	PressureCookedTouchingWaterOptionalField
-
-	LcRecipeField // likely won't exist for pre-existing or purchased
+	LcRecipeField      // always exists (unless purchased)
 	CreationDateField
 	SpeciesOptionalField
 	SubspeciesOptionalField
@@ -33,17 +31,20 @@ type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
 	GenerationsFields
 	TransfersOutField
 	ParentTypeField
-	BinaryOptionalParentField // TODO: BRAND NEW! // Must come from (main) LC, plate, slant, (alt) lcSyringe
+	MainCollectionOptionalParentField // TODO: used to be binary // TODO: BRAND NEW! // Must come from (main) LC, plate, slant, (alt) lcSyringe
 	PicsField
 	ConfirmedClean *bool `bson:"confirmedClean,omitempty" json:"confirmedClean,omitempty"` // TODO: change so that we know exactly what confirmed it?
 	ContaminationsField
 	KnownFruitableField
 	DisposedField
 	MostRecentImageField
-	Sales []AlternateCollectionId `bson:"sales,omitempty" json:"sales,omitempty"`
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
+}
+
+func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
+	return errors.New("LiquidCulture cannot transfer this way. Must create a new lcSyringe")
 }
 
 func (l LiquidCulture) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -126,11 +127,36 @@ func (l LiquidCulture) id() []byte {
 func initializeLCs(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(mainCollectionName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		newSimpleIndex("pcRun", "pcRun", false, true, false),
+		newSimpleIndex("recipe", "recipe", false, false, false),
+		creationDateIndexModel,
+		newSimpleIndex("species", "species", false, true, false),
+		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("innoc", "innoc", false, true, false),
+		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		transfersOutIndexModel,
+		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		//Pics (no index)
+		newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
+		// TODO: Contams
+		// Flushes
+		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		newSimpleIndex("disposed", "disposed", false, true, false),
+		// MostRecentImage
+		//Notes (no index) (maybe later with tags?)
+		lastUpdatedIndexModel,
+		// TODO: projectsIndexModel,
+	})
+	if err != nil {
+		return err
+	}
 	// If test agar batch does not exist, then create it
 	existingEntry := LiquidCulture{}
 	testId := mainCollIdForint(idTestLC)
 	testItem := LiquidCulture{
-		EntryTypeStructField:    EntryTypeStructField{*existingEntry.EntryTypeField()},
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		PcRunOptionalField:      PcRunOptionalField{&exAltId},
 		LcRecipeField:           LcRecipeField{exAltId},
@@ -142,20 +168,19 @@ func initializeLCs(ctx context.Context) error {
 			GenSporeField:        GenSporeField{&exGenSinceSpore},
 			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
 		},
-		TransfersOutField:         TransfersOutField{exAlts},
-		ParentTypeField:           ParentTypeField{&exParentType},
-		BinaryOptionalParentField: BinaryOptionalParentField{Parent: utils.Pointer(exPlate.ToBinaryCollectionId())},
-		PicsField:                 PicsField{exPics},
-		ConfirmedClean:            exBool,
-		ContaminationsField:       ContaminationsField{exContams},
-		KnownFruitableField:       KnownFruitableField{exBool},
-		DisposedField:             DisposedField{&exampleTime},
-		MostRecentImageField:      MostRecentImageField{&exPics[0]},
-		Sales:                     exAlts,
-		NotesField:                NotesField{exampleNotes()},
-		LastUpdatedField:          LastUpdatedField{exampleTime},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		ParentTypeField:                   ParentTypeField{&exParentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: &exPlate},
+		PicsField:                         PicsField{exPics},
+		ConfirmedClean:                    exBool,
+		ContaminationsField:               ContaminationsField{exContams},
+		KnownFruitableField:               KnownFruitableField{exBool},
+		DisposedField:                     DisposedField{&exampleTime},
+		MostRecentImageField:              MostRecentImageField{&exPics[0]},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil
@@ -174,7 +199,7 @@ type createLiquidCultureRequest struct {
 
 func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := createLiquidCultureRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -197,12 +222,12 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	now := unixTimeForNow()
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		// TODO: add to map!
 		_, err = data.LcRecipeField.Get(ctx)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := LiquidCulture{
-			EntryTypeStructField:  EntryTypeStructField{"lc"},
 			MainCollectionIdField: MainCollectionIdField{id},
 			LcRecipeField:         data.LcRecipeField,
 			PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
@@ -241,13 +266,13 @@ type importLiquidCultureRequest struct {
 	Generation     *int
 	ConfirmedClean *bool
 	WriteTagToField
-	PermsField
+	//PermsField
 	// image as "img"
 }
 
 func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLiquidCultureRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -279,11 +304,11 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	authinfo, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
+	//authinfo, err := GetAuthInfo(r.Context())
+	//if err != nil {
+	//	http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+	//	return
+	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -348,15 +373,14 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	spec, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("failed to get species and subspecies: %s", err), http.StatusInternalServerError)
-		return
-	}
-	finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
-	finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id) // Add user to perms if not already there
+	//spec, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	//if err != nil {
+	//	http.Error(w, fmt.Sprintf("failed to get species and subspecies: %s", err), http.StatusInternalServerError)
+	//	return
+	//}
+	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id) // Add user to perms if not already there
 	out := LiquidCulture{
-		EntryTypeStructField:  EntryTypeStructField{"lc"},
 		MainCollectionIdField: MainCollectionIdField{id},
 		//PcRunOptionalField:      PcRunOptionalField{},       // No pc runs on imports
 		LcRecipeField:           LcRecipeField{data.Recipe}, // TODO: optional for imports?
@@ -372,10 +396,11 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-		PermsField:           PermsField{finalPerms},
+		//PermsField:           PermsField{finalPerms},
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		// TODO: ADD TO MAP!
 		_, err = out.LcRecipeField.Get(ctx)
 		if err != nil && errors.Is(err, ErrMissingOptionalField) {
 			return DbTxnStdErr(w, "invalid LC recipe: "+err.Error(), http.StatusInternalServerError)
@@ -400,24 +425,22 @@ type updateLiquidCultureRequest struct {
 	Notes AllEntries[Note] // TODO: change into an anonymous struct???
 	KnownFruitableField
 	DisposedField
-	Sales          []AlternateCollectionId `json:"sale,omitempty"` // TODO: validate
 	ConfirmedClean *bool
 	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	Contams        SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	WriteTagToField
-	PermsField
+	//PermsField
 }
 
 func (upr updateLiquidCultureRequest) reform() resolvedUpdateLiquidCultureRequest {
 	return resolvedUpdateLiquidCultureRequest{
 		ConfirmedClean:      upr.ConfirmedClean,
 		KnownFruitableField: upr.KnownFruitableField,
-		Sales:               upr.Sales,
 		DisposedField:       upr.DisposedField,
 		Notes:               upr.Notes,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
-		PermsField:          upr.PermsField,
+		//PermsField:          upr.PermsField,
 	}
 }
 
@@ -425,12 +448,11 @@ func (mods resolvedUpdateLiquidCultureRequest) modsFor(existing LiquidCulture) (
 	return NewMods().
 		updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
 		updateConfirmedCleanIfNeeded(mods.ConfirmedClean, existing.ConfirmedClean).
-		updateSalesIfNeeded(mods.Sales, existing.Sales). // TODO: maybe do this via a "newSale" endpoint?
 		updateDisposedIfNeeded(mods.Disposed, existing.Disposed).
 		updateNotesIfNeeded(mods.Notes, existing.Notes).
 		updatePicsIfNeeded(mods.Images, existing.Pics).
 		updateContamsIfNeeded(mods.Contams, existing.Contaminations).
-		updatePermsIfNeeded(mods.Perms, existing.Perms).
+		//updatePermsIfNeeded(mods.Perms, existing.Perms).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -443,7 +465,7 @@ type resolvedUpdateLiquidCultureRequest struct {
 	ConfirmedClean *bool
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams        SplitEntries[contamForm, Contamination]
-	PermsField
+	//PermsField
 }
 
 func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
@@ -494,10 +516,10 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		restrictivePerms := minimalPermsBetween(data.Perms, existing.Perms)
-		if err = restrictivePerms.ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "does not meet either old or new permissions: "+err.Error(), http.StatusBadRequest)
-		}
+		//restrictivePerms := minimalPermsBetween(data.Perms, existing.Perms)
+		//if err = restrictivePerms.ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "does not meet either old or new permissions: "+err.Error(), http.StatusBadRequest)
+		//}
 		upd, err := out.modsFor(existing)
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates!!!!!!!
 	})

@@ -4,24 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"github.com/reeceappling/goUtils/v2/utils/slices"
-	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
 	"reflect"
-	"strconv"
-	"strings"
+	"slices"
 )
 
 // TODO: new are this, sporeSwab, agarBottle, plugs
 
 // Naming convention "{ParentLCID}-#"
 
-func parseName()
+//func parseName() // TODO: ???
 
 const (
 	lcSyringeSourceType     = "lcSyringe"
@@ -29,83 +25,34 @@ const (
 	lcSyringeIdPrefix       = "LCS"
 )
 
-type LcSyringeID string
-
-func (s LcSyringeID) MarshalJSON() ([]byte, error) {
-	if len(s) == RfidByteSize {
-		// Purchased LC syringes
-		return json.Marshal(MainCollectionId([]byte(s)[0:RfidByteSize]))
-	}
-	// Created LC syringes
-	// TODO: validate s[9:]
-	return []byte(fmt.Sprintf(`"%s-%s"`, string(MainCollectionId([]byte(s)[0:8]).base58Bytes()), s[9:])), nil
-}
-
-func (id *LcSyringeID) UnmarshalJSON(bs []byte) (err error) {
-	parts := strings.Split(string(bs), "-")
-	switch len(parts) {
-	case 1: // Purchased
-		// TODO: TEST
-		// TODO: does this expect double quotes to come in with it?
-		mainCollId, err := Base58Str(string(bs)).toMainCollectionId()
-		if err != nil {
-			return err
-		}
-		*id = LcSyringeID(mainCollId.dbIdStr())
-	case 2: // Created
-		// TODO: TEST
-		// TODO: does this expect double quotes to come in with it?
-		binaryParentId, err := Base58Str(parts[0]).toMainCollectionId()
-		if err != nil {
-			return err
-		}
-		// TODO: validate parts[1] is a number
-		*id = LcSyringeID(string(binaryParentId[:]) + "-" + parts[1])
-	default:
-		return errors.New("invalid LcSyringeID")
-	}
-	return nil
-}
-
-func (s LcSyringeID) ID() (LcSyringeIdInMemory, error) {
-	parts := strings.Split(string(s), "-")
-	num, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return LcSyringeIdInMemory{}, err
-	}
-	return LcSyringeIdInMemory{
-		parent: AlternateCollectionId([]byte(parts[0])),
-		number: num,
-	}, nil
-}
-
-type LcSyringeIdInMemory struct {
-	parent AlternateCollectionId
-	number int
-}
-
-func (s LcSyringeIdInMemory) DbId() LcSyringeIDInDB {
-	return LcSyringeIDInDB(s.parent.String() + "-" + strconv.Itoa(s.number))
-}
-
 type LcSyringe struct {
-	AlternateCollectionIdField
+	MainCollectionIdField
 	// Parent is always either purchased (nil), LC, or LcSyringe
 	MainCollectionOptionalParentField // TODO: likely won't exist for pre-existing
 	CreationDateField                 // create or receive date
 	SpeciesField
 	SubspeciesOptionalField
 	SaleField
+	GenerationsFields
+	KnownFruitableField       // TODO: NEW! HANDLE EVERYWHERE!
+	ConfirmedClean      *bool `bson:"confirmedClean,omitempty" json:"confirmedClean,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
 	// TODO: add contaminated field?
 	TransfersOutField
 	DisposedField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
 }
 
-func (sw LcSyringe) projects() []projectName {
-	return sw.Perms.Projects.Ids
+func (lcs LcSyringe) Innoculatable() bool {
+	return false
+}
+
+func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
+	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType}, dst.SourceType()) {
+		return errors.New("lc syringe cannot transfer to " + dst.SourceType())
+	}
+	return nil
 }
 
 func (sw LcSyringe) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
@@ -125,34 +72,8 @@ func (sw LcSyringe) setTransferParent(ctx mongo.SessionContext, xfer Transfer) e
 }
 
 func (sw LcSyringe) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
-	// TODO: can this happen????? should always be from a fruit right?
-	// This is a special case because it will always be 0-gen
-	parentInfo, err := from.GeneticInfoAsParent()
-	if err != nil {
-		return err
-	}
-	if parentInfo.Species == nil {
-		return errors.New("parent must have a species")
-	}
-	if from.SourceType() != FruitSourceType {
-		errors.New("only fruits are supported as a transfer source type into Syringes")
-	}
-	upd, err := xfer.
-		PicsModsForChild().
-		withInnoc(xfer).
-		withParent(utils.Pointer(from.DbId())).
-		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
-		updateLastUpdatedIfNeeded().
-		Finalized()
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.Id, upd)
-	if err != nil {
-		return err
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
-	}
-	return nil
+	// TODO: cannot happen
+	panic("does not happen")
 }
 
 func (sw LcSyringe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -181,8 +102,8 @@ func (sw LcSyringe) EntryTypeField() *string {
 	return nil
 }
 
-func (sw LcSyringe) altId() AlternateCollectionId {
-	return AlternateCollectionId(sw.Id)
+func (sw LcSyringe) altId() MainCollectionId {
+	return sw.Id
 }
 
 func (sw LcSyringe) id() []byte {
@@ -205,27 +126,18 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(lcSyringeCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		//AlternateCollectionIdField
-		//SubType string // spore or LC
-		//// Parent is always either purchased (nil), LC, or LcSyringe
-		//AlternateCollectionOptionalParentField // TODO: handle now a pointer       // TODO: likely won't exist for pre-existing
-		//CreationDateField                      // create or receive date
-		//SpeciesField
-		//SubspeciesOptionalField
-		//SaleField
-		//TransfersOutField
-		//DisposedField
-		//// TODO: projects?
-		//NotesField
-		//LastUpdatedField
-		//PermsField
-		newSimpleIndex("subType", "subType", false, false, false),
-		newSimpleIndex("parent", "parent", false, false, false),
+		newSimpleIndex("parent", "parent", false, true, false),
 		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		projectsIndexModel,
-		newSimpleIndex("sale", "sale", false, true, false),
+		saleIndexModel,
+		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
+		transfersOutIndexModel,
+		newSimpleIndex("disposed", "disposed", false, true, false),
+		//// TODO: projects?
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -235,7 +147,7 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 	// If test agar batch does not exist, then create it
 	existingEntry := LcSyringe{}
 	testItem := LcSyringe{
-		AlternateCollectionIdField:        AlternateCollectionIdField{exAltId},
+		MainCollectionIdField:             MainCollectionIdField{Id: exLC}, // TODO: FIX!
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exLC},
 		CreationDateField:                 exampleTime.asCreationDate(),
 		SpeciesField:                      SpeciesField{testEntryStringId},
@@ -244,7 +156,7 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 		DisposedField:                     DisposedField{&exampleTime},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		PermsField:                        PermsField{}, // TODO: fix
+		//PermsField:                        PermsField{}, // TODO: fix
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -255,156 +167,69 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
 }
 
-type createSyringeRequest struct {
-	FruitId AlternateCollectionId `bson:"fruitId" json:"fruitId"`
+type createLCSyringeRequest struct {
+	LC MainCollectionId `json:"lc"`
 	NotesField
-	Pics []PicWithNotesLessLocation //"newPic-1"
+	WriteTagToField
 }
 
-func (upr createSyringeRequest) reform() resolvedCreateSyringeRequest {
-	return resolvedCreateSyringeRequest{
-		FruitId:    upr.FruitId,
-		NotesField: upr.NotesField,
-		PicsField: PicsField{slices.Map(upr.Pics, func(i PicWithNotesLessLocation) PicWithNotes {
-			return i.asPicWithNotes(nil)
-		})},
-	}
-}
-
-type resolvedCreateSyringeRequest struct {
-	// TODO: spore print id or lc id
-	FruitId AlternateCollectionId `bson:"fruitId" json:"fruitId"`
-	NotesField
-	PicsField
-}
-
+// TODO: USE
 func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
-	data := createSyringeRequest{}
-	id := newAlternateCollectionId()
-	b58Id := id.asBase58()
+	data := createLCSyringeRequest{}
 	defer r.Body.Close()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
-	reader, err := r.MultipartReader() // TODO: do streamlined
+	bs, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	p, err := reader.NextPart()
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Process text (or object)
-	bs, errr := io.ReadAll(p)
-	if errr != nil {
-		err = errr
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Get any images
-	newPics := map[int]string{}
-	picsSaved := []string{}
-	defer func() {
-		if err != nil {
-			errDel := pics.DeleteFiles(r.Context(), picsSaved...)
-			if errDel != nil {
-				handleFileDeleteErr(errDel)
-			}
-		}
-	}()
-	for {
-		// Go to next part or break
-		p, err = reader.NextPart()
-		if err != nil {
-			if err != io.EOF {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			break
-		}
-		fileName := p.FileName()
-		if fileName == "" {
-			http.Error(w, "file name is empty for what should have been an image", http.StatusBadRequest)
-			return
-		}
-		// Process file
-		parts := strings.Split(fileName, "-")
-		if len(parts) != 2 {
-			http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
-			return
-		}
-		num, errr := strconv.Atoi(parts[1])
-		if errr != nil {
-			err = errr
-			http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
-			return
-		}
-		fieldBytes, err := multipartToImageBytes(p, w)
-		if err != nil {
-			// Already wrote
-			return
-		}
-		switch parts[0] {
-		case "newPic":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "LcSyringe", string(b58Id), "img")
-			if err != nil {
-				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			newPics[num] = newFileNameWithPrefixPath
-		default:
-			http.Error(w, "invalid picture name", http.StatusBadRequest)
-			return
-		}
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-	// CHECK THAT ALL NEW PICS EXIST
-	// PROCESS ALL NEW PICS AND CONTAMS
-	out := data.reform()
-	for i, _ := range data.Pics {
-		loc, exists := newPics[i]
-		if !exists {
-			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
-			return
-		}
-		out.Pics[i].Location = imageLocation(loc)
-	}
-
 	_, txErr := doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
-		parent := LiquidCulture{} // TODO: not fruit
-		err = db.Collection(fruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
+		parent := &LiquidCulture{}
+		err = db.Collection(LCCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-
+		if parent.Species == nil {
+			return DbTxnStdErr(w, "Parent LC must be innoculated", http.StatusInternalServerError)
+		}
 		now := unixTimeForNow()
+		if err = addToIdMapCollectionInTxn(ctx, id.ToBinaryCollectionId(), lcSyringeSourceType); err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := LcSyringe{
-			AlternateCollectionIdField:        AlternateCollectionIdField{id},
+			MainCollectionIdField:             MainCollectionIdField{Id: id},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+			ConfirmedClean:                    nil,
+			KnownFruitableField:               parent.KnownFruitableField,
 			CreationDateField:                 now.asCreationDate(),
 			SpeciesField:                      SpeciesField{Species: *parent.Species},
 			SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-			NotesField:                        NotesField{out.Notes},
+			GenerationsFields:                 parent.GenerationsFields,
+			NotesField:                        NotesField{data.Notes},
 			LastUpdatedField:                  LastUpdatedField{now},
 			// Do not check permissions, just pass parent perms to child
-			PermsField: PermsField{parent.Perms},
+			//PermsField: PermsField{parent.Perms},
 		}
+		// TODO: ADD TO MAP
 		_, err = db.Collection(lcSyringeCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		// TODO: Update LC with new syringe???
-		//err = parent.addSyringe(ctx, spid)
-		//if err != nil {
-		//	return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		//}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -419,25 +244,30 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
-	Notes AllEntries[Note]
-	PermsField
+	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
+	KnownFruitableField       // TODO: handle in react
+	Notes               AllEntries[Note]
+	//PermsField
 }
 
 func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
 	return resolvedUpdateSyringeRequest{
-		SaleField:     upr.SaleField,
-		DisposedField: upr.DisposedField,
-		Notes:         upr.Notes,
-		PermsField:    PermsField{upr.Perms},
+		SaleField:           upr.SaleField,
+		DisposedField:       upr.DisposedField,
+		ConfirmedClean:      upr.ConfirmedClean,
+		KnownFruitableField: upr.KnownFruitableField,
+		Notes:               upr.Notes,
+		//PermsField:    PermsField{upr.Perms},
 	}
 }
 
 type resolvedUpdateSyringeRequest struct {
 	SaleField
 	DisposedField
+	ConfirmedClean *bool `json:"confirmedClean,omitempty"`
+	KnownFruitableField
 	Notes AllEntries[Note]
-	Pics  SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsField
+	//PermsField
 }
 
 func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
@@ -460,14 +290,17 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
-		}
-		upd, err := NewMods().
+		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
+		//}
+		mds := NewMods()
+		updatePointerIfNeeded(mds, "confirmedClean", out.ConfirmedClean, existing.ConfirmedClean)
+		upd, err := mds.
 			updateSaleIfNeeded(out.Sale, existing.Sale).
 			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
+			updateKnownFruitableIfNeeded(data.KnownFruitable, existing.KnownFruitable).
 			updateNotesIfNeeded(data.Notes, existing.Notes).
-			updatePermsIfNeeded(data.Perms, existing.Perms). // TODO: ok?
+			//updatePermsIfNeeded(data.Perms, existing.Perms). // TODO: ok?
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
@@ -502,14 +335,19 @@ type importSyringeRequest struct {
 	CreationDateField
 	SpeciesField
 	SubspeciesOptionalField
+	KnownFruitableField
 	NotesField
 	// pic as "img"
-	PermsField
+	//PermsField
 }
 
 func importSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSyringeRequest{}
-	id := newAlternateCollectionId()
+	id, err := newMainCollectionId(r.Context())
+	if err != nil {
+		http.Error(w, "failed to create new mainCollectionId", http.StatusInternalServerError)
+		// TODO: err
+	}
 	defer r.Body.Close()
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)
@@ -523,35 +361,37 @@ func importSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "user cannot write with these perms: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "user cannot write with these perms: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		finalPerms := data.Perms
-		if data.Perms != nil {
-			spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
-			if err != nil {
-				return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
-			}
-			finalPerms = minimalPermsBetween(spec, subsp)
-			// TODO: add user perms if provided, as well as make user author?
-			if !finalPerms.Valid() {
-				// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
-				return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
-			}
-		}
+		//finalPerms := data.Perms
+		//if data.Perms != nil {
+		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+		//	if err != nil {
+		//		return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//	}
+		//	finalPerms = minimalPermsBetween(spec, subsp)
+		//	// TODO: add user perms if provided, as well as make user author?
+		//	if !finalPerms.Valid() {
+		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
+		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//	}
+		//}
 
 		toInsert := LcSyringe{
-			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			CreationDateField:          data.CreationDateField,
-			SpeciesField:               data.SpeciesField,
-			SubspeciesOptionalField:    data.SubspeciesOptionalField,
-			NotesField:                 data.NotesField,
-			LastUpdatedField:           LastUpdatedFieldForNow(),
-			PermsField:                 PermsField{finalPerms},
+			MainCollectionIdField:   MainCollectionIdField{Id: id},
+			CreationDateField:       data.CreationDateField,
+			SpeciesField:            data.SpeciesField,
+			KnownFruitableField:     data.KnownFruitableField,
+			SubspeciesOptionalField: data.SubspeciesOptionalField,
+			NotesField:              data.NotesField,
+			LastUpdatedField:        LastUpdatedFieldForNow(),
+			//PermsField:              PermsField{finalPerms},
 		}
+		// TODO: ADD TO MAP
 		coll := ctx.Client().Database(dbName).Collection(lcSyringeCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {

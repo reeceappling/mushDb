@@ -13,24 +13,24 @@ import (
 
 const salesCollectionName = "sales"
 
-var (
-	_ Sellable = &Bag{}
-	_ Sellable = &Fruit{}
-	_ Sellable = &FruitingChamber{}
-	_ Sellable = &GrainJar{}
-	_ Sellable = &LiquidCulture{}
-	_ Sellable = &MSS{}
-	_ Sellable = &Plate{}
-	_ Sellable = &Slant{}
-	_ Sellable = &SporePrint{}
-	_ Sellable = &SporeSwab{}
-	_ Sellable = &StasisTube{}
-	_ Sellable = &SporePrint{}
-)
-
-type Sellable interface {
-	AddSale() error
-}
+//var (
+//	_ Sellable = &Bag{}
+//	_ Sellable = &Fruit{}
+//	_ Sellable = &FruitingChamber{}
+//	_ Sellable = &GrainJar{}
+//	_ Sellable = &LiquidCulture{}
+//	_ Sellable = &MSS{}
+//	_ Sellable = &Plate{}
+//	_ Sellable = &Slant{}
+//	_ Sellable = &SporePrint{}
+//	_ Sellable = &SporeSwab{}
+//	_ Sellable = &StasisTube{}
+//	_ Sellable = &SporePrint{}
+//)
+//
+//type Sellable interface {
+//	AddSale() error // TODO: likely get rid of?
+//}
 
 type SaleField struct { // TODO: sales is multiple only for LC!
 	Sale *AlternateCollectionId `bson:"sale,omitempty" json:"sale,omitempty"`
@@ -50,7 +50,7 @@ type Sale struct {
 	CreationDateField // This is sale date
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
 }
 
 func (s Sale) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -71,7 +71,8 @@ func initializeSales(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(salesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("saleDate", "saleDate", true, false, false),
+		newSimpleIndex("saleDate", "creationDate", true, false, false),
+		//notes
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
@@ -135,7 +136,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 			CreationDateField:          unixTimeForNow().asCreationDate(),
 			NotesField:                 req.NotesField,
 			LastUpdatedField:           LastUpdatedField{now},
-			PermsField:                 PermsField{nil}, // TODO: THIS!!!!!!!!!!!!!
+			//PermsField:                 PermsField{nil}, // TODO: THIS!!!!!!!!!!!!!
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
@@ -154,7 +155,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateSaleRequest struct {
 	Notes AllEntries[Note]
-	PermsField
+	//PermsField
 }
 
 func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
@@ -188,12 +189,12 @@ func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "bad overlapping perms for user: "+err.Error(), http.StatusBadRequest)
-		}
+		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "bad overlapping perms for user: "+err.Error(), http.StatusBadRequest)
+		//}
 		upd, err := NewMods().
 			updateNotesIfNeeded(req.Notes, existing.Notes).
-			updatePermsIfNeeded(req.Perms, existing.Perms).
+			//updatePermsIfNeeded(req.Perms, existing.Perms).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

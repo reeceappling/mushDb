@@ -133,13 +133,20 @@ type ParentTypeField struct {
 	ParentType *string `bson:"parentType,omitempty" json:"parentType,omitempty"`
 }
 
-type PermsField struct {
-	Perms *Perms `bson:"perms,omitempty" json:"perms,omitempty"`
-}
+//type PermsField struct {
+//	Perms *Perms `bson:"perms,omitempty" json:"perms,omitempty"`
+//}
 
-func (field PermsField) Permissions() *Perms {
-	return field.Perms
-}
+//func (field PermsField) projects() []projectName {
+//	if field.Perms == nil {
+//		return []projectName{}
+//	}
+//	return field.Perms.Projects.Ids
+//}
+
+//func (field PermsField) Permissions() *Perms {
+//	return field.Perms
+//}
 
 type CreationDateField struct {
 	CreationDate unixTime `bson:"creationDate" json:"creationDate"`

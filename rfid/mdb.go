@@ -368,6 +368,7 @@ func doTxn(ctx context.Context, txnFunc func(ctx mongo.SessionContext) (interfac
 }
 
 func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, error) {
+	// TODO: ensure this checks the new idMap collection!
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	out := make([]MainCollectionId, n)
 	for i, _ := range out {
@@ -386,7 +387,7 @@ func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, 
 	return out, nil
 }
 
-func generateMainCollectionId(ctx context.Context) (MainCollectionId, error) {
+func newMainCollectionId(ctx context.Context) (MainCollectionId, error) {
 	ids, err := generateMainCollectionIds(ctx, 1)
 	if err != nil {
 		return MainCollectionId{}, err
@@ -464,6 +465,10 @@ func HandleCreate() http.HandlerFunc {
 		GetPermsMiddleware(handler).ServeHTTP(w, r)
 	}
 }
+
+func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
+	return handler // TODO: replace with old GetPermsMiddleware once perms are reenabled
+}
 func ImportHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		endpt := r.PathValue("endpt")
@@ -511,7 +516,7 @@ func UpdateById() http.HandlerFunc {
 			"subspecies":      updateSubspeciesHandler,
 			"substrateRecipe": updateSubstrateRecipeHandler,
 			"transfer":        updateTransferHandler,
-			"ser":             updateUserHandler,
+			//"ser":             updateUserHandler,
 		}[endpt]
 		if !exists {
 			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)

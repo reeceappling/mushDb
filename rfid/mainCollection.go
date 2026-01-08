@@ -17,6 +17,10 @@ var (
 	_ MainCollectionItem = Bag{}             // can only go to fruits
 	_ MainCollectionItem = FruitingChamber{} // can only go to fruits
 	_ MainCollectionItem = MSS{}             // generally only goes to plate
+	_ MainCollectionItem = SporePrint{}
+	_ MainCollectionItem = LcSyringe{}
+	_ MainCollectionItem = PlugsJar{} // TODO: has multiple sales
+	_ MainCollectionItem = SporeSwab{}
 )
 
 type CollectionId interface { // TODO; USE????

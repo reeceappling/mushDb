@@ -1,25 +1,17 @@
 version: '3.8'
 services:
-  cloudflare-ddns: # TODO: docker-compose --env-file ./env/.env.dev up
-    image: timothyjmiller/cloudflare-ddns:latest
-    container_name: cloudflare-ddns
-    security_opt:
-      - no-new-privileges:true
-    network_mode: 'host'
-    restart: unless-stopped
+  # Service to maintain cloudflare tunnel (because homelab is behind CGNAT)
+  cloudflared:
+    image: cloudflare/cloudflared
+    container_name: cloudflared
     environment:
-      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
-      CLOUDFLARE_EMAIL: ${CLOUDFLARE_EMAIL}
-      CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID}
-      CF_DDNS_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
-      CF_DDNS_EMAIL: ${CLOUDFLARE_EMAIL}
-      CF_DDNS_ZONE_ID: ${CLOUDFLARE_ZONE_ID}
-      # TODO: unsure what next 2 do
-      PUID: 1000
-      PGID: 1000
-    configs:
-      - source: config.json
-        target: /config.json
+      - TZ=America/New_York
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    networks:
+      - mushNet
+  # Main go api
   api:
     image: mush-api:latest
     restart: unless-stopped
@@ -30,180 +22,124 @@ services:
         - "mush-api:latest"
     environment:
       PICS_PATH: "/images"
-      API_PORT: ${MAIN_API_EXTERNAL_PORT}
-      MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL}
-      MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST}
-      MONGO_INITDB_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
-      RFID_SECRET: ${RFID_SECRET}
+      API_PORT: "80"
+      MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-http}
+      MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
+      MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
+      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
+      ADMIN_USER: ${ADMIN_USER:?error}
+      ADMIN_PASS: ${ADMIN_PASS:?error}
+      RFID_SECRET: ${RFID_SECRET:?error}
       DB_HOST_PORT: "27017"
       DB_HOST_NAME: "mushdb"
       WEB_HOST_INTERNAL: "web"
       WEB_HOST_INTERNAL_PORT: "3000"
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      # TODO: only use following 2 for https
-      TLS_KEY_FILE: ""
-      TLS_CERT_FILE: ""
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?error}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?error}
     volumes:
       - pictures:/images
-      - tls-keys:/tls # TODO: ensure checking this
-  web:
-    image: mush-web:latest
-    restart: unless-stopped
-    build:
-      context: ./rfid/client
-      dockerfile: ./Dockerfile
-      args:
-        MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL}
-        MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST}
-        MAIN_API_EXTERNAL_PORT: ${MAIN_API_EXTERNAL_PORT}
-        MAIN_API_INTERNAL_HOST: "api"
-      tags:
-        - "mush-web:latest"
-    # TODO: MORE
-    environment:
-      NEXT_PRIVATE_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL}://api"
-      NEXT_PUBLIC_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL}://${MAIN_API_EXTERNAL_HOST}"
+    networks:
+      - mushNet
+  # React/Next.js webserver
+#  web:
+#    image: mush-web:latest
+#    restart: unless-stopped
+#    build:
+#      context: ./rfid/client
+#      dockerfile: ./Dockerfile
+#      args:
+#        MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-http}
+#        MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
+#        MAIN_API_EXTERNAL_PORT: ${MAIN_API_EXTERNAL_PORT:-80}
+#        MAIN_API_INTERNAL_HOST: "api"
+#      tags:
+#        - "mush-web:latest"
+#    environment:
+#      NEXT_PRIVATE_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL:-http}://api"
+#      NEXT_PUBLIC_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL:-http}://${MAIN_API_EXTERNAL_HOST:-localhost}"
+#     networks:
+#       - mushNet
+  # fungi database container
   mushdb:
     image: mongo:4
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-      MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME}
-      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD}
-      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?error}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?error}
+      MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
+      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
     command: [--auth]
     volumes:
       - mongodb-data:/data/db
-      - ./initDB/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
-  certbot:
-    image: certbot/dns-cloudflare:latest
-    container_name: certbot
-    hostname: certbot
-    volumes:
-      - ./cloudflare:/opt/cloudflare
-      - ./letsencrypt:/etc/letsencrypt
-      - ./letsencrypt/log:/var/log/letsencrypt
-    # Dry Run
-    # command: certonly --non-interactive --dns-cloudflare --dns-cloudflare-credentials /opt/cloudflare/credentials --agree-tos -d home.appli.ng -d appli.ng -d www.appli.ng -d www.home.appli.ng --server https://acme-v02.api.letsencrypt.org/directory --dry-run
-    # Issue Cert # TODO: FIX SO IT AUTORENEWS!!
-    # command: certonly --non-interactive --dns-cloudflare --dns-cloudflare-credentials /opt/cloudflare/credentials --dns-cloudflare-propagation-seconds 30 --agree-tos -d home.appli.ng --server https://acme-v02.api.letsencrypt.org/directory
-    # Renew Cert
-    command: certonly --non-interactive --dns-cloudflare --dns-cloudflare-credentials /opt/cloudflare/credentials --dns-cloudflare-propagation-seconds 30 --agree-tos -d home.appli.ng --server https://acme-v02.api.letsencrypt.org/directory
-  nginx:
-    image: nginx:latest
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./html:/var/www/html:ro
-      - ./certbot/www/:/var/www/certbot/:rw
-      - ./letsencrypt:/etc/letsencrypt
-      - ./letsencrypt/log:/var/log/letsencrypt
-      #- certbot-var:/var/lib/letsencrypt
-  grafana:
-    image: grafana/grafana:latest
-    restart: unless-stopped
-    volumes:
-      - grafana_data:/var/lib/grafana:rw # TODO: FIX # TODO: https://grafana.com/docs/grafana/latest/setup-grafana/configure-docker/
-    ports:
-      - 3000:3000 # TODO: FIX
-    environment:
-      - GF_SERVER_ROOT_URL=http://localhost:3000 # TODO: Adjust if accessing from a different domain/IP
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD} # TODO: run with password
-  influxdb2:
-    image: influxdb:2
-    ports:
-      - 8086:8086
-    environment:
-      DOCKER_INFLUXDB_INIT_MODE: setup
-      DOCKER_INFLUXDB_INIT_USERNAME_FILE: /run/secrets/influxdb2-admin-username
-      DOCKER_INFLUXDB_INIT_PASSWORD_FILE: /run/secrets/influxdb2-admin-password
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN_FILE: /run/secrets/influxdb2-admin-token
-      DOCKER_INFLUXDB_INIT_ORG: docs
-      DOCKER_INFLUXDB_INIT_BUCKET: home
-    secrets:
-      - influxdb2-admin-username
-      - influxdb2-admin-password
-      - influxdb2-admin-token
-    volumes:
-      - type: volume
-        source: influxdb2-data
-        target: /var/lib/influxdb2
-      - type: volume
-        source: influxdb2-config
-        target: /etc/influxdb2
-    # TODO: MQTT for pub/sub on sensor data (main server is broker/subClients, sensors are pub clients)
-
-
+      - ./initDB:/docker-entrypoint-initdb.d
+    networks:
+      - mushNet
+  # grafana service
+#  grafana:
+#    image: grafana/grafana:latest
+#    restart: unless-stopped
+#    volumes:
+#      - grafana-data:/var/lib/grafana:rw
+#    #ports:
+#    #  - 3000:3000 # TODO: FIX
+#    environment:
+#      - GF_SERVER_ROOT_URL=http://localhost:3000 # TODO: Adjust if accessing from a different domain/IP
+#      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?error} # TODO: do
+#      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?error} # TODO: run with password
+#      - GF_LOG_LEVEL=debug # TODO: debug vs info
+#      #- GF_LOG_MODE="console"
+#      - GF_PLUGINS_PREINSTALL=grafana-mongodb-datasource,grafana-worldmap-panel,grafana-clock-panel,grafana-piechart-panel
+#      - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
+#    networks:
+#      - mushNet
+networks:
+  mushNet:
+    name: mushNet
 volumes:
   pictures:
     driver: local
     driver_opts:
       type: none
-      device: ${LOCAL_IMAGES_DIR}
-      o: bind
-  tls-keys:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${LOCAL_CERTS_DIR}
+      device: ${LOCAL_IMAGES_DIR:?error}
       o: bind
   mongodb-data:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${LOCAL_DB_DIR}
-      o: bind
+#    driver: local
+#    driver_opts:
+#      type: none
+#      device: ${LOCAL_DB_DIR:?error}
+#      o: bind
   grafana-data:
     driver: local
     driver_opts:
       type: none
-      device: ${LOCAL_GRAFANA_DIR} # TODO: ADD
+      device: ${LOCAL_GRAFANA_DIR:?error} # TODO: ADD
       o: bind
-  certbot-etc:
-  certbot-var:
-configs:
-  config.json: # TODO: generate via template?
-    content: |
-      {
-        "cloudflare": [
-          {
-            "authentication": {
-              "api_token": "${CLOUDFLARE_API_TOKEN}",
-              "api_key": {
-                "api_key": "${CLOUDFLARE_API_TOKEN}",
-                "account_email": "${CLOUDFLARE_EMAIL}"
-              }
-            },
-            "zone_id": "${CLOUDFLARE_ZONE_ID}",
-            "subdomains": [
-              {
-                "name": "",
-                "proxied": false
-              },
-              {
-                "name": "home",
-                "proxied": false
-              }
-            ]
-          }
-        ],
-        "a": false,
-        "aaaa": true,
-        "purgeUnknownRecords": true,
-        "ttl": 300
-      }
-secrets:
-  influxdb2-admin-username:
-    file: ~/.env.influxdb2-admin-username # TODO: fix
-  influxdb2-admin-password:
-    file: ~/.env.influxdb2-admin-password # TODO: fix
-  influxdb2-admin-token:
-    file: ~/.env.influxdb2-admin-token # TODO: fix
+# configs:
+#  config.json: # TODO: generate via template?
+#    content: |
+#      {
+#        "cloudflare": [
+#          {
+#            "authentication": {
+#              "api_token": "${CLOUDFLARE_API_TOKEN:?error}",
+#            },
+#            "zone_id": "${CLOUDFLARE_ZONE_ID:?error}",
+#            "subdomains": [
+#              {
+#                "name": "",
+#                "proxied": false
+#              },
+#              {
+#                "name": "home",
+#                "proxied": false
+#              }
+#            ]
+#          }
+#        ],
+#        "a": false,
+#        "aaaa": true,
+#        "purgeUnknownRecords": true,
+#        "ttl": 120
+#      }

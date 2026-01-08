@@ -2,6 +2,7 @@ package rfid
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 )
@@ -29,7 +30,7 @@ type AddSensorDataReq struct {
 
 func GetSensorDataHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		nodeName := r.PathValue("nodeName")
+		//nodeName := r.PathValue("nodeName")
 		// TODO: this
 		// TODO: check timespan/discretization
 		// TODO: get datapoints
@@ -39,7 +40,7 @@ func GetSensorDataHandler() http.Handler {
 
 func GetSensorDataSinceHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		nodeName := r.PathValue("nodeName")
+		//nodeName := r.PathValue("nodeName")
 		// TODO: this
 		// TODO: get all datapoints since the last one
 		// TODO: return all those datapoints
@@ -72,5 +73,7 @@ func AddSensorDataHandler() http.Handler {
 }
 
 func addSensorDataFor(nodeName string, data []SensorData) error {
+
 	// TODO: this! Add sensor data to db (or file?)
+	return errors.New("NOT IMPLEMENTED")
 }

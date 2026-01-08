@@ -26,7 +26,7 @@ type Subspecies struct {
 	AliasesField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
 }
 
 func (subsp Subspecies) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -47,10 +47,8 @@ func initializeSubspecies(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(subSpeciesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		// TODO: INDICES
 		newSimpleIndex("species", "species", false, false, false),
-		//BackupSubspecies (likely no index) *string  `bson:"backupSubspecies,omitempty" json:"backupSubspecies,omitempty"`
-		newSimpleIndex("aliases", "aliases", false, true, false),
+		aliasesIndexModel,
 		//Notes (no index) (maybe later with tags?)
 		lastUpdatedIndexModel,
 	})
@@ -65,14 +63,14 @@ func initializeSubspecies(ctx context.Context) error {
 			NameIdField:  NameIdField{"white beech"},
 			SpeciesField: SpeciesField{"beech"},
 			AliasesField: AliasesField{},
-			NotesField:   NotesField{}, // TODO: something to do with light?
+			NotesField:   NotesField{Notes: []Note{{Time: ogTime, Note: "something to do with light, fixme"}}}, // TODO: something to do with light?
 		},
 		// Brown Beech
 		{
 			NameIdField:  NameIdField{"brown beech"},
 			SpeciesField: SpeciesField{"beech"},
 			AliasesField: AliasesField{},
-			NotesField:   NotesField{}, // TODO: something to do with light?
+			NotesField:   NotesField{Notes: []Note{{Time: ogTime, Note: "something to do with light, fixme"}}}, // TODO: something to do with light?
 		},
 	} {
 		var existing Subspecies
@@ -149,7 +147,7 @@ type createSubspeciesRequest struct {
 	SpeciesField
 	AliasesField
 	NotesField
-	PermsField
+	//PermsField
 }
 
 func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -165,20 +163,25 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = req.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "user cannot write with supplied perms: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	finalPerms := req.Perms
-	if req.Perms != nil {
-		spec, _, err := getSpeciesAndSubspecies(r.Context(), req.Species, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		finalPerms = spec.Perms
-		// TODO: ensure user can write?
-	}
+	//if err = req.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "user cannot write with supplied perms: "+err.Error(), http.StatusUnauthorized)
+	//	return
+	//}
+	//finalPerms := req.Perms
+	//if req.Perms != nil {
+	//	spec, _, err := getSpeciesAndSubspecies(r.Context(), req.Species, nil)
+	//	if err != nil {
+	//		http.Error(w, err.Error(), http.StatusBadRequest)
+	//		return
+	//	}
+	//	// Validate user can write
+	//	if err = spec.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//		http.Error(w, "user cannot create a new subspecies for this species: "+err.Error(), http.StatusUnauthorized)
+	//		return
+	//	}
+	//	// TODO: use least perms?
+	//	finalPerms = spec.Perms
+	//}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(subSpeciesCollectionName)
@@ -189,7 +192,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 			NotesField:       req.NotesField,
 			LastUpdatedField: LastUpdatedField{unixTimeForNow()},
 			// TODO: overlap perms from species?
-			PermsField: PermsField{finalPerms},
+			//PermsField: PermsField{finalPerms},
 		}
 
 		_, err = coll.InsertOne(r.Context(), toInsert)
@@ -210,7 +213,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 type updateSubspeciesRequest struct {
 	Notes AllEntries[Note] `json:"notes,omitempty"`
 	AliasesField
-	PermsField
+	//PermsField
 }
 
 func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -242,13 +245,13 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil { // TODO: PUT PERMS UPDATER ON THE STRUCTS
-			return DbTxnStdErr(w, "bad overlapping perms for user: "+err.Error(), http.StatusUnauthorized)
-		}
+		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil { // TODO: PUT PERMS UPDATER ON THE STRUCTS?
+		//	return DbTxnStdErr(w, "bad overlapping perms for user: "+err.Error(), http.StatusUnauthorized)
+		//}
 		upd, err := NewMods().
 			updateAliasesIfNeeded(req.Aliases, existing.Aliases).
 			updateNotesIfNeeded(req.Notes, existing.Notes).
-			updatePermsIfNeeded(req.Perms, existing.Perms).
+			//updatePermsIfNeeded(req.Perms, existing.Perms).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

@@ -13,21 +13,21 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	slices2 "slices"
 )
 
 const (
-	GrainJarSourceType = "jar"
-	grainJarIdPrefix   = "GJ" // TODO: USE
+	GrainJarCollectionName = "grainJars"
+	GrainJarSourceType     = "jar"
 )
 
 type GrainJar struct {
-	EntryTypeStructField
 	MainCollectionIdField
 	SizeCups int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
 	JarRecipeField
-	GrainBatch *AlternateCollectionId `bson:"grainBatch,omitempty" json:"grainBatch,omitempty"` // TODO: NEW! USE!
+	WetnessField      // TODO: HANDLE IN JAVASCRIPT
+	BurstGrains  *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"` // TODO: HANDLE IN JAVASCRIPT
 	PcRunOptionalField
-	PressureCookedTouchingWaterOptionalField // TODO: handle this everywhere
 	CreationDateField
 	SpeciesOptionalField
 	SubspeciesOptionalField
@@ -44,7 +44,17 @@ type GrainJar struct {
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
+}
+
+func (j GrainJar) CanTransferTo(dst geneticSource) error {
+	if j.Innoc == nil {
+		return errors.New("source not innoculated. Cannot transfer nothing")
+	}
+	if slices2.Contains([]string{FruitingChamberSourceType, FruitSourceType, lcSyringeSourceType, MssSourceType, SporePrintSourceType, SporeSwabSourceType}, dst.SourceType()) {
+		return errors.New("jar cannot transfer to " + dst.SourceType())
+	}
+	return nil
 }
 
 func (j GrainJar) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -75,7 +85,7 @@ func (j GrainJar) setTransferParent(ctx mongo.SessionContext, xfer Transfer) err
 	if err != nil {
 		return err
 	}
-	res, err := ctx.Client().Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, j.Id, upd)
+	res, err := ctx.Client().Database(dbName).Collection(GrainJarCollectionName).UpdateByID(ctx, j.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -104,7 +114,7 @@ func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, j.Id, upd)
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).UpdateByID(ctx, j.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -119,25 +129,64 @@ func (j GrainJar) EntryTypeField() *string {
 }
 
 func (j GrainJar) CollectionName() string {
-	return mainCollectionName
+	return GrainJarCollectionName
 }
 
 func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection { // TODO: DO THIS ON EVERYTHING!
-	return ctx.Client().Database(dbName).Collection(mainCollectionName)
+	return ctx.Client().Database(dbName).Collection(GrainJarCollectionName) // TODO: switch all references to jarCollectionName
 }
 
-func (j *GrainJar) Refresh(ctx mongo.SessionContext, coll mongo.Collection) error { // TODO; DO THIS ON EVERYTHING!
-	return coll.FindOne(ctx, bson.D{{"_id", j.Id}}).Decode(j)
+func (j *GrainJar) Refresh(ctx mongo.SessionContext) error { // TODO; DO THIS ON EVERYTHING!
+	return j.Collection(ctx).FindOne(ctx, bson.D{{"_id", j.Id}}).Decode(j)
+}
+
+func LookupGrainJar(ctx mongo.SessionContext, id MainCollectionId) (j *GrainJar, err error) {
+	j = &GrainJar{}
+	err = ctx.Client().Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(j)
+	return j, err
+}
+
+type innoculateJarFromRequest struct { // TODO: this
+	parent MainCollectionId // TODO: can this be alt?
+
 }
 
 func initializeJars(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(mainCollectionName)
+	coll := db.Collection(GrainJarCollectionName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		creationDateIndexModel,
+		newSimpleIndex("sizeCups", "sizeCups", true, false, false),
+		newSimpleIndex("recipe", "recipe", false, true, false),
+		newSimpleIndex("wetness", "wetness", false, true, false),
+		newSimpleIndex("burstGrains", "burstGrains", false, true, false),
+		newSimpleIndex("pcRun", "pcRun", false, true, false),
+		creationDateIndexModel,
+		newSimpleIndex("species", "species", false, true, false),
+		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("innoc", "innoc", false, true, false),
+		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		transfersOutIndexModel,
+		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		//Pics (no index)
+		//TODO: Contams
+		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		saleIndexModel,
+		newSimpleIndex("disposed", "disposed", false, true, false),
+		// MostRecentImage
+		//Notes (no index) (maybe later with tags?)
+		lastUpdatedIndexModel,
+		// TODO: projectsIndexModel,
+	})
+	if err != nil {
+		return err
+	}
 	// If test agar batch does not exist, then create it
 	existingEntry := GrainJar{}
 	testId := mainCollIdForint(idTestJar)
 	testItem := GrainJar{
-		EntryTypeStructField:    EntryTypeStructField{*existingEntry.EntryTypeField()},
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		JarRecipeField:          JarRecipeField{&exAltId},
 		PcRunOptionalField:      PcRunOptionalField{&exAltId},
@@ -161,7 +210,7 @@ func initializeJars(ctx context.Context) error {
 		NotesField:                NotesField{exampleNotes()},
 		LastUpdatedField:          LastUpdatedField{exampleTime},
 	}
-	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil
@@ -200,8 +249,12 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 	return nil
 }
 
+// TODO: no innoculateJarHandler. Comes from create transfer handler
+
 type createJarRequest struct {
-	Recipe AlternateCollectionId // grain recipe
+	Recipe       AlternateCollectionId // grain recipe
+	WetnessField                       // TODO: NEW! HANDLE!
+	BurstGrains  *int                  `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"`
 	CreationDateField
 	PcRunField
 	NotesField
@@ -210,7 +263,7 @@ type createJarRequest struct {
 
 func createJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := createJarRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -227,14 +280,15 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(GrainJarCollectionName)
 		now := unixTimeForNow()
 		pcrun := PcRunField{data.PcRun}
 		toInsert := GrainJar{
-			EntryTypeStructField:  EntryTypeStructField{"jar"},
 			MainCollectionIdField: MainCollectionIdField{id},
 			JarRecipeField:        JarRecipeField{&data.Recipe},
 			PcRunOptionalField:    pcrun.asOptional(),
+			BurstGrains:           data.BurstGrains,
+			WetnessField:          data.WetnessField,
 			CreationDateField:     CreationDateField{data.CreationDate},
 			NotesField:            NotesField{data.Notes},
 			LastUpdatedField:      LastUpdatedField{now},
@@ -275,13 +329,13 @@ type importJarRequest struct {
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	PermsField
+	//PermsField
 	// image as "img"
 }
 
 func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := importJarRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -313,23 +367,23 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	authinfo, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species and subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
-	finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id)
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	//authinfo, err := GetAuthInfo(r.Context()) // TODO: fix
+	//if err != nil {
+	//	http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+	//	return
+	//}
+	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	//if err != nil {
+	//	http.Error(w, "failed to get species and subspecies: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id)
+	//err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	//if err != nil {
+	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	// Try to get pic if exists
 	picsSaved := []string{}
 	defer func() {
@@ -385,7 +439,6 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := GrainJar{
-		EntryTypeStructField:    EntryTypeStructField{"jar"},
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&data.Recipe},
 		PcRunOptionalField:      PcRunOptionalField{}, // No pc runs on imports
@@ -400,7 +453,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-		PermsField:           PermsField{finalPerms},
+		//PermsField:           PermsField{finalPerms},
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		_, err = out.PcRunOptionalField.Get(ctx)
@@ -411,7 +464,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
 			return DbTxnStdErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
 		}
-		jarColl := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		jarColl := ctx.Client().Database(dbName).Collection(GrainJarCollectionName)
 		_, err := jarColl.InsertOne(ctx, out)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -435,7 +488,7 @@ type updateJarRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	WriteTagToField
-	PermsField // TODO: new
+	//PermsField // TODO: new
 }
 
 func contamUpdates(contams SplitEntries[contamForm, ContaminationLessLocation]) SplitEntries[contamForm, Contamination] { // TODO: MOVE AND USE
@@ -464,7 +517,7 @@ func (upr updateJarRequest) reform() resolvedUpdateJarRequest {
 		Notes:               upr.Notes,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
-		PermsField:          upr.PermsField,
+		//PermsField:          upr.PermsField,
 	}
 }
 
@@ -472,10 +525,10 @@ type resolvedUpdateJarRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes      AllEntries[Note]
-	Images     SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams    SplitEntries[contamForm, Contamination]
-	PermsField // TODO: new
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	//PermsField // TODO: new
 }
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {
@@ -492,10 +545,10 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
-	if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "cannot write to new perms: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "cannot write to new perms: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -525,7 +578,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(GrainJarCollectionName)
 		// go get current plate
 		existing := GrainJar{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
@@ -539,7 +592,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 			updateNotesIfNeeded(out.Notes, existing.Notes).
 			updatePicsIfNeeded(out.Images, existing.Pics).
 			updateContamsIfNeeded(out.Contams, existing.Contaminations).
-			updatePermsIfNeeded(out.Perms, existing.Perms).
+			//updatePermsIfNeeded(out.Perms, existing.Perms).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)

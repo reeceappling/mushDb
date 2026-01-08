@@ -14,10 +14,6 @@ import (
 	"time"
 )
 
-// TODO: project.go and user.go anonymous fields handling
-
-// TODO: AltCollIDs are being json un/marshalled to base58! DONT use binary on the client side (check again, think done)
-
 // TODO: FIX ALL REQUESTS AND HANDLERS FOR IMPORTS, UPDATES, and CREATES
 
 // TODO: SPORE SWABS?!?!?!?!
@@ -27,6 +23,7 @@ const agarBatchCollectionName = "agarBatches"
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField
+	// CreationDate is assumed to be the same as on PcRun
 	PcRunField
 	AgarRecipeField
 	Color colorant `bson:"color" json:"color"`

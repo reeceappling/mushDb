@@ -12,33 +12,44 @@ import (
 	"reflect"
 )
 
-const MssSourceType = "mss"
+const (
+	MssCollectionName = "multisporeSyringes" // TODO: use
+	MssSourceType     = "mss"
+)
 
 type MSS struct {
 	// ALWAYS assume contaminated
-	EntryTypeStructField // always mss
 	MainCollectionIdField
 	CreationDateField
 	SpeciesField
 	SubspeciesOptionalField
 	// NOTE: parentType is always either sporePrint or purchased
-	AlternateCollectionOptionalParentField // no parent means purchased, traded-for, or imported
+	MainCollectionOptionalParentField // no parent means purchased, traded-for, or imported
 	TransfersOutField
 	SaleField
 	DisposedField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
+}
+
+func (M MSS) Innoculatable() bool {
+	return false // TODO: ensure ok
+}
+
+func (M MSS) CanTransferTo(dst geneticSource) error {
+	if dst.SourceType() != PlateSourceType {
+		return errors.New("mss transfers must go to plates")
+	}
+	if !dst.Innoculatable() {
+	}
+	return nil
 }
 
 func (M MSS) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	out := M
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (M MSS) projects() []projectName {
-	return M.Perms.Projects.Ids
 }
 
 func (M MSS) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -91,20 +102,31 @@ func (M MSS) CollectionName() string {
 func initializeMSS(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(mainCollectionName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		creationDateIndexModel,
+		newSimpleIndex("species", "species", false, false, false),
+		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("parent", "parent", false, true, false),
+		transfersOutIndexModel,
+		saleIndexModel,
+		disposedIndexModel,
+		//// TODO: projects?
+		//Notes (no index unless tags)
+		lastUpdatedIndexModel,
+	})
 	// If test agar batch does not exist, then create it
 	existingEntry := MSS{}
 	testId := mainCollIdForint(idTestMSS)
 	testItem := MSS{
-		EntryTypeStructField:                   EntryTypeStructField{*existingEntry.EntryTypeField()},
-		MainCollectionIdField:                  MainCollectionIdField{testId},
-		CreationDateField:                      CreationDateField{exampleTime},
-		SpeciesField:                           SpeciesField{testEntryStringId},
-		SubspeciesOptionalField:                SubspeciesOptionalField{&testEntryStringId},
-		TransfersOutField:                      TransfersOutField{exAlts},
-		AlternateCollectionOptionalParentField: AlternateCollectionOptionalParentField{&exAltId},
-		DisposedField:                          DisposedField{&exampleTime},
-		NotesField:                             NotesField{exampleNotes()},
-		LastUpdatedField:                       LastUpdatedField{exampleTime},
+		MainCollectionIdField:             MainCollectionIdField{testId},
+		CreationDateField:                 CreationDateField{exampleTime},
+		SpeciesField:                      SpeciesField{testEntryStringId},
+		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
+		DisposedField:                     DisposedField{&exampleTime},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
 	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
@@ -125,7 +147,7 @@ type createMssRequest struct {
 
 func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called from spore print page
 	data := createMssRequest{}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -154,15 +176,14 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		}
 		now := unixTimeForNow()
 		toInsert := MSS{
-			EntryTypeStructField:                   EntryTypeStructField{"mss"},
-			MainCollectionIdField:                  MainCollectionIdField{id},
-			CreationDateField:                      CreationDateField{now},
-			SpeciesField:                           SpeciesField{parent.Species},
-			SubspeciesOptionalField:                parent.SubspeciesOptionalField,
-			AlternateCollectionOptionalParentField: AlternateCollectionOptionalParentField{&parent.Id},
-			NotesField:                             NotesField{data.Notes},
-			LastUpdatedField:                       LastUpdatedField{now},
-			PermsField:                             PermsField{parent.Perms}, // NOTE: do NOT ensure user is authorized to write on parent, they will just be blocked from viewing.
+			MainCollectionIdField:             MainCollectionIdField{id},
+			CreationDateField:                 CreationDateField{now},
+			SpeciesField:                      SpeciesField{parent.Species},
+			SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+			NotesField:                        NotesField{data.Notes},
+			LastUpdatedField:                  LastUpdatedField{now},
+			//PermsField:                        PermsField{parent.Perms}, // NOTE: do NOT ensure user is authorized to write on parent, they will just be blocked from viewing.
 		}
 		_, err = db.Collection(mainCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
@@ -185,7 +206,7 @@ type importMssRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	WriteTagToField
-	PermsField // TODO: new // TODO: SEND THIS OVER. ptr?
+	//PermsField // TODO: new // TODO: SEND THIS OVER. ptr?
 	// image as "img"
 	// No ParentType/Parent because these are assumed to be from outside sources
 }
@@ -203,7 +224,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := generateMainCollectionId(r.Context())
+	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -213,27 +234,26 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	authinfo, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	spec, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
-	finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id) // TODO: species and subspecies perms?
+	//authinfo, err := GetAuthInfo(r.Context())
+	//if err != nil {
+	//	http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+	//	return
+	//}
+	//spec, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id) // TODO: species and subspecies perms?
 	toInsert := MSS{
-		EntryTypeStructField:    EntryTypeStructField{"mss"},
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
 		SpeciesField:            data.SpeciesField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-		PermsField:              PermsField{finalPerms},
+		//PermsField:              PermsField{finalPerms},
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
@@ -257,7 +277,7 @@ type updateMssRequest struct {
 	DisposedField
 	SaleField
 	WriteTagToField
-	PermsField
+	//PermsField
 }
 
 func updateMssHandler(w http.ResponseWriter, r *http.Request) {
@@ -292,9 +312,9 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		if err = minimalPermsBetween(data.Perms, existing.Perms).ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "old or new perms not writeable by user: "+err.Error(), http.StatusBadRequest)
-		}
+		//if err = minimalPermsBetween(data.Perms, existing.Perms).ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "old or new perms not writeable by user: "+err.Error(), http.StatusBadRequest)
+		//}
 		if data.Sale != nil && (existing.Sale == nil || *existing.Sale != *data.Sale) {
 			if err = db.Collection(salesCollectionName).FindOne(ctx, bson.D{{"_id", data.Sale}}).Err(); err != nil {
 				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
@@ -304,7 +324,7 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 			updateSaleIfNeeded(data.Sale, existing.Sale).
 			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
 			updateNotesIfNeeded(data.Notes, existing.Notes).
-			updatePermsIfNeeded(data.Perms, existing.Perms).
+			//updatePermsIfNeeded(data.Perms, existing.Perms).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

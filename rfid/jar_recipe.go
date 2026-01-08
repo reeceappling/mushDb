@@ -21,6 +21,16 @@ type JarRecipeField struct {
 	Recipe *AlternateCollectionId `bson:"recipe,omitempty" json:"recipe,omitempty"`
 }
 
+type JarRecipeRequiredField struct {
+	Recipe AlternateCollectionId `bson:"recipe" json:"recipe"`
+}
+
+func (field JarRecipeRequiredField) Get(ctx context.Context) (out JarRecipe, err error) {
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(jarRecipesCollectionName).
+		FindOne(ctx, bson.M{"_id": field.Recipe}).Decode(&out)
+	return
+}
+
 func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) {
 	if field.Recipe == nil {
 		return out, ErrMissingOptionalField
@@ -33,13 +43,18 @@ func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) 
 type JarRecipe struct {
 	AlternateCollectionIdField
 	NameField
-	Grain          grain `bson:"grain" json:"grain"` // TODO: multiple? grain percentages
-	StandardField                                    // If this is a standard recipe
-	NutrientsField                                   // Per grain jar?
-	SugarsField                                      // Per grain jar?
-	AdditivesField                                   // Per grain jar?
+	Grains         []GrainPercentage `bson:"grains" json:"grains"`
+	StandardField                    // If this is a standard recipe
+	NutrientsField                   // Per grain jar?
+	SugarsField                      // Per grain jar?
+	AdditivesField                   // Per grain jar?
 	NotesField
 	LastUpdatedField
+}
+
+type GrainPercentage struct {
+	Grain      grain `bson:"grain" json:"grain"`
+	Percentage int   `bson:"percentage" json:"percentage"`
 }
 
 func (recipe JarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -61,11 +76,11 @@ func initializeJarRecipes(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(jarRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false),
-		newSimpleIndex("grain", "grain", false, false, false),
+		newSimpleIndex("grains", "grains.grain", false, false, false),
+		standardIndexModel,
 		newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
 		newSimpleIndex("sugars", "sugars.type", false, false, false),
 		newSimpleIndex("additives", "additives.additive", false, false, false),
-		newSimpleIndex("standard", "standard", true, false, false),
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -79,7 +94,7 @@ func initializeJarRecipes(ctx context.Context) error {
 		{
 			NameField:                  NameField{"Popcorn"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarPop)},
-			Grain:                      Popcorn,
+			Grains:                     []GrainPercentage{{Grain: Popcorn, Percentage: 100}},
 			StandardField:              StandardField{true},
 			NotesField: NotesField{[]Note{
 				builtInNote("Typically pretty expensive comparably to oats"),
@@ -88,14 +103,14 @@ func initializeJarRecipes(ctx context.Context) error {
 		{
 			NameField:                  NameField{"Oats"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOat)},
-			Grain:                      Oats,
+			Grains:                     []GrainPercentage{{Grain: Oats, Percentage: 100}},
 			StandardField:              StandardField{true},
 			NotesField:                 NotesField{},
 		},
 		{
 			NameField:                  NameField{"Oats with standard additives"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOatWithVermGypsum)},
-			Grain:                      Oats,
+			Grains:                     []GrainPercentage{{Grain: Oats, Percentage: 100}},
 			StandardField:              StandardField{true},
 			SugarsField: SugarsField{[]sugarMeasurement{
 				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
@@ -126,8 +141,20 @@ func initializeJarRecipes(ctx context.Context) error {
 		}
 		// If exists, ensure it is the same as it was. Add notes if necessary
 		update := false
-		if recipe.Grain != existing.Grain {
+		if len(recipe.Grains) != len(existing.Grains) {
 			update = true
+		} else {
+			for i, _ := range recipe.Grains {
+				if recipe.Grains[i] != existing.Grains[i] {
+					update = true
+					break
+				} else {
+					if recipe.Grains[i].Percentage != existing.Grains[i].Percentage {
+						update = true
+						break
+					}
+				}
+			}
 		}
 		// Nutrients
 		if !update {
@@ -184,7 +211,7 @@ func initializeJarRecipes(ctx context.Context) error {
 	testItem := JarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		NameField:                  NameField{"testJarRecipeName"},
-		Grain:                      BirdSeed,
+		Grains:                     []GrainPercentage{{Grain: BirdSeed, Percentage: 100}},
 		StandardField:              StandardField{false},
 		NutrientsField: NutrientsField{[]nutrientMeasurement{
 			{
@@ -223,12 +250,29 @@ func initializeJarRecipes(ctx context.Context) error {
 
 type createJarRecipeRequest struct {
 	NameField
-	Grain         grain `bson:"grain" json:"grain"`
-	StandardField       // If this is a standard recipe
+	Grains        []GrainPercentage `bson:"grains" json:"grains"`
+	StandardField                   // If this is a standard recipe
 	NutrientsField
 	SugarsField
 	AdditivesField
 	NotesField
+}
+
+func (req createJarRecipeRequest) ValidateGrains() error {
+	pct := 0
+	if len(req.Grains) < 1 {
+		return errors.New("no grains in request")
+	}
+	for i, g := range req.Grains {
+		if g.Percentage < 1 {
+			return errors.New("grain percentage must be greater than zero")
+		}
+		pct += req.Grains[i].Percentage
+	}
+	if pct != 100 {
+		return errors.New("invalid grain percentages. Must add to 100")
+	}
+	return nil
 }
 
 func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -243,8 +287,8 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := errors.Join( // TODO: do this on all other recipes and stuff
-		req.Grain.Validate(),
+	if err = errors.Join( // TODO: do this on all other recipes and stuff
+		req.ValidateGrains(),
 		req.NutrientsField.Validate(),
 		req.SugarsField.Validate(),
 		req.AdditivesField.Validate(),
@@ -257,7 +301,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		toInsert := JarRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
 			NameField:                  NameField{req.Name},
-			Grain:                      req.Grain,
+			Grains:                     req.Grains,
 			StandardField:              StandardField{req.Standard},
 			NutrientsField:             NutrientsField{req.Nutrients},
 			SugarsField:                SugarsField{req.Sugars},

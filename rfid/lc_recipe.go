@@ -62,10 +62,9 @@ func initializeLcRecipes(ctx context.Context) error {
 		newSimpleIndex("name", "name", false, false, false),
 		newSimpleIndex("liquids", "liquids.name", false, false, false),
 		newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
-		newSimpleIndex("standard", "standard", true, false, false),
+		standardIndexModel,
 		newSimpleIndex("sugars", "sugars.type", false, false, false),
 		newSimpleIndex("additives", "additives.additive", false, false, false),
-
 		//Notes (no index for now unless tags)
 		lastUpdatedIndexModel,
 	})

@@ -13,6 +13,7 @@ import (
 	"io"
 	"net/http"
 	"reflect"
+	"slices"
 )
 
 const (
@@ -21,13 +22,13 @@ const (
 )
 
 type Fruit struct { // KnownFruitable is always true for this, // creation date field is id
-	AlternateCollectionIdField
-	CreationDateField // This is harvest date
+	MainCollectionIdField // TODO: was alt
+	CreationDateField     // This is harvest date
 	SpeciesField
 	SubspeciesOptionalField
 	GenSporeField
-	TransfersOutField                         // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
-	Prints            []AlternateCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
+	TransfersOutField                    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	Prints            []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"` // TODO: used to be alt ids
 	ParentTypeField
 	// parent can be "store, outside, or a mainCollectionId (box/bag)"
 	MainCollectionOptionalParentField /* TODO: new, make sure fixed everywhere */ // NONEXISTENT MEANS FROM STORE or outside???
@@ -36,7 +37,17 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	PermsField
+	//PermsField
+}
+
+func (f Fruit) CanTransferTo(dst geneticSource) error {
+	if !slices.Contains([]string{PlateSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
+		return errors.New("fruit cannot transfer to " + dst.SourceType() + " via this endpoint")
+	}
+	return nil
+}
+func (f Fruit) Innoculatable() bool {
+	return false
 }
 
 func (f Fruit) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -97,7 +108,7 @@ func (f Fruit) EntryTypeField() *string {
 //	return f.Id[:]
 //}
 
-func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId AlternateCollectionId) error {
+func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId) error {
 	// update fruit
 	res, err := ctx.Client().Database(dbName).Collection(fruitsCollName).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId))
 	if err != nil {
@@ -133,20 +144,23 @@ func initializeFruits(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(fruitsCollName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		// TODO: creationDateIndexModel
+		newSimpleIndex("creationDate", "creationDate", false, false, false), // TODO: this is harvest date
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		// TODO: genSpore
 		transfersOutIndexModel,
-		newSimpleIndex("harvestDate", "harvestDate", true, false, false),
+		// TODO: prints
+		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		newSimpleIndex("prints", "prints", false, true, false),
-		newSimpleIndex("parent", "parent", false, false, false),         // TODO: nil is store or outside?
-		newSimpleIndex("parentType", "parentType", false, false, false), // TODO: nil is store or outside?
 		newSimpleIndex("genSpore", "genSpore", true, true, false),
-		projectsIndexModel,
 		//Pics (no index)
 		newSimpleIndex("disposed", "disposed", false, true, false),
 		//MostRecentImage (no index)
 		//Notes (no index) (maybe later with tags?)
 		lastUpdatedIndexModel,
+		// TODO: projectsIndexModel,
 	})
 	if err != nil {
 		return err
@@ -154,13 +168,13 @@ func initializeFruits(ctx context.Context) error {
 	// If test agar batch does not exist, then create it
 	existingEntry := Fruit{}
 	testItem := Fruit{
-		AlternateCollectionIdField:        AlternateCollectionIdField{exAltId},
+		MainCollectionIdField:             MainCollectionIdField{exFruitId},
 		CreationDateField:                 CreationDateField{exampleTime},
 		SpeciesField:                      SpeciesField{testEntryStringId},
 		SubspeciesOptionalField:           SubspeciesOptionalField{utils.Pointer(testEntryStringId)},
 		GenSporeField:                     GenSporeField{&exGenSinceSpore},
 		TransfersOutField:                 TransfersOutField{exAlts},
-		Prints:                            exAlts,
+		Prints:                            []MainCollectionId{exSporePrint},
 		ParentTypeField:                   ParentTypeField{&exParentType},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
 		PicsField:                         PicsField{exPics},
@@ -207,13 +221,17 @@ type createFruitResolved struct {
 	ParentType                string // TODO: swap out for normal parentType
 	HarvestDate               unixTime
 	NotesField
-	PicsField  // newPic-1
-	PermsField // TODO: FIX THIS
+	PicsField // newPic-1
+	//PermsField // TODO: FIX THIS
 }
 
 func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FORMAT WITH DATA FIRST!
 	data := createFruitRequest{}
-	id := newAlternateCollectionId()
+	id, err := newMainCollectionId(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	b58Id := id.asBase58()
 	defer r.Body.Close()
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
@@ -241,10 +259,10 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 		if err != nil {
 			return DbTxnStdErr(w, "parent not found: "+err.Error(), http.StatusNotFound)
 		}
-		parentPerms := parent.Permissions()
-		if err = parentPerms.ValidateUserCanWrite(ctx); err != nil {
-			return DbTxnStdErr(w, "user not able to modify parent entry: "+err.Error(), http.StatusBadRequest)
-		}
+		//parentPerms := parent.Permissions()
+		//if err = parentPerms.ValidateUserCanWrite(ctx); err != nil {
+		//	return DbTxnStdErr(w, "user not able to modify parent entry: "+err.Error(), http.StatusBadRequest)
+		//}
 		parentGenetics, err := parent.GeneticInfoAsParent()
 		if err != nil {
 			return DbTxnStdErr(w, "parent genetics error: "+err.Error(), http.StatusInternalServerError)
@@ -257,7 +275,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 			return DbTxnStdErr(w, "parent species was nil", http.StatusInternalServerError)
 		}
 		toInsert := Fruit{
-			AlternateCollectionIdField:        AlternateCollectionIdField{id},
+			MainCollectionIdField:             MainCollectionIdField{id},
 			CreationDateField:                 CreationDateField{out.HarvestDate},
 			SpeciesField:                      SpeciesField{*parentGenetics.Species},
 			SubspeciesOptionalField:           parentGenetics.SubspeciesOptionalField,
@@ -268,7 +286,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 			MostRecentImageField:              MostRecentImageField{mri},
 			NotesField:                        NotesField{out.Notes},
 			LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
-			PermsField:                        PermsField{parentPerms},
+			//PermsField:                        PermsField{parentPerms},
 		}
 		// Write new fruit to db
 		_, err = db.Collection(fruitsCollName).InsertOne(ctx, toInsert)
@@ -290,7 +308,7 @@ type updateFruitRequest struct {
 	DisposedField
 	Notes  AllEntries[Note]
 	Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
-	PermsField
+	//PermsField
 }
 
 func (upr updateFruitRequest) reform() resolvedUpdateFruitRequest {
@@ -303,7 +321,7 @@ func (upr updateFruitRequest) reform() resolvedUpdateFruitRequest {
 				return i.asPicWithNotes(nil)
 			}),
 		},
-		PermsField: upr.PermsField,
+		//PermsField: upr.PermsField,
 	}
 }
 
@@ -311,7 +329,7 @@ type resolvedUpdateFruitRequest struct {
 	DisposedField
 	Notes  AllEntries[Note]
 	Images SplitEntries[picWithNotesForm, PicWithNotes] //"newPic-1"
-	PermsField
+	//PermsField
 }
 
 func (out resolvedUpdateFruitRequest) modsFor(existing Fruit) (bson.D, error) {
@@ -319,7 +337,7 @@ func (out resolvedUpdateFruitRequest) modsFor(existing Fruit) (bson.D, error) {
 		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
 		updateNotesIfNeeded(out.Notes, existing.Notes).
 		updatePicsIfNeeded(out.Images, existing.Pics).
-		updatePermsIfNeeded(out.Perms, existing.Perms).
+		//updatePermsIfNeeded(out.Perms, existing.Perms).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -327,7 +345,7 @@ func (out resolvedUpdateFruitRequest) modsFor(existing Fruit) (bson.D, error) {
 func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateFruitRequest{}
 	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toAltCollectionId()
+	id, err := b58Id.toMainCollectionId()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
@@ -351,15 +369,15 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(fruitsCollName)
 		// go get current plate
-		existing := &Fruit{AlternateCollectionIdField: AlternateCollectionIdField{id}}
+		existing := &Fruit{MainCollectionIdField: MainCollectionIdField{id}}
 		err = Refresh(ctx, existing)
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 
-		if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil { // TODO: PERMS VALIDATION FOR UPDATE
-			return DbTxnStdErr(w, "cannot modify: "+err.Error(), http.StatusUnauthorized)
-		}
+		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil { // TODO: PERMS VALIDATION FOR UPDATE
+		//	return DbTxnStdErr(w, "cannot modify: "+err.Error(), http.StatusUnauthorized)
+		//}
 		upd, err := out.modsFor(*existing)
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: DO THIS EVERYWHERE!
 	})
@@ -373,13 +391,17 @@ type importFruitRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	PermsField // TODO: new, use
+	//PermsField // TODO: new, use
 	// image as "img"
 }
 
 func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?????
 	data := importFruitRequest{}
-	id := newAlternateCollectionId()
+	id, err := newMainCollectionId(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err := r.MultipartReader()
@@ -470,31 +492,32 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
-	}
-	finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
-	if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil {
-		http.Error(w, "user cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	//if err != nil {
+	//	http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+	//}
+	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
+	//if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil {
+	//	http.Error(w, "user cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 	now := unixTimeForNow()
 
 	out := Fruit{
-		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		CreationDateField:          CreationDateField{unixTimeForNow()},
-		SpeciesField:               data.SpeciesField,
-		SubspeciesOptionalField:    data.SubspeciesOptionalField,
-		GenSporeField:              GenSporeField{gen},
-		ParentTypeField:            ParentTypeField{&data.ParentType},
-		PicsField:                  PicsField{pix},
-		MostRecentImageField:       MostRecentImageField{importedPic},
-		NotesField:                 NotesField{data.Notes},
-		LastUpdatedField:           LastUpdatedField{now},
-		PermsField:                 data.PermsField,
+		MainCollectionIdField:   MainCollectionIdField{id},
+		CreationDateField:       CreationDateField{unixTimeForNow()},
+		SpeciesField:            data.SpeciesField,
+		SubspeciesOptionalField: data.SubspeciesOptionalField,
+		GenSporeField:           GenSporeField{gen},
+		ParentTypeField:         ParentTypeField{&data.ParentType},
+		PicsField:               PicsField{pix},
+		MostRecentImageField:    MostRecentImageField{importedPic},
+		NotesField:              NotesField{data.Notes},
+		LastUpdatedField:        LastUpdatedField{now},
+		//PermsField:              data.PermsField,
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		// TODO: insert map entry
 		coll := ctx.Client().Database(dbName).Collection(fruitsCollName)
 		_, err = coll.InsertOne(ctx, out)
 		if err != nil {
