@@ -10,6 +10,7 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/rfid"
 	"github.com/reeceappling/mushDb/rfid/pics"
+	"github.com/reeceappling/mushDb/rfid/request"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/shared"
 	"github.com/ulule/limiter/v3"
@@ -18,6 +19,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
 	"net/http"
 	"net/url"
@@ -79,8 +81,8 @@ func main() {
 	ctx = logging.SetSugaredLogger(ctx, log.Sugar())
 
 	// Get non-db env vars
-	clusterSecret := os.Getenv("RFID_SECRET")
-	if clusterSecret == "" {
+	rfidRegistrySecret := os.Getenv("RFID_SECRET")
+	if rfidRegistrySecret == "" {
 		panic("env var missing for RFID_SECRET")
 	}
 	googId, googSecret := os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET")
@@ -114,7 +116,7 @@ func main() {
 		}
 	}()
 
-	webHostName := envVarOrDefault("WEB_HOST_INTERNAL", "localhost") // Can have port if not hosting on 80      // TODO: CONFIGURE (localhost default or web?)
+	webHostName := envVarOrDefault("WEB_HOST_INTERNAL", "web") // Can have port if not hosting on 80      // TODO: CONFIGURE (localhost default or web?)
 
 	// Set up server
 	srv := &http.Server{
@@ -155,7 +157,7 @@ func main() {
 	// Setup middlewares
 	const loginPath = "/login" // TODO: REENABLE
 	cleanupFreq := 2 * time.Minute
-	mgr := websocketSessions.NewSessionManager(&cleanupFreq, clusterSecret)
+	mgr := websocketSessions.NewSessionManager(&cleanupFreq, rfidRegistrySecret)
 	defer mgr.Cleanup()
 	ctx, rateLimiter, rfidMiddleware, picPathMiddleware, webAuthMiddleware, _ /*internalAuthMiddleware*/, ctxInternalAuthMiddleware, ctxMiddleware, ctxRfidMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, dbUser, dbPass)
 	if err != nil {
@@ -164,55 +166,67 @@ func main() {
 
 	// RFID HANDLERS
 	println("Defining endpoints")
-	// Must be publicly available?
+	println("Defining RFID endpoints")
+	// Must be publicly available. (external)
 	http.HandleFunc("/rfid/ws", ctxRfidMiddleware(http.HandlerFunc(websocketSessions.ServerHandler)))
 	// Can be internal to docker network
+	// TODO: are these internal or external?
 	http.HandleFunc("/rfid/read/{readerName}", ctxRfidMiddleware(rfidReadHandler))   // TODO: OUTPUT IS BASE 2! // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/write/{writerName}", ctxRfidMiddleware(rfidWriteHandler)) // TODO: INPUT IS BASE58(?) OUTPUT IS BASE 2! // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/readers", ctxRfidMiddleware(getRfidReaderNamesHandler))   // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/write/{writerName}", ctxRfidMiddleware(rfidWriteHandler)) // TODO: INPUT IS BASE58. OUTPUT IS BASE 2! // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	// internal
+	http.HandleFunc("/rfid/readers", ctxRfidMiddleware(getRfidReaderNamesHandler)) // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
-	passthroughConfig := newPassthroughHandlerConfig().
-		useHttps(false).
-		withHost(webHostName).
-		withCookies(true).
-		withHeaders(true)
-	webHostPortStr := os.Getenv("WEB_HOST_INTERNAL_PORT") // TODO: CONFIGURE
 	webHostPort := 3000
+	webHostPortStr := os.Getenv("WEB_HOST_INTERNAL_PORT") // TODO: configure
 	if webHostPortStr != "" {
 		webHostPort, err = strconv.Atoi(webHostPortStr)
 		if err != nil {
 			panic("invalid internal web host port: " + webHostPortStr)
 		}
-		passthroughConfig = passthroughConfig.withPort(webHostPort)
 	} else {
 		println("No/invalid web host port specified, defaulting to 3000")
 	}
+	passthroughConfig := newPassthroughHandlerConfig().
+		useHttps(false).
+		withHost(webHostName).
+		withCookies(true).
+		withHeaders(true).
+		withPort(webHostPort)
 
+	println("Defining webserver passthrough endpoints (external)")
 	// TODO: maybe create a more readable middleware setup???
 	webProxyHandler := newPassthroughHandler(passthroughConfig)
+	unAuthedProxied := ctxMiddleware(webProxyHandler)
+	authedProxied := ctxMiddleware(webAuthMiddleware(webProxyHandler))
+	// TODO: handle login????
 	http.Handle("/login", rateLimiter(ctxMiddleware(handleLogin(webProxyHandler, dbUser, dbPass))))         // GET=view, POST=do
 	http.Handle("/signup", rateLimiter(ctxMiddleware(rfid.SignupHandler(webProxyHandler, dbUser, dbPass)))) // GET=view, POST=do
 	http.Handle("/confirmSignup/{token}", rateLimiter(ctxMiddleware(rfid.ConfirmSignupHandler)))
 	// TODO: auth callback? /auth/callback
-	http.Handle("/_next", ctxMiddleware(webProxyHandler)) // TODO: CHANGE ROOT?
-	http.Handle("/", ctxMiddleware(webProxyHandler))      // TODO: CHANGE ROOT?
-	ctxWebAuthMiddleware := func(next http.Handler) http.HandlerFunc {
-		return ctxMiddleware(webAuthMiddleware(next))
-	}
-	http.Handle("/import/{variant}", ctxWebAuthMiddleware(webProxyHandler))         // TODO: GET import is here
-	http.Handle("/new/{variant}", ctxWebAuthMiddleware(webProxyHandler))            // TODO: GET new item is here
-	http.Handle("/view/{variant}/{entryId}", ctxWebAuthMiddleware(webProxyHandler)) // TODO: GET view item is here
+	http.Handle("/_next", unAuthedProxied) // TODO: CHANGE ROOT?
+	http.Handle("/", unAuthedProxied)      // TODO: CHANGE ROOT?
 
+	http.Handle("/import/{variant}", authedProxied)         // TODO: GET import is here
+	http.Handle("/new/{variant}", authedProxied)            // TODO: GET new item is here
+	http.Handle("/view/{variant}/{entryId}", authedProxied) // TODO: GET view item is here
+	http.Handle("/list/{variant}", authedProxied)
+	http.Handle("/error/{errTxt}", webProxyHandler) // TODO: rate limit???? ctx middleware? auth middleware?
+	http.Handle("/testpage", webProxyHandler)       // TODO: REMOVE
+
+	println("Defining sensor data endpoints")
+	// TODO: this
 	// Sensor data endpoints
-	http.Handle("/sensorData/{nodeName}", rfid.GetSensorDataHandler())           // TODO: middleware?
-	http.Handle("/sensorDataSince/{nodeName}", rfid.GetSensorDataSinceHandler()) // TODO: middleware?
-	http.Handle("/addSensorData/{nodeName}", rfid.AddSensorDataHandler())        // TODO: middleware?
+	//http.Handle("/sensorData/{nodeName}", rfid.GetSensorDataHandler())           // TODO: middleware?
+	//http.Handle("/sensorDataSince/{nodeName}", rfid.GetSensorDataSinceHandler()) // TODO: middleware?
+	//http.Handle("/addSensorData/{nodeName}", rfid.AddSensorDataHandler())        // TODO: middleware?
 
+	println("Defining admin endpoints")
 	// TODO: ADMIN STUFF
 	// TODO: user-viewer/editor for admin
 	// TODO: need to be able to create new users
 
+	println("Defining db interaction endpoints")
 	//http.Handle("/db/get/rfid/{id}", getRfidHandler())             // TODO: GET RID OF???             // TODO: ensure this works for base58s
 	http.Handle("/db/get/{variant}/{id}", rateLimiter(ctxInternalAuthMiddleware(getAnyCollectionHandler()))) // TODO: GET RID OF??? // TODO: make this work for base58 mains as well
 	http.Handle(fmt.Sprintf(`%s{%s...}`, imagesEndpoint, imageSubPathKey), ctxInternalAuthMiddleware(picPathMiddleware(getImageHandler())))
@@ -226,6 +240,8 @@ func main() {
 	http.Handle("/db/list/{variant}", ctxInternalAuthMiddleware(rfid.ListEntriesHandler())) // TODO: needs fixing
 	//http.Handle("/sessionUserProjects", ctxInternalAuthMiddleware(rfid.SessionUserProjectsHandler())) // TODO: GetPermsMiddleware?
 	//http.Handle("/userIdFor", ctxInternalAuthMiddleware(rfid.UserIdForNameOrEmail()))                 // TODO: GetPermsMiddleware?
+
+	println("Defining simple api endpoints")
 	http.Handle("/options/{optionsType}", rfid.GetOptionsHandler) // TODO: any options here?
 
 	// lastN handlers
@@ -238,6 +254,75 @@ func main() {
 	if err != nil {
 		panic("ERROR CLOSING SERVER " + err.Error())
 	}
+}
+
+func ReqTrackingMiddleWare(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		log := logging.GetLogger(ctx)
+		requestPath := r.URL.Path
+		var requestId string
+		// Set request path on request
+
+		ctx = request.SetPath(ctx, requestPath)
+		log = log.WithStringKVP(request.Path, requestPath)
+		// Set request and trace ids (trace only if span exists)
+		log, requestId = log.Fork(request.Id)
+		if span, ok := tracer.SpanFromContext(ctx); ok {
+			span.SetTag(request.Id, requestId)
+			span.SetBaggageItem(request.Id, requestId)
+			traceId := span.Context().TraceID()
+			log = log.WithTraceId(ctx, strconv.Itoa(int(traceId)))
+		}
+
+		defer log.Sync() //nolint:errcheck
+
+		handler.ServeHTTP(w, r.WithContext(logging.SetLogger(ctx, log)))
+
+		//now := time.Now()
+		//// TODO: ensure works properly
+		//wrappedWriter := NewResponseWriterWrapper(w, func() {
+		//	w.Header().Set("reqTimeMs", strconv.Itoa(int(time.Since(now).Milliseconds())))
+		//}) // reqTimeMs header will exist on responses
+		//handler.ServeHTTP(wrappedWriter, r.WithContext(logging.SetLogger(ctx, log)))
+	})
+}
+
+func NewResponseWriterWrapper(w http.ResponseWriter, onRespond func()) WrappedResponseWriter {
+	return WrappedResponseWriter{
+		TwoHundredOrAboveHeaderWritten: false,
+		internal:                       w,
+		onRespond:                      onRespond,
+	}
+}
+
+type WrappedResponseWriter struct {
+	TwoHundredOrAboveHeaderWritten bool
+	internal                       http.ResponseWriter
+	onRespond                      func()
+}
+
+func (w WrappedResponseWriter) Header() http.Header {
+	return w.internal.Header()
+}
+func (w WrappedResponseWriter) Write(bs []byte) (int, error) {
+	// Will call WriteHeader(200)before bytes are written
+	if !w.TwoHundredOrAboveHeaderWritten {
+		w.onRespond()
+		w.TwoHundredOrAboveHeaderWritten = true
+	}
+
+	return w.internal.Write(bs)
+}
+func (w WrappedResponseWriter) WriteHeader(statusCode int) {
+	if w.TwoHundredOrAboveHeaderWritten {
+		return
+	}
+	if statusCode >= 200 {
+		w.onRespond()
+		w.TwoHundredOrAboveHeaderWritten = true
+	}
+	w.internal.WriteHeader(statusCode) // TODO: handle 1XX/2XX/???
 }
 
 func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManager, loginPath, dbUser, dbPass string) (
@@ -256,11 +341,13 @@ func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManag
 	rateLimiterMiddleware := stdlib.NewMiddleware(limiter.New(rateLimiterStorage, rate, limiter.WithTrustForwardHeader(true)))
 	rateLimiter = rateLimiterMiddleware.Handler
 	// PicsPath and rfid middleware
+
+	rfidMiddleware = mgr.Middleware()
+	// Pics path middleware
 	picsPath := os.Getenv("PICS_PATH")
 	if picsPath == "" {
 		panic("env var missing for PICS_PATH")
 	}
-	rfidMiddleware = mgr.Middleware()
 	picsPathMiddleware = setupFilePathMiddleware(picsPath)
 	// Auth Middleware
 	adminUsername := os.Getenv("ADMIN_USER")
@@ -276,7 +363,7 @@ func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManag
 	//ctx = rfid.SetupAuthenticatorOnContext(ctx, utils.Pointer(time.Minute*5), utils.Pointer(time.Hour*2), dbUser, dbPass)
 	//svc, _ := rfid.GetAuthService(ctx)                                               // TODO: reenable
 	//webAuthMiddleware := svc.AuthOrRedirectMiddleware(loginPath, dbUser, dbPass) // TODO: reenable
-	internalAuthMiddleware := svc.AuthOrDenyMiddleware(dbUser, dbPass) // TODO: reenable
+	//internalAuthMiddleware := svc.AuthOrDenyMiddleware(dbUser, dbPass) // TODO: reenable
 	ctxMiddleware = func(next http.Handler) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			next.ServeHTTP(w, r.WithContext(ctx)) // TODO: ok?
@@ -506,7 +593,7 @@ func placeholderMiddleware(next http.Handler) http.Handler { // TODO: DELETEME!!
 		next.ServeHTTP(w, r)
 		// TODO: reenable
 		//next.ServeHTTP(w, r.WithContext(rfid.SetAuthInfo(r.Context(), rfid.AuthInfo{
-		//	Id: rfid.AlternateCollectionId(primitive.ObjectID{}),
+		//	UserId: rfid.AlternateCollectionId(primitive.ObjectID{}),
 		//	Opts: &rfid.UserPermsResolved{
 		//		Admin:    utils.Pointer(true),
 		//		Projects: nil,
@@ -791,7 +878,7 @@ type writeTagRequest struct {
 	Data   []byte // TODO: make sure we're ok with this being []byte
 }
 
-// TODO: consider moving to reader/writer side?
+// TODO: consider moving to reader/internal side?
 var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	mgr := websocketSessions.GetSessionManager(r.Context())
@@ -848,7 +935,7 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	w.Header().Set("Content-Type", "text/html") // TODO: ensure caught on other side
 	_, err = w.Write(req.Data)                  // TODO: is this still ok if incoming was base58?
 	if err != nil {
-		println("failed to write writer result", err)
+		println("failed to write internal result", err)
 	}
 }
 

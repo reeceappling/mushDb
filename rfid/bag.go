@@ -48,11 +48,12 @@ type Bag struct {
 
 	NotesField // Updated independently
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (b Bag) CanTransferTo(dst geneticSource) error {
 	return errors.New("Bag cannot be transferred (unsure if this is ok)")
+	// TODO: make transferrable to plate?
 }
 
 func (b Bag) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -109,7 +110,7 @@ func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from gene
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
-		//updatePermsIfNeeded(xfer.Perms, b.Perms).
+		//updatePermsIfNeeded(xfer.Perms, b.Perms). // TODO: this!
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -143,7 +144,7 @@ func (b Bag) id() []byte {
 //		MainCollectionIdField:        MainCollectionIdField{MainCollectionId(primitive.NewObjectID())},
 //		SpeciesField:                      SpeciesField{*b.Species},
 //		SubspeciesOptionalField:           b.SubspeciesOptionalField,
-//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&b.Id},
+//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&b.UserId},
 //		GenSporeField:                     GenSporeField{b.GenSinceSpore.Next()},
 //		ParentTypeField:                   ParentTypeField{utils.Pointer("bag")},
 //		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
@@ -212,7 +213,9 @@ func initializeBags(ctx context.Context) error {
 		DisposedField:             DisposedField{&exampleTime},
 		NotesField:                NotesField{exampleNotes()},
 		LastUpdatedField:          LastUpdatedField{exampleTime},
+		AclField:                  AclField{&testAcl},
 	}
+	// TODO: replace the test value
 	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
@@ -255,6 +258,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// Denying guest edits is done in the upper handlers
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		// Validate
 		_, err = data.PcRunField.Get(ctx)
@@ -284,6 +288,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 			CreationDateField:           data.CreationDateField,
 			NotesField:                  data.NotesField,
 			LastUpdatedField:            LastUpdatedFieldForNow(),
+			AclField:                    allCanWriteAcl(),
 		}
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
@@ -357,7 +362,7 @@ type updateBagRequest struct {
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func (upr updateBagRequest) reform() resolvedUpdateBagRequest {
@@ -369,7 +374,7 @@ func (upr updateBagRequest) reform() resolvedUpdateBagRequest {
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		Flushes:             imageUpdates(upr.Flushes),
-		//PermsField:          upr.PermsField,
+		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
@@ -377,14 +382,14 @@ type resolvedUpdateBagRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
-	Images  SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams SplitEntries[contamForm, Contamination]
-	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
-	//PermsField
+	Notes          AllEntries[Note]
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams        SplitEntries[contamForm, Contamination]
+	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
-func (out resolvedUpdateBagRequest) modsFor(current Bag) (bson.D, error) {
+func (out resolvedUpdateBagRequest) modsFor(current Bag, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(out.KnownFruitable, current.KnownFruitable).
 		updateSaleIfNeeded(out.Sale, current.Sale).
@@ -393,7 +398,7 @@ func (out resolvedUpdateBagRequest) modsFor(current Bag) (bson.D, error) {
 		updatePicsIfNeeded(out.Images, current.Pics).
 		updateContamsIfNeeded(out.Contams, current.Contaminations).
 		updateFlushesIfNeeded(out.Flushes, current.Flushes).
-		//updatePermsIfNeeded(out.Perms, current.Perms).
+		updatePermsIfNeeded(aclField.ACL, current.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -455,8 +460,8 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		out.Flushes.New[i].Location = imageLocation(loc)
 	}
-
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+
 		coll := ctx.Client().Database(dbName).Collection(BagsCollectionName)
 		// go get current plate
 		existing := Bag{}
@@ -464,11 +469,18 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-
-		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "overlapping perms for user err: "+err.Error(), http.StatusUnauthorized)
-		//}
-		upd, err := out.modsFor(existing)
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := data.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		upd, err := out.modsFor(existing, aclField)                   // TODO: ACL?
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: DO THIS EVERYWHERE!
 	})
 	if err != nil {
@@ -486,7 +498,7 @@ type importBagRequest struct {
 	KnownFruitableField
 	WriteTagToField
 	// image as "img"
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FRUITING CHAMBER
@@ -603,35 +615,45 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	out := Bag{
-		MainCollectionIdField: MainCollectionIdField{id},
-		SubstrateRecipeField:  data.SubstrateRecipeField,
-		//SubstrateBatchOptionalField: nil,
-		//WetnessField,
-		PcRunOptionalField:      PcRunOptionalField{},
-		FilterSize:              data.FilterSize,
-		CreationDateField:       data.CreationDateField,
-		GenerationsFields:       GenerationsFieldFor(gen),
-		SealDate:                &data.CreationDate,
-		KnownFruitableField:     data.KnownFruitableField,
-		SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
-		SubspeciesOptionalField: data.SubspeciesOptionalField,
-		PicsField:               PicsField{pix},
-		ContaminationsField:     ContaminationsField{},
-		MostRecentImageField:    MostRecentImageField{importedPic},
-		FlushesField:            FlushesField{},
-		SaleField:               SaleField{},
-		DisposedField:           DisposedField{},
-		NotesField:              NotesField{},
-		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		acl, err := data.AclFor(ctx, perms)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		out := Bag{
+			MainCollectionIdField: MainCollectionIdField{id},
+			SubstrateRecipeField:  data.SubstrateRecipeField,
+			//SubstrateBatchOptionalField: nil,
+			//WetnessField,
+			PcRunOptionalField:      PcRunOptionalField{},
+			FilterSize:              data.FilterSize,
+			CreationDateField:       data.CreationDateField,
+			GenerationsFields:       GenerationsFieldFor(gen),
+			SealDate:                &data.CreationDate,
+			KnownFruitableField:     data.KnownFruitableField,
+			SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
+			SubspeciesOptionalField: data.SubspeciesOptionalField,
+			PicsField:               PicsField{pix},
+			ContaminationsField:     ContaminationsField{},
+			MostRecentImageField:    MostRecentImageField{importedPic},
+			FlushesField:            FlushesField{},
+			SaleField:               SaleField{},
+			DisposedField:           DisposedField{},
+			NotesField:              NotesField{},
+			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+			AclField:                acl,
+		}
+		// TODO: for non-all acls, update each user and project
 		coll := ctx.Client().Database(dbName).Collection(BagsCollectionName)
 		_, err = data.SubstrateRecipeField.Get(ctx)
 		if err != nil {
 			return DbTxnStdErr(w, "substrate recipe retrieval error: "+err.Error(), http.StatusInternalServerError)
 		}
-		_, err := coll.InsertOne(ctx, out)
+		_, err = coll.InsertOne(ctx, out)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}

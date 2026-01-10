@@ -29,7 +29,7 @@ type SporeSwab struct { // TODO: FIX EVERYTHING IN THIS FILE BELOW THIS POINT!!!
 	TransfersOutField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (sw SporeSwab) Innoculatable() bool {
@@ -46,11 +46,11 @@ func (sw SporeSwab) CanTransferTo(dst geneticSource) error {
 func (sw SporeSwab) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
 	panic("cannot happen stp")
 	//// TODO: can this even occur?
-	//upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+	//upd, err := NewMods().addTransferOut(xfer.UserId).Finalized()
 	//if err != nil {
 	//	return err
 	//}
-	//res, err := ctx.Client().Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.Id, upd)
+	//res, err := ctx.Client().Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.UserId, upd)
 	//if err != nil {
 	//	return err
 	//}
@@ -82,7 +82,7 @@ func (sw SporeSwab) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 	//			withSubspecies(parentInfo.SubSpecies).
 	//			updateLastUpdatedIfNeeded().
 	//			Finalized()
-	//res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.Id, upd)
+	//res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.UserId, upd)
 	//if err != nil {
 	//	return err
 	//}
@@ -218,7 +218,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 				NotesField:                        NotesField{data.Notes},
 				LastUpdatedField:                  LastUpdatedField{now},
 				// Do not check permissions, just pass parent perms to child
-				//PermsField: PermsField{parent.Perms},
+				AclField: parent.AclField,
 			}
 
 		}
@@ -243,24 +243,24 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 type updateSporeSwabRequest struct { // TODO: fix everything below this
 	SaleField
 	DisposedField
-	Notes AllEntries[Note]
-	//PermsField
+	Notes          AllEntries[Note]
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func (upr updateSporeSwabRequest) reform() resolvedUpdateSporeSwabRequest {
 	return resolvedUpdateSporeSwabRequest{
-		SaleField:     upr.SaleField,
-		DisposedField: upr.DisposedField,
-		Notes:         upr.Notes,
-		//PermsField:    PermsField{upr.Perms},
+		SaleField:      upr.SaleField,
+		DisposedField:  upr.DisposedField,
+		Notes:          upr.Notes,
+		PermsOnRequest: upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateSporeSwabRequest struct {
 	SaleField
 	DisposedField
-	Notes AllEntries[Note]
-	//PermsField
+	Notes          AllEntries[Note]
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
@@ -281,14 +281,22 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
-		//}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := out.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		upd, err := NewMods().
 			updateSaleIfNeeded(out.Sale, existing.Sale).
 			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
 			updateNotesIfNeeded(data.Notes, existing.Notes).
-			//updatePermsIfNeeded(data.Perms, existing.Perms). // TODO: ok?
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
@@ -324,7 +332,7 @@ type importSporeSwabRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: NO IMAGES
@@ -367,6 +375,10 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//}
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 
 		toInsert := SporeSwab{
 			MainCollectionIdField:   MainCollectionIdField{id},
@@ -375,7 +387,7 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 			SubspeciesOptionalField: data.SubspeciesOptionalField,
 			NotesField:              data.NotesField,
 			LastUpdatedField:        LastUpdatedFieldForNow(),
-			//PermsField:              PermsField{finalPerms},
+			AclField:                data.AclFor(ctx, perms),
 		}
 		coll := ctx.Client().Database(dbName).Collection(sporeSwabCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)

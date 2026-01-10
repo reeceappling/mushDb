@@ -434,6 +434,15 @@ func getLastNEntries(ctx context.Context, variant string, updated bool, nresults
 
 func HandleCreate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		resolvedPerms, err := GetResolvedUserPerms(r.Context())
+		if err != nil {
+			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
+			return
+		}
+		if resolvedPerms.isGuest() {
+			http.Error(w, "guest users cannot create entries", http.StatusForbidden)
+			return
+		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
 			"agarBatch":       createAgarBatchHandler,
@@ -471,6 +480,15 @@ func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
 }
 func ImportHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		resolvedPerms, err := GetResolvedUserPerms(r.Context())
+		if err != nil {
+			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
+			return
+		}
+		if resolvedPerms.isGuest() {
+			http.Error(w, "guest users cannot import entries", http.StatusForbidden)
+			return
+		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
 			"bag":             importBagHandler,
@@ -493,6 +511,15 @@ func ImportHandler() http.HandlerFunc {
 
 func UpdateById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		resolvedPerms, err := GetResolvedUserPerms(r.Context())
+		if err != nil {
+			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
+			return
+		}
+		if resolvedPerms.isGuest() {
+			http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
+			return
+		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
 			"agarBatch":       updateAgarBatchHandler,

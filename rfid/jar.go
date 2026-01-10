@@ -44,7 +44,7 @@ type GrainJar struct {
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (j GrainJar) CanTransferTo(dst geneticSource) error {
@@ -292,6 +292,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 			CreationDateField:     CreationDateField{data.CreationDate},
 			NotesField:            NotesField{data.Notes},
 			LastUpdatedField:      LastUpdatedField{now},
+			AclField:              allCanWriteAcl(),
 		}
 		_, err = pcrun.Get(ctx)
 		if err != nil {
@@ -329,7 +330,7 @@ type importJarRequest struct {
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 	// image as "img"
 }
 
@@ -378,7 +379,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
-	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id)
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.UserId)
 	//err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	//if err != nil {
 	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -488,7 +489,7 @@ type updateJarRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	WriteTagToField
-	//PermsField // TODO: new
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func contamUpdates(contams SplitEntries[contamForm, ContaminationLessLocation]) SplitEntries[contamForm, Contamination] { // TODO: MOVE AND USE
@@ -517,7 +518,7 @@ func (upr updateJarRequest) reform() resolvedUpdateJarRequest {
 		Notes:               upr.Notes,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
-		//PermsField:          upr.PermsField,
+		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
@@ -525,10 +526,10 @@ type resolvedUpdateJarRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
-	Images  SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams SplitEntries[contamForm, Contamination]
-	//PermsField // TODO: new
+	Notes          AllEntries[Note]
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams        SplitEntries[contamForm, Contamination]
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {
@@ -585,6 +586,17 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := data.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		upd, err := NewMods().
 			updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
 			updateSaleIfNeeded(out.Sale, existing.Sale).
@@ -592,7 +604,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 			updateNotesIfNeeded(out.Notes, existing.Notes).
 			updatePicsIfNeeded(out.Images, existing.Pics).
 			updateContamsIfNeeded(out.Contams, existing.Contaminations).
-			//updatePermsIfNeeded(out.Perms, existing.Perms).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)

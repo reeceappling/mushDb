@@ -28,6 +28,7 @@ type LcRecipe struct {
 	AdditivesField
 	NotesField
 	LastUpdatedField
+	AclField // TODO: handle EVERYWHERE
 }
 
 type LcRecipeField struct {
@@ -254,8 +255,17 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	); err != nil {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 	}
+	resolvedUserPerms, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
+		return
+	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(lcRecipesCollectionName)
+		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+		if err != nil {
+			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := LcRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
 			NameField:                  req.NameField,
@@ -266,6 +276,7 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			AdditivesField:             req.AdditivesField,
 			NotesField:                 req.NotesField,
 			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+			AclField:                   acl,
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
@@ -285,7 +296,8 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 type updateLcRecipeRequest struct {
 	NameField
 	StandardField
-	Notes AllEntries[Note] `json:"notes"`
+	Notes          AllEntries[Note] `json:"notes"`
+	PermsOnRequest                  // TODO: handle in typescript and handler!
 }
 
 func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -316,21 +328,32 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	upd, err := NewMods().
-		updateNameIfNeeded(req.Name, existing.Name).
-		updateStandardIfNeeded(req.Standard, existing.Standard).
-		updateNotesIfNeeded(req.Notes, existing.Notes).
-		updateLastUpdatedIfNeeded().
-		Finalized()
-	if err != nil {
-		http.Error(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if len(upd) == 0 {
-		http.Error(w, "no changes made", http.StatusBadRequest)
-		return
-	}
+
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		upd, err := NewMods().
+			updateNameIfNeeded(req.Name, existing.Name).
+			updateStandardIfNeeded(req.Standard, existing.Standard).
+			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
+			updateLastUpdatedIfNeeded().
+			Finalized()
+		if err != nil {
+			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+		}
+		if len(upd) == 0 {
+			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+		}
 		// TODO: turn everything in this txn into its own func????
 		coll := ctx.Client().Database(dbName).Collection(lcRecipesCollectionName)
 		bsonId := bson.D{{"_id", existing.Id}}

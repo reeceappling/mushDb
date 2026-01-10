@@ -50,7 +50,7 @@ type Sale struct {
 	CreationDateField // This is sale date
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (s Sale) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -108,6 +108,7 @@ func initializeSales(ctx context.Context) error {
 type createSaleRequest struct {
 	Items []SoldItem
 	NotesField
+	// TODO: USE PARENT PERMS
 }
 
 type SoldItem struct {
@@ -136,6 +137,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 			CreationDateField:          unixTimeForNow().asCreationDate(),
 			NotesField:                 req.NotesField,
 			LastUpdatedField:           LastUpdatedField{now},
+			// TODO: USE PARENT PERMS
 			//PermsField:                 PermsField{nil}, // TODO: THIS!!!!!!!!!!!!!
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
@@ -154,8 +156,8 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSaleRequest struct {
-	Notes AllEntries[Note]
-	//PermsField
+	Notes          AllEntries[Note]
+	PermsOnRequest // TODO: ???? handle in typescript and handler!
 }
 
 func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
@@ -189,12 +191,23 @@ func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
 		//	return DbTxnStdErr(w, "bad overlapping perms for user: "+err.Error(), http.StatusBadRequest)
 		//}
 		upd, err := NewMods().
 			updateNotesIfNeeded(req.Notes, existing.Notes).
-			//updatePermsIfNeeded(req.Perms, existing.Perms).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

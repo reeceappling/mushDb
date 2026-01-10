@@ -4,14 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
 	"reflect"
-	"time"
 )
 
 // TODO: FIX ALL REQUESTS AND HANDLERS FOR IMPORTS, UPDATES, and CREATES
@@ -29,6 +26,7 @@ type AgarBatch struct { // This is >=1 media bottles of the same recipe that wen
 	Color colorant `bson:"color" json:"color"`
 	NotesField
 	LastUpdatedField
+	AclField // TODO: handle EVERYWHERE
 }
 
 type AgarBatchField struct {
@@ -66,22 +64,6 @@ type NewAgarBatchRequest struct {
 	Notes []string
 }
 
-func (req NewAgarBatchRequest) asAgarBatch() (AgarBatch, error) {
-	c := utils.Default(req.Color, string(clearColor))
-	colorSelected, exists := colors[c]
-	if !exists {
-		return AgarBatch{}, errors.New("invalid color")
-	}
-	return AgarBatch{
-		AlternateCollectionIdField: AlternateCollectionIdField{Id: AlternateCollectionId(primitive.NewObjectID())},
-		PcRunField:                 req.PcRunField,
-		AgarRecipeField:            req.AgarRecipeField,
-		Color:                      colorSelected,
-		NotesField:                 NotesField{stringsToNotes(req.Notes, time.Now())},
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-	}, nil
-}
-
 func newAgarBatch(ctx mongo.SessionContext, batch AgarBatch) (*AgarBatch, error) {
 	out, err := ctx.Client().Database(dbName).Collection(agarBatchCollectionName).InsertOne(ctx, batch)
 	if err != nil {
@@ -96,12 +78,14 @@ func newAgarBatch(ctx mongo.SessionContext, batch AgarBatch) (*AgarBatch, error)
 }
 
 type updateAgarBatchRequest struct {
-	Notes AllEntries[Note] `json:"notes"`
+	Notes          AllEntries[Note] `json:"notes"`
+	PermsOnRequest                  // TODO: handle in typescript and handler!
 }
 
-func (req updateAgarBatchRequest) modsFor(existing AgarBatch) (bson.D, error) {
+func (req updateAgarBatchRequest) modsFor(existing AgarBatch, acl *ACL) (bson.D, error) {
 	return NewMods().
 		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updatePermsIfNeeded(acl, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -124,6 +108,7 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarBatchCollectionName)
 		existing, err := GetAltCollectionItemInTxn(ctx, id, AgarBatch{})
@@ -135,7 +120,19 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), stat)
 			return nil, ErrInTxnAlreadyTriedToWrite
 		}
-		upd, err := req.modsFor(existing)
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		upd, err := req.modsFor(existing, aclField.ACL)
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)
 	})
 
@@ -167,6 +164,7 @@ func initializeAgarBatches(ctx context.Context) error {
 		Color:                      clearColor,
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
+		AclField:                   allCanReadAcl(),
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -212,7 +210,7 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
 		}
-
+		// create new batch
 		newBatch := AgarBatch{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
 			PcRunField:                 req.PcRunField,
@@ -220,6 +218,7 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 			Color:                      req.Color,
 			NotesField:                 req.NotesField,
 			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+			AclField:                   allCanWriteAcl(),
 		}
 		batch, err := newAgarBatch(ctx, newBatch)
 		if err != nil {

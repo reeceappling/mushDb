@@ -11,6 +11,10 @@ import (
 
 // TODO: this whole thing whenever we need to
 
+// TODO: IMPORTS!
+// TODO: CREATES!
+// TODO: UPDATES!
+
 const (
 	PlugsCollectionName = "plugs" // TODO: USE
 	PlugSourceType      = "plug"
@@ -33,7 +37,7 @@ type PlugsJar struct { // TODO: do this whole file! This should be an alt, not a
 	DisposedField // Also changed once all pegs are sold/used?
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 
 	// TODO: this whole thing whenever we need to
 }

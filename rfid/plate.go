@@ -39,7 +39,7 @@ type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (p Plate) CanTransferTo(dst geneticSource) error {
@@ -178,7 +178,7 @@ func initializePlates(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil
@@ -224,6 +224,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 			CreationDateField:     CreationDateField{now},
 			LastUpdatedField:      LastUpdatedField{now},
 			// No Perms here for basic plates
+			AclField: allCanWriteAcl(),
 		}
 		_, err = toInsert.AgarBatchField.Get(ctx)
 		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
@@ -252,7 +253,7 @@ type updatePlateRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	Contams SplitEntries[contamForm, ContaminationLessLocation]
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
@@ -264,11 +265,11 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		WriteTagToField:     upr.WriteTagToField,
-		//PermsField:          upr.PermsField,
+		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
-func (mods resolvedUpdatePlateRequest) modsFor(existing Plate) (bson.D, error) {
+func (mods resolvedUpdatePlateRequest) modsFor(existing Plate, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
 		updateSaleIfNeeded(mods.Sale, existing.Sale).
@@ -276,7 +277,7 @@ func (mods resolvedUpdatePlateRequest) modsFor(existing Plate) (bson.D, error) {
 		updateNotesIfNeeded(mods.Notes, existing.Notes).
 		updatePicsIfNeeded(mods.Images, existing.Pics).
 		updateContamsIfNeeded(mods.Contams, existing.Contaminations).
-		//updatePermsIfNeeded(mods.Perms, existing.Perms).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -289,7 +290,7 @@ type resolvedUpdatePlateRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	WriteTagToField
-	//PermsField // TODO: new
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -340,11 +341,19 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "failed to validate user permissions, old or new: "+err.Error(), http.StatusBadRequest)
-		//}
-		upd, err := out.modsFor(existing)
-		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates!!!!!!!
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := data.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		upd, err := out.modsFor(existing, aclField)
+		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates????
 	})
 	if err != nil {
 		handleWriteErr(err, w)
@@ -383,7 +392,7 @@ type importPlateRequest struct {
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -473,6 +482,14 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		//	finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: DO MAXIMAL PERMS WITH data.Perms if not allWrite?
 		//}
 
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		acl, err := data.AclFor(ctx, perms)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := Plate{
 			MainCollectionIdField:   id.IdField(),
 			CreationDateField:       data.CreationDateField,
@@ -483,10 +500,10 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:     data.KnownFruitableField,
 			MostRecentImageField:    MostRecentImageField{importedPic},
 			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-			//PermsField:              PermsField{finalPerms},
+			AclField:                acl,
 		}
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
-		_, err := coll.InsertOne(ctx, toInsert)
+		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}

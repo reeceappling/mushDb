@@ -1,5 +1,16 @@
 package rfid
 
+import (
+	"context"
+	"crypto/sha256"
+	"errors"
+	"github.com/reeceappling/goUtils/v2/utils"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"io"
+)
+
 // import (
 //
 //	"context"
@@ -17,26 +28,26 @@ package rfid
 //	"slices"
 //
 // )
-//
-// // User collection
-//
-// const userCollName = "users" // TODO: readonly field
-//
-//	type User struct {
-//		AlternateCollectionIdField
-//		Username   string     `bson:"username" json:"username"` // TODO: INDEX? MUST BE UNIQUE
-//		Email      string     `bson:"email" json:"email"`       // TODO: INDEX? MUST BE UNIQUE
-//		HashedPass *string    `bson:"password,omitempty" json:"password,omitempty"`
-//		Salt       *string    `bson:"salt,omitempty" json:"salt,omitempty"`
-//		GoogleId   *string    `bson:"googleId,omitempty" json:"googleId,omitempty"` // TODO: INDEX?
-//		Perms      *UserPerms `bson:"perms,omitempty" json:"perms,omitempty"`       // TODO: PROJECTS COME FROM PERMS
-//		// All can view?
-//		// TODO: GET ID TOKEN FROM USER, THEN VERIFY IT TO GET ACTUAL GOOGLE ID:
-//		// TODO: GET TOKEN: https://developers.google.com/identity/sign-in/web/sign-in
-//		// TODO: VERIFY TOKEN https://developers.google.com/identity/sign-in/web/backend-auth
-//		// TODO: more (google email, TOTP seed, etc)
-//	}
-//
+
+// User collection
+
+const userCollName = "users" // TODO: readonly field
+
+type User struct {
+	AlternateCollectionIdField
+	Username   string    `bson:"username" json:"username"` // TODO: INDEX? MUST BE UNIQUE
+	Email      string    `bson:"email" json:"email"`       // TODO: INDEX? MUST BE UNIQUE
+	HashedPass *string   `bson:"password,omitempty" json:"password,omitempty"`
+	Salt       *string   `bson:"salt,omitempty" json:"salt,omitempty"`
+	GoogleId   *string   `bson:"googleId,omitempty" json:"googleId,omitempty"` // TODO: INDEX?
+	Perms      UserPerms `bson:"perms,omitempty" json:"perms,omitempty"`       // TODO: PROJECTS COME FROM PERMS
+	// All can view?
+	// TODO: GET ID TOKEN FROM USER, THEN VERIFY IT TO GET ACTUAL GOOGLE ID:
+	// TODO: GET TOKEN: https://developers.google.com/identity/sign-in/web/sign-in
+	// TODO: VERIFY TOKEN https://developers.google.com/identity/sign-in/web/backend-auth
+	// TODO: more (google email, TOTP seed, etc)
+}
+
 // // TODO: describe
 //
 //	func (u User) CleanBytes() ([]byte, error) {
@@ -58,100 +69,101 @@ package rfid
 //		return out, err
 //	}
 //
-// // TODO: USE THIS LATE IN THE SETUP!
-//
-//	func initializeUsers(ctx context.Context, usern, unhashedPass string) error {
-//		// Indices
-//		coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName)
-//		_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-//			newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
-//			newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
-//			newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
-//		})
-//		if err != nil {
-//			return err
-//		}
-//		rootUserId := altCollIdForint(0)
-//
-//		root := User{}
-//		result := coll.FindOne(ctx, bson.M{"_id": rootUserId})
-//		if result.Err() != nil {
-//			if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-//				// create root user
-//				root.Email = "root@root.com"
-//				root.Username = usern
-//				salt, errr := generateUserSalt()
-//				if errr != nil {
-//					return errr
-//				}
-//				root.Salt = &salt
-//				h := sha256.New()
-//
-//				if _, err = h.Write([]byte(unhashedPass)); err != nil {
-//					return err
-//				}
-//				onceHashedPass := string(h.Sum(nil))
-//				finalPassHash, err := HashPassword(salt, onceHashedPass)
-//				if err != nil {
-//					return err
-//				}
-//				root.HashedPass = &finalPassHash
-//				root.Perms = &UserPerms{
-//					Admin:    utils.Pointer(true), // TODO: instead of using this, can admins just have a nil perms field?
-//					Projects: nil,
-//				}
-//				// Insert root user to db
-//				res, err := coll.InsertOne(ctx, root)
-//				if err != nil {
-//					return err
-//				}
-//				if res.InsertedID.(AlternateCollectionId).asBase58() != rootUserId.asBase58() {
-//					// TODO: REMOVE FROM DB?
-//					return errors.New("inserted root user id did not match expected id")
-//				}
-//			} else {
-//				return result.Err()
-//			}
-//		}
-//		var actualRootUser User
-//		err = result.Decode(&actualRootUser)
-//		if err != nil {
-//			return errors.Join(errors.New("failed to decode current root user"), err)
-//		}
-//		if actualRootUser.Username != usern {
-//			return errors.New("current root user id and expected do not match")
-//		}
-//		if actualRootUser.Id.asBase58() != rootUserId.asBase58() {
-//			return errors.New("inserted root id did not match expected")
-//		}
-//		return nil
-//	}
-//
-// // GenerateSalt creates a random salt of the specified length.
-//
-//	func generateSalt(length int) ([]byte, error) {
-//		salt := make([]byte, length)
-//		_, err := io.ReadFull(rand.Reader, salt)
-//		if err != nil {
-//			return nil, err
-//		}
-//		return salt, nil
-//	}
-//
-//	func generateUserSalt() (string, error) {
-//		bs, err := generateSalt(64)
-//		return string(bs), err
-//	}
-//
-//	func HashPassword(salt, pw string) (string, error) {
-//		h := sha256.New()
-//		_, err := h.Write([]byte(salt + pw))
-//		if err != nil {
-//			return "", errors.New("unable to hash password. Should never happen")
-//		}
-//		return string(h.Sum(nil)), nil
-//	}
-//
+// TODO: USE THIS LATE IN THE SETUP!
+
+func initializeUsers(ctx context.Context, usern, unhashedPass string) error {
+	// Indices
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName)
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
+		newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
+		newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
+	})
+	if err != nil {
+		return err
+	}
+	rootUserId := altCollIdForint(0)
+	guestUserId := altCollIdForint(1)
+
+	root := User{}
+	result := coll.FindOne(ctx, bson.M{"_id": rootUserId})
+	if result.Err() != nil {
+		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
+			// create root user
+			root.Email = "root@root.com"
+			root.Username = usern
+			salt, errr := generateUserSalt()
+			if errr != nil {
+				return errr
+			}
+			root.Salt = &salt
+			h := sha256.New()
+
+			if _, err = h.Write([]byte(unhashedPass)); err != nil {
+				return err
+			}
+			onceHashedPass := string(h.Sum(nil))
+			finalPassHash, err := HashPassword(salt, onceHashedPass)
+			if err != nil {
+				return err
+			}
+			root.HashedPass = &finalPassHash
+			root.Perms = &UserPerms{
+				Admin:    utils.Pointer(true), // TODO: instead of using this, can admins just have a nil perms field?
+				Projects: nil,
+			}
+			// Insert root user to db
+			res, err := coll.InsertOne(ctx, root)
+			if err != nil {
+				return err
+			}
+			if res.InsertedID.(AlternateCollectionId).asBase58() != rootUserId.asBase58() {
+				// TODO: REMOVE FROM DB?
+				return errors.New("inserted root user id did not match expected id")
+			}
+		} else {
+			return result.Err()
+		}
+	}
+	var actualRootUser User
+	err = result.Decode(&actualRootUser)
+	if err != nil {
+		return errors.Join(errors.New("failed to decode current root user"), err)
+	}
+	if actualRootUser.Username != usern {
+		return errors.New("current root user id and expected do not match")
+	}
+	if actualRootUser.UserId.asBase58() != rootUserId.asBase58() {
+		return errors.New("inserted root id did not match expected")
+	}
+	return nil
+}
+
+// GenerateSalt creates a random salt of the specified length.
+
+func generateSalt(length int) ([]byte, error) {
+	salt := make([]byte, length)
+	_, err := io.ReadFull(rand.Reader, salt)
+	if err != nil {
+		return nil, err
+	}
+	return salt, nil
+}
+
+func generateUserSalt() (string, error) {
+	bs, err := generateSalt(64)
+	return string(bs), err
+}
+
+func HashPassword(salt, pw string) (string, error) {
+	h := sha256.New()
+	_, err := h.Write([]byte(salt + pw))
+	if err != nil {
+		return "", errors.New("unable to hash password. Should never happen")
+	}
+	return string(h.Sum(nil)), nil
+}
+
 // func (u User) validatePassword(pw string) error { // TODO: USE
 //
 //		if u.Salt == nil {
@@ -226,7 +238,7 @@ package rfid
 // //		return
 // //	}
 // //	newUser := User{
-// //		Id:         newAlternateCollectionId(),
+// //		UserId:         newAlternateCollectionId(),
 // //		Username:   req.Name,
 // //		HashedPass: &hashedPass,
 // //		Salt:       &salt,
@@ -246,46 +258,49 @@ package rfid
 // //		return
 // //	}
 // //}
-//
-//	func (u User) ResolvePerms(ctx context.Context) (*UserPermsResolved, error) {
-//		var admin *bool = nil
-//		if u.Perms != nil {
-//			admin = u.Perms.Admin
-//		} else {
-//			admin = utils.Pointer(false) // TODO: do we want nil to be admin?
-//		}
-//		out := UserPermsResolved{
-//			Admin:    admin,
-//			Projects: nil,
-//		}
-//		if u.Perms == nil || (admin != nil && *admin) {
-//			return &out, nil
-//		}
-//		// Resolve project perms // TODO: MAKE SURE THIS WORKS
-//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName).
-//			Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.Projects}})
-//		if err != nil {
-//			return nil, errors.Join(errors.New("failed to get cursor for UserPerms projects"), err)
-//		}
-//		out.Projects = map[projectName]bool{}
-//		for cursor.Next(context.TODO()) {
-//			var project Project
-//			if err = cursor.Decode(&project); err != nil {
-//				return nil, errors.Join(errors.New("cursor decode error for UserPerms project"), err)
-//			}
-//			userIndex := slices.Index(sliceutils.Map(project.Perms.Users.Ids, func(ppuid ProjectPermUserId) AlternateCollectionId {
-//				return ppuid.Id
-//			}), u.Id)
-//			if userIndex != -1 {
-//				out.Projects[project.Name] = project.Perms.Users.CanWrite[userIndex]
-//			}
-//		}
-//		if err = cursor.Err(); err != nil {
-//			return nil, errors.Join(errors.New("mongo cursor error after UserPerms project iteration"), err)
-//		}
-//		return &out, nil
-//	}
-//
+
+// TODO: update user perms should update
+
+func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
+	userIsAdmin := u.Perms.admin
+	out := ResolvedUserPerms{
+		UserId: u.Id,
+		admin:  userIsAdmin,
+	}
+	// If guest or admin, return early
+	if u.Perms.admin == nil || (*u.Perms.admin) {
+		return out, nil
+	}
+
+	// TODO: ensure all projects are looped through
+
+	// Resolve project perms // TODO: MAKE SURE THIS WORKS
+	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName).
+		Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.projects}})
+	if err != nil {
+		return out, errors.Join(errors.New("failed to get cursor for UserPerms projects"), err)
+	}
+	userProjPerms := map[projectName]*bool{}
+
+	for cursor.Next(context.TODO()) {
+		var project Project
+		if err = cursor.Decode(&project); err != nil {
+			return out, errors.Join(errors.New("cursor decode error for UserPerms project"), err)
+		}
+		perm, exists := project.Perms[string(u.Id[:])]
+		if !exists {
+			// TODO: ERROR
+		} else {
+			userProjPerms[project.Name] = perm
+		}
+	}
+	if err = cursor.Err(); err != nil {
+		return out, errors.Join(errors.New("mongo cursor error after UserPerms project iteration"), err)
+	}
+	out.projects = userProjPerms
+	return out, nil
+}
+
 // func (u User) humanReadableId() string { // TODO: ok?
 //
 //		if u.GoogleId != nil {
@@ -298,12 +313,6 @@ package rfid
 //		Admin    *bool         `bson:"admin,omitempty" json:"admin,omitempty"`
 //		Projects []projectName `bson:"projects,omitempty" json:"projects,omitempty"`
 //	}
-//
-// UserPermsResolved is the cached version of userPerms that has the read/write privileges from each project
-type UserPermsResolved struct { // TODO: should we hold these in a cache?
-	Admin    *bool
-	Projects map[projectName]bool
-}
 
 //
 //// getUserPermsForRequest tries to get AuthInfo off of the request's context,
@@ -367,7 +376,7 @@ type UserPermsResolved struct { // TODO: should we hold these in a cache?
 //		return sessId, err
 //	}
 //	_, err = svc.SessionToAuthMap.NewSession(sessId, AuthInfo{
-//		Id: altCollIdForint(0), // TODO: FIX ME?
+//		UserId: altCollIdForint(0), // TODO: FIX ME?
 //		Opts: &UserPermsResolved{
 //			Admin:    utils.Pointer(true),
 //			Projects: nil,
@@ -444,7 +453,7 @@ type UserPermsResolved struct { // TODO: should we hold these in a cache?
 //	if err != nil {
 //		return utils.TandErr(AlternateCollectionId{}, err)
 //	}
-//	return utils.ErrAndT(u.Id)
+//	return utils.ErrAndT(u.UserId)
 //}
 //
 //type updateUserRequest struct {
@@ -490,7 +499,7 @@ type UserPermsResolved struct { // TODO: should we hold these in a cache?
 //			return DbTxnStdErr(w, err.Error(), stat)
 //		}
 //		doRemoveAdmin := req.Admin == nil || *req.Admin == false
-//		if existing.Id == authInfo.Id && doRemoveAdmin {
+//		if existing.UserId == authInfo.UserId && doRemoveAdmin {
 //			return DbTxnStdErr(w, "cannot remove admin from self", http.StatusBadRequest)
 //		}
 //		mods := bson.D{} // TODO: modify

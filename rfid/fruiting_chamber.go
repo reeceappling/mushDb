@@ -46,7 +46,7 @@ type FruitingChamber struct { // TODO: SHOEBOX
 	DisposedField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
@@ -149,7 +149,7 @@ func (f FruitingChamber) CollectionName() string {
 //		SubspeciesOptionalField:           f.SubspeciesOptionalField,
 //		GenSporeField:                     GenSporeField{f.GenSinceSpore.Next()},
 //		ParentTypeField:                   ParentTypeField{utils.Pointer(FruitingChamberSourceType)},
-//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Id},
+//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.UserId},
 //		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
 //	}
 //}
@@ -285,6 +285,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			CreationDateField:      CreationDateField{now},
 			NotesField:             NotesField{data.Notes},
 			LastUpdatedField:       LastUpdatedField{now},
+			AclField:               parentJar.AclField,
 		}
 		err = addToIdMapCollectionInTxn(ctx, id.ToBinaryCollectionId(), toInsert.SourceType())
 		if err != nil {
@@ -316,7 +317,7 @@ type importFruitingChamberRequest struct {
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	//PermsField // TODO: SHOULD WE CHECK SPECIES AND SUBSPECIES?
+	PermsOnRequest // TODO: handle in typescript and handler!
 	// image as "img"
 }
 
@@ -419,6 +420,11 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	//}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+
 		out := FruitingChamber{
 			MainCollectionIdField:       MainCollectionIdField{id},
 			SubstrateRecipeField:        data.SubstrateRecipeField,
@@ -437,7 +443,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:  data.KnownFruitableField,
 			MostRecentImageField: MostRecentImageField{importedPic},
 			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-			//PermsField:           finalPerms.asField(),
+			AclField:             data.AclFor(ctx, perms),
 		}
 		_, err = data.SubstrateRecipeField.Get(ctx)
 		if err != nil {
@@ -472,7 +478,7 @@ type updateFruitingChamberRequest struct {
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRequest {
@@ -484,7 +490,7 @@ func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRe
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		Flushes:             imageUpdates(upr.Flushes),
-		//PermsField:          upr.PermsField,
+		PermsOnRequest:      req.PermsOnRequest,
 	}
 }
 
@@ -492,11 +498,11 @@ type resolvedUpdateFruitingChamberRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
-	Images  SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams SplitEntries[contamForm, Contamination]
-	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
-	//PermsField // TODO: new
+	Notes          AllEntries[Note]
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams        SplitEntries[contamForm, Contamination]
+	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
@@ -562,6 +568,17 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 			}
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := data.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
 		//	return DbTxnStdErr(w, "overlapping perms invalid for user: "+err.Error(), http.StatusBadRequest)
 		//}
@@ -573,7 +590,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			updatePicsIfNeeded(out.Images, existing.Pics).
 			updateContamsIfNeeded(out.Contams, existing.Contaminations).
 			updateFlushesIfNeeded(out.Flushes, existing.Flushes).
-			//updatePermsIfNeeded(out.Perms, existing.Perms).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)

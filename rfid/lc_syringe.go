@@ -36,12 +36,11 @@ type LcSyringe struct {
 	GenerationsFields
 	KnownFruitableField       // TODO: NEW! HANDLE EVERYWHERE!
 	ConfirmedClean      *bool `bson:"confirmedClean,omitempty" json:"confirmedClean,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
-	// TODO: add contaminated field?
 	TransfersOutField
 	DisposedField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (lcs LcSyringe) Innoculatable() bool {
@@ -223,7 +222,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			NotesField:                        NotesField{data.Notes},
 			LastUpdatedField:                  LastUpdatedField{now},
 			// Do not check permissions, just pass parent perms to child
-			//PermsField: PermsField{parent.Perms},
+			AclField: parent.AclField,
 		}
 		// TODO: ADD TO MAP
 		_, err = db.Collection(lcSyringeCollectionName).InsertOne(ctx, toInsert)
@@ -245,9 +244,9 @@ type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField       // TODO: handle in react
+	KnownFruitableField                                         // TODO: handle in react
 	Notes               AllEntries[Note]
-	//PermsField
+	PermsOnRequest      // TODO: handle in typescript and handler!
 }
 
 func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
@@ -257,7 +256,7 @@ func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
 		ConfirmedClean:      upr.ConfirmedClean,
 		KnownFruitableField: upr.KnownFruitableField,
 		Notes:               upr.Notes,
-		//PermsField:    PermsField{upr.Perms},
+		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
@@ -266,8 +265,8 @@ type resolvedUpdateSyringeRequest struct {
 	DisposedField
 	ConfirmedClean *bool `json:"confirmedClean,omitempty"`
 	KnownFruitableField
-	Notes AllEntries[Note]
-	//PermsField
+	Notes          AllEntries[Note]
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
@@ -281,7 +280,6 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
 	out := data.reform()
-
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(lcSyringeCollectionName)
 		// go get current LcSyringe
@@ -289,6 +287,17 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := data.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
 		//	return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
@@ -300,7 +309,7 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
 			updateKnownFruitableIfNeeded(data.KnownFruitable, existing.KnownFruitable).
 			updateNotesIfNeeded(data.Notes, existing.Notes).
-			//updatePermsIfNeeded(data.Perms, existing.Perms). // TODO: ok?
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
@@ -331,18 +340,18 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type importSyringeRequest struct {
+type importLcSyringeRequest struct {
 	CreationDateField
 	SpeciesField
 	SubspeciesOptionalField
 	KnownFruitableField
 	NotesField
 	// pic as "img"
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
-func importSyringeHandler(w http.ResponseWriter, r *http.Request) {
-	data := importSyringeRequest{}
+func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
+	data := importLcSyringeRequest{}
 	id, err := newMainCollectionId(r.Context())
 	if err != nil {
 		http.Error(w, "failed to create new mainCollectionId", http.StatusInternalServerError)
@@ -381,6 +390,11 @@ func importSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		//	}
 		//}
 
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+
 		toInsert := LcSyringe{
 			MainCollectionIdField:   MainCollectionIdField{Id: id},
 			CreationDateField:       data.CreationDateField,
@@ -389,7 +403,7 @@ func importSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			SubspeciesOptionalField: data.SubspeciesOptionalField,
 			NotesField:              data.NotesField,
 			LastUpdatedField:        LastUpdatedFieldForNow(),
-			//PermsField:              PermsField{finalPerms},
+			AclField:                data.AclFor(ctx, perms),
 		}
 		// TODO: ADD TO MAP
 		coll := ctx.Client().Database(dbName).Collection(lcSyringeCollectionName)

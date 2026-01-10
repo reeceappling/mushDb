@@ -40,7 +40,7 @@ type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
@@ -234,7 +234,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			CreationDateField:     CreationDateField{data.CreationDate},
 			NotesField:            NotesField{data.Notes},
 			LastUpdatedField:      LastUpdatedField{now},
-			// No perms because initial is for everyone
+			AclField:              allCanWriteAcl(),
 		}
 
 		_, err = toInsert.PcRunOptionalField.Get(ctx)
@@ -266,7 +266,7 @@ type importLiquidCultureRequest struct {
 	Generation     *int
 	ConfirmedClean *bool
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 	// image as "img"
 }
 
@@ -379,34 +379,39 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
-	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id) // Add user to perms if not already there
-	out := LiquidCulture{
-		MainCollectionIdField: MainCollectionIdField{id},
-		//PcRunOptionalField:      PcRunOptionalField{},       // No pc runs on imports
-		LcRecipeField:           LcRecipeField{data.Recipe}, // TODO: optional for imports?
-		CreationDateField:       CreationDateField{data.CreationDate},
-		SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
-		SubspeciesOptionalField: data.SubspeciesOptionalField,
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{gen},
-			GenSinceFruitOrSpore: gen,
-		},
-		PicsField:            PicsField{pix},
-		ConfirmedClean:       data.ConfirmedClean,
-		KnownFruitableField:  data.KnownFruitableField,
-		MostRecentImageField: MostRecentImageField{importedPic},
-		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-		//PermsField:           PermsField{finalPerms},
-	}
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.UserId) // Add user to perms if not already there
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		out := LiquidCulture{
+			MainCollectionIdField: MainCollectionIdField{id},
+			//PcRunOptionalField:      PcRunOptionalField{},       // No pc runs on imports
+			LcRecipeField:           LcRecipeField{data.Recipe}, // TODO: optional for imports?
+			CreationDateField:       CreationDateField{data.CreationDate},
+			SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
+			SubspeciesOptionalField: data.SubspeciesOptionalField,
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{gen},
+				GenSinceFruitOrSpore: gen,
+			},
+			PicsField:            PicsField{pix},
+			ConfirmedClean:       data.ConfirmedClean,
+			KnownFruitableField:  data.KnownFruitableField,
+			MostRecentImageField: MostRecentImageField{importedPic},
+			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
+			AclField:             data.AclFor(ctx, perms),
+		}
 		// TODO: ADD TO MAP!
 		_, err = out.LcRecipeField.Get(ctx)
 		if err != nil && errors.Is(err, ErrMissingOptionalField) {
 			return DbTxnStdErr(w, "invalid LC recipe: "+err.Error(), http.StatusInternalServerError)
 		}
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
-		_, err := coll.InsertOne(ctx, out)
+		_, err = coll.InsertOne(ctx, out)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -429,7 +434,7 @@ type updateLiquidCultureRequest struct {
 	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	Contams        SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	WriteTagToField
-	//PermsField
+	PermsOnRequest
 }
 
 func (upr updateLiquidCultureRequest) reform() resolvedUpdateLiquidCultureRequest {
@@ -440,11 +445,11 @@ func (upr updateLiquidCultureRequest) reform() resolvedUpdateLiquidCultureReques
 		Notes:               upr.Notes,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
-		//PermsField:          upr.PermsField,
+		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
-func (mods resolvedUpdateLiquidCultureRequest) modsFor(existing LiquidCulture) (bson.D, error) {
+func (mods resolvedUpdateLiquidCultureRequest) modsFor(existing LiquidCulture, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
 		updateConfirmedCleanIfNeeded(mods.ConfirmedClean, existing.ConfirmedClean).
@@ -452,7 +457,7 @@ func (mods resolvedUpdateLiquidCultureRequest) modsFor(existing LiquidCulture) (
 		updateNotesIfNeeded(mods.Notes, existing.Notes).
 		updatePicsIfNeeded(mods.Images, existing.Pics).
 		updateContamsIfNeeded(mods.Contams, existing.Contaminations).
-		//updatePermsIfNeeded(mods.Perms, existing.Perms).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -465,7 +470,7 @@ type resolvedUpdateLiquidCultureRequest struct {
 	ConfirmedClean *bool
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams        SplitEntries[contamForm, Contamination]
-	//PermsField
+	PermsOnRequest
 }
 
 func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
@@ -493,19 +498,19 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
-	out := data.reform()
+	req := data.reform()
 	for i, _ := range data.Images.New {
 		loc, exists := newPics[i]
 		if !exists {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Images.New[i].Location = imageLocation(loc)
+		req.Images.New[i].Location = imageLocation(loc)
 	}
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
 			finalLoc := imageLocation(loc)
-			out.Contams.New[i].Location = &finalLoc
+			req.Contams.New[i].Location = &finalLoc
 		}
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
@@ -516,12 +521,19 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-		//restrictivePerms := minimalPermsBetween(data.Perms, existing.Perms)
-		//if err = restrictivePerms.ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "does not meet either old or new permissions: "+err.Error(), http.StatusBadRequest)
-		//}
-		upd, err := out.modsFor(existing)
-		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates!!!!!!!
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		upd, err := req.modsFor(existing, aclField)
+		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates?????
 	})
 	if err != nil {
 		handleWriteErr(err, w)

@@ -50,6 +50,7 @@ type JarRecipe struct {
 	AdditivesField                   // Per grain jar?
 	NotesField
 	LastUpdatedField
+	AclField // TODO: handle EVERYWHERE
 }
 
 type GrainPercentage struct {
@@ -256,6 +257,8 @@ type createJarRecipeRequest struct {
 	SugarsField
 	AdditivesField
 	NotesField
+	UsersThatCanEdit    []Base58Str   `json:"usersThatCanEdit,omitempty"`    // TODO: DO THIS IN TYPESCRIPT!
+	ProjectsThatCanEdit []projectName `json:"projectsThatCanEdit,omitempty"` // TODO: DO THIS IN TYPESCRIPT!
 }
 
 func (req createJarRecipeRequest) ValidateGrains() error {
@@ -296,8 +299,17 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	resolvedUserPerms, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
+		return
+	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(jarRecipesCollectionName)
+		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+		if err != nil {
+			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := JarRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
 			NameField:                  NameField{req.Name},
@@ -308,6 +320,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			AdditivesField:             AdditivesField{req.Additives},
 			NotesField:                 NotesField{req.Notes},
 			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+			AclField:                   acl,
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
@@ -327,7 +340,8 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 type updateJarRecipeRequest struct {
 	NameField
 	StandardField
-	Notes AllEntries[Note] `json:"notes"`
+	Notes          AllEntries[Note] `json:"notes"`
+	PermsOnRequest                  // TODO: handle in typescript and handler!
 }
 
 func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: txn?
@@ -363,6 +377,8 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 		updateNameIfNeeded(req.Name, existing.Name).
 		updateStandardIfNeeded(req.Standard, existing.Standard).
 		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
 		Finalized()
 	if err != nil {
 		http.Error(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
@@ -375,11 +391,30 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(jarRecipesCollectionName)
+		existing := JarRecipe{}
+		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+		if err != nil {
+			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		bsonId := bson.D{{"_id", existing.Id}}
+		// TODO: USE handleUpdateMods
+		// TODO: UPDATE PERMS!
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
+
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)

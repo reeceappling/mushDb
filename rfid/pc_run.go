@@ -18,6 +18,7 @@ type PCRun struct {
 	RunTimeMinutes    int `bson:"runtimeMinutes" json:"runtimeMinutes"` // todo; used to just be runtime, also used to be string
 	NotesField
 	LastUpdatedField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (run PCRun) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -88,15 +89,25 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "runtime must be greater than 10 minutes", http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
+	resolvedUserPerms, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
+		return
+	}
 
+	ctx := r.Context()
+	acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+	if err != nil {
+		return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+	}
 	toInsert := PCRun{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		CreationDateField:          req.CreationDateField,
 		RunTimeMinutes:             req.RunTimeMinutes,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		AclField:                   acl,
 	}
-	ctx := r.Context()
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	_, err = client.Database(dbName).Collection(pcRunCollectionName).InsertOne(ctx, toInsert)
 	if err != nil {
@@ -115,7 +126,8 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updatePcRunRequest struct {
-	Notes AllEntries[Note] `json:"notes"`
+	Notes          AllEntries[Note] `json:"notes"`
+	PermsOnRequest                  // TODO: handle in typescript and handler!
 }
 
 func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
@@ -147,9 +159,21 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		coll := ctx.Client().Database(dbName).Collection(pcRunCollectionName)
 		upd, err := NewMods().
 			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

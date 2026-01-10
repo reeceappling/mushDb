@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"reflect"
 	"slices"
-	"time"
 )
 
 const agarRecipesCollectionName = "agarRecipes"
@@ -29,6 +28,7 @@ type AgarRecipe struct {
 	AntibioticsField
 	NotesField
 	LastUpdatedField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (recipe AgarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -45,34 +45,36 @@ func (recipe AgarRecipe) CollectionName() string {
 	return agarRecipesCollectionName
 }
 
-type NewAgarRecipeRequest struct {
-	NameField
-	StandardField
-	LiquidsField
-	AgarGPerL int
-	NutrientsField
-	SugarsField
-	AdditivesField
-	AntibioticsField          // TODO: make sure to put dosages in notes
-	Notes            []string // TODO: these are just strings?
-}
+//type NewAgarRecipeRequest struct {
+//	NameField
+//	StandardField
+//	LiquidsField
+//	AgarGPerL int
+//	NutrientsField
+//	SugarsField
+//	AdditivesField
+//	AntibioticsField          // TODO: make sure to put dosages in notes
+//	Notes            []string // TODO: these are just strings?
+//	// TODO: ACL?
+//}
 
-func (req NewAgarRecipeRequest) asRecipe() AgarRecipe {
-	now := time.Now()
-	return AgarRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
-		NameField:                  req.NameField,
-		Agar:                       req.AgarGPerL,
-		LiquidsField:               req.LiquidsField,
-		NutrientsField:             req.NutrientsField,
-		SugarsField:                req.SugarsField,
-		AdditivesField:             req.AdditivesField,
-		AntibioticsField:           req.AntibioticsField,
-		StandardField:              req.StandardField,
-		NotesField:                 NotesField{stringsToNotes(req.Notes, now)},
-		LastUpdatedField:           LastUpdatedField{unixTimeFor(now)},
-	}
-}
+//func (req NewAgarRecipeRequest) asRecipe() AgarRecipe {
+//	now := time.Now()
+//	return AgarRecipe{
+//		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
+//		NameField:                  req.NameField,
+//		Agar:                       req.AgarGPerL,
+//		LiquidsField:               req.LiquidsField,
+//		NutrientsField:             req.NutrientsField,
+//		SugarsField:                req.SugarsField,
+//		AdditivesField:             req.AdditivesField,
+//		AntibioticsField:           req.AntibioticsField,
+//		StandardField:              req.StandardField,
+//		NotesField:                 NotesField{stringsToNotes(req.Notes, now)},
+//		LastUpdatedField:           LastUpdatedField{unixTimeFor(now)},
+//		AclField:                   AclField{}, // TODO: ACL?
+//	}
+//}
 
 func newAgarRecipe(ctx mongo.SessionContext, req AgarRecipe) utils.Result[AgarRecipe] {
 	res, err := ctx.Client().Database(dbName).Collection(agarRecipesCollectionName).InsertOne(ctx, req)
@@ -93,14 +95,16 @@ func newAgarRecipe(ctx mongo.SessionContext, req AgarRecipe) utils.Result[AgarRe
 type updateAgarRecipeRequest struct {
 	NameField
 	StandardField
-	Notes AllEntries[Note] `json:"notes"`
+	Notes          AllEntries[Note] `json:"notes"`
+	PermsOnRequest                  // TODO: handle in typescript and handler!
 }
 
-func (req updateAgarRecipeRequest) modsFor(existing AgarRecipe) (bson.D, error) {
+func (req updateAgarRecipeRequest) modsFor(existing AgarRecipe, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateNameIfNeeded(req.Name, existing.Name).
 		updateStandardIfNeeded(req.Standard, existing.Standard).
 		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -134,7 +138,18 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		upd, err := req.modsFor(existing)
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		upd, err := req.modsFor(existing, aclField)
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)
 	})
 	if err != nil {
@@ -177,6 +192,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			SugarsField:   SugarsField{},
 			StandardField: StandardField{true},
 			NotesField:    NotesField{},
+			AclField:      allCanReadAcl(),
 		},
 		{
 			NameField:                  NameField{"PDA - Potato Dextrose Agar"},
@@ -195,6 +211,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			}}},
 			StandardField: StandardField{true},
 			NotesField:    NotesField{},
+			AclField:      allCanReadAcl(),
 		},
 		{
 			NameField:                  NameField{"Water Agar"},
@@ -205,6 +222,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			SugarsField:                SugarsField{},
 			StandardField:              StandardField{true},
 			NotesField:                 NotesField{},
+			AclField:                   allCanReadAcl(),
 		},
 		{
 			NameField:                  NameField{"Grain Water Agar"},
@@ -220,6 +238,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("Grain water also acts as a nutrient source"),
 			}},
+			AclField: allCanReadAcl(),
 		},
 		{
 			NameField:                  NameField{"Antibiotic Agar"},
@@ -239,6 +258,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("50mg doxycycline per ?????"),
 			}},
+			AclField: allCanReadAcl(),
 		},
 	} {
 		var existing AgarRecipe
@@ -372,6 +392,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		AntibioticsField: AntibioticsField{[]antibiotic{Doxycycline, HydrogenPeroxide}},
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
+		AclField:         AclField{&testAcl},
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -389,12 +410,12 @@ func initializeAgarRecipes(ctx context.Context) error {
 type createAgarRecipeRequest struct {
 	NameField
 	StandardField
-	Agar int `json:"agar"`
+	Agar int `json:"agar"` // agar g/L
 	LiquidsField
 	NutrientsField
 	SugarsField
 	AdditivesField
-	AntibioticsField
+	AntibioticsField // TODO: make sure to put dosages in notes?
 	NotesField
 }
 
@@ -410,20 +431,22 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	entry := AgarRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		NameField:                  req.NameField,
-		LiquidsField:               req.LiquidsField,
-		Agar:                       req.Agar,
-		StandardField:              req.StandardField,
-		NutrientsField:             req.NutrientsField,
-		SugarsField:                req.SugarsField,
-		AdditivesField:             req.AdditivesField,
-		AntibioticsField:           req.AntibioticsField,
-		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-	}
+
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		entry := AgarRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{id},
+			NameField:                  req.NameField,
+			LiquidsField:               req.LiquidsField,
+			Agar:                       req.Agar,
+			StandardField:              req.StandardField,
+			NutrientsField:             req.NutrientsField,
+			SugarsField:                req.SugarsField,
+			AdditivesField:             req.AdditivesField,
+			AntibioticsField:           req.AntibioticsField,
+			NotesField:                 req.NotesField,
+			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+			AclField:                   allCanWriteAcl(),
+		}
 		result := newAgarRecipe(ctx, entry)
 		if result.Err != nil {
 			return DbTxnStdErr(w, "Agar batch creation failure: "+result.Err.Error(), http.StatusInternalServerError)

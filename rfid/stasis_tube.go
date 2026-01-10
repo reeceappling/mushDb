@@ -41,7 +41,7 @@ type StasisTube struct { // TODO: instructions somewhere?
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (s StasisTube) CanTransferTo(dst geneticSource) error {
@@ -177,7 +177,7 @@ func initializeStasisTubes(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil
@@ -222,6 +222,7 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
 			CreationDateField:     CreationDateField{now},
 			LastUpdatedField:      LastUpdatedField{now},
+			AclField:              allCanWriteAcl(),
 		}
 		if _, err := toInsert.PcRunOptionalField.Get(ctx); err != nil && !errors.Is(err, ErrMissingOptionalField) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -249,7 +250,7 @@ type updateStasisTubeRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	Contams SplitEntries[contamForm, ContaminationLessLocation]
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
@@ -261,7 +262,7 @@ func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		WriteTagToField:     upr.WriteTagToField,
-		//PermsField:          upr.PermsField,
+		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
@@ -273,7 +274,7 @@ type resolvedUpdateStasisTubeRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
@@ -408,6 +409,17 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := out.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
 			if err = db.Collection(salesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
 				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed
@@ -423,9 +435,9 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 					updateNotesIfNeeded(out.Notes, existing.Notes).
 					updatePicsIfNeeded(out.Images, existing.Pics).
 					updateContamsIfNeeded(out.Contams, existing.Contaminations).
-			//updatePermsIfNeeded(out.Perms, existing.Perms). // TODO: update sessions with perms updates
-			updateLastUpdatedIfNeeded().
-			Finalized()
+					updatePermsIfNeeded(aclField.ACL, existing.ACL).
+					updateLastUpdatedIfNeeded().
+					Finalized()
 		if err != nil {
 			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
@@ -462,7 +474,7 @@ type importStasisTubeRequest struct {
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	//PermsField // TODO: new
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
@@ -553,6 +565,11 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		//		return DbTxnStdErr(w, err.Error(), http.StatusUnauthorized) // TODO: ok?
 		//	}
 		//}
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+
 		toInsert := StasisTube{
 			MainCollectionIdField:   MainCollectionIdField{id},
 			CreationDateField:       data.CreationDateField,
@@ -563,7 +580,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:     data.KnownFruitableField,
 			MostRecentImageField:    MostRecentImageField{importedPic},
 			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-			//PermsField:              PermsField{finalPerms},
+			AclField:                data.AclFor(ctx, perms),
 		}
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)

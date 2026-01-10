@@ -3,6 +3,7 @@ package rfid
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -32,6 +33,7 @@ type SubstrateRecipe struct {
 	AliasesField // must be unique everywhere
 	NotesField   // ingredients in notes
 	LastUpdatedField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (recipe SubstrateRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -167,6 +169,56 @@ func initializeSubstrates(ctx context.Context) error {
 	return err
 }
 
+// TODO: USE THIS EVERYWHERE!
+type PermsOnRequest struct {
+	UserPerms    map[Base58Str]bool   `json:"userPerms,omitempty"` // Bool is canEdit
+	ProjectPerms map[projectName]bool `json:"projectPerms,omitempty"`
+	BlanketPerm  ReadWritePerm        `json:"blanketPerm,omitempty"` // TODO: ensure this is ok and we don't want publiclyReadable instead
+}
+
+func (requestPerms PermsOnRequest) AclFor(ctx mongo.SessionContext, perms ResolvedUserPerms) (AclField, error) {
+	if requestPerms.BlanketPerm != nil && *requestPerms.BlanketPerm {
+		return AclField{ACL: nil}, nil
+	}
+	// validate projects
+	// TODO: count instead?
+	projColl := ctx.Client().Database(dbName).Collection(projectsCollectionName)
+	for projName, _ := range requestPerms.ProjectPerms {
+		err := projColl.FindOne(ctx, bson.D{{"_id", projName}}).Err()
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return AclField{}, errors.New(string("could not find project " + projName))
+			}
+			return AclField{}, err
+		}
+	}
+	// validate users
+	// TODO: count instead?
+	userColl := ctx.Client().Database(dbName).Collection(userCollName)
+	for userB58, _ := range requestPerms.UserPerms {
+		userAltId, err := userB58.toAltCollectionId()
+		if err != nil {
+			return AclField{}, err
+		}
+		err = userColl.FindOne(ctx, bson.D{{"_id", userAltId}}).Err()
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return AclField{}, errors.New(string("could not find user " + userB58))
+			}
+			return AclField{}, err
+		}
+	}
+
+	// Resolve acl
+	acl := ACL{
+		Users:       requestPerms.UserPerms,
+		Projects:    requestPerms.ProjectPerms,
+		BlanketPerm: (requestPerms.BlanketPerm != nil),
+	}
+	acl.Users[perms.user()] = true
+	return AclField{ACL: &acl}, nil
+}
+
 type createSubstrateRecipeRequest struct {
 	NameField
 	AliasesField
@@ -186,8 +238,17 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
+	resolvedUserPerms, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
+		return
+	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(substrateRecipesCollectionName)
+		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+		if err != nil {
+			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := SubstrateRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
 			NameField:                  req.NameField,
@@ -195,6 +256,7 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			StandardField:              req.StandardField,
 			NotesField:                 req.NotesField,
 			LastUpdatedField:           LastUpdatedFieldForNow(),
+			AclField:                   acl,
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
@@ -215,7 +277,8 @@ type updateSubstrateRecipeRequest struct {
 	NameField
 	AliasesField
 	StandardField
-	Notes AllEntries[Note] `json:"notes"`
+	Notes          AllEntries[Note] `json:"notes"`
+	PermsOnRequest                  // TODO: handle in typescript and handler!
 }
 
 func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -247,11 +310,23 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		upd, err := NewMods().
 			updateNameIfNeeded(req.Name, existing.Name).
 			updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: make sure no duplicates
 			updateStandardIfNeeded(req.Standard, existing.Standard).
 			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

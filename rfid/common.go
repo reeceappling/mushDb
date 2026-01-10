@@ -708,11 +708,46 @@ var (
 	exStasis             = mainCollIdForint(idTestStasis)
 	exSwabId             = mainCollIdForint(idTestSwab)
 	exAlts               = []AlternateCollectionId{exAltId, exAltId}
-	exProj               = projectName(testEntryStringId)
-	exProjects           = []projectName{exProj, exProj}
-	exBool               = utils.Pointer(true)
-	exPicLoc             = "test.jpg" // TODO: make sure this exists
-	exPic                = PicWithNotes{
+	exProjWrite          = projectName("example write project ")
+	exProjRead           = projectName("example read project ")
+	testProj             = projectName("test project")
+	exProjects           = []projectName{exProjWrite, exProjWrite}
+	exUserRead           = altCollIdForint(0)
+	exUserWrite          = altCollIdForint(1)
+	exUserAdmin          = altCollIdForint(2)
+	exUserNoProjectRead  = altCollIdForint(3)
+	exUserNoProjectWrite = altCollIdForint(4)
+	exProjPerms          = map[string]*bool{
+		string(exUserRead[:]):  nil,
+		string(exUserWrite[:]): utils.Pointer(false),
+		string(exUserAdmin[:]): utils.Pointer(true),
+	}
+	exAcl = ACL{
+		Users: map[Base58Str]bool{
+			exUserNoProjectRead.asBase58():  false,
+			exUserNoProjectWrite.asBase58(): true,
+		},
+		Projects: map[projectName]bool{
+			exProjRead:  false,
+			exProjWrite: true,
+		},
+		BlanketPerm: false,
+	}
+	testAcl = ACL{
+		// TODO: ensure ok
+		Users: map[Base58Str]bool{
+			exUserNoProjectRead.asBase58():  false,
+			exUserNoProjectWrite.asBase58(): true,
+		},
+		Projects: map[projectName]bool{
+			exProjRead:  false,
+			exProjWrite: true,
+		},
+		BlanketPerm: false,
+	}
+	exBool   = utils.Pointer(true)
+	exPicLoc = "test.jpg" // TODO: make sure this exists
+	exPic    = PicWithNotes{
 		Time:       exampleTime,
 		Location:   imageLocation(exPicLoc),
 		NotesField: NotesField{exampleNotes()},

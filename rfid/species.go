@@ -24,7 +24,7 @@ type Species struct {
 	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate,omitempty" json:"standardSubstrate,omitempty"`
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (sp Species) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -266,7 +266,6 @@ type createSpeciesRequest struct {
 	AliasesField
 	SubstrateRecipeField // TODO: tag used to be "sub" is now "recipe"
 	NotesField
-	//PermsField
 }
 
 func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -283,7 +282,15 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	//	http.Error(w, "can not write with provided perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
+	perms, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		acl, err := newAlwaysReadableAcl(ctx, perms, nil, nil)
+		if err != nil {
+			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+		}
 		db := ctx.Client().Database(dbName)
 		err = db.Collection(substrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
 		if err != nil {
@@ -297,7 +304,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 			StandardSubstrate: req.Substrate,
 			NotesField:        req.NotesField,
 			LastUpdatedField:  LastUpdatedField{unixTimeForNow()},
-			//PermsField:        req.PermsField,
+			AclField:          acl,
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
@@ -318,7 +325,7 @@ type updateSpeciesRequest struct {
 	Substrate AlternateCollectionId `json:"standardSubstrate"`
 	Notes     AllEntries[Note]      `json:"notes,omitempty"`
 	AliasesField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -351,14 +358,22 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusBadRequest)
-		//}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		upd, err := NewMods().
 			UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
 			updateNotesIfNeeded(req.Notes, existing.Notes).
 			updateAliasesIfNeeded(req.Aliases, existing.Aliases).
-			//updatePermsIfNeeded(req.Perms, existing.Perms). // TODO: validate?
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			Finalized()
 		if err != nil {
 			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)

@@ -36,7 +36,7 @@ type SporePrint struct {
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (sw SporePrint) Innoculatable() bool {
@@ -121,7 +121,7 @@ func (sw SporePrint) EntryTypeField() *string {
 }
 
 //func (sw SporePrint) altId() AlternateCollectionId {
-//	return AlternateCollectionId(sw.Id)
+//	return AlternateCollectionId(sw.UserId)
 //}
 
 func (sw SporePrint) id() []byte {
@@ -187,6 +187,7 @@ type createSporePrintRequest struct {
 	FruitId AlternateCollectionId `bson:"fruitId" json:"fruitId"`
 	NotesField
 	Pics []PicWithNotesLessLocation //"newPic-1"
+	// TODO: USE PARENT PERMS?
 }
 
 func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
@@ -334,7 +335,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			NotesField:                        NotesField{out.Notes},
 			LastUpdatedField:                  LastUpdatedField{now},
 			// Do not check permissions, just pass parent perms to child
-			//PermsField: PermsField{parent.Perms},
+			AclField: parent.AclField,
 		}
 		_, err = db.Collection(sporePrintCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
@@ -359,9 +360,9 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 type updateSporePrintRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
-	Notes AllEntries[Note]
-	Pics  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
-	//PermsField
+	Notes          AllEntries[Note]
+	Pics           SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
@@ -375,16 +376,16 @@ func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 				return i.asPicWithNotes(nil)
 			}),
 		},
-		//PermsField: PermsField{upr.Perms},
+		PermsOnRequest: upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateSporePrintRequest struct {
 	SaleField
 	DisposedField
-	Notes AllEntries[Note]
-	Pics  SplitEntries[picWithNotesForm, PicWithNotes]
-	//PermsField
+	Notes          AllEntries[Note]
+	Pics           SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
@@ -420,6 +421,17 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := out.AclFor(ctx, user) // TODO: USE IN modsFor
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
 		//	return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
 		//}
@@ -428,7 +440,7 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
 			updateNotesIfNeeded(data.Notes, existing.Notes).
 			updatePicsIfNeeded(out.Pics, existing.Pics).
-			//updatePermsIfNeeded(data.Perms, existing.Perms). // TODO: ok?
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
@@ -465,7 +477,7 @@ type importSporePrintRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	// pic as "img"
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
@@ -572,6 +584,10 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//}
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 
 		toInsert := SporePrint{
 			MainCollectionIdField:   MainCollectionIdField{id},
@@ -582,7 +598,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			MostRecentImageField:    MostRecentImageField{importedPic},
 			NotesField:              data.NotesField,
 			LastUpdatedField:        LastUpdatedFieldForNow(),
-			//PermsField:              PermsField{finalPerms},
+			AclField:                data.AclFor(ctx, perms),
 		}
 		coll := ctx.Client().Database(dbName).Collection(sporePrintCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)

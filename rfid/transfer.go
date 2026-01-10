@@ -48,7 +48,7 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	ToImage           *imageLocation     `bson:"toImage,omitempty" json:"toImage,omitempty"`
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (t Transfer) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -162,6 +162,7 @@ type createTransferRequest struct {
 	// FromImage == 'picFrom'
 	// ToImage == 'picTo'
 	NotesField
+	// TODO: perms from parent?
 }
 
 func createTransferHandler(w http.ResponseWriter, r *http.Request) {
@@ -264,14 +265,17 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		if err = parent.CanTransferTo(child); err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusBadRequest)
 		}
+		// TODO: set child perms to the parent perms!
 
-		//finalPerms := minimalPermsBetween(parent.Permissions(), child.Permissions())
-		//if !finalPerms.Valid() {
-		//	return DbTxnStdErr(w, "invalid new permissions!", http.StatusBadRequest)
-		//}
-		//if finalPerms.ValidateUserCanWrite(ctx) != nil {
-		//	return DbTxnStdErr(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusBadRequest)
-		//}
+		// TODO: ensure user has perms to make this transfer? (can edit parent)
+		resolvedPerms, err := GetResolvedUserPerms(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusUnauthorized)
+		}
+		// to make a transfer, the user must only be able to write to the child initially
+		if userChildPerm := child.Permissions().HighestPermFor(resolvedPerms); userChildPerm == nil || !(*userChildPerm) {
+			return DbTxnStdErr(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusUnauthorized)
+		}
 		// Create Transfer
 		xfer := Transfer{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -285,7 +289,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			ToImage:                    (*imageLocation)(toPic),
 			NotesField:                 data.NotesField,
 			LastUpdatedField:           LastUpdatedFieldForNow(),
-			//PermsField:                 PermsField{finalPerms},
+			AclField:                   AclField{ACL: parent.Permissions()},
 		}
 		_, err = db.Collection(transfersCollName).InsertOne(ctx, xfer)
 		if err != nil {
@@ -312,8 +316,8 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateTransferRequest struct {
-	Notes AllEntries[Note] `json:"notes,omitempty"`
-	//PermsField
+	Notes          AllEntries[Note] `json:"notes,omitempty"`
+	PermsOnRequest                  // TODO: ????????? handle in typescript and handler!
 }
 
 func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
@@ -345,13 +349,20 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
-		//restrictivePerms := minimalPermsBetween(existing.Perms, req.Perms) // TODO: make sure to use this (restrictive perms var) everywhere needed
-		//if err = restrictivePerms.ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "permission denied for overlapping perms: "+err.Error(), http.StatusUnauthorized)
-		//}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		upd, err := NewMods().
 			updateNotesIfNeeded(req.Notes, existing.Notes). // TODO: make sure this works the way we want
-			//updatePermsIfNeeded(restrictivePerms, existing.Perms).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

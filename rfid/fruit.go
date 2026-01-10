@@ -37,7 +37,7 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (f Fruit) CanTransferTo(dst geneticSource) error {
@@ -101,11 +101,11 @@ func (f Fruit) EntryTypeField() *string {
 }
 
 //func (f Fruit) altId() AlternateCollectionId {
-//	return AlternateCollectionId(f.Id)
+//	return AlternateCollectionId(f.UserId)
 //}
 //
 //func (f Fruit) id() []byte {
-//	return f.Id[:]
+//	return f.UserId[:]
 //}
 
 func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId) error {
@@ -123,7 +123,7 @@ func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId)
 func (f Fruit) addSale(ctx mongo.SessionContext, printId AlternateCollectionId) error {
 	// TODO; get rid of?
 	// update fruit
-	//res, err := f.Collection(ctx).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId)) // TODO: ADD A SALE IF POSSIBLE
+	//res, err := f.Collection(ctx).UpdateByID(ctx, f.UserId, pushToArrayInline("prints", printId)) // TODO: ADD A SALE IF POSSIBLE
 	//if err != nil {
 	//	return err
 	//}
@@ -197,7 +197,8 @@ type createFruitRequest struct {
 	ParentType  string
 	HarvestDate unixTime
 	NotesField
-	Pics []PicWithNotesLessLocation // newPic-1
+	Pics           []PicWithNotesLessLocation // newPic-1
+	PermsOnRequest                            // TODO: handle in typescript and handler!
 }
 
 func (req createFruitRequest) reform() createFruitResolved {
@@ -213,6 +214,7 @@ func (req createFruitRequest) reform() createFruitResolved {
 				NotesField: NotesField{i.Notes},
 			}
 		})},
+		PermsOnRequest: req.PermsOnRequest,
 	}
 }
 
@@ -222,7 +224,6 @@ type createFruitResolved struct {
 	HarvestDate               unixTime
 	NotesField
 	PicsField // newPic-1
-	//PermsField // TODO: FIX THIS
 }
 
 func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FORMAT WITH DATA FIRST!
@@ -286,7 +287,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 			MostRecentImageField:              MostRecentImageField{mri},
 			NotesField:                        NotesField{out.Notes},
 			LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
-			//PermsField:                        PermsField{parentPerms},
+			AclField:                          AclField{parent.Permissions()}, PermsField{parentPerms},
 		}
 		// Write new fruit to db
 		_, err = db.Collection(fruitsCollName).InsertOne(ctx, toInsert)
@@ -306,9 +307,9 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 
 type updateFruitRequest struct {
 	DisposedField
-	Notes  AllEntries[Note]
-	Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
-	//PermsField
+	Notes          AllEntries[Note]
+	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
+	PermsOnRequest                                                          // TODO: handle in typescript and handler!
 }
 
 func (upr updateFruitRequest) reform() resolvedUpdateFruitRequest {
@@ -321,15 +322,15 @@ func (upr updateFruitRequest) reform() resolvedUpdateFruitRequest {
 				return i.asPicWithNotes(nil)
 			}),
 		},
-		//PermsField: upr.PermsField,
+		PermsOnRequest: req.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateFruitRequest struct {
 	DisposedField
-	Notes  AllEntries[Note]
-	Images SplitEntries[picWithNotesForm, PicWithNotes] //"newPic-1"
-	//PermsField
+	Notes          AllEntries[Note]
+	Images         SplitEntries[picWithNotesForm, PicWithNotes] //"newPic-1"
+	PermsOnRequest                                              // TODO: handle in typescript and handler!
 }
 
 func (out resolvedUpdateFruitRequest) modsFor(existing Fruit) (bson.D, error) {
@@ -374,7 +375,17 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
-
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user) // TODO: USE IN modsFor
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil { // TODO: PERMS VALIDATION FOR UPDATE
 		//	return DbTxnStdErr(w, "cannot modify: "+err.Error(), http.StatusUnauthorized)
 		//}
@@ -391,7 +402,7 @@ type importFruitRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	//PermsField // TODO: new, use
+	PermsOnRequest // TODO: handle in typescript and handler!
 	// image as "img"
 }
 
@@ -503,20 +514,25 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 	//}
 	now := unixTimeForNow()
 
-	out := Fruit{
-		MainCollectionIdField:   MainCollectionIdField{id},
-		CreationDateField:       CreationDateField{unixTimeForNow()},
-		SpeciesField:            data.SpeciesField,
-		SubspeciesOptionalField: data.SubspeciesOptionalField,
-		GenSporeField:           GenSporeField{gen},
-		ParentTypeField:         ParentTypeField{&data.ParentType},
-		PicsField:               PicsField{pix},
-		MostRecentImageField:    MostRecentImageField{importedPic},
-		NotesField:              NotesField{data.Notes},
-		LastUpdatedField:        LastUpdatedField{now},
-		//PermsField:              data.PermsField,
-	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		out := Fruit{
+			MainCollectionIdField:   MainCollectionIdField{id},
+			CreationDateField:       CreationDateField{unixTimeForNow()},
+			SpeciesField:            data.SpeciesField,
+			SubspeciesOptionalField: data.SubspeciesOptionalField,
+			GenSporeField:           GenSporeField{gen},
+			ParentTypeField:         ParentTypeField{&data.ParentType},
+			PicsField:               PicsField{pix},
+			MostRecentImageField:    MostRecentImageField{importedPic},
+			NotesField:              NotesField{data.Notes},
+			LastUpdatedField:        LastUpdatedField{now},
+			AclField:                data.AclFor(ctx, perms),
+		}
+
 		// TODO: insert map entry
 		coll := ctx.Client().Database(dbName).Collection(fruitsCollName)
 		_, err = coll.InsertOne(ctx, out)

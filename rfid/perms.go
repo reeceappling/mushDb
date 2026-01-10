@@ -1,6 +1,7 @@
 package rfid
 
-//var (
+// var (
+//
 //	_ Permissioned = &Perms{}
 //	_ Permissioned = &Bag{}
 //	_ Permissioned = &Fruit{}
@@ -15,11 +16,12 @@ package rfid
 //	_ Permissioned = &Species{}    // TODO: sporeSwab? // TODO: plugs?
 //	_ Permissioned = &Subspecies{} // TODO: sporeSwab?
 //	_ Permissioned = &Transfer{}   // TODO: HANDLE
-//)
 //
-//type Permissioned interface {
-//	Permissions() *Perms
-//}
+// )
+type Permissioned interface {
+	Permissions() *ACL
+}
+
 //
 //// TODO: HOLD ON TO USER AND GROUP PERMS IN A CACHE FOR A LITTLE BIT?
 //
@@ -65,12 +67,12 @@ package rfid
 //		return ClientSideUserPermsSubset{}, errors.New("non-matching id lengths")
 //	}
 //	for _, user := range results {
-//		i, exists := indForId[user.Id]
+//		i, exists := indForId[user.UserId]
 //		if !exists {
 //			return ClientSideUserPermsSubset{}, errors.New("found id not in set")
 //		}
 //		ids[i] = UserPermsPair{
-//			Id:  user.Id,
+//			UserId:  user.UserId,
 //			val: user.humanReadableId(),
 //		}
 //	}
@@ -85,14 +87,14 @@ package rfid
 //func (csups ClientSideUserPermsSubset) Convert() ServerSideUserPermsSubset {
 //	return ServerSideUserPermsSubset(objectPermSubset[AlternateCollectionId]{
 //		Ids: sliceutils.Map(csups.Ids, func(upp UserPermsPair) AlternateCollectionId {
-//			return upp.Id
+//			return upp.UserId
 //		}),
 //		CanWrite: csups.CanWrite,
 //	})
 //}
 //
 //type UserPermsPair struct {
-//	Id  AlternateCollectionId `json:"id" bson:"id"`
+//	UserId  AlternateCollectionId `json:"id" bson:"id"`
 //	val string                `bson:"val" json:"val"` // email or username
 //}
 //
@@ -218,7 +220,7 @@ package rfid
 //// TODO: ON PROJECT PERMS CHANGE, CHANGE USER SESSION PERMS
 //
 //type ProjectPermUserId struct {
-//	Id  AlternateCollectionId `bson:"id" json:"id"`
+//	UserId  AlternateCollectionId `bson:"id" json:"id"`
 //	Val string                `bson:"val" json:"val"` // Email or username
 //}
 //
@@ -382,7 +384,7 @@ package rfid
 //	}
 //	out := p.Blanket
 //	// Check if user is in item users
-//	if userIndex := slices.Index(p.Users.Ids, AlternateCollectionId(userAuthInfo.Id)); userIndex != -1 {
+//	if userIndex := slices.Index(p.Users.Ids, AlternateCollectionId(userAuthInfo.UserId)); userIndex != -1 {
 //		if p.Users.CanWrite[userIndex] {
 //			return perms.Write
 //		}

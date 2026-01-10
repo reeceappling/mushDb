@@ -20,6 +20,7 @@ type WetnessField struct {
 //	JarRecipeRequiredField
 //	NotesField
 //	LastUpdatedField
+//  AclField // TODO: handle EVERYWHERE
 //}
 //
 //func (batch GrainBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -172,7 +173,7 @@ type WetnessField struct {
 //
 //	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 //		coll := ctx.Client().Database(dbName).Collection(grainBatchesCollectionName)
-//		bsonId := bson.D{{"_id", existing.Id}}
+//		bsonId := bson.D{{"_id", existing.UserId}}
 //		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 //		if err != nil {
 //			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)

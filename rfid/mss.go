@@ -30,7 +30,7 @@ type MSS struct {
 	DisposedField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (M MSS) Innoculatable() bool {
@@ -128,7 +128,7 @@ func initializeMSS(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err := coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil
@@ -142,7 +142,6 @@ type createMssRequest struct {
 	NotesField
 	WriteTagToField
 	// Uses parent perms, then user can modify if they have the perms for parent
-	// TODO: DESCRIBE RATIONALE
 }
 
 func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called from spore print page
@@ -183,7 +182,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
 			NotesField:                        NotesField{data.Notes},
 			LastUpdatedField:                  LastUpdatedField{now},
-			//PermsField:                        PermsField{parent.Perms}, // NOTE: do NOT ensure user is authorized to write on parent, they will just be blocked from viewing.
+			AclField:                          parent.AclField, // NOTE: do NOT ensure user is authorized to write on parent, they will just be blocked from viewing.
 		}
 		_, err = db.Collection(mainCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
@@ -206,7 +205,7 @@ type importMssRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	WriteTagToField
-	//PermsField // TODO: new // TODO: SEND THIS OVER. ptr?
+	//PermsField // TODO: USE SPECIES PERMS
 	// image as "img"
 	// No ParentType/Parent because these are assumed to be from outside sources
 }
@@ -245,7 +244,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
-	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Id) // TODO: species and subspecies perms?
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.UserId) // TODO: species and subspecies perms?
 	toInsert := MSS{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
@@ -277,7 +276,7 @@ type updateMssRequest struct {
 	DisposedField
 	SaleField
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func updateMssHandler(w http.ResponseWriter, r *http.Request) {
@@ -312,6 +311,17 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := data.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		//if err = minimalPermsBetween(data.Perms, existing.Perms).ValidateUserCanWrite(ctx); err != nil {
 		//	return DbTxnStdErr(w, "old or new perms not writeable by user: "+err.Error(), http.StatusBadRequest)
 		//}
@@ -324,7 +334,7 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 			updateSaleIfNeeded(data.Sale, existing.Sale).
 			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
 			updateNotesIfNeeded(data.Notes, existing.Notes).
-			//updatePermsIfNeeded(data.Perms, existing.Perms).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

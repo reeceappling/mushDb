@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -22,8 +23,15 @@ type Project struct {
 	NotesField
 	LastUpdatedField
 	// TODO: FIX PROJECT PERMS
+	Perms ProjectPerms `bson:"perms,omitempty" json:"perms,omitempty"`
 	//Perms ProjectPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: account for this, make sure it is perms not permissions
 	// TODO: make it so we can add/remove users from projects
+}
+
+func (p Project) AddUser(u User, perm ReadWritePerm) string {
+	// TODO: this!!!!
+	// TODO: update user entry
+	// TODO: update user session?
 }
 
 func (p Project) StringId() string {
@@ -51,34 +59,41 @@ func initializeProjects(ctx context.Context) error {
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		newSimpleIndex("completed", "creationDate", true, true, false),
 		lastUpdatedIndexModel,
+		// TODO: Perms?
 	})
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	existingEntry := Project{}
-	testItem := Project{
-		Name:              exProj,
-		CreationDateField: CreationDateField{exampleTime},
-		Completed:         &exampleTime,
-		NotesField:        NotesField{exampleNotes()},
-		LastUpdatedField:  LastUpdatedField{exampleTime},
-	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
+	for i, testItem := range []Project{
+		{
+			Name:              testProj,
+			CreationDateField: CreationDateField{exampleTime},
+			Completed:         &exampleTime,
+			NotesField:        NotesField{exampleNotes()},
+			LastUpdatedField:  LastUpdatedField{exampleTime},
+			Perms:             exProjPerms,
+		},
+		{
+			Name:              exProjWrite,
+			CreationDateField: CreationDateField{exampleTime},
+			Completed:         nil,
+			NotesField:        NotesField{exampleNotes()},
+			LastUpdatedField:  LastUpdatedField{exampleTime},
+			Perms:             exProjPerms,
+		}, {
+			Name:              exProjRead,
+			CreationDateField: CreationDateField{exampleTime},
+			Completed:         nil,
+			NotesField:        NotesField{exampleNotes()},
+			LastUpdatedField:  LastUpdatedField{exampleTime},
+			Perms:             exProjPerms,
+		},
+	} {
+		// If test item does not exist or does not match, then create/update it
+		err = coll.FindOneAndReplace(ctx, bson.D{{"_id", testItem.Name}}, testItem).Err()
+		if err == nil {
+			return err
 		}
-	}
-	res, err := coll.InsertOne(ctx, testItem)
-	if err != nil {
-		return err
-	}
-	if res == nil {
-		return errors.New("result should not be nil")
-	}
-	if res.InsertedID != exAltId {
-		return errors.New("entry id did not match")
 	}
 	return nil
 }
@@ -86,6 +101,7 @@ func initializeProjects(ctx context.Context) error {
 type createProjectRequest struct {
 	NameField
 	NotesField
+	// TODO: PERMS!
 	//Perms ProjectPerms `json:"perms"` // TODO: validate
 }
 
@@ -113,14 +129,14 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 	//	authorExistsInPerms := false
 	//	for _, user := range req.Perms.Users.Ids {
 	//		// TODO: validate that each userId exists in the db
-	//		if user.Id.String() == authinfo.Id.String() {
+	//		if user.UserId.String() == authinfo.UserId.String() {
 	//			authorExistsInPerms = true
 	//			break
 	//		}
 	//	}
 	//	if !authorExistsInPerms {
 	//		req.Perms.Users = req.Perms.Users.WithAuthor(ProjectPermUserId{
-	//			Id:  authinfo.Id,
+	//			UserId:  authinfo.UserId,
 	//			Val: "FIXME!", // TODO: this
 	//		})
 	//	}
@@ -157,6 +173,8 @@ type updateProjectRequest struct {
 	Completed *unixTime        `json:"completed,omitempty"`
 	Notes     AllEntries[Note] `json:"notes"`
 	//Perms     ProjectPerms     `json:"perms"`
+	// TODO: PERMS!
+	// TODO: update perms should update users too!
 }
 
 func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +226,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//	tempName := map[Base58Str]string{}
 		//	var existsAlready = false
 		//	for i, userIds := range req.Perms.Users.Ids {
-		//		userIdStr := userIds.Id.asBase58()
+		//		userIdStr := userIds.UserId.asBase58()
 		//		_, existsAlready = tempCanWrite[userIdStr]
 		//		if existsAlready {
 		//			return DbTxnStdErr(w, fmt.Sprintf(`userId %d already exists in request`, i), http.StatusBadRequest)
@@ -219,7 +237,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//	}
 		//
 		//	for i, current := range existing.Perms.Users.Ids {
-		//		id := current.Id.asBase58()
+		//		id := current.UserId.asBase58()
 		//		newPerm, exists := tempCanWrite[]
 		//		if !exists {
 		//			removedUsers = append(removedUsers, current)
@@ -240,7 +258,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//			panic("SHOULD NEVER HAPPEN: " + err.Error()) // TODO: this
 		//		}
 		//		newUsers[ProjectPermUserId{
-		//			Id:  id,
+		//			UserId:  id,
 		//			Val: tempName[uidBase58],
 		//		}] = canWrite
 		//	}
@@ -366,7 +384,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //				continue
 //			}
 //			userIndex := slices.IndexFunc(project.Perms.Users.Ids, func(idPair ProjectPermUserId) bool {
-//				return idPair.Id.String() == auth.Id.String()
+//				return idPair.UserId.String() == auth.UserId.String()
 //			})
 //			if userIndex == -1 {
 //				if project.Perms.Blanket == perms.Read && !writeOnly {

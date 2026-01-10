@@ -25,7 +25,7 @@ type SubstrateBatch struct { // TODO: use this
 	SubstrateRecipeField
 	NotesField
 	LastUpdatedField
-	//PermsField // TODO: delete?
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (recipe SubstrateBatch) CollectionName() string {
@@ -152,7 +152,6 @@ func initializeSubstrateBatches(ctx context.Context) error {
 type createSubstrateBatchRequest struct {
 	SubstrateRecipeField
 	NotesField
-	// TODO: perms???
 }
 
 func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
@@ -167,6 +166,11 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
+	resolvedUserPerms, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
+		return
+	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
 		err = db.Collection(substrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
@@ -176,13 +180,17 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, "error getting substrate recipe: "+err.Error(), http.StatusInternalServerError)
 		}
+		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+		if err != nil {
+			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := SubstrateBatch{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
 			CreationDateField:          CreationDateField{CreationDate: unixTimeForNow()},
 			SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate}, // TODO: validate
 			NotesField:                 req.NotesField,
 			LastUpdatedField:           LastUpdatedFieldForNow(),
-			//PermsField:                 PermsField{}, // TODO: this?
+			AclField:                   acl,
 		}
 		_, err = db.Collection(substrateBatchCollectionName).InsertOne(r.Context(), toInsert)
 		if err != nil {
@@ -200,8 +208,8 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSubstrateBatchRequest struct {
-	Notes AllEntries[Note] `json:"notes"`
-	// TODO: perms???
+	Notes          AllEntries[Note] `json:"notes"`
+	PermsOnRequest                  // TODO: handle in typescript and handler!
 }
 
 func updateSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
@@ -233,8 +241,20 @@ func updateSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			return DbTxnStdErr(w, err.Error(), stat)
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := req.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		upd, err := NewMods().
 			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {

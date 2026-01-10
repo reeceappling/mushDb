@@ -41,7 +41,7 @@ type Slant struct {
 	MostRecentImageField
 	NotesField
 	LastUpdatedField
-	//PermsField
+	AclField // TODO: handle EVERYWHERE
 }
 
 func (s Slant) CanTransferTo(dst geneticSource) error {
@@ -241,7 +241,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 			StickType:             data.StickType,
 			CreationDateField:     CreationDateField{now},
 			LastUpdatedField:      LastUpdatedField{now},
-			// No Perms here for basic plates
+			AclField:              allCanWriteAcl(),
 		}
 		_, err = toInsert.AgarBatchField.Get(ctx)
 		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
@@ -276,7 +276,7 @@ func (upr updateSlantRequest) reform() resolvedUpdateSlantRequest {
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		WriteTagToField:     upr.WriteTagToField,
-		//PermsField:          upr.PermsField,
+		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
@@ -332,6 +332,17 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
+		user, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		if !user.HasPermissionToEdit(existing) {
+			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+		}
+		aclField, err := out.AclFor(ctx, user)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
 		//	return DbTxnStdErr(w, "bad overlapping perms for user:"+err.Error(), http.StatusBadRequest)
 		//}
@@ -342,7 +353,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 			updateNotesIfNeeded(out.Notes, existing.Notes).
 			updatePicsIfNeeded(out.Images, existing.Pics).
 			updateContamsIfNeeded(out.Contams, existing.Contaminations).
-			//updatePermsIfNeeded(out.Perms, existing.Perms).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
@@ -381,7 +392,7 @@ type importSlantRequest struct {
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	//PermsField
+	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
@@ -490,6 +501,10 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		//	}
 		//	finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: maximal with perms if nonWrite
 		//}
+		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := Slant{
 			MainCollectionIdField:   MainCollectionIdField{id},
 			StickType:               data.StickType,
@@ -504,7 +519,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:  data.KnownFruitableField,
 			MostRecentImageField: MostRecentImageField{importedPic},
 			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-			//PermsField:           PermsField{finalPerms},
+			AclField:             data.AclFor(ctx, perms),
 		}
 		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)

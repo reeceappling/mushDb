@@ -44,7 +44,7 @@ type geneticSource interface {
 	setTransferParent(ctx mongo.SessionContext, xfer Transfer) error
 	setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error
 	generation() (sinceSpore *Generation, sinceSporeOrClone *Generation)
-	//Permissioned // TODO: get rid of?
+	Permissioned
 	CanTransferTo(dst geneticSource) error
 	Innoculatable() bool
 }

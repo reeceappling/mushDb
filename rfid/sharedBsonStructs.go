@@ -569,6 +569,13 @@ func (upd *Mods) updateLastUpdatedIfNeeded() *Mods {
 	return upd.Set("lastUpdated", unixTimeFor(time.Now()))
 }
 
+func (upd *Mods) updatePermsIfNeeded(next, current *ACL) *Mods {
+	if current.Equivalent(next) {
+		return upd
+	}
+	return upd.Set("acl", next)
+}
+
 func (upd *Mods) updateNameIfNeeded(future, existing string) *Mods {
 	return updateValueIfNeeded(upd, "name", future, existing)
 }
