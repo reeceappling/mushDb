@@ -352,7 +352,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi").
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(5 * time.Second). // TODO: no?
-		SetTimeout(10 * time.Second)        // TODO: no?
+		SetTimeout(10 * time.Second) // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
@@ -412,14 +412,15 @@ func doTxn(ctx context.Context, txnFunc func(ctx mongo.SessionContext) (interfac
 	// Defers ending the session after the transaction is committed or ended
 	defer session.EndSession(ctx)
 
-	txnOptions := options.Transaction().SetWriteConcern(writeconcern.Majority()) // TODO: other concerns?
+	txnOptions := options.Transaction().SetWriteConcern(writeconcern.Majority()) // TODO: other concerns? read concern?
 	result, err := session.WithTransaction(ctx, txnFunc, txnOptions)
+	// Note: error aborts tx on its own
 	if err != nil {
 		if errors.Is(err, ErrInTxnAlreadyTriedToWrite) {
-			return result, session.AbortTransaction(ctx)
+			return result, err
 		}
 		newErr := errors.New("failed to execute transaction") // TODO: move
-		return result, errors.Join(err, newErr, session.AbortTransaction(ctx))
+		return result, errors.Join(err, newErr)
 	}
 	return result, errors.Join(session.CommitTransaction(ctx), err)
 }
