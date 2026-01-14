@@ -22,29 +22,33 @@ const (
 )
 
 type GrainJar struct {
-	MainCollectionIdField
-	SizeCups int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
-	JarRecipeField
-	WetnessField      // TODO: HANDLE IN JAVASCRIPT
-	BurstGrains  *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"` // TODO: HANDLE IN JAVASCRIPT
-	PcRunOptionalField
-	CreationDateField
-	SpeciesOptionalField
-	SubspeciesOptionalField
-	InnocField // TODO: multiple? What if first innoc does not work?
-	GenerationsFields
-	TransfersOutField
-	ParentTypeField // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX???? // TODO: multiple?
-	BinaryOptionalParentField
-	PicsField
-	ContaminationsField
-	KnownFruitableField
-	SaleField
-	DisposedField
-	MostRecentImageField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionIdField     `bson:"inline"`
+	SizeCups                  int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
+	JarRecipeField            `bson:"inline"`
+	WetnessField              `bson:"inline"` // TODO: HANDLE IN JAVASCRIPT
+	BurstGrainsField          `bson:"inline"`
+	PcRunOptionalField        `bson:"inline"`
+	CreationDateField         `bson:"inline"`
+	SpeciesOptionalField      `bson:"inline"`
+	SubspeciesOptionalField   `bson:"inline"`
+	InnocField                `bson:"inline"` // TODO: multiple? What if first innoc does not work?
+	GenerationsFields         `bson:"inline"`
+	TransfersOutField         `bson:"inline"`
+	ParentTypeField           `bson:"inline"` // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX???? // TODO: multiple?
+	BinaryOptionalParentField `bson:"inline"`
+	PicsField                 `bson:"inline"`
+	ContaminationsField       `bson:"inline"`
+	KnownFruitableField       `bson:"inline"`
+	SaleField                 `bson:"inline"`
+	DisposedField             `bson:"inline"`
+	MostRecentImageField      `bson:"inline"`
+	NotesField                `bson:"inline"`
+	LastUpdatedField          `bson:"inline"`
+	AclField                  `bson:"inline"` // TODO: handle EVERYWHERE
+}
+
+type BurstGrainsField struct {
+	BurstGrains *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"` // TODO: HANDLE IN JAVASCRIPT
 }
 
 func (j GrainJar) CanTransferTo(dst geneticSource) error {
@@ -254,7 +258,7 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 type createJarRequest struct {
 	Recipe       AlternateCollectionId // grain recipe
 	WetnessField                       // TODO: NEW! HANDLE!
-	BurstGrains  *int                  `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"`
+	BurstGrainsField
 	CreationDateField
 	PcRunField
 	NotesField
@@ -263,7 +267,7 @@ type createJarRequest struct {
 
 func createJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := createJarRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), GrainJarCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -287,7 +291,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 			MainCollectionIdField: MainCollectionIdField{id},
 			JarRecipeField:        JarRecipeField{&data.Recipe},
 			PcRunOptionalField:    pcrun.asOptional(),
-			BurstGrains:           data.BurstGrains,
+			BurstGrainsField:      data.BurstGrainsField,
 			WetnessField:          data.WetnessField,
 			CreationDateField:     CreationDateField{data.CreationDate},
 			NotesField:            NotesField{data.Notes},
@@ -336,7 +340,7 @@ type importJarRequest struct {
 
 func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := importJarRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), GrainJarCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -379,7 +383,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
-	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.UserId)
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Email)
 	//err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	//if err != nil {
 	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)

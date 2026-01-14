@@ -41,16 +41,16 @@ func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) 
 }
 
 type JarRecipe struct {
-	AlternateCollectionIdField
-	NameField
-	Grains         []GrainPercentage `bson:"grains" json:"grains"`
-	StandardField                    // If this is a standard recipe
-	NutrientsField                   // Per grain jar?
-	SugarsField                      // Per grain jar?
-	AdditivesField                   // Per grain jar?
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	AlternateCollectionIdField `bson:"inline"`
+	NameField                  `bson:"inline"`
+	Grains                     []GrainPercentage `bson:"grains" json:"grains"`
+	StandardField              `bson:"inline"`   // If this is a standard recipe
+	NutrientsField             `bson:"inline"`   // Per grain jar?
+	SugarsField                `bson:"inline"`   // Per grain jar?
+	AdditivesField             `bson:"inline"`   // Per grain jar?
+	NotesField                 `bson:"inline"`
+	LastUpdatedField           `bson:"inline"`
+	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 type GrainPercentage struct {
@@ -363,31 +363,6 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	existing, err := GetAltCollectionItem(r.Context(), id, JarRecipe{})
-	if err != nil {
-		stat := http.StatusInternalServerError
-		if err == mongo.ErrNoDocuments {
-			stat = http.StatusNotFound
-		}
-		http.Error(w, err.Error(), stat)
-		return
-	}
-	// TODO: make and/or validate grain changes?
-	upd, err := NewMods().
-		updateNameIfNeeded(req.Name, existing.Name).
-		updateStandardIfNeeded(req.Standard, existing.Standard).
-		updateNotesIfNeeded(req.Notes, existing.Notes).
-		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateLastUpdatedIfNeeded().
-		Finalized()
-	if err != nil {
-		http.Error(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if len(upd) == 0 {
-		http.Error(w, "no changes made", http.StatusBadRequest)
-		return
-	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(jarRecipesCollectionName)
@@ -406,6 +381,20 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		// TODO: make and/or validate grain changes?
+		upd, err := NewMods().
+			updateNameIfNeeded(req.Name, existing.Name).
+			updateStandardIfNeeded(req.Standard, existing.Standard).
+			updateNotesIfNeeded(req.Notes, existing.Notes).
+			updatePermsIfNeeded(aclField.ACL, existing.ACL).
+			updateLastUpdatedIfNeeded().
+			Finalized()
+		if err != nil {
+			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+		}
+		if len(upd) == 0 {
+			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
 		}
 		bsonId := bson.D{{"_id", existing.Id}}
 		// TODO: USE handleUpdateMods

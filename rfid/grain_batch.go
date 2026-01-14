@@ -173,7 +173,7 @@ type WetnessField struct {
 //
 //	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 //		coll := ctx.Client().Database(dbName).Collection(grainBatchesCollectionName)
-//		bsonId := bson.D{{"_id", existing.UserId}}
+//		bsonId := bson.D{{"_id", existing.Email}}
 //		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 //		if err != nil {
 //			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)

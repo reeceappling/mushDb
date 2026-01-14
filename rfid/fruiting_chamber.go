@@ -23,30 +23,30 @@ const (
 
 // TODO: HANDLE MULTIPLE GRAIN INPUTS FOR MONOTUBS (DO MONOTUBS LATER)
 type FruitingChamber struct { // TODO: SHOEBOX
-	MainCollectionIdField
-	CreationDateField
-	SubstrateRecipeField
-	SubstrateBatchOptionalField         // TODO: new! use!
-	CupsGrain                   float64 `bson:"cupsGrain" json:"cupsGrain"`                           // TODO: new! use!
-	MixedSubstratePerGrain      float64 `bson:"mixedSubstratePerGrain" json:"mixedSubstratePerGrain"` // for a 1:1:0.5 box this will be 1  // TODO: new! use!
-	CasingPerGrain              float64 `bson:"casingPerGrain" json:"casingPerGrain"`                 // No casing==0, half casing per grain == 0.5 // TODO: new! use!
-	SpeciesOptionalField
-	SubspeciesOptionalField
-	InnocField
-	GenerationsFields
-	TransfersOutField
-	ParentTypeField                   // can be nil, most (main), or some (alt) like lcSyringe // TODO: NEW! HANDLE! nil == mainCollectionType (or purchased?), can also be MSS or clone! // TODO: INDEX????
-	MainCollectionOptionalParentField // TODO: used to be binaryOptional
-	PicsField
-	ContaminationsField
-	FlushesField
-	KnownFruitableField
-	MostRecentImageField
-	SaleField
-	DisposedField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionIdField             `bson:"inline"`
+	CreationDateField                 `bson:"inline"`
+	SubstrateRecipeField              `bson:"inline"`
+	SubstrateBatchOptionalField       `bson:"inline"` // TODO: new! use!
+	CupsGrain                         float64         `bson:"cupsGrain" json:"cupsGrain"`                           // TODO: new! use!
+	MixedSubstratePerGrain            float64         `bson:"mixedSubstratePerGrain" json:"mixedSubstratePerGrain"` // for a 1:1:0.5 box this will be 1  // TODO: new! use!
+	CasingPerGrain                    float64         `bson:"casingPerGrain" json:"casingPerGrain"`                 // No casing==0, half casing per grain == 0.5 // TODO: new! use!
+	SpeciesOptionalField              `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	InnocField                        `bson:"inline"`
+	GenerationsFields                 `bson:"inline"`
+	TransfersOutField                 `bson:"inline"`
+	ParentTypeField                   `bson:"inline"` // can be nil, most (main), or some (alt) like lcSyringe // TODO: NEW! HANDLE! nil == mainCollectionType (or purchased?), can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField `bson:"inline"` // TODO: used to be binaryOptional
+	PicsField                         `bson:"inline"`
+	ContaminationsField               `bson:"inline"`
+	FlushesField                      `bson:"inline"`
+	KnownFruitableField               `bson:"inline"`
+	MostRecentImageField              `bson:"inline"`
+	SaleField                         `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
@@ -139,7 +139,7 @@ func (f FruitingChamber) EntryTypeField() *string {
 }
 
 func (f FruitingChamber) CollectionName() string {
-	return mainCollectionName
+	return FruitingChamberCollectionName
 }
 
 //func (f FruitingChamber) basicFruit() Fruit {
@@ -149,7 +149,7 @@ func (f FruitingChamber) CollectionName() string {
 //		SubspeciesOptionalField:           f.SubspeciesOptionalField,
 //		GenSporeField:                     GenSporeField{f.GenSinceSpore.Next()},
 //		ParentTypeField:                   ParentTypeField{utils.Pointer(FruitingChamberSourceType)},
-//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.UserId},
+//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Email},
 //		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
 //	}
 //}
@@ -242,7 +242,7 @@ type createFruitingChamberRequest struct {
 
 func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := createFruitingChamberRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), FruitingChamberCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -323,7 +323,7 @@ type importFruitingChamberRequest struct {
 
 func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitingChamberRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), FruitingChamberCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -415,12 +415,16 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	//}
 	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
 	//if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil { // TODO: maybe dont do this?
-	//	http.Error(w, "user cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
+	//	http.Error(w, "email cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		perms, err := GetAuthInfo(ctx)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		acl, err := data.AclFor(ctx, perms)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -443,7 +447,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:  data.KnownFruitableField,
 			MostRecentImageField: MostRecentImageField{importedPic},
 			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-			AclField:             data.AclFor(ctx, perms),
+			AclField:             acl,
 		}
 		_, err = data.SubstrateRecipeField.Get(ctx)
 		if err != nil {
@@ -453,8 +457,8 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		}
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
-		_, err := coll.InsertOne(ctx, out)
+		coll := ctx.Client().Database(dbName).Collection(FruitingChamberCollectionName)
+		_, err = coll.InsertOne(ctx, out)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -490,7 +494,7 @@ func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRe
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		Flushes:             imageUpdates(upr.Flushes),
-		PermsOnRequest:      req.PermsOnRequest,
+		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
@@ -556,7 +560,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
-		coll := db.Collection(mainCollectionName)
+		coll := db.Collection(FruitingChamberCollectionName)
 		// go get current plate
 		existing := FruitingChamber{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
@@ -580,7 +584,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "overlapping perms invalid for user: "+err.Error(), http.StatusBadRequest)
+		//	return DbTxnStdErr(w, "overlapping perms invalid for email: "+err.Error(), http.StatusBadRequest)
 		//}
 		upd, err := NewMods().
 			updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).

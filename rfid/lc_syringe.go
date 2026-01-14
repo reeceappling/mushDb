@@ -26,21 +26,21 @@ const (
 )
 
 type LcSyringe struct {
-	MainCollectionIdField
+	MainCollectionIdField `bson:"inline"`
 	// Parent is always either purchased (nil), LC, or LcSyringe
-	MainCollectionOptionalParentField // TODO: likely won't exist for pre-existing
-	CreationDateField                 // create or receive date
-	SpeciesField
-	SubspeciesOptionalField
-	SaleField
-	GenerationsFields
-	KnownFruitableField       // TODO: NEW! HANDLE EVERYWHERE!
-	ConfirmedClean      *bool `bson:"confirmedClean,omitempty" json:"confirmedClean,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
-	TransfersOutField
-	DisposedField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionOptionalParentField `bson:"inline"` // TODO: likely won't exist for pre-existing
+	CreationDateField                 `bson:"inline"` // create or receive date
+	SpeciesField                      `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	SaleField                         `bson:"inline"`
+	GenerationsFields                 `bson:"inline"`
+	KnownFruitableField               `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
+	ConfirmedCleanField               `bson:"inline"`
+	TransfersOutField                 `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (lcs LcSyringe) Innoculatable() bool {
@@ -106,7 +106,7 @@ func (sw LcSyringe) altId() MainCollectionId {
 }
 
 func (sw LcSyringe) id() []byte {
-	return sw.Id[:]
+	return []byte(sw.Id.dbIdStr())
 }
 
 //func (sp LcSyringe) knownFruitable() bool {
@@ -136,7 +136,7 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 		newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
 		transfersOutIndexModel,
 		newSimpleIndex("disposed", "disposed", false, true, false),
-		//// TODO: projects?
+		//// TODO: Projects?
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -181,7 +181,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), lcSyringeCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -213,7 +213,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		toInsert := LcSyringe{
 			MainCollectionIdField:             MainCollectionIdField{Id: id},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-			ConfirmedClean:                    nil,
+			ConfirmedCleanField:               parent.ConfirmedCleanField, // TODO: is this ok?
 			KnownFruitableField:               parent.KnownFruitableField,
 			CreationDateField:                 now.asCreationDate(),
 			SpeciesField:                      SpeciesField{Species: *parent.Species},
@@ -244,7 +244,7 @@ type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField                                         // TODO: handle in react
+	KnownFruitableField       // TODO: handle in react
 	Notes               AllEntries[Note]
 	PermsOnRequest      // TODO: handle in typescript and handler!
 }
@@ -352,7 +352,7 @@ type importLcSyringeRequest struct {
 
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLcSyringeRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), lcSyringeCollectionName)
 	if err != nil {
 		http.Error(w, "failed to create new mainCollectionId", http.StatusInternalServerError)
 		// TODO: err
@@ -371,7 +371,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "user cannot write with these perms: "+err.Error(), http.StatusBadRequest)
+	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
 
@@ -383,7 +383,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		//		return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//	finalPerms = minimalPermsBetween(spec, subsp)
-		//	// TODO: add user perms if provided, as well as make user author?
+		//	// TODO: add email perms if provided, as well as make email author?
 		//	if !finalPerms.Valid() {
 		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
 		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
@@ -394,7 +394,10 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-
+		acl, err := data.AclFor(ctx, perms)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := LcSyringe{
 			MainCollectionIdField:   MainCollectionIdField{Id: id},
 			CreationDateField:       data.CreationDateField,
@@ -403,7 +406,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			SubspeciesOptionalField: data.SubspeciesOptionalField,
 			NotesField:              data.NotesField,
 			LastUpdatedField:        LastUpdatedFieldForNow(),
-			AclField:                data.AclFor(ctx, perms),
+			AclField:                acl,
 		}
 		// TODO: ADD TO MAP
 		coll := ctx.Client().Database(dbName).Collection(lcSyringeCollectionName)

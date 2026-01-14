@@ -37,18 +37,18 @@ var transferReasons = map[transferReason]string{
 }
 
 type Transfer struct { // TODO: does not include multi-jar transfers from jars to monotubs
-	AlternateCollectionIdField
-	From              []MainCollectionId `bson:"from" json:"from"` // TODO: THIS USED TO NOT BE A SLICE
-	To                MainCollectionId   `bson:"to" json:"to"`     // fruit is mainCollectionId
-	FromType          string             `json:"fromType"`         //sourceType     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
-	ToType            string             `json:"toType"`           //sourceType
-	CreationDateField                    // TODO; changed from date to creationDate
-	Reason            transferReason     `bson:"reason" json:"reason"`
-	FromImage         *imageLocation     `bson:"fromImage,omitempty" json:"fromImage,omitempty"`
-	ToImage           *imageLocation     `bson:"toImage,omitempty" json:"toImage,omitempty"`
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	AlternateCollectionIdField `bson:"inline"`
+	From                       []MainCollectionId `bson:"from" json:"from"` // TODO: THIS USED TO NOT BE A SLICE
+	To                         MainCollectionId   `bson:"to" json:"to"`     // fruit is mainCollectionId
+	FromType                   string             `json:"fromType"`         //sourceType     //fruit, sporePrint, mss, plate, jar, stasis, lc, slant, bag, box
+	ToType                     string             `json:"toType"`           //sourceType
+	CreationDateField          `bson:"inline"`    // TODO; changed from date to creationDate
+	Reason                     transferReason     `bson:"reason" json:"reason"`
+	FromImage                  *imageLocation     `bson:"fromImage,omitempty" json:"fromImage,omitempty"`
+	ToImage                    *imageLocation     `bson:"toImage,omitempty" json:"toImage,omitempty"`
+	NotesField                 `bson:"inline"`
+	LastUpdatedField           `bson:"inline"`
+	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (t Transfer) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -267,12 +267,12 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		// TODO: set child perms to the parent perms!
 
-		// TODO: ensure user has perms to make this transfer? (can edit parent)
+		// TODO: ensure email has perms to make this transfer? (can edit parent)
 		resolvedPerms, err := GetResolvedUserPerms(ctx)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusUnauthorized)
 		}
-		// to make a transfer, the user must only be able to write to the child initially
+		// to make a transfer, the email must only be able to write to the child initially
 		if userChildPerm := child.Permissions().HighestPermFor(resolvedPerms); userChildPerm == nil || !(*userChildPerm) {
 			return DbTxnStdErr(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusUnauthorized)
 		}

@@ -54,7 +54,7 @@ type CollectionItem interface { // TODO: ADD USER TO THIS?
 	CollectionName() string
 	EntryTypeField() *string // "entryType" field. Non-nil for main collection items
 	Decode(*mongo.SingleResult) (CollectionItem, error)
-	StringId() string
+	StringId() string // binary string id?
 }
 
 //var (
@@ -76,7 +76,6 @@ func initializeDb(ctx context.Context) error {
 	}
 	// Create all collections that don't already exist
 	for _, name := range []string{
-		mainCollectionName,
 		agarBatchCollectionName,
 		agarRecipesCollectionName,
 		fruitsCollName,
@@ -106,7 +105,7 @@ var lastUpdatedIndexModel = mongo.IndexModel{
 	Options: options.Index().SetName("lastUpdated"),
 }
 var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
-var projectsIndexModel = newSimpleIndex("projects", "perms.projects.ids", false, true, false)
+var projectsIndexModel = newSimpleIndex("Projects", "perms.Projects.ids", false, true, false)
 var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
 var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false)
 var creationDateIndexModel = newSimpleIndex("creationDate", "createDate", true, false, false)
@@ -191,38 +190,38 @@ func updateTogether() bson.D {
 
 func Initialize(ctx context.Context) error { // TODO: use me!
 	for i, initializer := range map[string]func(context.Context) error{
-		"db": initializeDb,
+		//"db": initializeDb,
 		// Initialize Collections with predefined items
-		"agar Recipe":      initializeAgarRecipes,
-		"jar Recipe":       initializeJarRecipes,
-		"lc Recipe":        initializeLcRecipes,
-		"substrate Recipe": initializeSubstrates,
-		"species":          initializeSpecies,
-		"subspecies":       initializeSubspecies,
-		// Initialize main collections
-		"mainCollection (general)": initializeMainCollection,
-		"bags":                     initializeBags,
-		"fruiting chamber":         initializeFruitingChamber,
-		"jars":                     initializeJars,
-		"LCs":                      initializeLCs,
-		"mss":                      initializeMSS,
-		"plate":                    initializePlates,
-		"slant":                    initializeSlants,
-		"stasis tube":              initializeStasisTubes,
-		"spore swabs":              initializeSporeSwabs,
-		"spore syringes":           initializeSyringes,
-		// Initialize new main collections
-		"fruit":       initializeFruits,
-		"spore print": initializeSporePrints,
-		"plugs":       initializePlugs,
-		// Initialize alt collections
-		"agar batch": initializeAgarBatches,
-		"pc run":     initializePCRun,
-		"sales":      initializeSales,
-		"transfer":   initializeTransfers,
-
-		// Other collections
-		"projects": initializeProjects,
+		//"agar Recipe":      initializeAgarRecipes,
+		//"jar Recipe":       initializeJarRecipes,
+		//"lc Recipe":        initializeLcRecipes,
+		//"substrate Recipe": initializeSubstrates,
+		//"species":          initializeSpecies,
+		//"subspecies":       initializeSubspecies,
+		//// Initialize main collections
+		//"mainCollection (general)": initializeMainCollection,
+		//"bags":                     initializeBags,
+		//"fruiting chamber":         initializeFruitingChamber,
+		//"jars":                     initializeJars,
+		//"LCs":                      initializeLCs,
+		//"mss":                      initializeMSS,
+		"plate": initializePlates,
+		//"slant":                    initializeSlants,
+		//"stasis tube":              initializeStasisTubes,
+		//"spore swabs":              initializeSporeSwabs,
+		//"spore syringes":           initializeSyringes,
+		//// Initialize new main collections
+		//"fruit":       initializeFruits,
+		//"spore print": initializeSporePrints,
+		//"plugs":       initializePlugs,
+		//// Initialize alt collections
+		//"agar batch": initializeAgarBatches,
+		//"pc run":     initializePCRun,
+		//"sales":      initializeSales,
+		//"transfer":   initializeTransfers,
+		//
+		//// Other collections
+		//"Projects": initializeProjects,
 		// initialize users
 		// TODO: initialize others (Syringes, swabs, pegs, bottles)
 	} {
@@ -392,7 +391,7 @@ func stringsToNotes(notes []string, when ...time.Time) []Note {
 
 var ErrInvalidEntryType = errors.New("invalid entry type")
 
-func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work for projects?
+func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work for Projects?
 	switch strings.ToLower(inp) {
 	case "bag",
 		"bags":
@@ -435,7 +434,7 @@ func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work f
 	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
 		"pcruns", "pc runs", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
 		return PCRun{}, nil
-	case "project", "projects":
+	case "project", "Projects":
 		return Project{}, nil
 	case "sale", "sales":
 		return Sale{}, nil
@@ -694,7 +693,7 @@ var (
 	exGenSinceSpore      = Generation(2)
 	exGenSinceFruitSpore = Generation(1)
 	exParentType         = "plate"
-	exPlate              = mainCollIdForint(idTestPlate)
+	exPlate              = MainCollectionId([8]byte{0, 0, 0, 0, 0, 0, 0, 0})
 	exBag                = mainCollIdForint(idTestBag)
 	exBottle             = altCollIdForint(idTestBottle)
 	exBatch              = altCollIdForint(idTestBatch)
@@ -715,17 +714,17 @@ var (
 	exUserRead           = altCollIdForint(0)
 	exUserWrite          = altCollIdForint(1)
 	exUserAdmin          = altCollIdForint(2)
-	exUserNoProjectRead  = altCollIdForint(3)
-	exUserNoProjectWrite = altCollIdForint(4)
+	exUserNoProjectRead  = "1@example.com"
+	exUserNoProjectWrite = "2@example.com"
 	exProjPerms          = map[string]*bool{
 		string(exUserRead[:]):  nil,
 		string(exUserWrite[:]): utils.Pointer(false),
 		string(exUserAdmin[:]): utils.Pointer(true),
 	}
 	exAcl = ACL{
-		Users: map[Base58Str]bool{
-			exUserNoProjectRead.asBase58():  false,
-			exUserNoProjectWrite.asBase58(): true,
+		Users: map[string]bool{
+			exUserNoProjectRead:  false,
+			exUserNoProjectWrite: true,
 		},
 		Projects: map[projectName]bool{
 			exProjRead:  false,
@@ -735,9 +734,9 @@ var (
 	}
 	testAcl = ACL{
 		// TODO: ensure ok
-		Users: map[Base58Str]bool{
-			exUserNoProjectRead.asBase58():  false,
-			exUserNoProjectWrite.asBase58(): true,
+		Users: map[string]bool{
+			exUserNoProjectRead:  false,
+			exUserNoProjectWrite: true,
 		},
 		Projects: map[projectName]bool{
 			exProjRead:  false,

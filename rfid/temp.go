@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -30,10 +31,15 @@ func writeRfidTagIfNecessary(ctx context.Context, writeTagTo *string, id MainCol
 }
 
 func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
+	println(id)    // TODO: delete
+	if id == "1" { // TODO: DO THIS ELSEWHERE!
+		println("making ID 1!")
+		return utils.Pointer(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil
+	}
 	var out MainCollectionId
 	idBytes := []byte(id)
 	if len(idBytes) == 8 {
-		out = [8]byte(idBytes)
+		out = MainCollectionId(idBytes)
 		return &out, nil
 	}
 	realId, err := Base58Str(idBytes).toMainCollectionId()
@@ -59,7 +65,7 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 
 // Perms have not been checked yet
 func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out MainCollectionItem, err error) {
-	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).FindOne(ctx, bson.D{{"_id", id}})
+	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(resultItemType.CollectionName()).FindOne(ctx, bson.D{{"_id", id}})
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -72,8 +78,8 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 	return item, nil
 }
 
-func GetMainCollectionItemInTxn(ctx mongo.SessionContext, id MainCollectionId, optionalItemForType *MainCollectionItem) (out MainCollectionItem, err error) {
-	encodedResult := ctx.Client().Database(dbName).Collection(mainCollectionName).FindOne(ctx, bson.D{{"_id", id}})
+func GetCollectionItemInTxn(ctx mongo.SessionContext, id MainCollectionId, optionalItemForType *MainCollectionItem, collectionName string) (out MainCollectionItem, err error) {
+	encodedResult := ctx.Client().Database(dbName).Collection(collectionName).FindOne(ctx, bson.D{{"_id", id}})
 	if encodedResult.Err() != nil {
 		return nil, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -222,6 +228,8 @@ func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, re
 
 // TODO: rename
 func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseWriter, reader *multipart.Reader, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) { // TODO USE THIS ALL OVER THE PLACE
+	// TODO: BATTLE TEST THIS WHOLE THING!
+
 	// Get any images
 	newPics = map[int]string{}
 	newContams = map[int]string{}
@@ -240,14 +248,18 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 		p, err = reader.NextPart()
 		if err != nil {
 			if err != io.EOF {
+				println("non-eof err!" + err.Error()) // TODO: THIS
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			err = nil // Ensure error is nil so it does not get returned
 			break
 		}
+		println("CHECKING A PART:", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		fileName := p.FileName()
 		if fileName == "" {
 			err = errors.New("file name is empty for what should have been an image")
+			println(err.Error()) // TODO: THIS
 			http.Error(w, "file name is empty for what should have been an image", http.StatusBadRequest)
 			return
 		}
@@ -255,12 +267,14 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 		parts := strings.Split(fileName, "-")
 		if len(parts) != 2 {
 			err = errors.New("invalid image name: " + fileName)
+			println(err.Error()) // TODO: THIS
 			http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
 			return
 		}
 		num, errr := strconv.Atoi(parts[1])
 		if errr != nil {
 			err = errr
+			println(err.Error()) // TODO: THIS
 			http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
 			return
 		}
@@ -275,6 +289,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
 			if err != nil {
 				err = errr
+				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -282,8 +297,9 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newPics[num] = newFileNameWithPrefixPath
 		case "newContam":
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "contam")
-			if err != nil {
+			if errr != nil {
 				err = errr
+				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -293,6 +309,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "flush")
 			if errr != nil {
 				err = errr
+				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new flush: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -300,11 +317,13 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFlushes[num] = newFileNameWithPrefixPath
 		default:
 			err = errors.New("invalid picture name. Should never occur")
+			println(err.Error()) // TODO: THIS
 			http.Error(w, "invalid picture name. Should never occur", http.StatusInternalServerError)
 			return
 		}
 	}
 
+	// TODO:?????
 	//// CHECK THAT ALL NEW PICS EXIST
 	//// PROCESS ALL NEW PICS AND CONTAMS
 	//out := data.reform()

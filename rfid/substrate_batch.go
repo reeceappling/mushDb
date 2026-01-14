@@ -19,13 +19,13 @@ const (
 )
 
 type SubstrateBatch struct { // TODO: use this
-	AlternateCollectionIdField
+	AlternateCollectionIdField `bson:"inline"`
 	// Initial wetness is quantified on each bag/box
-	CreationDateField // Date of first hydration
-	SubstrateRecipeField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	CreationDateField    `bson:"inline"` // Date of first hydration
+	SubstrateRecipeField `bson:"inline"`
+	NotesField           `bson:"inline"`
+	LastUpdatedField     `bson:"inline"`
+	AclField             `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (recipe SubstrateBatch) CollectionName() string {

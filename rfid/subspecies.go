@@ -21,12 +21,12 @@ type SubspeciesOptionalField struct {
 }
 
 type Subspecies struct {
-	NameIdField
-	SpeciesField
-	AliasesField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	NameIdField      `bson:"inline"`
+	SpeciesField     `bson:"inline"`
+	AliasesField     `bson:"inline"`
+	NotesField       `bson:"inline"`
+	LastUpdatedField `bson:"inline"`
+	AclField         `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (subsp Subspecies) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -241,7 +241,7 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil { // TODO: PUT PERMS UPDATER ON THE STRUCTS?
-		//	return DbTxnStdErr(w, "bad overlapping perms for user: "+err.Error(), http.StatusUnauthorized)
+		//	return DbTxnStdErr(w, "bad overlapping perms for email: "+err.Error(), http.StatusUnauthorized)
 		//}
 		upd, err := NewMods().
 			updateAliasesIfNeeded(req.Aliases, existing.Aliases).

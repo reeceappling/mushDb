@@ -9,9 +9,9 @@ import (
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
 	"net/http"
-	"reflect"
 	"slices"
 )
 
@@ -21,25 +21,33 @@ const (
 )
 
 type Plate struct { // TODO: CACHE RESPONSES?!!!!!
-	MainCollectionIdField
-	AgarBatchField // TODO: will be empty for preexisting
-	CreationDateField
-	SpeciesOptionalField
-	SubspeciesOptionalField
-	InnocField
-	GenerationsFields
-	TransfersOutField
-	ParentTypeField                   // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	MainCollectionOptionalParentField // TODO: was binary, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
-	PicsField
-	ContaminationsField
-	KnownFruitableField // TODO: handle being yes if clone, among other yeses
-	SaleField
-	DisposedField
-	MostRecentImageField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionIdField             `bson:"inline"`
+	AgarBatchField                    `bson:"inline"` // TODO: will be empty for preexisting
+	CreationDateField                 `bson:"inline"`
+	SpeciesOptionalField              `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	InnocField                        `bson:"inline"`
+	GenerationsFields                 `bson:"inline"`
+	TransfersOutField                 `bson:"inline"`
+	ParentTypeField                   `bson:"inline"` // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField `bson:"inline"` // TODO: was binary, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
+	PicsField                         `bson:"inline"`
+	ContaminationsField               `bson:"inline"`
+	KnownFruitableField               `bson:"inline"` // TODO: handle being yes if clone, among other yeses
+	SaleField                         `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	MostRecentImageField              `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+}
+
+func (p Plate) DbId() BinaryCollectionId {
+	return p.Id.ToBinaryCollectionId()
+}
+
+func (p Plate) StringId() string {
+	return p.Id.dbIdStr() // TODO: ensure ok
 }
 
 func (p Plate) CanTransferTo(dst geneticSource) error {
@@ -77,7 +85,7 @@ func (p Plate) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error 
 	if err != nil {
 		return err
 	}
-	res, err := ctx.Client().Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, p.Id, upd)
+	res, err := ctx.Client().Database(dbName).Collection(PlatesCollectionName).UpdateByID(ctx, p.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -106,7 +114,7 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, p.Id, upd)
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlatesCollectionName).UpdateByID(ctx, p.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -121,40 +129,39 @@ func (p Plate) EntryTypeField() *string {
 }
 
 func (p Plate) CollectionName() string {
-	return mainCollectionName
+	return PlatesCollectionName
 }
 
 func initializePlates(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(mainCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
-		creationDateIndexModel,
-		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("innoc", "innoc", false, true, false),
-		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		transfersOutIndexModel,
-		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
-
-		//Pics (no index)
-		// TODO: Contams
-		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-		saleIndexModel,
-		disposedIndexModel,
-		// MostRecentImage
-		//Notes (no index) (maybe later with tags?)
-		lastUpdatedIndexModel,
-		// TODO: projectsIndexModel,
-	})
-	if err != nil {
-		return err
-	}
+	coll := db.Collection(PlatesCollectionName)
+	//_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	//	//newSimpleIndex("agarBatch", "agarBatch", false, true, false),
+	//	//creationDateIndexModel,
+	//	//newSimpleIndex("species", "species", false, true, false),
+	//	//newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+	//	//newSimpleIndex("innoc", "innoc", false, true, false),
+	//	//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+	//	//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+	//	//transfersOutIndexModel,
+	//	//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+	//	//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+	//	//
+	//	////Pics (no index)
+	//	//// TODO: Contams
+	//	//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+	//	//saleIndexModel,
+	//	//disposedIndexModel,
+	//	//// MostRecentImage
+	//	////Notes (no index) (maybe later with tags?)
+	//	//lastUpdatedIndexModel,
+	//	// TODO: projectsIndexModel,
+	//})
+	//if err != nil {
+	//	return err
+	//}
 	// If test agar batch does not exist, then create it
-	existingEntry := Plate{}
-	testId := mainCollIdForint(idTestPlate)
+	testId := mainCollIdForint(idTestPlate) // 0th id, b58==1
 	testItem := Plate{
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		AgarBatchField:          AgarBatchField{&exAltId},
@@ -178,13 +185,49 @@ func initializePlates(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
+
+	result, err := coll.ReplaceOne(ctx, bson.D{{"_id", testId}}, testItem, &options.ReplaceOptions{Upsert: utils.Pointer(true)})
+	if err != nil {
+		println(err.Error())
+		return err
 	}
-	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
+	res := coll.FindOne(ctx, bson.D{{"_id", testId}})
+	if res.Err() != nil {
+		println(res.Err().Error())
+		return res.Err()
+	}
+	raw, err := res.Raw()
+	if err != nil {
+		println(err.Error())
+		return err
+	}
+	println(raw.String())
+	err = res.Decode(&testItem)
+	if err != nil {
+		println("failed to decode test item", err.Error())
+	}
+
+	println(result.UpsertedID)
+	//result, err := coll.ReplaceOne(ctx, bson.D{{"_id", testId}}, testItem)
+	//if err != nil {
+	//	println(err.Error())
+	//	return err
+	//}
+	//result.UpsertedID =
+	//println("ITEM PLACED IN COLLECTION!!!!!!!! --------------------------------------")
+	//switch result.UpsertedID.(type) {
+	//case primitive.ObjectID:
+	//	println(result.UpsertedID)
+	//default:
+	//	println("not object id: " + reflect.TypeOf(result.UpsertedID).Name())
+	//
+	//}
+	//id, ok := result.UpsertedID.(type)
+	//if !ok {
+	//	return errors.New("id was not main")
+	//}
+	//println("id", id)
+	return err
 }
 
 type createPlateRequest struct {
@@ -194,7 +237,7 @@ type createPlateRequest struct {
 
 func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 	data := createPlateRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), PlatesCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -217,7 +260,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	now := unixTimeForNow()
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(PlatesCollectionName)
 		toInsert := Plate{
 			MainCollectionIdField: MainCollectionIdField{id},
 			AgarBatchField:        AgarBatchField{AgarBatch: &data.AgarBatch},
@@ -294,12 +337,15 @@ type resolvedUpdatePlateRequest struct {
 }
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
+	println("RECEIVED UPDATE PLATE REQUEST") // TODO: THIS
 	data := updatePlateRequest{}
 	b58Id := Base58Str(r.PathValue("id"))
 	id, err := b58Id.toMainCollectionId()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+	println("CREATED READER") // TODO: THIS
 	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
 		// Already written
@@ -310,6 +356,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	println("GETTING IMAGES") // TODO: THIS
 	newPics, newContams, _, err := getMultipartImages(r.Context(), "jar", w, reader, b58Id)
 	if err != nil {
 		// Already wrotw
@@ -318,29 +365,45 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
+	println("REFORMING") // TODO: THIS
 	out := data.reform()
 	for i, _ := range data.Images.New {
 		loc, exists := newPics[i]
 		if !exists {
+			println("FAILED TO GET LOCATION") // TODO: THIS
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
 		out.Images.New[i].Location = imageLocation(loc)
 	}
+	println("PARSING CONTAMS") // TODO: THIS
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
 			finalLoc := imageLocation(loc)
 			out.Contams.New[i].Location = &finalLoc
 		}
 	}
+	println("Starting TX") // TODO: THIS
+	/* TODO:
+	* Our responsiveness last year was very slow
+	* FEEDBACK FROM KATE:
+	* Move teams immediately...
+	* Prepare thoughts for talking to megan.
+	* Make her realize that it was in a situation that was mostly out of my control, but am still a great engineer.
+	* Make her confident in testing skills, people skills, decision making skills.
+	* Build emotional bank account back up.
+	*
+	 */
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(PlatesCollectionName)
 		// go get current plate
 		existing := Plate{}
 		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
+			// TODO: an issue here
 			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
+		println("GOT PLATE") // TODO: THIS
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -349,6 +412,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := data.AclFor(ctx, user)
+		println("GOT PERMS") // TODO: THIS
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -362,25 +426,33 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 
 func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) (any, error) {
 	if err != nil {
+		println("mod creation failure: " + err.Error())
 		return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 	}
 	if len(upd) == 0 {
+		println("no changes made") // TODO: del
 		return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
 	}
 	// write updates to db
+	println("updating") // TODO: del
 	bsonId := bson.D{{"_id", id}}
 	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 	if err != nil {
+		println("failed to update") // TODO: del
 		return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 	}
+	println("finding") // TODO: del
 	err = coll.FindOne(ctx, bsonId).Decode(&existing)
 	if err != nil {
+		println("failed to find") // TODO: del
 		return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 	}
+	println("marshalling") // TODO: del
 	bsOut, err := json.Marshal(existing)
 	if err != nil {
 		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 	}
+	println("Wrote plate update:", string(bsOut))
 	return w.Write(bsOut)
 }
 
@@ -398,7 +470,7 @@ type importPlateRequest struct {
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data := importPlateRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), PlatesCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -410,7 +482,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "user cannot write perms: "+err.Error(), http.StatusBadRequest)
+	//	http.Error(w, "email cannot write perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -491,7 +563,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := Plate{
-			MainCollectionIdField:   id.IdField(),
+			MainCollectionIdField:   MainCollectionIdField{id},
 			CreationDateField:       data.CreationDateField,
 			SpeciesOptionalField:    data.SpeciesField.AsOptional(),
 			SubspeciesOptionalField: data.SubspeciesOptionalField,
@@ -502,7 +574,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 			AclField:                acl,
 		}
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(PlatesCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)

@@ -13,12 +13,12 @@ import (
 const pcRunCollectionName = "pcRuns"
 
 type PCRun struct {
-	AlternateCollectionIdField
-	CreationDateField     //TODO: USED TO BE date, is now CreationDate
-	RunTimeMinutes    int `bson:"runtimeMinutes" json:"runtimeMinutes"` // todo; used to just be runtime, also used to be string
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	AlternateCollectionIdField `bson:"inline"`
+	CreationDateField          `bson:"inline"` //TODO: USED TO BE date, is now CreationDate
+	RunTimeMinutes             int             `bson:"runtimeMinutes" json:"runtimeMinutes"` // todo; used to just be runtime, also used to be string
+	NotesField                 `bson:"inline"`
+	LastUpdatedField           `bson:"inline"`
+	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (run PCRun) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -95,31 +95,30 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
-	if err != nil {
-		return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
-	}
-	toInsert := PCRun{
-		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		CreationDateField:          req.CreationDateField,
-		RunTimeMinutes:             req.RunTimeMinutes,
-		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   acl,
-	}
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-	_, err = client.Database(dbName).Collection(pcRunCollectionName).InsertOne(ctx, toInsert)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest) // TODO: 400 ok?
-		return
-	}
-	bsOut, err := json.Marshal(toInsert)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError) // TODO: 400 ok?
-		return
-	}
-	_, err = w.Write(bsOut)
+	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
+		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+		if err != nil {
+			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+		}
+		toInsert := PCRun{
+			AlternateCollectionIdField: AlternateCollectionIdField{id},
+			CreationDateField:          req.CreationDateField,
+			RunTimeMinutes:             req.RunTimeMinutes,
+			NotesField:                 req.NotesField,
+			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+			AclField:                   acl,
+		}
+		client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+		_, err = client.Database(dbName).Collection(pcRunCollectionName).InsertOne(ctx, toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusBadRequest)
+		}
+		bsOut, err := json.Marshal(toInsert)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
+		return w.Write(bsOut)
+	})
 	if err != nil {
 		handleWriteErr(err, w)
 	}

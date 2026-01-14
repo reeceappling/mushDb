@@ -17,18 +17,18 @@ import (
 const agarRecipesCollectionName = "agarRecipes"
 
 type AgarRecipe struct {
-	AlternateCollectionIdField
-	NameField
-	LiquidsField
-	Agar          int `bson:"agar" json:"agar"` // agar grams per 1L
-	StandardField     // If this is a standard recipe
-	NutrientsField
-	SugarsField
-	AdditivesField
-	AntibioticsField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	AlternateCollectionIdField `bson:"inline"`
+	NameField                  `bson:"inline"`
+	LiquidsField               `bson:"inline"`
+	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField              `bson:"inline"` // If this is a standard recipe
+	NutrientsField             `bson:"inline"`
+	SugarsField                `bson:"inline"`
+	AdditivesField             `bson:"inline"`
+	AntibioticsField           `bson:"inline"`
+	NotesField                 `bson:"inline"`
+	LastUpdatedField           `bson:"inline"`
+	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (recipe AgarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {

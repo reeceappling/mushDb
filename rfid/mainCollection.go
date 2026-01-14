@@ -43,21 +43,21 @@ var mainCollectionEntryTypes = []string{
 	MssSourceType,
 }
 
-func simpleInsertMainColl(ctx context.Context, item interface{}) (*MainCollectionId, error) {
-	out, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
-		Collection(mainCollectionName).
-		InsertOne(ctx, item)
-	if err != nil {
-		return nil, err
-	}
-	res, ok := out.InsertedID.(MainCollectionId)
-	if !ok {
-		return nil, errors.New("failed to convert to primitive.ObjectID")
-	}
-
-	return &res, nil
-}
+//func simpleInsertMainColl(ctx context.Context, item interface{}) (*MainCollectionId, error) {
+//	out, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+//		Database(dbName).
+//		Collection(mainCollectionName).
+//		InsertOne(ctx, item)
+//	if err != nil {
+//		return nil, err
+//	}
+//	res, ok := out.InsertedID.(MainCollectionId)
+//	if !ok {
+//		return nil, errors.New("failed to convert to primitive.ObjectID")
+//	}
+//
+//	return &res, nil
+//}
 
 func getTransferById(ctx context.Context, xferColl *mongo.Collection, id AlternateCollectionId) (*Transfer, error) {
 	var xfer Transfer
@@ -129,38 +129,38 @@ func rawEntryTypeConversion(raw bson.Raw) (MainCollectionItem, error) {
 //	panic("not implemented")
 //}
 
-func initializeMainCollection(ctx context.Context) error {
-	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("entryType", "entryType", false, false, false),
-		newSimpleIndex("creationDate", "creationDate", true, false, false),
-		newSimpleIndex("agar", "agar", false, true, false),     // Plate, slant
-		newSimpleIndex("pcRun", "pcRun", false, true, false),   // TODO: only on _
-		newSimpleIndex("recipe", "recipe", false, true, false), // TODO: only on _
-		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		// filterSize (no index) (BAG ONLY)
-		newSimpleIndex("sealDate", "sealDate", true, true, false), // BAG ONLY
-		// flushes (no index) (BAG AND BOX ONLY)
-		newSimpleIndex("innoc", "innoc", false, true, false),
-		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		newSimpleIndex("transfersOut", "transfersOut", false, true, false),
-		newSimpleIndex("parent", "parent", false, true, false),
-		newSimpleIndex("parentType", "parentType", false, true, false),
-		// pics (no index)
-		// confirmedClean (no index) (LC Only)
-		// Contaminations (no index)
-		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-		// disposed (sparse)
-		newSimpleIndex("sale", "sale", true, true, false),   // All but LC
-		newSimpleIndex("sales", "sales", true, true, false), // LC Only
-		newSimpleIndex("disposed", "disposed", true, true, false),
-		projectsIndexModel,
-		// mostRecentImage (no index)
-		//Notes (no index unless tags)
-		lastUpdatedIndexModel,
-	})
-	return err
-}
+//func initializeMainCollection(ctx context.Context) error {
+//	// Indices
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName)
+//	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+//		newSimpleIndex("entryType", "entryType", false, false, false),
+//		newSimpleIndex("creationDate", "creationDate", true, false, false),
+//		newSimpleIndex("agar", "agar", false, true, false),     // Plate, slant
+//		newSimpleIndex("pcRun", "pcRun", false, true, false),   // TODO: only on _
+//		newSimpleIndex("recipe", "recipe", false, true, false), // TODO: only on _
+//		newSimpleIndex("species", "species", false, true, false),
+//		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+//		// filterSize (no index) (BAG ONLY)
+//		newSimpleIndex("sealDate", "sealDate", true, true, false), // BAG ONLY
+//		// flushes (no index) (BAG AND BOX ONLY)
+//		newSimpleIndex("innoc", "innoc", false, true, false),
+//		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+//		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+//		newSimpleIndex("transfersOut", "transfersOut", false, true, false),
+//		newSimpleIndex("parent", "parent", false, true, false),
+//		newSimpleIndex("parentType", "parentType", false, true, false),
+//		// pics (no index)
+//		// confirmedClean (no index) (LC Only)
+//		// Contaminations (no index)
+//		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+//		// disposed (sparse)
+//		newSimpleIndex("sale", "sale", true, true, false),   // All but LC
+//		newSimpleIndex("sales", "sales", true, true, false), // LC Only
+//		newSimpleIndex("disposed", "disposed", true, true, false),
+//		projectsIndexModel,
+//		// mostRecentImage (no index)
+//		//Notes (no index unless tags)
+//		lastUpdatedIndexModel,
+//	})
+//	return err
+//}

@@ -1,11 +1,5 @@
 package rfid
 
-import (
-	"encoding/json"
-	"io"
-	"net/http"
-)
-
 var signupSessionsMap = map[string]any{} // TODO: get rid of?
 
 type signupRequest struct {
@@ -20,57 +14,67 @@ type adminSignupRequest struct {
 	signupRequest
 }
 
-func SignupHandler(proxyHandler http.Handler, dbUser, dbPass string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			proxyHandler.ServeHTTP(w, r)
-		case http.MethodPost:
-			bs, err := io.ReadAll(r.Body)
-			if err != nil {
-				http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-			if r.Header.Get("isAdmin") == "true" {
-				req := adminSignupRequest{}
-				if err = json.Unmarshal(bs, &req); err != nil {
-					http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
-					return
-				}
-				if req.AdminUsername != dbUser {
-					http.Error(w, "admin credential mismatch: "+err.Error(), http.StatusForbidden)
-					return
-				}
-				expectedHashedDbPass, err := HashPassword("", dbPass)
-				if err = json.Unmarshal(bs, &req); err != nil {
-					http.Error(w, "failed to get expected db pass: "+err.Error(), http.StatusInternalServerError)
-					return
-				}
-				if req.HashedAdminPassword != expectedHashedDbPass {
-					http.Error(w, "admin credential mismatch: "+err.Error(), http.StatusForbidden)
-					return
-				}
-				// try to sign up with new creds
-				err = CreateUser(r.Context(), req.Email, req.Username, &req.HashedPassword, nil)
-				if err != nil {
-					http.Error(w, "failed to create user with admin creds: "+err.Error(), http.StatusForbidden)
-					return
-				}
-			}
-			// TODO: if signup is google, create account
-			// TODO: if signup user/pass
-			////// TODO: create signupCode
-			////// TODO: Create user/hashedPass/email entry in signupSessionsMap (with a timeout)
-			////// TODO: Send email to user so that they can click the link with the signupCode
-			// TODO: take user and hashedPass (maybe email?)
-			// TODO:
-		default:
-			http.Error(w, "Unsupported http request method: "+http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		}
-	}
-}
+//var googleOauthConfig = &oauth2.Config{
+//	RedirectURL:  "http://localhost:8000/auth/google/callback", // TODO: FIX
+//	ClientID:     "{PATTERN}.apps.googleusercontent.com",       // TODO: FIX
+//	ClientSecret: "{SECRET}",                                   // TODO: FIX
+//	Scopes: []string{
+//		"https://www.googleapis.com/auth/userinfo.email",
+//		"https://www.googleapis.com/auth/userinfo.profile",
+//	},
+//	Endpoint: google.Endpoint,
+//}
 
-var ConfirmSignupHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	endpt := r.PathValue("token")
-	// TODO: THIS
-})
+//func SignupHandler() http.HandlerFunc {
+//	return func(w http.ResponseWriter, r *http.Request) {
+//		bs, err := io.ReadAll(r.Body)
+//		if err != nil {
+//			http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
+//			return
+//		}
+//
+//		googleToken := string(bs)
+//		userBs, err := getUserDataFromGoogle(googleToken)
+//		if err != nil {
+//			http.Error(w, "failed to get email data: "+err.Error(), http.StatusInternalServerError)
+//			return
+//		}
+//		w.Write(userBs) // TODO: FIX!
+//		userEmail := ""
+//
+//		// TODO: if signup is google, create account
+//		// TODO: if signup email/pass
+//		////// TODO: create signupCode
+//		////// TODO: Create email/hashedPass/email entry in signupSessionsMap (with a timeout)
+//		////// TODO: Send email to email so that they can click the link with the signupCode
+//		// TODO: take email and hashedPass (maybe email?)
+//		// TODO:
+//	}
+//}
+
+//func getUserDataFromGoogle(code string) ([]byte, error) {
+//	// Use code to get token and get email info from Google.
+//	token, err := googleOauthConfig.Exchange(context.Background(), code)
+//	if err != nil {
+//		return nil, fmt.Errorf("code exchange wrong: %s", err.Error())
+//	}
+//
+//	response, err := http.Get(oauthGoogleUrlAPI + token.AccessToken) // TODO: FIX
+//	if err != nil {
+//		return nil, fmt.Errorf("failed getting email info: %s", err.Error())
+//	}
+//	defer response.Body.Close()
+//	contents, err := ioutil.ReadAll(response.Body)
+//	if err != nil {
+//		return nil, fmt.Errorf("failed read response: %s", err.Error())
+//	}
+//
+//	saveUser(contents)
+//	saveToken(contents, token)
+//	return contents, nil
+//}
+//
+//var ConfirmSignupHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//	endpt := r.PathValue("token")
+//	// TODO: THIS
+//})

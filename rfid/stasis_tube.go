@@ -23,25 +23,25 @@ const (
 )
 
 type StasisTube struct { // TODO: instructions somewhere?
-	MainCollectionIdField
-	PcRunOptionalField // probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
-	CreationDateField
-	SpeciesOptionalField
-	SubspeciesOptionalField
-	InnocField
-	GenerationsFields
-	TransfersOutField
-	ParentTypeField // TODO: must be plate, slant, or purchased
-	MainCollectionOptionalParentField
-	PicsField
-	ContaminationsField
-	KnownFruitableField
-	SaleField
-	DisposedField
-	MostRecentImageField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionIdField             `bson:"inline"`
+	PcRunOptionalField                `bson:"inline"` // probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
+	CreationDateField                 `bson:"inline"`
+	SpeciesOptionalField              `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	InnocField                        `bson:"inline"`
+	GenerationsFields                 `bson:"inline"`
+	TransfersOutField                 `bson:"inline"`
+	ParentTypeField                   `bson:"inline"` // TODO: must be plate, slant, or purchased
+	MainCollectionOptionalParentField `bson:"inline"`
+	PicsField                         `bson:"inline"`
+	ContaminationsField               `bson:"inline"`
+	KnownFruitableField               `bson:"inline"`
+	SaleField                         `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	MostRecentImageField              `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (s StasisTube) CanTransferTo(dst geneticSource) error {
@@ -74,7 +74,7 @@ func (s StasisTube) setTransferParent(ctx mongo.SessionContext, xfer Transfer) e
 	if err != nil {
 		return err
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, s.Id, upd)
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(StasisTubeCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, s.Id, upd)
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(StasisTubeCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -118,16 +118,16 @@ func (s StasisTube) EntryTypeField() *string {
 }
 
 func (s StasisTube) CollectionName() string {
-	return mainCollectionName
+	return StasisTubeCollectionName
 }
 
 func (s StasisTube) id() []byte {
-	return s.Id[:]
+	return []byte(s.Id.dbIdStr())
 }
 
 func initializeStasisTubes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(mainCollectionName)
+	coll := db.Collection(StasisTubeCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		creationDateIndexModel,
@@ -193,7 +193,7 @@ type createStasisTubeRequest struct {
 
 func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := createStasisTubeRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), StasisTubeCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -216,7 +216,7 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	now := unixTimeForNow()
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(StasisTubeCollectionName)
 		toInsert := StasisTube{
 			MainCollectionIdField: MainCollectionIdField{id},
 			PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
@@ -402,7 +402,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
-		coll := db.Collection(mainCollectionName)
+		coll := db.Collection(StasisTubeCollectionName)
 		// go get current stasisTube
 		existing := StasisTube{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
@@ -426,7 +426,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
+		//	return DbTxnStdErr(w, "email cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
 		//}
 		upd, err := NewMods(). // TODO: exactly the same as plate, ok?
 					updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
@@ -479,7 +479,7 @@ type importStasisTubeRequest struct {
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importStasisTubeRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), StasisTubeCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -492,7 +492,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "user cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
+	//	http.Error(w, "email cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
 	//	return // TODO: ok? check species or no?
 	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -569,7 +569,10 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-
+		acl, err := data.AclFor(ctx, perms)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := StasisTube{
 			MainCollectionIdField:   MainCollectionIdField{id},
 			CreationDateField:       data.CreationDateField,
@@ -580,9 +583,9 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:     data.KnownFruitableField,
 			MostRecentImageField:    MostRecentImageField{importedPic},
 			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-			AclField:                data.AclFor(ctx, perms),
+			AclField:                acl,
 		}
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(StasisTubeCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)

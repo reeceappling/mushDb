@@ -16,32 +16,32 @@ import (
 )
 
 const (
-	SlantsCollectionName = "plates" // TODO: USE
+	SlantsCollectionName = "slants"
 	SlantSourceType      = "slant"
 )
 
 type Slant struct {
-	MainCollectionIdField
-	AgarBatchField // TODO: will be empty for preexisting
+	MainCollectionIdField `bson:"inline"`
+	AgarBatchField        `bson:"inline"` // TODO: will be empty for preexisting
 	// TODO: account for stickType field
-	StickType *string `bson:"stickType,omitempty" json:"stickType,omitempty"` //If the slant includes a popsicle stick or tongue depressor // TODO: new! use!
-	CreationDateField
-	SpeciesOptionalField
-	SubspeciesOptionalField
-	InnocField
-	GenerationsFields
-	TransfersOutField
-	ParentTypeField                   // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	MainCollectionOptionalParentField // TODO: binary serverside, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
-	PicsField
-	ContaminationsField
-	KnownFruitableField // TODO: handle being yes if clone, among other yeses
-	SaleField
-	DisposedField
-	MostRecentImageField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	StickType                         *string `bson:"stickType,omitempty" json:"stickType,omitempty"` //If the slant includes a popsicle stick or tongue depressor // TODO: new! use!
+	CreationDateField                 `bson:"inline"`
+	SpeciesOptionalField              `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	InnocField                        `bson:"inline"`
+	GenerationsFields                 `bson:"inline"`
+	TransfersOutField                 `bson:"inline"`
+	ParentTypeField                   `bson:"inline"` // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField `bson:"inline"` // TODO: binary serverside, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
+	PicsField                         `bson:"inline"`
+	ContaminationsField               `bson:"inline"`
+	KnownFruitableField               `bson:"inline"` // TODO: handle being yes if clone, among other yeses
+	SaleField                         `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	MostRecentImageField              `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (s Slant) CanTransferTo(dst geneticSource) error {
@@ -87,7 +87,7 @@ func (s Slant) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error 
 	if err != nil {
 		return err
 	}
-	res, err := ctx.Client().Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, s.Id, upd)
+	res, err := ctx.Client().Database(dbName).Collection(SlantsCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (s Slant) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, s.Id, upd)
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SlantsCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -132,16 +132,16 @@ func (s Slant) EntryTypeField() *string {
 }
 
 func (s Slant) CollectionName() string {
-	return mainCollectionName
+	return SlantsCollectionName
 }
 
 func (s Slant) id() []byte {
-	return s.Id[:]
+	return []byte(s.Id.dbIdStr())
 }
 
 func initializeSlants(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(mainCollectionName)
+	coll := db.Collection(SlantsCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
 		newSimpleIndex("stickType", "stickType", false, true, false),
@@ -211,7 +211,7 @@ type createSlantRequest struct {
 
 func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSlantRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), SlantsCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -324,7 +324,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SlantsCollectionName)
 		// go get current plate
 		existing := Slant{}
 
@@ -344,7 +344,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "bad overlapping perms for user:"+err.Error(), http.StatusBadRequest)
+		//	return DbTxnStdErr(w, "bad overlapping perms for email:"+err.Error(), http.StatusBadRequest)
 		//}
 		upd, err := NewMods().
 			updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
@@ -397,7 +397,7 @@ type importSlantRequest struct {
 
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSlantRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), SlantsCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -430,7 +430,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "user cannot write to provided perms: "+err.Error(), http.StatusBadRequest)
+	//	http.Error(w, "email cannot write to provided perms: "+err.Error(), http.StatusBadRequest)
 	//	return // TODO MAKE SURE TO ONLY TAKE SPECIES OVERLAP WITH REQUEST?
 	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -505,6 +505,10 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
+		acl, err := data.AclFor(ctx, perms)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := Slant{
 			MainCollectionIdField:   MainCollectionIdField{id},
 			StickType:               data.StickType,
@@ -519,9 +523,9 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 			KnownFruitableField:  data.KnownFruitableField,
 			MostRecentImageField: MostRecentImageField{importedPic},
 			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-			AclField:             data.AclFor(ctx, perms),
+			AclField:             acl,
 		}
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SlantsCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)

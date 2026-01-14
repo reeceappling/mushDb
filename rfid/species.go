@@ -18,13 +18,13 @@ import (
 const speciesCollectionName = "species"
 
 type Species struct {
-	NameIdField           // THIS IS THE COMMON NAME
-	ScientificName string `bson:"scientificName" json:"scientificName"`
-	AliasesField
+	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
+	ScientificName    string          `bson:"scientificName" json:"scientificName"`
+	AliasesField      `bson:"inline"`
 	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate,omitempty" json:"standardSubstrate,omitempty"`
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	NotesField        `bson:"inline"`
+	LastUpdatedField  `bson:"inline"`
+	AclField          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (sp Species) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {

@@ -32,7 +32,7 @@ type Permissioned interface {
 //	Blanket  perms.Perm                              `bson:"blanketPerms,omitempty" json:"blanketPerms,omitempty"` // TODO: index?
 //}
 //
-//func (p *Perms) projects() []projectName { // TODO: ever need to be used?
+//func (p *Perms) Projects() []projectName { // TODO: ever need to be used?
 //	if p == nil {
 //		return nil // TODO: ok?
 //	}
@@ -43,7 +43,7 @@ type Permissioned interface {
 //	return PermsField{p}
 //}
 //
-//// TODO: ON ENTRY PERMS CHANGE (or creation) modify all user session perms
+//// TODO: ON ENTRY PERMS CHANGE (or creation) modify all email session perms
 //
 //type ServerSideUserPermsSubset objectPermSubset[AlternateCollectionId]
 //
@@ -66,14 +66,14 @@ type Permissioned interface {
 //	if len(results) != len(ids) {
 //		return ClientSideUserPermsSubset{}, errors.New("non-matching id lengths")
 //	}
-//	for _, user := range results {
-//		i, exists := indForId[user.UserId]
+//	for _, email := range results {
+//		i, exists := indForId[email.Email]
 //		if !exists {
 //			return ClientSideUserPermsSubset{}, errors.New("found id not in set")
 //		}
 //		ids[i] = UserPermsPair{
-//			UserId:  user.UserId,
-//			val: user.humanReadableId(),
+//			Email:  email.Email,
+//			val: email.humanReadableId(),
 //		}
 //	}
 //	return ClientSideUserPermsSubset(objectPermSubset[UserPermsPair]{
@@ -87,14 +87,14 @@ type Permissioned interface {
 //func (csups ClientSideUserPermsSubset) Convert() ServerSideUserPermsSubset {
 //	return ServerSideUserPermsSubset(objectPermSubset[AlternateCollectionId]{
 //		Ids: sliceutils.Map(csups.Ids, func(upp UserPermsPair) AlternateCollectionId {
-//			return upp.UserId
+//			return upp.Email
 //		}),
 //		CanWrite: csups.CanWrite,
 //	})
 //}
 //
 //type UserPermsPair struct {
-//	UserId  AlternateCollectionId `json:"id" bson:"id"`
+//	Email  AlternateCollectionId `json:"id" bson:"id"`
 //	val string                `bson:"val" json:"val"` // email or username
 //}
 //
@@ -220,7 +220,7 @@ type Permissioned interface {
 //// TODO: ON PROJECT PERMS CHANGE, CHANGE USER SESSION PERMS
 //
 //type ProjectPermUserId struct {
-//	UserId  AlternateCollectionId `bson:"id" json:"id"`
+//	Email  AlternateCollectionId `bson:"id" json:"id"`
 //	Val string                `bson:"val" json:"val"` // Email or username
 //}
 //
@@ -327,7 +327,7 @@ type Permissioned interface {
 //	}
 //	lowestBlanketItem := ps[lowestBlanketIndex]
 //	users := lowestBlanketItem.Users.asMap()
-//	projects := lowestBlanketItem.Projects.asMap()
+//	Projects := lowestBlanketItem.Projects.asMap()
 //	for _, i := range nonBlanketWrites {
 //		if i == lowestBlanketIndex {
 //			continue
@@ -349,22 +349,22 @@ type Permissioned interface {
 //		}
 //		for j, id := range ps[i].Projects.Ids {
 //			canWriteOnToCheck := p.Projects.CanWrite[j]
-//			if currentPCanWrite, exists := projects[id]; exists {
+//			if currentPCanWrite, exists := Projects[id]; exists {
 //				if currentPCanWrite && !canWriteOnToCheck {
 //					if lowestBlanketPerm == perms.Read {
-//						delete(projects, id)
+//						delete(Projects, id)
 //					} else {
-//						projects[id] = false
+//						Projects[id] = false
 //					}
 //				}
 //			} else {
-//				delete(projects, id)
+//				delete(Projects, id)
 //			}
 //		}
 //	}
 //	return &Perms{
 //		Users:    mapAsPermSubset(users),
-//		Projects: mapAsPermSubset(projects),
+//		Projects: mapAsPermSubset(Projects),
 //		Blanket:  lowestBlanketPerm,
 //	}
 //}
@@ -374,7 +374,7 @@ type Permissioned interface {
 //	if p == nil {
 //		return perms.Write
 //	}
-//	// if user is root, return WritePerm
+//	// if email is root, return WritePerm
 //	if userAuthInfo.Opts.Admin != nil && *userAuthInfo.Opts.Admin {
 //		return perms.Write
 //	}
@@ -383,8 +383,8 @@ type Permissioned interface {
 //		return perms.Write
 //	}
 //	out := p.Blanket
-//	// Check if user is in item users
-//	if userIndex := slices.Index(p.Users.Ids, AlternateCollectionId(userAuthInfo.UserId)); userIndex != -1 {
+//	// Check if email is in item users
+//	if userIndex := slices.Index(p.Users.Ids, AlternateCollectionId(userAuthInfo.Email)); userIndex != -1 {
 //		if p.Users.CanWrite[userIndex] {
 //			return perms.Write
 //		}
@@ -393,8 +393,8 @@ type Permissioned interface {
 //		}
 //	}
 //
-//	// Check projects overlap
-//	// Generate set of projects to grab
+//	// Check Projects overlap
+//	// Generate set of Projects to grab
 //	minToKeep := perms.Read
 //	if out == perms.Read {
 //		minToKeep = perms.Write

@@ -6,10 +6,10 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-// ACL -> users / projects
-// Users -> projects
+// ACL -> users / Projects
+// Users -> Projects
 // Projects -> users
-// UserPermsResolved -> projects
+// UserPermsResolved -> Projects
 
 type AclField struct {
 	ACL *ACL `bson:"acl,omitempty" json:"acl,omitempty"`
@@ -29,9 +29,9 @@ func allCanWriteAcl() AclField {
 }
 
 type ACL struct {
-	Users       map[Base58Str] /*userId*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite
-	Projects    map[projectName]bool           `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite // TODO: project name?
-	BlanketPerm bool                           `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // false is public cannot read by default. // TODO: ENSURE PROPERLY SET EVERYWHERE
+	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite
+	Projects    map[projectName]bool       `bson:"Projects,omitempty" json:"Projects,omitempty"`       // bool is canWrite // TODO: project name?
+	BlanketPerm bool                       `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // false is public cannot read by default. // TODO: ENSURE PROPERLY SET EVERYWHERE
 }
 
 // TODO: USE THIS!!!!!!
@@ -64,11 +64,11 @@ func (acl *ACL) AsField() AclField {
 	return AclField{ACL: acl}
 }
 
-func (acl *ACL) userIdPermission(userId Base58Str) ReadWritePerm {
+func (acl *ACL) userIdPermission(email string) ReadWritePerm {
 	if acl == nil {
 		return utils.Pointer(true)
 	}
-	if userPerm, exists := (*acl).Users[userId]; exists {
+	if userPerm, exists := (*acl).Users[email]; exists {
 		return &userPerm
 	}
 	return nil
@@ -86,7 +86,7 @@ func (acl *ACL) HighestPermFor(perms ResolvedUserPerms) ReadWritePerm {
 		maxPerm = utils.Pointer(false)
 	}
 
-	maxPerm = acl.userIdPermission(perms.user())
+	maxPerm = acl.userIdPermission(perms.Email)
 	if maxPerm != nil && *maxPerm == true {
 		return utils.Pointer(true)
 	}
@@ -146,18 +146,14 @@ type Perm[T any] struct {
 }
 
 type ResolvedUserPerms struct {
-	UserId   AlternateCollectionId `bson:"userid" json:"userid"`
-	admin    *bool                 // nil is guest (never write), false is normal user, true is admin
+	Email    string                `bson:"email" json:"email"`
+	admin    *bool                 // nil is guest (never write), false is normal email, true is admin
 	projects map[projectName]*bool // nil is readonly, false is canWrite, true is admin of project
 }
 
 func (perms ResolvedUserPerms) HasPermissionToEdit(item Permissioned) bool {
 	userPerm := item.Permissions().HighestPermFor(perms)
 	return userPerm != nil && *userPerm
-}
-
-func (perms ResolvedUserPerms) user() Base58Str {
-	return perms.UserId.asBase58()
 }
 
 func (perms ResolvedUserPerms) isAdmin() bool {
@@ -181,16 +177,16 @@ func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permiss
 	return &out
 }
 
-type ProjectPerms map[string]*bool // TODO: USE // map of user to perm. nil is readOnly, false is write but not edit the project, true is full control over project
+type ProjectPerms map[string]*bool // TODO: USE // map of email to perm. nil is readOnly, false is write but not edit the project, true is full control over project
 
 type UserPerms struct { // TODO: USE!
-	admin    *bool // nil == guest, false == regular user, true==admin
-	projects []projectName
+	Admin    *bool         `bson:"admin,omitempty" json:"admin,omitempty"` // nil == guest, false == regular email, true==Admin
+	Projects []projectName `bson:"projects,omitempty" json:"projects,omitempty"`
 }
 
-func newAlwaysReadableAcl(ctx mongo.SessionContext, thisUserPerms ResolvedUserPerms, usersThatCanEdit []Base58Str, projectsThatCanEdit []projectName) (AclField, error) {
+func newAlwaysReadableAcl(ctx mongo.SessionContext, thisUserPerms ResolvedUserPerms, usersThatCanEdit []string, projectsThatCanEdit []projectName) (AclField, error) {
 	return PermsOnRequest{
-		UserPerms: slices.MapToMap(usersThatCanEdit, func(i Base58Str) (Base58Str, bool) {
+		UserPerms: slices.MapToMap(usersThatCanEdit, func(i string) (string, bool) {
 			return i, true
 		}),
 		ProjectPerms: slices.MapToMap(projectsThatCanEdit, func(i projectName) (projectName, bool) {

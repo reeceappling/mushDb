@@ -27,13 +27,13 @@ func (field SubstrateRecipeField) Get(ctx context.Context) (out SubstrateRecipe,
 }
 
 type SubstrateRecipe struct {
-	AlternateCollectionIdField
-	NameField
-	StandardField
-	AliasesField // must be unique everywhere
-	NotesField   // ingredients in notes
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	AlternateCollectionIdField `bson:"inline"`
+	NameField                  `bson:"inline"`
+	StandardField              `bson:"inline"`
+	AliasesField               `bson:"inline"` // must be unique everywhere
+	NotesField                 `bson:"inline"` // ingredients in notes
+	LastUpdatedField           `bson:"inline"`
+	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (recipe SubstrateRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -171,7 +171,7 @@ func initializeSubstrates(ctx context.Context) error {
 
 // TODO: USE THIS EVERYWHERE!
 type PermsOnRequest struct {
-	UserPerms    map[Base58Str]bool   `json:"userPerms,omitempty"` // Bool is canEdit
+	UserPerms    map[string]bool      `json:"userPerms,omitempty"` // Bool is canEdit
 	ProjectPerms map[projectName]bool `json:"projectPerms,omitempty"`
 	BlanketPerm  ReadWritePerm        `json:"blanketPerm,omitempty"` // TODO: ensure this is ok and we don't want publiclyReadable instead
 }
@@ -180,7 +180,7 @@ func (requestPerms PermsOnRequest) AclFor(ctx mongo.SessionContext, perms Resolv
 	if requestPerms.BlanketPerm != nil && *requestPerms.BlanketPerm {
 		return AclField{ACL: nil}, nil
 	}
-	// validate projects
+	// validate Projects
 	// TODO: count instead?
 	projColl := ctx.Client().Database(dbName).Collection(projectsCollectionName)
 	for projName, _ := range requestPerms.ProjectPerms {
@@ -195,15 +195,11 @@ func (requestPerms PermsOnRequest) AclFor(ctx mongo.SessionContext, perms Resolv
 	// validate users
 	// TODO: count instead?
 	userColl := ctx.Client().Database(dbName).Collection(userCollName)
-	for userB58, _ := range requestPerms.UserPerms {
-		userAltId, err := userB58.toAltCollectionId()
-		if err != nil {
-			return AclField{}, err
-		}
-		err = userColl.FindOne(ctx, bson.D{{"_id", userAltId}}).Err()
+	for userEmail, _ := range requestPerms.UserPerms {
+		err := userColl.FindOne(ctx, bson.D{{"_id", userEmail}}).Err()
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
-				return AclField{}, errors.New(string("could not find user " + userB58))
+				return AclField{}, errors.New(string("could not find email " + userEmail))
 			}
 			return AclField{}, err
 		}
@@ -215,7 +211,7 @@ func (requestPerms PermsOnRequest) AclFor(ctx mongo.SessionContext, perms Resolv
 		Projects:    requestPerms.ProjectPerms,
 		BlanketPerm: (requestPerms.BlanketPerm != nil),
 	}
-	acl.Users[perms.user()] = true
+	acl.Users[perms.Email] = true
 	return AclField{ACL: &acl}, nil
 }
 

@@ -24,20 +24,20 @@ const (
 
 type PlugsJar struct { // TODO: do this whole file! This should be an alt, not a main, due to multi-sales
 	// TODO; any more?
-	MainCollectionIdField             // TODO: was alt
-	ParentTypeField                   // TODO: get rid of these?           // None, plugs, jars, lcSyringe, plate, slant, etc (both alt and main
-	MainCollectionOptionalParentField // TODO: empty=bought, from plugs, jar, LC, plate/slant
-	CreationDateField
-	DowelTypes []Dowel `bson:"dowelTypes" json:"dowelTypes"`
-	SpeciesOptionalField
-	SubspeciesOptionalField
-	InnocField
-	PcRunField // TODO: created before innoculation
-	SalesField
-	DisposedField // Also changed once all pegs are sold/used?
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionIdField             `bson:"inline"` // TODO: was alt
+	ParentTypeField                   `bson:"inline"` // TODO: get rid of these?           // None, plugs, jars, lcSyringe, plate, slant, etc (both alt and main
+	MainCollectionOptionalParentField `bson:"inline"` // TODO: empty=bought, from plugs, jar, LC, plate/slant
+	CreationDateField                 `bson:"inline"`
+	DowelTypes                        []Dowel `bson:"dowelTypes" json:"dowelTypes"`
+	SpeciesOptionalField              `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	InnocField                        `bson:"inline"`
+	PcRunField                        `bson:"inline"` // TODO: created before innoculation
+	SalesField                        `bson:"inline"`
+	DisposedField                     `bson:"inline"` // Also changed once all pegs are sold/used?
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 
 	// TODO: this whole thing whenever we need to
 }

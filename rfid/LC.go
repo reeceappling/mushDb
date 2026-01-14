@@ -21,26 +21,26 @@ const (
 )
 
 type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
-	MainCollectionIdField
-	PcRunOptionalField // likely won't exist for pre-existing or purchased
-	LcRecipeField      // always exists (unless purchased)
-	CreationDateField
-	SpeciesOptionalField
-	SubspeciesOptionalField
-	InnocField
-	GenerationsFields
-	TransfersOutField
-	ParentTypeField
-	MainCollectionOptionalParentField // TODO: used to be binary // TODO: BRAND NEW! // Must come from (main) LC, plate, slant, (alt) lcSyringe
-	PicsField
-	ConfirmedClean *bool `bson:"confirmedClean,omitempty" json:"confirmedClean,omitempty"` // TODO: change so that we know exactly what confirmed it?
-	ContaminationsField
-	KnownFruitableField
-	DisposedField
-	MostRecentImageField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionIdField             `bson:"inline"`
+	PcRunOptionalField                `bson:"inline"` // likely won't exist for pre-existing or purchased
+	LcRecipeField                     `bson:"inline"` // always exists (unless purchased)
+	CreationDateField                 `bson:"inline"`
+	SpeciesOptionalField              `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	InnocField                        `bson:"inline"`
+	GenerationsFields                 `bson:"inline"`
+	TransfersOutField                 `bson:"inline"`
+	ParentTypeField                   `bson:"inline"`
+	MainCollectionOptionalParentField `bson:"inline"` // TODO: used to be binary // TODO: BRAND NEW! // Must come from (main) LC, plate, slant, (alt) lcSyringe
+	PicsField                         `bson:"inline"`
+	ConfirmedCleanField               `bson:"inline"` // TODO: fix everything using this
+	ContaminationsField               `bson:"inline"`
+	KnownFruitableField               `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	MostRecentImageField              `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
@@ -75,7 +75,7 @@ func (l LiquidCulture) setTransferParent(ctx mongo.SessionContext, xfer Transfer
 	if err != nil {
 		return err
 	}
-	res, err := ctx.Client().Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, l.Id, upd)
+	res, err := ctx.Client().Database(dbName).Collection(LCCollectionName).UpdateByID(ctx, l.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer,
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, l.Id, upd)
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LCCollectionName).UpdateByID(ctx, l.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -117,16 +117,16 @@ func (l LiquidCulture) EntryTypeField() *string {
 }
 
 func (l LiquidCulture) CollectionName() string {
-	return mainCollectionName
+	return LCCollectionName
 }
 
 func (l LiquidCulture) id() []byte {
-	return l.Id[:]
+	return []byte(l.Id.dbIdStr())
 }
 
 func initializeLCs(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(mainCollectionName)
+	coll := db.Collection(LCCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		newSimpleIndex("recipe", "recipe", false, false, false),
@@ -172,7 +172,7 @@ func initializeLCs(ctx context.Context) error {
 		ParentTypeField:                   ParentTypeField{&exParentType},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: &exPlate},
 		PicsField:                         PicsField{exPics},
-		ConfirmedClean:                    exBool,
+		ConfirmedCleanField:               ConfirmedCleanField{exBool},
 		ContaminationsField:               ContaminationsField{exContams},
 		KnownFruitableField:               KnownFruitableField{exBool},
 		DisposedField:                     DisposedField{&exampleTime},
@@ -199,7 +199,7 @@ type createLiquidCultureRequest struct {
 
 func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := createLiquidCultureRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), LCCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -241,7 +241,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(LCCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -263,8 +263,8 @@ type importLiquidCultureRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation     *int
-	ConfirmedClean *bool
+	Generation *int
+	ConfirmedCleanField
 	WriteTagToField
 	PermsOnRequest // TODO: handle in typescript and handler!
 	// image as "img"
@@ -272,7 +272,7 @@ type importLiquidCultureRequest struct {
 
 func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLiquidCultureRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), LCCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -379,7 +379,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
-	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.UserId) // Add user to perms if not already there
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Email) // Add email to perms if not already there
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		perms, err := GetAuthInfo(ctx)
@@ -387,6 +387,10 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 
+		acl, err := data.AclFor(ctx, perms)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		out := LiquidCulture{
 			MainCollectionIdField: MainCollectionIdField{id},
 			//PcRunOptionalField:      PcRunOptionalField{},       // No pc runs on imports
@@ -399,18 +403,18 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 				GenSinceFruitOrSpore: gen,
 			},
 			PicsField:            PicsField{pix},
-			ConfirmedClean:       data.ConfirmedClean,
+			ConfirmedCleanField:  data.ConfirmedCleanField,
 			KnownFruitableField:  data.KnownFruitableField,
 			MostRecentImageField: MostRecentImageField{importedPic},
 			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-			AclField:             data.AclFor(ctx, perms),
+			AclField:             acl,
 		}
 		// TODO: ADD TO MAP!
 		_, err = out.LcRecipeField.Get(ctx)
 		if err != nil && errors.Is(err, ErrMissingOptionalField) {
 			return DbTxnStdErr(w, "invalid LC recipe: "+err.Error(), http.StatusInternalServerError)
 		}
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(LCCollectionName)
 		_, err = coll.InsertOne(ctx, out)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -514,7 +518,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(LCCollectionName)
 		// go get current plate
 		existing := LiquidCulture{}
 		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)

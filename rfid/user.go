@@ -2,10 +2,9 @@ package rfid
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"errors"
-	"github.com/reeceappling/goUtils/v2/utils"
-	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -34,13 +33,8 @@ import (
 const userCollName = "users" // TODO: readonly field
 
 type User struct {
-	AlternateCollectionIdField
-	Username   string    `bson:"username" json:"username"` // TODO: INDEX? MUST BE UNIQUE
-	Email      string    `bson:"email" json:"email"`       // TODO: INDEX? MUST BE UNIQUE
-	HashedPass *string   `bson:"password,omitempty" json:"password,omitempty"`
-	Salt       *string   `bson:"salt,omitempty" json:"salt,omitempty"`
-	GoogleId   *string   `bson:"googleId,omitempty" json:"googleId,omitempty"` // TODO: INDEX?
-	Perms      UserPerms `bson:"perms,omitempty" json:"perms,omitempty"`       // TODO: PROJECTS COME FROM PERMS
+	Email string    `bson:"_id" json:"_id"`                         // TODO: INDEX? MUST BE UNIQUE
+	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: PROJECTS COME FROM PERMS
 	// All can view?
 	// TODO: GET ID TOKEN FROM USER, THEN VERIFY IT TO GET ACTUAL GOOGLE ID:
 	// TODO: GET TOKEN: https://developers.google.com/identity/sign-in/web/sign-in
@@ -75,67 +69,51 @@ func initializeUsers(ctx context.Context, usern, unhashedPass string) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
-		newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
-		newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
+		//newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
+		//newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
+		//newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
 	})
 	if err != nil {
 		return err
 	}
-	rootUserId := altCollIdForint(0)
-	guestUserId := altCollIdForint(1)
-
-	root := User{}
-	result := coll.FindOne(ctx, bson.M{"_id": rootUserId})
-	if result.Err() != nil {
-		if errors.Is(result.Err(), mongo.ErrNoDocuments) {
-			// create root user
-			root.Email = "root@root.com"
-			root.Username = usern
-			salt, errr := generateUserSalt()
-			if errr != nil {
-				return errr
-			}
-			root.Salt = &salt
-			h := sha256.New()
-
-			if _, err = h.Write([]byte(unhashedPass)); err != nil {
-				return err
-			}
-			onceHashedPass := string(h.Sum(nil))
-			finalPassHash, err := HashPassword(salt, onceHashedPass)
-			if err != nil {
-				return err
-			}
-			root.HashedPass = &finalPassHash
-			root.Perms = &UserPerms{
-				Admin:    utils.Pointer(true), // TODO: instead of using this, can admins just have a nil perms field?
-				Projects: nil,
-			}
-			// Insert root user to db
-			res, err := coll.InsertOne(ctx, root)
-			if err != nil {
-				return err
-			}
-			if res.InsertedID.(AlternateCollectionId).asBase58() != rootUserId.asBase58() {
-				// TODO: REMOVE FROM DB?
-				return errors.New("inserted root user id did not match expected id")
-			}
-		} else {
-			return result.Err()
-		}
-	}
-	var actualRootUser User
-	err = result.Decode(&actualRootUser)
-	if err != nil {
-		return errors.Join(errors.New("failed to decode current root user"), err)
-	}
-	if actualRootUser.Username != usern {
-		return errors.New("current root user id and expected do not match")
-	}
-	if actualRootUser.UserId.asBase58() != rootUserId.asBase58() {
-		return errors.New("inserted root id did not match expected")
-	}
+	//rootUserId := altCollIdForint(0)
+	//
+	//root := User{}
+	//result := coll.FindOne(ctx, bson.M{"_id": rootUserId})
+	//if result.Err() != nil {
+	//	if errors.Is(result.Err(), mongo.ErrNoDocuments) {
+	//		// create root email
+	//		root.Email = "root@root.com"
+	//		h := sha256.New()
+	//
+	//		if _, err = h.Write([]byte(unhashedPass)); err != nil {
+	//			return err
+	//		}
+	//
+	//		// Insert root email to db
+	//		res, err := coll.InsertOne(ctx, root)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		if res.InsertedID.(AlternateCollectionId).asBase58() != rootUserId.asBase58() {
+	//			// TODO: REMOVE FROM DB?
+	//			return errors.New("inserted root email id did not match expected id")
+	//		}
+	//	} else {
+	//		return result.Err()
+	//	}
+	//}
+	//var actualRootUser User
+	//err = result.Decode(&actualRootUser)
+	//if err != nil {
+	//	return errors.Join(errors.New("failed to decode current root email"), err)
+	//}
+	//if actualRootUser.Username != usern {
+	//	return errors.New("current root email id and expected do not match")
+	//}
+	//if actualRootUser.UserId.asBase58() != rootUserId.asBase58() {
+	//	return errors.New("inserted root id did not match expected")
+	//}
 	return nil
 }
 
@@ -226,7 +204,7 @@ func HashPassword(salt, pw string) (string, error) {
 // //		http.Error(w, "unable to parse request body", http.StatusBadRequest)
 // //		return
 // //	}
-// //	// Create user
+// //	// Create email
 // //	salt, err := generateUserSalt()
 // //	if err != nil {
 // //		http.Error(w, "unable to generate salt", http.StatusInternalServerError)
@@ -238,7 +216,7 @@ func HashPassword(salt, pw string) (string, error) {
 // //		return
 // //	}
 // //	newUser := User{
-// //		UserId:         newAlternateCollectionId(),
+// //		Email:         newAlternateCollectionId(),
 // //		Username:   req.Name,
 // //		HashedPass: &hashedPass,
 // //		Salt:       &salt,
@@ -254,31 +232,36 @@ func HashPassword(salt, pw string) (string, error) {
 // //		Collection(userCollName).
 // //		InsertOne(ctx, newUser)
 // //	if err != nil {
-// //		http.Error(w, "unable to create user", http.StatusInternalServerError)
+// //		http.Error(w, "unable to create email", http.StatusInternalServerError)
 // //		return
 // //	}
 // //}
 
-// TODO: update user perms should update
+// TODO: update email perms should update
 
 func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
-	userIsAdmin := u.Perms.admin
+	userIsAdmin := u.Perms.Admin
 	out := ResolvedUserPerms{
-		UserId: u.Id,
-		admin:  userIsAdmin,
+		Email: u.Email,
+		admin: userIsAdmin,
 	}
-	// If guest or admin, return early
-	if u.Perms.admin == nil || (*u.Perms.admin) {
+	// If guest or Admin, return early
+	if u.Perms.Admin == nil {
+		println("user is guest") // TODO; del
+		return out, nil
+	}
+	if *u.Perms.Admin {
+		println("user is Admin") // TODO; del
 		return out, nil
 	}
 
-	// TODO: ensure all projects are looped through
+	// TODO: ensure all Projects are looped through
 
 	// Resolve project perms // TODO: MAKE SURE THIS WORKS
 	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName).
-		Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.projects}})
+		Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.Projects}})
 	if err != nil {
-		return out, errors.Join(errors.New("failed to get cursor for UserPerms projects"), err)
+		return out, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
 	}
 	userProjPerms := map[projectName]*bool{}
 
@@ -287,7 +270,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 		if err = cursor.Decode(&project); err != nil {
 			return out, errors.Join(errors.New("cursor decode error for UserPerms project"), err)
 		}
-		perm, exists := project.Perms[string(u.Id[:])]
+		perm, exists := project.Perms[u.Email]
 		if !exists {
 			// TODO: ERROR
 		} else {
@@ -310,8 +293,8 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //	}
 //
 //	type UserPerms struct {
-//		Admin    *bool         `bson:"admin,omitempty" json:"admin,omitempty"`
-//		Projects []projectName `bson:"projects,omitempty" json:"projects,omitempty"`
+//		Admin    *bool         `bson:"Admin,omitempty" json:"Admin,omitempty"`
+//		Projects []projectName `bson:"Projects,omitempty" json:"Projects,omitempty"`
 //	}
 
 //
@@ -365,7 +348,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //	return sessId, err
 //}
 //
-//// TODO: root is all-powerful admin
+//// TODO: root is all-powerful Admin
 //func LoginRoot(ctx context.Context) (SessionId, error) {
 //	svc, err := GetAuthService(ctx)
 //	if err != nil {
@@ -376,7 +359,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		return sessId, err
 //	}
 //	_, err = svc.SessionToAuthMap.NewSession(sessId, AuthInfo{
-//		UserId: altCollIdForint(0), // TODO: FIX ME?
+//		Email: altCollIdForint(0), // TODO: FIX ME?
 //		Opts: &UserPermsResolved{
 //			Admin:    utils.Pointer(true),
 //			Projects: nil,
@@ -386,9 +369,9 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //}
 //
 //// TODO: USE THIS
-//// TODO: return user ID?
+//// TODO: return email ID?
 //func CreateUser(ctx context.Context, email string, username string, hashedPass, googleId *string) error {
-//	user := User{
+//	email := User{
 //		AlternateCollectionIdField: newAlternateCollectionId().asIdField(),
 //		Username:                   username,
 //		Email:                      email,
@@ -401,15 +384,15 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		if err != nil {
 //			return err
 //		}
-//		user.Salt = &salt
+//		email.Salt = &salt
 //		finalHashedPass, err := HashPassword(salt, *hashedPass)
 //		if err != nil {
 //			return err
 //		}
-//		user.HashedPass = &finalHashedPass
+//		email.HashedPass = &finalHashedPass
 //	}
 //	_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
-//		Collection(userCollName).InsertOne(ctx, user)
+//		Collection(userCollName).InsertOne(ctx, email)
 //	return err
 //}
 //
@@ -418,7 +401,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		defer r.Body.Close()
 //		valueBs, err := io.ReadAll(r.Body)
 //		if err != nil {
-//			http.Error(w, "failed to get user from request", http.StatusBadRequest)
+//			http.Error(w, "failed to get email from request", http.StatusBadRequest)
 //			return
 //		}
 //		usernameOrEmail := string(valueBs) // TODO: get via username or email
@@ -453,11 +436,11 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //	if err != nil {
 //		return utils.TandErr(AlternateCollectionId{}, err)
 //	}
-//	return utils.ErrAndT(u.UserId)
+//	return utils.ErrAndT(u.Email)
 //}
 //
 //type updateUserRequest struct {
-//	Admin *bool `json:"admin,omitempty"`
+//	Admin *bool `json:"Admin,omitempty"`
 //}
 //
 //func updateUserHandler(w http.ResponseWriter, r *http.Request) { // TODO: MAKE SURE WE ARE ONLY UPDATING THE ADMIN PART
@@ -485,7 +468,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		return
 //	}
 //	if !authInfo.isAdmin() {
-//		http.Error(w, "only admins can modify user permissions", http.StatusForbidden)
+//		http.Error(w, "only admins can modify email permissions", http.StatusForbidden)
 //		return
 //	}
 //	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
@@ -499,14 +482,14 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //			return DbTxnStdErr(w, err.Error(), stat)
 //		}
 //		doRemoveAdmin := req.Admin == nil || *req.Admin == false
-//		if existing.UserId == authInfo.UserId && doRemoveAdmin {
-//			return DbTxnStdErr(w, "cannot remove admin from self", http.StatusBadRequest)
+//		if existing.Email == authInfo.Email && doRemoveAdmin {
+//			return DbTxnStdErr(w, "cannot remove Admin from self", http.StatusBadRequest)
 //		}
 //		mods := bson.D{} // TODO: modify
 //		if doRemoveAdmin {
-//			mods = append(mods, bson.E{"$unset", "perms.admin"})
+//			mods = append(mods, bson.E{"$unset", "perms.Admin"})
 //		} else {
-//			mods = append(mods, bson.E{"$set", bson.D{{"perms.admin", true}}})
+//			mods = append(mods, bson.E{"$set", bson.D{{"perms.Admin", true}}})
 //		}
 //		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", id}}, mods)
 //		err = result.Err()

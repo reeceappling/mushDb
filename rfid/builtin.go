@@ -19,7 +19,6 @@ const (
 	idAntibioticAgar
 	idTestBag
 	idExampleTransfer
-	idTestPlate
 	idTestFC
 	idTestJar
 	idTestMSS
@@ -34,6 +33,8 @@ const (
 	idTestPlug
 	idTestGrainBatch
 )
+
+const idTestPlate int = 0
 
 var ogTime = unixTimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))
 
@@ -52,7 +53,7 @@ func altCollIdFieldForint(i int) AlternateCollectionIdField {
 }
 
 func mainCollIdForint(i int) MainCollectionId { // TODO: FIX FOR uint8 overflow
-	return [8]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)}
+	return MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)})
 }
 
 func mainCollIdFieldForint(i int) MainCollectionIdField {

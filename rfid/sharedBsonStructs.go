@@ -20,11 +20,10 @@ func init() {
 	var ok bool = true
 	dbName, ok = os.LookupEnv("MONGO_INITDB_DATABASE")
 	if !ok {
-		panic("missing env var MONGO_INITDB_DATABASE")
+		dbName = "mushdb"
+		println("missing env var MONGO_INITDB_DATABASE")
 	}
 }
-
-const mainCollectionName = "mainCollection"
 
 type imageLocation string
 type unixTime int64 // unixMilli!
@@ -63,15 +62,6 @@ type subdocWithImage interface {
 //	return out
 //}
 
-//type AgarPour struct {
-//	Date       unixTime              `bson:"date" json:"date"`
-//	Wateriness string                `bson:"wateriness,omitempty" json:"wateriness,omitempty"`
-//	PourTempF  int                   `bson:"pourTempF" json:"pourTempF"`
-//	Recipe     AlternateCollectionId `bson:"recipe" json:"recipe"` // This is from batch
-//	Batch      AlternateCollectionId `bson:"batch" json:"batch"`
-//	NotesField // TODO: account for this, used to be []Note
-//}
-
 type PicsField struct { // TODO: use where needed
 	Pics []PicWithNotes `bson:"pics,omitempty" json:"pics,omitempty"`
 }
@@ -85,9 +75,9 @@ type MostRecentImageField struct { // TODO: use where needed
 }
 
 type PicWithNotes struct {
-	Time       unixTime      `bson:"time" json:"time"`
-	Location   imageLocation `bson:"location" json:"location"`
-	NotesField               // TODO: account for this, used to be []Note
+	Time       unixTime        `bson:"time" json:"time"`
+	Location   imageLocation   `bson:"location" json:"location"`
+	NotesField `bson:"inline"` // TODO: account for this, used to be []Note
 }
 
 func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes {
@@ -111,8 +101,8 @@ func (pwn PicWithNotes) withoutNotes() PicWithNotes {
 }
 
 type PicWithNotesLessLocation struct {
-	Time       unixTime `bson:"time" json:"time"`
-	NotesField          // TODO: account for this, used to be []Note
+	Time       unixTime        `bson:"time" json:"time"`
+	NotesField `bson:"inline"` // TODO: account for this, used to be []Note
 }
 
 func (p PicWithNotesLessLocation) asPicWithNotes(location *string) PicWithNotes {
@@ -132,12 +122,12 @@ type ContaminationsField struct { // TODO: ensure handled properly everywhere
 }
 
 type Contamination struct {
-	Time       unixTime       `bson:"time" json:"time"` // TODO: NEW! HANDLE EVERYWHERE!
-	Confirmed  bool           `bson:"confirmed" json:"confirmed"`
-	Bacteria   bool           `bson:"bacteria" json:"bacteria"`
-	Mold       bool           `bson:"mold" json:"mold"`
-	Location   *imageLocation `bson:"location,omitempty" json:"location,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
-	NotesField                // TODO: account for this, used to be []Note       // TODO: NEW! HANDLE EVERYWHERE!
+	Time       unixTime        `bson:"time" json:"time"` // TODO: NEW! HANDLE EVERYWHERE!
+	Confirmed  bool            `bson:"confirmed" json:"confirmed"`
+	Bacteria   bool            `bson:"bacteria" json:"bacteria"`
+	Mold       bool            `bson:"mold" json:"mold"`
+	Location   *imageLocation  `bson:"location,omitempty" json:"location,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
+	NotesField `bson:"inline"` // TODO: account for this, used to be []Note       // TODO: NEW! HANDLE EVERYWHERE!
 }
 
 type ContaminationLessLocation struct {
@@ -207,17 +197,6 @@ func (f fluid) AsLiquid(pct ...float64) liquid {
 		Pct:  val,
 	}
 }
-
-//type notesGroup []Note
-//
-//func (notes notesGroup) GenerationIfExists() *int {
-//	for _, note := range notes {
-//		if out := note.GenerationIfExists(); out != nil {
-//			return out
-//		}
-//	}
-//	return nil
-//}
 
 type Note struct {
 	Time unixTime `bson:"time" json:"time"`

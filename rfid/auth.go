@@ -5,16 +5,33 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
+	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
+	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/sessions/genericsessions"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
+
+//func newOauthConfig() *oauth2.Config { // TODO: CHANGE
+//	return &oauth2.Config{
+//		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+//		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+//		RedirectURL:  "http://api/authCallback", // TODO: ensure ok!
+//		Scopes: []string{
+//			"https://www.googleapis.com/auth/userinfo.profile",
+//			"https://www.googleapis.com/auth/userinfo.email"},
+//		Endpoint: google.Endpoint,
+//	}
+//}
 
 var sessionAesCipher cipher.AEAD // 32 bytes for AES-256
 
@@ -44,7 +61,7 @@ type SessionId string
 func NewAuthService(sessionsCleanupFreq, sessionTTL *time.Duration) *AuthService {
 	out := &AuthService{
 		sessMap:        map[SessionId]genericsessions.Session[ResolvedUserPerms]{},
-		UserSessionMap: map[Base58Str]SessionId{},
+		UserSessionMap: map[string]SessionId{},
 		ttl:            utils.Default(sessionTTL, 2*time.Hour),
 		RWMutex:        &sync.RWMutex{},
 	}
@@ -60,20 +77,18 @@ func NewAuthService(sessionsCleanupFreq, sessionTTL *time.Duration) *AuthService
 	return out
 }
 
-func GetAuthService(ctx context.Context) (*AuthService, error) {
+func GetAuthService(ctx context.Context) *AuthService {
 	svc, ok := ctx.Value(authServiceContextKey).(*AuthService)
-	if !ok {
-		return nil, errors.New("auth service not found")
+	if !ok || svc == nil {
+		svc = NewAuthService(utils.Pointer(time.Minute*2), utils.Pointer(time.Hour*1)) // TODO: FIX!!!!
+		return svc
 	}
-	if svc == nil {
-		return nil, errors.New("auth service is nil")
-	}
-	return svc, nil
+	return svc
 }
 
 type AuthService struct {
 	sessMap        map[SessionId]genericsessions.Session[ResolvedUserPerms]
-	UserSessionMap map[Base58Str]SessionId
+	UserSessionMap map[string]SessionId
 	ttl            time.Duration
 	*sync.RWMutex  // This struct MUST be used as a pointer // TODO: HATE how the mutexes are used in here
 }
@@ -84,15 +99,30 @@ var (
 	ErrBadSession      = errors.New("bad session found in storage")
 )
 
+func (srv *AuthService) LogoutSession(sessId SessionId) error {
+	srv.Lock()
+	defer srv.Unlock()
+	res := srv.GetSession(sessId, false)
+	if res.Err != nil {
+		return res.Err
+	}
+	if res.Item.Data.Email == GuestEmail() {
+		srv.deleteGuestSession(sessId)
+	} else {
+		srv.deleteSession(sessId, res.Item.Data.Email)
+	}
+	return nil
+}
+
 // TODO: ensure working
 func (srv *AuthService) clearOldSessions() {
 	srv.RLock()
 
-	toDelete := map[SessionId]Base58Str{}
+	toDelete := map[SessionId]string{}
 	now := time.Now()
 	for sessid, sess := range srv.sessMap {
 		if sess.Expiry.Before(now) {
-			toDelete[sessid] = sess.Data.UserId.asBase58()
+			toDelete[sessid] = sess.Data.Email
 		}
 	}
 	srv.RUnlock()
@@ -104,7 +134,7 @@ func (srv *AuthService) clearOldSessions() {
 	return
 }
 
-func (srv *AuthService) getSession(id SessionId, refreshTTL bool) utils.Result[genericsessions.Session[ResolvedUserPerms]] { // TODO: PUSH THIS UPDATE TO THE REPO
+func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[genericsessions.Session[ResolvedUserPerms]] { // TODO: PUSH THIS UPDATE TO THE REPO
 
 	srv.RLock()
 	sess, ok := srv.sessMap[id]
@@ -115,23 +145,26 @@ func (srv *AuthService) getSession(id SessionId, refreshTTL bool) utils.Result[g
 	if sess.Expiry.Before(time.Now()) {
 		wg.Add(1)
 		go func() {
-			srv.deleteSession(id, sess.Data.UserId.asBase58())
+			srv.deleteSession(id, sess.Data.Email)
 			wg.Done()
 		}()
 		srv.RUnlock()
 		wg.Wait()
+		// TODO; is this ok?
 		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](ErrExpired)
 	}
 	if refreshTTL {
-		out := &utils.Result[genericsessions.Session[ResolvedUserPerms]]{}
+		result := genericsessions.Session[ResolvedUserPerms]{}
 		wg.Add(1)
 		go func() {
-			*out.Item = srv.setRefreshedSession(id, sess)
+			// TODO: FIXME!
+			result = srv.setRefreshedSession(id, sess)
 			wg.Done()
 		}()
+
 		srv.RUnlock()
 		wg.Wait()
-		return *out // TODO: ok?
+		return utils.ResultFrom(result, nil)
 	}
 	return utils.SuccessfulResult(sess)
 
@@ -145,7 +178,7 @@ func (srv *AuthService) setRefreshedSession(id SessionId, sess genericsessions.S
 	updatedSess := sess.WithUpdatedExpiry(srv.ttl)
 	*result = updatedSess
 	srv.sessMap[id] = updatedSess
-	srv.UserSessionMap[updatedSess.Data.UserId.asBase58()] = id // TODO: ok?
+	srv.UserSessionMap[updatedSess.Data.Email] = id // TODO: ok?
 	return *result
 }
 
@@ -157,33 +190,56 @@ func (srv *AuthService) addSessionIfNotExists(id SessionId, authinf ResolvedUser
 	if _, authExists := srv.sessMap[id]; authExists {
 		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](errors.New("session with that ID already exists")) // TODO: dont like
 	}
-	if _, userHasSessionAlready := srv.UserSessionMap[authinf.UserId.asBase58()]; userHasSessionAlready {
-		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](errors.New("user already has existing session")) // TODO: dont like. Maybe remove the user and their old session?
+	if _, userHasSessionAlready := srv.UserSessionMap[authinf.Email]; userHasSessionAlready {
+		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](errors.New("email already has existing session")) // TODO: dont like. Maybe remove the email and their old session?
 	}
 	sess := genericsessions.Session[ResolvedUserPerms]{Data: authinf}
 	updatedSess := sess.WithUpdatedExpiry(srv.ttl)
 	*result = updatedSess
 	srv.sessMap[id] = updatedSess
-	srv.UserSessionMap[updatedSess.Data.UserId.asBase58()] = id // TODO: ok?
+	srv.UserSessionMap[updatedSess.Data.Email] = id
 	return utils.SuccessfulResult(*result)
 }
 
-func (srv *AuthService) deleteSession(id SessionId, userId Base58Str) {
+// TODO; ensure ok
+func (srv *AuthService) addGuestSessionIfNotExists(id SessionId) error {
+	result := &genericsessions.Session[ResolvedUserPerms]{}
 	srv.Lock()
 	defer srv.Unlock()
-	delete(srv.UserSessionMap, userId)
+	if _, exists := srv.sessMap[id]; exists {
+		return errors.New("session with that ID already exists")
+	}
+	updatedSess := genericsessions.Session[ResolvedUserPerms]{Data: ResolvedUserPerms{Email: GuestEmail(), admin: nil}}.WithUpdatedExpiry(srv.ttl)
+	*result = updatedSess
+	srv.sessMap[id] = updatedSess
+	return nil
+}
+
+func (srv *AuthService) deleteSession(id SessionId, email string) {
+	srv.Lock()
+	defer srv.Unlock()
+	delete(srv.UserSessionMap, email)
 	delete(srv.sessMap, id)
 	return
 }
 
-// TODO: function to add/remove user project perms if they exist
+func (srv *AuthService) deleteGuestSession(id SessionId) {
+	srv.Lock()
+	defer srv.Unlock()
+	delete(srv.sessMap, id)
+	return
+}
+
+// TODO: function to add/remove email project perms if they exist
 
 func (serv *AuthService) TryToReAuth(sessionKey SessionId) (genericsessions.Session[ResolvedUserPerms], error) {
 	if sessionKey == "" {
+		println("sessionKey is empty") // TODO; del
 		return genericsessions.Session[ResolvedUserPerms]{}, ErrBlankSessionKey
 	}
-	res := serv.getSession(sessionKey, true) // TODO: needs update
+	res := serv.GetSession(sessionKey, true) // TODO: needs update
 	if res.Err != nil {
+		println("failed to get session in TryToReAuth") // TODO; del
 		return genericsessions.Session[ResolvedUserPerms]{}, utils.NotFound
 	}
 	return *res.Item, nil
@@ -191,11 +247,11 @@ func (serv *AuthService) TryToReAuth(sessionKey SessionId) (genericsessions.Sess
 
 // TODO: use this
 
-func (serv *AuthService) SessionForUserId(uid AlternateCollectionId) (session SessionId, err error) {
+func (serv *AuthService) SessionForEmail(email string) (session SessionId, err error) {
 	serv.RLock()
 	defer serv.RUnlock()
 
-	sess, exists := serv.UserSessionMap[uid.asBase58()]
+	sess, exists := serv.UserSessionMap[email]
 	if !exists {
 		return "", utils.NotFound
 	}
@@ -204,34 +260,67 @@ func (serv *AuthService) SessionForUserId(uid AlternateCollectionId) (session Se
 
 // TODO: USE THIS
 
-func (serv *AuthService) TryToAuthUserPass(ctx context.Context, username, hashedPass string) (sessionId SessionId, usernOut string, err error) {
-	usernOut = username
-	var u User
-	// TODO: ID vs username vs email?
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName).FindOne(ctx, bson.M{
-		"_id": username}).Decode(&u)
+func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser goth.User) (sessionId SessionId, email string, err error) {
+	var u User // TODO: get this from db
+	email = oauthUser.Email
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName)
+	userResult := coll.FindOne(ctx, bson.D{{"_id", email}})
+	raw, _ := userResult.Raw() // TODO; del
+	println(raw.String())      // TODO; del
+	err = userResult.Decode(&u)
 	if err != nil {
-		return "", "", err // TODO: ok?
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			return "", oauthUser.Email, errors.Join(errors.New("failed to get user. May exist"), err)
+		}
+		// If not found, create user!
+		u = User{
+			Email: email,
+			Perms: UserPerms{
+				Admin:    nil,
+				Projects: []projectName{},
+			},
+		}
+		adminEmail := os.Getenv("ADMIN_GMAIL")
+		if adminEmail != "" && email == adminEmail {
+			println("Admin user signed up!") // TODO: DEL
+			logging.GetLogger(ctx).Info("Admin user signed up with email " + adminEmail)
+			u = User{
+				Email: email,
+				Perms: UserPerms{
+					Admin:    utils.Pointer(true),
+					Projects: []projectName{},
+				},
+			}
+		}
+		bss, _ := json.Marshal(u)              // TODO: del
+		println("inserting user", string(bss)) // TODO: del
+		_, err = coll.InsertOne(ctx, u)
+		if err != nil {
+			return "", email, err
+		}
+		if adminEmail != "" && email == adminEmail {
+			if err = coll.FindOne(ctx, bson.D{{"_id", email}}).Decode(&u); err != nil {
+				println("failed to check Admin user")
+				return "", email, err
+			}
+			if u.Perms.Admin == nil || !(*u.Perms.Admin) {
+				return "", email, errors.New("result does not show Admin")
+			}
+		}
+		println("user created, continuing")
 	}
-	username = u.Username
-	if u.HashedPass == nil || u.Salt == nil {
-		return "", "", errors.New("user does not have a password set up")
-	}
-	hashed, err := HashPassword(*u.Salt, hashedPass) // TODO: ensure ok
-	if *u.HashedPass != hashed {
-		return "", "", errors.New("password mismatch")
+	if u.Perms.Admin == nil {
+		println("Admin on perms was nil when it should not have been!")
+	} else {
+		println("Admin on perms was correct!")
 	}
 	sessionId, _, err = serv.registerSessionAndResolvePerms(ctx, u)
 	return
 }
 
-// TODO: USE THIS
-
-func (serv *AuthService) TryToAuthGoogle(ctx context.Context, finalEndpoint, googleId string) (sessionId SessionId, username string, err error) {
-	var u User // TODO: get this from db
-	// TODO: DO THIS WHOLE THING
-	sessionId, _, err = serv.registerSessionAndResolvePerms(ctx, u)
-	return
+// TODO: USE THIS!
+func (serv *AuthService) SigninGuestUser(ctx context.Context) (sessionId SessionId, err error) {
+	return serv.registerGuestSession(ctx)
 }
 
 func generateSessionId() (SessionId, error) {
@@ -246,18 +335,18 @@ func generateSessionId() (SessionId, error) {
 // TODO: USE!
 func (serv *AuthService) registerSessionAndResolvePerms(ctx context.Context, usr User) (sessionId SessionId, auths genericsessions.Session[ResolvedUserPerms], err error) {
 	// TODO: RESOLVE ALL USER INFO FOR PROJECTS
-	// Check if user already has a session
-	sessId, err := serv.SessionForUserId(usr.Id)
+	// Check if email already has a session
+	sessId, err := serv.SessionForEmail(usr.Email)
 	if err == nil {
 		// User already exists! Remove old one
-		serv.deleteSession(sessId, usr.Id.asBase58())
+		serv.deleteSession(sessId, usr.Email)
 	}
 	sessId, err = generateSessionId() // TODO: make sure does not already exist!
 	if err != nil {
 		return
 	}
 	// Resolve auth info
-	resolvedPerms, err := usr.ResolvePerms(ctx)
+	resolvedPerms, err := usr.ResolvePerms(ctx) // TODO; FIX?
 	if err != nil {
 		return "", auths, err
 	}
@@ -265,11 +354,24 @@ func (serv *AuthService) registerSessionAndResolvePerms(ctx context.Context, usr
 	if authsResult.Err != nil {
 		return sessId, auths, authsResult.Err
 	}
-	serv.UserSessionMap[usr.Id.asBase58()] = sessId
+	serv.UserSessionMap[usr.Email] = sessId
 	return sessId, *authsResult.Item, nil
 }
 
-//// TODO: ON PROJECT PERMS CHANGE, OR ENTRY PERMS CHANGE, that affect each user, modify user session perms
+// TODO: USE!
+func (serv *AuthService) registerGuestSession(ctx context.Context) (sessionId SessionId, err error) {
+	sessId, err := generateSessionId() // TODO: make sure does not already exist!
+	if err != nil {
+		return
+	}
+	err = serv.addGuestSessionIfNotExists(sessId)
+	if err != nil {
+		return sessId, err
+	}
+	return sessId, nil
+}
+
+//// TODO: ON PROJECT PERMS CHANGE, OR ENTRY PERMS CHANGE, that affect each email, modify email session perms
 //// TODO: USE!
 //func (serv *AuthService) changeSessionProjectPerms(projName projectName, newProjectPerms map[Base58Str]perms.Perm) { // TODO: USE THIS
 //
@@ -288,7 +390,7 @@ func (serv *AuthService) registerSessionAndResolvePerms(ctx context.Context, usr
 //		if session.Data.Opts == nil {
 //			continue // TODO: ok?
 //		}
-//		// TODO: do we need to create projects in opts if it does not exist?
+//		// TODO: do we need to create Projects in opts if it does not exist?
 //		serv.Lock()
 //		if newPerms == perms.None {
 //			delete(session.Data.Opts.Projects, projName)
@@ -329,43 +431,41 @@ const (
 	AuthSessionCookieKey      = "SessionId"
 )
 
-// authSplitterMiddleware , if the user does not supply a session, will need to handle GetSessionCookie returning http.ErrNoCookie
+// authSplitterMiddleware , if the email does not supply a session, will need to handle GetSessionCookie returning http.ErrNoCookie
 //
 // handleAuthErr is typically just a http.Handler that will redirect when err==http.ErrNoCookie and truly error out if err is !=nil otherwise
 
-func authSplitterMiddleware(masterUser, masterPass string) func(http.Handler, http.Handler, func(error) http.Handler) http.Handler {
+func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.Handler) http.Handler {
 	return func(onAuthed, handleNoSessionCookie http.Handler, handleAuthErr func(error) http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-			svc, err := GetAuthService(ctx)
+			println("COOKIES!")
+			cs := r.Cookies()
+			if len(cs) == 0 {
+				println("NO COOKIES FOUND")
+			}
+			for _, c := range cs {
+				println(c.Name, c.Path, c.Domain, c.Value) // TODO: del
+			}
+			svc := GetAuthService(ctx)
+			println("Getting session id")
+			sessionId, err := SessionIdFromRequest(r)
 			if err != nil {
-				err = errors.Join(errors.New("no auth service found. Endpoint unavailable"), err)
+				println("no session id found on request", err.Error()) // TODO: del
+				// TODO: handleNoSessionCookie
 				handleAuthErr(err).ServeHTTP(w, r)
 				return
 			}
-			var sessionId SessionId
-			cookie, err := GetSessionCookie(r)
-			if err == nil {
-				sessionId, err = SessionIdFromCookie(cookie)
-			}
-			if err != nil {
-				if errors.Is(err, http.ErrNoCookie) {
-					// TODO: remove cookie if needed?
-					handleNoSessionCookie.ServeHTTP(w, r)
-				} else {
-					handleAuthErr(err).ServeHTTP(w, r)
-				}
-				return
-			}
-
+			println("Trying to reauth")
 			sess, err := svc.TryToReAuth(sessionId)
 			if err != nil {
+				println("failed to reAuth", err.Error())
 				handleAuthErr(err).ServeHTTP(w, r)
 				return
 			}
-			cookie.Expires = sess.Expiry
-			http.SetCookie(w, cookie)
-
+			// TODO: validate user perms are correct
+			// TODO: ensure session cookies persist!
+			println("Serving next success handler")
 			onAuthed.ServeHTTP(w, r.WithContext(SetAuthInfo(r.Context(), sess.Data)))
 		})
 	}
@@ -373,6 +473,7 @@ func authSplitterMiddleware(masterUser, masterPass string) func(http.Handler, ht
 func GetResolvedUserPerms(ctx context.Context) (ResolvedUserPerms, error) {
 	usr, ok := ctx.Value(AuthPermsContextHeaderKey).(ResolvedUserPerms)
 	if !ok {
+		println("no auth info on context")
 		return ResolvedUserPerms{}, errors.New("no auth info on context")
 	}
 
@@ -384,8 +485,8 @@ func GetAuthInfo(ctx context.Context) (ResolvedUserPerms, error) {
 	return GetResolvedUserPerms(ctx)
 }
 
-func SetAuthInfo(ctxIn context.Context, info ResolvedUserPerms) context.Context {
-	return context.WithValue(ctxIn, AuthPermsContextHeaderKey, info)
+func SetAuthInfo(ctxIn context.Context, perms ResolvedUserPerms) context.Context {
+	return context.WithValue(ctxIn, AuthPermsContextHeaderKey, perms)
 }
 
 func (serv *AuthService) necessaryFirstMiddleware(next http.Handler) http.Handler {
@@ -394,7 +495,7 @@ func (serv *AuthService) necessaryFirstMiddleware(next http.Handler) http.Handle
 	})
 }
 
-func (serv *AuthService) AuthOrRedirectMiddleware(redirectUrl, masterUser, masterPass string) func(http.Handler) http.Handler {
+func (serv *AuthService) AuthOrRedirectMiddleware(redirectUrl string) func(http.Handler) http.Handler {
 	var redirectHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// TODO: PUT PAGE FROM IN THE DATA SO WE CAN PULL IT LATER?
 		http.Redirect(w, r, redirectUrl, http.StatusTemporaryRedirect)
@@ -405,13 +506,13 @@ func (serv *AuthService) AuthOrRedirectMiddleware(redirectUrl, masterUser, maste
 	//	http.Redirect(w, r, redirectUrl, http.StatusSeeOther) // TODO: status ok?
 	//})
 	return func(nextHandler http.Handler) http.Handler {
-		return serv.necessaryFirstMiddleware(authSplitterMiddleware(masterUser, masterPass)(nextHandler, redirectHandler, customDenyHandler))
+		return serv.necessaryFirstMiddleware(authSplitterMiddleware()(nextHandler, redirectHandler, customDenyHandler))
 	}
 }
 
-func (serv *AuthService) BasicSplitterMiddleware(masterUser, masterPass string) func(http.Handler, http.Handler) http.Handler {
+func (serv *AuthService) BasicSplitterMiddleware() func(http.Handler, http.Handler) http.Handler {
 	return func(authSuccess, authFailure http.Handler) http.Handler {
-		return serv.necessaryFirstMiddleware(authSplitterMiddleware(masterUser, masterPass)(authSuccess, authFailure, func(error) http.Handler {
+		return serv.necessaryFirstMiddleware(authSplitterMiddleware()(authSuccess, authFailure, func(error) http.Handler {
 			return authFailure
 		}))
 	}
@@ -421,14 +522,14 @@ var denyHandler = customDenyHandler(errors.New("Forbidden"))
 
 func customDenyHandler(err error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, err.Error(), http.StatusForbidden)
+		http.Error(w, "denied here"+err.Error(), http.StatusForbidden)
 		return
 	})
 }
 
-func (serv *AuthService) AuthOrDenyMiddleware(masterUser, masterPass string) func(http.Handler) http.Handler {
+func (serv *AuthService) AuthOrDenyMiddleware() func(http.Handler) http.Handler {
 	return func(nextHandler http.Handler) http.Handler {
-		return serv.necessaryFirstMiddleware(authSplitterMiddleware(masterUser, masterPass)(nextHandler, denyHandler, func(error) http.Handler { return denyHandler }))
+		return serv.necessaryFirstMiddleware(authSplitterMiddleware()(nextHandler, denyHandler, func(error) http.Handler { return denyHandler }))
 	}
 }
 
@@ -465,13 +566,12 @@ func GetSessionCookie(r *http.Request) (*http.Cookie, error) {
 	return out, err
 }
 
-func SessionIdFromCookie(c *http.Cookie) (SessionId, error) {
-	if c == nil {
-		return "", errors.Join(errors.New("session cookie did not exist"), http.ErrNoCookie)
+const SessionIdKey = "SessionId"
+
+func SessionIdFromRequest(r *http.Request) (SessionId, error) {
+	sessId, err := gothic.GetFromSession(SessionIdKey, r)
+	if err != nil {
+		return "", err
 	}
-	sessionName := c.Value
-	if sessionName == "" {
-		return "", errors.Join(errors.New("session cookie was empty"), http.ErrNoCookie)
-	}
-	return SessionId(sessionName), nil
+	return SessionId(sessId), nil
 }

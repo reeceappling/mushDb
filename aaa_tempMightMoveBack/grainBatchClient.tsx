@@ -243,7 +243,7 @@ export function GrainBatchSelector(
     const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
     useEffect(() => {
         fetch(BaseExternalUrl + "db/list/grainBatches", {
-            method: 'Get',
+            method: 'GET',
             headers: {
                 credentials: 'include',
                 SessionId: cookies.SessionId,

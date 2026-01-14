@@ -3,35 +3,31 @@ package rfid
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
-const projectsCollectionName = "projects"
+const projectsCollectionName = "Projects"
 
 type projectName string
 
 type Project struct {
-	Name projectName `bson:"_id" json:"_id"`
-	CreationDateField
-	Completed *unixTime `bson:"completed,omitempty" json:"completed,omitempty"` // TODO: index?
-	NotesField
-	LastUpdatedField
-	// TODO: FIX PROJECT PERMS
-	Perms ProjectPerms `bson:"perms,omitempty" json:"perms,omitempty"`
-	//Perms ProjectPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: account for this, make sure it is perms not permissions
-	// TODO: make it so we can add/remove users from projects
+	Name              projectName `bson:"_id" json:"_id"`
+	CreationDateField `bson:"inline"`
+	Completed         *unixTime `bson:"completed,omitempty" json:"completed,omitempty"` // TODO: index?
+	NotesField        `bson:"inline"`
+	LastUpdatedField  `bson:"inline"`
+	Perms             ProjectPerms `bson:"perms" json:"perms"`
+	// TODO: make it so we can add/remove users from Projects
 }
 
 func (p Project) AddUser(u User, perm ReadWritePerm) string {
 	// TODO: this!!!!
-	// TODO: update user entry
-	// TODO: update user session?
+	// TODO: update email entry
+	// TODO: update email session?
+	panic("implement me")
 }
 
 func (p Project) StringId() string {
@@ -64,7 +60,7 @@ func initializeProjects(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for i, testItem := range []Project{
+	for _, testItem := range []Project{
 		{
 			Name:              testProj,
 			CreationDateField: CreationDateField{exampleTime},
@@ -127,16 +123,16 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 	//}
 	//if req.Perms.Blanket != perms.Write {
 	//	authorExistsInPerms := false
-	//	for _, user := range req.Perms.Users.Ids {
+	//	for _, email := range req.Perms.Users.Ids {
 	//		// TODO: validate that each userId exists in the db
-	//		if user.UserId.String() == authinfo.UserId.String() {
+	//		if email.Email.String() == authinfo.Email.String() {
 	//			authorExistsInPerms = true
 	//			break
 	//		}
 	//	}
 	//	if !authorExistsInPerms {
 	//		req.Perms.Users = req.Perms.Users.WithAuthor(ProjectPermUserId{
-	//			UserId:  authinfo.UserId,
+	//			Email:  authinfo.Email,
 	//			Val: "FIXME!", // TODO: this
 	//		})
 	//	}
@@ -159,7 +155,7 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		// TODO: add this project to all user sessions that need it (only if non-blanket-write)
+		// TODO: add this project to all email sessions that need it (only if non-blanket-write)
 		//
 		return w.Write(bsOut)
 	})
@@ -207,16 +203,16 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 			updateNotesIfNeeded(req.Notes, existing.Notes)
 		// TODO: ENSURE THIS USER CAN WRITE TO THIS PROJECT
 
-		//newUsers := map[ProjectPermUserId]bool{} // TODO brand new user to this project. Handle
-		//removedUsers := []ProjectPermUserId{}    // TODO: this user has had their perms revoked. Handle
-		//promotedPerms := []ProjectPermUserId{}   // TODO user can now write. Handle
-		//demotedPerms := []ProjectPermUserId{}    // TODO: user can no longer write, handle
+		//newUsers := map[ProjectPermUserId]bool{} // TODO brand new email to this project. Handle
+		//removedUsers := []ProjectPermUserId{}    // TODO: this email has had their perms revoked. Handle
+		//promotedPerms := []ProjectPermUserId{}   // TODO email can now write. Handle
+		//demotedPerms := []ProjectPermUserId{}    // TODO: email can no longer write, handle
 		//
 		//// TODO: simplify req perms if needed
 		//if req.Perms.Blanket != existing.Perms.Blanket {
 		//	if req.Perms.Blanket == perms.Write {
 		//		mods.Unset("perms")
-		//		// TODO: remove project from users and user sessions as needed
+		//		// TODO: remove project from users and email sessions as needed
 		//	} else {
 		//		mods = mods.Set("perms", req.Perms)
 		//	}
@@ -226,7 +222,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//	tempName := map[Base58Str]string{}
 		//	var existsAlready = false
 		//	for i, userIds := range req.Perms.Users.Ids {
-		//		userIdStr := userIds.UserId.asBase58()
+		//		userIdStr := userIds.Email.asBase58()
 		//		_, existsAlready = tempCanWrite[userIdStr]
 		//		if existsAlready {
 		//			return DbTxnStdErr(w, fmt.Sprintf(`userId %d already exists in request`, i), http.StatusBadRequest)
@@ -237,7 +233,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//	}
 		//
 		//	for i, current := range existing.Perms.Users.Ids {
-		//		id := current.UserId.asBase58()
+		//		id := current.Email.asBase58()
 		//		newPerm, exists := tempCanWrite[]
 		//		if !exists {
 		//			removedUsers = append(removedUsers, current)
@@ -258,7 +254,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//			panic("SHOULD NEVER HAPPEN: " + err.Error()) // TODO: this
 		//		}
 		//		newUsers[ProjectPermUserId{
-		//			UserId:  id,
+		//			Email:  id,
 		//			Val: tempName[uidBase58],
 		//		}] = canWrite
 		//	}
@@ -269,7 +265,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//	if len(newUsers) > 0 || len(removedUsers) > 0 || len(promotedPerms) > 0 || len(demotedPerms) > 0 {
 		//		mods = mods.Set("perms", req.Perms)
 		//	}
-		//	// TODO: modify users and user sessions if the perms changed
+		//	// TODO: modify users and email sessions if the perms changed
 		//
 		//	// TODO: MODIFY DB,
 		//}
@@ -293,19 +289,19 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		//for user, canWrite := range newUsers { //:= map[ProjectPermUserId]bool{} // TODO brand new user to this project. Handle
-		//	// TODO: add project to user in db
-		//	// TODO: add to user session perms (if user has a session)
+		//for email, canWrite := range newUsers { //:= map[ProjectPermUserId]bool{} // TODO brand new email to this project. Handle
+		//	// TODO: add project to email in db
+		//	// TODO: add to email session perms (if email has a session)
 		//}
-		//for _, user := range removedUsers { //:= []ProjectPermUserId{}    // TODO: this user has had their perms revoked. Handle
-		//	// TODO: remove project from user in db if can no-longer read
-		//	// TODO: change user session perms
+		//for _, email := range removedUsers { //:= []ProjectPermUserId{}    // TODO: this email has had their perms revoked. Handle
+		//	// TODO: remove project from email in db if can no-longer read
+		//	// TODO: change email session perms
 		//}
-		//for _, user := range promotedPerms { //:= []ProjectPermUserId{}   // TODO user can now write. Handle
-		//	// TODO: change user session perms
+		//for _, email := range promotedPerms { //:= []ProjectPermUserId{}   // TODO email can now write. Handle
+		//	// TODO: change email session perms
 		//}
-		//for _, user := range demotedPerms { //:= []ProjectPermUserId{}    // TODO: user can no longer write, handle
-		//	// TODO: change user session perms
+		//for _, email := range demotedPerms { //:= []ProjectPermUserId{}    // TODO: email can no longer write, handle
+		//	// TODO: change email session perms
 		//}
 		return w.Write(bsOut)
 	})
@@ -324,7 +320,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName).
 //			Find(ctx, filter) // TODO: ok?
 //		if err != nil {
-//			return nil, errors.Join(errors.New("failed to get cursor for UserPerms projects"), err)
+//			return nil, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
 //		}
 //		for cursor.Next(ctx) {
 //			var project Project
@@ -366,7 +362,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName).
 //			Find(ctx, filter) // TODO: ok?
 //		if err != nil {
-//			return nil, errors.Join(errors.New("failed to get cursor for UserPerms projects"), err)
+//			return nil, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
 //		}
 //		for cursor.Next(ctx) {
 //			if maxProjects != nil && len(out) == *maxProjects {
@@ -384,7 +380,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //				continue
 //			}
 //			userIndex := slices.IndexFunc(project.Perms.Users.Ids, func(idPair ProjectPermUserId) bool {
-//				return idPair.UserId.String() == auth.UserId.String()
+//				return idPair.Email.String() == auth.Email.String()
 //			})
 //			if userIndex == -1 {
 //				if project.Perms.Blanket == perms.Read && !writeOnly {

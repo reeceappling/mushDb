@@ -19,16 +19,16 @@ const lcRecipesCollectionName = "lcRecipes"
 // TODO: ensure standard LC recipes are accessible
 
 type LcRecipe struct {
-	AlternateCollectionIdField
-	NameField    // TODO: ENSURE THIS IS PROPERLY SET EVERYWHERE AND INDEXED
-	LiquidsField // TapWater, DistilledWater, GrainWater (Oat,
-	NutrientsField
-	StandardField // Whether or not this is a standard recipe
-	SugarsField
-	AdditivesField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	AlternateCollectionIdField `bson:"inline"`
+	NameField                  `bson:"inline"` // TODO: ENSURE THIS IS PROPERLY SET EVERYWHERE AND INDEXED
+	LiquidsField               `bson:"inline"` // TapWater, DistilledWater, GrainWater (Oat,
+	NutrientsField             `bson:"inline"`
+	StandardField              `bson:"inline"` // Whether or not this is a standard recipe
+	SugarsField                `bson:"inline"`
+	AdditivesField             `bson:"inline"`
+	NotesField                 `bson:"inline"`
+	LastUpdatedField           `bson:"inline"`
+	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 type LcRecipeField struct {

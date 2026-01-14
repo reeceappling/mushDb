@@ -19,18 +19,18 @@ const (
 
 type MSS struct {
 	// ALWAYS assume contaminated
-	MainCollectionIdField
-	CreationDateField
-	SpeciesField
-	SubspeciesOptionalField
+	MainCollectionIdField   `bson:"inline"`
+	CreationDateField       `bson:"inline"`
+	SpeciesField            `bson:"inline"`
+	SubspeciesOptionalField `bson:"inline"`
 	// NOTE: parentType is always either sporePrint or purchased
-	MainCollectionOptionalParentField // no parent means purchased, traded-for, or imported
-	TransfersOutField
-	SaleField
-	DisposedField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionOptionalParentField `bson:"inline"` // no parent means purchased, traded-for, or imported
+	TransfersOutField                 `bson:"inline"`
+	SaleField                         `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (M MSS) Innoculatable() bool {
@@ -77,7 +77,7 @@ func (M MSS) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error { 
 	if err != nil {
 		return err
 	}
-	res, err := ctx.Client().Database(dbName).Collection(mainCollectionName).UpdateByID(ctx, M.Id, upd)
+	res, err := ctx.Client().Database(dbName).Collection(MssCollectionName).UpdateByID(ctx, M.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -96,12 +96,12 @@ func (M MSS) EntryTypeField() *string {
 }
 
 func (M MSS) CollectionName() string {
-	return mainCollectionName
+	return MssCollectionName
 }
 
 func initializeMSS(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(mainCollectionName)
+	coll := db.Collection(MssCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, false, false),
@@ -110,7 +110,7 @@ func initializeMSS(ctx context.Context) error {
 		transfersOutIndexModel,
 		saleIndexModel,
 		disposedIndexModel,
-		//// TODO: projects?
+		//// TODO: Projects?
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -141,12 +141,12 @@ type createMssRequest struct {
 	SporePrintId AlternateCollectionId
 	NotesField
 	WriteTagToField
-	// Uses parent perms, then user can modify if they have the perms for parent
+	// Uses parent perms, then email can modify if they have the perms for parent
 }
 
 func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called from spore print page
 	data := createMssRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), MssCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -182,9 +182,9 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
 			NotesField:                        NotesField{data.Notes},
 			LastUpdatedField:                  LastUpdatedField{now},
-			AclField:                          parent.AclField, // NOTE: do NOT ensure user is authorized to write on parent, they will just be blocked from viewing.
+			AclField:                          parent.AclField, // NOTE: do NOT ensure email is authorized to write on parent, they will just be blocked from viewing.
 		}
-		_, err = db.Collection(mainCollectionName).InsertOne(ctx, toInsert)
+		_, err = db.Collection(MssCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -223,7 +223,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), MssCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -244,7 +244,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
-	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.UserId) // TODO: species and subspecies perms?
+	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Email) // TODO: species and subspecies perms?
 	toInsert := MSS{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
@@ -255,7 +255,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		//PermsField:              PermsField{finalPerms},
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(mainCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(MssCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
@@ -304,7 +304,7 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
-		coll := db.Collection(mainCollectionName)
+		coll := db.Collection(MssCollectionName)
 		// go get current plate
 		existing := MSS{}
 		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
@@ -323,7 +323,7 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(data.Perms, existing.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "old or new perms not writeable by user: "+err.Error(), http.StatusBadRequest)
+		//	return DbTxnStdErr(w, "old or new perms not writeable by email: "+err.Error(), http.StatusBadRequest)
 		//}
 		if data.Sale != nil && (existing.Sale == nil || *existing.Sale != *data.Sale) {
 			if err = db.Collection(salesCollectionName).FindOne(ctx, bson.D{{"_id", data.Sale}}).Err(); err != nil {

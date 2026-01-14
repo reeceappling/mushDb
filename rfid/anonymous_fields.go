@@ -70,7 +70,7 @@ func (field LiquidsField) Validate() error {
 	totalPct := 0.0 // TODO: make percentage int rather than float?
 	for i, item := range field.Liquids {
 		if !slices.Contains(fluids, item.Name) {
-			return fmt.Errorf(`invalid antibiotic at position %d: %s`, i, item)
+			return fmt.Errorf(`invalid antibiotic at position %d: %s`, i, item.Name)
 		}
 		totalPct += item.Pct
 	}
@@ -81,7 +81,7 @@ func (field LiquidsField) Validate() error {
 }
 
 type MainCollectionIdField struct {
-	Id MainCollectionId `bson:"_id" json:"_id"`
+	Id MainCollectionId `bson:"_id" json:"_id"` // TODO; INLINE ALL!
 }
 
 func (field MainCollectionIdField) DbId() BinaryCollectionId {
@@ -133,21 +133,6 @@ type ParentTypeField struct {
 	ParentType *string `bson:"parentType,omitempty" json:"parentType,omitempty"`
 }
 
-//type PermsField struct {
-//	Perms *Perms `bson:"perms,omitempty" json:"perms,omitempty"`
-//}
-
-//func (field PermsField) projects() []projectName {
-//	if field.Perms == nil {
-//		return []projectName{}
-//	}
-//	return field.Perms.Projects.Ids
-//}
-
-//func (field PermsField) Permissions() *Perms {
-//	return field.Perms
-//}
-
 type CreationDateField struct {
 	CreationDate unixTime `bson:"creationDate" json:"creationDate"`
 }
@@ -156,12 +141,8 @@ type DisposedField struct {
 	Disposed *unixTime `bson:"disposed,omitempty" json:"disposed,omitempty"`
 }
 
-type EntryTypeStructField struct {
-	EntryType string `bson:"entryType" json:"entryType"`
-}
-
 type GenerationsFields struct {
-	GenSporeField
+	GenSporeField        `bson:"inline"`
 	GenSinceFruitOrSpore *Generation `bson:"genFruitOrSpore,omitempty" json:"genFruitOrSpore,omitempty"`
 }
 
@@ -195,6 +176,10 @@ func (field NotesField) withAllTimesSetTo(t time.Time) NotesField {
 			Note: n.Note,
 		}
 	})}
+}
+
+type ConfirmedCleanField struct {
+	ConfirmedClean *bool `bson:"confirmedClean,omitempty" json:"confirmedClean,omitempty"`
 }
 
 type PressureCookedTouchingWaterOptionalField struct {

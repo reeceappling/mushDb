@@ -8,10 +8,12 @@ import (
 	"github.com/itchyny/base58-go"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"math/big"
 	"net/http"
 	"reflect"
@@ -77,13 +79,21 @@ func (b58str Base58Str) Base2Bytes() ([]byte, error) {
 }
 
 func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
+	if string(b58str) == "1" {
+		return [8]byte{0, 0, 0, 0, 0, 0, 0, 0}, nil
+	}
 	out := [RfidByteSize]byte{}
 	bs, err := b58str.Base2Bytes()
 	if err != nil {
 		return out, err
 	}
-	if len(bs) != RfidByteSize {
-		return MainCollectionId{}, ErrInvalidByteLength
+	if len(bs) != RfidByteSize { // TODO: what about too long?
+		// TODO: ensure padding ok
+		result := [RfidByteSize]byte{}
+		for i, b := range bs {
+			result[RfidByteSize-len(bs)+i] = b // TODO: validate ok
+		}
+		return result, nil
 	}
 	return MainCollectionId(bs), nil
 }
@@ -94,8 +104,13 @@ func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
 	if err != nil {
 		return out, err
 	}
-	if len(bs) != 12 {
-		return AlternateCollectionId{}, ErrInvalidByteLength
+	if len(bs) != 12 { // TODO: what about too long?
+		// TODO: ensure padding ok
+		result := [12]byte{}
+		for i, b := range bs {
+			result[12-len(bs)+i] = b // TODO: validate ok
+		}
+		return result, nil
 	}
 	return AlternateCollectionId(bs), nil
 }
@@ -103,10 +118,11 @@ func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
 // Tested, working // TODO: remove comment
 func Base2BytesToBase58(littleEndianBytes []byte) (Base58Str, error) {
 	if len(littleEndianBytes)%4 != 0 {
-		return "", ErrInvalidByteLength // TODO: unnecesary?
+		return "", errors.Join(errors.New("Base2BytesToBase58 failed"), ErrInvalidByteLength) // TODO: unnecesary?
 	}
 	baseTenStr := []byte(new(big.Int).SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10))
 	encoded, err := base58.BitcoinEncoding.Encode(baseTenStr)
+	println(string(baseTenStr), string(encoded)) // TODO; DEL
 	if err != nil {
 		return "", errors.Join(errors.New("base58 encoding fault"), err)
 	}
@@ -123,7 +139,8 @@ func (id BinaryCollectionId) asBase58() Base58Str {
 func (id BinaryCollectionId) AsMainCollectionId() (MainCollectionId, error) {
 	bs := []byte(id)
 	if len(bs) != RfidByteSize {
-		return MainCollectionId{}, ErrInvalidByteLength
+		// TODO: PAD UP TO 8?
+		return MainCollectionId{}, errors.Join(errors.New("bin as main failed"), ErrInvalidByteLength)
 	}
 	return MainCollectionId(bs), nil
 }
@@ -131,13 +148,15 @@ func (id BinaryCollectionId) AsMainCollectionId() (MainCollectionId, error) {
 func (id BinaryCollectionId) AsAltCollectionId() (AlternateCollectionId, error) {
 	bs := []byte(id)
 	if len(bs) != 12 {
-		return AlternateCollectionId{}, ErrInvalidByteLength
+		// TODO: PAD UP TO 12!
+		return AlternateCollectionId{}, errors.Join(errors.New("bin as alt failed"), ErrInvalidByteLength)
 	}
 	return AlternateCollectionId(bs), nil
 }
 
 func (id BinaryCollectionId) Bytes() []byte {
-	return []byte(id)
+	return []byte(id[:])
+	//return []byte(id)
 }
 
 func (id BinaryCollectionId) ToBase58Bytes() []byte {
@@ -155,7 +174,34 @@ func (id *BinaryCollectionId) UnmarshalJSON(bs []byte) (err error) {
 
 const RfidByteSize = 8
 
+//var _ bson.ValueMarshaler = MainCollectionId{}
+//var _ bson.ValueUnmarshaler = &MainCollectionId{}
+
+// type MainCollectionId string // TODO: WILL ALWAYS BE THE BINARY ID!!!!
 type MainCollectionId [RfidByteSize]byte
+
+//// MarshalBSONValue implements the bson.ValueMarshaler interface
+//func (id MainCollectionId) MarshalBSONValue() (bsontype.Type, []byte, error) {
+//	// Format the id as a string for BSON storage
+//	return bson.TypeString, bsoncore.AppendString(nil, string(id[:])), nil
+//}
+//
+//// UnmarshalBSONValue implements the bson.ValueUnmarshaler interface
+//func (id *MainCollectionId) UnmarshalBSONValue(t bsontype.Type, data []byte) error {
+//	if t != bson.TypeString {
+//		return fmt.Errorf("invalid bson type %s, expected string", t.String())
+//	}
+//	// Read the BSON string and parse it back into a time.Time
+//	s, _, ok := bsoncore.ReadString(data)
+//	if !ok {
+//		return fmt.Errorf("invalid bson string value")
+//	}
+//	if len(s) != RfidByteSize {
+//		return fmt.Errorf("invalid bson string value for main collection id. Length should be 8")
+//	}
+//	*id = MainCollectionId([]byte(s[0:RfidByteSize]))
+//	return nil
+//}
 
 func (id MainCollectionId) base58Bytes() []byte {
 	return []byte(id.asBase58())
@@ -189,28 +235,39 @@ func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
 }
 
 func (id MainCollectionId) dbIdStr() string { // Returns Most efficient string
-	bytes := [RfidByteSize]byte(id)
-	return string(bytes[:])
+	return string(id[:])
 }
 func (id MainCollectionId) asBase58() Base58Str { // TODO: make sure that everywhere this is used, it is being used properly, and doesnt need to be in binary format
 	return id.ToBinaryCollectionId().asBase58() // TODO: make sure ok
-	//arr := [RfidByteSize]byte(id)
-	//bs := arr[:]
-	//println("bytes asBase58 preBase: " + string(bs)) // TODO: remove
-	//out, err := Base2BytesToBase58(bs)
-	//if err != nil {
-	//	errOut := "Error getting MainCollId str " + err.Error()
-	//	println(errOut) // TODO: remove
-	//	panic(errOut) // TODO: EW, GET RID OF
-	//}
-	//println("bytes asBase58 out: " + string(out)) // TODO: remove
-	//return out
 }
 func (id MainCollectionId) IdField() MainCollectionIdField { // Returns Most efficient string
 	return MainCollectionIdField{id}
 }
 
 type AlternateCollectionId primitive.ObjectID // == [12]byte
+func GuestEmail() string                      { return "guest" }
+
+func (id AlternateCollectionId) MarshalBSONValue() (bsontype.Type, []byte, error) {
+	// Format the id as a string for BSON storage
+	return bson.TypeString, bsoncore.AppendString(nil, id.String()), nil
+}
+
+// UnmarshalBSONValue implements the bson.ValueUnmarshaler interface
+func (id *AlternateCollectionId) UnmarshalBSONValue(t bsontype.Type, data []byte) error {
+	if t != bson.TypeString {
+		return fmt.Errorf("invalid bson type %s, expected string", t.String())
+	}
+	// Read the BSON string and parse it back into a time.Time
+	s, _, ok := bsoncore.ReadString(data)
+	if !ok {
+		return fmt.Errorf("invalid bson string value")
+	}
+	if len(s) != 12 {
+		return fmt.Errorf("invalid bson string value for alt collection id. Length should be 12")
+	}
+	*id = AlternateCollectionId([]byte(s[0:12]))
+	return nil
+}
 
 func (id AlternateCollectionId) ToBinaryCollectionId() BinaryCollectionId {
 	return BinaryCollectionId(id.String())
@@ -324,7 +381,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 func mongoClientForURI(ctx context.Context, uri string) (context.Context, error) {
 	// Use the SetServerAPIOptions() method to set the Stable API version to 1
 	// To configure auth via URI instead of a Credential, use
-	// "mongodb://user:password@localhost:27017".
+	// "mongodb://email:password@localhost:27017".
 
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI)
@@ -367,14 +424,14 @@ func doTxn(ctx context.Context, txnFunc func(ctx mongo.SessionContext) (interfac
 	return result, errors.Join(session.CommitTransaction(ctx), err)
 }
 
-func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, error) {
+func generateCollectionIds(ctx context.Context, collectionName string, n int) ([]MainCollectionId, error) {
 	// TODO: ensure this checks the new idMap collection!
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	out := make([]MainCollectionId, n)
 	for i, _ := range out {
 		for { // TODO: break eventually
 			newId := randomRFID(RfidByteSize)
-			err := client.Database(dbName).Collection(mainCollectionName).FindOne(ctx, bson.D{{"_id", newId}}).Err()
+			err := client.Database(dbName).Collection(collectionName).FindOne(ctx, bson.D{{"_id", newId}}).Err()
 			if err != nil {
 				if errors.Is(err, mongo.ErrNoDocuments) {
 					out[i] = MainCollectionId(newId)
@@ -387,8 +444,8 @@ func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, 
 	return out, nil
 }
 
-func newMainCollectionId(ctx context.Context) (MainCollectionId, error) {
-	ids, err := generateMainCollectionIds(ctx, 1)
+func newCollectionId(ctx context.Context, collectionName string) (MainCollectionId, error) {
+	ids, err := generateCollectionIds(ctx, collectionName, 1)
 	if err != nil {
 		return MainCollectionId{}, err
 	}
@@ -511,11 +568,15 @@ func ImportHandler() http.HandlerFunc {
 
 func UpdateById() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		println("hit updateById handler")
 		resolvedPerms, err := GetResolvedUserPerms(r.Context())
 		if err != nil {
+			println("failed to load permissions")
 			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
 			return
 		}
+		bs, _ := json.Marshal(resolvedPerms) // TODO; del
+		println(string(bs))                  // TOFO: del
 		if resolvedPerms.isGuest() {
 			http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
 			return
@@ -596,6 +657,7 @@ func setSalesIfUnequal(upd bson.D, new []AlternateCollectionId, current []Altern
 }
 
 func DbTxnStdErr(w http.ResponseWriter, txt string, status int) (interface{}, error) {
+	println("txnErr " + txt)
 	http.Error(w, txt, status)
 	return nil, ErrInTxnAlreadyTriedToWrite
 }

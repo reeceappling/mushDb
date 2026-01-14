@@ -20,35 +20,35 @@ const (
 )
 
 type Bag struct {
-	MainCollectionIdField
-	SubstrateRecipeField
-	SubstrateBatchOptionalField // TODO: NEW! HANDLE
-	PcRunOptionalField          // this may not exist for pre-existing bags
+	MainCollectionIdField       `bson:"inline"`
+	SubstrateRecipeField        `bson:"inline"`
+	SubstrateBatchOptionalField `bson:"inline"` // TODO: NEW! HANDLE
+	PcRunOptionalField          `bson:"inline"` // this may not exist for pre-existing bags
 	//Size string // TODO: unsure what to do here
-	FilterSize string `bson:"filterSize" json:"filterSize"`
-	CreationDateField
-	GenerationsFields
-	SealDate                *unixTime `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField                      // Initial wetness (refer to scale on field struct) // TODO: new
-	KnownFruitableField               // set on transfer in, or once fruited
-	SpeciesOptionalField              // set on transfer in
-	SubspeciesOptionalField           // set on transfer in
-	InnocField                        // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField                 // Set on transfer out
+	FilterSize              string `bson:"filterSize" json:"filterSize"`
+	CreationDateField       `bson:"inline"`
+	GenerationsFields       `bson:"inline"`
+	SealDate                *unixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField            `bson:"inline"` // Initial wetness (refer to scale on field struct) // TODO: new
+	KnownFruitableField     `bson:"inline"` // set on transfer in, or once fruited
+	SpeciesOptionalField    `bson:"inline"` // set on transfer in
+	SubspeciesOptionalField `bson:"inline"` // set on transfer in
+	InnocField              `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField       `bson:"inline"` // Set on transfer out
 	// TODO: make the next 2 a combo field?
-	BinaryOptionalParentField // Set on transfer in
-	ParentTypeField           // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	BinaryOptionalParentField `bson:"inline"` // Set on transfer in
+	ParentTypeField           `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
 
-	PicsField           // Updated independently
-	ContaminationsField // Updated independently
-	MostRecentImageField
-	FlushesField // Updated independently
-	SaleField
-	DisposedField
+	PicsField            `bson:"inline"` // Updated independently
+	ContaminationsField  `bson:"inline"` // Updated independently
+	MostRecentImageField `bson:"inline"`
+	FlushesField         `bson:"inline"` // Updated independently
+	SaleField            `bson:"inline"`
+	DisposedField        `bson:"inline"`
 
-	NotesField // Updated independently
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	NotesField       `bson:"inline"` // Updated independently
+	LastUpdatedField `bson:"inline"`
+	AclField         `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (b Bag) CanTransferTo(dst geneticSource) error {
@@ -135,7 +135,7 @@ func (b Bag) CollectionName() string {
 }
 
 func (b Bag) id() []byte {
-	return b.Id[:]
+	return []byte(b.Id.dbIdStr())
 }
 
 //func (b Bag) basicFruit() Fruit {
@@ -144,7 +144,7 @@ func (b Bag) id() []byte {
 //		MainCollectionIdField:        MainCollectionIdField{MainCollectionId(primitive.NewObjectID())},
 //		SpeciesField:                      SpeciesField{*b.Species},
 //		SubspeciesOptionalField:           b.SubspeciesOptionalField,
-//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&b.UserId},
+//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&b.Email},
 //		GenSporeField:                     GenSporeField{b.GenSinceSpore.Next()},
 //		ParentTypeField:                   ParentTypeField{utils.Pointer("bag")},
 //		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
@@ -237,7 +237,7 @@ type createBagRequest struct {
 
 func createBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := createBagRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), BagsCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -503,7 +503,7 @@ type importBagRequest struct {
 
 func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FRUITING CHAMBER
 	data := importBagRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), BagsCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -599,7 +599,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 	//}
 	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp) // TODO: subsp ptr ok here?
 	//if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "user cannot write these perms: "+err.Error(), http.StatusUnauthorized)
+	//	http.Error(w, "email cannot write these perms: "+err.Error(), http.StatusUnauthorized)
 	//	return
 	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -647,7 +647,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 			AclField:                acl,
 		}
-		// TODO: for non-all acls, update each user and project
+		// TODO: for non-all acls, update each email and project
 		coll := ctx.Client().Database(dbName).Collection(BagsCollectionName)
 		_, err = data.SubstrateRecipeField.Get(ctx)
 		if err != nil {

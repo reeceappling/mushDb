@@ -19,14 +19,14 @@ import (
 const agarBatchCollectionName = "agarBatches"
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
-	AlternateCollectionIdField
+	AlternateCollectionIdField `bson:"inline"`
 	// CreationDate is assumed to be the same as on PcRun
-	PcRunField
-	AgarRecipeField
-	Color colorant `bson:"color" json:"color"`
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	PcRunField       `bson:"inline"`
+	AgarRecipeField  `bson:"inline"`
+	Color            colorant `bson:"color" json:"color"`
+	NotesField       `bson:"inline"`
+	LastUpdatedField `bson:"inline"`
+	AclField         `bson:"inline"`
 }
 
 type AgarBatchField struct {

@@ -45,12 +45,12 @@ func (field SalesField) AddSale() {
 }
 
 type Sale struct {
-	AlternateCollectionIdField
+	AlternateCollectionIdField `bson:"inline"`
 	//Lot               AlternateCollectionId `bson:"_id" json:"_id"` // Lot number // TODO: REMOVED
-	CreationDateField // This is sale date
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	CreationDateField `bson:"inline"` // This is sale date
+	NotesField        `bson:"inline"`
+	LastUpdatedField  `bson:"inline"`
+	AclField          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (s Sale) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
@@ -203,7 +203,7 @@ func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "bad overlapping perms for user: "+err.Error(), http.StatusBadRequest)
+		//	return DbTxnStdErr(w, "bad overlapping perms for email: "+err.Error(), http.StatusBadRequest)
 		//}
 		upd, err := NewMods().
 			updateNotesIfNeeded(req.Notes, existing.Notes).

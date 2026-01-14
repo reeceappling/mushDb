@@ -24,19 +24,19 @@ const (
 )
 
 type SporePrint struct {
-	MainCollectionIdField // TODO: was alt
+	MainCollectionIdField `bson:"inline"` // TODO: was alt
 	// Parent is always either fruit, or purchased
-	MainCollectionOptionalParentField // TODO: handle now a pointer // TODO: used to be an altCollId       // TODO: likely won't exist for pre-existing
-	CreationDateField                 // Print or receive date
-	SpeciesField
-	SubspeciesOptionalField
-	PicsField
-	SaleField
-	DisposedField
-	MostRecentImageField
-	NotesField
-	LastUpdatedField
-	AclField // TODO: handle EVERYWHERE
+	MainCollectionOptionalParentField `bson:"inline"` // TODO: handle now a pointer // TODO: used to be an altCollId       // TODO: likely won't exist for pre-existing
+	CreationDateField                 `bson:"inline"` // Print or receive date
+	SpeciesField                      `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	PicsField                         `bson:"inline"`
+	SaleField                         `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	MostRecentImageField              `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
 func (sw SporePrint) Innoculatable() bool {
@@ -121,11 +121,11 @@ func (sw SporePrint) EntryTypeField() *string {
 }
 
 //func (sw SporePrint) altId() AlternateCollectionId {
-//	return AlternateCollectionId(sw.UserId)
+//	return AlternateCollectionId(sw.Email)
 //}
 
 func (sw SporePrint) id() []byte {
-	return sw.Id[:]
+	return []byte(sw.Id.dbIdStr())
 }
 
 //func (sp SporePrint) knownFruitable() bool {
@@ -208,7 +208,7 @@ type resolvedCreateSporePrintRequest struct {
 
 func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSporePrintRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), sporePrintCollectionName)
 	if err != nil {
 		http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -482,7 +482,7 @@ type importSporePrintRequest struct {
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporePrintRequest{}
-	id, err := newMainCollectionId(r.Context())
+	id, err := newCollectionId(r.Context(), sporePrintCollectionName)
 	if err != nil {
 		http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -515,7 +515,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "user cannot write with these perms: "+err.Error(), http.StatusBadRequest)
+	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
 	// Try to get pic if exists
@@ -578,7 +578,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		//		return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//	finalPerms = minimalPermsBetween(spec, subsp)
-		//	// TODO: add user perms if provided, as well as make user author?
+		//	// TODO: add email perms if provided, as well as make email author?
 		//	if !finalPerms.Valid() {
 		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
 		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
@@ -588,7 +588,10 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
 		}
-
+		acl, err := data.AclFor(ctx, perms)
+		if err != nil {
+			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		}
 		toInsert := SporePrint{
 			MainCollectionIdField:   MainCollectionIdField{id},
 			CreationDateField:       data.CreationDateField,
@@ -598,7 +601,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			MostRecentImageField:    MostRecentImageField{importedPic},
 			NotesField:              data.NotesField,
 			LastUpdatedField:        LastUpdatedFieldForNow(),
-			AclField:                data.AclFor(ctx, perms),
+			AclField:                acl,
 		}
 		coll := ctx.Client().Database(dbName).Collection(sporePrintCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
