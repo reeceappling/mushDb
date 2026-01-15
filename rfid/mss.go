@@ -72,22 +72,25 @@ func (M MSS) SourceType() string {
 	return MssSourceType
 }
 
-func (M MSS) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error { // TODO: I think these are the same for pretty much everywhere (except maybe sporeprint?), so we should get rid of this
+func (M MSS) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) { // TODO: I think these are the same for pretty much everywhere (except maybe sporeprint?), so we should get rid of this
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(MssCollectionName).Collection(MssCollectionName)
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(MssCollectionName).UpdateByID(ctx, M.Id, upd)
+	res, err := coll.UpdateByID(ctx, M.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.M{"_id": M.Id}, M).Err()
+	}
 }
 
-func (M MSS) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (M MSS) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	return errors.New("mss cannot be a child in a normal transfer. Must be created manually from spore print or imported")
 }
 

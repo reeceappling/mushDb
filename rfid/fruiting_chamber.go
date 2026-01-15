@@ -76,23 +76,26 @@ func (f FruitingChamber) SourceType() string {
 	return FruitingChamberSourceType
 }
 
-func (f FruitingChamber) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (f FruitingChamber) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(FruitingChamberCollectionName).UpdateByID(ctx, f.Id, upd)
+	res, err := coll.UpdateByID(ctx, f.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", f.Id}}, f).Err()
+	}
 }
 
 // TODO: create box via jar instead
-func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (f FruitingChamber) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err

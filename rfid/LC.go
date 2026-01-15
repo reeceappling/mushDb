@@ -70,22 +70,25 @@ func (l LiquidCulture) SourceType() string {
 	return LcSourceType
 }
 
-func (l LiquidCulture) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (l LiquidCulture) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LCCollectionName)
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(LCCollectionName).UpdateByID(ctx, l.Id, upd)
+	res, err := coll.UpdateByID(ctx, l.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", l.Id}}, l).Err()
+	}
 }
 
-func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (l LiquidCulture) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err

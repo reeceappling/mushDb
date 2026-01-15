@@ -242,6 +242,7 @@ func (serv *AuthService) TryToReAuth(sessionKey SessionId) (genericsessions.Sess
 		println("failed to get session in TryToReAuth") // TODO; del
 		return genericsessions.Session[ResolvedUserPerms]{}, utils.NotFound
 	}
+	println("reauthed user " + res.Item.Data.Email)
 	return *res.Item, nil
 }
 
@@ -456,7 +457,7 @@ func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 				handleAuthErr(err).ServeHTTP(w, r)
 				return
 			}
-			println("Trying to reauth")
+			println("Trying to reauth session ID " + sessionId)
 			sess, err := svc.TryToReAuth(sessionId)
 			if err != nil {
 				println("failed to reAuth", err.Error())

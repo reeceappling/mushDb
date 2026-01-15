@@ -335,6 +335,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 	}
 
 	//uri := fmt.Sprintf("mongodb://%s", hostAndPort)
+	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
 	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
 	println("creating client to " + uri)                               // TODO: deleteMe
 
@@ -345,6 +346,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 	opts := options.Client().
 		ApplyURI(uri).
 		SetDirect(true).
+
 		//SetHosts([]string{hostAndPort}).
 		SetServerSelectionTimeout(time.Second * 20).
 		//SetAuth(options.Credential{Username: usern, Password: pass}). // TODO: get rid of?
@@ -352,7 +354,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi").
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(5 * time.Second). // TODO: no?
-		SetTimeout(10 * time.Second) // TODO: no?
+		SetTimeout(10 * time.Second)        // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {

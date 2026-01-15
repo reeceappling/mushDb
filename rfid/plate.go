@@ -80,22 +80,25 @@ func (p Plate) SourceType() string {
 	return PlateSourceType
 }
 
-func (p Plate) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (p Plate) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlatesCollectionName)
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(PlatesCollectionName).UpdateByID(ctx, p.Id, upd)
+	res, err := coll.UpdateByID(ctx, p.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", p.Id}}, p).Err()
+	}
 }
 
-func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (p Plate) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
@@ -133,7 +136,9 @@ func (p Plate) CollectionName() string {
 }
 
 func initializePlates(ctx context.Context) error {
+	println("1")
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	println("2")
 	coll := db.Collection(PlatesCollectionName)
 	//_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 	//	//newSimpleIndex("agarBatch", "agarBatch", false, true, false),
@@ -185,28 +190,31 @@ func initializePlates(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-
+	println("3")
 	result, err := coll.ReplaceOne(ctx, bson.D{{"_id", testId}}, testItem, &options.ReplaceOptions{Upsert: utils.Pointer(true)})
 	if err != nil {
 		println(err.Error())
 		return err
 	}
+	println("4")
 	res := coll.FindOne(ctx, bson.D{{"_id", testId}})
 	if res.Err() != nil {
 		println(res.Err().Error())
 		return res.Err()
 	}
+	println("5")
 	raw, err := res.Raw()
 	if err != nil {
 		println(err.Error())
 		return err
 	}
+	println("6")
 	println(raw.String())
 	err = res.Decode(&testItem)
 	if err != nil {
 		println("failed to decode test item", err.Error())
 	}
-
+	println("7")
 	println(result.UpsertedID)
 	//result, err := coll.ReplaceOne(ctx, bson.D{{"_id", testId}}, testItem)
 	//if err != nil {
@@ -258,31 +266,35 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	now := unixTimeForNow()
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(PlatesCollectionName)
-		toInsert := Plate{
-			MainCollectionIdField: MainCollectionIdField{id},
-			AgarBatchField:        AgarBatchField{AgarBatch: &data.AgarBatch},
-			CreationDateField:     CreationDateField{now},
-			LastUpdatedField:      LastUpdatedField{now},
-			// No Perms here for basic plates
-			AclField: allCanWriteAcl(),
-		}
-		_, err = toInsert.AgarBatchField.Get(ctx)
-		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-			return DbTxnStdErr(w, "agar batch field missing: "+err.Error(), http.StatusInternalServerError)
-		}
-		_, err = coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	ctx := r.Context()
+	client := r.Context().Value(mongoClientContextKey).(*mongo.Client)
+	coll := client.Database(dbName).Collection(PlatesCollectionName)
+	toInsert := Plate{
+		MainCollectionIdField: MainCollectionIdField{id},
+		AgarBatchField:        AgarBatchField{AgarBatch: &data.AgarBatch},
+		CreationDateField:     CreationDateField{now},
+		LastUpdatedField:      LastUpdatedField{now},
+		// No Perms here for basic plates
+		AclField: allCanWriteAcl(),
+	}
+	_, err = toInsert.AgarBatchField.Get(ctx)
+	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
+		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	_, err = coll.InsertOne(ctx, toInsert)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
 	if err != nil {
 		handleWriteErr(err, w)
 	}
@@ -394,31 +406,34 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	* Build emotional bank account back up.
 	*
 	 */
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(PlatesCollectionName)
-		// go get current plate
-		existing := Plate{}
-		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
-		if err != nil {
-			// TODO: an issue here
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		}
-		println("GOT PLATE") // TODO: THIS
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := data.AclFor(ctx, user)
-		println("GOT PERMS") // TODO: THIS
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := out.modsFor(existing, aclField)
-		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates????
-	})
+	ctx := r.Context()
+	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+	coll := client.Database(dbName).Collection(PlatesCollectionName)
+	existing := Plate{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	if err != nil {
+		// TODO: an issue here?
+		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	println("GOT PLATE") // TODO: THIS
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !user.HasPermissionToEdit(existing) {
+		http.Error(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
+	aclField, err := data.AclFor(ctx, user)
+	println("GOT PERMS") // TODO: THIS
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusForbidden)
+		return
+	}
+	upd, err := out.modsFor(existing, aclField)
+	_, err = handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates
 	if err != nil {
 		handleWriteErr(err, w)
 	}

@@ -43,24 +43,25 @@ func (sw SporeSwab) CanTransferTo(dst geneticSource) error {
 	return errors.New("fc cannot be transferred (unsure if this is ok)")
 }
 
-func (sw SporeSwab) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
-	panic("cannot happen stp")
-	//// TODO: can this even occur?
-	//upd, err := NewMods().addTransferOut(xfer.Email).Finalized()
-	//if err != nil {
-	//	return err
-	//}
-	//res, err := ctx.Client().Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.Email, upd)
-	//if err != nil {
-	//	return err
-	//}
-	//if res.ModifiedCount == 0 {
-	//	return ErrNoParentModifiedForTransfer
-	//}
-	//return nil
+func (sw SporeSwab) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
+	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+	if err != nil {
+		return err, nil
+	}
+	res, err := coll.UpdateByID(ctx, sw.Id, upd)
+	if err != nil {
+		return err, nil
+	}
+	if res.ModifiedCount == 0 {
+		return ErrNoParentModifiedForTransfer, nil
+	}
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", sw.Id}}, sw).Err()
+	}
 }
 
-func (sw SporeSwab) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (sw SporeSwab) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	panic("cannot happen stc")
 	//// TODO: can this happen????? should always be from a fruit right?
 	//// This is a special case because it will always be 0-gen

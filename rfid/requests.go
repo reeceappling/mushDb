@@ -14,6 +14,19 @@ type AllEntries[T any] struct {
 	New      []Data[T] `json:"new,omitempty"`
 }
 
+func (ae AllEntries[T]) asEntries() []T {
+	out := make([]T, len(ae.Existing)+len(ae.New))
+	for _, n := range ae.Existing {
+		if !n.disabled {
+			out = append(out, n.data)
+		}
+	}
+	for _, n := range ae.New {
+		out = append(out, n.data)
+	}
+	return out
+}
+
 type SplitEntries[T, U any] struct {
 	Existing []Data[T] `json:"existing,omitempty"`
 	New      []U       `json:"new,omitempty"`

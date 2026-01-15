@@ -54,23 +54,26 @@ func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
 	return nil
 }
 
-func (sw LcSyringe) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
-	// TODO: can this even occur?
+func (sw LcSyringe) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+	// TODO: can this even happen?
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.Id, upd)
+	res, err := coll.UpdateByID(ctx, sw.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", sw.Id}}, sw).Err()
+	}
 }
 
-func (sw LcSyringe) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (sw LcSyringe) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	// TODO: cannot happen
 	panic("does not happen")
 }

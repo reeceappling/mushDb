@@ -47,23 +47,26 @@ func (sw SporePrint) CanTransferTo(dst geneticSource) error {
 	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
 
-func (sw SporePrint) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (sw SporePrint) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
 	// TODO: can this even occur?
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.Id, upd)
+	res, err := coll.UpdateByID(ctx, sw.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", sw.Id}}, sw).Err()
+	}
 }
 
-func (sw SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (sw SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	// TODO: can this happen????? should always be from a fruit right?
 	// This is a special case because it will always be 0-gen
 	parentInfo, err := from.GeneticInfoAsParent()
@@ -120,17 +123,9 @@ func (sw SporePrint) EntryTypeField() *string {
 	return nil
 }
 
-//func (sw SporePrint) altId() AlternateCollectionId {
-//	return AlternateCollectionId(sw.Email)
-//}
-
 func (sw SporePrint) id() []byte {
 	return []byte(sw.Id.dbIdStr())
 }
-
-//func (sp SporePrint) knownFruitable() bool {
-//	return false
-//}
 
 func (sw SporePrint) prefix() string {
 	return sporePrintIdPrefix
@@ -144,14 +139,14 @@ func initializeSporePrints(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sporePrintCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("parent", "parent", false, false, false),
-		newSimpleIndex("printDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
-		newSimpleIndex("species", "species", false, false, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		//newSimpleIndex("parent", "parent", false, false, false),
+		//newSimpleIndex("printDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
+		//newSimpleIndex("species", "species", false, false, false),
+		//newSimpleIndex("subSpecies", "subSpecies", false, true, false),
 		// Pics
 		// TODO: projectsIndexModel,
-		saleIndexModel,
-		disposedIndexModel,
+		//saleIndexModel,
+		//disposedIndexModel,
 		// MostRecentImage
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
@@ -174,7 +169,7 @@ func initializeSporePrints(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+	err = coll.FindOneAndReplace(ctx, bson.D{{"_id", exAltId}}, testItem).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil
@@ -307,53 +302,57 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		out.Pics[i].Location = imageLocation(loc)
 	}
+	ctx := r.Context()
+	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	// TODO: add spore print to mapCollection
+	parent := Fruit{}
+	err = db.Collection(fruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	_, txErr := doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		// TODO: add spore print to mapCollection
-		parent := Fruit{}
-		err = db.Collection(fruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		now := unixTimeForNow()
-		spid := id
-		var mri *PicWithNotes = nil
-		if len(out.Pics) > 0 {
-			lastPic := out.Pics[len(out.Pics)-1]
-			mri = &lastPic
-		}
-		toInsert := SporePrint{
-			MainCollectionIdField:             MainCollectionIdField{spid},
-			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-			CreationDateField:                 now.asCreationDate(),
-			SpeciesField:                      parent.SpeciesField,
-			SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-			PicsField:                         out.PicsField,
-			MostRecentImageField:              MostRecentImageField{mri},
-			NotesField:                        NotesField{out.Notes},
-			LastUpdatedField:                  LastUpdatedField{now},
-			// Do not check permissions, just pass parent perms to child
-			AclField: parent.AclField,
-		}
-		_, err = db.Collection(sporePrintCollectionName).InsertOne(ctx, toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		// Update fruit with new print id
-		err = parent.addSporePrint(ctx, spid)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if txErr != nil {
-		handleWriteErr(txErr, w)
+	now := unixTimeForNow()
+	spid := id
+	var mri *PicWithNotes = nil
+	if len(out.Pics) > 0 {
+		lastPic := out.Pics[len(out.Pics)-1]
+		mri = &lastPic
+	}
+	toInsert := SporePrint{
+		MainCollectionIdField:             MainCollectionIdField{spid},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+		CreationDateField:                 now.asCreationDate(),
+		SpeciesField:                      parent.SpeciesField,
+		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+		PicsField:                         out.PicsField,
+		MostRecentImageField:              MostRecentImageField{mri},
+		NotesField:                        NotesField{out.Notes},
+		LastUpdatedField:                  LastUpdatedField{now},
+		// Do not check permissions, just pass parent perms to child
+		AclField: parent.AclField,
+	}
+	_, err = db.Collection(sporePrintCollectionName).InsertOne(ctx, toInsert)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Update fruit with new print id
+	err = parent.addSporePrint(ctx, spid)
+	if err != nil {
+		// Rollback print insert
+		err = errors.Join(db.Collection(sporePrintCollectionName).FindOneAndDelete(ctx, bson.D{{"_id", toInsert.Id}}).Err(), err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
+	if err != nil {
+		handleWriteErr(err, w)
 	}
 }
 

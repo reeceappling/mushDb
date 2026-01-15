@@ -76,22 +76,25 @@ func (f Fruit) SourceType() string {
 	return FruitSourceType
 }
 
-func (f Fruit) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (f Fruit) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(fruitsCollName)
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(fruitsCollName).UpdateByID(ctx, f.Id, upd)
+	res, err := coll.UpdateByID(ctx, f.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", f.Id}}, f).Err()
+	}
 }
 
-func (f Fruit) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (f Fruit) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	// Transferring TO a fruit is not a thing
 	return errors.New("fruits are invalid transfer children, must be created from a fruiter, or imported")
 }
@@ -108,13 +111,13 @@ func (f Fruit) EntryTypeField() *string {
 //	return f.Email[:]
 //}
 
-func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId) error {
+func (f Fruit) addSporePrint(ctx context.Context, printId MainCollectionId) error {
 	// update fruit
-	res, err := ctx.Client().Database(dbName).Collection(fruitsCollName).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId))
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(fruitsCollName).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId))
 	if err != nil {
 		return err
 	}
-	if res.ModifiedCount != 1 {
+	if res.ModifiedCount == 0 {
 		return errors.New("invalid result") // TODO: ok?
 	}
 	return nil

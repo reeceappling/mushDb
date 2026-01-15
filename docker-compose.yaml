@@ -41,6 +41,10 @@ services:
       - pictures:/images
     networks:
       - mushNet
+    links:
+      - mushdb
+    depends_on:
+      - mushdb
   # React/Next.js webserver
   web:
     image: mush-web:latest
@@ -73,12 +77,35 @@ services:
       MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
       MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
+      MONGO_REPLICA_SET_NAME: rs0
+#    entrypoint:
+#      - bash
+#      - -c
+#      - |
+#        cp /opt/keyfile/keyfile /opt/keyfile/keyfile2
+#        chmod 400 /opt/keyfile/keyfile2
+#        chown 999:999 /opt/keyfile/keyfile2
+#        exec docker-entrypoint.sh $$@
+    # command: [--bind_ip_all,--replSet, rs0 ]
+    #command: [--auth,--bind_ip_all,--keyFile,/opt/keyfile/keyfile2,--replSet, rs0]
+    #command: [--auth,--bind_ip_all,--keyFile,/opt/keyfile/keyfile2,--replSet, rs0]
     command: [--auth]
+#    healthcheck:
+#      test: test $$(echo 'rs.initiate({_id':' "rs0", members':' [{_id':' 1, "host"':' "mushdb':'27017"}]}) || rs.status().ok' | mongosh -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD}) -eq 1
+##      #test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:1,host:'mushdb:27017'}]}) }" | mongosh -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --port 27017 --quiet
+#      interval: 10s
+#      timeout: 30s
+#      start_period: 0s
+#      start_interval: 1s
+#      retries: 30
     volumes:
       - mongodb-data:/data/db
       - ./initDB:/docker-entrypoint-initdb.d
+#      - ./mongoKeys:/opt/keyfile/
+#      - mongo_repl_config:/data/configdb
     networks:
       - mushNet
+
   # grafana service
 #  grafana:
 #    image: grafana/grafana:latest
@@ -101,6 +128,7 @@ networks:
   mushNet:
     name: mushNet
 volumes:
+  mongo_repl_config:
   pictures:
     driver: local
     driver_opts:

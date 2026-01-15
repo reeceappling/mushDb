@@ -1,24 +1,16 @@
 package rfid
 
 import (
+	"context"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
-var (
-	// Alts
-	// SporePrint
-	_ geneticSource = Fruit{} // TODO: only clones via transfer
-)
-
-type GeneticParentInfo struct { // TODO: FIGURE OUT WHERE WE CAN USE THESE
+type GeneticParentInfo struct {
 	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
-	GenerationsFields // TODO: NEW, FIX
-	// TODO: used to be gensSinceSpore, now genSpore
-	//TODO: used to be gensSinceFruitOrSpore, now genFruitOrSpore
+	GenerationsFields
 }
 
 var (
@@ -32,8 +24,8 @@ var (
 	_ geneticSource = &Plate{}
 	_ geneticSource = &PlugsJar{}
 	_ geneticSource = &Slant{}
-	_ geneticSource = &SporePrint{} // TODO: sporeSwab?
-	_ geneticSource = &SporeSwab{}  // TODO: sporeSwab?
+	_ geneticSource = &SporePrint{}
+	_ geneticSource = &SporeSwab{}
 	_ geneticSource = &StasisTube{}
 )
 
@@ -41,8 +33,8 @@ type geneticSource interface {
 	SourceType() string
 	GeneticInfoAsParent() (GeneticParentInfo, error)
 	DbId() BinaryCollectionId
-	setTransferParent(ctx mongo.SessionContext, xfer Transfer) error
-	setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error
+	setTransferParent(ctx context.Context, xfer Transfer) (err error, rollback func() error)
+	setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error
 	generation() (sinceSpore *Generation, sinceSporeOrClone *Generation)
 	Permissioned
 	CanTransferTo(dst geneticSource) error

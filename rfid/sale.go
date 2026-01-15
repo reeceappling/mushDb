@@ -36,7 +36,7 @@ type SaleField struct { // TODO: sales is multiple only for LC!
 	Sale *AlternateCollectionId `bson:"sale,omitempty" json:"sale,omitempty"`
 }
 
-type SalesField struct { // TODO: sales is multiple only for LC, sporeSwab, and pegs!
+type SalesField struct { // TODO: sales is multiple only for plugs!
 	Sales []AlternateCollectionId `bson:"sales,omitempty" json:"sales,omitempty"`
 }
 

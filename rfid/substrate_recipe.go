@@ -176,13 +176,15 @@ type PermsOnRequest struct {
 	BlanketPerm  ReadWritePerm        `json:"blanketPerm,omitempty"` // TODO: ensure this is ok and we don't want publiclyReadable instead
 }
 
-func (requestPerms PermsOnRequest) AclFor(ctx mongo.SessionContext, perms ResolvedUserPerms) (AclField, error) {
+func (requestPerms PermsOnRequest) AclFor(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
 	if requestPerms.BlanketPerm != nil && *requestPerms.BlanketPerm {
 		return AclField{ACL: nil}, nil
 	}
+	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+
 	// validate Projects
 	// TODO: count instead?
-	projColl := ctx.Client().Database(dbName).Collection(projectsCollectionName)
+	projColl := client.Database(dbName).Collection(projectsCollectionName)
 	for projName, _ := range requestPerms.ProjectPerms {
 		err := projColl.FindOne(ctx, bson.D{{"_id", projName}}).Err()
 		if err != nil {
@@ -194,7 +196,7 @@ func (requestPerms PermsOnRequest) AclFor(ctx mongo.SessionContext, perms Resolv
 	}
 	// validate users
 	// TODO: count instead?
-	userColl := ctx.Client().Database(dbName).Collection(userCollName)
+	userColl := client.Database(dbName).Collection(userCollName)
 	for userEmail, _ := range requestPerms.UserPerms {
 		err := userColl.FindOne(ctx, bson.D{{"_id", userEmail}}).Err()
 		if err != nil {
@@ -210,6 +212,12 @@ func (requestPerms PermsOnRequest) AclFor(ctx mongo.SessionContext, perms Resolv
 		Users:       requestPerms.UserPerms,
 		Projects:    requestPerms.ProjectPerms,
 		BlanketPerm: (requestPerms.BlanketPerm != nil),
+	}
+	if acl.Users == nil {
+		acl.Users = map[string]bool{}
+	}
+	if acl.Projects == nil {
+		acl.Projects = map[projectName]bool{}
 	}
 	acl.Users[perms.Email] = true
 	return AclField{ACL: &acl}, nil

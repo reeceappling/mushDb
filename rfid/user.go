@@ -10,24 +10,6 @@ import (
 	"io"
 )
 
-// import (
-//
-//	"context"
-//	"crypto/rand"
-//	"crypto/sha256"
-//	"encoding/json"
-//	"errors"
-//	"github.com/reeceappling/goUtils/v2/utils"
-//	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
-//	"go.mongodb.org/mongo-driver/bson"
-//	"go.mongodb.org/mongo-driver/mongo"
-//	"io"
-//	"net/http"
-//	"net/mail"
-//	"slices"
-//
-// )
-
 // User collection
 
 const userCollName = "users" // TODO: readonly field

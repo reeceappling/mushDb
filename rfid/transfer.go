@@ -80,7 +80,7 @@ func (t Transfer) PicsModsForChild() *Mods {
 }
 
 // Perms have not been checked when this runs yet // TODO: ?
-func getGeneticItem(ctx mongo.SessionContext, entryType string, id MainCollectionId) (geneticSource, error) {
+func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) (geneticSource, error) {
 	b58id := id.asBase58()
 	if tempItem, exists := mainCollMap[entryType]; exists { // TODO: no longer need this
 		out, err := GetMainCollectionItem(ctx, id, tempItem) // TODO: use multiple collections here!
@@ -100,7 +100,7 @@ func getGeneticItem(ctx mongo.SessionContext, entryType string, id MainCollectio
 	if !exists {
 		return nil, errors.Join(errors.New("invalid entry type"), err)
 	}
-	coll := ctx.Client().Database(dbName).Collection(outType.CollectionName())
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(outType.CollectionName())
 	err = coll.FindOne(ctx, bson.D{{"_id", acId}}).Decode(&outType)
 	if err != nil {
 		return nil, err
@@ -166,6 +166,7 @@ type createTransferRequest struct {
 }
 
 func createTransferHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: CANNOT USE TRANSACTIONS!!!!!!
 	data := createTransferRequest{}
 	id := newAlternateCollectionId()
 	b58id := id.asBase58()
@@ -248,69 +249,100 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	ctx := r.Context()
 	parentId := data.From
 	childId := data.To
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		now := unixTimeForNow()
-		db := ctx.Client().Database(dbName)
-		// Get parent and child items
-		parent, errr := getGeneticItem(ctx, data.FromType, data.From)
-		if errr != nil {
-			return DbTxnStdErr(w, "failed to get parent item: "+errr.Error(), http.StatusBadRequest)
-		}
-		child, errr := getGeneticItem(ctx, data.ToType, data.To)
-		if errr != nil {
-			return DbTxnStdErr(w, "failed to get child item: "+errr.Error(), http.StatusBadRequest)
-		}
-		if err = parent.CanTransferTo(child); err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusBadRequest)
-		}
-		// TODO: set child perms to the parent perms!
+	now := unixTimeForNow()
+	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	// Get parent and child items
+	parent, errr := getGeneticItem(ctx, data.FromType, data.From)
+	if errr != nil {
+		http.Error(w, "failed to get parent item: "+errr.Error(), http.StatusBadRequest)
+		return
+	}
+	child, errr := getGeneticItem(ctx, data.ToType, data.To)
+	if errr != nil {
+		http.Error(w, "failed to get child item: "+errr.Error(), http.StatusBadRequest)
+		return
+	}
+	if err = parent.CanTransferTo(child); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// TODO: set child perms to the parent perms!
 
-		// TODO: ensure email has perms to make this transfer? (can edit parent)
-		resolvedPerms, err := GetResolvedUserPerms(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusUnauthorized)
-		}
-		// to make a transfer, the email must only be able to write to the child initially
-		if userChildPerm := child.Permissions().HighestPermFor(resolvedPerms); userChildPerm == nil || !(*userChildPerm) {
-			return DbTxnStdErr(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusUnauthorized)
-		}
-		// Create Transfer
-		xfer := Transfer{
-			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			From:                       []MainCollectionId{parentId},
-			To:                         childId,
-			FromType:                   data.FromType,
-			ToType:                     data.ToType,
-			CreationDateField:          CreationDateField{now},
-			Reason:                     transferReason(data.Reason),
-			FromImage:                  (*imageLocation)(fromPic),
-			ToImage:                    (*imageLocation)(toPic),
-			NotesField:                 data.NotesField,
-			LastUpdatedField:           LastUpdatedFieldForNow(),
-			AclField:                   AclField{ACL: parent.Permissions()},
-		}
-		_, err = db.Collection(transfersCollName).InsertOne(ctx, xfer)
-		if err != nil {
-			return DbTxnStdErr(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
-		}
-
-		if err = parent.setTransferParent(ctx, xfer); err != nil {
-			return DbTxnStdErr(w, "failed to set transfer parent: "+err.Error(), http.StatusInternalServerError)
-		}
-
-		if err = child.setTransferChild(ctx, xfer, parent); err != nil {
-			return DbTxnStdErr(w, "failed to set transfer child: "+err.Error(), http.StatusInternalServerError)
-		}
-
-		bsOut, err := json.Marshal(xfer)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	// TODO: ensure email has perms to make this transfer? (can edit parent)
+	resolvedPerms, err := GetResolvedUserPerms(ctx)
 	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	// to make a transfer, the email must only be able to write to the child initially
+	if userChildPerm := child.Permissions().HighestPermFor(resolvedPerms); userChildPerm == nil || !(*userChildPerm) {
+		http.Error(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusUnauthorized)
+		return
+	}
+	// Create Transfer
+	xfer := Transfer{
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		From:                       []MainCollectionId{parentId},
+		To:                         childId,
+		FromType:                   data.FromType,
+		ToType:                     data.ToType,
+		CreationDateField:          CreationDateField{now},
+		Reason:                     transferReason(data.Reason),
+		FromImage:                  (*imageLocation)(fromPic),
+		ToImage:                    (*imageLocation)(toPic),
+		NotesField:                 data.NotesField,
+		LastUpdatedField:           LastUpdatedFieldForNow(),
+		AclField:                   AclField{ACL: parent.Permissions()},
+	}
+	_, err = db.Collection(transfersCollName).InsertOne(ctx, xfer)
+	if err != nil {
+		http.Error(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Set rollback
+	rollbackXfer := func() error {
+		result, errrr := db.Collection(transfersCollName).DeleteOne(ctx, bson.D{{"_id", xfer.Id}})
+		if errrr != nil {
+			return errrr
+		}
+		if result.DeletedCount == 0 {
+			return errors.New("transfer not deleted")
+		}
+		return nil
+	}
+	err, rollbackParent := parent.setTransferParent(ctx, xfer)
+	if err != nil {
+		err = errors.Join(errors.New("failed to set transfer parent"), rollbackXfer(), err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = child.setTransferChild(ctx, xfer, parent)
+	if err != nil {
+		parentRollbackErr := rollbackParent()
+		if parentRollbackErr != nil {
+			// TODO: HUGE ERROR. FIGURE OUT
+		}
+		xferRollbackErr := rollbackXfer()
+		if xferRollbackErr != nil {
+			// TODO: HUGE ERROR. FIGURE OUT
+		}
+		err = errors.Join(errors.New("failed to set transfer child"), parentRollbackErr, xferRollbackErr, err)
+		http.Error(w, "failed to set transfer child: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	bsOut, err := json.Marshal(xfer)
+	if err != nil {
+		// Do not rollback here. Data made it in successfully
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
+	if err != nil {
+		// Do not rollback here. Data made it in successfully
 		handleWriteErr(err, w)
 	}
 }

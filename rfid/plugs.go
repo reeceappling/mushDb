@@ -58,7 +58,7 @@ func (pl PlugsJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	panic("implement me")
 }
 
-func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (pl PlugsJar) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	// TODO: MUST BE AGAR OR BAG
 	//TODO implement me
 	panic("implement me")
@@ -117,20 +117,23 @@ func (pl PlugsJar) CollectionName() string {
 	return PlugsCollectionName
 }
 
-func (pl PlugsJar) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (pl PlugsJar) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
 	// TODO: can this even occur?
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pl.CollectionName())
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(pl.CollectionName()).UpdateByID(ctx, pl.Id, upd)
+	res, err := coll.UpdateByID(ctx, pl.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", pl.Id}}, pl).Err()
+	}
 }
 
 func initializePlugs(ctx context.Context) error {

@@ -512,6 +512,14 @@ type picWithNotesForm struct {
 	Notes AllEntries[Note]
 }
 
+func (pwn picWithNotesForm) convert() PicWithNotes {
+	return PicWithNotes{
+		Time:       pwn.Time,
+		Location:   imageLocation(pwn.Img),
+		NotesField: NotesField{pwn.Notes.asEntries()},
+	}
+}
+
 type contamForm struct {
 	Time      unixTime
 	Confirmed bool
@@ -519,6 +527,21 @@ type contamForm struct {
 	Mold      bool
 	Notes     AllEntries[Note]
 	Location  *string // MAY OR MAY NOT EXIST ON RESPONSE
+}
+
+func (cf contamForm) convert() Contamination {
+	var loc *imageLocation = nil
+	if cf.Location != nil {
+		loc = utils.Pointer(imageLocation(*cf.Location))
+	}
+	return Contamination{
+		Time:       cf.Time,
+		Confirmed:  cf.Confirmed,
+		Bacteria:   cf.Bacteria,
+		Mold:       cf.Mold,
+		Location:   loc,
+		NotesField: NotesField{cf.Notes.asEntries()},
+	}
 }
 
 func compareContamUpdate(a contamForm, b Contamination) (equal bool) {
@@ -533,12 +556,22 @@ func compareContamUpdate(a contamForm, b Contamination) (equal bool) {
 	return true
 }
 
-func compareImageUpdate(a picWithNotesForm, b PicWithNotes) (equal bool) {
-	if len(a.Notes.New) > 0 {
+func picWithNotesWasModified(existing PicWithNotes, updated picWithNotesForm) (wasModified bool) {
+	return updated.Img != string(existing.Location) ||
+		updated.Time != existing.Time ||
+		notesWereModified(existing.Notes, updated.Notes)
+}
+
+func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal bool) {
+	if len(updated.Notes.New) > 0 {
 		return false
 	}
-	for i, updatedNote := range a.Notes.Existing {
-		if DataStripped(updatedNote) != b.Notes[i] {
+	return notesWereModified(existing.Notes, updated.Notes)
+	for i, updatedNote := range updated.Notes.Existing {
+		if updatedNote.disabled {
+			return false
+		}
+		if updatedNote.data.Note != existing.Notes[i].Note {
 			return false
 		}
 	}
@@ -576,83 +609,73 @@ func compareImageUpdate(a picWithNotesForm, b PicWithNotes) (equal bool) {
 //	return mods, nil
 //}
 
-func NotesEqual(a, b Note) bool {
-	return a.Note == b.Note
-}
+//// WithEntriesChanges Is to be used with notes, and things formatted like them (no image-holders)
+//func WithEntriesChanges[T any](currentMods bson.D, id string, updatedEntries AllEntries[T], existing []T, areEqual func(a, b T) bool) (mods bson.D, err error) {
+//	mods, err = WithExistingEntriesChange(currentMods, id, updatedEntries.Existing, existing, areEqual)
+//	if err != nil {
+//		return nil, err
+//	}
+//	// add new items
+//	mods = append(mods, pushToArrayInline("notes", updatedEntries.New...)...)
+//	return mods, nil
+//}
 
-func WithNotesUpdate(currentMods bson.D, updatedEntries AllEntries[Note], existing []Note) (mods bson.D, err error) {
-	return WithEntriesChanges(currentMods, "notes", updatedEntries, existing, func(a, b Note) bool {
-		return a.Note == b.Note
-	})
-}
+//// WithExistingEntriesChange is to be used with Images, Contams, etc
+//func WithExistingEntriesChangeNew[T, U any](upd *Mods, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) *Mods {
+//	if upd.err != nil {
+//		return upd
+//	}
+//	// INCOMING SIZE MUST BE THE SAME!
+//	if len(existing) != len(updatedExisting) {
+//		upd.err = errors.New("incorrect amount of incoming existing " + id + "s")
+//		return upd
+//	}
+//	// Do changes/removals
+//	for i, newExisting := range updatedExisting {
+//		indexKey := fmt.Sprintf(`%s.%d`, id, i)
+//		if newExisting.disabled {
+//			upd.Unset(indexKey) // TODO: value of 1 was here?
+//			//removals = append(removals, bson.E{currentKey, 1}) // TODO: make sure ok
+//			continue
+//		}
+//		if !areEqual(newExisting.data, existing[i]) {
+//			upd.Set(indexKey, newExisting.data)
+//		}
+//	}
+//	// TODO: Changes (sets) first if exist (not sure if possible the way we do it)
+//	// TODO: Removals second if exist
+//	return upd
+//}
 
-// WithEntriesChanges Is to be used with notes, and things formatted like them (no image-holders)
-func WithEntriesChanges[T any](currentMods bson.D, id string, updatedEntries AllEntries[T], existing []T, areEqual func(a, b T) bool) (mods bson.D, err error) {
-	mods, err = WithExistingEntriesChange(currentMods, id, updatedEntries.Existing, existing, areEqual)
-	if err != nil {
-		return nil, err
-	}
-	// add new items
-	mods = append(mods, pushToArrayInline("notes", updatedEntries.New...)...)
-	return mods, nil
-}
-
-// WithExistingEntriesChange is to be used with Images, Contams, etc
-func WithExistingEntriesChangeNew[T, U any](upd *Mods, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) *Mods {
-	if upd.err != nil {
-		return upd
-	}
-	// INCOMING SIZE MUST BE THE SAME!
-	if len(existing) != len(updatedExisting) {
-		upd.err = errors.New("incorrect amount of incoming existing " + id + "s")
-		return upd
-	}
-	// Do changes/removals
-	for i, newExisting := range updatedExisting {
-		indexKey := fmt.Sprintf(`%s.%d`, id, i)
-		if newExisting.disabled {
-			upd.Unset(indexKey) // TODO: value of 1 was here?
-			//removals = append(removals, bson.E{currentKey, 1}) // TODO: make sure ok
-			continue
-		}
-		if !areEqual(newExisting.data, existing[i]) {
-			upd.Set(indexKey, newExisting.data)
-		}
-	}
-	// TODO: Changes (sets) first if exist (not sure if possible the way we do it)
-	// TODO: Removals second if exist
-	return upd
-}
-
-// WithExistingEntriesChange is to be used with Images, Contams, etc
-func WithExistingEntriesChange[T, U any](currentMods bson.D, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) (mods bson.D, err error) {
-	mods = currentMods
-	// INCOMING SIZE MUST BE THE SAME!
-	if len(existing) != len(updatedExisting) {
-		err = errors.New("incorrect amount of incoming existing " + id + "s")
-	}
-	// Do changes
-	removals := []bson.E{}
-	chgs := []bson.E{}
-	for i, newExisting := range updatedExisting {
-		if newExisting.disabled {
-			removals = append(removals, bson.E{fmt.Sprintf(`%s.%d`, id, i), 1})
-			continue
-		}
-		if !areEqual(newExisting.data, existing[i]) {
-			chgs = append(chgs, bson.E{fmt.Sprintf(`%s.%d`, id, i), newExisting.data})
-		}
-	}
-	// Changes first if exist
-	if len(chgs) > 0 {
-		mods = append(mods, bson.E{"$set", chgs})
-	}
-	// Removals second if exist
-	if len(removals) > 0 {
-		mods = append(mods, bson.E{"$unset", removals})
-	}
-	return mods, nil
-}
+//// WithExistingEntriesChange is to be used with Images, Contams, etc
+//func WithExistingEntriesChange[T, U any](currentMods bson.D, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) (mods bson.D, err error) {
+//	mods = currentMods
+//	// INCOMING SIZE MUST BE THE SAME!
+//	if len(existing) != len(updatedExisting) {
+//		err = errors.New("incorrect amount of incoming existing " + id + "s")
+//	}
+//	// Do changes
+//	removals := []bson.E{}
+//	chgs := []bson.E{}
+//	for i, newExisting := range updatedExisting {
+//		if newExisting.disabled {
+//			removals = append(removals, bson.E{fmt.Sprintf(`%s.%d`, id, i), 1})
+//			continue
+//		}
+//		if !areEqual(newExisting.data, existing[i]) {
+//			chgs = append(chgs, bson.E{fmt.Sprintf(`%s.%d`, id, i), newExisting.data})
+//		}
+//	}
+//	// Changes first if exist
+//	if len(chgs) > 0 {
+//		mods = append(mods, bson.E{"$set", chgs})
+//	}
+//	// Removals second if exist
+//	if len(removals) > 0 {
+//		mods = append(mods, bson.E{"$unset", removals})
+//	}
+//	return mods, nil
+//}
 
 func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, error) {
 	// Get field bytes as an image

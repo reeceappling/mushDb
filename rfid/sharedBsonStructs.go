@@ -62,15 +62,15 @@ type subdocWithImage interface {
 //	return out
 //}
 
-type PicsField struct { // TODO: use where needed
+type PicsField struct {
 	Pics []PicWithNotes `bson:"pics,omitempty" json:"pics,omitempty"`
 }
 
-type FlushesField struct { // TODO: use where needed
+type FlushesField struct {
 	Flushes []PicWithNotes `bson:"flushes,omitempty" json:"flushes,omitempty"`
 }
 
-type MostRecentImageField struct { // TODO: use where needed
+type MostRecentImageField struct {
 	MostRecentImage *PicWithNotes `bson:"mostRecentImage,omitempty" json:"mostRecentImage,omitempty"`
 }
 
@@ -559,30 +559,84 @@ func (upd *Mods) updateNameIfNeeded(future, existing string) *Mods {
 	return updateValueIfNeeded(upd, "name", future, existing)
 }
 
+func notesWereModified(existing []Note, updated AllEntries[Note]) (hasChanged bool) {
+	if len(updated.New) > 0 {
+		return true
+	}
+	for i, finalExisting := range updated.Existing {
+		if finalExisting.disabled {
+			return true
+		}
+		if finalExisting.data.Note != existing[i].Note {
+			return true
+		}
+		if finalExisting.data.Time != existing[i].Time { // TODO: do we even want this?
+			return true
+		}
+	}
+	return false
+}
+
+func picsWereModified(existing []PicWithNotes, updated SplitEntries[picWithNotesForm, PicWithNotes]) (hasChanged bool) {
+	if len(updated.New) > 0 {
+		return true
+	}
+	for i, finalExisting := range updated.Existing {
+		if finalExisting.disabled ||
+			finalExisting.data.Img != string(existing[i].Location) || // TODO: ensure ok
+			finalExisting.data.Time != existing[i].Time || // TODO: do we even want this?
+			notesWereModified(existing[i].Notes, finalExisting.data.Notes) {
+			return true
+		}
+	}
+	return false
+
+}
+
+func contamsWereModified(existing []Contamination, updated SplitEntries[contamForm, Contamination]) bool {
+	if len(updated.New) > 0 {
+		return true
+	}
+	for i, finalExisting := range updated.Existing {
+		if finalExisting.disabled ||
+			finalExisting.data.Time != existing[i].Time || // TODO: do we even want this?
+			finalExisting.data.Mold != existing[i].Mold ||
+			finalExisting.data.Bacteria != existing[i].Bacteria ||
+			finalExisting.data.Confirmed != existing[i].Confirmed ||
+			notesWereModified(existing[i].Notes, finalExisting.data.Notes) {
+			return true
+		}
+		if existing[i].Location != nil {
+			if finalExisting.data.Location == nil || *finalExisting.data.Location != string(*existing[i].Location) { // TODO: ensure ok
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (upd *Mods) updateNotesIfNeeded(updatedEntries AllEntries[Note], existing []Note) *Mods { // TODO: make sure this always works the way we want it to!!! // TODO: lower-down notes?
 	if upd.err != nil {
 		return upd
 	}
-	// TODO: main id is "notes"?
-	upd = WithExistingEntriesChangeNew(upd, "notes", updatedEntries.Existing, existing, NotesEqual) // TODO: rename
-	if upd.err != nil {
+	if len(updatedEntries.Existing) != len(existing) {
+		upd.err = errors.Join(errors.New("length of existing notes must match"), upd.err)
 		return upd
 	}
-	// add new items
-	return upd.pushBson(pushToArrayNew("notes", updatedEntries.New)...)
-}
-
-func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
-	if upd.err != nil {
+	if !notesWereModified(existing, updatedEntries) {
 		return upd
 	}
-	// TODO: make sure fieldName is all that is needed. What if this field is embedded?
-	upd = WithExistingEntriesChangeNew(upd, fieldName, updatedEntries.Existing, existing, compareImageUpdate) // TODO: rename
-	if upd.err != nil {
-		return upd
+	finalNotes := make([]Note, 0, len(existing)+len(updatedEntries.New))
+	for _, final := range updatedEntries.Existing {
+		if !final.disabled {
+			finalNotes = append(finalNotes, final.data)
+		}
 	}
-	// add new items
-	return upd.pushBson(pushToArrayNew(fieldName, updatedEntries.New)...)
+	for _, final := range updatedEntries.New {
+		finalNotes = append(finalNotes, final.data)
+	}
+	// Set notes
+	return upd.Set("notes", finalNotes) // TODO: ensure ok
 }
 
 func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
@@ -593,16 +647,49 @@ func (upd *Mods) updateFlushesIfNeeded(updatedEntries SplitEntries[picWithNotesF
 	return upd.updatePwnIfNeeded("flushes", updatedEntries, existing)
 }
 
+func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+	if upd.err != nil {
+		return upd
+	}
+	if len(updatedEntries.Existing) != len(existing) {
+		upd.err = errors.Join(errors.New("length of existing "+fieldName+" must match"), upd.err)
+		return upd
+	}
+	if !picsWereModified(existing, updatedEntries) {
+		return upd
+	}
+	finalPics := make([]PicWithNotes, 0, len(existing)+len(updatedEntries.New))
+	for _, final := range updatedEntries.Existing {
+		if !final.disabled {
+			finalPics = append(finalPics, final.data.convert())
+		}
+	}
+	finalPics = append(finalPics, updatedEntries.New...)
+	// Set field
+	return upd.Set(fieldName, finalPics) // TODO: ensure ok
+
+}
+
 func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, Contamination], existing []Contamination) *Mods {
 	if upd.err != nil {
 		return upd
 	}
-	upd = WithExistingEntriesChangeNew(upd, "contamination", updatedEntries.Existing, existing, compareContamUpdate) // TODO: rename
-	if upd.err != nil {
+	if len(updatedEntries.Existing) != len(existing) {
+		upd.err = errors.Join(errors.New("length of existing contams must match"), upd.err)
 		return upd
 	}
-	// add new items
-	return upd.pushBson(pushToArrayNew("contamination", updatedEntries.New)...)
+	if !contamsWereModified(existing, updatedEntries) {
+		return upd
+	}
+	finalEntries := make([]Contamination, 0, len(existing)+len(updatedEntries.New))
+	for _, final := range updatedEntries.Existing {
+		if !final.disabled {
+			finalEntries = append(finalEntries, final.data.convert())
+		}
+	}
+	finalEntries = append(finalEntries, updatedEntries.New...)
+	// Set field
+	return upd.Set("contamination", finalEntries) // TODO: ensure ok
 }
 
 //func (upd *Mods) updatePermsIfNeeded(future, existing *Perms) *Mods { // TODO: interface ok? or slice?
@@ -686,28 +773,17 @@ func setPointerIfNonNil[T any](upd *Mods, fieldName string, val *T) *Mods {
 }
 
 func updateValueIfNeeded[T comparable](upd *Mods, fieldName string, future, existing T) *Mods {
-	if upd.err != nil {
-		return upd
-	}
-	if future == existing {
-		// Do nothing
+	if upd.err != nil || future == existing {
 		return upd
 	}
 	return upd.Set(fieldName, future)
-}
-func updateValueIfNeededNew[T comparable](upd *Mods, fieldName string, future, existing T) {
-	if upd.err != nil || future == existing {
-		return
-	}
-	upd.Set(fieldName, future)
 }
 func updatePointerIfNeeded[T comparable](upd *Mods, fieldName string, future, existing *T) *Mods {
 	if upd.err != nil {
 		return upd
 	}
-	futureIsNil := future == nil
 	existingIsNil := existing == nil
-	if futureIsNil {
+	if future == nil {
 		if existingIsNil {
 			return upd
 		}

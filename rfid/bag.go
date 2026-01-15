@@ -79,23 +79,26 @@ func (b Bag) SourceType() string {
 	return BagSourceType
 }
 
-func (b Bag) setTransferParent(ctx mongo.SessionContext, xfer Transfer) error {
+func (b Bag) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
-		return err
+		return err, nil
 	}
-	res, err := ctx.Client().Database(dbName).Collection(BagsCollectionName).UpdateByID(ctx, b.Id, upd)
+	res, err := coll.UpdateByID(ctx, b.Id, upd)
 	if err != nil {
-		return err
+		return err, nil
 	}
 	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
+		return ErrNoParentModifiedForTransfer, nil
 	}
-	return nil
+	return nil, func() error {
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", b.Id}}, b).Err()
+	}
 }
 
 // TODO: create bag via jar (or LCSyringe) instead
-func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (b Bag) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
