@@ -29,17 +29,17 @@ var ErrInTxnAlreadyTriedToWrite = errors.New("transaction failed, response has b
 
 var sourceTypeCollections = map[string]string{
 	BagSourceType:             BagsCollectionName,
-	FruitSourceType:           fruitsCollName,
+	FruitSourceType:           FruitsCollName,
 	FruitingChamberSourceType: FruitingChamberCollectionName,
 	GrainJarSourceType:        GrainJarCollectionName,
 	LcSourceType:              LCCollectionName,
-	lcSyringeSourceType:       lcSyringeCollectionName,
+	LcSyringeSourceType:       LcSyringeCollectionName,
 	MssSourceType:             MssCollectionName,
 	PlateSourceType:           PlatesCollectionName,
 	PlugSourceType:            PlugsCollectionName,
 	SlantSourceType:           SlantsCollectionName,
-	SporePrintSourceType:      sporePrintCollectionName,
-	SporeSwabSourceType:       sporeSwabCollectionName,
+	SporePrintSourceType:      SporePrintCollectionName,
+	SporeSwabSourceType:       SporeSwabCollectionName,
 	StasisTubeSourceType:      StasisTubeCollectionName,
 }
 
@@ -76,17 +76,17 @@ func initializeDb(ctx context.Context) error {
 	}
 	// Create all collections that don't already exist
 	for _, name := range []string{
-		agarBatchCollectionName,
-		agarRecipesCollectionName,
-		fruitsCollName,
-		jarRecipesCollectionName,
-		lcRecipesCollectionName,
-		pcRunCollectionName,
-		speciesCollectionName,
-		sporePrintCollectionName,
-		subSpeciesCollectionName,
-		substrateRecipesCollectionName,
-		transfersCollName,
+		AgarBatchCollectionName,
+		AgarRecipesCollectionName,
+		FruitsCollName,
+		JarRecipesCollectionName,
+		LcRecipesCollectionName,
+		PcRunCollectionName,
+		SpeciesCollectionName,
+		SporePrintCollectionName,
+		SubspeciesCollectionName,
+		SubstrateRecipesCollectionName,
+		TransfersCollName,
 	} {
 		// Create if needed
 		if !slices.Contains(collNames, name) {
@@ -135,7 +135,7 @@ func and() bson.D { // TODO: use me elsewhere (USE ME)
 //	opts := options.Find().SetHint(
 //		mongo.IndexModel{Keys: bson.D{{"transfersOut", 1}}}, // TODO: ????????????
 //		)
-//	coll := db.Collection(fruitsCollName)
+//	coll := db.Collection(FruitsCollName)
 //	_, err := coll.Find(ctx, bson.D{}, opts)
 //	return err
 //	//coll.UpdateByID(ctx, bson.D{{"_id": "someId"}}, ) // TODO: use this
@@ -804,9 +804,9 @@ func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {
 	return
 }
 
-func CollectionFor(item CollectionItem, ctx mongo.SessionContext) *mongo.Collection { // TODO; USE THIS EVERYWHERE!
-	return ctx.Client().Database(dbName).Collection(item.CollectionName())
+func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection { // TODO; USE THIS EVERYWHERE!
+	return db.Collection(item.CollectionName())
 }
-func Refresh[T CollectionItem](ctx mongo.SessionContext, item *T) error { // TODO; USE THIS EVERYWHERE!
-	return CollectionFor(*item, ctx).FindOne(ctx, bson.D{{"_id", (*item).StringId()}}).Decode(item)
+func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T) error { // TODO; USE THIS EVERYWHERE!
+	return CollectionFor(*item, db).FindOne(ctx, bson.D{{"_id", (*item).StringId()}}).Decode(item)
 }

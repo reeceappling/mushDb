@@ -43,6 +43,18 @@ type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
+func (l *LiquidCulture) SetPerms(field AclField) {
+	l.AclField = field
+}
+
+func (l LiquidCulture) DbId() MainCollectionId {
+	return l.Id
+}
+
+func (l LiquidCulture) EntryType() string {
+	return LcSourceType
+}
+
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
 	return errors.New("LiquidCulture cannot transfer this way. Must create a new lcSyringe")
 }
@@ -228,7 +240,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: add to map!
 		_, err = data.LcRecipeField.Get(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := LiquidCulture{
 			MainCollectionIdField: MainCollectionIdField{id},
@@ -242,16 +254,16 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 
 		_, err = toInsert.PcRunOptionalField.Get(ctx)
 		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		coll := ctx.Client().Database(dbName).Collection(LCCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bs, err = json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bs)
 	})
@@ -387,12 +399,12 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		perms, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 
 		acl, err := data.AclFor(ctx, perms)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		out := LiquidCulture{
 			MainCollectionIdField: MainCollectionIdField{id},
@@ -415,16 +427,16 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: ADD TO MAP!
 		_, err = out.LcRecipeField.Get(ctx)
 		if err != nil && errors.Is(err, ErrMissingOptionalField) {
-			return DbTxnStdErr(w, "invalid LC recipe: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "invalid LC recipe: "+err.Error(), http.StatusInternalServerError)
 		}
 		coll := ctx.Client().Database(dbName).Collection(LCCollectionName)
 		_, err = coll.InsertOne(ctx, out)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(out)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -526,18 +538,18 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		existing := LiquidCulture{}
 		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		upd, err := req.modsFor(existing, aclField)
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates?????

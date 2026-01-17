@@ -1,7 +1,21 @@
 package rfid
 
+import (
+	"errors"
+)
+
 type WetnessField struct {
 	Wetness *int `bson:"wetness,omitempty" json:"wetness,omitempty"` // nil==unknown, 0== very dry, 10==veryWet, 5==perfect fieldCapacity, normal range 4-6
+}
+
+func (field WetnessField) Validate() error {
+	if field.Wetness == nil {
+		return nil
+	}
+	if *field.Wetness < 0 || *field.Wetness > 10 {
+		return errors.New("Invalid wetness, must either be nonexistent or 0-10")
+	}
+	return nil
 }
 
 // TODO: DO THIS WHOLE THING???
@@ -105,11 +119,11 @@ type WetnessField struct {
 //		}
 //		_, err = coll.InsertOne(r.Context(), toInsert)
 //		if err != nil {
-//			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+//			return dbErr(w, err.Error(), http.StatusInternalServerError)
 //		}
 //		bs, err := json.Marshal(toInsert)
 //		if err != nil {
-//			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+//			return dbErr(w, err.Error(), http.StatusInternalServerError)
 //		}
 //		return w.Write(bs)
 //	})
@@ -176,15 +190,15 @@ type WetnessField struct {
 //		bsonId := bson.D{{"_id", existing.Email}}
 //		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 //		if err != nil {
-//			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+//			return dbErr(w, err.Error(), http.StatusInternalServerError)
 //		}
 //		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 //		if err != nil {
-//			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+//			return dbErr(w, err.Error(), http.StatusInternalServerError)
 //		}
 //		bs, err = json.Marshal(existing)
 //		if err != nil {
-//			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+//			return dbErr(w, err.Error(), http.StatusInternalServerError)
 //		}
 //		return w.Write(bs)
 //	})

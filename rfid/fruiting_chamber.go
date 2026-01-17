@@ -49,6 +49,18 @@ type FruitingChamber struct { // TODO: SHOEBOX
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
+func (f *FruitingChamber) DbId() MainCollectionId {
+	return f.Id
+}
+
+func (f *FruitingChamber) SetPerms(aclField AclField) {
+	f.AclField = aclField
+}
+
+func (f FruitingChamber) EntryType() string {
+	return FruitingChamberSourceType
+}
+
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
 	return errors.New("fc cannot be transferred (unsure if this is ok)")
 }
@@ -261,52 +273,40 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	ctx := r.Context()
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
+	// Validation
 
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		parentJar, err := LookupGrainJar(ctx, data.ParentJar)
-		if err != nil {
-			return DbTxnStdErr(w, "failed to resolve parent jar"+err.Error(), http.StatusBadRequest)
-		}
-
-		// TODO: figure out cupSize of grain
-		coll := ctx.Client().Database(dbName).Collection(FruitingChamberCollectionName)
-		now := unixTimeForNow()
-		_, err = SubstrateRecipeField{data.Recipe}.Get(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, "invalid substrate recipe: "+err.Error(), http.StatusBadRequest)
-		}
-		err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
-		if err != nil {
-			return DbTxnStdErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		}
-		toInsert := FruitingChamber{
-			MainCollectionIdField:  MainCollectionIdField{id},
-			SubstrateRecipeField:   SubstrateRecipeField{data.Recipe},
-			CupsGrain:              float64(parentJar.SizeCups),
-			MixedSubstratePerGrain: data.MixedSubstrateCups / float64(parentJar.SizeCups), // TODO: ensure ok
-			CasingPerGrain:         data.CasingCups / float64(parentJar.SizeCups),         // TODO: ensure ok
-			CreationDateField:      CreationDateField{now},
-			NotesField:             NotesField{data.Notes},
-			LastUpdatedField:       LastUpdatedField{now},
-			AclField:               parentJar.AclField,
-		}
-		err = addToIdMapCollectionInTxn(ctx, id.ToBinaryCollectionId(), toInsert.SourceType())
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		_, err = coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	parentJar, err := LookupGrainJar(ctx, data.ParentJar)
 	if err != nil {
-		handleWriteErr(err, w)
+		http.Error(w, "failed to resolve parent jar"+err.Error(), http.StatusBadRequest)
+		return
 	}
+
+	// TODO: figure out cupSize of grain
+	now := unixTimeForNow()
+	_, err = SubstrateRecipeField{data.Recipe}.Get(ctx)
+	if err != nil {
+		http.Error(w, "invalid substrate recipe: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	toInsert := FruitingChamber{
+		MainCollectionIdField:  MainCollectionIdField{id},
+		SubstrateRecipeField:   SubstrateRecipeField{data.Recipe},
+		CupsGrain:              float64(parentJar.SizeCups),
+		MixedSubstratePerGrain: data.MixedSubstrateCups / float64(parentJar.SizeCups), // TODO: ensure ok
+		CasingPerGrain:         data.CasingCups / float64(parentJar.SizeCups),         // TODO: ensure ok
+		CreationDateField:      CreationDateField{now},
+		NotesField:             NotesField{data.Notes},
+		LastUpdatedField:       LastUpdatedField{now},
+		AclField:               parentJar.AclField,
+	}
+	finishCreate(ctx, coll, toInsert, w)
 }
 
 type importFruitingChamberRequest struct {
@@ -411,69 +411,51 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError) // TODO: normalize
-	//	return
-	//}
-	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
-	//if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil { // TODO: maybe dont do this?
-	//	http.Error(w, "email cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		perms, err := GetAuthInfo(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		acl, err := data.AclFor(ctx, perms)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		out := FruitingChamber{
-			MainCollectionIdField:       MainCollectionIdField{id},
-			SubstrateRecipeField:        data.SubstrateRecipeField,
-			SubstrateBatchOptionalField: SubstrateBatchOptionalField{nil}, // Unknown for imports
-			CreationDateField:           CreationDateField{data.CreationDate},
-			CupsGrain:                   data.GrainCups,
-			MixedSubstratePerGrain:      utils.Default(data.SubstrateRatio, 1.0),
-			CasingPerGrain:              utils.Default(data.CasingRatio, 0.5),
-			SpeciesOptionalField:        SpeciesOptionalField{&data.Species},
-			SubspeciesOptionalField:     data.SubspeciesOptionalField,
-			GenerationsFields: GenerationsFields{
-				GenSporeField:        GenSporeField{gen},
-				GenSinceFruitOrSpore: gen,
-			},
-			PicsField:            PicsField{pix},
-			KnownFruitableField:  data.KnownFruitableField,
-			MostRecentImageField: MostRecentImageField{importedPic},
-			LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-			AclField:             acl,
-		}
-		_, err = data.SubstrateRecipeField.Get(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, "bad substrate recipe: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
-		}
-		err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-		if err != nil {
-			return DbTxnStdErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		}
-		coll := ctx.Client().Database(dbName).Collection(FruitingChamberCollectionName)
-		_, err = coll.InsertOne(ctx, out)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(out)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	ctx := r.Context()
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
+	perms, err := GetAuthInfo(ctx)
 	if err != nil {
-		handleWriteErr(err, w)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	acl, err := data.AclFor(ctx, perms)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	toInsert := &FruitingChamber{
+		MainCollectionIdField:       MainCollectionIdField{id},
+		SubstrateRecipeField:        data.SubstrateRecipeField,
+		SubstrateBatchOptionalField: SubstrateBatchOptionalField{nil}, // Unknown for imports
+		CreationDateField:           CreationDateField{data.CreationDate},
+		CupsGrain:                   data.GrainCups,
+		MixedSubstratePerGrain:      utils.Default(data.SubstrateRatio, 1.0),
+		CasingPerGrain:              utils.Default(data.CasingRatio, 0.5),
+		SpeciesOptionalField:        SpeciesOptionalField{&data.Species},
+		SubspeciesOptionalField:     data.SubspeciesOptionalField,
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{gen},
+			GenSinceFruitOrSpore: gen,
+		},
+		PicsField:            PicsField{pix},
+		KnownFruitableField:  data.KnownFruitableField,
+		MostRecentImageField: MostRecentImageField{importedPic},
+		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
+		AclField:             acl,
+	}
+	_, err = data.SubstrateRecipeField.Get(ctx)
+	if err != nil {
+		http.Error(w, "bad substrate recipe: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		return
+	}
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	finishImport(ctx, coll, toInsert, data.PermsOnRequest, w)
+
 }
 
 type updateFruitingChamberRequest struct {
@@ -510,6 +492,20 @@ type resolvedUpdateFruitingChamberRequest struct {
 	Contams        SplitEntries[contamForm, Contamination]
 	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
 	PermsOnRequest // TODO: handle in typescript and handler!
+}
+
+func (out resolvedUpdateFruitingChamberRequest) modsFor(existing FruitingChamber, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
+		updateSaleIfNeeded(out.Sale, existing.Sale).
+		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
+		updateNotesIfNeeded(out.Notes, existing.Notes).
+		updatePicsIfNeeded(out.Images, existing.Pics).
+		updateContamsIfNeeded(out.Contams, existing.Contaminations).
+		updateFlushesIfNeeded(out.Flushes, existing.Flushes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
@@ -561,48 +557,23 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		out.Flushes.New[i].Location = imageLocation(loc)
 	}
 
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		coll := db.Collection(FruitingChamberCollectionName)
-		// go get current plate
-		existing := FruitingChamber{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
-		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		}
-		if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-			if err = db.Collection(salesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
-				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-			}
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := data.AclFor(ctx, user)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "overlapping perms invalid for email: "+err.Error(), http.StatusBadRequest)
-		//}
-		upd, err := NewMods().
-			updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
-			updateSaleIfNeeded(out.Sale, existing.Sale).
-			updateDisposedIfNeeded(out.Disposed, existing.Disposed).
-			updateNotesIfNeeded(out.Notes, existing.Notes).
-			updatePicsIfNeeded(out.Images, existing.Pics).
-			updateContamsIfNeeded(out.Contams, existing.Contaminations).
-			updateFlushesIfNeeded(out.Flushes, existing.Flushes).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)
-	})
+	ctx := r.Context()
+	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+
+	coll := db.Collection(FruitingChamberCollectionName)
+	// go get current FC
+	existing := &FruitingChamber{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
 	if err != nil {
-		handleWriteErr(err, w)
+		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	// TODO: ensure this is ok
+	if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
+		if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
+			dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	finishItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
 }

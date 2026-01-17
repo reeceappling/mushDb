@@ -20,9 +20,8 @@ import (
 //func parseName() // TODO: ???
 
 const (
-	lcSyringeSourceType     = "lcSyringe"
-	lcSyringeCollectionName = "lcSyringes"
-	lcSyringeIdPrefix       = "LCS"
+	LcSyringeSourceType     = "lcSyringe"
+	LcSyringeCollectionName = "lcSyringes"
 )
 
 type LcSyringe struct {
@@ -41,6 +40,18 @@ type LcSyringe struct {
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+}
+
+func (lcs *LcSyringe) SetPerms(field AclField) {
+	lcs.AclField = field
+}
+
+func (lcs LcSyringe) DbId() MainCollectionId {
+	return lcs.Id
+}
+
+func (lcs LcSyringe) EntryType() string {
+	return LcSyringeSourceType
 }
 
 func (lcs LcSyringe) Innoculatable() bool {
@@ -97,7 +108,7 @@ func (sw LcSyringe) generation() (sinceSpore *Generation, sinceSporeOrClone *Gen
 }
 
 func (sw LcSyringe) SourceType() string {
-	return lcSyringeSourceType
+	return LcSyringeSourceType
 }
 
 func (sw LcSyringe) EntryTypeField() *string {
@@ -116,17 +127,13 @@ func (sw LcSyringe) id() []byte {
 //	return false
 //}
 
-func (sw LcSyringe) prefix() string {
-	return lcSyringeIdPrefix
-}
-
 func (sw LcSyringe) CollectionName() string {
-	return lcSyringeCollectionName
+	return LcSyringeCollectionName
 }
 
 func initializeSyringes(ctx context.Context) error { // TODO; this
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(lcSyringeCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcSyringeCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("parent", "parent", false, true, false),
 		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
@@ -184,7 +191,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := newCollectionId(r.Context(), lcSyringeCollectionName)
+	id, err := newCollectionId(r.Context(), LcSyringeCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -204,14 +211,14 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		parent := &LiquidCulture{}
 		err = db.Collection(LCCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if parent.Species == nil {
-			return DbTxnStdErr(w, "Parent LC must be innoculated", http.StatusInternalServerError)
+			return dbErr(w, "Parent LC must be innoculated", http.StatusInternalServerError)
 		}
 		now := unixTimeForNow()
-		if err = addToIdMapCollectionInTxn(ctx, id.ToBinaryCollectionId(), lcSyringeSourceType); err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		if err = addToIdMapCollection(ctx, id.ToBinaryCollectionId(), LcSyringeSourceType); err != nil {
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := LcSyringe{
 			MainCollectionIdField:             MainCollectionIdField{Id: id},
@@ -228,13 +235,13 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			AclField: parent.AclField,
 		}
 		// TODO: ADD TO MAP
-		_, err = db.Collection(lcSyringeCollectionName).InsertOne(ctx, toInsert)
+		_, err = db.Collection(LcSyringeCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -284,26 +291,26 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	// PROCESS ALL NEW PICS AND CONTAMS
 	out := data.reform()
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(lcSyringeCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(LcSyringeCollectionName)
 		// go get current LcSyringe
 		existing := LcSyringe{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := data.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
+		//	return dbErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
 		//}
 		mds := NewMods()
 		updatePointerIfNeeded(mds, "confirmedClean", out.ConfirmedClean, existing.ConfirmedClean)
@@ -316,25 +323,25 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 
 		// write updates to db
 		bsonId := bson.D{{"_id", id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -355,7 +362,7 @@ type importLcSyringeRequest struct {
 
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLcSyringeRequest{}
-	id, err := newCollectionId(r.Context(), lcSyringeCollectionName)
+	id, err := newCollectionId(r.Context(), LcSyringeCollectionName)
 	if err != nil {
 		http.Error(w, "failed to create new mainCollectionId", http.StatusInternalServerError)
 		// TODO: err
@@ -383,23 +390,23 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		//if data.Perms != nil {
 		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
 		//	if err != nil {
-		//		return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//		return dbErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//	finalPerms = minimalPermsBetween(spec, subsp)
 		//	// TODO: add email perms if provided, as well as make email author?
 		//	if !finalPerms.Valid() {
 		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
-		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//		return dbErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//}
 
 		perms, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		acl, err := data.AclFor(ctx, perms)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := LcSyringe{
 			MainCollectionIdField:   MainCollectionIdField{Id: id},
@@ -412,14 +419,14 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 			AclField:                acl,
 		}
 		// TODO: ADD TO MAP
-		coll := ctx.Client().Database(dbName).Collection(lcSyringeCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(LcSyringeCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

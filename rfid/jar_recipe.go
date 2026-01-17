@@ -15,7 +15,7 @@ import (
 	sliceutils "slices"
 )
 
-const jarRecipesCollectionName = "jarRecipes"
+const JarRecipesCollectionName = "jarRecipes"
 
 type JarRecipeField struct {
 	Recipe *AlternateCollectionId `bson:"recipe,omitempty" json:"recipe,omitempty"`
@@ -26,7 +26,7 @@ type JarRecipeRequiredField struct {
 }
 
 func (field JarRecipeRequiredField) Get(ctx context.Context) (out JarRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(jarRecipesCollectionName).
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName).
 		FindOne(ctx, bson.M{"_id": field.Recipe}).Decode(&out)
 	return
 }
@@ -35,7 +35,7 @@ func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) 
 	if field.Recipe == nil {
 		return out, ErrMissingOptionalField
 	}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(jarRecipesCollectionName).
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName).
 		FindOne(ctx, bson.M{"_id": *field.Recipe}).Decode(&out)
 	return
 }
@@ -69,12 +69,12 @@ func (recipe JarRecipe) EntryTypeField() *string {
 }
 
 func (recipe JarRecipe) CollectionName() string {
-	return jarRecipesCollectionName
+	return JarRecipesCollectionName
 }
 
 func initializeJarRecipes(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(jarRecipesCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false),
 		newSimpleIndex("grains", "grains.grain", false, false, false),
@@ -305,10 +305,10 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(jarRecipesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(JarRecipesCollectionName)
 		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := JarRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
@@ -324,11 +324,11 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bs, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bs)
 	})
@@ -365,22 +365,22 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(jarRecipesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(JarRecipesCollectionName)
 		existing := JarRecipe{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		// TODO: make and/or validate grain changes?
 		upd, err := NewMods().
@@ -391,26 +391,26 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 		bsonId := bson.D{{"_id", existing.Id}}
 		// TODO: USE handleUpdateMods
 		// TODO: UPDATE PERMS!
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bs, err = json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bs)
 	})

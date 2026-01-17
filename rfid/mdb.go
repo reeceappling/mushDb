@@ -12,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"math/big"
 	"net/http"
@@ -403,29 +402,30 @@ func GetMongoClient(ctx context.Context) *mongo.Client {
 	return ctx.Value(mongoClientContextKey).(*mongo.Client) // TODO, ensure ok that this may not be set
 }
 
-func doTxn(ctx context.Context, txnFunc func(ctx mongo.SessionContext) (interface{}, error)) (interface{}, error) {
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-
-	// Starts a session on the client
-	session, err := client.StartSession()
-	if err != nil {
-		return nil, errors.Join(errors.New("failed to start transaction session"), err)
-	}
-	// Defers ending the session after the transaction is committed or ended
-	defer session.EndSession(ctx)
-
-	txnOptions := options.Transaction().SetWriteConcern(writeconcern.Majority()) // TODO: other concerns? read concern?
-	result, err := session.WithTransaction(ctx, txnFunc, txnOptions)
-	// Note: error aborts tx on its own
-	if err != nil {
-		if errors.Is(err, ErrInTxnAlreadyTriedToWrite) {
-			return result, err
-		}
-		newErr := errors.New("failed to execute transaction") // TODO: move
-		return result, errors.Join(err, newErr)
-	}
-	return result, errors.Join(session.CommitTransaction(ctx), err)
-}
+//// TODO: DONT USE THIS ANYMORE!!!!!
+//func doTxn(ctx context.Context, txnFunc func(ctx mongo.SessionContext) (interface{}, error)) (interface{}, error) {
+//	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+//
+//	// Starts a session on the client
+//	session, err := client.StartSession()
+//	if err != nil {
+//		return nil, errors.Join(errors.New("failed to start transaction session"), err)
+//	}
+//	// Defers ending the session after the transaction is committed or ended
+//	defer session.EndSession(ctx)
+//
+//	txnOptions := options.Transaction().SetWriteConcern(writeconcern.Majority()) // TODO: other concerns? read concern?
+//	result, err := session.WithTransaction(ctx, txnFunc, txnOptions)
+//	// Note: error aborts tx on its own
+//	if err != nil {
+//		if errors.Is(err, ErrInTxnAlreadyTriedToWrite) {
+//			return result, err
+//		}
+//		newErr := errors.New("failed to execute transaction") // TODO: move
+//		return result, errors.Join(err, newErr)
+//	}
+//	return result, errors.Join(session.CommitTransaction(ctx), err)
+//}
 
 func generateCollectionIds(ctx context.Context, collectionName string, n int) ([]MainCollectionId, error) {
 	// TODO: ensure this checks the new idMap collection!
@@ -659,10 +659,10 @@ func setSalesIfUnequal(upd bson.D, new []AlternateCollectionId, current []Altern
 	return out
 }
 
-func DbTxnStdErr(w http.ResponseWriter, txt string, status int) (interface{}, error) {
+func dbErr(w http.ResponseWriter, txt string, status int) {
 	println("txnErr " + txt)
 	http.Error(w, txt, status)
-	return nil, ErrInTxnAlreadyTriedToWrite
+	return
 }
 
 //func HandleFIXME() http.HandlerFunc { // TODO: handle permissions on all handlers

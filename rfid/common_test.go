@@ -19,7 +19,7 @@ func TestCommon(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 12, len(colls))
 		assert.Contains(t, colls, PlatesCollectionName)
-		assert.Contains(t, colls, pcRunCollectionName)
+		assert.Contains(t, colls, PcRunCollectionName)
 	})
 
 	t.Run("Built-in items", func(t *testing.T) {
@@ -28,11 +28,11 @@ func TestCommon(t *testing.T) {
 		})
 		t.Run("Sub/Species", func(t *testing.T) {
 			spec := Species{}
-			amt, err := db.Collection(speciesCollectionName).CountDocuments(ctx, bson.D{}) //.FindOne(ctx, bson.D{{"_id", "maitake"}})
+			amt, err := db.Collection(SpeciesCollectionName).CountDocuments(ctx, bson.D{}) //.FindOne(ctx, bson.D{{"_id", "maitake"}})
 			assert.NoError(t, err)
 			assert.NotEqual(t, int64(0), amt)
 
-			res := db.Collection(speciesCollectionName).FindOne(ctx, bson.D{{"_id", "maitake"}})
+			res := db.Collection(SpeciesCollectionName).FindOne(ctx, bson.D{{"_id", "maitake"}})
 			assert.NotNil(t, res)
 			assert.NoError(t, res.Err())
 			assert.NoError(t, res.Decode(&spec))

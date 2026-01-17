@@ -78,25 +78,36 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 	return item, nil
 }
 
-func GetCollectionItemInTxn(ctx mongo.SessionContext, id MainCollectionId, optionalItemForType *MainCollectionItem, collectionName string) (out MainCollectionItem, err error) {
-	encodedResult := ctx.Client().Database(dbName).Collection(collectionName).FindOne(ctx, bson.D{{"_id", id}})
-	if encodedResult.Err() != nil {
-		return nil, encodedResult.Err() // mongo.ErrNoDocuments if 404
+func typeForSource(src string) MainCollectionItem {
+	out, exists := map[string]MainCollectionItem{
+		BagSourceType:             Bag{},
+		FruitSourceType:           Fruit{},
+		FruitingChamberSourceType: FruitingChamber{},
+		GrainJarSourceType:        GrainJar{},
+		LcSourceType:              LiquidCulture{},
+		LcSyringeSourceType:       LcSyringe{},
+		MssSourceType:             MSS{},
+		PlateSourceType:           Plate{},
+		PlugSourceType:            PlugsJar{},
+		SlantSourceType:           Slant{},
+		SporePrintSourceType:      SporePrint{},
+		SporeSwabSourceType:       SporeSwab{},
+		StasisTubeSourceType:      StasisTube{},
+	}[src]
+	if !exists {
+		panic(src + " is an invalid source type")
 	}
-	if optionalItemForType != nil {
-		out = *optionalItemForType
-	} else {
-		raw := bson.Raw{}
-		raw, err = encodedResult.Raw()
-		if err != nil {
-			return nil, err
-		}
-		out, err = rawEntryTypeConversion(raw)
-		if err != nil {
-			return nil, err
-		}
+	return out
+}
+
+func GetCollectionItemInTxn(ctx context.Context, id MainCollectionId, sourceType string) (out MainCollectionItem, err error) {
+	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	out = typeForSource(sourceType) // TODO: this should be sourceType instead
+	err = db.Collection(out.CollectionName()).FindOne(ctx, bson.D{{"_id", id}}).Decode(&out)
+	if err != nil {
+		return nil, err // mongo.ErrNoDocuments if 404
 	}
-	err = encodedResult.Decode(&out)
+	// TODO: auth info????
 	//authinfo, err := GetAuthInfo(ctx)
 	//if err != nil {
 	//	return nil, err
@@ -171,7 +182,7 @@ func GetSpeciesNameInTxn(ctx mongo.SessionContext, name string) (out Species, er
 	out = Species{}
 	encodedResult := ctx.Client().
 		Database(dbName).
-		Collection(speciesCollectionName).
+		Collection(SpeciesCollectionName).
 		FindOne(ctx, bson.D{{"_id", name}})
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404

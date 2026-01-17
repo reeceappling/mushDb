@@ -749,8 +749,11 @@ func (upd *Mods) withMostRecentImage(parentType *PicWithNotes) *Mods {
 func (upd *Mods) withParentType(parentType *string) *Mods {
 	return setPointerIfNonNil(upd, "parentType", parentType)
 }
-func (upd *Mods) withParent(parentId *BinaryCollectionId) *Mods {
+func (upd *Mods) withParent(parentId *MainCollectionId) *Mods {
 	return setPointerIfNonNil(upd, "parent", parentId)
+}
+func (upd *Mods) withPerms(acl *ACL) *Mods {
+	return setPointerIfNonNil(upd, "acl", acl) // TODO: ensure ok
 }
 func (upd *Mods) withPics(pics []PicWithNotes) *Mods {
 	if len(pics) == 0 {

@@ -14,7 +14,7 @@ import (
 	sliceutils "slices"
 )
 
-const subSpeciesCollectionName = "subspecies"
+const SubspeciesCollectionName = "subspecies"
 
 type SubspeciesOptionalField struct {
 	SubSpecies *string `bson:"subSpecies,omitempty" json:"subSpecies,omitempty"`
@@ -40,12 +40,12 @@ func (subsp Subspecies) EntryTypeField() *string {
 }
 
 func (subsp Subspecies) CollectionName() string {
-	return subSpeciesCollectionName
+	return SubspeciesCollectionName
 }
 
 func initializeSubspecies(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(subSpeciesCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubspeciesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("species", "species", false, false, false),
 		aliasesIndexModel,
@@ -169,7 +169,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(subSpeciesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SubspeciesCollectionName)
 		toInsert := Subspecies{
 			NameIdField:      NameIdField{req.Name},
 			SpeciesField:     req.SpeciesField,
@@ -181,11 +181,11 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -220,28 +220,28 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(subSpeciesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SubspeciesCollectionName)
 		existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			return DbTxnStdErr(w, err.Error(), stat)
+			return dbErr(w, err.Error(), stat)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil { // TODO: PUT PERMS UPDATER ON THE STRUCTS?
-		//	return DbTxnStdErr(w, "bad overlapping perms for email: "+err.Error(), http.StatusUnauthorized)
+		//	return dbErr(w, "bad overlapping perms for email: "+err.Error(), http.StatusUnauthorized)
 		//}
 		upd, err := NewMods().
 			updateAliasesIfNeeded(req.Aliases, existing.Aliases).
@@ -250,23 +250,23 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 		bsonId := bson.D{{"_id", speciesName}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	sporePrintCollectionName = "sporePrints"
+	SporePrintCollectionName = "sporePrints"
 	SporePrintSourceType     = "sporePrint"
-	sporePrintIdPrefix       = "sp"
+	sporePrintIdPrefix       = "sp" // TODO; ew
 )
 
 type SporePrint struct {
@@ -39,22 +39,34 @@ type SporePrint struct {
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (sw SporePrint) Innoculatable() bool {
+func (sp *SporePrint) SetPerms(field AclField) {
+	sp.AclField = field
+}
+
+func (sp SporePrint) DbId() MainCollectionId {
+	return sp.Id
+}
+
+func (sp SporePrint) EntryType() string {
+	return SporePrintSourceType
+}
+
+func (sp SporePrint) Innoculatable() bool {
 	return false
 }
 
-func (sw SporePrint) CanTransferTo(dst geneticSource) error {
+func (sp SporePrint) CanTransferTo(dst geneticSource) error {
 	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
 
-func (sw SporePrint) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+func (sp SporePrint) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
 	// TODO: can this even occur?
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sp.CollectionName())
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
 		return err, nil
 	}
-	res, err := coll.UpdateByID(ctx, sw.Id, upd)
+	res, err := coll.UpdateByID(ctx, sp.Id, upd)
 	if err != nil {
 		return err, nil
 	}
@@ -62,11 +74,11 @@ func (sw SporePrint) setTransferParent(ctx context.Context, xfer Transfer) (erro
 		return ErrNoParentModifiedForTransfer, nil
 	}
 	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", sw.Id}}, sw).Err()
+		return coll.FindOneAndReplace(ctx, bson.D{{"_id", sp.Id}}, sp).Err()
 	}
 }
 
-func (sw SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (sp SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	// TODO: can this happen????? should always be from a fruit right?
 	// This is a special case because it will always be 0-gen
 	parentInfo, err := from.GeneticInfoAsParent()
@@ -87,7 +99,7 @@ func (sw SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from g
 		withSubspecies(parentInfo.SubSpecies).
 		updateLastUpdatedIfNeeded().
 		Finalized()
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName()).UpdateByID(ctx, sw.Id, upd)
+	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sp.CollectionName()).UpdateByID(ctx, sp.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -97,47 +109,47 @@ func (sw SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from g
 	return nil
 }
 
-func (sw SporePrint) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := sw
+func (sp SporePrint) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
+	out := sp
 	err := decodeItem(&out, encoded)
 	return out, err
 }
 
-func (sw SporePrint) GeneticInfoAsParent() (GeneticParentInfo, error) {
+func (sp SporePrint) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
-		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
-		SubspeciesOptionalField: sw.SubspeciesOptionalField,
+		SpeciesOptionalField:    sp.SpeciesField.AsOptional(),
+		SubspeciesOptionalField: sp.SubspeciesOptionalField,
 		GenerationsFields:       GenerationsFieldFor(utils.Pointer(Generation(0))),
 	}, nil
 }
 
-func (sw SporePrint) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
+func (sp SporePrint) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
-func (sw SporePrint) SourceType() string {
+func (sp SporePrint) SourceType() string {
 	return SporePrintSourceType
 }
 
-func (sw SporePrint) EntryTypeField() *string {
+func (sp SporePrint) EntryTypeField() *string {
 	return nil
 }
 
-func (sw SporePrint) id() []byte {
-	return []byte(sw.Id.dbIdStr())
+func (sp SporePrint) id() []byte {
+	return []byte(sp.Id.dbIdStr())
 }
 
-func (sw SporePrint) prefix() string {
+func (sp SporePrint) prefix() string {
 	return sporePrintIdPrefix
 }
 
-func (sw SporePrint) CollectionName() string {
-	return sporePrintCollectionName
+func (sp SporePrint) CollectionName() string {
+	return SporePrintCollectionName
 }
 
 func initializeSporePrints(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sporePrintCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SporePrintCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		//newSimpleIndex("parent", "parent", false, false, false),
 		//newSimpleIndex("printDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
@@ -203,7 +215,7 @@ type resolvedCreateSporePrintRequest struct {
 
 func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSporePrintRequest{}
-	id, err := newCollectionId(r.Context(), sporePrintCollectionName)
+	id, err := newCollectionId(r.Context(), SporePrintCollectionName)
 	if err != nil {
 		http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -306,7 +318,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	// TODO: add spore print to mapCollection
 	parent := Fruit{}
-	err = db.Collection(fruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
+	err = db.Collection(FruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -332,7 +344,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		// Do not check permissions, just pass parent perms to child
 		AclField: parent.AclField,
 	}
-	_, err = db.Collection(sporePrintCollectionName).InsertOne(ctx, toInsert)
+	_, err = db.Collection(SporePrintCollectionName).InsertOne(ctx, toInsert)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -341,7 +353,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	err = parent.addSporePrint(ctx, spid)
 	if err != nil {
 		// Rollback print insert
-		err = errors.Join(db.Collection(sporePrintCollectionName).FindOneAndDelete(ctx, bson.D{{"_id", toInsert.Id}}).Err(), err)
+		err = errors.Join(db.Collection(SporePrintCollectionName).FindOneAndDelete(ctx, bson.D{{"_id", toInsert.Id}}).Err(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -413,26 +425,26 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(sporePrintCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SporePrintCollectionName)
 		// go get current sporePrint
 		existing := SporePrint{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := out.AclFor(ctx, user) // TODO: USE IN modsFor
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
+		//	return dbErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
 		//}
 		upd, err := NewMods().
 			updateSaleIfNeeded(out.Sale, existing.Sale).
@@ -443,25 +455,25 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 
 		// write updates to db
 		bsonId := bson.D{{"_id", id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -481,7 +493,7 @@ type importSporePrintRequest struct {
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporePrintRequest{}
-	id, err := newCollectionId(r.Context(), sporePrintCollectionName)
+	id, err := newCollectionId(r.Context(), SporePrintCollectionName)
 	if err != nil {
 		http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -574,22 +586,22 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		//if data.Perms != nil {
 		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
 		//	if err != nil {
-		//		return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//		return dbErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//	finalPerms = minimalPermsBetween(spec, subsp)
 		//	// TODO: add email perms if provided, as well as make email author?
 		//	if !finalPerms.Valid() {
 		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
-		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//		return dbErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//}
 		perms, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		acl, err := data.AclFor(ctx, perms)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := SporePrint{
 			MainCollectionIdField:   MainCollectionIdField{id},
@@ -602,14 +614,14 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			LastUpdatedField:        LastUpdatedFieldForNow(),
 			AclField:                acl,
 		}
-		coll := ctx.Client().Database(dbName).Collection(sporePrintCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SporePrintCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

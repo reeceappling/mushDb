@@ -13,7 +13,7 @@ type GeneticParentInfo struct {
 	GenerationsFields
 }
 
-var (
+var ( // TODO: all used to be non-pointer. Ensure they all still work
 	_ geneticSource = &Bag{}
 	_ geneticSource = &Fruit{}
 	_ geneticSource = &FruitingChamber{}
@@ -32,13 +32,14 @@ var (
 type geneticSource interface {
 	SourceType() string
 	GeneticInfoAsParent() (GeneticParentInfo, error)
-	DbId() BinaryCollectionId
+	DbId() MainCollectionId
 	setTransferParent(ctx context.Context, xfer Transfer) (err error, rollback func() error)
 	setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error
 	generation() (sinceSpore *Generation, sinceSporeOrClone *Generation)
 	Permissioned
 	CanTransferTo(dst geneticSource) error
 	Innoculatable() bool
+	SetPerms(AclField)
 }
 
 func childGensForParent(parent geneticSource) (parentInfo GeneticParentInfo, genSpore, genFruitSpore *Generation, err error) {

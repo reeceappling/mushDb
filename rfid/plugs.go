@@ -18,7 +18,6 @@ import (
 const (
 	PlugsCollectionName = "plugs" // TODO: USE
 	PlugSourceType      = "plug"
-	plugsCollectionName = "plugs"
 	plugIdPrefix        = "pl"
 )
 
@@ -40,6 +39,18 @@ type PlugsJar struct { // TODO: do this whole file! This should be an alt, not a
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 
 	// TODO: this whole thing whenever we need to
+}
+
+func (pl *PlugsJar) SetPerms(field AclField) {
+	pl.AclField = field
+}
+
+func (pl PlugsJar) DbId() MainCollectionId {
+	return pl.Id
+}
+
+func (pl PlugsJar) EntryType() string {
+	return PlugSourceType
 }
 
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {

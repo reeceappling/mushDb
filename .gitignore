@@ -11,6 +11,7 @@ noCommit-*
 
 # Test binary, built with `go test -c`
 *.test
+mygenerator
 # (non-example) env vars
 env/.env.*
 

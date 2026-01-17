@@ -33,6 +33,18 @@ type MSS struct {
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
+func (M *MSS) SetPerms(field AclField) {
+	M.AclField = field
+}
+
+func (M MSS) DbId() MainCollectionId {
+	return M.Id
+}
+
+func (M MSS) EntryType() string {
+	return MssSourceType
+}
+
 func (M MSS) Innoculatable() bool {
 	return false // TODO: ensure ok
 }
@@ -168,13 +180,13 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
 		var parent SporePrint
-		err = db.Collection(sporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
+		err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find sporePrint: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find sporePrint: "+err.Error(), http.StatusBadRequest)
 		}
 		err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		}
 		now := unixTimeForNow()
 		toInsert := MSS{
@@ -189,11 +201,11 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		}
 		_, err = db.Collection(MssCollectionName).InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -261,11 +273,11 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		coll := ctx.Client().Database(dbName).Collection(MssCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -312,25 +324,25 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 		existing := MSS{}
 		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := data.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(data.Perms, existing.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "old or new perms not writeable by email: "+err.Error(), http.StatusBadRequest)
+		//	return dbErr(w, "old or new perms not writeable by email: "+err.Error(), http.StatusBadRequest)
 		//}
 		if data.Sale != nil && (existing.Sale == nil || *existing.Sale != *data.Sale) {
-			if err = db.Collection(salesCollectionName).FindOne(ctx, bson.D{{"_id", data.Sale}}).Err(); err != nil {
-				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", data.Sale}}).Err(); err != nil {
+				return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 			}
 		}
 		upd, err := NewMods().
@@ -341,25 +353,25 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 
 		// write updates to db
 		bsonId := bson.D{{"_id", id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bs, err = json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bs)
 	})

@@ -16,7 +16,7 @@ import (
 // TODO: SPORE SWABS?!?!?!?!
 // TODO: PEGS?????!!?!?!?! Oak, Poplar, Bamboo
 
-const agarBatchCollectionName = "agarBatches"
+const AgarBatchCollectionName = "agarBatches"
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
@@ -37,7 +37,7 @@ func (field AgarBatchField) Get(ctx context.Context) (out AgarBatch, err error) 
 	if field.AgarBatch == nil {
 		return out, ErrMissingOptionalField
 	}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarBatchCollectionName).FindOne(ctx, bson.M{
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{
 		"_id": *field.AgarBatch,
 	}).Decode(&out)
 	return out, err
@@ -54,7 +54,7 @@ func (batch AgarBatch) EntryTypeField() *string {
 }
 
 func (batch AgarBatch) CollectionName() string {
-	return agarBatchCollectionName
+	return AgarBatchCollectionName
 }
 
 type NewAgarBatchRequest struct {
@@ -65,7 +65,7 @@ type NewAgarBatchRequest struct {
 }
 
 func newAgarBatch(ctx mongo.SessionContext, batch AgarBatch) (*AgarBatch, error) {
-	out, err := ctx.Client().Database(dbName).Collection(agarBatchCollectionName).InsertOne(ctx, batch)
+	out, err := ctx.Client().Database(dbName).Collection(AgarBatchCollectionName).InsertOne(ctx, batch)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarBatchCollectionName)
+		coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(AgarBatchCollectionName)
 		existing, err := GetAltCollectionItemInTxn(ctx, id, AgarBatch{})
 		if err != nil {
 			stat := http.StatusInternalServerError
@@ -122,14 +122,14 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 
 		upd, err := req.modsFor(existing, aclField.ACL)
@@ -144,7 +144,7 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 func initializeAgarBatches(ctx context.Context) error {
 	// Indices
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(agarBatchCollectionName)
+	coll := db.Collection(AgarBatchCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		newSimpleIndex("recipe", "recipe", false, false, false),
@@ -204,11 +204,11 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		// Validate fields
 		_, err = req.PcRunField.Get(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
 		}
 		_, err = req.AgarRecipeField.Get(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
 		}
 		// create new batch
 		newBatch := AgarBatch{
@@ -222,11 +222,11 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		batch, err := newAgarBatch(ctx, newBatch)
 		if err != nil {
-			return DbTxnStdErr(w, "Agar batch creation failure: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "Agar batch creation failure: "+err.Error(), http.StatusInternalServerError)
 		}
 		bs, err := json.Marshal(*batch)
 		if err != nil {
-			return DbTxnStdErr(w, "Agar batch marshal failure: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "Agar batch marshal failure: "+err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bs)
 	})

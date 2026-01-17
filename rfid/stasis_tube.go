@@ -44,6 +44,18 @@ type StasisTube struct { // TODO: instructions somewhere?
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
+func (s *StasisTube) SetPerms(field AclField) {
+	s.AclField = field
+}
+
+func (s StasisTube) DbId() MainCollectionId {
+	return s.Id
+}
+
+func (s StasisTube) EntryType() string {
+	return StasisTubeSourceType
+}
+
 func (s StasisTube) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("stasis tubes cannot transfer to " + dst.SourceType())
@@ -228,15 +240,15 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			AclField:              allCanWriteAcl(),
 		}
 		if _, err := toInsert.PcRunOptionalField.Get(ctx); err != nil && !errors.Is(err, ErrMissingOptionalField) {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -410,26 +422,26 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		existing := StasisTube{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := out.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-			if err = db.Collection(salesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
-				return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed
+			if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
+				return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed
 			}
 		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "email cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
+		//	return dbErr(w, "email cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
 		//}
 		upd, err := NewMods(). // TODO: exactly the same as plate, ok?
 					updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
@@ -442,25 +454,25 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 					updateLastUpdatedIfNeeded().
 					Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 
 		// write updates to db
 		bsonId := bson.D{{"_id", id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -560,21 +572,21 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		//if data.Perms != nil {
 		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
 		//	if err != nil {
-		//		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		//		return dbErr(w, err.Error(), http.StatusInternalServerError)
 		//	}
 		//	finalPerms = minimalPermsBetween(spec, subsp)
 		//} else {
 		//	if err = finalPerms.ValidateUserCanWrite(ctx); err != nil { // TODO: do this on others
-		//		return DbTxnStdErr(w, err.Error(), http.StatusUnauthorized) // TODO: ok?
+		//		return dbErr(w, err.Error(), http.StatusUnauthorized) // TODO: ok?
 		//	}
 		//}
 		perms, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		acl, err := data.AclFor(ctx, perms)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := StasisTube{
 			MainCollectionIdField:   MainCollectionIdField{id},
@@ -591,11 +603,11 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		coll := ctx.Client().Database(dbName).Collection(StasisTubeCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

@@ -42,8 +42,17 @@ type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (p Plate) DbId() BinaryCollectionId {
-	return p.Id.ToBinaryCollectionId()
+func (p *Plate) SetPerms(field AclField) {
+	p.AclField = field
+}
+
+func (p Plate) DbId() MainCollectionId {
+	return p.Id
+}
+
+func (p Plate) EntryType() string {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (p Plate) StringId() string {
@@ -112,6 +121,7 @@ func (p Plate) setTransferChild(ctx context.Context, xfer Transfer, from genetic
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
+		withPerms(from.Permissions()). // TODO: USE THIS IN A LOT OF PLACES!!!!!
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -190,6 +200,7 @@ func initializePlates(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
+	// TODO: INSERT IN MAP COLLECTION?
 	println("3")
 	result, err := coll.ReplaceOne(ctx, bson.D{{"_id", testId}}, testItem, &options.ReplaceOptions{Upsert: utils.Pointer(true)})
 	if err != nil {
@@ -284,20 +295,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = coll.InsertOne(ctx, toInsert)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	bsOut, err := json.Marshal(toInsert)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(bsOut)
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	finishCreate(ctx, coll, toInsert, w) // TODO: use in all main creates
 }
 
 type updatePlateRequest struct {
@@ -439,14 +437,16 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) (any, error) {
+func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) {
 	if err != nil {
 		println("mod creation failure: " + err.Error())
-		return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+		dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	if len(upd) == 0 {
 		println("no changes made") // TODO: del
-		return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+		dbErr(w, "no changes made", http.StatusBadRequest)
+		return
 	}
 	// write updates to db
 	println("updating") // TODO: del
@@ -454,21 +454,25 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId](ctx con
 	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 	if err != nil {
 		println("failed to update") // TODO: del
-		return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	println("finding") // TODO: del
 	err = coll.FindOne(ctx, bsonId).Decode(&existing)
 	if err != nil {
 		println("failed to find") // TODO: del
-		return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	println("marshalling") // TODO: del
 	bsOut, err := json.Marshal(existing)
 	if err != nil {
-		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	println("Wrote plate update:", string(bsOut))
-	return w.Write(bsOut)
+	_, err = w.Write(bsOut)
+	handleWriteErr(err, w)
 }
 
 type importPlateRequest struct {
@@ -564,18 +568,18 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		//if data.Perms != nil {
 		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
 		//	if err != nil {
-		//		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+		//		return dbErr(w, err.Error(), http.StatusInternalServerError)
 		//	}
 		//	finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: DO MAXIMAL PERMS WITH data.Perms if not allWrite?
 		//}
 
 		perms, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		acl, err := data.AclFor(ctx, perms)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := Plate{
 			MainCollectionIdField:   MainCollectionIdField{id},
@@ -592,11 +596,11 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		coll := ctx.Client().Database(dbName).Collection(PlatesCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

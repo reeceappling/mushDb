@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-const projectsCollectionName = "Projects"
+const ProjectsCollectionName = "Projects"
 
 type projectName string
 
@@ -41,7 +41,7 @@ func (p Project) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 }
 
 func (p Project) CollectionName() string {
-	return projectsCollectionName
+	return ProjectsCollectionName
 }
 
 func (p Project) EntryTypeField() *string {
@@ -50,7 +50,7 @@ func (p Project) EntryTypeField() *string {
 
 func initializeProjects(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		newSimpleIndex("completed", "creationDate", true, true, false),
@@ -138,7 +138,7 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 	//	}
 	//}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(projectsCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(ProjectsCollectionName)
 		now := unixTimeForNow()
 		// TODO: validate all users exist
 		toInsert := Project{
@@ -149,11 +149,11 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		// TODO: add this project to all email sessions that need it (only if non-blanket-write)
 		//
@@ -188,7 +188,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(projectsCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(ProjectsCollectionName)
 		existing := Project{}
 		err = coll.FindOne(ctx, bson.M{"_id": req.Name}).Decode(&existing)
 		if err != nil {
@@ -196,7 +196,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			return DbTxnStdErr(w, err.Error(), stat)
+			return dbErr(w, err.Error(), stat)
 		}
 		mods := NewMods().
 			// UpdatePointerIfNeeded("completed", req.Completed, existing.Completed). // TODO: FIX
@@ -225,7 +225,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//		userIdStr := userIds.Email.asBase58()
 		//		_, existsAlready = tempCanWrite[userIdStr]
 		//		if existsAlready {
-		//			return DbTxnStdErr(w, fmt.Sprintf(`userId %d already exists in request`, i), http.StatusBadRequest)
+		//			return dbErr(w, fmt.Sprintf(`userId %d already exists in request`, i), http.StatusBadRequest)
 		//		}
 		//		tempCanWrite[userIdStr] = req.Perms.Users.CanWrite[i]
 		//		tempName[userIdStr] = userIds.Val
@@ -271,23 +271,23 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		//}
 		upd, err := mods.Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
+			return dbErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 		bsonId := bson.D{{"_id", existing.Name}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//for email, canWrite := range newUsers { //:= map[ProjectPermUserId]bool{} // TODO brand new email to this project. Handle
 		//	// TODO: add project to email in db
@@ -317,7 +317,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //		if !auth.isAdmin() {
 //			filter = bson.M{"_id": bson.M{"$in": maps.Keys(auth.Opts.Projects)}}
 //		}
-//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName).
+//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
 //			Find(ctx, filter) // TODO: ok?
 //		if err != nil {
 //			return nil, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
@@ -359,7 +359,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //		if unfinishedOnly {
 //			filter["completed"] = bson.M{"$exists": false}
 //		}
-//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName).
+//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
 //			Find(ctx, filter) // TODO: ok?
 //		if err != nil {
 //			return nil, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)

@@ -47,6 +47,18 @@ type GrainJar struct {
 	AclField                  `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
+func (j *GrainJar) SetPerms(field AclField) {
+	j.AclField = field
+}
+
+func (j GrainJar) DbId() MainCollectionId {
+	return j.Id
+}
+
+func (j GrainJar) EntryType() string {
+	return GrainJarSourceType
+}
+
 type BurstGrainsField struct {
 	BurstGrains *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"` // TODO: HANDLE IN JAVASCRIPT
 }
@@ -55,7 +67,7 @@ func (j GrainJar) CanTransferTo(dst geneticSource) error {
 	if j.Innoc == nil {
 		return errors.New("source not innoculated. Cannot transfer nothing")
 	}
-	if slices2.Contains([]string{FruitingChamberSourceType, FruitSourceType, lcSyringeSourceType, MssSourceType, SporePrintSourceType, SporeSwabSourceType}, dst.SourceType()) {
+	if slices2.Contains([]string{FruitingChamberSourceType, FruitSourceType, LcSyringeSourceType, MssSourceType, SporePrintSourceType, SporeSwabSourceType}, dst.SourceType()) {
 		return errors.New("jar cannot transfer to " + dst.SourceType())
 	}
 	return nil
@@ -147,9 +159,9 @@ func (j *GrainJar) Refresh(ctx mongo.SessionContext) error { // TODO; DO THIS ON
 	return j.Collection(ctx).FindOne(ctx, bson.D{{"_id", j.Id}}).Decode(j)
 }
 
-func LookupGrainJar(ctx mongo.SessionContext, id MainCollectionId) (j *GrainJar, err error) {
+func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err error) {
 	j = &GrainJar{}
-	err = ctx.Client().Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(j)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(j)
 	return j, err
 }
 
@@ -286,47 +298,37 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(GrainJarCollectionName)
-		now := unixTimeForNow()
-		pcrun := PcRunField{data.PcRun}
-		toInsert := GrainJar{
-			MainCollectionIdField: MainCollectionIdField{id},
-			JarRecipeField:        JarRecipeField{&data.Recipe},
-			PcRunOptionalField:    pcrun.asOptional(),
-			BurstGrainsField:      data.BurstGrainsField,
-			WetnessField:          data.WetnessField,
-			CreationDateField:     CreationDateField{data.CreationDate},
-			NotesField:            NotesField{data.Notes},
-			LastUpdatedField:      LastUpdatedField{now},
-			AclField:              allCanWriteAcl(),
-		}
-		_, err = pcrun.Get(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		_, err = toInsert.JarRecipeField.Get(ctx)
-		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-		if err != nil {
-			return DbTxnStdErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		}
-		_, err := coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-
-	if err != nil {
-		handleWriteErr(err, w)
+	ctx, db := Db(r)
+	coll := db.Collection(GrainJarCollectionName)
+	now := unixTimeForNow()
+	pcrun := PcRunField{data.PcRun}
+	toInsert := GrainJar{
+		MainCollectionIdField: MainCollectionIdField{id},
+		JarRecipeField:        JarRecipeField{&data.Recipe},
+		PcRunOptionalField:    pcrun.asOptional(),
+		BurstGrainsField:      data.BurstGrainsField,
+		WetnessField:          data.WetnessField,
+		CreationDateField:     CreationDateField{data.CreationDate},
+		NotesField:            NotesField{data.Notes},
+		LastUpdatedField:      LastUpdatedField{now},
+		AclField:              allCanWriteAcl(),
 	}
+	_, err = pcrun.Get(ctx)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = toInsert.JarRecipeField.Get(ctx)
+	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	if err != nil {
+		dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	finishCreate(ctx, coll, toInsert, w)
 }
 
 type importJarRequest struct {
@@ -375,11 +377,11 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//authinfo, err := GetAuthInfo(r.Context()) // TODO: fix
-	//if err != nil {
-	//	http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-	//	return
-	//}
+	user, err := GetAuthInfo(r.Context()) // TODO: fix
+	if err != nil {
+		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
 	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	//if err != nil {
 	//	http.Error(w, "failed to get species and subspecies: "+err.Error(), http.StatusInternalServerError)
@@ -445,8 +447,13 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-
-	out := GrainJar{
+	ctx, db := Db(r)
+	acl, err := data.PermsOnRequest.AclFor(ctx, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&data.Recipe},
 		PcRunOptionalField:      PcRunOptionalField{}, // No pc runs on imports
@@ -461,31 +468,21 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-		//PermsField:           PermsField{finalPerms},
+		AclField:             acl,
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		_, err = out.PcRunOptionalField.Get(ctx)
-		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-			return DbTxnStdErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
-		}
-		_, err = out.JarRecipeField.Get(ctx)
-		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-			return DbTxnStdErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
-		}
-		jarColl := ctx.Client().Database(dbName).Collection(GrainJarCollectionName)
-		_, err := jarColl.InsertOne(ctx, out)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(out)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
+
+	coll := db.Collection(GrainJarCollectionName)
+	_, err = toInsert.PcRunOptionalField.Get(ctx)
+	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
+		dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	_, err = toInsert.JarRecipeField.Get(ctx)
+	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
+		dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	finishCreate(ctx, coll, toInsert, w)
 }
 
 type updateJarRequest struct {
@@ -539,6 +536,19 @@ type resolvedUpdateJarRequest struct {
 	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
+func (out resolvedUpdateJarRequest) modsFor(existing GrainJar, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
+		updateSaleIfNeeded(out.Sale, existing.Sale).
+		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
+		updateNotesIfNeeded(out.Notes, existing.Notes).
+		updatePicsIfNeeded(out.Images, existing.Pics).
+		updateContamsIfNeeded(out.Contams, existing.Contaminations).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+}
+
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateJarRequest{}
 	defer r.Body.Close()
@@ -585,38 +595,19 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 			out.Contams.New[i].Location = &finalLoc
 		}
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(GrainJarCollectionName)
-		// go get current plate
-		existing := GrainJar{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
-		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := data.AclFor(ctx, user)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := NewMods().
-			updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
-			updateSaleIfNeeded(out.Sale, existing.Sale).
-			updateDisposedIfNeeded(out.Disposed, existing.Disposed).
-			updateNotesIfNeeded(out.Notes, existing.Notes).
-			updatePicsIfNeeded(out.Images, existing.Pics).
-			updateContamsIfNeeded(out.Contams, existing.Contaminations).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(GrainJarCollectionName)
+	// go get current
+	existing := &GrainJar{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
 	if err != nil {
-		handleWriteErr(err, w)
+		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	finishItemUpdate(ctx, w, coll, out.modsFor, existing, out.PermsOnRequest)
+}
+
+func Db(r *http.Request) (context.Context, *mongo.Database) {
+	ctx := r.Context()
+	return ctx, ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 }

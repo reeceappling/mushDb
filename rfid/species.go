@@ -15,7 +15,7 @@ import (
 	sliceutils "slices"
 )
 
-const speciesCollectionName = "species"
+const SpeciesCollectionName = "species"
 
 type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
@@ -38,7 +38,7 @@ func (sp Species) EntryTypeField() *string {
 }
 
 func (sp Species) CollectionName() string {
-	return speciesCollectionName
+	return SpeciesCollectionName
 }
 
 const shiitakeName = "Shiitake"
@@ -60,7 +60,7 @@ var shiitakeNotes = NotesField{[]Note{{
 
 func initializeSpecies(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(speciesCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SpeciesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("scientificName", "scientificName", false, false, true),
 		aliasesIndexModel,
@@ -289,14 +289,14 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		acl, err := newAlwaysReadableAcl(ctx, perms, nil, nil)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
 		}
 		db := ctx.Client().Database(dbName)
-		err = db.Collection(substrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
+		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
-		coll := ctx.Client().Database(dbName).Collection(speciesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SpeciesCollectionName)
 		toInsert := Species{
 			NameIdField:       NameIdField{req.Name},
 			ScientificName:    req.ScientificName,
@@ -308,11 +308,11 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -349,25 +349,25 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
-		coll := db.Collection(speciesCollectionName)
+		coll := db.Collection(SpeciesCollectionName)
 		existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if errors.Is(err, mongo.ErrNoDocuments) {
 				stat = http.StatusNotFound
 			}
-			return DbTxnStdErr(w, err.Error(), stat)
+			return dbErr(w, err.Error(), stat)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		upd, err := NewMods().
 			UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
@@ -376,29 +376,29 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 			updatePermsIfNeeded(aclField.ACL, existing.ACL).
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if req.Substrate.asBase58() != existing.StandardSubstrate.asBase58() {
-			err = db.Collection(substrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
+			err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
 			if err != nil {
-				return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+				return dbErr(w, err.Error(), http.StatusInternalServerError)
 			}
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 		bsonId := bson.D{{"_id", speciesName}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -415,7 +415,7 @@ func getSpecies(ctx context.Context, speciesName string, subspeciesName *string)
 func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
 	sp := Species{}
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	err := db.Collection(speciesCollectionName).FindOne(ctx, bson.D{{"_id", speciesName}}).Decode(&sp)
+	err := db.Collection(SpeciesCollectionName).FindOne(ctx, bson.D{{"_id", speciesName}}).Decode(&sp)
 	if err != nil {
 		return sp, nil, err
 	}
@@ -423,7 +423,7 @@ func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspecies
 		return sp, nil, nil
 	}
 	subsp := Subspecies{}
-	err = db.Collection(subSpeciesCollectionName).FindOne(ctx, bson.D{{"_id", *subspeciesName}}).Decode(&subsp)
+	err = db.Collection(SubspeciesCollectionName).FindOne(ctx, bson.D{{"_id", *subspeciesName}}).Decode(&subsp)
 	if err != nil {
 		return sp, nil, err
 	}

@@ -9,18 +9,18 @@ import (
 )
 
 var (
-	_ MainCollectionItem = LiquidCulture{}   // can go anywhere (in theory) except MSS
-	_ MainCollectionItem = GrainJar{}        // can go anywhere (in theory) except MSS
-	_ MainCollectionItem = Plate{}           // can go anywhere (in theory) except MSS
-	_ MainCollectionItem = Slant{}           // generally only goes to plate
-	_ MainCollectionItem = StasisTube{}      // generally only goes to plate
-	_ MainCollectionItem = Bag{}             // can only go to fruits
-	_ MainCollectionItem = FruitingChamber{} // can only go to fruits
-	_ MainCollectionItem = MSS{}             // generally only goes to plate
-	_ MainCollectionItem = SporePrint{}
-	_ MainCollectionItem = LcSyringe{}
-	_ MainCollectionItem = PlugsJar{} // TODO: has multiple sales
-	_ MainCollectionItem = SporeSwab{}
+	_ MainCollectionItem = &LiquidCulture{}   // can go anywhere (in theory) except MSS
+	_ MainCollectionItem = &GrainJar{}        // can go anywhere (in theory) except MSS
+	_ MainCollectionItem = &Plate{}           // can go anywhere (in theory) except MSS
+	_ MainCollectionItem = &Slant{}           // generally only goes to plate
+	_ MainCollectionItem = &StasisTube{}      // generally only goes to plate
+	_ MainCollectionItem = &Bag{}             // can only go to fruits
+	_ MainCollectionItem = &FruitingChamber{} // can only go to fruits
+	_ MainCollectionItem = &MSS{}             // generally only goes to plate
+	_ MainCollectionItem = &SporePrint{}
+	_ MainCollectionItem = &LcSyringe{}
+	_ MainCollectionItem = &PlugsJar{} // TODO: has multiple sales
+	_ MainCollectionItem = &SporeSwab{}
 )
 
 type CollectionId interface { // TODO; USE????
@@ -30,6 +30,8 @@ type CollectionId interface { // TODO; USE????
 type MainCollectionItem interface {
 	CollectionItem
 	geneticSource
+	EntryType() string
+	Permissioned
 }
 
 var mainCollectionEntryTypes = []string{
@@ -75,7 +77,7 @@ func getTransferById(ctx context.Context, xferColl *mongo.Collection, id Alterna
 func initializeChildrenMethod(ctx context.Context) ([]geneticSource, *mongo.Database, *mongo.Collection) {
 	out := []geneticSource{}
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	xferColl := db.Collection(transfersCollName)
+	xferColl := db.Collection(TransfersCollName)
 	return out, db, xferColl
 }
 

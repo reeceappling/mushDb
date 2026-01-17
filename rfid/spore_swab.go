@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	sporeSwabCollectionName = "sporeSwabs"
+	SporeSwabCollectionName = "sporeSwabs"
 	SporeSwabSourceType     = "swab"
 )
 
@@ -30,6 +30,18 @@ type SporeSwab struct { // TODO: FIX EVERYTHING IN THIS FILE BELOW THIS POINT!!!
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+}
+
+func (sw *SporeSwab) SetPerms(field AclField) {
+	sw.AclField = field
+}
+
+func (sw SporeSwab) DbId() MainCollectionId {
+	return sw.Id
+}
+
+func (sw SporeSwab) EntryType() string {
+	return SporeSwabSourceType
 }
 
 func (sw SporeSwab) Innoculatable() bool {
@@ -124,12 +136,12 @@ func (sw SporeSwab) id() []byte {
 }
 
 func (sw SporeSwab) CollectionName() string {
-	return sporeSwabCollectionName
+	return SporeSwabCollectionName
 }
 
 func initializeSporeSwabs(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sporeSwabCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SporeSwabCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("parent", "parent", false, false, false),
 		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
@@ -191,7 +203,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 		return
 	}
 
-	ids, err := generateCollectionIds(r.Context(), sporeSwabCollectionName, data.num)
+	ids, err := generateCollectionIds(r.Context(), SporeSwabCollectionName, data.num)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -200,9 +212,9 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 	_, txErr := doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		db := ctx.Client().Database(dbName)
 		parent := SporePrint{}
-		err = db.Collection(sporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
+		err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 
 		now := unixTimeForNow()
@@ -226,13 +238,13 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 
 		// TODO: add new swabs to mappings
 
-		_, err = db.Collection(sporeSwabCollectionName).InsertMany(ctx, out)
+		_, err = db.Collection(SporeSwabCollectionName).InsertMany(ctx, out)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(out)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -275,23 +287,23 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	out := data.reform()
 
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(sporeSwabCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SporeSwabCollectionName)
 		// go get current sporePrint
 		existing := SporeSwab{}
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := out.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		upd, err := NewMods().
 			updateSaleIfNeeded(out.Sale, existing.Sale).
@@ -301,25 +313,25 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 
 		// write updates to db
 		bsonId := bson.D{{"_id", id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -338,7 +350,7 @@ type importSporeSwabRequest struct {
 
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: NO IMAGES
 	data := importSporeSwabRequest{}
-	id, err := newCollectionId(r.Context(), sporeSwabCollectionName)
+	id, err := newCollectionId(r.Context(), SporeSwabCollectionName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -367,22 +379,22 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 		//if data.Perms != nil {
 		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
 		//	if err != nil {
-		//		return DbTxnStdErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//		return dbErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//	finalPerms = minimalPermsBetween(spec, subsp)
 		//	// TODO: add email perms if provided, as well as make email author?
 		//	if !finalPerms.Valid() {
 		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
-		//		return DbTxnStdErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//		return dbErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//}
 		perms, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		acl, err := data.AclFor(ctx, perms)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := SporeSwab{
 			MainCollectionIdField:   MainCollectionIdField{id},
@@ -393,14 +405,14 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 			LastUpdatedField:        LastUpdatedFieldForNow(),
 			AclField:                acl,
 		}
-		coll := ctx.Client().Database(dbName).Collection(sporeSwabCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SporeSwabCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

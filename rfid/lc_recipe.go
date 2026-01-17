@@ -13,7 +13,7 @@ import (
 	sliceutils "slices"
 )
 
-const lcRecipesCollectionName = "lcRecipes"
+const LcRecipesCollectionName = "lcRecipes"
 
 // TODO: AgarRecipe, JarRecipe, LcRecipe now have additiveMeasurements. Account for those everywhere
 // TODO: ensure standard LC recipes are accessible
@@ -36,7 +36,7 @@ type LcRecipeField struct {
 }
 
 func (field LcRecipeField) Get(ctx context.Context) (out LcRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(lcRecipesCollectionName).FindOne(ctx, bson.M{
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcRecipesCollectionName).FindOne(ctx, bson.M{
 		"_id": field.Recipe,
 	}).Decode(&out)
 	return out, err
@@ -53,12 +53,12 @@ func (recipe LcRecipe) EntryTypeField() *string {
 }
 
 func (recipe LcRecipe) CollectionName() string {
-	return lcRecipesCollectionName
+	return LcRecipesCollectionName
 }
 
 func initializeLcRecipes(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(lcRecipesCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false),
 		newSimpleIndex("liquids", "liquids.name", false, false, false),
@@ -261,10 +261,10 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(lcRecipesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(LcRecipesCollectionName)
 		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := LcRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -280,11 +280,11 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bs, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bs)
 	})
@@ -332,14 +332,14 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		upd, err := NewMods().
 			updateNameIfNeeded(req.Name, existing.Name).
@@ -349,25 +349,25 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 		// TODO: turn everything in this txn into its own func????
-		coll := ctx.Client().Database(dbName).Collection(lcRecipesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(LcRecipesCollectionName)
 		bsonId := bson.D{{"_id", existing.Id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bs, err = json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write([]byte(b58Id))
 	})

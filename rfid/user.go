@@ -12,7 +12,7 @@ import (
 
 // User collection
 
-const userCollName = "users" // TODO: readonly field
+const UserCollName = "users" // TODO: readonly field
 
 type User struct {
 	Email string    `bson:"_id" json:"_id"`                         // TODO: INDEX? MUST BE UNIQUE
@@ -49,7 +49,7 @@ type User struct {
 
 func initializeUsers(ctx context.Context, usern, unhashedPass string) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		//newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
 		//newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
@@ -143,7 +143,7 @@ func HashPassword(salt, pw string) (string, error) {
 //	}
 //
 //	func (u User) CollectionName() string {
-//		return userCollName
+//		return UserCollName
 //	}
 //
 // //func idFieldFor(item any) string { // use THIS ELSEWHERE IF NEEDED
@@ -211,7 +211,7 @@ func HashPassword(salt, pw string) (string, error) {
 // //	}
 // //	_, err = ctx.Value(mongoClientContextKey).(*mongo.Client).
 // //		Database(dbName).
-// //		Collection(userCollName).
+// //		Collection(UserCollName).
 // //		InsertOne(ctx, newUser)
 // //	if err != nil {
 // //		http.Error(w, "unable to create email", http.StatusInternalServerError)
@@ -240,7 +240,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	// TODO: ensure all Projects are looped through
 
 	// Resolve project perms // TODO: MAKE SURE THIS WORKS
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(projectsCollectionName).
+	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
 		Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.Projects}})
 	if err != nil {
 		return out, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
@@ -374,7 +374,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		email.HashedPass = &finalHashedPass
 //	}
 //	_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
-//		Collection(userCollName).InsertOne(ctx, email)
+//		Collection(UserCollName).InsertOne(ctx, email)
 //	return err
 //}
 //
@@ -414,7 +414,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		filter = bson.M{"username": nameOrEmail}
 //	}
 //	var u User
-//	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName).FindOne(ctx, filter).Decode(&u)
+//	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName).FindOne(ctx, filter).Decode(&u)
 //	if err != nil {
 //		return utils.TandErr(AlternateCollectionId{}, err)
 //	}
@@ -454,18 +454,18 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		return
 //	}
 //	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-//		coll := ctx.Client().Database(dbName).Collection(userCollName) // TODO: FIX EVERYTHING BELOW THIS
+//		coll := ctx.Client().Database(dbName).Collection(UserCollName) // TODO: FIX EVERYTHING BELOW THIS
 //		existing, err := GetAltCollectionItemInTxn(ctx, id, User{})
 //		if err != nil {
 //			stat := http.StatusInternalServerError
 //			if err == mongo.ErrNoDocuments {
 //				stat = http.StatusNotFound
 //			}
-//			return DbTxnStdErr(w, err.Error(), stat)
+//			return dbErr(w, err.Error(), stat)
 //		}
 //		doRemoveAdmin := req.Admin == nil || *req.Admin == false
 //		if existing.Email == authInfo.Email && doRemoveAdmin {
-//			return DbTxnStdErr(w, "cannot remove Admin from self", http.StatusBadRequest)
+//			return dbErr(w, "cannot remove Admin from self", http.StatusBadRequest)
 //		}
 //		mods := bson.D{} // TODO: modify
 //		if doRemoveAdmin {
@@ -476,7 +476,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		result := coll.FindOneAndUpdate(ctx, bson.D{{"_id", id}}, mods)
 //		err = result.Err()
 //		if err != nil {
-//			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+//			return dbErr(w, err.Error(), http.StatusInternalServerError)
 //		}
 //		resultUser, err := GetAltCollectionItemInTxn(ctx, id, User{})
 //		if err != nil {
@@ -484,11 +484,11 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //			if err == mongo.ErrNoDocuments {
 //				stat = http.StatusNotFound
 //			}
-//			return DbTxnStdErr(w, err.Error(), stat)
+//			return dbErr(w, err.Error(), stat)
 //		}
 //		userBs, err := resultUser.CleanBytes()
 //		if err != nil {
-//			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+//			return dbErr(w, err.Error(), http.StatusInternalServerError)
 //		}
 //		return w.Write(userBs)
 //	})

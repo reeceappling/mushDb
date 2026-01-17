@@ -13,7 +13,7 @@ import (
 	"reflect"
 )
 
-const transfersCollName = "transfers"
+const TransfersCollName = "transfers"
 
 type TransfersOutField struct {
 	TransfersOut []AlternateCollectionId `bson:"transfersOut,omitempty" json:"transfersOut,omitempty"`
@@ -62,7 +62,7 @@ func (t Transfer) EntryTypeField() *string {
 }
 
 func (t Transfer) CollectionName() string {
-	return transfersCollName
+	return TransfersCollName
 }
 
 func (t Transfer) PicsModsForChild() *Mods {
@@ -110,7 +110,7 @@ func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) 
 
 func initializeTransfers(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(transfersCollName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(TransfersCollName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		// TODO: UNSURE WHICH INDICES ARE NEEDED
 		// TODO: ensure from index indexes all of the child ids
@@ -297,14 +297,14 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedFieldForNow(),
 		AclField:                   AclField{ACL: parent.Permissions()},
 	}
-	_, err = db.Collection(transfersCollName).InsertOne(ctx, xfer)
+	_, err = db.Collection(TransfersCollName).InsertOne(ctx, xfer)
 	if err != nil {
 		http.Error(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Set rollback
 	rollbackXfer := func() error {
-		result, errrr := db.Collection(transfersCollName).DeleteOne(ctx, bson.D{{"_id", xfer.Id}})
+		result, errrr := db.Collection(TransfersCollName).DeleteOne(ctx, bson.D{{"_id", xfer.Id}})
 		if errrr != nil {
 			return errrr
 		}
@@ -372,25 +372,25 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(transfersCollName)
+		coll := ctx.Client().Database(dbName).Collection(TransfersCollName)
 		existing, err := GetAltCollectionItemInTxn(ctx, id, Transfer{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			return DbTxnStdErr(w, err.Error(), stat)
+			return dbErr(w, err.Error(), stat)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		upd, err := NewMods().
 			updateNotesIfNeeded(req.Notes, existing.Notes). // TODO: make sure this works the way we want
@@ -398,20 +398,20 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
 		}
 		bsonId := bson.D{{"_id", existing.Id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

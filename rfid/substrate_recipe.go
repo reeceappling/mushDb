@@ -13,14 +13,14 @@ import (
 	sliceutils "slices"
 )
 
-const substrateRecipesCollectionName = "substrateRecipes"
+const SubstrateRecipesCollectionName = "substrateRecipes"
 
 type SubstrateRecipeField struct {
 	Substrate AlternateCollectionId `bson:"recipe" json:"recipe"`
 }
 
 func (field SubstrateRecipeField) Get(ctx context.Context) (out SubstrateRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pcRunCollectionName).FindOne(ctx, bson.M{
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PcRunCollectionName).FindOne(ctx, bson.M{
 		"_id": field.Substrate,
 	}).Decode(&out)
 	return out, err
@@ -47,12 +47,12 @@ func (recipe SubstrateRecipe) EntryTypeField() *string {
 }
 
 func (recipe SubstrateRecipe) CollectionName() string {
-	return substrateRecipesCollectionName
+	return SubstrateRecipesCollectionName
 }
 
 func initializeSubstrates(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(substrateRecipesCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, true),
 		standardIndexModel,
@@ -184,7 +184,7 @@ func (requestPerms PermsOnRequest) AclFor(ctx context.Context, perms ResolvedUse
 
 	// validate Projects
 	// TODO: count instead?
-	projColl := client.Database(dbName).Collection(projectsCollectionName)
+	projColl := client.Database(dbName).Collection(ProjectsCollectionName)
 	for projName, _ := range requestPerms.ProjectPerms {
 		err := projColl.FindOne(ctx, bson.D{{"_id", projName}}).Err()
 		if err != nil {
@@ -196,7 +196,7 @@ func (requestPerms PermsOnRequest) AclFor(ctx context.Context, perms ResolvedUse
 	}
 	// validate users
 	// TODO: count instead?
-	userColl := client.Database(dbName).Collection(userCollName)
+	userColl := client.Database(dbName).Collection(UserCollName)
 	for userEmail, _ := range requestPerms.UserPerms {
 		err := userColl.FindOne(ctx, bson.D{{"_id", userEmail}}).Err()
 		if err != nil {
@@ -248,10 +248,10 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(substrateRecipesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SubstrateRecipesCollectionName)
 		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := SubstrateRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -264,11 +264,11 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = coll.InsertOne(r.Context(), toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -305,25 +305,25 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(substrateRecipesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(SubstrateRecipesCollectionName)
 		existing, err := GetAltCollectionItemInTxn(ctx, id, SubstrateRecipe{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			return DbTxnStdErr(w, err.Error(), stat)
+			return dbErr(w, err.Error(), stat)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		upd, err := NewMods().
 			updateNameIfNeeded(req.Name, existing.Name).
@@ -334,20 +334,20 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
 		}
 		bsonId := bson.D{{"_id", existing.Id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(existing)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

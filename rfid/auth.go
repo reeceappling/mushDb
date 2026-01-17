@@ -264,7 +264,7 @@ func (serv *AuthService) SessionForEmail(email string) (session SessionId, err e
 func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser goth.User) (sessionId SessionId, email string, err error) {
 	var u User // TODO: get this from db
 	email = oauthUser.Email
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName)
 	userResult := coll.FindOne(ctx, bson.D{{"_id", email}})
 	raw, _ := userResult.Raw() // TODO; del
 	println(raw.String())      // TODO; del

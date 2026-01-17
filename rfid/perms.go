@@ -55,7 +55,7 @@ type Permissioned interface {
 //	}
 //	//GET ALL USERS FOR IDS (from db)
 //	results := make([]User, len(ssups.Ids))
-//	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(userCollName).
+//	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName).
 //		Find(ctx, bson.M{"_id": bson.M{"$in": ssups.Ids}})
 //	if err != nil {
 //		return ClientSideUserPermsSubset{}, err

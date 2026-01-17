@@ -44,6 +44,18 @@ type Slant struct {
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
+func (s *Slant) SetPerms(field AclField) {
+	s.AclField = field
+}
+
+func (s Slant) DbId() MainCollectionId {
+	return s.Id
+}
+
+func (s Slant) EntryType() string {
+	return SlantSourceType
+}
+
 func (s Slant) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("plates cannot transfer to " + dst.SourceType())
@@ -114,7 +126,7 @@ func (s Slant) setTransferChild(ctx context.Context, xfer Transfer, from genetic
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
-		//updatePermsIfNeeded(xfer.Perms, s.Perms). // TODO: make sure perms are on all setTransferChild
+		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -237,35 +249,61 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := unixTimeForNow()
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		toInsert := Slant{
-			MainCollectionIdField: MainCollectionIdField{id},
-			AgarBatchField:        AgarBatchField{&data.AgarBatch},
-			StickType:             data.StickType,
-			CreationDateField:     CreationDateField{now},
-			LastUpdatedField:      LastUpdatedField{now},
-			AclField:              allCanWriteAcl(),
-		}
-		_, err = toInsert.AgarBatchField.Get(ctx)
-		if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-			return DbTxnStdErr(w, "agar batch field missing: "+err.Error(), http.StatusInternalServerError)
-		}
-		coll := ctx.Client().Database(dbName).Collection(SlantsCollectionName)
-		_, err = coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		_, err = w.Write(bsOut)
-		return nil, err
-	})
+	ctx := r.Context()
+	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	coll := db.Collection(SlantsCollectionName)
+	toInsert := Slant{
+		MainCollectionIdField: MainCollectionIdField{id},
+		AgarBatchField:        AgarBatchField{&data.AgarBatch},
+		StickType:             data.StickType,
+		CreationDateField:     CreationDateField{now},
+		LastUpdatedField:      LastUpdatedField{now},
+		AclField:              allCanWriteAcl(),
+	}
+	_, err = toInsert.AgarBatchField.Get(ctx)
+	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
+		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	finishCreate(ctx, coll, toInsert, w) // TODO: use in all main creates
+}
 
+func finishCreate(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, w http.ResponseWriter) {
+	err, rollback := addToIdMapCollection(ctx, toInsert) // TODO: do this everywhere
+	if err != nil {
+		http.Error(w, "failed to insert in map collection: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = coll.InsertOne(ctx, toInsert)
+	if err != nil {
+		err = errors.Join(rollback(), err) // TODO: do this everywhere
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
 	if err != nil {
 		handleWriteErr(err, w)
 	}
+}
+func finishImport(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, reqPerms PermsOnRequest, w http.ResponseWriter) {
+	perms, err := GetAuthInfo(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// TODO: perms from species???
+	acl, err := reqPerms.AclFor(ctx, perms)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	toInsert.SetPerms(acl)
+	finishCreate(ctx, coll, toInsert, w)
 }
 
 type updateSlantRequest updatePlateRequest
@@ -333,21 +371,21 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 
 		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := out.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return DbTxnStdErr(w, "bad overlapping perms for email:"+err.Error(), http.StatusBadRequest)
+		//	return dbErr(w, "bad overlapping perms for email:"+err.Error(), http.StatusBadRequest)
 		//}
 		upd, err := NewMods().
 			updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
@@ -360,24 +398,24 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 			updateLastUpdatedIfNeeded().
 			Finalized()
 		if err != nil {
-			return DbTxnStdErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
 		}
 		if len(upd) == 0 {
-			return DbTxnStdErr(w, "no changes made", http.StatusBadRequest)
+			return dbErr(w, "no changes made", http.StatusBadRequest)
 		}
 		// write updates to db
 		bsonId := bson.D{{"_id", id}}
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
-			return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		}
 		err = coll.FindOne(ctx, bsonId).Decode(&existing)
 		if err != nil {
-			return DbTxnStdErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(&out)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})
@@ -500,17 +538,17 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		//if data.Perms != nil {
 		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
 		//	if err != nil {
-		//		return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
+		//		return dbErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
 		//	}
 		//	finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: maximal with perms if nonWrite
 		//}
 		perms, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		acl, err := data.AclFor(ctx, perms)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		toInsert := Slant{
 			MainCollectionIdField:   MainCollectionIdField{id},
@@ -531,11 +569,11 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		coll := ctx.Client().Database(dbName).Collection(SlantsCollectionName)
 		_, err = coll.InsertOne(ctx, toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		bsOut, err := json.Marshal(toInsert)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bsOut)
 	})

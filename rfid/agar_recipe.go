@@ -14,7 +14,7 @@ import (
 	"slices"
 )
 
-const agarRecipesCollectionName = "agarRecipes"
+const AgarRecipesCollectionName = "agarRecipes"
 
 type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
@@ -42,7 +42,7 @@ func (recipe AgarRecipe) EntryTypeField() *string {
 }
 
 func (recipe AgarRecipe) CollectionName() string {
-	return agarRecipesCollectionName
+	return AgarRecipesCollectionName
 }
 
 //type NewAgarRecipeRequest struct {
@@ -77,7 +77,7 @@ func (recipe AgarRecipe) CollectionName() string {
 //}
 
 func newAgarRecipe(ctx mongo.SessionContext, req AgarRecipe) utils.Result[AgarRecipe] {
-	res, err := ctx.Client().Database(dbName).Collection(agarRecipesCollectionName).InsertOne(ctx, req)
+	res, err := ctx.Client().Database(dbName).Collection(AgarRecipesCollectionName).InsertOne(ctx, req)
 	if err != nil {
 		return utils.ErroredResult[AgarRecipe](err)
 	}
@@ -129,25 +129,25 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(agarRecipesCollectionName)
+		coll := ctx.Client().Database(dbName).Collection(AgarRecipesCollectionName)
 		existing, err := GetAltCollectionItem(ctx, id, AgarRecipe{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {
 				stat = http.StatusNotFound
 			}
-			return DbTxnStdErr(w, err.Error(), stat)
+			return dbErr(w, err.Error(), stat)
 		}
 		user, err := GetAuthInfo(ctx)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
+			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		}
 		aclField, err := req.AclFor(ctx, user)
 		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
+			return dbErr(w, err.Error(), http.StatusInternalServerError)
 		}
 		upd, err := req.modsFor(existing, aclField)
 		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)
@@ -159,7 +159,7 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 
 func initializeAgarRecipes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(agarRecipesCollectionName)
+	coll := db.Collection(AgarRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false), // TODO: names unique?
 		newSimpleIndex("liquids", "liquids.name", false, false, false),
@@ -449,11 +449,11 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		result := newAgarRecipe(ctx, entry)
 		if result.Err != nil {
-			return DbTxnStdErr(w, "Agar batch creation failure: "+result.Err.Error(), http.StatusInternalServerError)
+			return dbErr(w, "Agar batch creation failure: "+result.Err.Error(), http.StatusInternalServerError)
 		}
 		bs, errr := json.Marshal(result.Item)
 		if errr != nil {
-			return DbTxnStdErr(w, errr.Error(), http.StatusInternalServerError)
+			return dbErr(w, errr.Error(), http.StatusInternalServerError)
 		}
 		return w.Write(bs)
 	})
@@ -467,7 +467,7 @@ func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) {
 	out := AgarRecipe{}
 	err := ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
-		Collection(agarRecipesCollectionName).
+		Collection(AgarRecipesCollectionName).
 		FindOne(ctx, bson.M{"name": name}).
 		Decode(&out)
 	return out, err
@@ -478,7 +478,7 @@ type AgarRecipeField struct {
 }
 
 func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(agarRecipesCollectionName).FindOne(ctx, bson.M{
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(AgarRecipesCollectionName).FindOne(ctx, bson.M{
 		"_id": field.AgarRecipe,
 	}).Decode(&out)
 	return out, err

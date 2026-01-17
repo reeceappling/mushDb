@@ -51,6 +51,18 @@ type Bag struct {
 	AclField         `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
+func (b *Bag) SetPerms(field AclField) {
+	b.AclField = field
+}
+
+func (b Bag) DbId() MainCollectionId {
+	return b.Id
+}
+
+func (b Bag) EntryType() string {
+	return BagSourceType
+}
+
 func (b Bag) CanTransferTo(dst geneticSource) error {
 	return errors.New("Bag cannot be transferred (unsure if this is ok)")
 	// TODO: make transferrable to plate?
@@ -113,7 +125,7 @@ func (b Bag) setTransferChild(ctx context.Context, xfer Transfer, from geneticSo
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
-		//updatePermsIfNeeded(xfer.Perms, b.Perms). // TODO: this!
+		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -160,28 +172,27 @@ func initializeBags(ctx context.Context) error {
 	coll := db.Collection(BagsCollectionName)
 	// Indices
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		// TODO: DO INDICES!!!
-		newSimpleIndex("recipe", "recipe", false, false, false),
-		newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
-		newSimpleIndex("pcRun", "pcRun", false, true, false),
-		// TODO: filter size?
-		newSimpleIndex("creationDate", "creationDate", true, false, false),
-		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		newSimpleIndex("sealDate", "sealDate", true, true, false), // BAG ONLY
-		// TODO: wetness
-		// TODO: knownFruitable?
-		newSimpleIndex("species", "species", false, false, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("innoc", "innoc", false, true, false),
-		newSimpleIndex("transfersOut", "transfersOut", false, true, false),
-		newSimpleIndex("parent", "parent", false, true, false),
-		newSimpleIndex("parentType", "parentType", false, true, false),
-		//pics
-		//TODO: contams?
-		//flushes
-		newSimpleIndex("sale", "sale", false, true, false),
-		newSimpleIndex("disposed", "disposed", false, true, false),
+		//newSimpleIndex("recipe", "recipe", false, false, false),
+		//newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
+		//newSimpleIndex("pcRun", "pcRun", false, true, false),
+		//// TODO: filter size?
+		//newSimpleIndex("creationDate", "creationDate", true, false, false),
+		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		//newSimpleIndex("sealDate", "sealDate", true, true, false), // BAG ONLY
+		//// TODO: wetness
+		//// TODO: knownFruitable?
+		//newSimpleIndex("species", "species", false, false, false),
+		//newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		//newSimpleIndex("innoc", "innoc", false, true, false),
+		//newSimpleIndex("transfersOut", "transfersOut", false, true, false),
+		//newSimpleIndex("parent", "parent", false, true, false),
+		//newSimpleIndex("parentType", "parentType", false, true, false),
+		////pics
+		////TODO: contams?
+		////flushes
+		//newSimpleIndex("sale", "sale", false, true, false),
+		//newSimpleIndex("disposed", "disposed", false, true, false),
 		//notes
 		lastUpdatedIndexModel,
 		//TODO: projectsIndexModel,
@@ -218,7 +229,7 @@ func initializeBags(ctx context.Context) error {
 		LastUpdatedField:          LastUpdatedField{exampleTime},
 		AclField:                  AclField{&testAcl},
 	}
-	// TODO: replace the test value
+	// TODO: replace the test value!
 	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
@@ -229,8 +240,8 @@ func initializeBags(ctx context.Context) error {
 }
 
 type createBagRequest struct {
-	SubstrateBatchField // TODO: USE AND VALIDATE
-	WetnessField        // TODO: use and validate
+	SubstrateBatchField
+	WetnessField // TODO: use and validate
 	PcRunField
 	FilterSize string // TODO: validate?
 	CreationDateField
@@ -261,99 +272,39 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ctx := r.Context()
+	// Validate
+	_, err = data.PcRunField.Get(ctx)
+	if err != nil {
+		http.Error(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	batch, err := data.SubstrateBatchField.Get(ctx)
+	if err != nil {
+		http.Error(w, "Substrate batch validation failure: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// validate wetness
+	if err = data.WetnessField.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	// Denying guest edits is done in the upper handlers
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		// Validate
-		_, err = data.PcRunField.Get(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
-		}
-
-		batch, err := data.SubstrateBatchField.Get(ctx) // TODO: get and validate substrate batch field
-		if err != nil {
-			return DbTxnStdErr(w, "Substrate batch validation failure: "+err.Error(), http.StatusBadRequest)
-		}
-		// validate wetness
-		if data.Wetness != nil {
-			if *data.Wetness < 0 || *data.Wetness > 10 {
-				return DbTxnStdErr(w, "Invalid wetness, must either be nonexistent or 0-10: "+err.Error(), http.StatusBadRequest)
-			}
-		}
-
-		coll := ctx.Client().Database(dbName).Collection(BagsCollectionName)
-		toInsert := Bag{
-			MainCollectionIdField:       MainCollectionIdField{id},
-			SubstrateRecipeField:        batch.SubstrateRecipeField,
-			SubstrateBatchOptionalField: data.SubstrateBatchField.asOptional(),
-			WetnessField:                data.WetnessField,
-			PcRunOptionalField:          PcRunOptionalField{&data.PcRun},
-			FilterSize:                  data.FilterSize,
-			CreationDateField:           data.CreationDateField,
-			NotesField:                  data.NotesField,
-			LastUpdatedField:            LastUpdatedFieldForNow(),
-			AclField:                    allCanWriteAcl(),
-		}
-		_, err = coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
+	toInsert := &Bag{
+		MainCollectionIdField:       MainCollectionIdField{id},
+		SubstrateRecipeField:        batch.SubstrateRecipeField,
+		SubstrateBatchOptionalField: data.SubstrateBatchField.asOptional(),
+		WetnessField:                data.WetnessField,
+		PcRunOptionalField:          PcRunOptionalField{&data.PcRun},
+		FilterSize:                  data.FilterSize,
+		CreationDateField:           data.CreationDateField,
+		NotesField:                  data.NotesField,
+		LastUpdatedField:            LastUpdatedFieldForNow(),
+		AclField:                    allCanWriteAcl(),
 	}
-}
-
-func innoculateBagHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
-	bagId, err := b58Id.toMainCollectionId()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	b, err := getBag(r.Context(), bagId)
-	if err != nil {
-		http.Error(w, "failed to find bag: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	if b.Innoc != nil {
-		http.Error(w, "bag already innoculated before", http.StatusBadRequest)
-		return
-	}
-	// TODO: create transfer
-	// TODO: calculate all new things
-	// TODO: save new things
-	defer r.Body.Close()
-	bs, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	req := inncoulateBagRequest{}
-	err = json.Unmarshal(bs, &req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	switch req.sourceType {
-	case lcSyringeSourceType:
-		// TODO: handle lcSyringe innoc
-	case GrainJarSourceType:
-		// TODO: handle grainJarInnoc
-	default:
-		http.Error(w, "invalid source type", http.StatusBadRequest)
-		return
-	}
-}
-
-type inncoulateBagRequest struct {
-	sourceType string // TODO: jar or lcSyringe
-	parent     MainCollectionId
+	finishCreate(ctx, coll, toInsert, w) // TODO: use in all main creates
 }
 
 type updateBagRequest struct {
@@ -463,32 +414,15 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		out.Flushes.New[i].Location = imageLocation(loc)
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-
-		coll := ctx.Client().Database(dbName).Collection(BagsCollectionName)
-		// go get current plate
-		existing := Bag{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
-		if err != nil {
-			return DbTxnStdErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return DbTxnStdErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := data.AclFor(ctx, user)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := out.modsFor(existing, aclField)                   // TODO: ACL?
-		return handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: DO THIS EVERYWHERE!
-	})
+	ctx := r.Context()
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
+	existing := &Bag{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
 	if err != nil {
-		handleWriteErr(err, w)
+		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	finishItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
 }
 
 type importBagRequest struct {
@@ -595,16 +529,6 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//spec, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	//if err != nil {
-	//	http.Error(w, "failed to get spec/subsp: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp) // TODO: subsp ptr ok here?
-	//if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "email cannot write these perms: "+err.Error(), http.StatusUnauthorized)
-	//	return
-	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -618,55 +542,36 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		perms, err := GetAuthInfo(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		acl, err := data.AclFor(ctx, perms)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		out := Bag{
-			MainCollectionIdField: MainCollectionIdField{id},
-			SubstrateRecipeField:  data.SubstrateRecipeField,
-			//SubstrateBatchOptionalField: nil,
-			//WetnessField,
-			PcRunOptionalField:      PcRunOptionalField{},
-			FilterSize:              data.FilterSize,
-			CreationDateField:       data.CreationDateField,
-			GenerationsFields:       GenerationsFieldFor(gen),
-			SealDate:                &data.CreationDate,
-			KnownFruitableField:     data.KnownFruitableField,
-			SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
-			SubspeciesOptionalField: data.SubspeciesOptionalField,
-			PicsField:               PicsField{pix},
-			ContaminationsField:     ContaminationsField{},
-			MostRecentImageField:    MostRecentImageField{importedPic},
-			FlushesField:            FlushesField{},
-			SaleField:               SaleField{},
-			DisposedField:           DisposedField{},
-			NotesField:              NotesField{},
-			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-			AclField:                acl,
-		}
-		// TODO: for non-all acls, update each email and project
-		coll := ctx.Client().Database(dbName).Collection(BagsCollectionName)
-		_, err = data.SubstrateRecipeField.Get(ctx)
-		if err != nil {
-			return DbTxnStdErr(w, "substrate recipe retrieval error: "+err.Error(), http.StatusInternalServerError)
-		}
-		_, err = coll.InsertOne(ctx, out)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bs, err := json.Marshal(out)
-		if err != nil {
-			return DbTxnStdErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bs)
-	})
+	ctx := r.Context()
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
+	// Validate
+	_, err = data.SubstrateRecipeField.Get(ctx)
 	if err != nil {
-		handleWriteErr(err, w)
+		dbErr(w, "substrate recipe retrieval error: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	// Write
+	toInsert := &Bag{
+		MainCollectionIdField: MainCollectionIdField{id},
+		SubstrateRecipeField:  data.SubstrateRecipeField,
+		//SubstrateBatchOptionalField: nil,
+		//WetnessField, // TODO: add?
+		PcRunOptionalField:      PcRunOptionalField{},
+		FilterSize:              data.FilterSize,
+		CreationDateField:       data.CreationDateField,
+		GenerationsFields:       GenerationsFieldFor(gen),
+		SealDate:                &data.CreationDate,
+		KnownFruitableField:     data.KnownFruitableField,
+		SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
+		SubspeciesOptionalField: data.SubspeciesOptionalField,
+		PicsField:               PicsField{pix},
+		ContaminationsField:     ContaminationsField{},
+		MostRecentImageField:    MostRecentImageField{importedPic},
+		FlushesField:            FlushesField{},
+		SaleField:               SaleField{},
+		DisposedField:           DisposedField{},
+		NotesField:              NotesField{},
+		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+	}
+	finishImport(ctx, coll, *toInsert, data.PermsOnRequest, w)
 }
