@@ -10,10 +10,6 @@ import (
 	"io"
 )
 
-// User collection
-
-const UserCollName = "users" // TODO: readonly field
-
 type User struct {
 	Email string    `bson:"_id" json:"_id"`                         // TODO: INDEX? MUST BE UNIQUE
 	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: PROJECTS COME FROM PERMS
@@ -22,6 +18,10 @@ type User struct {
 	// TODO: GET TOKEN: https://developers.google.com/identity/sign-in/web/sign-in
 	// TODO: VERIFY TOKEN https://developers.google.com/identity/sign-in/web/backend-auth
 	// TODO: more (google email, TOTP seed, etc)
+}
+
+func (u User) IdValue() any {
+	return u.Email
 }
 
 // // TODO: describe

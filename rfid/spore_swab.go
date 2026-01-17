@@ -12,11 +12,6 @@ import (
 	"reflect"
 )
 
-const (
-	SporeSwabCollectionName = "sporeSwabs"
-	SporeSwabSourceType     = "swab"
-)
-
 type SporeSwab struct { // TODO: FIX EVERYTHING IN THIS FILE BELOW THIS POINT!!!!
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either sporePrint, or purchased
@@ -30,18 +25,6 @@ type SporeSwab struct { // TODO: FIX EVERYTHING IN THIS FILE BELOW THIS POINT!!!
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
-}
-
-func (sw *SporeSwab) SetPerms(field AclField) {
-	sw.AclField = field
-}
-
-func (sw SporeSwab) DbId() MainCollectionId {
-	return sw.Id
-}
-
-func (sw SporeSwab) EntryType() string {
-	return SporeSwabSourceType
 }
 
 func (sw SporeSwab) Innoculatable() bool {
@@ -105,12 +88,6 @@ func (sw SporeSwab) setTransferChild(ctx context.Context, xfer Transfer, from ge
 	//return nil
 }
 
-func (sw SporeSwab) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := sw
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (sw SporeSwab) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
@@ -123,20 +100,12 @@ func (sw SporeSwab) generation() (sinceSpore *Generation, sinceSporeOrClone *Gen
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
-func (sw SporeSwab) SourceType() string {
-	return SporeSwabSourceType
-}
-
 func (sw SporeSwab) EntryTypeField() *string {
 	return nil
 }
 
 func (sw SporeSwab) id() []byte {
 	return []byte(sw.Id.dbIdStr())
-}
-
-func (sw SporeSwab) CollectionName() string {
-	return SporeSwabCollectionName
 }
 
 func initializeSporeSwabs(ctx context.Context) error {

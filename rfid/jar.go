@@ -16,11 +16,6 @@ import (
 	slices2 "slices"
 )
 
-const (
-	GrainJarCollectionName = "grainJars"
-	GrainJarSourceType     = "jar"
-)
-
 type GrainJar struct {
 	MainCollectionIdField     `bson:"inline"`
 	SizeCups                  int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
@@ -47,18 +42,6 @@ type GrainJar struct {
 	AclField                  `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (j *GrainJar) SetPerms(field AclField) {
-	j.AclField = field
-}
-
-func (j GrainJar) DbId() MainCollectionId {
-	return j.Id
-}
-
-func (j GrainJar) EntryType() string {
-	return GrainJarSourceType
-}
-
 type BurstGrainsField struct {
 	BurstGrains *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"` // TODO: HANDLE IN JAVASCRIPT
 }
@@ -73,12 +56,6 @@ func (j GrainJar) CanTransferTo(dst geneticSource) error {
 	return nil
 }
 
-func (j GrainJar) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := j
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (j GrainJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    SpeciesOptionalField{j.Species},
@@ -90,10 +67,6 @@ func (j GrainJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (j GrainJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return j.GenSinceSpore, j.GenSinceFruitOrSpore
-}
-
-func (j GrainJar) SourceType() string {
-	return GrainJarSourceType
 }
 
 func (j GrainJar) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
@@ -145,10 +118,6 @@ func (j GrainJar) setTransferChild(ctx context.Context, xfer Transfer, from gene
 
 func (j GrainJar) EntryTypeField() *string {
 	return utils.Pointer(GrainJarSourceType)
-}
-
-func (j GrainJar) CollectionName() string {
-	return GrainJarCollectionName
 }
 
 func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection { // TODO: DO THIS ON EVERYTHING!

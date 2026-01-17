@@ -10,8 +10,6 @@ import (
 	"reflect"
 )
 
-const PcRunCollectionName = "pcRuns"
-
 type PCRun struct {
 	AlternateCollectionIdField `bson:"inline"`
 	CreationDateField          `bson:"inline"` //TODO: USED TO BE date, is now CreationDate
@@ -21,18 +19,8 @@ type PCRun struct {
 	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (run PCRun) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := PCRun{}
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (run PCRun) EntryTypeField() *string {
 	return nil
-}
-
-func (run PCRun) CollectionName() string {
-	return PcRunCollectionName
 }
 
 func initializePCRun(ctx context.Context) error {

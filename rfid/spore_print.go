@@ -17,12 +17,6 @@ import (
 	"strings"
 )
 
-const (
-	SporePrintCollectionName = "sporePrints"
-	SporePrintSourceType     = "sporePrint"
-	sporePrintIdPrefix       = "sp" // TODO; ew
-)
-
 type SporePrint struct {
 	MainCollectionIdField `bson:"inline"` // TODO: was alt
 	// Parent is always either fruit, or purchased
@@ -37,18 +31,6 @@ type SporePrint struct {
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
-}
-
-func (sp *SporePrint) SetPerms(field AclField) {
-	sp.AclField = field
-}
-
-func (sp SporePrint) DbId() MainCollectionId {
-	return sp.Id
-}
-
-func (sp SporePrint) EntryType() string {
-	return SporePrintSourceType
 }
 
 func (sp SporePrint) Innoculatable() bool {
@@ -109,12 +91,6 @@ func (sp SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from g
 	return nil
 }
 
-func (sp SporePrint) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := sp
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (sp SporePrint) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sp.SpeciesField.AsOptional(),
@@ -127,24 +103,12 @@ func (sp SporePrint) generation() (sinceSpore *Generation, sinceSporeOrClone *Ge
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
-func (sp SporePrint) SourceType() string {
-	return SporePrintSourceType
-}
-
 func (sp SporePrint) EntryTypeField() *string {
 	return nil
 }
 
 func (sp SporePrint) id() []byte {
 	return []byte(sp.Id.dbIdStr())
-}
-
-func (sp SporePrint) prefix() string {
-	return sporePrintIdPrefix
-}
-
-func (sp SporePrint) CollectionName() string {
-	return SporePrintCollectionName
 }
 
 func initializeSporePrints(ctx context.Context) error {

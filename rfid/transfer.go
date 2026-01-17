@@ -13,8 +13,6 @@ import (
 	"reflect"
 )
 
-const TransfersCollName = "transfers"
-
 type TransfersOutField struct {
 	TransfersOut []AlternateCollectionId `bson:"transfersOut,omitempty" json:"transfersOut,omitempty"`
 }
@@ -51,18 +49,8 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (t Transfer) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := t
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (t Transfer) EntryTypeField() *string {
 	return nil
-}
-
-func (t Transfer) CollectionName() string {
-	return TransfersCollName
 }
 
 func (t Transfer) PicsModsForChild() *Mods {

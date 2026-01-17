@@ -13,8 +13,6 @@ import (
 	sliceutils "slices"
 )
 
-const SubstrateRecipesCollectionName = "substrateRecipes"
-
 type SubstrateRecipeField struct {
 	Substrate AlternateCollectionId `bson:"recipe" json:"recipe"`
 }
@@ -36,18 +34,8 @@ type SubstrateRecipe struct {
 	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (recipe SubstrateRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := recipe
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (recipe SubstrateRecipe) EntryTypeField() *string {
 	return nil
-}
-
-func (recipe SubstrateRecipe) CollectionName() string {
-	return SubstrateRecipesCollectionName
 }
 
 func initializeSubstrates(ctx context.Context) error {

@@ -13,11 +13,6 @@ import (
 	sliceutils "slices"
 )
 
-const (
-	SubstrateBatchCollectionName = "substrateBatches"
-	substrateBatchType           = "substrateBatch"
-)
-
 type SubstrateBatch struct { // TODO: use this
 	AlternateCollectionIdField `bson:"inline"`
 	// Initial wetness is quantified on each bag/box
@@ -28,18 +23,8 @@ type SubstrateBatch struct { // TODO: use this
 	AclField             `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (batch SubstrateBatch) CollectionName() string {
-	return SubstrateBatchCollectionName
-}
-
 func (batch SubstrateBatch) EntryTypeField() *string { // TODO: make these not pointers
 	panic("substrate batch has no entry type field")
-}
-
-func (batch SubstrateBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := &SubstrateBatch{}
-	err := decodeItem(out, encoded)
-	return *out, err
 }
 
 // TODO; USE!

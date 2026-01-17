@@ -9,8 +9,6 @@ import (
 	"net/http"
 )
 
-const ProjectsCollectionName = "Projects"
-
 type projectName string
 
 type Project struct {
@@ -30,18 +28,8 @@ func (p Project) AddUser(u User, perm ReadWritePerm) string {
 	panic("implement me")
 }
 
-func (p Project) StringId() string {
+func (p Project) IdValue() any {
 	return string(p.Name)
-}
-
-func (p Project) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := p
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
-func (p Project) CollectionName() string {
-	return ProjectsCollectionName
 }
 
 func (p Project) EntryTypeField() *string {

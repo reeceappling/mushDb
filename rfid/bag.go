@@ -14,11 +14,6 @@ import (
 	"reflect"
 )
 
-const (
-	BagsCollectionName = "fruitingBags" // TODO: USE
-	BagSourceType      = "bag"
-)
-
 type Bag struct {
 	MainCollectionIdField       `bson:"inline"`
 	SubstrateRecipeField        `bson:"inline"`
@@ -51,27 +46,9 @@ type Bag struct {
 	AclField         `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (b *Bag) SetPerms(field AclField) {
-	b.AclField = field
-}
-
-func (b Bag) DbId() MainCollectionId {
-	return b.Id
-}
-
-func (b Bag) EntryType() string {
-	return BagSourceType
-}
-
 func (b Bag) CanTransferTo(dst geneticSource) error {
 	return errors.New("Bag cannot be transferred (unsure if this is ok)")
 	// TODO: make transferrable to plate?
-}
-
-func (b Bag) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Bag{}
-	err := decodeItem(&out, encoded)
-	return out, err
 }
 
 func (b Bag) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -85,10 +62,6 @@ func (b Bag) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (b Bag) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return b.GenSinceSpore, b.GenSinceFruitOrSpore
-}
-
-func (b Bag) SourceType() string {
-	return BagSourceType
 }
 
 func (b Bag) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
@@ -143,10 +116,6 @@ func (b Bag) setTransferChild(ctx context.Context, xfer Transfer, from geneticSo
 
 func (b Bag) EntryTypeField() *string {
 	return utils.Pointer(BagSourceType)
-}
-
-func (b Bag) CollectionName() string {
-	return BagsCollectionName
 }
 
 func (b Bag) id() []byte {

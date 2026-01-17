@@ -15,8 +15,6 @@ import (
 	sliceutils "slices"
 )
 
-const SpeciesCollectionName = "species"
-
 type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
 	ScientificName    string          `bson:"scientificName" json:"scientificName"`
@@ -27,18 +25,8 @@ type Species struct {
 	AclField          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (sp Species) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Species{}
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (sp Species) EntryTypeField() *string {
 	return nil
-}
-
-func (sp Species) CollectionName() string {
-	return SpeciesCollectionName
 }
 
 const shiitakeName = "Shiitake"

@@ -17,11 +17,6 @@ import (
 	"time"
 )
 
-const (
-	FruitSourceType = "fruit"
-	FruitsCollName  = "fruits"
-)
-
 type Fruit struct { // KnownFruitable is always true for this, // creation date field is id
 	MainCollectionIdField   `bson:"inline"` // TODO: was alt
 	CreationDateField       `bson:"inline"` // This is harvest date
@@ -41,18 +36,6 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (f *Fruit) SetPerms(field AclField) {
-	f.AclField = field
-}
-
-func (f Fruit) DbId() MainCollectionId {
-	return f.Id
-}
-
-func (f Fruit) EntryType() string {
-	return FruitSourceType
-}
-
 func (f Fruit) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{PlateSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("fruit cannot transfer to " + dst.SourceType() + " via this endpoint")
@@ -61,12 +44,6 @@ func (f Fruit) CanTransferTo(dst geneticSource) error {
 }
 func (f Fruit) Innoculatable() bool {
 	return false
-}
-
-func (f Fruit) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := f
-	err := decodeItem(&out, encoded)
-	return out, err
 }
 
 func (f Fruit) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -83,10 +60,6 @@ func (f Fruit) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (f Fruit) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return f.GenSinceSpore, (*Generation)(utils.Pointer(0))
-}
-
-func (f Fruit) SourceType() string {
-	return FruitSourceType
 }
 
 func (f Fruit) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
@@ -149,10 +122,6 @@ func (f Fruit) addSale(ctx mongo.SessionContext, printId AlternateCollectionId) 
 	//return nil
 	panic("implement me") // TODO: this
 	return nil
-}
-
-func (f Fruit) CollectionName() string {
-	return FruitsCollName
 }
 
 func initializeFruits(ctx context.Context) error {

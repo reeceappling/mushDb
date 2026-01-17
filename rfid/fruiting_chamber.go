@@ -14,13 +14,6 @@ import (
 	"reflect"
 )
 
-const (
-	FruitingChamberCollectionName = "fruitingChambers" // TODO: USE
-
-	FruitingChamberSourceType = "fruitingChamber"
-	fruitingChamberIdPrefix   = "FC"
-)
-
 // TODO: HANDLE MULTIPLE GRAIN INPUTS FOR MONOTUBS (DO MONOTUBS LATER)
 type FruitingChamber struct { // TODO: SHOEBOX
 	MainCollectionIdField             `bson:"inline"`
@@ -49,26 +42,8 @@ type FruitingChamber struct { // TODO: SHOEBOX
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (f *FruitingChamber) DbId() MainCollectionId {
-	return f.Id
-}
-
-func (f *FruitingChamber) SetPerms(aclField AclField) {
-	f.AclField = aclField
-}
-
-func (f FruitingChamber) EntryType() string {
-	return FruitingChamberSourceType
-}
-
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
 	return errors.New("fc cannot be transferred (unsure if this is ok)")
-}
-
-func (f FruitingChamber) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := f
-	err := decodeItem(&out, encoded)
-	return out, err
 }
 
 func (f FruitingChamber) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -82,10 +57,6 @@ func (f FruitingChamber) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (f FruitingChamber) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return f.GenSinceSpore, f.GenSinceFruitOrSpore
-}
-
-func (f FruitingChamber) SourceType() string {
-	return FruitingChamberSourceType
 }
 
 func (f FruitingChamber) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
@@ -151,10 +122,6 @@ func (f FruitingChamber) setTransferChild(ctx context.Context, xfer Transfer, fr
 
 func (f FruitingChamber) EntryTypeField() *string {
 	return utils.Pointer(FruitingChamberSourceType)
-}
-
-func (f FruitingChamber) CollectionName() string {
-	return FruitingChamberCollectionName
 }
 
 //func (f FruitingChamber) basicFruit() Fruit {

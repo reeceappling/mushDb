@@ -1,5 +1,7 @@
 package rfid
 
+//go:generate ./goGenerator/mygenerator
+
 import (
 	"bytes"
 	"context"
@@ -52,9 +54,9 @@ var (
 
 type CollectionItem interface { // TODO: ADD USER TO THIS?
 	CollectionName() string
-	EntryTypeField() *string // "entryType" field. Non-nil for main collection items
+	//EntryTypeField() *string // TODO: GET RID OF // "entryType" field. Non-nil for main collection items
 	Decode(*mongo.SingleResult) (CollectionItem, error)
-	StringId() string // binary string id?
+	IdValue() any // binary string id?
 }
 
 //var (
@@ -808,5 +810,5 @@ func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection { 
 	return db.Collection(item.CollectionName())
 }
 func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T) error { // TODO; USE THIS EVERYWHERE!
-	return CollectionFor(*item, db).FindOne(ctx, bson.D{{"_id", (*item).StringId()}}).Decode(item)
+	return CollectionFor(*item, db).FindOne(ctx, bson.D{{"_id", (*item).IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
 }

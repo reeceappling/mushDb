@@ -14,8 +14,6 @@ import (
 	sliceutils "slices"
 )
 
-const SubspeciesCollectionName = "subspecies"
-
 type SubspeciesOptionalField struct {
 	SubSpecies *string `bson:"subSpecies,omitempty" json:"subSpecies,omitempty"`
 }
@@ -29,18 +27,8 @@ type Subspecies struct {
 	AclField         `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (subsp Subspecies) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := subsp
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (subsp Subspecies) EntryTypeField() *string {
 	return nil
-}
-
-func (subsp Subspecies) CollectionName() string {
-	return SubspeciesCollectionName
 }
 
 func initializeSubspecies(ctx context.Context) error {

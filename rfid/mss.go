@@ -12,11 +12,6 @@ import (
 	"reflect"
 )
 
-const (
-	MssCollectionName = "multisporeSyringes" // TODO: use
-	MssSourceType     = "mss"
-)
-
 type MSS struct {
 	// ALWAYS assume contaminated
 	MainCollectionIdField   `bson:"inline"`
@@ -33,18 +28,6 @@ type MSS struct {
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (M *MSS) SetPerms(field AclField) {
-	M.AclField = field
-}
-
-func (M MSS) DbId() MainCollectionId {
-	return M.Id
-}
-
-func (M MSS) EntryType() string {
-	return MssSourceType
-}
-
 func (M MSS) Innoculatable() bool {
 	return false // TODO: ensure ok
 }
@@ -56,12 +39,6 @@ func (M MSS) CanTransferTo(dst geneticSource) error {
 	if !dst.Innoculatable() {
 	}
 	return nil
-}
-
-func (M MSS) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := M
-	err := decodeItem(&out, encoded)
-	return out, err
 }
 
 func (M MSS) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -78,10 +55,6 @@ func (M MSS) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (M MSS) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
-}
-
-func (M MSS) SourceType() string {
-	return MssSourceType
 }
 
 func (M MSS) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) { // TODO: I think these are the same for pretty much everywhere (except maybe sporeprint?), so we should get rid of this
@@ -108,10 +81,6 @@ func (M MSS) setTransferChild(ctx context.Context, xfer Transfer, from geneticSo
 
 func (M MSS) EntryTypeField() *string {
 	return utils.Pointer(MssSourceType)
-}
-
-func (M MSS) CollectionName() string {
-	return MssCollectionName
 }
 
 func initializeMSS(ctx context.Context) error {

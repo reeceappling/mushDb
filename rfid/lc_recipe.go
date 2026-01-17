@@ -13,8 +13,6 @@ import (
 	sliceutils "slices"
 )
 
-const LcRecipesCollectionName = "lcRecipes"
-
 // TODO: AgarRecipe, JarRecipe, LcRecipe now have additiveMeasurements. Account for those everywhere
 // TODO: ensure standard LC recipes are accessible
 
@@ -42,18 +40,8 @@ func (field LcRecipeField) Get(ctx context.Context) (out LcRecipe, err error) {
 	return out, err
 }
 
-func (recipe LcRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := recipe
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (recipe LcRecipe) EntryTypeField() *string {
 	return nil
-}
-
-func (recipe LcRecipe) CollectionName() string {
-	return LcRecipesCollectionName
 }
 
 func initializeLcRecipes(ctx context.Context) error {

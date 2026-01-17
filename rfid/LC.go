@@ -14,12 +14,6 @@ import (
 	"reflect"
 )
 
-const (
-	LCCollectionName = "LCJars" // TODO: USE
-	LcSourceType     = "lc"
-	LCIdPrefix       = "LC" // TODO: USE
-)
-
 type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
 	MainCollectionIdField             `bson:"inline"`
 	PcRunOptionalField                `bson:"inline"` // likely won't exist for pre-existing or purchased
@@ -43,26 +37,8 @@ type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (l *LiquidCulture) SetPerms(field AclField) {
-	l.AclField = field
-}
-
-func (l LiquidCulture) DbId() MainCollectionId {
-	return l.Id
-}
-
-func (l LiquidCulture) EntryType() string {
-	return LcSourceType
-}
-
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
 	return errors.New("LiquidCulture cannot transfer this way. Must create a new lcSyringe")
-}
-
-func (l LiquidCulture) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := l
-	err := decodeItem(&out, encoded)
-	return out, err
 }
 
 func (l LiquidCulture) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -76,10 +52,6 @@ func (l LiquidCulture) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (l LiquidCulture) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return l.GenSinceSpore, l.GenSinceFruitOrSpore
-}
-
-func (l LiquidCulture) SourceType() string {
-	return LcSourceType
 }
 
 func (l LiquidCulture) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
@@ -129,10 +101,6 @@ func (l LiquidCulture) setTransferChild(ctx context.Context, xfer Transfer, from
 
 func (l LiquidCulture) EntryTypeField() *string {
 	return utils.Pointer(LcSourceType)
-}
-
-func (l LiquidCulture) CollectionName() string {
-	return LCCollectionName
 }
 
 func (l LiquidCulture) id() []byte {

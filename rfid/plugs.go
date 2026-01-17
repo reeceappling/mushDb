@@ -15,12 +15,6 @@ import (
 // TODO: CREATES!
 // TODO: UPDATES!
 
-const (
-	PlugsCollectionName = "plugs" // TODO: USE
-	PlugSourceType      = "plug"
-	plugIdPrefix        = "pl"
-)
-
 type PlugsJar struct { // TODO: do this whole file! This should be an alt, not a main, due to multi-sales
 	// TODO; any more?
 	MainCollectionIdField             `bson:"inline"` // TODO: was alt
@@ -41,27 +35,11 @@ type PlugsJar struct { // TODO: do this whole file! This should be an alt, not a
 	// TODO: this whole thing whenever we need to
 }
 
-func (pl *PlugsJar) SetPerms(field AclField) {
-	pl.AclField = field
-}
-
-func (pl PlugsJar) DbId() MainCollectionId {
-	return pl.Id
-}
-
-func (pl PlugsJar) EntryType() string {
-	return PlugSourceType
-}
-
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("plugs cannot transfer to " + dst.SourceType())
 	}
 	return nil
-}
-
-func (pl PlugsJar) SourceType() string {
-	return PlugSourceType
 }
 
 func (pl PlugsJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -82,12 +60,6 @@ func (pl PlugsJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Gene
 
 func (pl PlugsJar) EntryTypeField() *string {
 	return nil
-}
-
-func (pl PlugsJar) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := pl
-	err := decodeItem(&out, encoded) // TODO: likely wont work
-	return out, err
 }
 
 type Dowel struct { // TODO: use?
@@ -124,10 +96,6 @@ const (
 	meter = "m"
 )
 
-func (pl PlugsJar) CollectionName() string {
-	return PlugsCollectionName
-}
-
 func (pl PlugsJar) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
 	// TODO: can this even occur?
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pl.CollectionName())
@@ -149,7 +117,7 @@ func (pl PlugsJar) setTransferParent(ctx context.Context, xfer Transfer) (error,
 
 func initializePlugs(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(plugsCollectionName)
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlugsCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		// TODO: which indices are needed?
 		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?

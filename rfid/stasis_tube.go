@@ -17,11 +17,6 @@ import (
 	"strings"
 )
 
-const (
-	StasisTubeCollectionName = "stasisTubes" // TODO: USE
-	StasisTubeSourceType     = "stasisTube"
-)
-
 type StasisTube struct { // TODO: instructions somewhere?
 	MainCollectionIdField             `bson:"inline"`
 	PcRunOptionalField                `bson:"inline"` // probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
@@ -44,29 +39,11 @@ type StasisTube struct { // TODO: instructions somewhere?
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (s *StasisTube) SetPerms(field AclField) {
-	s.AclField = field
-}
-
-func (s StasisTube) DbId() MainCollectionId {
-	return s.Id
-}
-
-func (s StasisTube) EntryType() string {
-	return StasisTubeSourceType
-}
-
 func (s StasisTube) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("stasis tubes cannot transfer to " + dst.SourceType())
 	}
 	return nil
-}
-
-func (s StasisTube) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := s
-	err := decodeItem(&out, encoded)
-	return out, err
 }
 
 func (s StasisTube) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -75,10 +52,6 @@ func (s StasisTube) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (s StasisTube) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return s.GenSinceSpore, s.GenSinceFruitOrSpore
-}
-
-func (s StasisTube) SourceType() string {
-	return StasisTubeSourceType
 }
 
 func (s StasisTube) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
@@ -130,10 +103,6 @@ func (s StasisTube) setTransferChild(ctx context.Context, xfer Transfer, from ge
 
 func (s StasisTube) EntryTypeField() *string {
 	return utils.Pointer(StasisTubeSourceType)
-}
-
-func (s StasisTube) CollectionName() string {
-	return StasisTubeCollectionName
 }
 
 func (s StasisTube) id() []byte {

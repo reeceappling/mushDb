@@ -11,8 +11,6 @@ import (
 	"reflect"
 )
 
-const SalesCollectionName = "sales"
-
 //var (
 //	_ Sellable = &Bag{}
 //	_ Sellable = &Fruit{}
@@ -51,16 +49,6 @@ type Sale struct {
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	AclField          `bson:"inline"` // TODO: handle EVERYWHERE
-}
-
-func (s Sale) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := s
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
-func (s Sale) CollectionName() string {
-	return SalesCollectionName
 }
 
 func (s Sale) EntryTypeField() *string {

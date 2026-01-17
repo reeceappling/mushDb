@@ -39,7 +39,7 @@ type AlternateCollectionIdField struct {
 func (field AlternateCollectionIdField) DbId() BinaryCollectionId {
 	return field.Id.ToBinaryCollectionId()
 }
-func (field AlternateCollectionIdField) StringId() string { return string(field.DbId()) }
+func (field AlternateCollectionIdField) IdValue() any { return string(field.DbId()) }
 
 type AlternateCollectionOptionalParentField struct {
 	Parent *AlternateCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
@@ -87,7 +87,7 @@ type MainCollectionIdField struct {
 func (field MainCollectionIdField) DbId() BinaryCollectionId {
 	return field.Id.ToBinaryCollectionId()
 }
-func (field MainCollectionIdField) StringId() string { return string(field.DbId()) }
+func (field MainCollectionIdField) IdValue() any { return string(field.DbId()) }
 
 type MainCollectionOptionalParentField struct {
 	Parent *MainCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
@@ -100,7 +100,7 @@ type NameIdField struct {
 	Name string `bson:"_id" json:"_id"`
 }
 
-func (field NameIdField) StringId() string {
+func (field NameIdField) IdValue() any {
 	return field.Name
 }
 

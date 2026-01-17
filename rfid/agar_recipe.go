@@ -14,8 +14,6 @@ import (
 	"slices"
 )
 
-const AgarRecipesCollectionName = "agarRecipes"
-
 type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
@@ -31,18 +29,8 @@ type AgarRecipe struct {
 	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (recipe AgarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := recipe
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (recipe AgarRecipe) EntryTypeField() *string {
 	return nil
-}
-
-func (recipe AgarRecipe) CollectionName() string {
-	return AgarRecipesCollectionName
 }
 
 //type NewAgarRecipeRequest struct {

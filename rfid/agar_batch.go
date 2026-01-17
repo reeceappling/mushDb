@@ -15,9 +15,6 @@ import (
 
 // TODO: SPORE SWABS?!?!?!?!
 // TODO: PEGS?????!!?!?!?! Oak, Poplar, Bamboo
-
-const AgarBatchCollectionName = "agarBatches"
-
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
 	// CreationDate is assumed to be the same as on PcRun
@@ -43,18 +40,8 @@ func (field AgarBatchField) Get(ctx context.Context) (out AgarBatch, err error) 
 	return out, err
 }
 
-func (batch AgarBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := batch
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (batch AgarBatch) EntryTypeField() *string {
 	return nil
-}
-
-func (batch AgarBatch) CollectionName() string {
-	return AgarBatchCollectionName
 }
 
 type NewAgarBatchRequest struct {

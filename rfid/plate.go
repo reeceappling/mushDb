@@ -15,11 +15,6 @@ import (
 	"slices"
 )
 
-const (
-	PlatesCollectionName = "plates" // TODO: USE
-	PlateSourceType      = "plate"
-)
-
 type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	MainCollectionIdField             `bson:"inline"`
 	AgarBatchField                    `bson:"inline"` // TODO: will be empty for preexisting
@@ -42,20 +37,7 @@ type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (p *Plate) SetPerms(field AclField) {
-	p.AclField = field
-}
-
-func (p Plate) DbId() MainCollectionId {
-	return p.Id
-}
-
-func (p Plate) EntryType() string {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (p Plate) StringId() string {
+func (p Plate) IdValue() any {
 	return p.Id.dbIdStr() // TODO: ensure ok
 }
 
@@ -64,12 +46,6 @@ func (p Plate) CanTransferTo(dst geneticSource) error {
 		return errors.New("plates cannot transfer to " + dst.SourceType())
 	}
 	return nil
-}
-
-func (p Plate) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := p
-	err := decodeItem(&out, encoded)
-	return out, err
 }
 
 func (p Plate) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -83,10 +59,6 @@ func (p Plate) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (p Plate) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return p.GenSinceSpore, p.GenSinceFruitOrSpore
-}
-
-func (p Plate) SourceType() string {
-	return PlateSourceType
 }
 
 func (p Plate) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
@@ -139,10 +111,6 @@ func (p Plate) setTransferChild(ctx context.Context, xfer Transfer, from genetic
 
 func (p Plate) EntryTypeField() *string {
 	return utils.Pointer(PlateSourceType)
-}
-
-func (p Plate) CollectionName() string {
-	return PlatesCollectionName
 }
 
 func initializePlates(ctx context.Context) error {

@@ -15,11 +15,6 @@ import (
 	"slices"
 )
 
-const (
-	SlantsCollectionName = "slants"
-	SlantSourceType      = "slant"
-)
-
 type Slant struct {
 	MainCollectionIdField `bson:"inline"`
 	AgarBatchField        `bson:"inline"` // TODO: will be empty for preexisting
@@ -44,18 +39,6 @@ type Slant struct {
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
 }
 
-func (s *Slant) SetPerms(field AclField) {
-	s.AclField = field
-}
-
-func (s Slant) DbId() MainCollectionId {
-	return s.Id
-}
-
-func (s Slant) EntryType() string {
-	return SlantSourceType
-}
-
 func (s Slant) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("plates cannot transfer to " + dst.SourceType())
@@ -71,12 +54,6 @@ var (
 	slantStickDowel           = "wooden dowel" // TODO: diff dowel types?
 )
 
-func (s Slant) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := s
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (s Slant) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    SpeciesOptionalField{s.Species},
@@ -88,10 +65,6 @@ func (s Slant) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (s Slant) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return s.GenSinceSpore, s.GenSinceFruitOrSpore
-}
-
-func (s Slant) SourceType() string {
-	return SlantSourceType
 }
 
 func (s Slant) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
@@ -144,10 +117,6 @@ func (s Slant) setTransferChild(ctx context.Context, xfer Transfer, from genetic
 
 func (s Slant) EntryTypeField() *string {
 	return utils.Pointer(SlantSourceType)
-}
-
-func (s Slant) CollectionName() string {
-	return SlantsCollectionName
 }
 
 func (s Slant) id() []byte {

@@ -19,11 +19,6 @@ import (
 
 //func parseName() // TODO: ???
 
-const (
-	LcSyringeSourceType     = "lcSyringe"
-	LcSyringeCollectionName = "lcSyringes"
-)
-
 type LcSyringe struct {
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either purchased (nil), LC, or LcSyringe
@@ -40,18 +35,6 @@ type LcSyringe struct {
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
-}
-
-func (lcs *LcSyringe) SetPerms(field AclField) {
-	lcs.AclField = field
-}
-
-func (lcs LcSyringe) DbId() MainCollectionId {
-	return lcs.Id
-}
-
-func (lcs LcSyringe) EntryType() string {
-	return LcSyringeSourceType
 }
 
 func (lcs LcSyringe) Innoculatable() bool {
@@ -89,12 +72,6 @@ func (sw LcSyringe) setTransferChild(ctx context.Context, xfer Transfer, from ge
 	panic("does not happen")
 }
 
-func (sw LcSyringe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := sw
-	err := decodeItem(&out, encoded)
-	return out, err
-}
-
 func (sw LcSyringe) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
@@ -105,10 +82,6 @@ func (sw LcSyringe) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (sw LcSyringe) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
-}
-
-func (sw LcSyringe) SourceType() string {
-	return LcSyringeSourceType
 }
 
 func (sw LcSyringe) EntryTypeField() *string {
@@ -126,10 +99,6 @@ func (sw LcSyringe) id() []byte {
 //func (sp LcSyringe) knownFruitable() bool {
 //	return false
 //}
-
-func (sw LcSyringe) CollectionName() string {
-	return LcSyringeCollectionName
-}
 
 func initializeSyringes(ctx context.Context) error { // TODO; this
 	// Indices
