@@ -23,35 +23,29 @@ func main() {
 // To regenerate: go build -o goGenerator/mygenerator ./goGenerator
 //go:generate ./goGenerator/mygenerator`
 
-	const interfacesTpl = header + `
-package rfid
-var (
-{{range $typ, $info := .MainCollTypes}}
-	_ MainCollectionItem = &{{$typ}}{}
-{{end}}
-{{range $typ, $info := .MainCollTypes}}
-	_ geneticSource = &{{$typ}}{}
-{{end}}
+	const interfacesTpl = `package rfid
+
+` + header + `
+
+var ({{range $typ, $info := .MainCollTypes}}
+	_ MainCollectionItem = &{{$typ}}{}{{end}}{{range $typ, $info := .MainCollTypes}}
+	_ geneticSource = &{{$typ}}{}{{end}}
 )
 `
 	// The template for the new Go file
-	const tpl = header + `
+	const tpl = `package rfid
 
-package rfid
+` + header + `
 
 import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 const (
-{{range $typ, $info := .MainCollTypes}}
-    {{$info.CollConstName}} = "{{$info.CollName}}"
+{{range $typ, $info := .MainCollTypes}}	{{$info.CollConstName}} = "{{$info.CollName}}"
     {{$info.EntryTypeConstName}} = "{{$info.EntryTypeConstValue}}"
 {{end}}
-{{range $typ, $info := .OtherCollTypes}}
-    {{$info.CollConstName}} = "{{$info.CollName}}"
-{{end}}
-)
-
+{{range $typ, $info := .OtherCollTypes}}	{{$info.CollConstName}} = "{{$info.CollName}}"
+{{end}})
 {{range $typ, $info := .MainCollTypes}}
 func ({{$info.Receiver}} *{{$typ}}) SetPerms(field AclField) {
 	{{$info.Receiver}}.AclField = field
