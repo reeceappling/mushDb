@@ -218,7 +218,7 @@ func updateSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(SubstrateBatchCollectionName)
-		existing, err := GetAltCollectionItemInTxn(ctx, id, SubstrateBatch{})
+		existing, err := GetAltCollectionItemOutsideTxn(ctx, id, SubstrateBatch{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if errors.Is(err, mongo.ErrNoDocuments) {

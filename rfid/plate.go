@@ -263,7 +263,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishCreate(ctx, coll, toInsert, w) // TODO: use in all main creates
+	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w) // TODO: use in all main creates
 }
 
 type updatePlateRequest struct {
@@ -290,7 +290,7 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 	}
 }
 
-func (mods resolvedUpdatePlateRequest) modsFor(existing Plate, aclField AclField) (bson.D, error) {
+func (mods resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
 		updateSaleIfNeeded(mods.Sale, existing.Sale).
@@ -382,30 +382,10 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	println("GOT PLATE") // TODO: THIS
-	user, err := GetAuthInfo(ctx)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !user.HasPermissionToEdit(existing) {
-		http.Error(w, "unauthorized to edit", http.StatusForbidden)
-		return
-	}
-	aclField, err := data.AclFor(ctx, user)
-	println("GOT PERMS") // TODO: THIS
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusForbidden)
-		return
-	}
-	upd, err := out.modsFor(existing, aclField)
-	_, err = handleUpdateMods(ctx, w, coll, existing, id, upd, err) // TODO: use this on all updates
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
 }
 
-func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) {
+func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) {
 	if err != nil {
 		println("mod creation failure: " + err.Error())
 		dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
@@ -531,49 +511,19 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		pix = []PicWithNotes{*importedPic}
 	}
 
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		//finalPerms := data.Perms
-		//if data.Perms != nil {
-		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
-		//	if err != nil {
-		//		return dbErr(w, err.Error(), http.StatusInternalServerError)
-		//	}
-		//	finalPerms = minimalPermsBetween(data.Perms, spec, subsp) // TODO: DO MAXIMAL PERMS WITH data.Perms if not allWrite?
-		//}
+	ctx, db := Db(r)
+	coll := db.Collection(PlatesCollectionName)
 
-		perms, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		acl, err := data.AclFor(ctx, perms)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		toInsert := Plate{
-			MainCollectionIdField:   MainCollectionIdField{id},
-			CreationDateField:       data.CreationDateField,
-			SpeciesOptionalField:    data.SpeciesField.AsOptional(),
-			SubspeciesOptionalField: data.SubspeciesOptionalField,
-			GenerationsFields:       GenerationsFieldFor(gen),
-			PicsField:               PicsField{pix},
-			KnownFruitableField:     data.KnownFruitableField,
-			MostRecentImageField:    MostRecentImageField{importedPic},
-			LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-			AclField:                acl,
-		}
-		coll := ctx.Client().Database(dbName).Collection(PlatesCollectionName)
-		_, err = coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-
-	if err != nil {
-		handleWriteErr(err, w)
+	toInsert := Plate{
+		MainCollectionIdField:   MainCollectionIdField{id},
+		CreationDateField:       data.CreationDateField,
+		SpeciesOptionalField:    data.SpeciesField.AsOptional(),
+		SubspeciesOptionalField: data.SubspeciesOptionalField,
+		GenerationsFields:       GenerationsFieldFor(gen),
+		PicsField:               PicsField{pix},
+		KnownFruitableField:     data.KnownFruitableField,
+		MostRecentImageField:    MostRecentImageField{importedPic},
+		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 	}
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
 }

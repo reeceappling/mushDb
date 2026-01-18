@@ -361,7 +361,7 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(TransfersCollName)
-		existing, err := GetAltCollectionItemInTxn(ctx, id, Transfer{})
+		existing, err := GetAltCollectionItemOutsideTxn(ctx, id, Transfer{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {

@@ -87,7 +87,7 @@ type updateAgarRecipeRequest struct {
 	PermsOnRequest                  // TODO: handle in typescript and handler!
 }
 
-func (req updateAgarRecipeRequest) modsFor(existing AgarRecipe, aclField AclField) (bson.D, error) {
+func (req updateAgarRecipeRequest) modsFor(existing *AgarRecipe, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateNameIfNeeded(req.Name, existing.Name).
 		updateStandardIfNeeded(req.Standard, existing.Standard).
@@ -116,33 +116,19 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(AgarRecipesCollectionName)
-		existing, err := GetAltCollectionItem(ctx, id, AgarRecipe{})
-		if err != nil {
-			stat := http.StatusInternalServerError
-			if err == mongo.ErrNoDocuments {
-				stat = http.StatusNotFound
-			}
-			return dbErr(w, err.Error(), stat)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := req.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := req.modsFor(existing, aclField)
-		return handleUpdateMods(ctx, w, coll, existing, id, upd, err)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(AgarRecipesCollectionName)
+
+	existing, err := GetAltCollectionItem(ctx, id, AgarRecipe{})
 	if err != nil {
-		handleWriteErr(err, w)
+		stat := http.StatusInternalServerError
+		if err == mongo.ErrNoDocuments {
+			stat = http.StatusNotFound
+		}
+		dbErr(w, err.Error(), stat)
+		return
 	}
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
 func initializeAgarRecipes(ctx context.Context) error {
@@ -150,13 +136,13 @@ func initializeAgarRecipes(ctx context.Context) error {
 	coll := db.Collection(AgarRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false), // TODO: names unique?
-		newSimpleIndex("liquids", "liquids.name", false, false, false),
-		newSimpleIndex("agar", "agar", true, false, false),
+		//newSimpleIndex("liquids", "liquids.name", false, false, false),
+		//newSimpleIndex("agar", "agar", true, false, false),
 		standardIndexModel,
-		newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
-		newSimpleIndex("sugars", "sugars.type", false, false, false),
-		newSimpleIndex("additives", "additives.additive", false, false, false),
-		newSimpleIndex("antibiotics", "antibiotics", false, false, false),
+		//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
+		//newSimpleIndex("sugars", "sugars.type", false, false, false),
+		//newSimpleIndex("additives", "additives.additive", false, false, false),
+		//newSimpleIndex("antibiotics", "antibiotics", false, false, false),
 		//Notes (not indexed, unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -419,38 +405,27 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
+	ctx, db := Db(r)
+	coll := db.Collection(AgarRecipesCollectionName)
 
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		entry := AgarRecipe{
-			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			NameField:                  req.NameField,
-			LiquidsField:               req.LiquidsField,
-			Agar:                       req.Agar,
-			StandardField:              req.StandardField,
-			NutrientsField:             req.NutrientsField,
-			SugarsField:                req.SugarsField,
-			AdditivesField:             req.AdditivesField,
-			AntibioticsField:           req.AntibioticsField,
-			NotesField:                 req.NotesField,
-			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-			AclField:                   allCanWriteAcl(),
-		}
-		result := newAgarRecipe(ctx, entry)
-		if result.Err != nil {
-			return dbErr(w, "Agar batch creation failure: "+result.Err.Error(), http.StatusInternalServerError)
-		}
-		bs, errr := json.Marshal(result.Item)
-		if errr != nil {
-			return dbErr(w, errr.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bs)
-	})
-
-	if err != nil {
-		handleWriteErr(err, w)
+	toInsert := AgarRecipe{
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		NameField:                  req.NameField,
+		LiquidsField:               req.LiquidsField,
+		Agar:                       req.Agar,
+		StandardField:              req.StandardField,
+		NutrientsField:             req.NutrientsField,
+		SugarsField:                req.SugarsField,
+		AdditivesField:             req.AdditivesField,
+		AntibioticsField:           req.AntibioticsField,
+		NotesField:                 req.NotesField,
+		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		AclField:                   allCanWriteAcl(),
 	}
+	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
 
+// TODO: USE!
 func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) { // TODO: USE ME
 	out := AgarRecipe{}
 	err := ctx.Value(mongoClientContextKey).(*mongo.Client).

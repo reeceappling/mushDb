@@ -1,6 +1,6 @@
 package rfid
 
-//go:generate ./goGenerator/mygenerator
+//go:generate goGenerator/buildAndGenerate.sh
 
 import (
 	"bytes"
@@ -18,6 +18,7 @@ import (
 	"image/png"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"reflect"
 	"slices"
 	"strings"
@@ -27,25 +28,17 @@ import (
 var ErrNoParentModifiedForTransfer = errors.New("parent not found for transfer update. Shouldnt occur")
 var ErrMissingOptionalField = errors.New("missing optional field")
 var ErrFailedToFinalizeMods = errors.New("failed to finalize mods")
-var ErrInTxnAlreadyTriedToWrite = errors.New("transaction failed, response has been written already") // TODO: do already
-
-var sourceTypeCollections = map[string]string{
-	BagSourceType:             BagsCollectionName,
-	FruitSourceType:           FruitsCollName,
-	FruitingChamberSourceType: FruitingChamberCollectionName,
-	GrainJarSourceType:        GrainJarCollectionName,
-	LcSourceType:              LCCollectionName,
-	LcSyringeSourceType:       LcSyringeCollectionName,
-	MssSourceType:             MssCollectionName,
-	PlateSourceType:           PlatesCollectionName,
-	PlugSourceType:            PlugsCollectionName,
-	SlantSourceType:           SlantsCollectionName,
-	SporePrintSourceType:      SporePrintCollectionName,
-	SporeSwabSourceType:       SporeSwabCollectionName,
-	StasisTubeSourceType:      StasisTubeCollectionName,
-}
 
 // TODO: ALL CREATION ENDPOINTS
+// TODO: USE!
+func urlEncodeString(toEncode string) string {
+	return url.QueryEscape(toEncode)
+}
+
+// TODO: USE!
+func urlDecodeString(encoded string) (string, error) {
+	return url.QueryUnescape(encoded)
+}
 
 var (
 	_ CollectionItem = Project{}

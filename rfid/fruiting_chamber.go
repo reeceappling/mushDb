@@ -273,7 +273,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:       LastUpdatedField{now},
 		AclField:               parentJar.AclField,
 	}
-	finishCreate(ctx, coll, toInsert, w)
+	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
 }
 
 type importFruitingChamberRequest struct {
@@ -421,7 +421,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishImport(ctx, coll, toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, toInsert, data.PermsOnRequest, w)
 
 }
 
@@ -461,7 +461,7 @@ type resolvedUpdateFruitingChamberRequest struct {
 	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
-func (out resolvedUpdateFruitingChamberRequest) modsFor(existing FruitingChamber, aclField AclField) (bson.D, error) {
+func (out resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChamber, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
 		updateSaleIfNeeded(out.Sale, existing.Sale).
@@ -542,5 +542,5 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	finishItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
 }

@@ -3,7 +3,6 @@ package rfid
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -20,9 +19,15 @@ type User struct {
 	// TODO: more (google email, TOTP seed, etc)
 }
 
+func (u User) DbId() string {
+	return u.Email
+}
+
 func (u User) IdValue() any {
 	return u.Email
 }
+
+// TODO: UPDATE USER?
 
 // // TODO: describe
 //
@@ -110,19 +115,20 @@ func generateSalt(length int) ([]byte, error) {
 	return salt, nil
 }
 
-func generateUserSalt() (string, error) {
-	bs, err := generateSalt(64)
-	return string(bs), err
-}
-
-func HashPassword(salt, pw string) (string, error) {
-	h := sha256.New()
-	_, err := h.Write([]byte(salt + pw))
-	if err != nil {
-		return "", errors.New("unable to hash password. Should never happen")
-	}
-	return string(h.Sum(nil)), nil
-}
+//
+//func generateUserSalt() (string, error) {
+//	bs, err := generateSalt(64)
+//	return string(bs), err
+//}
+//
+//func HashPassword(salt, pw string) (string, error) {
+//	h := sha256.New()
+//	_, err := h.Write([]byte(salt + pw))
+//	if err != nil {
+//		return "", errors.New("unable to hash password. Should never happen")
+//	}
+//	return string(h.Sum(nil)), nil
+//}
 
 // func (u User) validatePassword(pw string) error { // TODO: USE
 //
@@ -455,7 +461,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //	}
 //	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 //		coll := ctx.Client().Database(dbName).Collection(UserCollName) // TODO: FIX EVERYTHING BELOW THIS
-//		existing, err := GetAltCollectionItemInTxn(ctx, id, User{})
+//		existing, err := GetAltCollectionItemOutsideTxn(ctx, id, User{})
 //		if err != nil {
 //			stat := http.StatusInternalServerError
 //			if err == mongo.ErrNoDocuments {
@@ -478,7 +484,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 //		if err != nil {
 //			return dbErr(w, err.Error(), http.StatusInternalServerError)
 //		}
-//		resultUser, err := GetAltCollectionItemInTxn(ctx, id, User{})
+//		resultUser, err := GetAltCollectionItemOutsideTxn(ctx, id, User{})
 //		if err != nil {
 //			stat := http.StatusInternalServerError
 //			if err == mongo.ErrNoDocuments {

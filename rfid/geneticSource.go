@@ -39,7 +39,7 @@ type geneticSource interface {
 	Permissioned
 	CanTransferTo(dst geneticSource) error
 	Innoculatable() bool
-	SetPerms(AclField)
+	SetPerms(AclField) // TODO: needs to be a pointer reciever
 }
 
 func childGensForParent(parent geneticSource) (parentInfo GeneticParentInfo, genSpore, genFruitSpore *Generation, err error) {

@@ -297,7 +297,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreate(ctx, coll, toInsert, w)
+	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
 }
 
 type importJarRequest struct {
@@ -451,7 +451,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreate(ctx, coll, toInsert, w)
+	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
 }
 
 type updateJarRequest struct {
@@ -505,7 +505,7 @@ type resolvedUpdateJarRequest struct {
 	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
-func (out resolvedUpdateJarRequest) modsFor(existing GrainJar, aclField AclField) (bson.D, error) {
+func (out resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
 		updateSaleIfNeeded(out.Sale, existing.Sale).
@@ -573,7 +573,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishItemUpdate(ctx, w, coll, out.modsFor, existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.PermsOnRequest)
 }
 
 func Db(r *http.Request) (context.Context, *mongo.Database) {

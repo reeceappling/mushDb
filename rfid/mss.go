@@ -146,41 +146,32 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		var parent SporePrint
-		err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
-		if err != nil {
-			return dbErr(w, "failed to find sporePrint: "+err.Error(), http.StatusBadRequest)
-		}
-		err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
-		if err != nil {
-			return dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		}
-		now := unixTimeForNow()
-		toInsert := MSS{
-			MainCollectionIdField:             MainCollectionIdField{id},
-			CreationDateField:                 CreationDateField{now},
-			SpeciesField:                      SpeciesField{parent.Species},
-			SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-			NotesField:                        NotesField{data.Notes},
-			LastUpdatedField:                  LastUpdatedField{now},
-			AclField:                          parent.AclField, // NOTE: do NOT ensure email is authorized to write on parent, they will just be blocked from viewing.
-		}
-		_, err = db.Collection(MssCollectionName).InsertOne(ctx, toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(MssCollectionName)
+	// Validate parent
+	parent := SporePrint{}
+	err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
 	if err != nil {
-		handleWriteErr(err, w)
+		dbErr(w, "failed to find sporePrint: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	now := unixTimeForNow()
+	toInsert := &MSS{
+		MainCollectionIdField:             MainCollectionIdField{id},
+		CreationDateField:                 CreationDateField{now},
+		SpeciesField:                      SpeciesField{parent.Species},
+		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+		NotesField:                        NotesField{data.Notes},
+		LastUpdatedField:                  LastUpdatedField{now},
+		AclField:                          parent.AclField, // NOTE: do NOT ensure email is authorized to write on parent, they will just be blocked from viewing.
+	}
+	finishCreateMainCollectionEntry(ctx, coll, toInsert, w)
 }
 
 type importMssRequest struct {
@@ -189,7 +180,7 @@ type importMssRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	WriteTagToField
-	//PermsField // TODO: USE SPECIES PERMS
+	PermsOnRequest // TODO: use species perms instead????
 	// image as "img"
 	// No ParentType/Parent because these are assumed to be from outside sources
 }
@@ -217,18 +208,9 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//authinfo, err := GetAuthInfo(r.Context())
-	//if err != nil {
-	//	http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-	//	return
-	//}
-	//spec, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
-	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Email) // TODO: species and subspecies perms?
+	// TODO: validate species and subspecies
+	ctx, db := Db(r)
+	coll := db.Collection(MssCollectionName)
 	toInsert := MSS{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
@@ -236,23 +218,8 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
-		//PermsField:              PermsField{finalPerms},
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(MssCollectionName)
-		_, err = coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
 }
 
 type updateMssRequest struct {
@@ -261,6 +228,16 @@ type updateMssRequest struct {
 	SaleField
 	WriteTagToField
 	PermsOnRequest // TODO: handle in typescript and handler!
+}
+
+func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req.Disposed, existing.Disposed).
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateMssHandler(w http.ResponseWriter, r *http.Request) {
@@ -286,65 +263,22 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		coll := db.Collection(MssCollectionName)
-		// go get current plate
-		existing := MSS{}
-		err := coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
-		if err != nil {
-			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := data.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		//if err = minimalPermsBetween(data.Perms, existing.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return dbErr(w, "old or new perms not writeable by email: "+err.Error(), http.StatusBadRequest)
-		//}
-		if data.Sale != nil && (existing.Sale == nil || *existing.Sale != *data.Sale) {
-			if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", data.Sale}}).Err(); err != nil {
-				return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-			}
-		}
-		upd, err := NewMods().
-			updateSaleIfNeeded(data.Sale, existing.Sale).
-			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
-			updateNotesIfNeeded(data.Notes, existing.Notes).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		}
-		if len(upd) == 0 {
-			return dbErr(w, "no changes made", http.StatusBadRequest)
-		}
+	ctx, db := Db(r)
+	coll := db.Collection(MssCollectionName)
 
-		// write updates to db
-		bsonId := bson.D{{"_id", id}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bs, err = json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bs)
-	})
+	// go get current entry
+	existing := MSS{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 	if err != nil {
-		handleWriteErr(err, w)
+		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	//Validation
+	if data.Sale != nil && (existing.Sale == nil || *existing.Sale != *data.Sale) {
+		if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", data.Sale}}).Err(); err != nil {
+			dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	finishMainCollItemUpdate(ctx, w, coll, data.modsFor, &existing, data.PermsOnRequest)
 }

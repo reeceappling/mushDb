@@ -3,6 +3,7 @@ package rfid
 import (
 	"context"
 	"encoding/json"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -21,7 +22,11 @@ type Project struct {
 	// TODO: make it so we can add/remove users from Projects
 }
 
-func (p Project) AddUser(u User, perm ReadWritePerm) string {
+func (p Project) DbId() string {
+	return string(p.Name)
+}
+
+func (p Project) AddUser(u User, perm *ReadWritePerm) string {
 	// TODO: this!!!!
 	// TODO: update email entry
 	// TODO: update email session?
@@ -85,8 +90,6 @@ func initializeProjects(ctx context.Context) error {
 type createProjectRequest struct {
 	NameField
 	NotesField
-	// TODO: PERMS!
-	//Perms ProjectPerms `json:"perms"` // TODO: validate
 }
 
 func createProjectHandler(w http.ResponseWriter, r *http.Request) {
@@ -104,64 +107,60 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	//authinfo, err := GetAuthInfo(r.Context())
-	//if err != nil {
-	//	http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-	//	return
-	//}
-	//if req.Perms.Blanket != perms.Write {
-	//	authorExistsInPerms := false
-	//	for _, email := range req.Perms.Users.Ids {
-	//		// TODO: validate that each userId exists in the db
-	//		if email.Email.String() == authinfo.Email.String() {
-	//			authorExistsInPerms = true
-	//			break
-	//		}
-	//	}
-	//	if !authorExistsInPerms {
-	//		req.Perms.Users = req.Perms.Users.WithAuthor(ProjectPermUserId{
-	//			Email:  authinfo.Email,
-	//			Val: "FIXME!", // TODO: this
-	//		})
-	//	}
-	//}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(ProjectsCollectionName)
-		now := unixTimeForNow()
-		// TODO: validate all users exist
-		toInsert := Project{
-			Name:              projectName(req.Name),
-			CreationDateField: CreationDateField{now},
-			NotesField:        req.NotesField,
-			LastUpdatedField:  LastUpdatedField{now},
-		}
-		_, err = coll.InsertOne(r.Context(), toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		// TODO: add this project to all email sessions that need it (only if non-blanket-write)
-		//
-		return w.Write(bsOut)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(ProjectsCollectionName)
+	user, err := GetAuthInfo(ctx)
 	if err != nil {
-		handleWriteErr(err, w)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+	// dont allow guests to create projects
+	if user.isGuest() {
+		http.Error(w, "guests cannot create new projects", http.StatusForbidden)
+		return
+	}
+
+	now := unixTimeForNow()
+	toInsert := Project{
+		Name:              projectName(req.Name),
+		CreationDateField: CreationDateField{now},
+		NotesField:        req.NotesField,
+		LastUpdatedField:  LastUpdatedField{now},
+		Perms: ProjectPerms(map[string]*bool{
+			user.Email: utils.Pointer(true),
+		}),
+	}
+	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	// TODO: add this project to the user session
 }
 
 type updateProjectRequest struct {
-	NameField
 	Completed *unixTime        `json:"completed,omitempty"`
 	Notes     AllEntries[Note] `json:"notes"`
-	//Perms     ProjectPerms     `json:"perms"`
-	// TODO: PERMS!
+	Perms     ProjectPerms     `json:"perms"`
 	// TODO: update perms should update users too!
 }
 
 func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
+	urlEncodedProjectName := r.PathValue("id") // TODO: USE!
+	projNameStr, err := urlDecodeString(urlEncodedProjectName)
+	if err != nil {
+		http.Error(w, "bad project name in url", http.StatusBadRequest)
+		return
+	}
+	projName := projectName(projNameStr)
+	ctx := r.Context()
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// Validate user perms for this project
+	// TODO: validate current user can edit
+	if projUserPerm := user.PermsForProject(projName); projUserPerm == nil || bool(*projUserPerm) != true {
+		http.Error(w, "user is not project admin", http.StatusForbidden)
+		return
+	}
 	// TODO: HANDLE CHANGES TO PERMS
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
@@ -175,127 +174,62 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(ProjectsCollectionName)
-		existing := Project{}
-		err = coll.FindOne(ctx, bson.M{"_id": req.Name}).Decode(&existing)
-		if err != nil {
-			stat := http.StatusInternalServerError
-			if err == mongo.ErrNoDocuments {
-				stat = http.StatusNotFound
-			}
-			return dbErr(w, err.Error(), stat)
-		}
-		mods := NewMods().
-			// UpdatePointerIfNeeded("completed", req.Completed, existing.Completed). // TODO: FIX
-			updateNotesIfNeeded(req.Notes, existing.Notes)
-		// TODO: ENSURE THIS USER CAN WRITE TO THIS PROJECT
-
-		//newUsers := map[ProjectPermUserId]bool{} // TODO brand new email to this project. Handle
-		//removedUsers := []ProjectPermUserId{}    // TODO: this email has had their perms revoked. Handle
-		//promotedPerms := []ProjectPermUserId{}   // TODO email can now write. Handle
-		//demotedPerms := []ProjectPermUserId{}    // TODO: email can no longer write, handle
-		//
-		//// TODO: simplify req perms if needed
-		//if req.Perms.Blanket != existing.Perms.Blanket {
-		//	if req.Perms.Blanket == perms.Write {
-		//		mods.Unset("perms")
-		//		// TODO: remove project from users and email sessions as needed
-		//	} else {
-		//		mods = mods.Set("perms", req.Perms)
-		//	}
-		//} else {
-		//	// TODO: check all users in projectPerms for changes (and make sure they exist)
-		//	tempCanWrite := map[Base58Str]bool{}
-		//	tempName := map[Base58Str]string{}
-		//	var existsAlready = false
-		//	for i, userIds := range req.Perms.Users.Ids {
-		//		userIdStr := userIds.Email.asBase58()
-		//		_, existsAlready = tempCanWrite[userIdStr]
-		//		if existsAlready {
-		//			return dbErr(w, fmt.Sprintf(`userId %d already exists in request`, i), http.StatusBadRequest)
-		//		}
-		//		tempCanWrite[userIdStr] = req.Perms.Users.CanWrite[i]
-		//		tempName[userIdStr] = userIds.Val
-		//
-		//	}
-		//
-		//	for i, current := range existing.Perms.Users.Ids {
-		//		id := current.Email.asBase58()
-		//		newPerm, exists := tempCanWrite[]
-		//		if !exists {
-		//			removedUsers = append(removedUsers, current)
-		//		} else {
-		//			if newPerm != existing.Perms.Users.CanWrite[i] {
-		//				if newPerm {
-		//					promotedPerms = append(promotedPerms, current)
-		//				} else {
-		//					demotedPerms = append(demotedPerms, current)
-		//				}
-		//			}
-		//		}
-		//		delete(tempCanWrite, id)
-		//	}
-		//	for uidBase58, canWrite := range tempCanWrite {
-		//		id, err := uidBase58.toAltCollectionId()
-		//		if err != nil {
-		//			panic("SHOULD NEVER HAPPEN: " + err.Error()) // TODO: this
-		//		}
-		//		newUsers[ProjectPermUserId{
-		//			Email:  id,
-		//			Val: tempName[uidBase58],
-		//		}] = canWrite
-		//	}
-		//	if len(newUsers) > 0 {
-		//		// TODO: validate users exist
-		//	}
-		//
-		//	if len(newUsers) > 0 || len(removedUsers) > 0 || len(promotedPerms) > 0 || len(demotedPerms) > 0 {
-		//		mods = mods.Set("perms", req.Perms)
-		//	}
-		//	// TODO: modify users and email sessions if the perms changed
-		//
-		//	// TODO: MODIFY DB,
-		//}
-		upd, err := mods.Finalized()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
-		}
-		if len(upd) == 0 {
-			return dbErr(w, "no changes made", http.StatusBadRequest)
-		}
-		bsonId := bson.D{{"_id", existing.Name}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		//for email, canWrite := range newUsers { //:= map[ProjectPermUserId]bool{} // TODO brand new email to this project. Handle
-		//	// TODO: add project to email in db
-		//	// TODO: add to email session perms (if email has a session)
-		//}
-		//for _, email := range removedUsers { //:= []ProjectPermUserId{}    // TODO: this email has had their perms revoked. Handle
-		//	// TODO: remove project from email in db if can no-longer read
-		//	// TODO: change email session perms
-		//}
-		//for _, email := range promotedPerms { //:= []ProjectPermUserId{}   // TODO email can now write. Handle
-		//	// TODO: change email session perms
-		//}
-		//for _, email := range demotedPerms { //:= []ProjectPermUserId{}    // TODO: email can no longer write, handle
-		//	// TODO: change email session perms
-		//}
-		return w.Write(bsOut)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(ProjectsCollectionName)
+	existing := Project{}
+	err = coll.FindOne(ctx, bson.M{"_id": projName}).Decode(&existing)
 	if err != nil {
-		handleWriteErr(err, w)
+		stat := http.StatusInternalServerError
+		if err == mongo.ErrNoDocuments {
+			stat = http.StatusNotFound
+		}
+		dbErr(w, err.Error(), stat)
+		return
 	}
+	for u, _ := range req.Perms {
+		if _, exists := existing.Perms[u]; !exists {
+			// TODO: validate new user exists
+			result := db.Collection(UserCollName).FindOne(ctx, bson.D{{"_id", u}})
+			if err = result.Err(); err != nil {
+				dbErr(w, "user "+u+" not found", http.StatusNotFound)
+				return
+			}
+		}
+	}
+
+	upd, err := NewMods().
+		updateProjectCompletedIfNeeded(req.Completed, existing.Completed).
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateProjectPermsIfNeeded(req.Perms, existing.Perms).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
+		return
+	}
+	if len(upd) == 0 {
+		dbErr(w, "no changes made", http.StatusBadRequest)
+		return
+	}
+	bsonId := bson.D{{"_id", existing.Name}}
+	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = coll.FindOne(ctx, bsonId).Decode(&existing)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bsOut, err := json.Marshal(existing)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
+	handleWriteErr(err, w)
+	return
 }
 
 //func allUnfinishedProjectsForUser(ctx context.Context, auth AuthInfo) ([]ProjectWithPerm, error) {

@@ -304,37 +304,26 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(JarRecipesCollectionName)
-		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
-		if err != nil {
-			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
-		}
-		toInsert := JarRecipe{
-			AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
-			NameField:                  NameField{req.Name},
-			Grains:                     req.Grains,
-			StandardField:              StandardField{req.Standard},
-			NutrientsField:             NutrientsField{req.Nutrients},
-			SugarsField:                SugarsField{req.Sugars},
-			AdditivesField:             AdditivesField{req.Additives},
-			NotesField:                 NotesField{req.Notes},
-			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-			AclField:                   acl,
-		}
-		_, err = coll.InsertOne(r.Context(), toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bs, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bs)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(JarRecipesCollectionName)
+	acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
 	if err != nil {
-		handleWriteErr(err, w)
+		dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	toInsert := JarRecipe{
+		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
+		NameField:                  NameField{req.Name},
+		Grains:                     req.Grains,
+		StandardField:              StandardField{req.Standard},
+		NutrientsField:             NutrientsField{req.Nutrients},
+		SugarsField:                SugarsField{req.Sugars},
+		AdditivesField:             AdditivesField{req.Additives},
+		NotesField:                 NotesField{req.Notes},
+		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		AclField:                   acl,
+	}
+	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
 
 type updateJarRecipeRequest struct {
@@ -342,6 +331,17 @@ type updateJarRecipeRequest struct {
 	StandardField
 	Notes          AllEntries[Note] `json:"notes"`
 	PermsOnRequest                  // TODO: handle in typescript and handler!
+}
+
+func (req updateJarRecipeRequest) modsFor(existing *JarRecipe, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateNameIfNeeded(req.Name, existing.Name).
+		updateStandardIfNeeded(req.Standard, existing.Standard).
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		// TODO: for perms updates, disallow removing self???
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: txn?
@@ -363,58 +363,13 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: t
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(JarRecipesCollectionName)
-		existing := JarRecipe{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
-		if err != nil {
-			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := req.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		// TODO: make and/or validate grain changes?
-		upd, err := NewMods().
-			updateNameIfNeeded(req.Name, existing.Name).
-			updateStandardIfNeeded(req.Standard, existing.Standard).
-			updateNotesIfNeeded(req.Notes, existing.Notes).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		}
-		if len(upd) == 0 {
-			return dbErr(w, "no changes made", http.StatusBadRequest)
-		}
-		bsonId := bson.D{{"_id", existing.Id}}
-		// TODO: USE handleUpdateMods
-		// TODO: UPDATE PERMS!
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bs, err = json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bs)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(JarRecipesCollectionName)
+	existing := JarRecipe{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 	if err != nil {
-		HandleHttpWriteError(err)
+		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }

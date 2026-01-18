@@ -23,13 +23,13 @@ type Bag struct {
 	FilterSize              string `bson:"filterSize" json:"filterSize"`
 	CreationDateField       `bson:"inline"`
 	GenerationsFields       `bson:"inline"`
-	SealDate                *unixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField            `bson:"inline"` // Initial wetness (refer to scale on field struct) // TODO: new
-	KnownFruitableField     `bson:"inline"` // set on transfer in, or once fruited
-	SpeciesOptionalField    `bson:"inline"` // set on transfer in
-	SubspeciesOptionalField `bson:"inline"` // set on transfer in
-	InnocField              `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField       `bson:"inline"` // Set on transfer out
+	SealDate                *unixTime `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField            `bson:"inline"`                                                 // Initial wetness (refer to scale on field struct) // TODO: new
+	KnownFruitableField     `bson:"inline"`                                                 // set on transfer in, or once fruited
+	SpeciesOptionalField    `bson:"inline"`                                                 // set on transfer in
+	SubspeciesOptionalField `bson:"inline"`                                                 // set on transfer in
+	InnocField              `bson:"inline"`                                                 // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField       `bson:"inline"`                                                 // Set on transfer out
 	// TODO: make the next 2 a combo field?
 	BinaryOptionalParentField `bson:"inline"` // Set on transfer in
 	ParentTypeField           `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
@@ -242,19 +242,17 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	// Validate
+	// Validate request
 	_, err = data.PcRunField.Get(ctx)
 	if err != nil {
 		http.Error(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	batch, err := data.SubstrateBatchField.Get(ctx)
 	if err != nil {
 		http.Error(w, "Substrate batch validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// validate wetness
 	if err = data.WetnessField.Validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -273,7 +271,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:            LastUpdatedFieldForNow(),
 		AclField:                    allCanWriteAcl(),
 	}
-	finishCreate(ctx, coll, toInsert, w) // TODO: use in all main creates
+	finishCreateMainCollectionEntry(ctx, coll, toInsert, w) // TODO: use in all main creates
 }
 
 type updateBagRequest struct {
@@ -312,16 +310,16 @@ type resolvedUpdateBagRequest struct {
 	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
-func (out resolvedUpdateBagRequest) modsFor(current Bag, aclField AclField) (bson.D, error) {
+func (out resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(out.KnownFruitable, current.KnownFruitable).
-		updateSaleIfNeeded(out.Sale, current.Sale).
-		updateDisposedIfNeeded(out.Disposed, current.Disposed).
-		updateNotesIfNeeded(out.Notes, current.Notes).
-		updatePicsIfNeeded(out.Images, current.Pics).
-		updateContamsIfNeeded(out.Contams, current.Contaminations).
-		updateFlushesIfNeeded(out.Flushes, current.Flushes).
-		updatePermsIfNeeded(aclField.ACL, current.ACL).
+		updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
+		updateSaleIfNeeded(out.Sale, existing.Sale).
+		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
+		updateNotesIfNeeded(out.Notes, existing.Notes).
+		updatePicsIfNeeded(out.Images, existing.Pics).
+		updateContamsIfNeeded(out.Contams, existing.Contaminations).
+		updateFlushesIfNeeded(out.Flushes, existing.Flushes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -391,7 +389,7 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
 }
 
 type importBagRequest struct {
@@ -542,5 +540,5 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 		NotesField:              NotesField{},
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 	}
-	finishImport(ctx, coll, *toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, toInsert, data.PermsOnRequest, w)
 }

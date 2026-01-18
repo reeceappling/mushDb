@@ -115,37 +115,33 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		coll := db.Collection(SalesCollectionName)
-		now := unixTimeForNow()
-		id := newAlternateCollectionId()
-		toInsert := Sale{
-			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			CreationDateField:          unixTimeForNow().asCreationDate(),
-			NotesField:                 req.NotesField,
-			LastUpdatedField:           LastUpdatedField{now},
-			// TODO: USE PARENT PERMS
-			//PermsField:                 PermsField{nil}, // TODO: THIS!!!!!!!!!!!!!
-		}
-		_, err = coll.InsertOne(r.Context(), toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
+	ctx, db := Db(r)
+	coll := db.Collection(SalesCollectionName)
+
+	now := unixTimeForNow()
+	id := newAlternateCollectionId()
+	toInsert := Sale{
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		CreationDateField:          unixTimeForNow().asCreationDate(),
+		NotesField:                 req.NotesField,
+		LastUpdatedField:           LastUpdatedField{now},
+		// TODO: USE PARENT PERMS?????
+		//PermsField:                 PermsField{nil}, // TODO: THIS!!!!!!!!!!!!!
 	}
+	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
 }
 
 type updateSaleRequest struct {
 	Notes          AllEntries[Note]
 	PermsOnRequest // TODO: ???? handle in typescript and handler!
+}
+
+func (req updateSaleRequest) modsFor(existing *Sale, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
@@ -167,59 +163,17 @@ func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to convert id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		coll := db.Collection(SalesCollectionName)
-		existing := Sale{}
-		err = coll.FindOne(ctx, bson.M{"_id": id}).Decode(&existing)
-		if err != nil {
-			stat := http.StatusInternalServerError
-			if err == mongo.ErrNoDocuments {
-				stat = http.StatusNotFound
-			}
-			return dbErr(w, err.Error(), stat)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := req.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		//if err = minimalPermsBetween(existing.Perms, req.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return dbErr(w, "bad overlapping perms for email: "+err.Error(), http.StatusBadRequest)
-		//}
-		upd, err := NewMods().
-			updateNotesIfNeeded(req.Notes, existing.Notes).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		}
-		if len(upd) == 0 {
-			return dbErr(w, "no changes made", http.StatusBadRequest)
-		}
-		bsonId := bson.D{{"_id", id}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(SalesCollectionName)
+	existing := Sale{}
+	err = coll.FindOne(ctx, bson.M{"_id": id}).Decode(&existing)
 	if err != nil {
-		handleWriteErr(err, w)
+		stat := http.StatusInternalServerError
+		if err == mongo.ErrNoDocuments {
+			stat = http.StatusNotFound
+		}
+		dbErr(w, err.Error(), stat)
+		return
 	}
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }

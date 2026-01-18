@@ -261,7 +261,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 		http.Error(w, "parent species was nil", http.StatusInternalServerError)
 		return
 	}
-	toInsert := Fruit{
+	toInsert := &Fruit{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		CreationDateField:                 CreationDateField{unixTime(time.Now().UnixMilli())},
 		SpeciesField:                      SpeciesField{*parentGenetics.Species},
@@ -276,7 +276,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 		AclField:                          AclField{parent.Permissions()},
 	}
 	// TODO: edit parent?
-	finishCreate(ctx, coll, toInsert, w)
+	finishCreateMainCollectionEntry(ctx, coll, toInsert, w)
 }
 
 type updateFruitRequest struct {
@@ -307,7 +307,7 @@ type resolvedUpdateFruitRequest struct {
 	PermsOnRequest                                              // TODO: handle in typescript and handler!
 }
 
-func (out resolvedUpdateFruitRequest) modsFor(existing Fruit, aclField AclField) (bson.D, error) {
+func (out resolvedUpdateFruitRequest) modsFor(existing *Fruit, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
 		updateNotesIfNeeded(out.Notes, existing.Notes).
@@ -351,17 +351,17 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest) // TODO: DO THIS EVERYWHERE!
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest) // TODO: DO THIS EVERYWHERE!
 }
 
 // TODO: MOVE ME
-func finishItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
+func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if !user.HasPermissionToEdit(*existing) {
+	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
@@ -370,8 +370,30 @@ func finishItemUpdate[T MainCollectionItem](ctx context.Context, w http.Response
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	upd, err := modsFor(*existing, aclField)
-	handleUpdateMods(ctx, w, coll, *existing, (*existing).DbId(), upd, err)
+	upd, err := modsFor(existing, aclField)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	return
+}
+
+// TODO: MOVE ME
+func finishAltCollItemUpdate[T PermissionedAltCollectionItem](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
+	// TODO: ensure all callers properly
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !user.HasPermissionToEdit(existing) {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
+	aclField, err := reqPerms.AclFor(ctx, user)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	upd, err := modsFor(existing, aclField)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
 	return
 }
 
@@ -506,5 +528,5 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 		NotesField:              NotesField{data.Notes},
 		LastUpdatedField:        LastUpdatedField{now},
 	}
-	finishImport(ctx, coll, toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, toInsert, data.PermsOnRequest, w)
 }

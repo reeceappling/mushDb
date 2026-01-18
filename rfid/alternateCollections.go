@@ -10,26 +10,18 @@ import (
 	"strconv"
 )
 
-var (
-	_ AltCollectionItem = PCRun{}
-	_ AltCollectionItem = AgarBatch{}
-	_ AltCollectionItem = AgarRecipe{}
-	_ AltCollectionItem = LcRecipe{}
-	_ AltCollectionItem = JarRecipe{}
-	_ AltCollectionItem = SubstrateRecipe{}
-	_ AltCollectionItem = Transfer{}
-	_ AltCollectionItem = Fruit{}      // TODO: main or alt?
-	_ AltCollectionItem = Species{}    // this is a str id case
-	_ AltCollectionItem = Subspecies{} // this is a str id case
+type AltCollectionIdType interface {
+	AlternateCollectionId | string
+}
 
-	_ AltCollectionItem = Project{}
-	_ AltCollectionItem = Sale{}
-	//_ AltCollectionItem = User{}
-	_ AltCollectionItem = SubstrateBatch{}
-)
-
-type AltCollectionItem interface {
+type AltCollectionItem[T AltCollectionIdType] interface {
 	CollectionItem
+	DbId() T
+}
+
+type PermissionedAltCollectionItem interface {
+	AltCollectionItem[AlternateCollectionId]
+	Permissioned
 }
 
 func ListEntriesHandler() http.Handler {

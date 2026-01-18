@@ -1,9 +1,9 @@
 package rfid
 
 import (
+	"context"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/goUtils/v2/utils/slices"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // ACL -> users / Projects
@@ -64,67 +64,80 @@ func (acl *ACL) AsField() AclField {
 	return AclField{ACL: acl}
 }
 
-func (acl *ACL) userIdPermission(email string) ReadWritePerm {
+func (acl *ACL) userIdPermission(email string) *ReadWritePerm {
 	if acl == nil {
-		return utils.Pointer(true)
+		return newPerm(true)
 	}
 	if userPerm, exists := (*acl).Users[email]; exists {
-		return &userPerm
+		return newPerm(userPerm)
 	}
-	return nil
+	return noPerm()
 }
 
 // TODO: ensure this works
-func (acl *ACL) HighestPermFor(perms ResolvedUserPerms) ReadWritePerm {
+func (acl *ACL) HighestPermFor(perms ResolvedUserPerms) *ReadWritePerm {
 	if acl == nil || (perms.admin != nil && (*perms.admin)) {
-		return utils.Pointer(true)
+		return newPerm(true)
 	}
 	// TODO: handle guest?
 	// Handle blanket perm
-	var maxPerm ReadWritePerm = nil
+	var maxPerm *ReadWritePerm = nil
 	if acl.BlanketPerm {
-		maxPerm = utils.Pointer(false)
+		maxPerm = newPerm(false)
 	}
 
 	maxPerm = acl.userIdPermission(perms.Email)
 	if maxPerm != nil && *maxPerm == true {
-		return utils.Pointer(true)
+		return newPerm(true)
 	}
 	for proj, canWrite := range (*acl).Projects {
 		if projPerm, exists := perms.projects[proj]; exists {
 			userPermForProjectAndEntry := (projPerm != nil) && canWrite
 			if userPermForProjectAndEntry {
-				return utils.Pointer(projPerm != nil)
+				return newPerm(projPerm != nil)
 			}
 			if maxPerm == nil {
-				maxPerm = utils.Pointer(false)
+				maxPerm = newPerm(false)
 			}
-			maxPerm = maxPermsBetween(maxPerm, utils.Pointer(projPerm != nil))
+			maxPerm = maxPermsBetween(maxPerm, newPerm(projPerm != nil))
 		}
 	}
 	return maxPerm
 }
 
-type ReadWritePerm *bool // nil is cant do anything, false is read, true is write
+type ReadWritePerm bool // must always be used as *ReadWritePerm! nil is cant do anything, false is read, true is write
+func (rw *ReadWritePerm) Copy() *ReadWritePerm {
+	if rw == nil {
+		return nil
+	}
+	return utils.Pointer(ReadWritePerm(*rw == true))
+}
+func newPerm(canWrite bool) *ReadWritePerm {
+	out := ReadWritePerm(canWrite)
+	return &out
+}
+func noPerm() *ReadWritePerm {
+	return nil
+}
 
-func maxPermsBetween(ps ...ReadWritePerm) ReadWritePerm {
+func maxPermsBetween(ps ...*ReadWritePerm) *ReadWritePerm {
 	if len(ps) == 0 {
 		return nil
 	}
-	var out ReadWritePerm = nil
+	var out *ReadWritePerm = nil
 	for _, perm := range ps {
 		if perm != nil {
 			if *perm {
-				return utils.Pointer(true) // can write
+				return newPerm(true) // can write
 			}
 			if out == nil {
-				out = utils.Pointer(false)
+				out = newPerm(false)
 			}
 		}
 	}
 	return out
 }
-func minPermsBetween(ps ...ReadWritePerm) ReadWritePerm {
+func minPermsBetween(ps ...*ReadWritePerm) *ReadWritePerm {
 	if len(ps) == 0 {
 		return nil
 	}
@@ -133,11 +146,11 @@ func minPermsBetween(ps ...ReadWritePerm) ReadWritePerm {
 		if perm == nil {
 			return nil
 		}
-		if !(*perm) && temp {
+		if !bool(*perm) && temp {
 			temp = false
 		}
 	}
-	return &temp
+	return newPerm(temp)
 }
 
 type Perm[T any] struct {
@@ -153,7 +166,7 @@ type ResolvedUserPerms struct {
 
 func (perms ResolvedUserPerms) HasPermissionToEdit(item Permissioned) bool {
 	userPerm := item.Permissions().HighestPermFor(perms)
-	return userPerm != nil && *userPerm
+	return userPerm != nil && bool(*userPerm)
 }
 
 func (perms ResolvedUserPerms) isAdmin() bool {
@@ -163,8 +176,26 @@ func (perms ResolvedUserPerms) isAdmin() bool {
 func (perms ResolvedUserPerms) isGuest() bool {
 	return perms.admin == nil
 }
+func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWritePerm {
+	if perms.admin == nil {
+		return nil // Guest, cant
+	}
+	if *perms.admin {
+		return newPerm(true)
+	}
+	userProjPerm, exists := perms.projects[projName]
+	if !exists {
+		return nil
+	}
+	if userProjPerm == nil {
+		return newPerm(false)
+	}
+	// False is can write on project items, but not project itself
+	// True is project admin
+	return newPerm(*userProjPerm == true)
+}
 
-func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permissioned) ReadWritePerm {
+func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permissioned) *ReadWritePerm {
 	out := true
 	for _, item := range entryPermsets {
 		minPermsBetween()
@@ -172,19 +203,41 @@ func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permiss
 		if thisPerm == nil {
 			return nil
 		}
-		out = out && *thisPerm
+		out = out && bool(*thisPerm)
 	}
-	return &out
+	return newPerm(out)
 }
 
 type ProjectPerms map[string]*bool // TODO: USE // map of email to perm. nil is readOnly, false is write but not edit the project, true is full control over project
+
+func (pp ProjectPerms) Equal(other ProjectPerms) bool {
+	if len(pp) != len(other) {
+		return false
+	}
+	for email, permA := range pp {
+		permB, exists := other[email]
+		if !exists {
+			return false
+		}
+		if permA == nil {
+			if permB != nil {
+				return false
+			}
+		} else {
+			if permB == nil || *permA != *permB {
+				return false
+			}
+		}
+	}
+	return true
+}
 
 type UserPerms struct { // TODO: USE!
 	Admin    *bool         `bson:"admin,omitempty" json:"admin,omitempty"` // nil == guest, false == regular email, true==Admin
 	Projects []projectName `bson:"projects,omitempty" json:"projects,omitempty"`
 }
 
-func newAlwaysReadableAcl(ctx mongo.SessionContext, thisUserPerms ResolvedUserPerms, usersThatCanEdit []string, projectsThatCanEdit []projectName) (AclField, error) {
+func newAlwaysReadableAcl(ctx context.Context, thisUserPerms ResolvedUserPerms, usersThatCanEdit []string, projectsThatCanEdit []projectName) (AclField, error) {
 	return PermsOnRequest{
 		UserPerms: slices.MapToMap(usersThatCanEdit, func(i string) (string, bool) {
 			return i, true
@@ -192,6 +245,6 @@ func newAlwaysReadableAcl(ctx mongo.SessionContext, thisUserPerms ResolvedUserPe
 		ProjectPerms: slices.MapToMap(projectsThatCanEdit, func(i projectName) (projectName, bool) {
 			return i, true
 		}),
-		BlanketPerm: utils.Pointer(false),
+		BlanketPerm: newPerm(false),
 	}.AclFor(ctx, thisUserPerms)
 }

@@ -270,43 +270,24 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	//	http.Error(w, "can not write with provided perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
-	perms, err := GetAuthInfo(r.Context())
+	ctx, db := Db(r)
+	coll := db.Collection(SpeciesCollectionName)
+	// Validate
+	// TODO: Aliases?
+	err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		acl, err := newAlwaysReadableAcl(ctx, perms, nil, nil)
-		if err != nil {
-			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
-		}
-		db := ctx.Client().Database(dbName)
-		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		coll := ctx.Client().Database(dbName).Collection(SpeciesCollectionName)
-		toInsert := Species{
-			NameIdField:       NameIdField{req.Name},
-			ScientificName:    req.ScientificName,
-			AliasesField:      req.AliasesField,
-			StandardSubstrate: req.Substrate,
-			NotesField:        req.NotesField,
-			LastUpdatedField:  LastUpdatedField{unixTimeForNow()},
-			AclField:          acl,
-		}
-		_, err = coll.InsertOne(r.Context(), toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
+	toInsert := Species{
+		NameIdField:       NameIdField{req.Name},
+		ScientificName:    req.ScientificName,
+		AliasesField:      req.AliasesField,
+		StandardSubstrate: req.Substrate,
+		NotesField:        req.NotesField,
+		LastUpdatedField:  LastUpdatedField{unixTimeForNow()},
 	}
+	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
 }
 
 type updateSpeciesRequest struct {
@@ -314,6 +295,15 @@ type updateSpeciesRequest struct {
 	Notes     AllEntries[Note]      `json:"notes,omitempty"`
 	AliasesField
 	PermsOnRequest // TODO: handle in typescript and handler!
+}
+
+func (out updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (bson.D, error) {
+	return NewMods().
+		UpdateValueIfNeeded("standardSubstrate", out.Substrate, existing.StandardSubstrate). // TODO: validate ok
+		updateNotesIfNeeded(out.Notes, existing.Notes).
+		updateAliasesIfNeeded(out.Aliases, existing.Aliases).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		Finalized()
 }
 
 func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -335,64 +325,31 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		coll := db.Collection(SpeciesCollectionName)
-		existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically
-		if err != nil {
-			stat := http.StatusInternalServerError
-			if errors.Is(err, mongo.ErrNoDocuments) {
-				stat = http.StatusNotFound
-			}
-			return dbErr(w, err.Error(), stat)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := req.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := NewMods().
-			UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
-			updateNotesIfNeeded(req.Notes, existing.Notes).
-			updateAliasesIfNeeded(req.Aliases, existing.Aliases).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		}
-		if req.Substrate.asBase58() != existing.StandardSubstrate.asBase58() {
-			err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
-			if err != nil {
-				return dbErr(w, err.Error(), http.StatusInternalServerError)
-			}
-		}
-		if len(upd) == 0 {
-			return dbErr(w, "no changes made", http.StatusBadRequest)
-		}
-		bsonId := bson.D{{"_id", speciesName}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+
+	ctx, db := Db(r)
+	coll := db.Collection(SpeciesCollectionName)
+
+	// TODO: ensure next line works
+	existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically
 	if err != nil {
-		handleWriteErr(err, w)
+		stat := http.StatusInternalServerError
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			stat = http.StatusNotFound
+		}
+		dbErr(w, err.Error(), stat)
+		return
 	}
+
+	// Validate substrate exists
+	if req.Substrate.asBase58() != existing.StandardSubstrate.asBase58() {
+		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
+		if err != nil {
+			dbErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	// TODO: FIX!!!!!
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
 func getSpecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {

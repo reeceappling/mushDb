@@ -4,20 +4,6 @@ import (
 	"errors"
 )
 
-type WetnessField struct {
-	Wetness *int `bson:"wetness,omitempty" json:"wetness,omitempty"` // nil==unknown, 0== very dry, 10==veryWet, 5==perfect fieldCapacity, normal range 4-6
-}
-
-func (field WetnessField) Validate() error {
-	if field.Wetness == nil {
-		return nil
-	}
-	if *field.Wetness < 0 || *field.Wetness > 10 {
-		return errors.New("Invalid wetness, must either be nonexistent or 0-10")
-	}
-	return nil
-}
-
 // TODO: DO THIS WHOLE THING???
 // TODO: what about mixed-grain batches????
 

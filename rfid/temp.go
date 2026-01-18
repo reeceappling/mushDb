@@ -118,7 +118,7 @@ func GetCollectionItemInTxn(ctx context.Context, id MainCollectionId, sourceType
 	return
 }
 
-func GetAltCollectionItem[T AltCollectionItem](ctx context.Context, id AlternateCollectionId, item T) (out T, err error) {
+func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id AlternateCollectionId, item T) (out T, err error) {
 	out = item
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
@@ -131,27 +131,13 @@ func GetAltCollectionItem[T AltCollectionItem](ctx context.Context, id Alternate
 	if err != nil {
 		return out, err
 	}
-	//authInfo, err := GetAuthInfo(ctx)
-	//if err != nil {
-	//	return out, err
-	//}
-	//if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
-	//	temp, ok := interface{}(out).(Permissioned)
-	//	if !ok {
-	//		return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
-	//	}
-	//
-	//	if temp.Permissions().PermissionFor(authInfo) == perms.None {
-	//		return out, errors.New("no permission")
-	//	}
-	//}
 	return out, nil
 }
 
-func GetAltCollectionItemInTxn[T AltCollectionItem](ctx mongo.SessionContext, id AlternateCollectionId, item T) (out T, err error) {
+// TODO: used to be in txn!
+func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id AlternateCollectionId, item T) (out T, err error) {
 	out = item
-	encodedResult := ctx.Client().
-		Database(dbName).
+	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(item.CollectionName()).
 		FindOne(ctx, bson.D{{"_id", id}})
 	if encodedResult.Err() != nil {
@@ -178,10 +164,9 @@ func GetAltCollectionItemInTxn[T AltCollectionItem](ctx mongo.SessionContext, id
 	return out, nil
 }
 
-func GetSpeciesNameInTxn(ctx mongo.SessionContext, name string) (out Species, err error) { // TODO: make sure this works as intended!
+func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err error) { // TODO: make sure this works as intended!
 	out = Species{}
-	encodedResult := ctx.Client().
-		Database(dbName).
+	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(SpeciesCollectionName).
 		FindOne(ctx, bson.D{{"_id", name}})
 	if encodedResult.Err() != nil {

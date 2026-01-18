@@ -1,6 +1,7 @@
 package rfid
 
 import (
+	"errors"
 	"fmt"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"math"
@@ -36,13 +37,27 @@ type AlternateCollectionIdField struct {
 	Id AlternateCollectionId `bson:"_id" json:"_id"`
 }
 
-func (field AlternateCollectionIdField) DbId() BinaryCollectionId {
-	return field.Id.ToBinaryCollectionId()
+func (field AlternateCollectionIdField) DbId() AlternateCollectionId {
+	return field.Id
 }
-func (field AlternateCollectionIdField) IdValue() any { return string(field.DbId()) }
+func (field AlternateCollectionIdField) IdValue() any { return field.DbId() } // TODO: DEL!
 
 type AlternateCollectionOptionalParentField struct {
 	Parent *AlternateCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
+}
+
+type WetnessField struct {
+	Wetness *int `bson:"wetness,omitempty" json:"wetness,omitempty"` // nil==unknown, 0== very dry, 10==veryWet, 5==perfect fieldCapacity, normal range 4-6
+}
+
+func (field WetnessField) Validate() error {
+	if field.Wetness == nil {
+		return nil
+	}
+	if *field.Wetness < 0 || *field.Wetness > 10 {
+		return errors.New("Invalid wetness, must either be nonexistent or 0-10")
+	}
+	return nil
 }
 
 type AntibioticsField struct {
@@ -101,6 +116,9 @@ type NameIdField struct {
 }
 
 func (field NameIdField) IdValue() any {
+	return field.Name
+} // TODO: DELETE?
+func (field NameIdField) DbId() string {
 	return field.Name
 }
 

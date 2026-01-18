@@ -363,6 +363,17 @@ type resolvedUpdateSporePrintRequest struct {
 	PermsOnRequest // TODO: handle in typescript and handler!
 }
 
+func (out resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateSaleIfNeeded(out.Sale, existing.Sale).
+		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
+		updateNotesIfNeeded(out.Notes, existing.Notes).
+		updatePicsIfNeeded(out.Pics, existing.Pics).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+}
+
 func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateSporePrintRequest{}
 	b58Id := Base58Str(r.PathValue("id")) // TODO: ensure ok
@@ -388,62 +399,15 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		out.Pics.New[i].Location = imageLocation(loc)
 	}
 
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(SporePrintCollectionName)
-		// go get current sporePrint
-		existing := SporePrint{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
-		if err != nil {
-			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := out.AclFor(ctx, user) // TODO: USE IN modsFor
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		//if err = minimalPermsBetween(existing.Perms, data.Perms).ValidateUserCanWrite(ctx); err != nil {
-		//	return dbErr(w, "failed to validate overlapping permissions: "+err.Error(), http.StatusBadRequest)
-		//}
-		upd, err := NewMods().
-			updateSaleIfNeeded(out.Sale, existing.Sale).
-			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
-			updateNotesIfNeeded(data.Notes, existing.Notes).
-			updatePicsIfNeeded(out.Pics, existing.Pics).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		}
-		if len(upd) == 0 {
-			return dbErr(w, "no changes made", http.StatusBadRequest)
-		}
-
-		// write updates to db
-		bsonId := bson.D{{"_id", id}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(SporePrintCollectionName)
+	existing := SporePrint{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 	if err != nil {
-		HandleHttpWriteError(err)
+		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
 }
 
 type importSporePrintRequest struct {
@@ -544,52 +508,18 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		pix = []PicWithNotes{*importedPic}
 	}
 
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		// TODO: add print to mapColl
-		//finalPerms := data.Perms
-		//if data.Perms != nil {
-		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
-		//	if err != nil {
-		//		return dbErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
-		//	}
-		//	finalPerms = minimalPermsBetween(spec, subsp)
-		//	// TODO: add email perms if provided, as well as make email author?
-		//	if !finalPerms.Valid() {
-		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
-		//		return dbErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
-		//	}
-		//}
-		perms, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		acl, err := data.AclFor(ctx, perms)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		toInsert := SporePrint{
-			MainCollectionIdField:   MainCollectionIdField{id},
-			CreationDateField:       data.CreationDateField,
-			SpeciesField:            data.SpeciesField,
-			SubspeciesOptionalField: data.SubspeciesOptionalField,
-			PicsField:               PicsField{pix},
-			MostRecentImageField:    MostRecentImageField{importedPic},
-			NotesField:              data.NotesField,
-			LastUpdatedField:        LastUpdatedFieldForNow(),
-			AclField:                acl,
-		}
-		coll := ctx.Client().Database(dbName).Collection(SporePrintCollectionName)
-		_, err = coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
+	ctx, db := Db(r)
+	coll := db.Collection(SporePrintCollectionName)
+	// TODO: validate species and subspecies
+	toInsert := SporePrint{
+		MainCollectionIdField:   MainCollectionIdField{id},
+		CreationDateField:       data.CreationDateField,
+		SpeciesField:            data.SpeciesField,
+		SubspeciesOptionalField: data.SubspeciesOptionalField,
+		PicsField:               PicsField{pix},
+		MostRecentImageField:    MostRecentImageField{importedPic},
+		NotesField:              data.NotesField,
+		LastUpdatedField:        LastUpdatedFieldForNow(),
 	}
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
 }

@@ -541,6 +541,17 @@ func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {
 	return updatePointerIfNeeded(upd, "confirmedClean", future, existing)
 }
 
+func (upd *Mods) updateProjectCompletedIfNeeded(future, existing *unixTime) *Mods {
+	return updatePointerIfNeeded(upd, "completed", future, existing)
+}
+
+func (upd *Mods) updateProjectPermsIfNeeded(future, existing ProjectPerms) *Mods {
+	if future.Equal(existing) { // TODO: validate works
+		return upd
+	}
+	return upd.Set("perms", future)
+}
+
 func (upd *Mods) updateLastUpdatedIfNeeded() *Mods {
 	if upd.IsEmpty() {
 		return upd

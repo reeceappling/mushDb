@@ -77,44 +77,30 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "runtime must be greater than 10 minutes", http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	resolvedUserPerms, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
-		return
+	ctx, db := Db(r)
+	coll := db.Collection(PcRunCollectionName)
+	toInsert := PCRun{
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		CreationDateField:          req.CreationDateField,
+		RunTimeMinutes:             req.RunTimeMinutes,
+		NotesField:                 req.NotesField,
+		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		AclField:                   allCanWriteAcl(), // TODO: ? acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
 	}
-
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
-		if err != nil {
-			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
-		}
-		toInsert := PCRun{
-			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			CreationDateField:          req.CreationDateField,
-			RunTimeMinutes:             req.RunTimeMinutes,
-			NotesField:                 req.NotesField,
-			LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-			AclField:                   acl,
-		}
-		client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-		_, err = client.Database(dbName).Collection(PcRunCollectionName).InsertOne(ctx, toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusBadRequest)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
 
 type updatePcRunRequest struct {
 	Notes          AllEntries[Note] `json:"notes"`
 	PermsOnRequest                  // TODO: handle in typescript and handler!
+}
+
+func (req updatePcRunRequest) modsFor(existing *PCRun, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
@@ -136,6 +122,8 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	ctx, db := Db(r)
+	coll := db.Collection(PcRunCollectionName)
 	existing, err := GetAltCollectionItem(r.Context(), id, PCRun{})
 	if err != nil {
 		stat := http.StatusInternalServerError
@@ -145,48 +133,7 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := req.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		coll := ctx.Client().Database(dbName).Collection(PcRunCollectionName)
-		upd, err := NewMods().
-			updateNotesIfNeeded(req.Notes, existing.Notes).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		}
-		if len(upd) == 0 {
-			return dbErr(w, "no changes made", http.StatusBadRequest)
-		}
-		bsonId := bson.D{{"_id", existing.Id}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		HandleHttpWriteError(err)
-	}
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
 type PcRunField struct {

@@ -161,7 +161,7 @@ func initializeSubstrates(ctx context.Context) error {
 type PermsOnRequest struct {
 	UserPerms    map[string]bool      `json:"userPerms,omitempty"` // Bool is canEdit
 	ProjectPerms map[projectName]bool `json:"projectPerms,omitempty"`
-	BlanketPerm  ReadWritePerm        `json:"blanketPerm,omitempty"` // TODO: ensure this is ok and we don't want publiclyReadable instead
+	BlanketPerm  *ReadWritePerm       `json:"blanketPerm,omitempty"` // TODO: ensure this is ok and we don't want publiclyReadable instead
 }
 
 func (requestPerms PermsOnRequest) AclFor(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
@@ -294,7 +294,7 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 		coll := ctx.Client().Database(dbName).Collection(SubstrateRecipesCollectionName)
-		existing, err := GetAltCollectionItemInTxn(ctx, id, SubstrateRecipe{})
+		existing, err := GetAltCollectionItemOutsideTxn(ctx, id, SubstrateRecipe{})
 		if err != nil {
 			stat := http.StatusInternalServerError
 			if err == mongo.ErrNoDocuments {
