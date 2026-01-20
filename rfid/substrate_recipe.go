@@ -4,13 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
-	sliceutils "slices"
 )
 
 type SubstrateRecipeField struct {
@@ -31,7 +28,7 @@ type SubstrateRecipe struct {
 	AliasesField               `bson:"inline"` // must be unique everywhere
 	NotesField                 `bson:"inline"` // ingredients in notes
 	LastUpdatedField           `bson:"inline"`
-	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                   `bson:"inline"`
 }
 
 func (recipe SubstrateRecipe) EntryTypeField() *string {
@@ -47,13 +44,13 @@ func initializeSubstrates(ctx context.Context) error {
 		aliasesIndexModel,
 		//Notes (no index unless tags)
 		//LastUpdated
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
-	inserted, updated := 0, 0
-	for _, recipe := range []SubstrateRecipe{
+	basicEntries := []*SubstrateRecipe{
 		// Coir
 		{
 			NameField:                  NameField{"Coir"},
@@ -66,6 +63,7 @@ func initializeSubstrates(ctx context.Context) error {
 					Note: "roughly 40g dry coir, 1 cup H20 per quart",
 				},
 			}},
+			AclField: allCanReadAcl(),
 		},
 		// Coir and Vermiculite
 		{
@@ -83,6 +81,7 @@ func initializeSubstrates(ctx context.Context) error {
 					Note: "Vermiculite helps to keep more moisture in the substrate over time",
 				},
 			}},
+			AclField: allCanReadAcl(),
 		},
 		{
 			NameField:                  NameField{"HWFP"},
@@ -95,76 +94,42 @@ func initializeSubstrates(ctx context.Context) error {
 					Note: "Roughly equal parts wood pellets and water (maybe less water. Do less at first to ensure field capacity)",
 				},
 			}},
+			AclField: allCanReadAcl(),
 		},
-	} {
-		var existing SubstrateRecipe
-		err := coll.FindOne(ctx, bson.D{{"_id", recipe.Id}}).Decode(&existing)
-		if err != nil {
-			if err != mongo.ErrNoDocuments {
-				return err
-			}
-			// if not exists, add it to the db
-			_, err = coll.InsertOne(ctx, recipe)
-			if err != nil {
-				return err
-			}
-			inserted++
-			continue
-		}
-		// If exists, ensure it is the same as it was. Add notes if necessary
-		update := false
-
-		// Notes
-		finalNotes := []Note{}
-		copy(finalNotes, existing.Notes)
-		for _, note := range recipe.Notes {
-			if !sliceutils.Contains(finalNotes, note) {
-				finalNotes = append(finalNotes, note)
-				update = true
-			}
-		}
-		recipe.Notes = finalNotes
-
-		// Update if necessary
-		if update {
-			err = coll.FindOneAndReplace(ctx, bson.D{{"_id", recipe.Id}}, recipe).Err()
-			if err != nil {
-				return err
-			}
-			updated++
-		}
+	}
+	err = addBasicAltEntries(ctx, basicEntries...)
+	if err != nil {
+		return err
 	}
 	// Add test entry
-	existingEntry := SubstrateRecipe{}
-	testItem := SubstrateRecipe{
+	testItem := &SubstrateRecipe{
 		AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
 		NameField:                  NameField{testEntryStringId},
 		StandardField:              StandardField{false},
-		AliasesField:               AliasesField{[]string{"testSubstrate", "example substrate"}}, // TODO: search by aliases?
+		AliasesField:               AliasesField{[]string{"testSubstrate", "example substrate"}},
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
+		AclField:                   allCanReadAcl(), // TODO: write?
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
-	if inserted+updated > 0 {
-		println(fmt.Sprintf(`SubstrateRecipe: inserted %d, updated %d`, inserted, updated))
-	}
-	return err
+	// TODO: add built-in entries
+	return addTestAltEntries(ctx, testItem)
 }
 
-// TODO: USE THIS EVERYWHERE!
 type PermsOnRequest struct {
 	UserPerms    map[string]bool      `json:"userPerms,omitempty"` // Bool is canEdit
 	ProjectPerms map[projectName]bool `json:"projectPerms,omitempty"`
-	BlanketPerm  *ReadWritePerm       `json:"blanketPerm,omitempty"` // TODO: ensure this is ok and we don't want publiclyReadable instead
+	BlanketPerm  *ReadWritePerm       `json:"blanketPerm,omitempty"` // If true then these entries are publicly readable
 }
 
-func (requestPerms PermsOnRequest) AclFor(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
+func (requestPerms PermsOnRequest) DefaultAcl() *ACL {
+	return &ACL{
+		Users:       requestPerms.UserPerms,
+		Projects:    requestPerms.ProjectPerms,
+		BlanketPerm: false,
+	}
+}
+
+func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
 	if requestPerms.BlanketPerm != nil && *requestPerms.BlanketPerm {
 		return AclField{ACL: nil}, nil
 	}
@@ -230,47 +195,37 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	resolvedUserPerms, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
-		return
+	ctx, db := Db(r)
+	coll := db.Collection(SubstrateRecipesCollectionName)
+
+	toInsert := SubstrateRecipe{
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		NameField:                  req.NameField,
+		AliasesField:               req.AliasesField,
+		StandardField:              req.StandardField,
+		NotesField:                 req.NotesField,
+		LastUpdatedField:           LastUpdatedFieldForNow(),
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(SubstrateRecipesCollectionName)
-		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
-		if err != nil {
-			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
-		}
-		toInsert := SubstrateRecipe{
-			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			NameField:                  req.NameField,
-			AliasesField:               req.AliasesField,
-			StandardField:              req.StandardField,
-			NotesField:                 req.NotesField,
-			LastUpdatedField:           LastUpdatedFieldForNow(),
-			AclField:                   acl,
-		}
-		_, err = coll.InsertOne(r.Context(), toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
 
 type updateSubstrateRecipeRequest struct {
 	NameField
 	AliasesField
 	StandardField
-	Notes          AllEntries[Note] `json:"notes"`
-	PermsOnRequest                  // TODO: handle in typescript and handler!
+	Notes AllEntries[Note] `json:"notes"`
+	PermsOnRequest
+}
+
+func (mods updateSubstrateRecipeRequest) modsFor(existing *SubstrateRecipe, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateNameIfNeeded(mods.Name, existing.Name).
+		updateAliasesIfNeeded(mods.Aliases, existing.Aliases). // TODO: make sure no duplicates
+		updateStandardIfNeeded(mods.Standard, existing.Standard).
+		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -292,54 +247,16 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(SubstrateRecipesCollectionName)
-		existing, err := GetAltCollectionItemOutsideTxn(ctx, id, SubstrateRecipe{})
-		if err != nil {
-			stat := http.StatusInternalServerError
-			if err == mongo.ErrNoDocuments {
-				stat = http.StatusNotFound
-			}
-			return dbErr(w, err.Error(), stat)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := req.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := NewMods().
-			updateNameIfNeeded(req.Name, existing.Name).
-			updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: make sure no duplicates
-			updateStandardIfNeeded(req.Standard, existing.Standard).
-			updateNotesIfNeeded(req.Notes, existing.Notes).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
-		}
-		bsonId := bson.D{{"_id", existing.Id}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(SubstrateRecipesCollectionName)
+	existing, err := GetAltCollectionItemOutsideTxn(ctx, id, SubstrateRecipe{})
 	if err != nil {
-		handleWriteErr(err, w)
+		stat := http.StatusInternalServerError
+		if err == mongo.ErrNoDocuments {
+			stat = http.StatusNotFound
+		}
+		dbErr(w, err.Error(), stat)
+		return
 	}
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }

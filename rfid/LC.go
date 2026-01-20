@@ -11,10 +11,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
-type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
+type LiquidCulture struct {
 	MainCollectionIdField             `bson:"inline"`
 	PcRunOptionalField                `bson:"inline"` // likely won't exist for pre-existing or purchased
 	LcRecipeField                     `bson:"inline"` // always exists (unless purchased)
@@ -25,16 +24,16 @@ type LiquidCulture struct { // TODO: LIQUID CULTURE SYRINGE???
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
 	ParentTypeField                   `bson:"inline"`
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: used to be binary // TODO: BRAND NEW! // Must come from (main) LC, plate, slant, (alt) lcSyringe
+	MainCollectionOptionalParentField `bson:"inline"` // Must come from (main) LC, plate, slant, (alt) lcSyringe
 	PicsField                         `bson:"inline"`
-	ConfirmedCleanField               `bson:"inline"` // TODO: fix everything using this
+	ConfirmedCleanField               `bson:"inline"`
 	ContaminationsField               `bson:"inline"`
 	KnownFruitableField               `bson:"inline"`
 	DisposedField                     `bson:"inline"`
 	MostRecentImageField              `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 }
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
@@ -115,21 +114,22 @@ func initializeLCs(ctx context.Context) error {
 		newSimpleIndex("recipe", "recipe", false, false, false),
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("innoc", "innoc", false, true, false),
-		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		transfersOutIndexModel,
-		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//newSimpleIndex("innoc", "innoc", false, true, false),
+		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		//transfersOutIndexModel,
+		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//Pics (no index)
-		newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
+		//newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
 		// TODO: Contams
 		// Flushes
-		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-		newSimpleIndex("disposed", "disposed", false, true, false),
+		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		//newSimpleIndex("disposed", "disposed", false, true, false),
 		// MostRecentImage
 		//Notes (no index) (maybe later with tags?)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 		// TODO: projectsIndexModel,
 	})
@@ -137,9 +137,8 @@ func initializeLCs(ctx context.Context) error {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := LiquidCulture{}
 	testId := mainCollIdForint(idTestLC)
-	testItem := LiquidCulture{
+	testItem := &LiquidCulture{
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		PcRunOptionalField:      PcRunOptionalField{&exAltId},
 		LcRecipeField:           LcRecipeField{exAltId},
@@ -163,13 +162,7 @@ func initializeLCs(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createLiquidCultureRequest struct {
@@ -239,7 +232,7 @@ type importLiquidCultureRequest struct {
 	Generation *int
 	ConfirmedCleanField
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 	// image as "img"
 }
 
@@ -364,7 +357,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := LiquidCulture{
 		MainCollectionIdField: MainCollectionIdField{id},
 		//PcRunOptionalField:      PcRunOptionalField{},       // No pc runs on imports
-		LcRecipeField:           LcRecipeField{data.Recipe}, // TODO: optional for imports?
+		LcRecipeField:           LcRecipeField{data.Recipe},
 		CreationDateField:       CreationDateField{data.CreationDate},
 		SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
@@ -382,7 +375,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateLiquidCultureRequest struct {
-	Notes AllEntries[Note] // TODO: change into an anonymous struct???
+	Notes AllEntries[Note]
 	KnownFruitableField
 	DisposedField
 	ConfirmedClean *bool

@@ -20,7 +20,7 @@ type SubstrateBatch struct { // TODO: use this
 	SubstrateRecipeField `bson:"inline"`
 	NotesField           `bson:"inline"`
 	LastUpdatedField     `bson:"inline"`
-	AclField             `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField             `bson:"inline"`
 }
 
 func (batch SubstrateBatch) EntryTypeField() *string { // TODO: make these not pointers
@@ -35,6 +35,7 @@ func initializeSubstrateBatches(ctx context.Context) error {
 		creationDateIndexModel,
 		newSimpleIndex("recipe", "recipe", false, false, true),
 		//Notes (no index unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 		//Perms
 	})
@@ -151,50 +152,46 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	resolvedUserPerms, err := GetAuthInfo(r.Context())
+
+	ctx, db := Db(r)
+	coll := db.Collection(SubstrateRecipesCollectionName)
+	//resolvedUserPerms, err := GetAuthInfo(r.Context())
+	//if err != nil {
+	//	http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
+	//	return
+	//}
+	//acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+	//if err != nil {
+	//	return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
+	//}
+	toInsert := SubstrateBatch{
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		CreationDateField:          CreationDateField{CreationDate: unixTimeForNow()},
+		SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate}, // TODO: validate
+		NotesField:                 req.NotesField,
+		LastUpdatedField:           LastUpdatedFieldForNow(),
+		// TODO: AclField:                   acl,
+	}
+	// Validate
+	_, err = toInsert.SubstrateRecipeField.Get(ctx)
 	if err != nil {
-		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
+		http.Error(w, "failed to validate substrate recipe: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return dbErr(w, "recipe not found", http.StatusNotFound)
-			}
-			return dbErr(w, "error getting substrate recipe: "+err.Error(), http.StatusInternalServerError)
-		}
-		acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
-		if err != nil {
-			return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
-		}
-		toInsert := SubstrateBatch{
-			AlternateCollectionIdField: AlternateCollectionIdField{id},
-			CreationDateField:          CreationDateField{CreationDate: unixTimeForNow()},
-			SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate}, // TODO: validate
-			NotesField:                 req.NotesField,
-			LastUpdatedField:           LastUpdatedFieldForNow(),
-			AclField:                   acl,
-		}
-		_, err = db.Collection(SubstrateBatchCollectionName).InsertOne(r.Context(), toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
 }
 
 type updateSubstrateBatchRequest struct {
-	Notes          AllEntries[Note] `json:"notes"`
-	PermsOnRequest                  // TODO: handle in typescript and handler!
+	Notes AllEntries[Note] `json:"notes"`
+	PermsOnRequest
+}
+
+func (mods updateSubstrateBatchRequest) modsFor(existing *SubstrateBatch, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
@@ -216,53 +213,18 @@ func updateSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(SubstrateBatchCollectionName)
-		existing, err := GetAltCollectionItemOutsideTxn(ctx, id, SubstrateBatch{})
-		if err != nil {
-			stat := http.StatusInternalServerError
-			if errors.Is(err, mongo.ErrNoDocuments) {
-				stat = http.StatusNotFound
-			}
-			return dbErr(w, err.Error(), stat)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := req.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := NewMods().
-			updateNotesIfNeeded(req.Notes, existing.Notes).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
-		}
-		bsonId := bson.D{{"_id", existing.Id}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(SubstrateBatchCollectionName)
+	existing, err := GetAltCollectionItemOutsideTxn(ctx, id, SubstrateBatch{})
 	if err != nil {
-		handleWriteErr(err, w)
+		stat := http.StatusInternalServerError
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			stat = http.StatusNotFound
+		}
+		dbErr(w, err.Error(), stat)
+		return
 	}
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
 type SubstrateBatchField struct {

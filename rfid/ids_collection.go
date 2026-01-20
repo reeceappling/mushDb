@@ -14,8 +14,6 @@ type idMapEntry struct {
 	EntryType string           `bson:"entryType" json:"entryType"`
 }
 
-// TODO: can be bag, fruit, FC, jar, LC, LCSyr, MSS, plate, plugs, slant, sporePrint, sporeSwab, stasisTube
-
 func initializeItemMapCollection(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName)

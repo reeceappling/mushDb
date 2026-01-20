@@ -12,7 +12,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 	"strconv"
 	"strings"
 )
@@ -30,7 +29,7 @@ type SporePrint struct {
 	MostRecentImageField              `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 }
 
 func (sp SporePrint) Innoculatable() bool {
@@ -117,22 +116,22 @@ func initializeSporePrints(ctx context.Context) error {
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		//newSimpleIndex("parent", "parent", false, false, false),
 		//newSimpleIndex("printDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
-		//newSimpleIndex("species", "species", false, false, false),
-		//newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		newSimpleIndex("species", "species", false, false, false),
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		// Pics
 		// TODO: projectsIndexModel,
 		//saleIndexModel,
 		//disposedIndexModel,
 		// MostRecentImage
 		//Notes (no index unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := SporePrint{}
-	testItem := SporePrint{
+	testItem := &SporePrint{
 		MainCollectionIdField:             MainCollectionIdField{exSporePrint},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exFruitId},
 		CreationDateField:                 exampleTime.asCreationDate(),
@@ -145,13 +144,7 @@ func initializeSporePrints(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOneAndReplace(ctx, bson.D{{"_id", exAltId}}, testItem).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createSporePrintRequest struct {
@@ -335,9 +328,9 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 type updateSporePrintRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
-	Notes          AllEntries[Note]
-	Pics           SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
-	PermsOnRequest // TODO: handle in typescript and handler!
+	Notes AllEntries[Note]
+	Pics  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
+	PermsOnRequest
 }
 
 func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
@@ -358,9 +351,9 @@ func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 type resolvedUpdateSporePrintRequest struct {
 	SaleField
 	DisposedField
-	Notes          AllEntries[Note]
-	Pics           SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsOnRequest // TODO: handle in typescript and handler!
+	Notes AllEntries[Note]
+	Pics  SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest
 }
 
 func (out resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclField AclField) (bson.D, error) {
@@ -416,7 +409,7 @@ type importSporePrintRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	// pic as "img"
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {

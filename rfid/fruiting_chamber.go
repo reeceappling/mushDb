@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
 // TODO: HANDLE MULTIPLE GRAIN INPUTS FOR MONOTUBS (DO MONOTUBS LATER)
@@ -19,17 +18,17 @@ type FruitingChamber struct { // TODO: SHOEBOX
 	MainCollectionIdField             `bson:"inline"`
 	CreationDateField                 `bson:"inline"`
 	SubstrateRecipeField              `bson:"inline"`
-	SubstrateBatchOptionalField       `bson:"inline"` // TODO: new! use!
-	CupsGrain                         float64         `bson:"cupsGrain" json:"cupsGrain"`                           // TODO: new! use!
-	MixedSubstratePerGrain            float64         `bson:"mixedSubstratePerGrain" json:"mixedSubstratePerGrain"` // for a 1:1:0.5 box this will be 1  // TODO: new! use!
-	CasingPerGrain                    float64         `bson:"casingPerGrain" json:"casingPerGrain"`                 // No casing==0, half casing per grain == 0.5 // TODO: new! use!
+	SubstrateBatchOptionalField       `bson:"inline"`
+	CupsGrain                         float64 `bson:"cupsGrain" json:"cupsGrain"`                           // TODO: new! use!
+	MixedSubstratePerGrain            float64 `bson:"mixedSubstratePerGrain" json:"mixedSubstratePerGrain"` // for a 1:1:0.5 box this will be 1  // TODO: new! use!
+	CasingPerGrain                    float64 `bson:"casingPerGrain" json:"casingPerGrain"`                 // No casing==0, half casing per grain == 0.5 // TODO: new! use!
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // can be nil, most (main), or some (alt) like lcSyringe // TODO: NEW! HANDLE! nil == mainCollectionType (or purchased?), can also be MSS or clone! // TODO: INDEX????
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: used to be binaryOptional
+	ParentTypeField                   `bson:"inline"` // can be nil, most (main), or some (alt) like lcSyringe // nil == mainCollectionType (or purchased?), can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`
 	FlushesField                      `bson:"inline"`
@@ -39,11 +38,12 @@ type FruitingChamber struct { // TODO: SHOEBOX
 	DisposedField                     `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 }
 
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
 	return errors.New("fc cannot be transferred (unsure if this is ok)")
+	// TODO: make transferrable to plate? box? bag?
 }
 
 func (f FruitingChamber) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -141,40 +141,39 @@ func initializeFruitingChamber(ctx context.Context) error {
 	coll := db.Collection(FruitingChamberCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		creationDateIndexModel,
-		newSimpleIndex("recipe", "recipe", false, false, false), // TODO: this is harvest date
-		newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
+		//newSimpleIndex("recipe", "recipe", false, false, false), // TODO: this is harvest date
+		// TODO: newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
 		//newSimpleIndex("cupsGrain","cupsGrain", false, false, false),
 		//newSimpleIndex("mixedSubstratePerGrain","mixedSubstratePerGrain", false, false, false),
 		//newSimpleIndex("casingPerGrain","casingPerGrain", false, false, false),
 		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("innoc", "innoc", false, true, false),
-		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		transfersOutIndexModel,
-		// TODO: prints
-		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//newSimpleIndex("innoc", "innoc", false, true, false),
+		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		//transfersOutIndexModel,
+		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//Pics (no index)
 		//TODO: Contams
 		// Flushes
-		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		// MostRecentImage
-		saleIndexModel,
-		newSimpleIndex("disposed", "disposed", false, true, false),
+		//saleIndexModel,
+		//newSimpleIndex("disposed", "disposed", false, true, false),
 		//Notes (no index) (maybe later with tags?)
 		lastUpdatedIndexModel,
+		projectsIndexModel,
 		// TODO: projectsIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test FC does not exist, then create it
-	existingEntry := FruitingChamber{}
 	testId := mainCollIdForint(idTestFC)
 	xfer := exAltId
 	plateId := mainCollIdForint(idTestPlate)
-	testItem := FruitingChamber{
+	testItem := &FruitingChamber{
 
 		MainCollectionIdField:       MainCollectionIdField{testId},
 		SubstrateRecipeField:        SubstrateRecipeField{exAltId},
@@ -203,21 +202,15 @@ func initializeFruitingChamber(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createFruitingChamberRequest struct {
-	Recipe              AlternateCollectionId // substrate recipe // TODO: do not use this. Pull from batch
-	SubstrateBatchField                       // TODO: USE ME
-	ParentJar           MainCollectionId      // TODO: USE ME
-	MixedSubstrateCups  float64
-	CasingCups          float64
+	// TODO: removed: Recipe // substrate recipe // TODO: do not use this. Pull from batch
+	SubstrateBatchField
+	ParentJar          MainCollectionId
+	MixedSubstrateCups float64
+	CasingCups         float64
 	NotesField
 	WriteTagToField
 }
@@ -250,11 +243,10 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: figure out cupSize of grain
 	now := unixTimeForNow()
-	_, err = SubstrateRecipeField{data.Recipe}.Get(ctx)
+	batch, err := data.SubstrateBatchField.Get(ctx)
 	if err != nil {
-		http.Error(w, "invalid substrate recipe: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid substrate batch: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
@@ -263,15 +255,16 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	toInsert := FruitingChamber{
-		MainCollectionIdField:  MainCollectionIdField{id},
-		SubstrateRecipeField:   SubstrateRecipeField{data.Recipe},
-		CupsGrain:              float64(parentJar.SizeCups),
-		MixedSubstratePerGrain: data.MixedSubstrateCups / float64(parentJar.SizeCups), // TODO: ensure ok
-		CasingPerGrain:         data.CasingCups / float64(parentJar.SizeCups),         // TODO: ensure ok
-		CreationDateField:      CreationDateField{now},
-		NotesField:             NotesField{data.Notes},
-		LastUpdatedField:       LastUpdatedField{now},
-		AclField:               parentJar.AclField,
+		MainCollectionIdField:       MainCollectionIdField{id},
+		SubstrateRecipeField:        batch.SubstrateRecipeField,
+		SubstrateBatchOptionalField: data.SubstrateBatchField.asOptional(),
+		CupsGrain:                   float64(parentJar.SizeCups),
+		MixedSubstratePerGrain:      data.MixedSubstrateCups / float64(parentJar.SizeCups),
+		CasingPerGrain:              data.CasingCups / float64(parentJar.SizeCups),
+		CreationDateField:           CreationDateField{now},
+		NotesField:                  NotesField{data.Notes},
+		LastUpdatedField:            LastUpdatedField{now},
+		AclField:                    parentJar.AclField,
 	}
 	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
 }
@@ -280,14 +273,14 @@ type importFruitingChamberRequest struct {
 	SubstrateRecipeField
 	CreationDateField
 	SpeciesField
-	GrainCups      float64  // TODO: USE
-	SubstrateRatio *float64 // TODO: USE
-	CasingRatio    *float64 // TODO: USE
+	GrainCups      float64
+	SubstrateRatio float64 // TODO: used to be optional
+	CasingRatio    float64 // TODO: used to be optional
 	SubspeciesOptionalField
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 	// image as "img"
 }
 
@@ -385,7 +378,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	acl, err := data.AclFor(ctx, perms)
+	acl, err := data.AclForUser(ctx, perms)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -397,8 +390,8 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		SubstrateBatchOptionalField: SubstrateBatchOptionalField{nil}, // Unknown for imports
 		CreationDateField:           CreationDateField{data.CreationDate},
 		CupsGrain:                   data.GrainCups,
-		MixedSubstratePerGrain:      utils.Default(data.SubstrateRatio, 1.0),
-		CasingPerGrain:              utils.Default(data.CasingRatio, 0.5),
+		MixedSubstratePerGrain:      data.SubstrateRatio,
+		CasingPerGrain:              data.CasingRatio,
 		SpeciesOptionalField:        SpeciesOptionalField{&data.Species},
 		SubspeciesOptionalField:     data.SubspeciesOptionalField,
 		GenerationsFields: GenerationsFields{
@@ -413,7 +406,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = data.SubstrateRecipeField.Get(ctx)
 	if err != nil {
-		http.Error(w, "bad substrate recipe: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "bad substrate recipe: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -434,7 +427,7 @@ type updateFruitingChamberRequest struct {
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRequest {
@@ -454,11 +447,11 @@ type resolvedUpdateFruitingChamberRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams        SplitEntries[contamForm, Contamination]
-	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsOnRequest // TODO: handle in typescript and handler!
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest
 }
 
 func (out resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChamber, aclField AclField) (bson.D, error) {

@@ -7,7 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
 type PCRun struct {
@@ -16,7 +15,7 @@ type PCRun struct {
 	RunTimeMinutes             int             `bson:"runtimeMinutes" json:"runtimeMinutes"` // todo; used to just be runtime, also used to be string
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
-	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                   `bson:"inline"`
 }
 
 func (run PCRun) EntryTypeField() *string {
@@ -31,27 +30,22 @@ func initializePCRun(ctx context.Context) error {
 		// TODO: newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
 		//RunTime (likely no index)    string                `bson:"runtime" json:"runtime"`
 		//Notes (no index unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := PCRun{}
-	testItem := PCRun{
+	testItem := &PCRun{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		CreationDateField:          CreationDateField{exampleTime},
 		RunTimeMinutes:             60,
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
+		AclField:                   allCanReadAcl(),
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createPcRunRequest struct {
@@ -91,8 +85,8 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updatePcRunRequest struct {
-	Notes          AllEntries[Note] `json:"notes"`
-	PermsOnRequest                  // TODO: handle in typescript and handler!
+	Notes AllEntries[Note] `json:"notes"`
+	PermsOnRequest
 }
 
 func (req updatePcRunRequest) modsFor(existing *PCRun, aclField AclField) (bson.D, error) {

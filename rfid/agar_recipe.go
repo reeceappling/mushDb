@@ -3,15 +3,10 @@ package rfid
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
-	"slices"
 )
 
 type AgarRecipe struct {
@@ -26,65 +21,18 @@ type AgarRecipe struct {
 	AntibioticsField           `bson:"inline"`
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
-	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                   `bson:"inline"`
 }
 
 func (recipe AgarRecipe) EntryTypeField() *string {
 	return nil
 }
 
-//type NewAgarRecipeRequest struct {
-//	NameField
-//	StandardField
-//	LiquidsField
-//	AgarGPerL int
-//	NutrientsField
-//	SugarsField
-//	AdditivesField
-//	AntibioticsField          // TODO: make sure to put dosages in notes
-//	Notes            []string // TODO: these are just strings?
-//	// TODO: ACL?
-//}
-
-//func (req NewAgarRecipeRequest) asRecipe() AgarRecipe {
-//	now := time.Now()
-//	return AgarRecipe{
-//		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
-//		NameField:                  req.NameField,
-//		Agar:                       req.AgarGPerL,
-//		LiquidsField:               req.LiquidsField,
-//		NutrientsField:             req.NutrientsField,
-//		SugarsField:                req.SugarsField,
-//		AdditivesField:             req.AdditivesField,
-//		AntibioticsField:           req.AntibioticsField,
-//		StandardField:              req.StandardField,
-//		NotesField:                 NotesField{stringsToNotes(req.Notes, now)},
-//		LastUpdatedField:           LastUpdatedField{unixTimeFor(now)},
-//		AclField:                   AclField{}, // TODO: ACL?
-//	}
-//}
-
-func newAgarRecipe(ctx mongo.SessionContext, req AgarRecipe) utils.Result[AgarRecipe] {
-	res, err := ctx.Client().Database(dbName).Collection(AgarRecipesCollectionName).InsertOne(ctx, req)
-	if err != nil {
-		return utils.ErroredResult[AgarRecipe](err)
-	}
-	if res == nil {
-		return utils.ErroredResult[AgarRecipe](errors.New("empty response when adding recipe"))
-	}
-	id, ok := res.InsertedID.(AlternateCollectionId)
-	if !ok {
-		return utils.ErroredResult[AgarRecipe](errors.New("failed to resolve new agar recipe ID"))
-	}
-	req.Id = id
-	return utils.SuccessfulResult(req)
-}
-
 type updateAgarRecipeRequest struct {
 	NameField
 	StandardField
-	Notes          AllEntries[Note] `json:"notes"`
-	PermsOnRequest                  // TODO: handle in typescript and handler!
+	Notes AllEntries[Note] `json:"notes"`
+	PermsOnRequest
 }
 
 func (req updateAgarRecipeRequest) modsFor(existing *AgarRecipe, aclField AclField) (bson.D, error) {
@@ -144,16 +92,16 @@ func initializeAgarRecipes(ctx context.Context) error {
 		//newSimpleIndex("additives", "additives.additive", false, false, false),
 		//newSimpleIndex("antibiotics", "antibiotics", false, false, false),
 		//Notes (not indexed, unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
-	inserted, updated := 0, 0
-	for _, recipe := range []AgarRecipe{
+	basicEntries := []*AgarRecipe{
 		{
-			NameField:                  NameField{"LMEA - Light Malt Extract Agar"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
+			NameField:                  NameField{"LMEA - Light Malt Extract Agar"},
 			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]nutrientMeasurement{
@@ -169,8 +117,8 @@ func initializeAgarRecipes(ctx context.Context) error {
 			AclField:      allCanReadAcl(),
 		},
 		{
-			NameField:                  NameField{"PDA - Potato Dextrose Agar"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idPda)},
+			NameField:                  NameField{"PDA - Potato Dextrose Agar"},
 			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]nutrientMeasurement{{
@@ -188,8 +136,8 @@ func initializeAgarRecipes(ctx context.Context) error {
 			AclField:      allCanReadAcl(),
 		},
 		{
-			NameField:                  NameField{"Water Agar"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idWaterAgar)},
+			NameField:                  NameField{"Water Agar"},
 			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField:             NutrientsField{},
@@ -199,8 +147,8 @@ func initializeAgarRecipes(ctx context.Context) error {
 			AclField:                   allCanReadAcl(),
 		},
 		{
-			NameField:                  NameField{"Grain Water Agar"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idGrainWaterAgar)},
+			NameField:                  NameField{"Grain Water Agar"},
 			LiquidsField: LiquidsField{[]liquid{
 				GrainWater.AsLiquid().withPct(50.0),
 				DistilledWater.AsLiquid().withPct(50.0),
@@ -215,8 +163,8 @@ func initializeAgarRecipes(ctx context.Context) error {
 			AclField: allCanReadAcl(),
 		},
 		{
-			NameField:                  NameField{"Antibiotic Agar"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idAntibioticAgar)},
+			NameField:                  NameField{"Antibiotic Agar"},
 			LiquidsField:               LiquidsField{[]liquid{DistilledWater.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]nutrientMeasurement{
@@ -234,89 +182,12 @@ func initializeAgarRecipes(ctx context.Context) error {
 			}},
 			AclField: allCanReadAcl(),
 		},
-	} {
-		var existing AgarRecipe
-		err := coll.FindOne(ctx, bson.D{{"_id", recipe.Id}}).Decode(&existing)
-		if err != nil {
-			if err != mongo.ErrNoDocuments {
-				return err
-			}
-			// if not exists, add it to the db
-			_, err = coll.InsertOne(ctx, recipe)
-			if err != nil {
-				return err
-			}
-			inserted++
-			continue
-		}
-		// If exists, ensure it is the same as it was. Add notes if necessary
-		update := false
-		if len(recipe.LiquidsField.Liquids) != len(existing.LiquidsField.Liquids) {
-			update = true
-		} else {
-			// if any liquids are different, replace all liquids
-			for i, liq := range recipe.LiquidsField.Liquids {
-				if liq != existing.LiquidsField.Liquids[i] {
-					update = true
-					break
-				}
-			}
-		}
-		if !update && recipe.Agar != existing.Agar {
-			update = true
-		}
-		// Nutrients
-		if !update {
-			if len(recipe.NutrientsField.Nutrients) != len(existing.NutrientsField.Nutrients) {
-				update = true
-			} else {
-				// if any nutrients are different, replace
-				for i, nut := range recipe.NutrientsField.Nutrients {
-					if nut != existing.NutrientsField.Nutrients[i] {
-						update = true
-						break
-					}
-				}
-			}
-		}
-
-		// Sugars
-		if !update {
-			if len(recipe.SugarsField.Sugars) != len(existing.SugarsField.Sugars) {
-				update = true
-			} else {
-				// if any sugars are different, replace
-				for i, s := range recipe.SugarsField.Sugars {
-					if s != existing.SugarsField.Sugars[i] {
-						update = true
-						break
-					}
-				}
-			}
-		}
-
-		// Notes
-		finalNotes := []Note{}
-		copy(finalNotes, existing.Notes)
-		for _, note := range recipe.Notes {
-			if !slices.Contains(finalNotes, note) {
-				finalNotes = append(finalNotes, note)
-				update = true
-			}
-		}
-		recipe.Notes = finalNotes
-
-		// Update if necessary
-		if update {
-			err = coll.FindOneAndReplace(ctx, bson.D{{"_id", recipe.Id}}, recipe).Err()
-			if err != nil {
-				return err
-			}
-			updated++
-		}
 	}
-	existingEntry := AgarRecipe{}
-	testItem := AgarRecipe{
+	err = addBasicAltEntries(ctx, basicEntries...)
+	if err != nil {
+		return err
+	}
+	testItem := &AgarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		NameField:                  NameField{testEntryStringId},
 		LiquidsField: LiquidsField{[]liquid{
@@ -368,17 +239,8 @@ func initializeAgarRecipes(ctx context.Context) error {
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		AclField:         AclField{&testAcl},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
-	if inserted+updated > 0 {
-		println(fmt.Sprintf(`Agar recipes: inserted %d, updated %d`, inserted, updated))
-	}
-	return err
+	// TODO: add built-in entries
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createAgarRecipeRequest struct {

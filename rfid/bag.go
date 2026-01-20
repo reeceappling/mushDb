@@ -11,44 +11,41 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
 type Bag struct {
 	MainCollectionIdField       `bson:"inline"`
 	SubstrateRecipeField        `bson:"inline"`
-	SubstrateBatchOptionalField `bson:"inline"` // TODO: NEW! HANDLE
+	SubstrateBatchOptionalField `bson:"inline"`
 	PcRunOptionalField          `bson:"inline"` // this may not exist for pre-existing bags
 	//Size string // TODO: unsure what to do here
-	FilterSize              string `bson:"filterSize" json:"filterSize"`
-	CreationDateField       `bson:"inline"`
-	GenerationsFields       `bson:"inline"`
-	SealDate                *unixTime `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField            `bson:"inline"`                                                 // Initial wetness (refer to scale on field struct) // TODO: new
-	KnownFruitableField     `bson:"inline"`                                                 // set on transfer in, or once fruited
-	SpeciesOptionalField    `bson:"inline"`                                                 // set on transfer in
-	SubspeciesOptionalField `bson:"inline"`                                                 // set on transfer in
-	InnocField              `bson:"inline"`                                                 // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField       `bson:"inline"`                                                 // Set on transfer out
-	// TODO: make the next 2 a combo field?
-	BinaryOptionalParentField `bson:"inline"` // Set on transfer in
-	ParentTypeField           `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
-
-	PicsField            `bson:"inline"` // Updated independently
-	ContaminationsField  `bson:"inline"` // Updated independently
-	MostRecentImageField `bson:"inline"`
-	FlushesField         `bson:"inline"` // Updated independently
-	SaleField            `bson:"inline"`
-	DisposedField        `bson:"inline"`
+	FilterSize                        string `bson:"filterSize" json:"filterSize"`
+	CreationDateField                 `bson:"inline"`
+	GenerationsFields                 `bson:"inline"`
+	SealDate                          *unixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
+	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
+	SpeciesOptionalField              `bson:"inline"` // set on transfer in
+	SubspeciesOptionalField           `bson:"inline"` // set on transfer in
+	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                 `bson:"inline"` // Set on transfer out
+	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
+	ParentTypeField                   `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	PicsField                         `bson:"inline"` // Updated independently
+	ContaminationsField               `bson:"inline"` // Updated independently
+	MostRecentImageField              `bson:"inline"`
+	FlushesField                      `bson:"inline"` // Updated independently
+	SaleField                         `bson:"inline"`
+	DisposedField                     `bson:"inline"`
 
 	NotesField       `bson:"inline"` // Updated independently
 	LastUpdatedField `bson:"inline"`
-	AclField         `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField         `bson:"inline"`
 }
 
 func (b Bag) CanTransferTo(dst geneticSource) error {
 	return errors.New("Bag cannot be transferred (unsure if this is ok)")
-	// TODO: make transferrable to plate?
+	// TODO: make transferrable to plate? bag?
 }
 
 func (b Bag) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -122,19 +119,6 @@ func (b Bag) id() []byte {
 	return []byte(b.Id.dbIdStr())
 }
 
-//func (b Bag) basicFruit() Fruit {
-//	// TODO: ensure new fruit has a decent mainCollId in map
-//	return Fruit{
-//		MainCollectionIdField:        MainCollectionIdField{MainCollectionId(primitive.NewObjectID())},
-//		SpeciesField:                      SpeciesField{*b.Species},
-//		SubspeciesOptionalField:           b.SubspeciesOptionalField,
-//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&b.Email},
-//		GenSporeField:                     GenSporeField{b.GenSinceSpore.Next()},
-//		ParentTypeField:                   ParentTypeField{utils.Pointer("bag")},
-//		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
-//	}
-//}
-
 func initializeBags(ctx context.Context) error {
 	// TODO: INDICES!
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
@@ -152,7 +136,7 @@ func initializeBags(ctx context.Context) error {
 		//// TODO: wetness
 		//// TODO: knownFruitable?
 		//newSimpleIndex("species", "species", false, false, false),
-		//newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+		//newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//newSimpleIndex("innoc", "innoc", false, true, false),
 		//newSimpleIndex("transfersOut", "transfersOut", false, true, false),
 		//newSimpleIndex("parent", "parent", false, true, false),
@@ -163,13 +147,15 @@ func initializeBags(ctx context.Context) error {
 		//newSimpleIndex("sale", "sale", false, true, false),
 		//newSimpleIndex("disposed", "disposed", false, true, false),
 		//notes
+		projectsIndexModel,
 		lastUpdatedIndexModel,
-		//TODO: projectsIndexModel,
 	})
+	if err != nil {
+		return err
+	}
 	// If test agar batch does not exist, then create it
-	existingEntry := Bag{}
 	testId := mainCollIdForint(idTestBag)
-	testItem := Bag{
+	testItem := &Bag{
 		MainCollectionIdField:       MainCollectionIdField{testId},
 		SubstrateRecipeField:        SubstrateRecipeField{exAltId},
 		SubstrateBatchOptionalField: SubstrateBatchOptionalField{SubstrateBatch: utils.Pointer(altCollIdForint(idWoodPellets))},
@@ -180,39 +166,32 @@ func initializeBags(ctx context.Context) error {
 			GenSporeField:        GenSporeField{&exGenSinceSpore},
 			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
 		},
-		SealDate:                  &exampleTime,
-		KnownFruitableField:       KnownFruitableField{exBool},
-		SpeciesOptionalField:      SpeciesOptionalField{&testEntryStringId},
-		SubspeciesOptionalField:   SubspeciesOptionalField{&testEntryStringId},
-		InnocField:                InnocField{&exAltId},
-		TransfersOutField:         TransfersOutField{exAlts},
-		ParentTypeField:           ParentTypeField{&exParentType},
-		BinaryOptionalParentField: BinaryOptionalParentField{utils.Pointer(exPlate.ToBinaryCollectionId())},
-		PicsField:                 PicsField{exPics},
-		ContaminationsField:       ContaminationsField{exContams},
-		MostRecentImageField:      MostRecentImageField{&exPics[0]},
-		FlushesField:              FlushesField{exPics},
-		SaleField:                 SaleField{&exAltId},
-		DisposedField:             DisposedField{&exampleTime},
-		NotesField:                NotesField{exampleNotes()},
-		LastUpdatedField:          LastUpdatedField{exampleTime},
-		AclField:                  AclField{&testAcl},
+		SealDate:                          &exampleTime,
+		KnownFruitableField:               KnownFruitableField{exBool},
+		SpeciesOptionalField:              SpeciesOptionalField{&testEntryStringId},
+		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+		InnocField:                        InnocField{&exAltId},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		ParentTypeField:                   ParentTypeField{&exParentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+		PicsField:                         PicsField{exPics},
+		ContaminationsField:               ContaminationsField{exContams},
+		MostRecentImageField:              MostRecentImageField{&exPics[0]},
+		FlushesField:                      FlushesField{exPics},
+		SaleField:                         SaleField{&exAltId},
+		DisposedField:                     DisposedField{&exampleTime},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		AclField:                          AclField{&testAcl},
 	}
-	// TODO: replace the test value!
-	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem) // TODO: use everywhere
 }
 
 type createBagRequest struct {
 	SubstrateBatchField
-	WetnessField // TODO: use and validate
+	WetnessField
 	PcRunField
-	FilterSize string // TODO: validate?
+	FilterSize string // TODO: ????
 	CreationDateField
 	NotesField
 	WriteTagToField
@@ -257,6 +236,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	// TODO: validate filter size
 	// Denying guest edits is done in the upper handlers
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
 	toInsert := &Bag{
@@ -271,7 +251,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:            LastUpdatedFieldForNow(),
 		AclField:                    allCanWriteAcl(),
 	}
-	finishCreateMainCollectionEntry(ctx, coll, toInsert, w) // TODO: use in all main creates
+	finishCreateMainCollectionEntry(ctx, coll, toInsert, w)
 }
 
 type updateBagRequest struct {
@@ -283,7 +263,7 @@ type updateBagRequest struct {
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func (upr updateBagRequest) reform() resolvedUpdateBagRequest {
@@ -303,11 +283,11 @@ type resolvedUpdateBagRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams        SplitEntries[contamForm, Contamination]
-	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsOnRequest // TODO: handle in typescript and handler!
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest
 }
 
 func (out resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (bson.D, error) {
@@ -395,17 +375,17 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 type importBagRequest struct {
 	CreationDateField
 	SubstrateRecipeField
-	FilterSize              string
-	SpeciesField            // TODO: Check species perms too
-	SubspeciesOptionalField // TODO: check perms and validate
-	Generation              *int
+	FilterSize string
+	SpeciesField
+	SubspeciesOptionalField
+	Generation *int
 	KnownFruitableField
 	WriteTagToField
 	// image as "img"
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
-func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FRUITING CHAMBER
+func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := importBagRequest{}
 	id, err := newCollectionId(r.Context(), BagsCollectionName)
 	if err != nil {
@@ -519,10 +499,8 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) { // TODO: COPY FR
 	}
 	// Write
 	toInsert := &Bag{
-		MainCollectionIdField: MainCollectionIdField{id},
-		SubstrateRecipeField:  data.SubstrateRecipeField,
-		//SubstrateBatchOptionalField: nil,
-		//WetnessField, // TODO: add?
+		MainCollectionIdField:   MainCollectionIdField{id},
+		SubstrateRecipeField:    data.SubstrateRecipeField,
 		PcRunOptionalField:      PcRunOptionalField{},
 		FilterSize:              data.FilterSize,
 		CreationDateField:       data.CreationDateField,

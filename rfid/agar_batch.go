@@ -4,17 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
-// TODO: FIX ALL REQUESTS AND HANDLERS FOR IMPORTS, UPDATES, and CREATES
-
-// TODO: SPORE SWABS?!?!?!?!
-// TODO: PEGS?????!!?!?!?! Oak, Poplar, Bamboo
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
 	// CreationDate is assumed to be the same as on PcRun
@@ -52,8 +48,8 @@ type NewAgarBatchRequest struct {
 }
 
 type updateAgarBatchRequest struct {
-	Notes          AllEntries[Note] `json:"notes"`
-	PermsOnRequest                  // TODO: handle in typescript and handler!
+	Notes AllEntries[Note] `json:"notes"`
+	PermsOnRequest
 }
 
 func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bson.D, error) {
@@ -104,14 +100,15 @@ func initializeAgarBatches(ctx context.Context) error {
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		newSimpleIndex("recipe", "recipe", false, false, false),
 		//newSimpleIndex("color", "color", false, false, false),
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
+
 	testAltId := altCollIdForint(0)
-	existingEntry := AgarBatch{}
 	testItem := AgarBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{Id: exAltId},
 		PcRunField:                 PcRunField{testAltId},
@@ -121,13 +118,52 @@ func initializeAgarBatches(ctx context.Context) error {
 		LastUpdatedField:           LastUpdatedField{exampleTime},
 		AclField:                   allCanReadAcl(),
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
+	return addTestAltEntries(ctx, testItem) // TODO: do this everywhere
+}
+
+// TODO: move
+func addTestAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, testItems ...T) error {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
+	_, err := coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+		return mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
+	}))
+	// TODO: do something with the result?
+	return err
+}
+
+// TODO: move
+func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, testItems ...T) error {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
+	_, err := coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+		return mongo.NewInsertOneModel().SetDocument(item)
+	}))
+	if err != nil {
+		println("error adding basic alt entries: " + err.Error()) // TODO: del
 	}
-	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	// TODO: do something with the result?
+	return err
+}
+
+// TODO: move
+func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...T) error {
+	_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+		Collection(idMapCollectionName).BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+		return mongo.NewReplaceOneModel().SetReplacement(idMapEntry{
+			Id:        item.DbId(),
+			EntryType: item.EntryType(),
+		}).SetUpsert(true)
+	}))
+	// TODO: do something with the result?
+	if err != nil {
+		return err
+	}
+
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
+	_, err = coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+		return mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
+	}))
+	// TODO: do something with the result?
+	return err
 }
 
 type createAgarBatchRequest struct {

@@ -20,7 +20,7 @@ import (
 //	JarRecipeRequiredField
 //	NotesField
 //	LastUpdatedField
-//  AclField // TODO: handle EVERYWHERE
+//  AclField
 //}
 //
 //func (batch GrainBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {

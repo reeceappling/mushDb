@@ -2,11 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils/slices"
-	"golang.org/x/exp/maps"
 	"log"
 	"os"
-	"strings"
 	"text/template"
 )
 
@@ -36,18 +33,27 @@ var ({{range $typ, $info := .MainCollTypes}}
 	const tpl = `package rfid
 
 ` + header + `
-
 import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
+
 const (
-	//Main collection entry constants
+	// Main collection entry constants
 {{range $typ, $info := .MainCollTypes}}` + constCollNameTpl + `
     {{$info.EntryTypeConstName}} = "{{$info.EntryTypeConstValue}}"
-{{end}}	//Alternate entry constants
+{{end}}	// Alternate entry constants
 {{range $typ, $info := .OtherCollTypes}}` + constCollNameTpl + `
 {{end}})
-{{range $typ, $info := .MainCollTypes}}
+
+// Functions
+func mainCollMap(name string) (item MainCollectionItem, exists bool) {
+	switch name {
+	{{range $typ, $info := .MainCollTypes}}case "{{$info.EntryTypeConstValue}}": return &{{$typ}}{}, true
+	{{end}}default: return nil, false
+	}
+}
+
+// Methods{{range $typ, $info := .MainCollTypes}}
 ` + setPermsMethodTpl + `
 ` + dbIdMethodTpl + `
 ` + entryTypeMethodTpl + `
@@ -131,15 +137,6 @@ type otherCollInfo struct {
 	IdType           string // Must either be AlternateCollectionId, or string (such as for users or projects)
 }
 
-type methodInfo struct {
-	sig     string
-	bodyGen func(info mainCollInfo) string
-}
-type methodInfoForOther struct {
-	sig     string
-	bodyGen func(info otherCollInfo) string
-}
-
 func infoForO(reciever, collConstName, collConstValue, idType string) otherCollInfo {
 	return otherCollInfo{reciever, collConstName, collConstValue, false, idType}
 }
@@ -191,221 +188,4 @@ func createOtherCollTypes() map[string]otherCollInfo {
 
 func init() {
 	otherCollTypes = createOtherCollTypes()
-}
-
-var mainCollMethods = []methodInfo{
-	entryTypeMethod,
-	sourceTypeMethod, // TODO: likely get rid of
-	collectionNameMethod,
-	dbIdMethod,
-	decodeMethod,
-
-	// TODO: ADD MORE
-}
-var mainCollPtrMethods = []methodInfo{
-	setPermsMethod,
-	// TODO: ADD MORE
-}
-var otherCollMethods = []methodInfoForOther{
-	otherCollectionNameMethod,
-	decodeMethodOther,
-	// TODO: ADD MORE?
-}
-var otherCollPtrMethods = []methodInfoForOther{
-	// TODO: ADD MORE?
-}
-
-func allConstants(b *strings.Builder) {
-	b.WriteString("\nconst (")
-	for _, info := range mainCollTypes {
-		col := fmt.Sprintf(`\t%s = "%s"\n"`, info.CollConstName, info.CollName)
-		src := fmt.Sprintf(`\t%s = "%s"\n"`, info.EntryTypeConstName, info.EntryTypeConstValue)
-		b.WriteString(col + src)
-	}
-	for _, info := range otherCollTypes {
-		b.WriteString(fmt.Sprintf(`\t%s = "%s"\n"`, info.CollConstName, info.CollName))
-	}
-	b.WriteString(")\n")
-
-}
-func writeTop(b *strings.Builder) {
-	// package
-	b.WriteString("package rfid\n\nimport(\n")
-	// imports
-	for _, imp := range []string{
-		"go.mongodb.org/mongo-driver/mongo",
-	} {
-		b.WriteString(fmt.Sprintf("\t\"%s\"\n", imp))
-	}
-	b.WriteString(")\n")
-}
-
-func allCollItemMethods(b *strings.Builder) {
-	for typ, info := range mainCollTypes {
-		genMainCollectionItem(b, typ, info)
-	}
-	for typ, info := range otherCollTypes {
-		genOtherCollectionItem(b, typ, info)
-	}
-}
-
-func genMainCollectionItem(b *strings.Builder, typ string, info mainCollInfo) {
-	// Non-pointer Methods
-	receiver := mainCollReceiver(typ, info)
-	for _, methodToWrite := range mainCollMethods {
-		b.WriteString(method(receiver, methodToWrite.sig, methodToWrite.bodyGen(info)))
-	}
-	// Pointer Methods
-	ptrReceiver := mainCollPtrReceiver(typ, info)
-	for _, methodToWrite := range mainCollPtrMethods {
-		b.WriteString(method(ptrReceiver, methodToWrite.sig, methodToWrite.bodyGen(info)))
-	}
-}
-func genOtherCollectionItem(b *strings.Builder, typ string, info otherCollInfo) {
-	// Non-pointer Methods
-	receiver := otherCollReceiver(typ, info)
-	for _, methodToWrite := range otherCollMethods {
-		b.WriteString(method(receiver, methodToWrite.sig, methodToWrite.bodyGen(info)))
-	}
-	// Pointer Methods
-	ptrReceiver := otherCollPtrReceiver(typ, info)
-	for _, methodToWrite := range otherCollPtrMethods {
-		b.WriteString(method(ptrReceiver, methodToWrite.sig, methodToWrite.bodyGen(info)))
-	}
-}
-
-func method(receiverText, signature, body string) string {
-	return fmt.Sprintf("\nfunc %s %s {\n%s\n}\n", receiverText, signature, body)
-}
-
-func methodSignature(methodName string, methodArgs string, methodReturns string) string {
-	methodReturnsResolved := ""
-	if methodReturns != "" {
-		methodReturnsResolved = "(" + methodReturns + ")"
-	}
-	return fmt.Sprintf(`%s(%s)%s
-}!\n`, methodName, methodArgs, methodReturnsResolved)
-}
-
-func mainCollPtrReceiver(typeName string, info mainCollInfo) string {
-	return fmt.Sprintf(`(%s *%s)`, info.Receiver, typeName)
-}
-func mainCollReceiver(typeName string, info mainCollInfo) string {
-	return fmt.Sprintf(`(%s %s)`, info.Receiver, typeName)
-}
-func otherCollPtrReceiver(typeName string, info otherCollInfo) string {
-	return fmt.Sprintf(`(%s *%s)`, info.Receiver, typeName)
-}
-func otherCollReceiver(typeName string, info otherCollInfo) string {
-	return fmt.Sprintf(`(%s %s)`, info.Receiver, typeName)
-}
-
-//func methodWrapper(typeName string, info mainCollInfo, methodName string, methodArgs string, methodReturns string) func(body string) string {
-//	methodReturnsResolved := ""
-//	if methodReturns != "" {
-//		methodReturnsResolved = "(" + methodReturns + ")"
-//	}
-//	return func(body string) string {
-//		return fmt.Sprintf(`!\nfunc (%s *%s) %s(%s)%s {
-//	%s
-//}!\n`, info.Receiver, typeName, methodName, methodArgs, methodReturnsResolved, body)
-//	}
-//}
-
-var setPermsMethod = methodInfo{
-	sig: methodSignature("SetPerms", "field AclField", ""),
-	bodyGen: func(i mainCollInfo) string {
-		return fmt.Sprintf(`%s.AclField = field`, i.Receiver)
-	},
-}
-
-var setPermsTpl = `func ({{.receiver}} *{{.typ}}) SetPerms(field AclField) {
-	{{.receiver}}.AclField = field
-}`
-
-var dbIdMethod = methodInfo{
-	sig: methodSignature("DbId", "", "MainCollectionId"),
-	bodyGen: func(i mainCollInfo) string {
-		return fmt.Sprintf(`return %s.Id`, i.Receiver)
-	},
-}
-
-var entryTypeMethod = methodInfo{ // TODO: likely get rid of and keep SourceType instead
-	sig: methodSignature("EntryType", "", "string"),
-	bodyGen: func(i mainCollInfo) string {
-		return fmt.Sprintf(`return %s`, i.EntryTypeConstName)
-	},
-}
-var sourceTypeMethod = methodInfo{
-	sig: methodSignature("SourceType", "", "string"),
-	bodyGen: func(i mainCollInfo) string {
-		return fmt.Sprintf(`return %s`, i.EntryTypeConstName)
-	},
-}
-var collectionNameMethod = methodInfo{
-	sig: methodSignature("CollectionName", "", "string"),
-	bodyGen: func(i mainCollInfo) string {
-		return fmt.Sprintf(`return %s`, i.CollConstName)
-	},
-}
-var otherCollectionNameMethod = methodInfoForOther{
-	sig: methodSignature("CollectionName", "", "string"),
-	bodyGen: func(i otherCollInfo) string {
-		return fmt.Sprintf(`return %s`, i.CollConstName)
-	},
-}
-
-var decodeMethod = methodInfo{
-	sig: methodSignature("Decode", "encoded *mongo.SingleResult", "CollectionItem, error"),
-	bodyGen: func(i mainCollInfo) string {
-		return fmt.Sprintf(`out := %s
-	err := decodeItem(&out, encoded)
-	return out, err`, i.Receiver)
-	},
-}
-var decodeMethodOther = methodInfoForOther{
-	sig: methodSignature("Decode", "encoded *mongo.SingleResult", "CollectionItem, error"),
-	bodyGen: func(i otherCollInfo) string {
-		return fmt.Sprintf(`out := %s
-	err := decodeItem(&out, encoded)
-	return out, err`, i.Receiver)
-	},
-}
-
-func validGeneticSourceStrs() []string {
-	return slices.Map(maps.Keys(mainCollTypes), func(typ string) string {
-		return "_ geneticSource = &" + typ + "{}"
-	})
-}
-func validMainCollItemStrs() []string {
-	return slices.Map(maps.Keys(mainCollTypes), func(typ string) string {
-		return "_ MainCollectionItem = &" + typ + "{}"
-	})
-}
-
-func writeValidateInterfacesGroup(b *strings.Builder, varStrs []string) {
-	for _, str := range varStrs {
-		_, err := b.WriteString(fmt.Sprintf(`!\n%s`, str))
-		if err != nil {
-			panic("writeValidateInterfacesArea failed body write")
-		}
-	}
-}
-
-func fullValidateInterfacesArea(b *strings.Builder) {
-	_, err := b.WriteString("var (")
-	if err != nil {
-		panic("writeValidateInterfacesArea failed initial write")
-	}
-	for _, generatedGroup := range []func() []string{
-		validMainCollItemStrs,
-		validGeneticSourceStrs,
-		// TODO: MORE!
-	} {
-		writeValidateInterfacesGroup(b, generatedGroup())
-	}
-	_, err = b.WriteString("\n)")
-	if err != nil {
-		panic("writeValidateInterfacesArea failed end write")
-	}
 }

@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
 type MSS struct {
@@ -25,7 +24,7 @@ type MSS struct {
 	DisposedField                     `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 }
 
 func (M MSS) Innoculatable() bool {
@@ -89,19 +88,21 @@ func initializeMSS(ctx context.Context) error {
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, false, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("parent", "parent", false, true, false),
-		transfersOutIndexModel,
-		saleIndexModel,
-		disposedIndexModel,
-		//// TODO: Projects?
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//newSimpleIndex("parent", "parent", false, true, false),
+		//transfersOutIndexModel,
+		//saleIndexModel,
+		//disposedIndexModel,
 		//Notes (no index unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
+	if err != nil {
+		return err
+	}
 	// If test agar batch does not exist, then create it
-	existingEntry := MSS{}
 	testId := mainCollIdForint(idTestMSS)
-	testItem := MSS{
+	testItem := &MSS{
 		MainCollectionIdField:             MainCollectionIdField{testId},
 		CreationDateField:                 CreationDateField{exampleTime},
 		SpeciesField:                      SpeciesField{testEntryStringId},
@@ -112,13 +113,7 @@ func initializeMSS(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createMssRequest struct {
@@ -227,7 +222,7 @@ type updateMssRequest struct {
 	DisposedField
 	SaleField
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {

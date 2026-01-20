@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 	"os"
@@ -49,18 +50,19 @@ type subdocWithImage interface {
 	getPicWithNotes() *PicWithNotes
 }
 
-//func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes { // TODO: use?
-//	var out *PicWithNotes = nil
-//	latestTime := unixTime(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
-//	for _, subdoc := range possibleSubdocs {
-//		pwn := subdoc.getPicWithNotes()
-//		if pwn.Time > latestTime {
-//			latestTime = pwn.Time
-//			out = pwn
-//		}
-//	}
-//	return out
-//}
+// TODO: USE
+func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes { // TODO: use?
+	var out *PicWithNotes = nil
+	latestTime := unixTime(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
+	for _, subdoc := range possibleSubdocs {
+		pwn := subdoc.getPicWithNotes()
+		if pwn.Time > latestTime {
+			latestTime = pwn.Time
+			out = pwn
+		}
+	}
+	return out
+}
 
 type PicsField struct {
 	Pics []PicWithNotes `bson:"pics,omitempty" json:"pics,omitempty"`
@@ -75,9 +77,9 @@ type MostRecentImageField struct {
 }
 
 type PicWithNotes struct {
-	Time       unixTime        `bson:"time" json:"time"`
-	Location   imageLocation   `bson:"location" json:"location"`
-	NotesField `bson:"inline"` // TODO: account for this, used to be []Note
+	Time       unixTime      `bson:"time" json:"time"`
+	Location   imageLocation `bson:"location" json:"location"`
+	NotesField `bson:"inline"`
 }
 
 func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes {
@@ -101,8 +103,8 @@ func (pwn PicWithNotes) withoutNotes() PicWithNotes {
 }
 
 type PicWithNotesLessLocation struct {
-	Time       unixTime        `bson:"time" json:"time"`
-	NotesField `bson:"inline"` // TODO: account for this, used to be []Note
+	Time       unixTime `bson:"time" json:"time"`
+	NotesField `bson:"inline"`
 }
 
 func (p PicWithNotesLessLocation) asPicWithNotes(location *string) PicWithNotes {
@@ -117,25 +119,25 @@ func (p PicWithNotes) getPicWithNotes() *PicWithNotes {
 	return &p
 }
 
-type ContaminationsField struct { // TODO: ensure handled properly everywhere
+type ContaminationsField struct {
 	Contaminations []Contamination `bson:"contamination,omitempty" json:"contamination,omitempty"`
 }
 
 type Contamination struct {
-	Time       unixTime        `bson:"time" json:"time"` // TODO: NEW! HANDLE EVERYWHERE!
-	Confirmed  bool            `bson:"confirmed" json:"confirmed"`
-	Bacteria   bool            `bson:"bacteria" json:"bacteria"`
-	Mold       bool            `bson:"mold" json:"mold"`
-	Location   *imageLocation  `bson:"location,omitempty" json:"location,omitempty"` // TODO: NEW! HANDLE EVERYWHERE!
-	NotesField `bson:"inline"` // TODO: account for this, used to be []Note       // TODO: NEW! HANDLE EVERYWHERE!
+	Time       unixTime       `bson:"time" json:"time"`
+	Confirmed  bool           `bson:"confirmed" json:"confirmed"`
+	Bacteria   bool           `bson:"bacteria" json:"bacteria"`
+	Mold       bool           `bson:"mold" json:"mold"`
+	Location   *imageLocation `bson:"location,omitempty" json:"location,omitempty"`
+	NotesField `bson:"inline"`
 }
 
 type ContaminationLessLocation struct {
-	Time       unixTime `bson:"time" json:"time"` // TODO: NEW! HANDLE EVERYWHERE!
-	Confirmed  bool     `bson:"confirmed" json:"confirmed"`
-	Bacteria   bool     `bson:"bacteria" json:"bacteria"`
-	Mold       bool     `bson:"mold" json:"mold"`
-	NotesField          // TODO: account for this, used to be []Note // TODO: NEW! HANDLE EVERYWHERE!
+	Time      unixTime `bson:"time" json:"time"`
+	Confirmed bool     `bson:"confirmed" json:"confirmed"`
+	Bacteria  bool     `bson:"bacteria" json:"bacteria"`
+	Mold      bool     `bson:"mold" json:"mold"`
+	NotesField
 }
 
 func (c ContaminationLessLocation) asContamination(location *imageLocation) Contamination {
@@ -157,6 +159,24 @@ func (c Contamination) getPicWithNotes() *PicWithNotes {
 		Time:       c.Time,
 		Location:   *c.Location,
 		NotesField: c.NotesField,
+	}
+}
+
+func contamUpdates(contams SplitEntries[contamForm, ContaminationLessLocation]) SplitEntries[contamForm, Contamination] {
+	return SplitEntries[contamForm, Contamination]{
+		Existing: contams.Existing,
+		New: sliceutils.Map(contams.New, func(i ContaminationLessLocation) Contamination {
+			return i.asContamination(nil)
+		}),
+	}
+}
+
+func imageUpdates(Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation]) SplitEntries[picWithNotesForm, PicWithNotes] {
+	return SplitEntries[picWithNotesForm, PicWithNotes]{
+		Existing: Images.Existing,
+		New: sliceutils.Map(Images.New, func(i PicWithNotesLessLocation) PicWithNotes {
+			return i.asPicWithNotes(nil)
+		}),
 	}
 }
 
@@ -191,7 +211,9 @@ func (f fluid) AsLiquid(pct ...float64) liquid {
 	if len(pct) != 0 {
 		val = pct[0]
 	}
-	// TODO: ensure pct can never go over 100
+	if val > 100.0 || val <= 0.0 {
+		panic("invalid fluid percentage") // TODO: ok?
+	}
 	return liquid{
 		Name: f,
 		Pct:  val,
@@ -218,23 +240,6 @@ func (n Note) GenerationIfExists() *int {
 	return &out
 }
 
-//func newGenerationNote(n int) Note {
-//	return Note{
-//		Time: unixTimeForNow(),
-//		Note: fmt.Sprintf(`Generation: %d`, n),
-//	}
-//}
-//
-//func newAltSourceNote(src string) Note {
-//	return Note{
-//		Time: unixTimeForNow(),
-//		Note: fmt.Sprintf(`Sample Source: %s`, src),
-//	}
-//}
-
-// TODO:  // TODO: THIS!
-// TODO: altSource (outside, store, etc) notes // TODO: THIS?
-
 type nutrientMeasurement struct {
 	Nutrient nutrient `bson:"nutrient" json:"nutrient"` // Nutrient name
 	Amount   float64  `bson:"amount" json:"amount"`     // Amount per 1L agar
@@ -243,15 +248,15 @@ type nutrientMeasurement struct {
 
 type nutrient string
 
-var nutrients = []nutrient{LME, Potato} // TODO: ADD MEASUREMENT UNITS TO THIS (or each?)
+var nutrients = []nutrient{LME, Potato}
 var (
 	LME    nutrient = "light malt extract"
 	Potato nutrient = "potato flakes"
 )
 
-func getAllNutrientsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
-	writeAsJson(w, nutrients)
-}
+//func getAllNutrientsHandler(w http.ResponseWriter, r *http.Request) {
+//	writeAsJson(w, nutrients)
+//}
 
 type sugarMeasurement struct {
 	Type   sugar   `bson:"type" json:"type"`     // Sugar Username
@@ -566,6 +571,14 @@ func (upd *Mods) updatePermsIfNeeded(next, current *ACL) *Mods {
 	return upd.Set("acl", next)
 }
 
+func (upd *Mods) updateDefaultEntryPermsIfNeeded(nextReq PermsOnRequest, current *ACL) *Mods {
+	next := nextReq.DefaultAcl()
+	if current.Equivalent(next) {
+		return upd
+	}
+	return upd.Set("defaultAcl", next)
+}
+
 func (upd *Mods) updateNameIfNeeded(future, existing string) *Mods {
 	return updateValueIfNeeded(upd, "name", future, existing)
 }
@@ -764,19 +777,19 @@ func (upd *Mods) withParent(parentId *MainCollectionId) *Mods {
 	return setPointerIfNonNil(upd, "parent", parentId)
 }
 func (upd *Mods) withPerms(acl *ACL) *Mods {
-	return setPointerIfNonNil(upd, "acl", acl) // TODO: ensure ok
+	return setPointerIfNonNil(upd, "acl", acl)
 }
 func (upd *Mods) withPics(pics []PicWithNotes) *Mods {
 	if len(pics) == 0 {
 		return upd
 	}
-	return upd.Set("pics", pics) // TODO: will this work if it does not exist yet?
+	return upd.Set("pics", pics)
 }
 func (upd *Mods) withSpecies(species *string) *Mods {
 	return setPointerIfNonNil(upd, "species", species)
 }
 func (upd *Mods) withSubspecies(subsp *string) *Mods {
-	return setPointerIfNonNil(upd, "subSpecies", subsp) // TODO: make sure string is correct!!!
+	return setPointerIfNonNil(upd, "subspecies", subsp) // TODO: make sure string is correct!!!
 }
 
 func setPointerIfNonNil[T any](upd *Mods, fieldName string, val *T) *Mods {
@@ -862,24 +875,3 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	}
 	writeAsJson(w, toWrite)
 }
-
-//type changes []bson.E
-//
-//func (upd changes)
-//
-//func blankChanges() changes {
-//	return changes{}
-//}
-//
-//func (chg changes) addIf(doChange bool, key string, newValue interface{}) changes {
-//	out := changes{}
-//	copy(out, chg)
-//	if doChange {
-//		out = append(out, bson.E{key, newValue})
-//	}
-//	return out
-//}
-//
-//func (chg changes) resolve() bson.D {
-//	return bson.D(chg)
-//}

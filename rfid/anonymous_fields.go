@@ -73,9 +73,9 @@ func (field AntibioticsField) Validate() error {
 	return nil
 }
 
-type BinaryOptionalParentField struct {
-	Parent *BinaryCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
-}
+//type BinaryOptionalParentField struct {
+//	Parent *BinaryCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
+//}
 
 type LiquidsField struct {
 	Liquids []liquid `bson:"liquids" json:"liquids"`

@@ -4,25 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
-	sliceutils "slices"
 )
 
 type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
-	ScientificName    string          `bson:"scientificName" json:"scientificName"`
+	ScientificName    string `bson:"scientificName" json:"scientificName"`
 	AliasesField      `bson:"inline"`
 	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate,omitempty" json:"standardSubstrate,omitempty"`
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
-	AclField          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField          `bson:"inline"`
+	DefaultAcl        *ACL `bson:"defaultAcl" json:"defaultAcl"` // TODO; NEW!!! // Only used when importing!
+
 }
 
 func (sp Species) EntryTypeField() *string {
@@ -52,19 +50,18 @@ func initializeSpecies(ctx context.Context) error {
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("scientificName", "scientificName", false, false, true),
 		aliasesIndexModel,
-		//BackupSpecies (likely no index)      *string           `bson:"backupSpecies,omitempty" json:"backupSpecies,omitempty"` // a species that is similar to this one, somehow
 		newSimpleIndex("standardSubstrate", "standardSubstrate", false, true, false),
 		//Notes (no index) (maybe later with tags?)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 
-	inserted, updated := 0, 0
 	woodPelletsId := altCollIdForint(idWoodPellets)
-	for _, species := range []Species{
-		// King Oyester
+	basicEntries := []*Species{
+		// King Oyster
 		{
 			NameIdField:       NameIdField{"king oyster"},
 			ScientificName:    "Pleurotus Eryngii",
@@ -83,7 +80,10 @@ func initializeSpecies(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
 				}},
-			}},
+			},
+			AclField: allCanWriteAcl(),
+		},
+
 		// Pink Oyster
 		{
 			NameIdField:       NameIdField{"Pink Oyster"},
@@ -102,7 +102,9 @@ func initializeSpecies(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
 				}},
-			}},
+			},
+			AclField: allCanWriteAcl(),
+		},
 		// Enoki
 		{
 			NameIdField:       NameIdField{"Enoki"},
@@ -121,7 +123,9 @@ func initializeSpecies(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
 				}},
-			}},
+			},
+			AclField: allCanWriteAcl(),
+		},
 		// Shiitake
 		{
 			NameIdField:       NameIdField{shiitakeName},
@@ -129,6 +133,7 @@ func initializeSpecies(ctx context.Context) error {
 			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
 			NotesField:        shiitakeNotes,
+			AclField:          allCanWriteAcl(),
 		},
 		// Maitake, Hen of the Woods
 		{
@@ -152,7 +157,9 @@ func initializeSpecies(ctx context.Context) error {
 					Time: ogTime,
 					Note: "Best Agar: LMEA",
 				}},
-			}},
+			},
+			AclField: allCanWriteAcl(),
+		},
 		// Beech
 		{ // TODO: WHITE AND BROWN
 			NameIdField:       NameIdField{"Beech"},
@@ -173,79 +180,25 @@ func initializeSpecies(ctx context.Context) error {
 					Note: "Best Agar: LMEA",
 				},
 			}},
+			AclField: allCanWriteAcl(),
 		},
-	} {
-		var existing Species
-		err = coll.FindOne(ctx, bson.D{{"_id", species.Name}}).Decode(&existing)
-		if err != nil {
-			if err != mongo.ErrNoDocuments {
-				return err
-			}
-			// if not exists, add it to the db
-			_, err = coll.InsertOne(ctx, species)
-			if err != nil {
-				return err
-			}
-			inserted++
-			continue
-		}
-		// If exists, ensure it is the same as it was. Add notes if necessary
-		update := false
-		if species.ScientificName != existing.ScientificName {
-			update = true
-		}
-		finalAliases := utils.Set[string]{}
-		finalAliases.Add(existing.Aliases...)
-		finalAliases.Add(species.Aliases...)
-		if len(finalAliases) != len(existing.Aliases) {
-			update = true
-			species.Aliases = finalAliases.ToSlice()
-		}
-		if !update && existing.StandardSubstrate != species.StandardSubstrate {
-			update = true
-		}
-
-		// Notes
-		finalNotes := []Note{}
-		copy(finalNotes, existing.Notes)
-		for _, note := range species.Notes {
-			if !sliceutils.Contains(finalNotes, note) {
-				finalNotes = append(finalNotes, note)
-				update = true
-			}
-		}
-		species.Notes = finalNotes
-
-		// Update if necessary
-		if update {
-			err = coll.FindOneAndReplace(ctx, bson.D{{"_id", species.Name}}, species).Err()
-			if err != nil {
-				return err
-			}
-			updated++
-		}
+	}
+	err = addBasicAltEntries(ctx, basicEntries...)
+	if err != nil {
+		return err
 	}
 	// Add test entry
-	existingEntry := Species{}
-	testItem := Species{
+	testItem := &Species{
 		NameIdField:       NameIdField{testEntryStringId},
 		ScientificName:    "examplius speciesus",
 		AliasesField:      AliasesField{[]string{"testSpecies", "example species"}},
 		StandardSubstrate: exAltId,
 		NotesField:        NotesField{exampleNotes()},
 		LastUpdatedField:  LastUpdatedField{exampleTime},
+		AclField:          allCanReadAcl(), // TODO: write?
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
-	if inserted+updated > 0 {
-		println(fmt.Sprintf(`Species: inserted %d, updated %d`, inserted, updated))
-	}
-	return err
+	// TODO: add built-in entries
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createSpeciesRequest struct {
@@ -286,6 +239,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		StandardSubstrate: req.Substrate,
 		NotesField:        req.NotesField,
 		LastUpdatedField:  LastUpdatedField{unixTimeForNow()},
+		DefaultAcl:        allCanWriteAcl().ACL,
 	}
 	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
 }
@@ -294,7 +248,8 @@ type updateSpeciesRequest struct {
 	Substrate AlternateCollectionId `json:"standardSubstrate"`
 	Notes     AllEntries[Note]      `json:"notes,omitempty"`
 	AliasesField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
+	DefaultEntryPermsOnRequest PermsOnRequest // TODO: handle in TS
 }
 
 func (out updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (bson.D, error) {
@@ -303,6 +258,8 @@ func (out updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (b
 		updateNotesIfNeeded(out.Notes, existing.Notes).
 		updateAliasesIfNeeded(out.Aliases, existing.Aliases).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateDefaultEntryPermsIfNeeded(out.DefaultEntryPermsOnRequest, existing.ACL).
+		updateLastUpdatedIfNeeded().
 		Finalized()
 }
 
@@ -348,8 +305,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// TODO: FIX!!!!!
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
+	finishStringIdAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
 func getSpecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {

@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 	"slices"
 )
 
@@ -28,13 +27,13 @@ type LcSyringe struct {
 	SubspeciesOptionalField           `bson:"inline"`
 	SaleField                         `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	KnownFruitableField               `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
+	KnownFruitableField               `bson:"inline"`
 	ConfirmedCleanField               `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
 	DisposedField                     `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 }
 
 func (lcs LcSyringe) Innoculatable() bool {
@@ -104,17 +103,17 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcSyringeCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("parent", "parent", false, true, false),
+		//newSimpleIndex("parent", "parent", false, true, false),
 		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		saleIndexModel,
-		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-		newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
-		transfersOutIndexModel,
-		newSimpleIndex("disposed", "disposed", false, true, false),
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//saleIndexModel,
+		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		//newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
+		//transfersOutIndexModel,
+		//newSimpleIndex("disposed", "disposed", false, true, false),
 		//// TODO: Projects?
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
@@ -123,8 +122,7 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := LcSyringe{}
-	testItem := LcSyringe{
+	testItem := &LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: exLC}, // TODO: FIX!
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exLC},
 		CreationDateField:                 exampleTime.asCreationDate(),
@@ -136,13 +134,7 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 		//PermsField:                        PermsField{}, // TODO: fix
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createLCSyringeRequest struct {
@@ -151,7 +143,6 @@ type createLCSyringeRequest struct {
 	WriteTagToField
 }
 
-// TODO: USE
 func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := createLCSyringeRequest{}
 	defer r.Body.Close()
@@ -212,7 +203,7 @@ type updateSyringeRequest struct {
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
 	KnownFruitableField       // TODO: handle in react
 	Notes               AllEntries[Note]
-	PermsOnRequest      // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
@@ -231,8 +222,8 @@ type resolvedUpdateSyringeRequest struct {
 	DisposedField
 	ConfirmedClean *bool `json:"confirmedClean,omitempty"`
 	KnownFruitableField
-	Notes          AllEntries[Note]
-	PermsOnRequest // TODO: handle in typescript and handler!
+	Notes AllEntries[Note]
+	PermsOnRequest
 }
 
 func (mods resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField AclField) (bson.D, error) {
@@ -277,7 +268,7 @@ type importLcSyringeRequest struct {
 	KnownFruitableField
 	NotesField
 	// pic as "img"
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 // TODO: USE!!!

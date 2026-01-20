@@ -3,7 +3,6 @@ package rfid
 import (
 	"context"
 	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -81,30 +80,19 @@ func initializeChildrenMethod(ctx context.Context) ([]geneticSource, *mongo.Data
 	return out, db, xferColl
 }
 
-var mainCollMap = map[string]MainCollectionItem{
-	"jar":             GrainJar{},
-	"lc":              LiquidCulture{},
-	"plate":           Plate{},
-	"slant":           Slant{},
-	"stasisTube":      StasisTube{},
-	"bag":             Bag{},
-	"fruitingChamber": FruitingChamber{},
-	"mss":             MSS{},
-}
-
 func isMainCollItem(entryType string) bool {
-	_, exists := mainCollMap[entryType]
+	_, exists := mainCollMap(entryType)
 	return exists
 }
 
-func rawEntryTypeConversion(raw bson.Raw) (MainCollectionItem, error) {
-	entryType := raw.Lookup("entryType").String()
-	child, exists := mainCollMap[raw.Lookup("entryType").String()] // TODO: unsure if this is correct
-	if !exists {
-		return nil, errors.Join(errors.New("invalid item entryType"), fmt.Errorf(`entryType: %s`, entryType))
-	}
-	return child, nil
-}
+//func rawEntryTypeConversion(raw bson.Raw) (MainCollectionItem, error) {
+//	entryType := raw.Lookup("entryType").String()
+//	child, exists := mainCollMap(raw.Lookup("entryType").String())// TODO: unsure if this is correct
+//	if !exists {
+//		return nil, errors.Join(errors.New("invalid item entryType"), fmt.Errorf(`entryType: %s`, entryType))
+//	}
+//	return child, nil
+//}
 
 //func childrenOnlyToPlate(ctx context.Context, xferIds []AlternateCollectionId) ([]geneticSource, error) {
 //	out, db, xferColl := initializeChildrenMethod(ctx)
@@ -141,7 +129,7 @@ func rawEntryTypeConversion(raw bson.Raw) (MainCollectionItem, error) {
 //		newSimpleIndex("pcRun", "pcRun", false, true, false),   // TODO: only on _
 //		newSimpleIndex("recipe", "recipe", false, true, false), // TODO: only on _
 //		newSimpleIndex("species", "species", false, true, false),
-//		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
+//		newSimpleIndex("subspecies", "subspecies", false, true, false),
 //		// filterSize (no index) (BAG ONLY)
 //		newSimpleIndex("sealDate", "sealDate", true, true, false), // BAG ONLY
 //		// flushes (no index) (BAG AND BOX ONLY)

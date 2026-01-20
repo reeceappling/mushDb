@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 	"slices"
 )
 
@@ -26,7 +25,7 @@ type Slant struct {
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
 	MainCollectionOptionalParentField `bson:"inline"` // TODO: binary serverside, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`
@@ -36,7 +35,7 @@ type Slant struct {
 	MostRecentImageField              `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 }
 
 func (s Slant) CanTransferTo(dst geneticSource) error {
@@ -128,24 +127,25 @@ func initializeSlants(ctx context.Context) error {
 	coll := db.Collection(SlantsCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
-		newSimpleIndex("stickType", "stickType", false, true, false),
+		//newSimpleIndex("stickType", "stickType", false, true, false),
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("innoc", "innoc", false, true, false),
-		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		transfersOutIndexModel,
-		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//newSimpleIndex("innoc", "innoc", false, true, false),
+		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		//transfersOutIndexModel,
+		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 
 		//Pics (no index)
 		// TODO: Contams
-		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-		saleIndexModel,
-		disposedIndexModel,
+		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		//saleIndexModel,
+		//disposedIndexModel,
 		// MostRecentImage
 		//Notes (no index) (maybe later with tags?)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 		// TODO: projectsIndexModel,
 	})
@@ -153,9 +153,8 @@ func initializeSlants(ctx context.Context) error {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := Slant{}
 	testId := mainCollIdForint(idTestSlant)
-	testItem := Slant{
+	testItem := &Slant{
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		AgarBatchField:          AgarBatchField{&exAltId},
 		CreationDateField:       CreationDateField{exampleTime},
@@ -178,13 +177,7 @@ func initializeSlants(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createSlantRequest struct {
@@ -276,17 +269,24 @@ func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toI
 	}
 }
 func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, reqPerms PermsOnRequest, w http.ResponseWriter) {
-	perms, err := GetAuthInfo(ctx)
+	// TODO: validate that species and subspecies exist???
+	genetics, err := toInsert.GeneticInfoAsParent()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to get genetic info: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO: validate that species and subspecies exist???
-	// TODO: perms from species??? if user cannot write to species, then use species perms?
-	acl, err := reqPerms.AclFor(ctx, perms)
+	sp, subsp, err := genetics.GetSpeciesSubspecies(ctx)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	// Set ACL to default from parent species/subspecies
+	// Note: users can always import, but they may not be able to write afterwards if they do not meet the permissions...
+	var acl = AclField{ACL: &ACL{}}
+	if subsp != nil {
+		acl.ACL = subsp.DefaultAcl
+	} else {
+		acl.ACL = sp.DefaultAcl
 	}
 	toInsert.SetPerms(acl)
 	finishCreateMainCollectionEntry(ctx, coll, toInsert, w)
@@ -384,7 +384,7 @@ type importSlantRequest struct {
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {

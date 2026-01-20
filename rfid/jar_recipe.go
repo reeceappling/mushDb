@@ -6,13 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
-	sliceutils "slices"
 )
 
 const JarRecipesCollectionName = "jarRecipes"
@@ -50,7 +47,7 @@ type JarRecipe struct {
 	AdditivesField             `bson:"inline"`   // Per grain jar?
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
-	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                   `bson:"inline"`
 }
 
 type GrainPercentage struct {
@@ -77,12 +74,13 @@ func initializeJarRecipes(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false),
-		newSimpleIndex("grains", "grains.grain", false, false, false),
+		//newSimpleIndex("grains", "grains.grain", false, false, false),
 		standardIndexModel,
-		newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
-		newSimpleIndex("sugars", "sugars.type", false, false, false),
-		newSimpleIndex("additives", "additives.additive", false, false, false),
+		//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
+		//newSimpleIndex("sugars", "sugars.type", false, false, false),
+		//newSimpleIndex("additives", "additives.additive", false, false, false),
 		//Notes (no index unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
@@ -90,8 +88,7 @@ func initializeJarRecipes(ctx context.Context) error {
 	}
 
 	// Built-ins
-	inserted, updated := 0, 0
-	for _, recipe := range []JarRecipe{
+	basicEntries := []*JarRecipe{
 		{
 			NameField:                  NameField{"Popcorn"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarPop)},
@@ -125,91 +122,13 @@ func initializeJarRecipes(ctx context.Context) error {
 				builtInNote("Vermioculite should be added after oats are boiled"),
 			}},
 		},
-	} {
-		var existing JarRecipe
-		err := coll.FindOne(ctx, bson.D{{"_id", recipe.Id}}).Decode(&existing)
-		if err != nil {
-			if err != mongo.ErrNoDocuments {
-				return err
-			}
-			// if not exists, add it to the db
-			_, err = coll.InsertOne(ctx, recipe)
-			if err != nil {
-				return err
-			}
-			inserted++
-			continue
-		}
-		// If exists, ensure it is the same as it was. Add notes if necessary
-		update := false
-		if len(recipe.Grains) != len(existing.Grains) {
-			update = true
-		} else {
-			for i, _ := range recipe.Grains {
-				if recipe.Grains[i] != existing.Grains[i] {
-					update = true
-					break
-				} else {
-					if recipe.Grains[i].Percentage != existing.Grains[i].Percentage {
-						update = true
-						break
-					}
-				}
-			}
-		}
-		// Nutrients
-		if !update {
-			if len(recipe.Nutrients) != len(existing.Nutrients) {
-				update = true
-			} else {
-				// if any nutrients are different, replace
-				for i, nut := range recipe.Nutrients {
-					if nut != existing.Nutrients[i] {
-						update = true
-						break
-					}
-				}
-			}
-		}
-
-		// Sugars
-		if !update {
-			if len(recipe.Sugars) != len(existing.Sugars) {
-				update = true
-			} else {
-				// if any sugars are different, replace
-				for i, s := range recipe.Sugars {
-					if s != existing.Sugars[i] {
-						update = true
-						break
-					}
-				}
-			}
-		}
-
-		// Notes
-		finalNotes := []Note{}
-		copy(finalNotes, existing.Notes)
-		for _, note := range recipe.Notes {
-			if !sliceutils.Contains(finalNotes, note) {
-				finalNotes = append(finalNotes, note)
-				update = true
-			}
-		}
-		recipe.Notes = finalNotes
-
-		// Update if necessary
-		if update {
-			err = coll.FindOneAndReplace(ctx, bson.D{{"_id", recipe.Id}}, recipe).Err()
-			if err != nil {
-				return err
-			}
-			updated++
-		}
+	}
+	err = addBasicAltEntries(ctx, basicEntries...)
+	if err != nil {
+		return err
 	}
 	// If test jar recipe does not exist, then create it
-	existingEntry := JarRecipe{}
-	testItem := JarRecipe{
+	testItem := &JarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		NameField:                  NameField{"testJarRecipeName"},
 		Grains:                     []GrainPercentage{{Grain: BirdSeed, Percentage: 100}},
@@ -236,17 +155,8 @@ func initializeJarRecipes(ctx context.Context) error {
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
-	if inserted+updated > 0 { // TODO: ok?
-		println(fmt.Sprintf(`Jar recipes: inserted %d, updated %d`, inserted, updated))
-	}
-	return err
+	// TODO: add built-in entries
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createJarRecipeRequest struct {
@@ -257,8 +167,6 @@ type createJarRecipeRequest struct {
 	SugarsField
 	AdditivesField
 	NotesField
-	UsersThatCanEdit    []Base58Str   `json:"usersThatCanEdit,omitempty"`    // TODO: DO THIS IN TYPESCRIPT!
-	ProjectsThatCanEdit []projectName `json:"projectsThatCanEdit,omitempty"` // TODO: DO THIS IN TYPESCRIPT!
 }
 
 func (req createJarRecipeRequest) ValidateGrains() error {
@@ -299,18 +207,8 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	resolvedUserPerms, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
-		return
-	}
 	ctx, db := Db(r)
 	coll := db.Collection(JarRecipesCollectionName)
-	acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
-	if err != nil {
-		dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	toInsert := JarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
 		NameField:                  NameField{req.Name},
@@ -321,7 +219,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AdditivesField:             AdditivesField{req.Additives},
 		NotesField:                 NotesField{req.Notes},
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   acl,
+		AclField:                   allCanWriteAcl(),
 	}
 	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
@@ -329,8 +227,8 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 type updateJarRecipeRequest struct {
 	NameField
 	StandardField
-	Notes          AllEntries[Note] `json:"notes"`
-	PermsOnRequest                  // TODO: handle in typescript and handler!
+	Notes AllEntries[Note] `json:"notes"`
+	PermsOnRequest
 }
 
 func (req updateJarRecipeRequest) modsFor(existing *JarRecipe, aclField AclField) (bson.D, error) {

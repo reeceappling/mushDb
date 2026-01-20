@@ -10,7 +10,6 @@ import (
 	"golang.org/x/exp/maps"
 	"io"
 	"net/http"
-	"reflect"
 )
 
 type TransfersOutField struct {
@@ -31,7 +30,7 @@ var transferReasons = map[transferReason]string{
 	"outgrew":      "outgrew plate",
 	"contaminated": "parent was contaminated",
 	"sectoring":    "transferring a specific sector",
-	// TODO: more?
+	"age":          "plate is veryold",
 }
 
 type Transfer struct { // TODO: does not include multi-jar transfers from jars to monotubs
@@ -46,7 +45,7 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	ToImage                    *imageLocation     `bson:"toImage,omitempty" json:"toImage,omitempty"`
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
-	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                   `bson:"inline"`
 }
 
 func (t Transfer) EntryTypeField() *string {
@@ -67,40 +66,23 @@ func (t Transfer) PicsModsForChild() *Mods {
 		withPics([]PicWithNotes{pic})
 }
 
-// Perms have not been checked when this runs yet // TODO: ?
+// Perms have not been checked when this runs yet
 func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) (geneticSource, error) {
-	b58id := id.asBase58()
-	if tempItem, exists := mainCollMap[entryType]; exists { // TODO: no longer need this
-		out, err := GetMainCollectionItem(ctx, id, tempItem) // TODO: use multiple collections here!
-		if err != nil {
-			return nil, errors.Join(errors.New("failed to get main coll item genetic item"), err)
-		}
-		return out, nil
-	}
-	acId, err := b58id.toAltCollectionId()
-	if err != nil {
-		return nil, errors.Join(errors.New("invalid altCollectionId"), err)
-	}
-	outType, exists := map[string]AltCollectionItem{
-		"fruit":      Fruit{},
-		"sporePrint": SporePrint{},
-	}[entryType]
+	tempItem, exists := mainCollMap(entryType)
 	if !exists {
-		return nil, errors.Join(errors.New("invalid entry type"), err)
+		return nil, errors.New("invalid entry type: " + entryType)
 	}
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(outType.CollectionName())
-	err = coll.FindOne(ctx, bson.D{{"_id", acId}}).Decode(&outType)
+	out, err := GetMainCollectionItem(ctx, id, tempItem)
 	if err != nil {
-		return nil, err
+		err = errors.Join(errors.New("failed to get main coll item genetic item"), err)
 	}
-	return outType.(geneticSource), nil
+	return out, err
 }
 
 func initializeTransfers(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(TransfersCollName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		// TODO: UNSURE WHICH INDICES ARE NEEDED
 		// TODO: ensure from index indexes all of the child ids
 		// TODO: newSimpleIndex("from", "from", true, false, false),
 		// TODO: newSimpleIndex("to", "to", true, false, false),
@@ -111,15 +93,15 @@ func initializeTransfers(ctx context.Context) error {
 		//FromImage (no index)
 		//ToImage (no index)
 		//Notes (no index unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := Transfer{}
 	// TODO: also create many-to-one monotub test transfer
-	testItem := Transfer{
+	testItem := &Transfer{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		From:                       []MainCollectionId{exPlate},
 		To:                         exJar,
@@ -131,14 +113,9 @@ func initializeTransfers(ctx context.Context) error {
 		ToImage:                    (*imageLocation)(&exPicLoc),
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
+		AclField:                   allCanReadAcl(),
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createTransferRequest struct {
@@ -340,6 +317,14 @@ type updateTransferRequest struct {
 	PermsOnRequest                  // TODO: ????????? handle in typescript and handler!
 }
 
+func (mods updateTransferRequest) modsFor(existing *Transfer, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateNotesIfNeeded(mods.Notes, existing.Notes). // TODO: make sure this works the way we want
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+}
+
 func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 	b58Id := Base58Str(r.PathValue("id"))
 	defer r.Body.Close()
@@ -359,53 +344,18 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(TransfersCollName)
-		existing, err := GetAltCollectionItemOutsideTxn(ctx, id, Transfer{})
-		if err != nil {
-			stat := http.StatusInternalServerError
-			if err == mongo.ErrNoDocuments {
-				stat = http.StatusNotFound
-			}
-			return dbErr(w, err.Error(), stat)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := req.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := NewMods().
-			updateNotesIfNeeded(req.Notes, existing.Notes). // TODO: make sure this works the way we want
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error resolving updates list: "+err.Error(), http.StatusInternalServerError)
-		}
-		bsonId := bson.D{{"_id", existing.Id}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	ctx, db := Db(r)
+	coll := db.Collection(TransfersCollName)
+	existing, err := GetAltCollectionItemOutsideTxn(ctx, id, Transfer{})
 	if err != nil {
-		handleWriteErr(err, w)
+		stat := http.StatusInternalServerError
+		if err == mongo.ErrNoDocuments {
+			stat = http.StatusNotFound
+		}
+		dbErr(w, err.Error(), stat)
+		return
 	}
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
 func getAllTransferReasonsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use

@@ -4,21 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
-	sliceutils "slices"
 )
-
-// TODO: AgarRecipe, JarRecipe, LcRecipe now have additiveMeasurements. Account for those everywhere
-// TODO: ensure standard LC recipes are accessible
 
 type LcRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
-	NameField                  `bson:"inline"` // TODO: ENSURE THIS IS PROPERLY SET EVERYWHERE AND INDEXED
+	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"` // TapWater, DistilledWater, GrainWater (Oat,
 	NutrientsField             `bson:"inline"`
 	StandardField              `bson:"inline"` // Whether or not this is a standard recipe
@@ -26,7 +20,7 @@ type LcRecipe struct {
 	AdditivesField             `bson:"inline"`
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
-	AclField                   `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                   `bson:"inline"`
 }
 
 type LcRecipeField struct {
@@ -49,25 +43,25 @@ func initializeLcRecipes(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcRecipesCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false),
-		newSimpleIndex("liquids", "liquids.name", false, false, false),
-		newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
+		//newSimpleIndex("liquids", "liquids.name", false, false, false),
+		//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
 		standardIndexModel,
-		newSimpleIndex("sugars", "sugars.type", false, false, false),
-		newSimpleIndex("additives", "additives.additive", false, false, false),
+		//newSimpleIndex("sugars", "sugars.type", false, false, false),
+		//newSimpleIndex("additives", "additives.additive", false, false, false),
 		//Notes (no index for now unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
-	inserted, updated := 0, 0
 	allWater := LiquidsField{[]liquid{Water.AsLiquid()}}
 	allLME := NutrientsField{[]nutrientMeasurement{{
 		Nutrient: LME,
 		Amount:   0.667,
 		Unit:     "g/pt",
 	}}}
-	for _, recipe := range []LcRecipe{
+	basicEntries := []*LcRecipe{
 		// LME LC - Light Malt Extract LC
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idMeaLC)},
@@ -79,6 +73,7 @@ func initializeLcRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("0.667g nutes per pint jar"),
 			}},
+			AclField: allCanReadAcl(),
 		},
 		// Sugary LME LC
 		{
@@ -93,88 +88,15 @@ func initializeLcRecipes(ctx context.Context) error {
 			AdditivesField: AdditivesField{},
 			StandardField:  StandardField{true},
 			NotesField:     NotesField{[]Note{}},
+			AclField:       allCanReadAcl(),
 		},
-	} {
-		var existing LcRecipe
-		err := coll.FindOne(ctx, bson.D{{"_id", recipe.Id}}).Decode(&existing)
-		if err != nil {
-			if err != mongo.ErrNoDocuments {
-				return err
-			}
-			// if not exists, add it to the db
-			_, err = coll.InsertOne(ctx, recipe)
-			if err != nil {
-				return err
-			}
-			inserted++
-			continue
-		}
-		// If exists, ensure it is the same as it was. Add notes if necessary
-		update := false
-		if len(recipe.Liquids) != len(existing.Liquids) {
-			update = true
-		} else {
-			// if any liquids are different, replace all liquids
-			for i, liq := range recipe.Liquids {
-				if liq != existing.Liquids[i] {
-					update = true
-					break
-				}
-			}
-		}
-		// Nutrients
-		if !update {
-			if len(recipe.Nutrients) != len(existing.Nutrients) {
-				update = true
-			} else {
-				// if any nutrients are different, replace
-				for i, nut := range recipe.Nutrients {
-					if nut != existing.Nutrients[i] {
-						update = true
-						break
-					}
-				}
-			}
-		}
-
-		// Sugars
-		if !update {
-			if len(recipe.Sugars) != len(existing.Sugars) {
-				update = true
-			} else {
-				// if any sugars are different, replace
-				for i, s := range recipe.Sugars {
-					if s != existing.Sugars[i] {
-						update = true
-						break
-					}
-				}
-			}
-		}
-
-		// Notes
-		finalNotes := []Note{}
-		copy(finalNotes, existing.Notes)
-		for _, note := range recipe.Notes {
-			if !sliceutils.Contains(finalNotes, note) {
-				finalNotes = append(finalNotes, note)
-				update = true
-			}
-		}
-		recipe.Notes = finalNotes
-
-		// Update if necessary
-		if update {
-			err = coll.FindOneAndReplace(ctx, bson.D{{"_id", recipe.Id}}, recipe).Err()
-			if err != nil {
-				return err
-			}
-			updated++
-		}
+	}
+	err = addBasicAltEntries(ctx, basicEntries...)
+	if err != nil {
+		return err
 	}
 	// Add test entry
-	existingEntry := LcRecipe{}
-	testItem := LcRecipe{
+	testItem := &LcRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		NameField:                  NameField{"testJarRecipeName"},
 		StandardField:              StandardField{false},
@@ -200,17 +122,8 @@ func initializeLcRecipes(ctx context.Context) error {
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
-	if inserted+updated > 0 {
-		println(fmt.Sprintf(`LC recipes: inserted %d, updated %d`, inserted, updated))
-	}
-	return err
+	// TODO: add built-in entries
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createLcRecipeRequest struct {
@@ -263,8 +176,8 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 type updateLcRecipeRequest struct {
 	NameField
 	StandardField
-	Notes          AllEntries[Note] `json:"notes"`
-	PermsOnRequest                  // TODO: handle in typescript and handler!
+	Notes AllEntries[Note] `json:"notes"`
+	PermsOnRequest
 }
 
 func (req updateLcRecipeRequest) modsFor(existing *LcRecipe, aclField AclField) (bson.D, error) {

@@ -3,9 +3,9 @@ package rfid
 import (
 	"context"
 	"errors"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"reflect"
 	"slices"
 )
 
@@ -30,7 +30,7 @@ type PlugsJar struct { // TODO: do this whole file! This should be an alt, not a
 	DisposedField                     `bson:"inline"` // Also changed once all pegs are sold/used?
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 
 	// TODO: this whole thing whenever we need to
 }
@@ -120,51 +120,44 @@ func initializePlugs(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlugsCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		// TODO: which indices are needed?
-		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
-		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
 		creationDateIndexModel,
 		// TODO: DOWEL TYPES
-		newSimpleIndex("dowelTypes", "dowelTypes.wood", false, false, false),
-		newSimpleIndex("dowelSizes", "dowelTypes.radius", false, false, false),
+		//newSimpleIndex("dowelTypes", "dowelTypes.wood", false, false, false),
+		//newSimpleIndex("dowelSizes", "dowelTypes.radius", false, false, false),
 		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("innoc", "innoc", false, true, false),
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//newSimpleIndex("innoc", "innoc", false, true, false),
 		newSimpleIndex("pcRun", "pcRun", false, false, false),
 		// TODO: ensure sales index is for each item!
-		newSimpleIndex("sales", "sales", false, true, false),
-		disposedIndexModel,
-		// TODO: PROJECTS
+		//newSimpleIndex("sales", "sales", false, true, false),
+		//disposedIndexModel,
 		//Notes (no index unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := PlugsJar{}
-	testItem := PlugsJar{
+	testItem := &PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{exPlugId},
-		ParentTypeField:       ParentTypeField{
-			// TODO; FIX!
+		ParentTypeField: ParentTypeField{
+			utils.Pointer("plate"),
 		},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
 		CreationDateField:                 exampleTime.asCreationDate(),
 		DowelTypes:                        nil, // TODO; FIX
 		SpeciesOptionalField:              SpeciesOptionalField{&testEntryStringId},
 		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
-		InnocField:                        InnocField{}, // TODO; FIX
-		PcRunField:                        PcRunField{}, // TODO; FIX
+		InnocField:                        InnocField{&exAltId},
+		PcRunField:                        PcRunField{exAltId},
 		SalesField:                        SalesField{[]AlternateCollectionId{exAltId}},
 		DisposedField:                     DisposedField{&exampleTime},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		//PermsField:                        PermsField{}, // TODO; FIX
+		AclField:                          allCanReadAcl(),
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }

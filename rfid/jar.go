@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"github.com/reeceappling/goUtils/v2/utils/slices"
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,29 +16,29 @@ import (
 )
 
 type GrainJar struct {
-	MainCollectionIdField     `bson:"inline"`
-	SizeCups                  int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
-	JarRecipeField            `bson:"inline"`
-	WetnessField              `bson:"inline"` // TODO: HANDLE IN JAVASCRIPT
-	BurstGrainsField          `bson:"inline"`
-	PcRunOptionalField        `bson:"inline"`
-	CreationDateField         `bson:"inline"`
-	SpeciesOptionalField      `bson:"inline"`
-	SubspeciesOptionalField   `bson:"inline"`
-	InnocField                `bson:"inline"` // TODO: multiple? What if first innoc does not work?
-	GenerationsFields         `bson:"inline"`
-	TransfersOutField         `bson:"inline"`
-	ParentTypeField           `bson:"inline"` // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX???? // TODO: multiple?
-	BinaryOptionalParentField `bson:"inline"`
-	PicsField                 `bson:"inline"`
-	ContaminationsField       `bson:"inline"`
-	KnownFruitableField       `bson:"inline"`
-	SaleField                 `bson:"inline"`
-	DisposedField             `bson:"inline"`
-	MostRecentImageField      `bson:"inline"`
-	NotesField                `bson:"inline"`
-	LastUpdatedField          `bson:"inline"`
-	AclField                  `bson:"inline"` // TODO: handle EVERYWHERE
+	MainCollectionIdField             `bson:"inline"`
+	SizeCups                          int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
+	JarRecipeField                    `bson:"inline"`
+	WetnessField                      `bson:"inline"` // TODO: HANDLE IN JAVASCRIPT
+	BurstGrainsField                  `bson:"inline"`
+	PcRunOptionalField                `bson:"inline"`
+	CreationDateField                 `bson:"inline"`
+	SpeciesOptionalField              `bson:"inline"`
+	SubspeciesOptionalField           `bson:"inline"`
+	InnocField                        `bson:"inline"` // TODO: multiple? What if first innoc does not work?
+	GenerationsFields                 `bson:"inline"`
+	TransfersOutField                 `bson:"inline"`
+	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX???? // TODO: multiple?
+	MainCollectionOptionalParentField `bson:"inline"`
+	PicsField                         `bson:"inline"`
+	ContaminationsField               `bson:"inline"`
+	KnownFruitableField               `bson:"inline"`
+	SaleField                         `bson:"inline"`
+	DisposedField                     `bson:"inline"`
+	MostRecentImageField              `bson:"inline"`
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"`
 }
 
 type BurstGrainsField struct {
@@ -144,27 +143,28 @@ func initializeJars(ctx context.Context) error {
 	coll := db.Collection(GrainJarCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		creationDateIndexModel,
-		newSimpleIndex("sizeCups", "sizeCups", true, false, false),
-		newSimpleIndex("recipe", "recipe", false, true, false),
-		newSimpleIndex("wetness", "wetness", false, true, false),
-		newSimpleIndex("burstGrains", "burstGrains", false, true, false),
+		//newSimpleIndex("sizeCups", "sizeCups", true, false, false),
+		//newSimpleIndex("recipe", "recipe", false, true, false),
+		//newSimpleIndex("wetness", "wetness", false, true, false),
+		//newSimpleIndex("burstGrains", "burstGrains", false, true, false),
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		newSimpleIndex("innoc", "innoc", false, true, false),
-		newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		transfersOutIndexModel,
-		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//newSimpleIndex("innoc", "innoc", false, true, false),
+		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		//transfersOutIndexModel,
+		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//Pics (no index)
 		//TODO: Contams
-		newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-		saleIndexModel,
-		newSimpleIndex("disposed", "disposed", false, true, false),
+		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		//saleIndexModel,
+		//newSimpleIndex("disposed", "disposed", false, true, false),
 		// MostRecentImage
 		//Notes (no index) (maybe later with tags?)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 		// TODO: projectsIndexModel,
 	})
@@ -172,9 +172,8 @@ func initializeJars(ctx context.Context) error {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := GrainJar{}
 	testId := mainCollIdForint(idTestJar)
-	testItem := GrainJar{
+	testItem := &GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		JarRecipeField:          JarRecipeField{&exAltId},
 		PcRunOptionalField:      PcRunOptionalField{&exAltId},
@@ -186,25 +185,19 @@ func initializeJars(ctx context.Context) error {
 			GenSporeField:        GenSporeField{&exGenSinceSpore},
 			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
 		},
-		TransfersOutField:         TransfersOutField{exAlts},
-		ParentTypeField:           ParentTypeField{&exParentType},
-		BinaryOptionalParentField: BinaryOptionalParentField{utils.Pointer(exPlate.ToBinaryCollectionId())},
-		PicsField:                 PicsField{exPics},
-		ContaminationsField:       ContaminationsField{exContams},
-		KnownFruitableField:       KnownFruitableField{exBool},
-		SaleField:                 SaleField{&exAltId},
-		DisposedField:             DisposedField{&exampleTime},
-		MostRecentImageField:      MostRecentImageField{&exPics[0]},
-		NotesField:                NotesField{exampleNotes()},
-		LastUpdatedField:          LastUpdatedField{exampleTime},
+		TransfersOutField:                 TransfersOutField{exAlts},
+		ParentTypeField:                   ParentTypeField{&exParentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+		PicsField:                         PicsField{exPics},
+		ContaminationsField:               ContaminationsField{exContams},
+		KnownFruitableField:               KnownFruitableField{exBool},
+		SaleField:                         SaleField{&exAltId},
+		DisposedField:                     DisposedField{&exampleTime},
+		MostRecentImageField:              MostRecentImageField{&exPics[0]},
+		NotesField:                        NotesField{exampleNotes()},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, testId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }
 
 // TODO: RENAME AND MOVE!
@@ -240,8 +233,8 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 // TODO: no innoculateJarHandler. Comes from create transfer handler
 
 type createJarRequest struct {
-	Recipe       AlternateCollectionId // grain recipe
-	WetnessField                       // TODO: NEW! HANDLE!
+	Recipe AlternateCollectionId // grain recipe
+	WetnessField
 	BurstGrainsField
 	CreationDateField
 	PcRunField
@@ -308,7 +301,7 @@ type importJarRequest struct {
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 	// image as "img"
 }
 
@@ -417,7 +410,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		pix = []PicWithNotes{*importedPic}
 	}
 	ctx, db := Db(r)
-	acl, err := data.PermsOnRequest.AclFor(ctx, user)
+	acl, err := data.PermsOnRequest.AclForUser(ctx, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -462,25 +455,7 @@ type updateJarRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
-}
-
-func contamUpdates(contams SplitEntries[contamForm, ContaminationLessLocation]) SplitEntries[contamForm, Contamination] { // TODO: MOVE AND USE
-	return SplitEntries[contamForm, Contamination]{
-		Existing: contams.Existing,
-		New: slices.Map(contams.New, func(i ContaminationLessLocation) Contamination {
-			return i.asContamination(nil)
-		}),
-	}
-}
-
-func imageUpdates(Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation]) SplitEntries[picWithNotesForm, PicWithNotes] { // TODO: MOVE AND USE
-	return SplitEntries[picWithNotesForm, PicWithNotes]{
-		Existing: Images.Existing,
-		New: slices.Map(Images.New, func(i PicWithNotesLessLocation) PicWithNotes {
-			return i.asPicWithNotes(nil)
-		}),
-	}
+	PermsOnRequest
 }
 
 func (upr updateJarRequest) reform() resolvedUpdateJarRequest {
@@ -499,10 +474,10 @@ type resolvedUpdateJarRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes          AllEntries[Note]
-	Images         SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams        SplitEntries[contamForm, Contamination]
-	PermsOnRequest // TODO: handle in typescript and handler!
+	Notes   AllEntries[Note]
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	PermsOnRequest
 }
 
 func (out resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {

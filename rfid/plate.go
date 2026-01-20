@@ -9,7 +9,6 @@ import (
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
 	"net/http"
 	"slices"
@@ -24,8 +23,8 @@ type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // TODO: NEW! HANDLE! nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: was binary, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
+	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`
 	KnownFruitableField               `bson:"inline"` // TODO: handle being yes if clone, among other yeses
@@ -34,7 +33,7 @@ type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	MostRecentImageField              `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 }
 
 func (p Plate) IdValue() any {
@@ -118,34 +117,34 @@ func initializePlates(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	println("2")
 	coll := db.Collection(PlatesCollectionName)
-	//_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-	//	//newSimpleIndex("agarBatch", "agarBatch", false, true, false),
-	//	//creationDateIndexModel,
-	//	//newSimpleIndex("species", "species", false, true, false),
-	//	//newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-	//	//newSimpleIndex("innoc", "innoc", false, true, false),
-	//	//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-	//	//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-	//	//transfersOutIndexModel,
-	//	//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-	//	//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
-	//	//
-	//	////Pics (no index)
-	//	//// TODO: Contams
-	//	//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-	//	//saleIndexModel,
-	//	//disposedIndexModel,
-	//	//// MostRecentImage
-	//	////Notes (no index) (maybe later with tags?)
-	//	//lastUpdatedIndexModel,
-	//	// TODO: projectsIndexModel,
-	//})
-	//if err != nil {
-	//	return err
-	//}
-	// If test agar batch does not exist, then create it
+	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
+		creationDateIndexModel,
+		newSimpleIndex("species", "species", false, true, false),
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//newSimpleIndex("innoc", "innoc", false, true, false),
+		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+		//transfersOutIndexModel,
+		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		//
+		////Pics (no index)
+		//// TODO: Contams
+		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+		//saleIndexModel,
+		//disposedIndexModel,
+		//// MostRecentImage
+		////Notes (no index) (maybe later with tags?)
+		lastUpdatedIndexModel,
+		projectsIndexModel,
+	})
+	if err != nil {
+		return err
+	}
+	// If test plate does not exist, then create it
 	testId := mainCollIdForint(idTestPlate) // 0th id, b58==1
-	testItem := Plate{
+	testItem := &Plate{
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		AgarBatchField:          AgarBatchField{&exAltId},
 		CreationDateField:       CreationDateField{exampleTime},
@@ -168,53 +167,7 @@ func initializePlates(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	// TODO: INSERT IN MAP COLLECTION?
-	println("3")
-	result, err := coll.ReplaceOne(ctx, bson.D{{"_id", testId}}, testItem, &options.ReplaceOptions{Upsert: utils.Pointer(true)})
-	if err != nil {
-		println(err.Error())
-		return err
-	}
-	println("4")
-	res := coll.FindOne(ctx, bson.D{{"_id", testId}})
-	if res.Err() != nil {
-		println(res.Err().Error())
-		return res.Err()
-	}
-	println("5")
-	raw, err := res.Raw()
-	if err != nil {
-		println(err.Error())
-		return err
-	}
-	println("6")
-	println(raw.String())
-	err = res.Decode(&testItem)
-	if err != nil {
-		println("failed to decode test item", err.Error())
-	}
-	println("7")
-	println(result.UpsertedID)
-	//result, err := coll.ReplaceOne(ctx, bson.D{{"_id", testId}}, testItem)
-	//if err != nil {
-	//	println(err.Error())
-	//	return err
-	//}
-	//result.UpsertedID =
-	//println("ITEM PLACED IN COLLECTION!!!!!!!! --------------------------------------")
-	//switch result.UpsertedID.(type) {
-	//case primitive.ObjectID:
-	//	println(result.UpsertedID)
-	//default:
-	//	println("not object id: " + reflect.TypeOf(result.UpsertedID).Name())
-	//
-	//}
-	//id, ok := result.UpsertedID.(type)
-	//if !ok {
-	//	return errors.New("id was not main")
-	//}
-	//println("id", id)
-	return err
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createPlateRequest struct {
@@ -274,7 +227,7 @@ type updatePlateRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	Contams SplitEntries[contamForm, ContaminationLessLocation]
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
@@ -311,7 +264,7 @@ type resolvedUpdatePlateRequest struct {
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -431,7 +384,7 @@ type importPlateRequest struct {
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {

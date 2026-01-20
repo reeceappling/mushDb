@@ -15,8 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"math/big"
 	"net/http"
-	"reflect"
-	"slices"
 	"time"
 )
 
@@ -335,8 +333,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 
 	//uri := fmt.Sprintf("mongodb://%s", hostAndPort)
 	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
-	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
-	println("creating client to " + uri)                               // TODO: deleteMe
+	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
 
 	// TODO: SET UP INITIAL USER IF USER DOES NOT EXIST!
 	// TODO: THIS SHOULD BE DONE VIA: https://stackoverflow.com/questions/42912755/how-to-create-a-db-for-mongodb-container-on-start-up
@@ -402,31 +399,6 @@ func GetMongoClient(ctx context.Context) *mongo.Client {
 	return ctx.Value(mongoClientContextKey).(*mongo.Client) // TODO, ensure ok that this may not be set
 }
 
-//// TODO: DONT USE THIS ANYMORE!!!!!
-//func doTxn(ctx context.Context, txnFunc func(ctx mongo.SessionContext) (interface{}, error)) (interface{}, error) {
-//	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-//
-//	// Starts a session on the client
-//	session, err := client.StartSession()
-//	if err != nil {
-//		return nil, errors.Join(errors.New("failed to start transaction session"), err)
-//	}
-//	// Defers ending the session after the transaction is committed or ended
-//	defer session.EndSession(ctx)
-//
-//	txnOptions := options.Transaction().SetWriteConcern(writeconcern.Majority()) // TODO: other concerns? read concern?
-//	result, err := session.WithTransaction(ctx, txnFunc, txnOptions)
-//	// Note: error aborts tx on its own
-//	if err != nil {
-//		if errors.Is(err, ErrInTxnAlreadyTriedToWrite) {
-//			return result, err
-//		}
-//		newErr := errors.New("failed to execute transaction") // TODO: move
-//		return result, errors.Join(err, newErr)
-//	}
-//	return result, errors.Join(session.CommitTransaction(ctx), err)
-//}
-
 func generateCollectionIds(ctx context.Context, collectionName string, n int) ([]MainCollectionId, error) {
 	// TODO: ensure this checks the new idMap collection!
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
@@ -459,38 +431,38 @@ func newCollectionId(ctx context.Context, collectionName string) (MainCollection
 //
 //}
 
-func getLastNEntries(ctx context.Context, variant string, updated bool, nresults int) ([]byte, error) {
-	entryType, err := entryTypeFor(variant)
-	if err != nil {
-		return nil, err
-	}
-	findBson := bson.D{{}}
-	if etf := entryType.EntryTypeField(); etf != nil {
-		findBson = bson.D{{"entryType", *etf}} // TODO: ensure ok (dont like this)
-	}
-	sortField := "$natural"
-	if updated {
-		sortField = "lastUpdated"
-	}
-	// TODO: pagination?
-	opts := options.Find().
-		SetLimit(int64(nresults)).
-		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
-	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
-
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
-		Collection(entryType.CollectionName()).
-		Find(ctx, findBson, opts)
-	if err != nil {
-		return nil, err
-	}
-	results, err := getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType))
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(results)
-}
+//func getLastNEntries(ctx context.Context, variant string, updated bool, nresults int) ([]byte, error) {
+//	entryType, err := entryTypeFor(variant)
+//	if err != nil {
+//		return nil, err
+//	}
+//	findBson := bson.D{{}}
+//	if etf := entryType.EntryTypeField(); etf != nil {
+//		findBson = bson.D{{"entryType", *etf}} // TODO: ensure ok (dont like this)
+//	}
+//	sortField := "$natural"
+//	if updated {
+//		sortField = "lastUpdated"
+//	}
+//	// TODO: pagination?
+//	opts := options.Find().
+//		SetLimit(int64(nresults)).
+//		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
+//	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
+//
+//	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+//		Database(dbName).
+//		Collection(entryType.CollectionName()).
+//		Find(ctx, findBson, opts)
+//	if err != nil {
+//		return nil, err
+//	}
+//	results, err := getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType))
+//	if err != nil {
+//		return nil, err
+//	}
+//	return json.Marshal(results)
+//}
 
 func HandleCreate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -505,10 +477,12 @@ func HandleCreate() http.HandlerFunc {
 		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
-			"agarBatch":       createAgarBatchHandler,
-			"agarRecipe":      createAgarRecipeHandler,
-			"bag":             createBagHandler,
-			"lc":              createLiquidCultureHandler,
+			"agarBatch":  createAgarBatchHandler,
+			"agarRecipe": createAgarRecipeHandler,
+			"bag":        createBagHandler,
+			"lc":         createLiquidCultureHandler,
+			"lcSyringe":  createSyringeHandler,
+			//"plugs": createPlugsHandler, // TODO: FIX!
 			"lcRecipe":        createLcRecipeHandler,
 			"fruit":           createFruitHandler,
 			"fruitingChamber": createFruitingChamberHandler,
@@ -522,9 +496,11 @@ func HandleCreate() http.HandlerFunc {
 			"slant":           createSlantHandler,
 			"species":         createSpeciesHandler,
 			"sporePrint":      createSporePrintHandler,
+			"sporeSwab":       createSporeSwabHandler,
 			"stasisTube":      createStasisTubeHandler,
 			"subspecies":      createSubspeciesHandler,
 			"substrateRecipe": createSubstrateRecipeHandler,
+			"substrateBatch":  createSubstrateBatchHandler,
 			"transfer":        createTransferHandler,
 			//"User":"", // TODO: probably don't need
 		}[endpt]
@@ -551,8 +527,10 @@ func ImportHandler() http.HandlerFunc {
 		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
-			"bag":             importBagHandler,
-			"lc":              importLiquidCultureHandler,
+			"bag":       importBagHandler,
+			"lc":        importLiquidCultureHandler,
+			"lcSyringe": importLcSyringeHandler,
+			//"plugs": importPlugsHandler, // TODO: FIX!
 			"fruit":           importFruitHandler,
 			"fruitingChamber": importFruitingChamberHandler,
 			"jar":             importJarHandler,
@@ -560,6 +538,7 @@ func ImportHandler() http.HandlerFunc {
 			"plate":           importPlateHandler,
 			"slant":           importSlantHandler,
 			"sporePrint":      importSporePrintHandler,
+			"sporeSwab":       importSporeSwabHandler,
 			"stasisTube":      importStasisTubeHandler,
 		}[endpt]
 		if !exists {
@@ -586,11 +565,13 @@ func UpdateById() http.HandlerFunc {
 		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
-			"agarBatch":       updateAgarBatchHandler,
-			"agarRecipe":      updateAgarRecipeHandler,
-			"bag":             updateBagHandler,
-			"lc":              updateLiquidCultureHandler,
-			"lcRecipe":        updateLcRecipeHandler,
+			"agarBatch":  updateAgarBatchHandler,
+			"agarRecipe": updateAgarRecipeHandler,
+			"bag":        updateBagHandler,
+			"lc":         updateLiquidCultureHandler,
+			"lcRecipe":   updateLcRecipeHandler,
+			"lcSyringe":  updateSyringeHandler,
+			//"plugs": updatePlugsHandler, // TODO: FIX!
 			"fruit":           updateFruitHandler,
 			"fruitingChamber": updateFruitingChamberHandler,
 			"jar":             updateJarHandler,
@@ -603,11 +584,14 @@ func UpdateById() http.HandlerFunc {
 			"slant":           updateSlantHandler,
 			"species":         updateSpeciesHandler,
 			"sporePrint":      updateSporePrintHandler,
+
+			"sporeSwab":       updateSporeSwabHandler,
 			"stasisTube":      updateStasisTubeHandler,
 			"subspecies":      updateSubspeciesHandler,
 			"substrateRecipe": updateSubstrateRecipeHandler,
+			"substrateBatch":  updateSubstrateBatchHandler,
 			"transfer":        updateTransferHandler,
-			//"ser":             updateUserHandler,
+			//"user":             updateUserHandler,
 		}[endpt]
 		if !exists {
 			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
@@ -616,90 +600,8 @@ func UpdateById() http.HandlerFunc {
 	}
 }
 
-//func userIsAdmin(ctx context.Context) bool {
-//	authinfo, err := GetAuthInfo(ctx)
-//	return err == nil && authinfo.Opts != nil && authinfo.Opts.Admin != nil && *authinfo.Opts.Admin
-//}
-
-func setStringArrayIfUnequal(upd *Mods, new []string, current []string, key string) *Mods {
-	out := upd
-	if len(new) != len(current) {
-		out.Set(key, new)
-		return out
-	}
-	for i := 0; i < len(current); i++ {
-		if !slices.Contains(new, current[i]) {
-			out.Set(key, new)
-			return out
-		}
-	}
-	return out
-}
-
-func projectsAsStrings(projs []projectName) []string {
-	out := make([]string, len(projs))
-	for i := 0; i < len(projs); i++ {
-		out[i] = string(projs[i])
-	}
-	return out
-}
-
-func setSalesIfUnequal(upd bson.D, new []AlternateCollectionId, current []AlternateCollectionId) bson.D {
-	out := upd
-	if len(new) != len(current) {
-		out = append(out, bson.E{"$set", bson.D{{"sales", new}}})
-		return out
-	}
-	for i := 0; i < len(current); i++ {
-		if !slices.Contains(new, current[i]) {
-			out = append(out, bson.E{"$set", bson.D{{"sales", new}}})
-			return out
-		}
-	}
-	return out
-}
-
 func dbErr(w http.ResponseWriter, txt string, status int) {
 	println("txnErr " + txt)
 	http.Error(w, txt, status)
 	return
 }
-
-//func HandleFIXME() http.HandlerFunc { // TODO: handle permissions on all handlers
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		switch r.Method {
-//		case http.MethodGet: // Viewing pages (incl signup?)or other gets (entries, images, sessionUserProjects
-//		case http.MethodPost: // TODO: creating new things?
-//		case http.MethodPatch: // TODO: updating things
-//		}
-//		endpt := r.PathValue("endpt")
-//		handler, exists := map[string]http.HandlerFunc{
-//			"agarBatch":       createAgarBatchHandler,
-//			"agarRecipe":      createAgarRecipeHandler,
-//			"bag":             createBagHandler,
-//			"lc":              createLiquidCultureHandler,
-//			"lcRecipe":        createLcRecipeHandler,
-//			"fruit":           createFruitHandler,
-//			"fruitingChamber": createFruitingChamberHandler,
-//			"jar":             createJarHandler,
-//			"jarRecipe":       createJarRecipeHandler,
-//			"mss":             createMssHandler,
-//			"pcRun":           createPcRunHandler,
-//			"plate":           createPlateHandler,
-//			"project":         createProjectHandler,
-//			"sale":            createSaleHandler,
-//			"slant":           createSlantHandler,
-//			"species":         createSpeciesHandler,
-//			"sporePrint":      createSporePrintHandler,
-//			"stasisTube":      createStasisTubeHandler,
-//			"subspecies":      createSubspeciesHandler,
-//			"substrateRecipe": createSubstrateRecipeHandler,
-//			"transfer":        createTransferHandler,
-//			//"User":"", // TODO: probably don't need
-//		}[endpt]
-//		if !exists {
-//			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
-//		}
-//		GetPermsMiddleware(handler).ServeHTTP(w, r)
-//	}
-//}

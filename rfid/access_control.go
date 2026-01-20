@@ -2,6 +2,8 @@ package rfid
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/goUtils/v2/utils/slices"
 )
@@ -19,6 +21,14 @@ func (field AclField) Permissions() *ACL {
 	return field.ACL
 }
 
+type DefaultAclField struct {
+	ACL *ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"`
+}
+
+func (field DefaultAclField) DefaultPermissions() *ACL {
+	return field.ACL
+}
+
 func allCanReadAcl() AclField {
 	return AclField{ACL: &ACL{
 		BlanketPerm: true,
@@ -30,8 +40,63 @@ func allCanWriteAcl() AclField {
 
 type ACL struct {
 	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite
-	Projects    map[projectName]bool       `bson:"Projects,omitempty" json:"Projects,omitempty"`       // bool is canWrite // TODO: project name?
+	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite // TODO: project name?
 	BlanketPerm bool                       `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // false is public cannot read by default. // TODO: ENSURE PROPERLY SET EVERYWHERE
+}
+
+func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
+	out := &ACL{
+		Users:       nil,
+		Projects:    nil,
+		BlanketPerm: false,
+	}
+	temp := map[string]any{}
+	if err = json.Unmarshal(bs, &temp); err != nil {
+		return err
+	}
+	if usersInterface, ok := temp["users"]; ok {
+		out.Users, ok = usersInterface.(map[string]bool)
+		if !ok {
+			return errors.New("ACL Users is not a map[string]bool or nil")
+		}
+	}
+	if projectsInterface, ok := temp["projects"]; ok {
+		out.Projects, ok = projectsInterface.(map[projectName]bool)
+		if !ok {
+			return errors.New("ACL projects is not a map[string]bool or nil")
+		}
+	}
+	blanketPermIfc, ok := temp["blanketPerm"]
+	if !ok {
+		return errors.New("ACL blanketPerm must be a present boolean field")
+	}
+	out.BlanketPerm, ok = blanketPermIfc.(bool)
+	if !ok {
+		return errors.New("ACL blanketPerm must be a present boolean field")
+	}
+	*acl = *(out.simplified())
+	return nil
+}
+
+// func (acl ACL) MarshalJSON()(bs []byte, err error) is not custom
+
+func (acl *ACL) simplified() *ACL {
+	if acl == nil || acl.BlanketPerm == false {
+		// If admin or default permission is no permission, return self
+		return acl
+	}
+	// If blanketPerm is read, then remove all users/projects that can only read
+	for user, canWrite := range acl.Users {
+		if !canWrite {
+			delete(acl.Users, user)
+		}
+	}
+	for proj, canWrite := range acl.Projects {
+		if !canWrite {
+			delete(acl.Projects, proj)
+		}
+	}
+	return acl
 }
 
 // TODO: USE THIS!!!!!!
@@ -246,5 +311,5 @@ func newAlwaysReadableAcl(ctx context.Context, thisUserPerms ResolvedUserPerms, 
 			return i, true
 		}),
 		BlanketPerm: newPerm(false),
-	}.AclFor(ctx, thisUserPerms)
+	}.AclForUser(ctx, thisUserPerms)
 }

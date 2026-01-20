@@ -3,12 +3,10 @@ package rfid
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
 //var (
@@ -48,12 +46,15 @@ type Sale struct {
 	CreationDateField `bson:"inline"` // This is sale date
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
-	AclField          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField          `bson:"inline"`
 }
 
 func (s Sale) EntryTypeField() *string {
 	return nil
 }
+
+// TODO: func to create plugs sale?
+// TODO: func to create a sale for anything else?
 
 func initializeSales(ctx context.Context) error {
 	// Indices
@@ -61,36 +62,21 @@ func initializeSales(ctx context.Context) error {
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("saleDate", "creationDate", true, false, false),
 		//notes
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := Sale{}
-	testItem := Sale{
+	testItem := &Sale{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		CreationDateField:          exampleTime.asCreationDate(),
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
+		AclField:                   allCanReadAcl(),
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	res, err := coll.InsertOne(ctx, testItem)
-	if err != nil {
-		return err
-	}
-	if res == nil {
-		return errors.New("result should not be nil")
-	}
-	if res.InsertedID != exAltId {
-		return errors.New("entry id did not match")
-	}
-	return nil
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createSaleRequest struct {

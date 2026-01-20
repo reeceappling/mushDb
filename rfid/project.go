@@ -46,9 +46,8 @@ func initializeProjects(ctx context.Context) error {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
-		newSimpleIndex("completed", "creationDate", true, true, false),
+		//newSimpleIndex("completed", "creationDate", true, true, false),
 		lastUpdatedIndexModel,
-		// TODO: Perms?
 	})
 	if err != nil {
 		return err
@@ -141,6 +140,15 @@ type updateProjectRequest struct {
 	// TODO: update perms should update users too!
 }
 
+func (mods updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
+	return NewMods().
+		updateProjectCompletedIfNeeded(mods.Completed, existing.Completed).
+		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updateProjectPermsIfNeeded(mods.Perms, existing.Perms).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+}
+
 func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	urlEncodedProjectName := r.PathValue("id") // TODO: USE!
 	projNameStr, err := urlDecodeString(urlEncodedProjectName)
@@ -196,6 +204,12 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	// TODO: add/remove users (on users)
+	// TODO; add/remove
+	wrappedModsFor := func(pr *Project, _ AclField) (bson.D, error) {
+		return req.modsFor(pr)
+	}
+	finishStringIdAltCollItemUpdate(ctx, w, coll, wrappedModsFor, &existing, PermsOnRequest{})
 
 	upd, err := NewMods().
 		updateProjectCompletedIfNeeded(req.Completed, existing.Completed).

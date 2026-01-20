@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 )
 
 type SporeSwab struct { // TODO: FIX EVERYTHING IN THIS FILE BELOW THIS POINT!!!!
@@ -24,7 +23,7 @@ type SporeSwab struct { // TODO: FIX EVERYTHING IN THIS FILE BELOW THIS POINT!!!
 	TransfersOutField                 `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"` // TODO: handle EVERYWHERE
+	AclField                          `bson:"inline"`
 }
 
 func (sw SporeSwab) Innoculatable() bool {
@@ -112,23 +111,22 @@ func initializeSporeSwabs(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SporeSwabCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("parent", "parent", false, false, false),
+		//newSimpleIndex("parent", "parent", false, false, false),
 		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),
-		newSimpleIndex("subSpecies", "subSpecies", false, true, false),
-		// TODO: projectsIndexModel,
-		saleIndexModel,
-		disposedIndexModel,
-		transfersOutIndexModel,
+		newSimpleIndex("subspecies", "subspecies", false, true, false),
+		//saleIndexModel,
+		//disposedIndexModel,
+		//transfersOutIndexModel,
 		//Notes (no index unless tags)
+		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	existingEntry := SporeSwab{}
-	testItem := SporeSwab{
+	testItem := &SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{exSwabId},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
 		CreationDateField:                 exampleTime.asCreationDate(),
@@ -139,13 +137,7 @@ func initializeSporeSwabs(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	return testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createSporeSwabsRequest struct {
@@ -177,56 +169,58 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	ctx, db := Db(r)
+	coll := db.Collection(SporeSwabCollectionName)
 
-	_, txErr := doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		db := ctx.Client().Database(dbName)
-		parent := SporePrint{}
-		err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
+	parent := SporePrint{}
+	err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	now := unixTimeForNow()
+	out := make([]interface{}, len(ids))
+	idsToMap := make([]MainCollectionId, len(ids))
+	for i, id := range ids {
+		idsToMap[i] = id
+		out[i] = SporeSwab{
+			MainCollectionIdField:             MainCollectionIdField{idsToMap[i]},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+			CreationDateField:                 now.asCreationDate(),
+			SpeciesField:                      parent.SpeciesField,
+			SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+			NotesField:                        NotesField{data.Notes},
+			LastUpdatedField:                  LastUpdatedField{now},
+			// Do not check permissions, just pass parent perms to child
+			AclField: parent.AclField,
 		}
 
-		now := unixTimeForNow()
-		out := make([]interface{}, len(ids))
-		idsToMap := make([]MainCollectionId, len(ids))
-		for i, id := range ids {
-			idsToMap[i] = id
-			out[i] = SporeSwab{
-				MainCollectionIdField:             MainCollectionIdField{idsToMap[i]},
-				MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-				CreationDateField:                 now.asCreationDate(),
-				SpeciesField:                      parent.SpeciesField,
-				SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-				NotesField:                        NotesField{data.Notes},
-				LastUpdatedField:                  LastUpdatedField{now},
-				// Do not check permissions, just pass parent perms to child
-				AclField: parent.AclField,
-			}
+	}
 
-		}
+	// TODO: add new swabs to mappings
 
-		// TODO: add new swabs to mappings
-
-		_, err = db.Collection(SporeSwabCollectionName).InsertMany(ctx, out)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(out)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if txErr != nil {
-		handleWriteErr(txErr, w)
+	_, err = coll.InsertMany(ctx, out)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bsOut, err := json.Marshal(out)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
+	if err != nil {
+		handleWriteErr(err, w)
 	}
 }
 
 type updateSporeSwabRequest struct { // TODO: fix everything below this
 	SaleField
 	DisposedField
-	Notes          AllEntries[Note]
-	PermsOnRequest // TODO: handle in typescript and handler!
+	Notes AllEntries[Note]
+	PermsOnRequest
 }
 
 func (upr updateSporeSwabRequest) reform() resolvedUpdateSporeSwabRequest {
@@ -241,8 +235,18 @@ func (upr updateSporeSwabRequest) reform() resolvedUpdateSporeSwabRequest {
 type resolvedUpdateSporeSwabRequest struct {
 	SaleField
 	DisposedField
-	Notes          AllEntries[Note]
-	PermsOnRequest // TODO: handle in typescript and handler!
+	Notes AllEntries[Note]
+	PermsOnRequest
+}
+
+func (mods resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
+	return NewMods().
+		updateSaleIfNeeded(mods.Sale, existing.Sale).
+		updateDisposedIfNeeded(mods.Disposed, existing.Disposed).
+		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
@@ -254,59 +258,17 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := data.reform()
+	ctx, db := Db(r)
+	coll := db.Collection(SporeSwabCollectionName)
 
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		coll := ctx.Client().Database(dbName).Collection(SporeSwabCollectionName)
-		// go get current sporePrint
-		existing := SporeSwab{}
-		err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
-		if err != nil {
-			return dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		}
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		if !user.HasPermissionToEdit(existing) {
-			return dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		}
-		aclField, err := out.AclFor(ctx, user)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		upd, err := NewMods().
-			updateSaleIfNeeded(out.Sale, existing.Sale).
-			updateDisposedIfNeeded(data.Disposed, existing.Disposed).
-			updateNotesIfNeeded(data.Notes, existing.Notes).
-			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-			updateLastUpdatedIfNeeded().
-			Finalized()
-		if err != nil {
-			return dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		}
-		if len(upd) == 0 {
-			return dbErr(w, "no changes made", http.StatusBadRequest)
-		}
-
-		// write updates to db
-		bsonId := bson.D{{"_id", id}}
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			return dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-		}
-		err = coll.FindOne(ctx, bsonId).Decode(&existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(existing)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
+	// go get current sporeSwab
+	existing := SporeSwab{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
 	if err != nil {
-		HandleHttpWriteError(err)
+		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
 	}
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
 }
 
 type importSporeSwabRequest struct {
@@ -314,7 +276,7 @@ type importSporeSwabRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	PermsOnRequest // TODO: handle in typescript and handler!
+	PermsOnRequest
 }
 
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: NO IMAGES
@@ -342,50 +304,37 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
-
-	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
-		//finalPerms := data.Perms
-		//if data.Perms != nil {
-		//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
-		//	if err != nil {
-		//		return dbErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
-		//	}
-		//	finalPerms = minimalPermsBetween(spec, subsp)
-		//	// TODO: add email perms if provided, as well as make email author?
-		//	if !finalPerms.Valid() {
-		//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
-		//		return dbErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
-		//	}
-		//}
-		perms, err := GetAuthInfo(ctx)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		acl, err := data.AclFor(ctx, perms)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		toInsert := SporeSwab{
-			MainCollectionIdField:   MainCollectionIdField{id},
-			CreationDateField:       data.CreationDateField,
-			SpeciesField:            data.SpeciesField,
-			SubspeciesOptionalField: data.SubspeciesOptionalField,
-			NotesField:              data.NotesField,
-			LastUpdatedField:        LastUpdatedFieldForNow(),
-			AclField:                acl,
-		}
-		coll := ctx.Client().Database(dbName).Collection(SporeSwabCollectionName)
-		_, err = coll.InsertOne(ctx, toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		bsOut, err := json.Marshal(toInsert)
-		if err != nil {
-			return dbErr(w, err.Error(), http.StatusInternalServerError)
-		}
-		return w.Write(bsOut)
-	})
-	if err != nil {
-		handleWriteErr(err, w)
+	ctx, db := Db(r)
+	coll := db.Collection(SporeSwabCollectionName)
+	toInsert := SporeSwab{
+		MainCollectionIdField:   MainCollectionIdField{id},
+		CreationDateField:       data.CreationDateField,
+		SpeciesField:            data.SpeciesField,
+		SubspeciesOptionalField: data.SubspeciesOptionalField,
+		NotesField:              data.NotesField,
+		LastUpdatedField:        LastUpdatedFieldForNow(),
+		// TODO: perms? AclField:                acl,
 	}
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	//finalPerms := data.Perms
+	//if data.Perms != nil {
+	//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+	//	if err != nil {
+	//		return dbErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+	//	}
+	//	finalPerms = minimalPermsBetween(spec, subsp)
+	//	// TODO: add email perms if provided, as well as make email author?
+	//	if !finalPerms.Valid() {
+	//		// TODO: invalid species/subspecies perm crossover. DO THIS ELSEwHERE
+	//		return dbErr(w, "invalid species/subspecies perm crossover: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
+	//	}
+	//}
+	//perms, err := GetAuthInfo(ctx)
+	//if err != nil {
+	//	return dbErr(w, err.Error(), http.StatusInternalServerError)
+	//}
+	//acl, err := data.AclForUser(ctx, perms)
+	//if err != nil {
+	//	return dbErr(w, err.Error(), http.StatusInternalServerError)
+	//}
 }

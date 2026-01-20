@@ -71,17 +71,32 @@ func initializeDb(ctx context.Context) error {
 	}
 	// Create all collections that don't already exist
 	for _, name := range []string{
+		BagsCollectionName,
+		FruitsCollName,
+		FruitingChamberCollectionName,
+		GrainJarCollectionName,
+		LcSyringeCollectionName,
+		LCCollectionName,
+		MssCollectionName,
+		PlatesCollectionName,
+		PlugsCollectionName,
+		SlantsCollectionName,
+		SporePrintCollectionName,
+		SporeSwabCollectionName,
+		StasisTubeCollectionName,
+		// Alternate entry constants
 		AgarBatchCollectionName,
 		AgarRecipesCollectionName,
-		FruitsCollName,
-		JarRecipesCollectionName,
 		LcRecipesCollectionName,
 		PcRunCollectionName,
+		ProjectsCollectionName,
+		SalesCollectionName,
 		SpeciesCollectionName,
-		SporePrintCollectionName,
 		SubspeciesCollectionName,
+		SubstrateBatchCollectionName,
 		SubstrateRecipesCollectionName,
 		TransfersCollName,
+		UserCollName,
 	} {
 		// Create if needed
 		if !slices.Contains(collNames, name) {
@@ -100,28 +115,13 @@ var lastUpdatedIndexModel = mongo.IndexModel{
 	Options: options.Index().SetName("lastUpdated"),
 }
 var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
-var projectsIndexModel = newSimpleIndex("Projects", "perms.Projects.ids", false, true, false)
+var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, true, false) // TODO: ensure actually indexes the correct thing! // TODO: this is a wildcard index!!!!
 var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
 var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false)
 var creationDateIndexModel = newSimpleIndex("creationDate", "createDate", true, false, false)
 var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false)
 
-// TODO: ensure aliases are PER ALIAS
 var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false)
-
-// TODO: HOW TO SORT AND STUFF IS BELOW
-
-func filterByEntryType(entryType string) bson.D { // TODO: fixMe (USE ME)
-	return bson.D{{"entryType", entryType}}
-}
-
-func and() bson.D { // TODO: use me elsewhere (USE ME)
-	operators := bson.A{
-		bson.D{{"type", "Oolong"}},
-		bson.D{{"rating", 7}},
-	}
-	return bson.D{{"$and", operators}}
-}
 
 //// TODO: searching in a specific index
 //func latestNUpdatedB(ctx context.Context) error { // TODO: fixMe
@@ -185,40 +185,39 @@ func updateTogether() bson.D {
 
 func Initialize(ctx context.Context) error { // TODO: use me!
 	for i, initializer := range map[string]func(context.Context) error{
-		//"db": initializeDb,
-		// Initialize Collections with predefined items
-		//"agar Recipe":      initializeAgarRecipes,
-		//"jar Recipe":       initializeJarRecipes,
-		//"lc Recipe":        initializeLcRecipes,
-		//"substrate Recipe": initializeSubstrates,
-		//"species":          initializeSpecies,
-		//"subspecies":       initializeSubspecies,
-		//// Initialize main collections
-		//"mainCollection (general)": initializeMainCollection,
-		//"bags":                     initializeBags,
-		//"fruiting chamber":         initializeFruitingChamber,
-		//"jars":                     initializeJars,
-		//"LCs":                      initializeLCs,
-		//"mss":                      initializeMSS,
-		"plate": initializePlates,
-		//"slant":                    initializeSlants,
-		//"stasis tube":              initializeStasisTubes,
-		//"spore swabs":              initializeSporeSwabs,
-		//"spore syringes":           initializeSyringes,
-		//// Initialize new main collections
-		//"fruit":       initializeFruits,
-		//"spore print": initializeSporePrints,
-		//"plugs":       initializePlugs,
-		//// Initialize alt collections
-		//"agar batch": initializeAgarBatches,
-		//"pc run":     initializePCRun,
-		//"sales":      initializeSales,
-		//"transfer":   initializeTransfers,
-		//
-		//// Other collections
-		//"Projects": initializeProjects,
+		"db": initializeDb,
+		// Initialize main collections
+		"bags":             initializeBags,
+		"fruiting chamber": initializeFruitingChamber,
+		"jars":             initializeJars,
+		"LCs":              initializeLCs,
+		"LcSyringes":       initializeSyringes,
+		"mss":              initializeMSS,
+		"plate":            initializePlates,
+		"slant":            initializeSlants,
+		"stasis tube":      initializeStasisTubes,
+		"spore swabs":      initializeSporeSwabs,
+		// Initialize new main collections
+		"fruit":       initializeFruits,
+		"spore print": initializeSporePrints,
+		"plugs":       initializePlugs,
+		//Initialize Collections with predefined items
+		"agar Recipe":      initializeAgarRecipes,
+		"jar Recipe":       initializeJarRecipes,
+		"lc Recipe":        initializeLcRecipes,
+		"substrate Recipe": initializeSubstrates,
+		"species":          initializeSpecies,
+		"subspecies":       initializeSubspecies,
+		// Initialize other alt collections
+		"agar batch": initializeAgarBatches,
+		"pc run":     initializePCRun,
+		"sales":      initializeSales,
+		"transfer":   initializeTransfers,
+
+		// Other collections
+		"Projects": initializeProjects,
 		// initialize users
-		// TODO: initialize others (Syringes, swabs, pegs, bottles)
+		// TODO: ???
 	} {
 		if err := initializer(ctx); err != nil {
 			return errors.Join(fmt.Errorf(`%s initializer failed`, i), err)
@@ -233,14 +232,14 @@ func Initialize(ctx context.Context) error { // TODO: use me!
 		"mss":             string(exMSS.asBase58()),
 		"slant":           string(exSlant.asBase58()),
 		"stasisTube":      string(exStasis.asBase58()),
+		"fruit":           string(exFruitId.base58Bytes()),
+		"sporePrint":      string(exSporePrint.base58Bytes()),
 		// Standard Alt IDs
 		"agarBatch":       string(exAltId.base58Bytes()),
 		"agarRecipe":      string(exAltId.base58Bytes()),
-		"fruit":           string(exAltId.base58Bytes()),
 		"jarRecipe":       string(exAltId.base58Bytes()),
 		"lcRecipe":        string(exAltId.base58Bytes()),
 		"sale":            string(exAltId.base58Bytes()),
-		"sporePrint":      string(exAltId.base58Bytes()),
 		"substrateRecipe": string(exAltId.base58Bytes()),
 		"transfer":        string(exAltId.base58Bytes()),
 		// String Alt IDs
@@ -400,6 +399,10 @@ func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work f
 	case "lc", "liquidculture", "liquid culture",
 		"lcs", "liquidcultures", "liquid cultures":
 		return LiquidCulture{}, nil
+	case "lcSyringe", "lcSyringes":
+		return LcSyringe{}, nil
+	case "plugs", "plug", "peg", "pegs":
+		return PlugsJar{}, nil
 	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
 		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
 		return MSS{}, nil
@@ -713,7 +716,6 @@ var (
 	exParentType         = "plate"
 	exPlate              = MainCollectionId([8]byte{0, 0, 0, 0, 0, 0, 0, 0})
 	exBag                = mainCollIdForint(idTestBag)
-	exBottle             = altCollIdForint(idTestBottle)
 	exBatch              = altCollIdForint(idTestBatch)
 	exJar                = mainCollIdForint(idTestJar)
 	exSporePrint         = mainCollIdForint(idTestSp)
@@ -804,4 +806,64 @@ func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection { 
 }
 func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T) error { // TODO; USE THIS EVERYWHERE!
 	return CollectionFor(*item, db).FindOne(ctx, bson.D{{"_id", (*item).IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
+}
+
+func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !user.HasPermissionToEdit(existing) {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
+	aclField, err := reqPerms.AclForUser(ctx, user)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	upd, err := modsFor(existing, aclField)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	return
+}
+
+func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !user.HasPermissionToEdit(existing) {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
+	aclField, err := reqPerms.AclForUser(ctx, user)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	upd, err := modsFor(existing, aclField)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	return
+}
+
+func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !user.HasPermissionToEdit(existing) {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
+	aclField, err := reqPerms.AclForUser(ctx, user)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	upd, err := modsFor(existing, aclField)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	return
 }

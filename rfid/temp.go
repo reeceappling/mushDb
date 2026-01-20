@@ -194,6 +194,21 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 	return out, nil
 }
 
+func GetSubspeciesNameInTxn(ctx context.Context, name string) (out Subspecies, err error) { // TODO: make sure this works as intended!
+	out = Subspecies{}
+	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+		Collection(SubspeciesCollectionName).
+		FindOne(ctx, bson.D{{"_id", name}})
+	if encodedResult.Err() != nil {
+		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
+	}
+	err = encodedResult.Decode(&out)
+	if err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
 func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, result *T) (reader *multipart.Reader, err error) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err = r.MultipartReader()

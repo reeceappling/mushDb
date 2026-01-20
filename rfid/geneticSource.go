@@ -13,6 +13,17 @@ type GeneticParentInfo struct {
 	GenerationsFields
 }
 
+func (genetics GeneticParentInfo) GetSpeciesSubspecies(ctx context.Context) (*Species, *Subspecies, error) {
+	if genetics.Species != nil {
+		return nil, nil, errors.New("no species present on entry")
+	}
+	sp, subsp, err := getSpeciesAndSubspecies(ctx, *genetics.Species, genetics.SubSpecies)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &sp, subsp, err
+}
+
 var ( // TODO: all used to be non-pointer. Ensure they all still work
 	_ geneticSource = &Bag{}
 	_ geneticSource = &Fruit{}

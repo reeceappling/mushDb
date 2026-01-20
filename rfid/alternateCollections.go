@@ -19,8 +19,8 @@ type AltCollectionItem[T AltCollectionIdType] interface {
 	DbId() T
 }
 
-type PermissionedAltCollectionItem interface {
-	AltCollectionItem[AlternateCollectionId]
+type PermissionedAltCollectionItem[T AltCollectionIdType] interface {
+	AltCollectionItem[T]
 	Permissioned
 }
 
