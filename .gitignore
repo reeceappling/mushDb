@@ -40,7 +40,7 @@ bin/*
 
 # temp getRidOf?
 caddy
-aaa_tempMightMoveBack
+/aaa_tempMightMoveBack/
 certbot
 cloudflare
 grafana
@@ -50,6 +50,7 @@ nginx/*
 old
 rfid/secrets
 rfid/sessions
+/rfid/client/src/app/testpage
 test
 tests
 sessions
@@ -63,4 +64,6 @@ fungi-tracker
 fungi-tracker/*
 k8s
 letsencrypt
+
+
 
