@@ -39,6 +39,8 @@ go.work.sum
 bin/*
 
 # temp getRidOf?
+/tests/cloudflareTunnelTesting/testServer/
+/tests/cloudflareTunnelTesting/testServer/*
 caddy
 /aaa_tempMightMoveBack/
 certbot
@@ -64,6 +66,7 @@ fungi-tracker
 fungi-tracker/*
 k8s
 letsencrypt
+
 
 
 
