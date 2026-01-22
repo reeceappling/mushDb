@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"math/big"
 	"net/http"
+	"reflect"
 	"time"
 )
 
@@ -431,38 +432,32 @@ func newCollectionId(ctx context.Context, collectionName string) (MainCollection
 //
 //}
 
-//func getLastNEntries(ctx context.Context, variant string, updated bool, nresults int) ([]byte, error) {
-//	entryType, err := entryTypeFor(variant)
-//	if err != nil {
-//		return nil, err
-//	}
-//	findBson := bson.D{{}}
-//	if etf := entryType.EntryTypeField(); etf != nil {
-//		findBson = bson.D{{"entryType", *etf}} // TODO: ensure ok (dont like this)
-//	}
-//	sortField := "$natural"
-//	if updated {
-//		sortField = "lastUpdated"
-//	}
-//	// TODO: pagination?
-//	opts := options.Find().
-//		SetLimit(int64(nresults)).
-//		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
-//	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
-//
-//	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-//		Database(dbName).
-//		Collection(entryType.CollectionName()).
-//		Find(ctx, findBson, opts)
-//	if err != nil {
-//		return nil, err
-//	}
-//	results, err := getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType))
-//	if err != nil {
-//		return nil, err
-//	}
-//	return json.Marshal(results)
-//}
+func getLastNEntries(ctx context.Context, variant string, updated bool, nresults int) ([]CollectionItem, error) {
+	entryType, err := entryTypeFor(variant)
+	if err != nil {
+		return nil, err
+	}
+	findBson := bson.D{{}}
+	sortField := "$natural"
+	if updated {
+		sortField = "lastUpdated"
+	}
+	// TODO: pagination?
+	opts := options.Find().
+		//SetLimit(int64(nresults)). // TODO: no limit because user can be unable to view some items
+		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
+	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
+
+	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+		Database(dbName).
+		Collection(entryType.CollectionName()).
+		Find(ctx, findBson, opts)
+	if err != nil {
+		return nil, err
+	}
+	// TODO: ensure that user can read each item!!!!!!!!!!
+	return getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType), &nresults)
+}
 
 func HandleCreate() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

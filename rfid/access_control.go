@@ -8,11 +8,6 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils/slices"
 )
 
-// ACL -> users / Projects
-// Users -> Projects
-// Projects -> users
-// UserPermsResolved -> Projects
-
 type AclField struct {
 	ACL *ACL `bson:"acl,omitempty" json:"acl,omitempty"`
 }

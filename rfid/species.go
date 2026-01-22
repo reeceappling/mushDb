@@ -13,7 +13,7 @@ import (
 
 type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
-	ScientificName    string `bson:"scientificName" json:"scientificName"`
+	ScientificName    string          `bson:"scientificName" json:"scientificName"`
 	AliasesField      `bson:"inline"`
 	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate,omitempty" json:"standardSubstrate,omitempty"`
 	NotesField        `bson:"inline"`

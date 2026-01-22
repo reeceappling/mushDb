@@ -28,6 +28,7 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -270,12 +271,11 @@ func main() {
 	println("4") // TODO: del
 	http.Handle("/db/import/{endpt}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.ImportHandler()))))
 	// List handlers
-	http.Handle("/db/list/{variant}", ctxInternalAuthMiddleware(rfid.ListEntriesHandler())) // TODO: needs fixing
-	//http.Handle("/sessionUserProjects", ctxInternalAuthMiddleware(rfid.SessionUserProjectsHandler())) // TODO: GetPermsMiddleware?
-	//http.Handle("/userIdFor", ctxInternalAuthMiddleware(rfid.UserIdForNameOrEmail()))                 // TODO: GetPermsMiddleware?
+	http.Handle("/db/list/{variant}", ctxInternalAuthMiddleware(rfid.ListEntriesHandler()))
+	http.Handle("/sessionUserProjects", ctxInternalAuthMiddleware(rfid.SessionUserProjectsHandler()))
 
 	println("Defining simple api endpoints")
-	http.Handle("/options/{optionsType}", rfid.GetOptionsHandler) // TODO: any options here?
+	http.Handle("/options/{optionsType}", rfid.GetOptionsHandler) // TODO: any more options here?
 
 	// lastN handlers
 	//http.Handle("/db/list/latest/{variant}", rfid.ListNewestEntriesHandler()) // TODO: maybe unnecessary?
@@ -945,6 +945,24 @@ var base58Converter = clientServerStringConverter{
 		return utils.ErrAndT(string(bs))
 	},
 }
+var emailConverter = clientServerStringConverter{
+	toClient: func(urlEncodedEmail string) utils.ErrAnd[string] {
+		return utils.TandErr(urlDecodeString(urlEncodedEmail))
+	},
+	toServer: func(humanReadable string) utils.ErrAnd[string] {
+		return utils.ErrAndT(urlEncodeString(humanReadable))
+	},
+}
+
+func urlEncodeString(toEncode string) string {
+	return url.QueryEscape(toEncode)
+}
+
+// TODO: USE!
+func urlDecodeString(encoded string) (string, error) {
+	return url.QueryUnescape(encoded)
+}
+
 var spacedNameConverter = clientServerStringConverter{
 	toClient: func(spaced string) utils.ErrAnd[string] {
 		// Take spaces and make them underscores?
@@ -956,11 +974,7 @@ var spacedNameConverter = clientServerStringConverter{
 	},
 }
 
-type itemTypeWithIdConverter struct {
-	item      rfid.AltCollectionItem
-	converter clientServerStringConverter
-}
-
+// TODO: FIXME!!!!
 func getAnyCollectionHandler() http.Handler {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		println("GETTING ITEM") // TODO: del
@@ -970,32 +984,17 @@ func getAnyCollectionHandler() http.Handler {
 		//	http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
 		//	return
 		//}
+		// TODO: ?????? id := strings.ReplaceAll(r.PathValue("id"), "_", " ") // TODO: replace all underscores with spaces, for things like "chicken of the woods"
 		id := strings.ReplaceAll(r.PathValue("id"), "_", " ") // TODO: replace all underscores with spaces, for things like "chicken of the woods"
+
 		entryType := r.PathValue("variant")
 		var bytes []byte
-		if itemType, exists := map[string]itemTypeWithIdConverter{
-			"agarBatch":       {rfid.AgarBatch{}, base58Converter},
-			"agarRecipe":      {rfid.AgarRecipe{}, base58Converter}, // TODO: what about search by name?
-			"fruit":           {rfid.Fruit{}, base58Converter},
-			"jarRecipe":       {rfid.JarRecipe{}, base58Converter}, // TODO: what about search by name?
-			"lcRecipe":        {rfid.LcRecipe{}, base58Converter},  // TODO: what about search by name?
-			"pcRun":           {rfid.PCRun{}, base58Converter},
-			"project":         {rfid.Project{}, spacedNameConverter},
-			"sale":            {rfid.Sale{}, base58Converter},
-			"species":         {rfid.Species{}, spacedNameConverter}, // TODO: search by other names?
-			"sporePrint":      {rfid.SporePrint{}, base58Converter},
-			"subspecies":      {rfid.Subspecies{}, spacedNameConverter},  // TODO: search by other names?
-			"substrateRecipe": {rfid.SubstrateRecipe{}, base58Converter}, // TODO: what about search by name?
-			"transfer":        {rfid.Transfer{}, base58Converter},
-			// TODO: reenable "user":            {rfid.User{}, base58Converter}, // TODO: MAKE SURE USER IS ONLY GOTTEN BY ADMIN // TODO: search by other things than id?
-		}[entryType]; exists {
-			println("USING ALTCOLLID") // TODO: del
-			serverFormattedId := itemType.converter.toServer(id)
-			if serverFormattedId.Err != nil {
-				http.Error(w, "failed to convert id: "+serverFormattedId.Err.Error(), http.StatusBadRequest)
-				return
-			}
-			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId([]byte(serverFormattedId.Item)), itemType.item) // TODO: fix
+		switch entryType {
+		case "project", "species", "subspecies": // Items with possible spaces in names
+			// TODO: ensure to convert id from url format to server format
+			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId([]byte(id)), map[string]rfid.AltCollectionItem[string]{
+				"project": &rfid.Project{}, "species": &rfid.Species{}, "subspecies": &rfid.Subspecies{},
+			}[entryType]) // TODO: validate works
 			if err != nil {
 				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 				return
@@ -1005,17 +1004,55 @@ func getAnyCollectionHandler() http.Handler {
 				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 				return
 			}
-		} else {
+		case "user": // User (can have @)
+			// TODO: ensure to convert id from url format to server format
+			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId([]byte(id)), &rfid.User{})
+			if err != nil {
+				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
+				return
+			} // TODO: validate works
+			bytes, err = json.Marshal(out)
+			if err != nil {
+				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
+				return
+			}
+		// Cases which are alt colls with base58->binary ids
+		case "agarBatch", "agarRecipe", "jarRecipe", "lcRecipe", "pcRun", "sale", "substrateRecipe", "transfer":
+			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId([]byte(id)), map[string]rfid.AltCollectionItem[rfid.AlternateCollectionId]{
+				"agarBatch":       &rfid.AgarBatch{},
+				"agarRecipe":      &rfid.AgarRecipe{},
+				"jarRecipe":       &rfid.JarRecipe{},
+				"lcRecipe":        &rfid.LcRecipe{},
+				"pcRun":           &rfid.PCRun{},
+				"sale":            &rfid.Sale{},
+				"substrateRecipe": &rfid.SubstrateRecipe{},
+				"transfer":        &rfid.Transfer{},
+			}[entryType])
+			if err != nil {
+				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
+				return
+			} // TODO: validate works
+			bytes, err = json.Marshal(out)
+			if err != nil {
+				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
+				return
+			}
+		default: // Main collection ids
 			println("USING MAINCOLLID") // TODO: del
 			if mainCollItem, exists := map[string]rfid.MainCollectionItem{
-				"bag":             rfid.Bag{},             // can only go to fruits
-				"fruitingChamber": rfid.FruitingChamber{}, // can only go to fruits
-				"jar":             rfid.GrainJar{},        // can go anywhere (in theory) except MSS
-				"lc":              rfid.LiquidCulture{},   // can go anywhere (in theory) except MSS
-				"mss":             rfid.MSS{},             // generally only goes to plate
-				"plate":           rfid.Plate{},           // can go anywhere (in theory) except MSS
-				"slant":           rfid.Slant{},           // generally only goes to plate
-				"stasis":          rfid.StasisTube{},      // generally only goes to plate
+				"bag":             &rfid.Bag{}, // can only go to fruits
+				"fruit":           &rfid.Fruit{},
+				"fruitingChamber": &rfid.FruitingChamber{}, // can only go to fruits
+				"jar":             &rfid.GrainJar{},        // can go anywhere (in theory) except MSS
+				"lc":              &rfid.LiquidCulture{},   // can go anywhere (in theory) except MSS
+				"lcSyringe":       &rfid.LcSyringe{},
+				"mss":             &rfid.MSS{},   // generally only goes to plate
+				"plate":           &rfid.Plate{}, // can go anywhere (in theory) except MSS
+				// TODO: "plugs": &rfid.PlugsJar{},
+				"slant":      &rfid.Slant{}, // generally only goes to plate
+				"sporePrint": &rfid.SporePrint{},
+				"sporeSwab":  &rfid.SporeSwab{},
+				"stasis":     &rfid.StasisTube{}, // generally only goes to plate
 			}[entryType]; exists {
 				println("MAINCOLLID EXISTS") // TODO: del
 				// ensure id is in correct format
@@ -1026,6 +1063,7 @@ func getAnyCollectionHandler() http.Handler {
 					return
 				}
 				println("GETTING ITEM") // TODO: del
+				// TODO: DELETE CURSOR PARTs????
 				dbName, _ := os.LookupEnv("MONGO_INITDB_DATABASE")
 				coll := ctx.Value("mongoClient").(*mongo.Client).Database(dbName).Collection(rfid.PlatesCollectionName)
 				cursor, err := coll.Find(ctx, bson.D{})
@@ -1070,7 +1108,11 @@ func getAnyCollectionHandler() http.Handler {
 					http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 					return
 				}
-				userPermOnEntry := out.Permissions().HighestPermFor(user)
+				ps := out.Permissions()
+				if ps == nil {
+					println("permissions acl was nil!") // TODO: del
+				}
+				userPermOnEntry := ps.HighestPermFor(user)
 				if userPermOnEntry == nil {
 					println("user does not have permission", err.Error()) // TODO; del
 					http.Error(w, "item requested cannot be read by this user: "+err.Error(), http.StatusForbidden)
@@ -1088,7 +1130,9 @@ func getAnyCollectionHandler() http.Handler {
 				}
 			}
 			// If not a main collection itemType, try for alt
+
 		}
+
 		println("wrote bytes", string(bytes)) // TODO: this!
 		_, err := w.Write(bytes)
 		if err != nil {

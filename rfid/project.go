@@ -196,7 +196,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	for u, _ := range req.Perms {
 		if _, exists := existing.Perms[u]; !exists {
-			// TODO: validate new user exists
+			// validate new user exists
 			result := db.Collection(UserCollName).FindOne(ctx, bson.D{{"_id", u}})
 			if err = result.Err(); err != nil {
 				dbErr(w, "user "+u+" not found", http.StatusNotFound)
@@ -205,45 +205,16 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// TODO: add/remove users (on users)
-	// TODO; add/remove
-	wrappedModsFor := func(pr *Project, _ AclField) (bson.D, error) {
-		return req.modsFor(pr)
+	// Validate user is admin of project
+	existingUserPerm := existing.Perms[user.Email]
+	if existingUserPerm == nil || !*existingUserPerm {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
 	}
-	finishStringIdAltCollItemUpdate(ctx, w, coll, wrappedModsFor, &existing, PermsOnRequest{})
 
-	upd, err := NewMods().
-		updateProjectCompletedIfNeeded(req.Completed, existing.Completed).
-		updateNotesIfNeeded(req.Notes, existing.Notes).
-		updateProjectPermsIfNeeded(req.Perms, existing.Perms).
-		updateLastUpdatedIfNeeded().
-		Finalized()
-	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError) // TODO: ok?
-		return
-	}
-	if len(upd) == 0 {
-		dbErr(w, "no changes made", http.StatusBadRequest)
-		return
-	}
-	bsonId := bson.D{{"_id", existing.Name}}
-	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = coll.FindOne(ctx, bsonId).Decode(&existing)
-	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	bsOut, err := json.Marshal(existing)
-	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(bsOut)
-	handleWriteErr(err, w)
-	return
+	// Create and write modifications
+	upd, err := req.modsFor(&existing)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
 }
 
 //func allUnfinishedProjectsForUser(ctx context.Context, auth AuthInfo) ([]ProjectWithPerm, error) {

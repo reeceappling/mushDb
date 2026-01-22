@@ -86,8 +86,8 @@ func (b Bag) CollectionName() string {
 	return BagsCollectionName
 }
 func (b Bag) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Bag{}
-	err := decodeItem(&out, encoded)
+	out := &Bag{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -107,8 +107,8 @@ func (f Fruit) CollectionName() string {
 	return FruitsCollName
 }
 func (f Fruit) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Fruit{}
-	err := decodeItem(&out, encoded)
+	out := &Fruit{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -128,8 +128,8 @@ func (f FruitingChamber) CollectionName() string {
 	return FruitingChamberCollectionName
 }
 func (f FruitingChamber) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := FruitingChamber{}
-	err := decodeItem(&out, encoded)
+	out := &FruitingChamber{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -149,8 +149,8 @@ func (j GrainJar) CollectionName() string {
 	return GrainJarCollectionName
 }
 func (j GrainJar) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := GrainJar{}
-	err := decodeItem(&out, encoded)
+	out := &GrainJar{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -170,8 +170,8 @@ func (lcs LcSyringe) CollectionName() string {
 	return LcSyringeCollectionName
 }
 func (lcs LcSyringe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := LcSyringe{}
-	err := decodeItem(&out, encoded)
+	out := &LcSyringe{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -191,8 +191,8 @@ func (l LiquidCulture) CollectionName() string {
 	return LCCollectionName
 }
 func (l LiquidCulture) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := LiquidCulture{}
-	err := decodeItem(&out, encoded)
+	out := &LiquidCulture{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -212,8 +212,8 @@ func (M MSS) CollectionName() string {
 	return MssCollectionName
 }
 func (M MSS) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := MSS{}
-	err := decodeItem(&out, encoded)
+	out := &MSS{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -233,8 +233,8 @@ func (p Plate) CollectionName() string {
 	return PlatesCollectionName
 }
 func (p Plate) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Plate{}
-	err := decodeItem(&out, encoded)
+	out := &Plate{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -254,8 +254,8 @@ func (pl PlugsJar) CollectionName() string {
 	return PlugsCollectionName
 }
 func (pl PlugsJar) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := PlugsJar{}
-	err := decodeItem(&out, encoded)
+	out := &PlugsJar{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -275,8 +275,8 @@ func (s Slant) CollectionName() string {
 	return SlantsCollectionName
 }
 func (s Slant) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Slant{}
-	err := decodeItem(&out, encoded)
+	out := &Slant{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -296,8 +296,8 @@ func (sp SporePrint) CollectionName() string {
 	return SporePrintCollectionName
 }
 func (sp SporePrint) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := SporePrint{}
-	err := decodeItem(&out, encoded)
+	out := &SporePrint{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -317,8 +317,8 @@ func (sw SporeSwab) CollectionName() string {
 	return SporeSwabCollectionName
 }
 func (sw SporeSwab) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := SporeSwab{}
-	err := decodeItem(&out, encoded)
+	out := &SporeSwab{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -338,8 +338,8 @@ func (s StasisTube) CollectionName() string {
 	return StasisTubeCollectionName
 }
 func (s StasisTube) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := StasisTube{}
-	err := decodeItem(&out, encoded)
+	out := &StasisTube{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
  // Alternate Collection Entry Types
@@ -348,8 +348,8 @@ func (batch AgarBatch) CollectionName() string {
 	return AgarBatchCollectionName
 }
 func (batch AgarBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := AgarBatch{}
-	err := decodeItem(&out, encoded)
+	out := &AgarBatch{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (batch *AgarBatch) SetPerms(field AclField) {
@@ -360,8 +360,8 @@ func (recipe AgarRecipe) CollectionName() string {
 	return AgarRecipesCollectionName
 }
 func (recipe AgarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := AgarRecipe{}
-	err := decodeItem(&out, encoded)
+	out := &AgarRecipe{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (recipe *AgarRecipe) SetPerms(field AclField) {
@@ -372,8 +372,8 @@ func (recipe LcRecipe) CollectionName() string {
 	return LcRecipesCollectionName
 }
 func (recipe LcRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := LcRecipe{}
-	err := decodeItem(&out, encoded)
+	out := &LcRecipe{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (recipe *LcRecipe) SetPerms(field AclField) {
@@ -384,8 +384,8 @@ func (run PCRun) CollectionName() string {
 	return PcRunCollectionName
 }
 func (run PCRun) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := PCRun{}
-	err := decodeItem(&out, encoded)
+	out := &PCRun{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (run *PCRun) SetPerms(field AclField) {
@@ -396,8 +396,8 @@ func (p Project) CollectionName() string {
 	return ProjectsCollectionName
 }
 func (p Project) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Project{}
-	err := decodeItem(&out, encoded)
+	out := &Project{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 
@@ -406,8 +406,8 @@ func (s Sale) CollectionName() string {
 	return SalesCollectionName
 }
 func (s Sale) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Sale{}
-	err := decodeItem(&out, encoded)
+	out := &Sale{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (s *Sale) SetPerms(field AclField) {
@@ -418,8 +418,8 @@ func (sp Species) CollectionName() string {
 	return SpeciesCollectionName
 }
 func (sp Species) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Species{}
-	err := decodeItem(&out, encoded)
+	out := &Species{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (sp *Species) SetPerms(field AclField) {
@@ -430,8 +430,8 @@ func (subsp Subspecies) CollectionName() string {
 	return SubspeciesCollectionName
 }
 func (subsp Subspecies) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Subspecies{}
-	err := decodeItem(&out, encoded)
+	out := &Subspecies{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (subsp *Subspecies) SetPerms(field AclField) {
@@ -442,8 +442,8 @@ func (batch SubstrateBatch) CollectionName() string {
 	return SubstrateBatchCollectionName
 }
 func (batch SubstrateBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := SubstrateBatch{}
-	err := decodeItem(&out, encoded)
+	out := &SubstrateBatch{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (batch *SubstrateBatch) SetPerms(field AclField) {
@@ -454,8 +454,8 @@ func (recipe SubstrateRecipe) CollectionName() string {
 	return SubstrateRecipesCollectionName
 }
 func (recipe SubstrateRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := SubstrateRecipe{}
-	err := decodeItem(&out, encoded)
+	out := &SubstrateRecipe{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (recipe *SubstrateRecipe) SetPerms(field AclField) {
@@ -466,8 +466,8 @@ func (t Transfer) CollectionName() string {
 	return TransfersCollName
 }
 func (t Transfer) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := Transfer{}
-	err := decodeItem(&out, encoded)
+	out := &Transfer{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 func (t *Transfer) SetPerms(field AclField) {
@@ -478,8 +478,8 @@ func (u User) CollectionName() string {
 	return UserCollName
 }
 func (u User) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := User{}
-	err := decodeItem(&out, encoded)
+	out := &User{}
+	err := decodeItem(out, encoded)
 	return out, err
 }
 

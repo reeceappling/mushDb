@@ -1,9 +1,5 @@
 package rfid
 
-import (
-	"errors"
-)
-
 // TODO: DO THIS WHOLE THING???
 // TODO: what about mixed-grain batches????
 

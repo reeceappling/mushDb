@@ -101,8 +101,8 @@ func mainCollMap(name string) (item MainCollectionItem, exists bool) {
 const constCollNameTpl = `	{{$info.CollConstName}} = "{{$info.CollName}}"`
 
 const decodeMethodTpl = `func ({{$info.Receiver}} {{$typ}}) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
-	out := {{$typ}}{}
-	err := decodeItem(&out, encoded)
+	out := &{{$typ}}{}
+	err := decodeItem(out, encoded)
 	return out, err
 }`
 const collectionNameMethodTpl = `func ({{$info.Receiver}} {{$typ}}) CollectionName() string {

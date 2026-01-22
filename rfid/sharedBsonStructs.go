@@ -196,15 +196,12 @@ type fluid string
 
 var fluids = []fluid{Water, DistilledWater, GrainWater}
 
+// TODO: add all of these to autogenned
 var (
 	Water          = fluid("water")
 	DistilledWater = fluid("distilledWater")
 	GrainWater     = fluid("grain water")
 )
-
-func getAllFluidsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
-	writeAsJson(w, fluids)
-}
 
 func (f fluid) AsLiquid(pct ...float64) liquid {
 	val := 100.0
@@ -240,6 +237,7 @@ func (n Note) GenerationIfExists() *int {
 	return &out
 }
 
+// TODO: add all of these to autogenned
 type nutrientMeasurement struct {
 	Nutrient nutrient `bson:"nutrient" json:"nutrient"` // Nutrient name
 	Amount   float64  `bson:"amount" json:"amount"`     // Amount per 1L agar
@@ -248,16 +246,14 @@ type nutrientMeasurement struct {
 
 type nutrient string
 
+// TODO: add all of these to autogenned
 var nutrients = []nutrient{LME, Potato}
 var (
 	LME    nutrient = "light malt extract"
 	Potato nutrient = "potato flakes"
 )
 
-//func getAllNutrientsHandler(w http.ResponseWriter, r *http.Request) {
-//	writeAsJson(w, nutrients)
-//}
-
+// TODO: add all of these to autogenned
 type sugarMeasurement struct {
 	Type   sugar   `bson:"type" json:"type"`     // Sugar Username
 	Amount float64 `bson:"amount" json:"amount"` // Amount per 1L agar
@@ -276,19 +272,16 @@ func newSugarMeasurement(add sugar, amount float64, unit string) sugarMeasuremen
 	}
 }
 
+// TODO: add all of these to autogenned
 var (
 	Dextrose   sugar = "dextrose" // This is corn syrup
 	Honey      sugar = "honey"
 	MapleSyrup sugar = "maple syrup"
 )
 
-func getAllSugarsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
-	writeAsJson(w, sugars)
-}
-
 type grain string
 
-var grains = []grain{Oats, Popcorn, BirdSeed}
+var grains = []grain{Rye, Wheat, Oats, Millett, Popcorn, BirdSeed}
 
 func (g grain) Validate() error {
 	if !slices.Contains(grains, g) {
@@ -297,15 +290,15 @@ func (g grain) Validate() error {
 	return nil
 }
 
+// TODO: add all of these to autogenned
 var (
+	Rye      grain = "rye"
+	Wheat    grain = "wheat"
+	Millett  grain = "millett"
 	Oats     grain = "oats"
 	Popcorn  grain = "popcorn"
 	BirdSeed grain = "birdseed"
 )
-
-func getAllGrainsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
-	writeAsJson(w, grains)
-}
 
 func writeAsJson(w http.ResponseWriter, obj any) {
 	bs, err := json.Marshal(obj)
@@ -335,10 +328,7 @@ type colorant string
 
 var colorants = []colorant{clearColor, black, blue, yellow, orange, red}
 
-func getAllColorantsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
-	writeAsJson(w, colorants)
-}
-
+// TODO: add all of these to autogenned
 var (
 	clearColor colorant = "Clear"
 	black      colorant = "Black"
@@ -365,18 +355,17 @@ func ValidColor(c colorant) bool {
 
 type additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
 var additives = []additive{Vermiculite, Perlite, Gypsum}
+
+// TODO: add all of these to autogenned
 var (
 	Vermiculite additive = "vermiculite"
 	Perlite     additive = "perlite"
 	Gypsum      additive = "gypsum"
 )
 
-func getAllAdditivesHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
-	writeAsJson(w, additives)
-}
-
 type antibiotic string
 
+// TODO: add all of these to autogenned
 var antibiotics = []antibiotic{HydrogenPeroxide, Doxycycline}
 
 var (
@@ -384,10 +373,7 @@ var (
 	Doxycycline      antibiotic = "doxycycline"
 )
 
-func getAllAntibioticsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
-	writeAsJson(w, antibiotics)
-}
-
+// TODO: use
 var antibioticDosages = map[antibiotic]string{ // TODO: USE THIS!
 	Doxycycline:      "unknown as of right now", // TODO: figure out measurements
 	HydrogenPeroxide: "unknown as of right now", // TODO: figure out measurements
@@ -407,13 +393,12 @@ func NewMods() *Mods {
 	return &Mods{}
 }
 
-type Mods struct { // TODO: USE THIS FOR ALL CREATES, IMPORTS, AND UPDATES
-	err    error    // TODO: SKIP WHEN THIS IS NON-NIL
+type Mods struct {
+	err    error    // SKIP WHEN THIS IS NON-NIL
 	unsets []bson.E // Key, "" // TODO: ?
 	sets   []bson.E // Key, value
 	pushes []bson.E // FieldName, valueToPush
 	pulls  []bson.E //{ "$pull": { <field1>: <value|condition>, <field2>: <value|condition>, ... } }
-	// TODO: more?
 }
 
 func (upd *Mods) Add(sets, unsets, pushes, pulls []bson.E) *Mods {
@@ -716,24 +701,11 @@ func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, C
 	return upd.Set("contamination", finalEntries) // TODO: ensure ok
 }
 
-//func (upd *Mods) updatePermsIfNeeded(future, existing *Perms) *Mods { // TODO: interface ok? or slice?
-//	if upd.err != nil {
-//		return upd
-//	}
-//	if future.ExactMatch(existing) {
-//		return upd
-//	}
-//	if future.Blanket == perms.Write {
-//		return upd.Unset("perms")
-//	}
-//	return upd.Set("perms", unixTimeFor(time.Now()))
-//}
-
 func (upd *Mods) updateSaleIfNeeded(future, existing *AlternateCollectionId) *Mods {
 	return updatePointerIfNeeded(upd, "sale", future, existing)
 }
 
-// TODO: Only used on LC?
+// TODO: Only used on plugs?
 func (upd *Mods) updateSalesIfNeeded(future, existing []AlternateCollectionId) *Mods { // TODO: validate works as intended (Should this be structured like notes?)
 	if upd.err != nil {
 		return upd
@@ -866,9 +838,10 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	case "antibiotics", "antibiotic":
 		toWrite = antibiotics
 		break
-	case strings.ToLower("transferReasons"), strings.ToLower("transferReason"):
+	case "transferreasons", "transferreason":
 		toWrite = transferReasons
 		break
+		// TODO: any other cases???
 	default:
 		http.Error(w, fmt.Sprintf(`invalid option provided: "%s" is not one of [color,liquid,nutrient,sugar,grain,additive,transferReason]`, opt), http.StatusBadRequest)
 		return

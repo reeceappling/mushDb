@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -119,51 +118,6 @@ func initializeAgarBatches(ctx context.Context) error {
 		AclField:                   allCanReadAcl(),
 	}
 	return addTestAltEntries(ctx, testItem) // TODO: do this everywhere
-}
-
-// TODO: move
-func addTestAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, testItems ...T) error {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
-	_, err := coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
-		return mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
-	}))
-	// TODO: do something with the result?
-	return err
-}
-
-// TODO: move
-func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, testItems ...T) error {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
-	_, err := coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
-		return mongo.NewInsertOneModel().SetDocument(item)
-	}))
-	if err != nil {
-		println("error adding basic alt entries: " + err.Error()) // TODO: del
-	}
-	// TODO: do something with the result?
-	return err
-}
-
-// TODO: move
-func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...T) error {
-	_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
-		Collection(idMapCollectionName).BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
-		return mongo.NewReplaceOneModel().SetReplacement(idMapEntry{
-			Id:        item.DbId(),
-			EntryType: item.EntryType(),
-		}).SetUpsert(true)
-	}))
-	// TODO: do something with the result?
-	if err != nil {
-		return err
-	}
-
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
-	_, err = coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
-		return mongo.NewUpdateOneModel().SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
-	}))
-	// TODO: do something with the result?
-	return err
 }
 
 type createAgarBatchRequest struct {

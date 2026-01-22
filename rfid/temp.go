@@ -74,25 +74,29 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 		err = errors.Join(errors.New("failed to decode"), err)
 		return resultItemType, err
 	}
-	item := temp.(MainCollectionItem)
+	item, ok := temp.(MainCollectionItem)
+	if !ok {
+		err = errors.New("failed to decode. Item was not a mainCollection item")
+		return nil, err
+	}
 	return item, nil
 }
 
 func typeForSource(src string) MainCollectionItem {
 	out, exists := map[string]MainCollectionItem{
-		BagSourceType:             Bag{},
-		FruitSourceType:           Fruit{},
-		FruitingChamberSourceType: FruitingChamber{},
-		GrainJarSourceType:        GrainJar{},
-		LcSourceType:              LiquidCulture{},
-		LcSyringeSourceType:       LcSyringe{},
-		MssSourceType:             MSS{},
-		PlateSourceType:           Plate{},
-		PlugSourceType:            PlugsJar{},
-		SlantSourceType:           Slant{},
-		SporePrintSourceType:      SporePrint{},
-		SporeSwabSourceType:       SporeSwab{},
-		StasisTubeSourceType:      StasisTube{},
+		BagSourceType:             &Bag{},
+		FruitSourceType:           &Fruit{},
+		FruitingChamberSourceType: &FruitingChamber{},
+		GrainJarSourceType:        &GrainJar{},
+		LcSourceType:              &LiquidCulture{},
+		LcSyringeSourceType:       &LcSyringe{},
+		MssSourceType:             &MSS{},
+		PlateSourceType:           &Plate{},
+		PlugSourceType:            &PlugsJar{},
+		SlantSourceType:           &Slant{},
+		SporePrintSourceType:      &SporePrint{},
+		SporeSwabSourceType:       &SporeSwab{},
+		StasisTubeSourceType:      &StasisTube{},
 	}[src]
 	if !exists {
 		panic(src + " is an invalid source type")

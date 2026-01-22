@@ -5,7 +5,6 @@ package rfid
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
@@ -115,7 +114,7 @@ var lastUpdatedIndexModel = mongo.IndexModel{
 	Options: options.Index().SetName("lastUpdated"),
 }
 var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
-var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, true, false) // TODO: ensure actually indexes the correct thing! // TODO: this is a wildcard index!!!!
+var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, false, false) // TODO: ensure actually indexes the correct thing! // TODO: this is a wildcard index!!!!
 var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
 var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false)
 var creationDateIndexModel = newSimpleIndex("creationDate", "createDate", true, false, false)
@@ -389,73 +388,74 @@ func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work f
 	switch strings.ToLower(inp) {
 	case "bag",
 		"bags":
-		return Bag{}, nil
+		return &Bag{}, nil
 	case "box", "fruitingchamber", "chamber", "fruiting chamber",
 		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
-		return FruitingChamber{}, nil
+		return &FruitingChamber{}, nil
 	case "jar", "grainjar", "grain jar",
 		"jars", "grainjars", "grain jars":
-		return GrainJar{}, nil
+		return &GrainJar{}, nil
 	case "lc", "liquidculture", "liquid culture",
 		"lcs", "liquidcultures", "liquid cultures":
-		return LiquidCulture{}, nil
+		return &LiquidCulture{}, nil
 	case "lcSyringe", "lcSyringes":
-		return LcSyringe{}, nil
+		return &LcSyringe{}, nil
 	case "plugs", "plug", "peg", "pegs":
-		return PlugsJar{}, nil
+		return &PlugsJar{}, nil
 	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
 		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
-		return MSS{}, nil
+		return &MSS{}, nil
 	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
 		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
-		return Plate{}, nil
+		return &Plate{}, nil
 	case "slant", "slants":
-		return Slant{}, nil
+		return &Slant{}, nil
 	case "stasistube", "stasis tube", "stasis", "tube",
 		"stasistubes", "stasis tubes", "tubes":
-		return StasisTube{}, nil
+		return &StasisTube{}, nil
 	case "agarbatch", "agar batch",
 		"agarbatches", "agar batches":
-		return AgarBatch{}, nil
+		return &AgarBatch{}, nil
 	case "agarrecipe", "agar recipe",
 		"agarrecipes", "agar recipes":
-		return AgarRecipe{}, nil
+		return &AgarRecipe{}, nil
 	case "fruit",
 		"fruits":
-		return Fruit{}, nil
+		return &Fruit{}, nil
 	case "jarrecipe", "jar recipe",
 		"jarrecipes", "jar recipes":
-		return JarRecipe{}, nil
+		return &JarRecipe{}, nil
 	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
 		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
-		return LcRecipe{}, nil
+		return &LcRecipe{}, nil
 	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
 		"pcruns", "pc runs", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
-		return PCRun{}, nil
+		return &PCRun{}, nil
 	case "project", "Projects":
-		return Project{}, nil
+		return &Project{}, nil
 	case "sale", "sales":
-		return Sale{}, nil
+		return &Sale{}, nil
 	case "species":
-		return Species{}, nil
+		return &Species{}, nil
 	case "subspecies":
-		return Subspecies{}, nil
+		return &Subspecies{}, nil
 	case "sporeprint", "spore print", "print",
 		"sporeprints", "spore prints", "prints":
-		return SporePrint{}, nil
+		return &SporePrint{}, nil
 	case "substrate", "substraterecipe", "substrate recipe",
 		"substrates", "substraterecipes", "substrate recipes":
-		return SubstrateRecipe{}, nil
+		return &SubstrateRecipe{}, nil
 	case "transfer", "xfer",
 		"transfers", "xfers":
-		return Transfer{}, nil
-		// TODO: USER?
+		return &Transfer{}, nil
+	case "user", "users":
+		return &User{}, nil
 	default:
 		return nil, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name"))
 	}
 }
 
-func getStandardEntries(ctx context.Context, variant string) (out []byte, err error) {
+func getStandardEntries(ctx context.Context, variant string) (out []CollectionItem, err error) {
 	entryType, err := entryTypeFor(variant)
 	if err != nil {
 		return
@@ -467,32 +467,42 @@ func getStandardEntries(ctx context.Context, variant string) (out []byte, err er
 	if err != nil {
 		return
 	}
-	results, err := getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType))
-	if err != nil {
-		return
-	}
-	return json.Marshal(results)
+	return getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType), nil)
 }
 
-func getCollectionItemsFromCursor(ctx context.Context, cursor *mongo.Cursor, entryType reflect.Type) ([]CollectionItem, error) {
-	var results []CollectionItem
-	i := 0
-	for {
+func getCollectionItemsFromCursor(ctx context.Context, cursor *mongo.Cursor, entryType reflect.Type, numItems *int) ([]CollectionItem, error) {
+	results := []CollectionItem{}
+	if numItems != nil {
+		results = make([]CollectionItem, 0, *numItems)
+	}
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for numItems != nil && len(results) < *numItems {
 		if cursor.TryNext(ctx) {
 			result := reflect.New(reflect.TypeOf(entryType))
 			if err := cursor.Decode(&result); err != nil {
 				return nil, err
 			}
+			permedItem, ok := result.Interface().(Permissioned)
+			if ok {
+				if permedItem.Permissions().HighestPermFor(user) == nil {
+					// Skip this entry
+					continue
+				}
+			}
 			resultCollItem, ok := result.Interface().(CollectionItem)
 			if !ok {
-				return nil, fmt.Errorf(`invalid collection result at index %d. THIS SHOULD NEVER HAPPEN`, i)
+				return nil, fmt.Errorf(`invalid collection result at index %d. THIS SHOULD NEVER HAPPEN`, len(results))
 			}
+
 			results = append(results, resultCollItem)
 			continue
 		}
 		cursorClosed := cursor.ID() == 0
-		if cursorClosed && i == 0 {
-			return nil, mongo.ErrNoDocuments
+		if cursorClosed && len(results) == 0 {
+			return results, mongo.ErrNoDocuments // TODO: ok?
 		}
 		if err := cursor.Err(); err != nil {
 			return nil, err
@@ -794,7 +804,7 @@ func exampleNotes() []Note {
 }
 
 func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {
-	err = encoded.Decode(&item)
+	err = encoded.Decode(item) // TODO: was pointer
 	if err != nil {
 		err = errors.Join(errors.New("failed to decode"), err)
 	}

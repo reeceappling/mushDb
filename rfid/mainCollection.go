@@ -3,6 +3,7 @@ package rfid
 import (
 	"context"
 	"errors"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -33,15 +34,31 @@ type MainCollectionItem interface {
 	Permissioned
 }
 
-var mainCollectionEntryTypes = []string{
-	LcSourceType,
-	GrainJarSourceType,
-	PlateSourceType,
-	SlantSourceType,
-	StasisTubeSourceType,
-	BagSourceType,
-	FruitingChamberSourceType,
-	MssSourceType,
+func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...T) error {
+	_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+		Collection(idMapCollectionName).BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+		return mongo.NewReplaceOneModel().SetReplacement(idMapEntry{
+			Id:        item.DbId(),
+			EntryType: item.EntryType(),
+		}).SetFilter(bson.D{{"_id", item.DbId()}}).SetUpsert(true)
+	}))
+	// TODO: do something with the result?
+	if err != nil {
+		return errors.Join(errors.New("failed to bulk write id maps"), err)
+	}
+
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
+	_, err = coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+		return mongo.NewReplaceOneModel().
+			SetReplacement(item).
+			SetFilter(bson.M{"_id": item.DbId()}).
+			SetUpsert(true)
+	}))
+	if err != nil {
+		return errors.Join(errors.New("failed to bulk write"), err)
+	}
+	// TODO: do something with the result?
+	return err
 }
 
 //func simpleInsertMainColl(ctx context.Context, item interface{}) (*MainCollectionId, error) {

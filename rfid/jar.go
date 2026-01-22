@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"reflect"
 	slices2 "slices"
+	"strings"
 )
 
 type GrainJar struct {
@@ -169,7 +170,11 @@ func initializeJars(ctx context.Context) error {
 		// TODO: projectsIndexModel,
 	})
 	if err != nil {
-		return err
+		// TODO: I dont like the second one here!
+		if !strings.Contains(err.Error(), "Identical index already exists:") && !strings.Contains(err.Error(), "Cannot build two identical indexes") {
+			println("failed to create indices", err.Error())
+			return err
+		}
 	}
 	// If test agar batch does not exist, then create it
 	testId := mainCollIdForint(idTestJar)
