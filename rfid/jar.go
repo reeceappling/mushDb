@@ -142,33 +142,33 @@ type innoculateJarFromRequest struct { // TODO: this
 func initializeJars(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(GrainJarCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		creationDateIndexModel,
-		//newSimpleIndex("sizeCups", "sizeCups", true, false, false),
-		//newSimpleIndex("recipe", "recipe", false, true, false),
-		//newSimpleIndex("wetness", "wetness", false, true, false),
-		//newSimpleIndex("burstGrains", "burstGrains", false, true, false),
-		newSimpleIndex("pcRun", "pcRun", false, true, false),
-		creationDateIndexModel,
-		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subspecies", "subspecies", false, true, false),
-		//newSimpleIndex("innoc", "innoc", false, true, false),
-		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		//transfersOutIndexModel,
-		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
-		//Pics (no index)
-		//TODO: Contams
-		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-		//saleIndexModel,
-		//newSimpleIndex("disposed", "disposed", false, true, false),
-		// MostRecentImage
-		//Notes (no index) (maybe later with tags?)
-		projectsIndexModel,
-		lastUpdatedIndexModel,
-		// TODO: projectsIndexModel,
-	})
+	err := createIndexes(ctx, coll,
+		[]mongo.IndexModel{
+			creationDateIndexModel,
+			//newSimpleIndex("sizeCups", "sizeCups", true, false, false),
+			//newSimpleIndex("recipe", "recipe", false, true, false),
+			//newSimpleIndex("wetness", "wetness", false, true, false),
+			//newSimpleIndex("burstGrains", "burstGrains", false, true, false),
+			newSimpleIndex("pcRun", "pcRun", false, true, false),
+			creationDateIndexModel,
+			newSimpleIndex("species", "species", false, true, false),
+			newSimpleIndex("subspecies", "subspecies", false, true, false),
+			//newSimpleIndex("innoc", "innoc", false, true, false),
+			//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+			//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+			//transfersOutIndexModel,
+			//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+			//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+			//Pics (no index)
+			//TODO: Contams
+			//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+			//saleIndexModel,
+			//newSimpleIndex("disposed", "disposed", false, true, false),
+			// MostRecentImage
+			//Notes (no index) (maybe later with tags?)
+			projectsIndexModel,
+			lastUpdatedIndexModel,
+		})
 	if err != nil {
 		// TODO: I dont like the second one here!
 		if !strings.Contains(err.Error(), "Identical index already exists:") && !strings.Contains(err.Error(), "Cannot build two identical indexes") {

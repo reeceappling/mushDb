@@ -127,24 +127,24 @@ func initializeFruits(ctx context.Context) error {
 	// Indices
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(FruitsCollName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		// TODO: creationDateIndexModel
-		newSimpleIndex("creationDate", "creationDate", false, false, false), // TODO: this is harvest date
-		newSimpleIndex("species", "species", false, false, false),
-		newSimpleIndex("subspecies", "subspecies", false, true, false),
-		transfersOutIndexModel,
-		newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
-		//TODO: newSimpleIndex("prints", "prints", false, true, false),
-		//newSimpleIndex("genSpore", "genSpore", true, true, false),
-		//Pics (no index)
-		//newSimpleIndex("disposed", "disposed", false, true, false),
-		//MostRecentImage (no index)
-		//Notes (no index) (maybe later with tags?)
-		projectsIndexModel,
-		lastUpdatedIndexModel,
-		// TODO: projectsIndexModel,
-	})
+	err := createIndexes(ctx, coll,
+		[]mongo.IndexModel{
+			// TODO: creationDateIndexModel
+			newSimpleIndex("creationDate", "creationDate", false, false, false), // TODO: this is harvest date
+			newSimpleIndex("species", "species", false, false, false),
+			newSimpleIndex("subspecies", "subspecies", false, true, false),
+			transfersOutIndexModel,
+			newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+			newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+			//TODO: newSimpleIndex("prints", "prints", false, true, false),
+			//newSimpleIndex("genSpore", "genSpore", true, true, false),
+			//Pics (no index)
+			//newSimpleIndex("disposed", "disposed", false, true, false),
+			//MostRecentImage (no index)
+			//Notes (no index) (maybe later with tags?)
+			projectsIndexModel,
+			lastUpdatedIndexModel,
+		})
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,11 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	ctx := r.Context()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(FruitsCollName)
-	parent := typeForSource(data.ParentType)
+	parent, err := typeForSource(data.ParentType)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	err = db.Collection(parent.CollectionName()).FindOne(ctx, bson.D{{"_id", data.ParentId}}).Decode(&parent)
 	if err != nil {
 		http.Error(w, "failed to get parent: "+err.Error(), http.StatusInternalServerError)

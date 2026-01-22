@@ -27,21 +27,6 @@ var (
 	ErrInvalidByteLength = errors.New("invalid id bytes length")
 )
 
-//var (
-//	_ idAsDbStr = Fruit{}           // Alt
-//	_ idAsDbStr = LiquidCulture{}   // Prim
-//	_ idAsDbStr = GrainJar{}        // Prim
-//	_ idAsDbStr = Plate{}           // Prim
-//	_ idAsDbStr = Slant{}           // Prim
-//	_ idAsDbStr = StasisTube{}      // Prim
-//	_ idAsDbStr = Bag{}             // Prim
-//	_ idAsDbStr = FruitingChamber{} // Prim
-//	_ idAsDbStr = MSS{}
-//)
-
-//	type idAsDbStr interface {
-//		idAsStr() string
-//	}
 type Base58Str string
 
 func (b58str Base58Str) ToBinaryCollectionId() (BinaryCollectionId, error) {
@@ -457,6 +442,15 @@ func getLastNEntries(ctx context.Context, variant string, updated bool, nresults
 	}
 	// TODO: ensure that user can read each item!!!!!!!!!!
 	return getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType), &nresults)
+}
+
+func FindItemTypeForId(ctx context.Context, id MainCollectionId) (MainCollectionItem, error) {
+	mapEntry := &idMapEntry{}
+	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": id}).Decode(mapEntry)
+	if err != nil {
+		return nil, err
+	}
+	return typeForEntryType(mapEntry.EntryType)
 }
 
 func HandleCreate() http.HandlerFunc {

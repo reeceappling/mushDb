@@ -113,7 +113,7 @@ func (sp SporePrint) id() []byte {
 func initializeSporePrints(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SporePrintCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		//newSimpleIndex("parent", "parent", false, false, false),
 		//newSimpleIndex("printDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),

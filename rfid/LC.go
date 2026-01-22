@@ -109,7 +109,7 @@ func (l LiquidCulture) id() []byte {
 func initializeLCs(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(LCCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		newSimpleIndex("recipe", "recipe", false, false, false),
 		creationDateIndexModel,
@@ -131,7 +131,6 @@ func initializeLCs(ctx context.Context) error {
 		//Notes (no index) (maybe later with tags?)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
-		// TODO: projectsIndexModel,
 	})
 	if err != nil {
 		return err

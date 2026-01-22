@@ -111,7 +111,7 @@ func (s StasisTube) id() []byte {
 func initializeStasisTubes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(StasisTubeCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, true, false),

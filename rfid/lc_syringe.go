@@ -102,7 +102,7 @@ func (sw LcSyringe) id() []byte {
 func initializeSyringes(ctx context.Context) error { // TODO; this
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcSyringeCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		//newSimpleIndex("parent", "parent", false, true, false),
 		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),

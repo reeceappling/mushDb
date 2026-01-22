@@ -31,7 +31,7 @@ func (subsp Subspecies) EntryTypeField() *string {
 func initializeSubspecies(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubspeciesCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("species", "species", false, false, false),
 		aliasesIndexModel,
 		//Notes (no index) (maybe later with tags?)

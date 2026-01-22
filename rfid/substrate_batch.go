@@ -31,7 +31,7 @@ func (batch SubstrateBatch) EntryTypeField() *string { // TODO: make these not p
 func initializeSubstrateBatches(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateBatchCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		newSimpleIndex("recipe", "recipe", false, false, true),
 		//Notes (no index unless tags)

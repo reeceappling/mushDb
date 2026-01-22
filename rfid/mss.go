@@ -85,7 +85,7 @@ func (M MSS) EntryTypeField() *string {
 func initializeMSS(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(MssCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),

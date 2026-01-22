@@ -59,7 +59,7 @@ func (s Sale) EntryTypeField() *string {
 func initializeSales(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SalesCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("saleDate", "creationDate", true, false, false),
 		//notes
 		projectsIndexModel,

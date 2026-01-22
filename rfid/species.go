@@ -47,7 +47,7 @@ var shiitakeNotes = NotesField{[]Note{{
 func initializeSpecies(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SpeciesCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("scientificName", "scientificName", false, false, true),
 		aliasesIndexModel,
 		newSimpleIndex("standardSubstrate", "standardSubstrate", false, true, false),

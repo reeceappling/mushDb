@@ -22,16 +22,16 @@ func (u User) IdValue() any {
 }
 
 func initializeUsers(ctx context.Context, usern, unhashedPass string) error {
-	// Indices
-	//coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName)
-	//_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-	//	//newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
-	//	//newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
-	//	//newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
-	//})
-	//if err != nil {
-	//	return err
-	//}
+	//Indices
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName)
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		//newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
+		//newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
+		//newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

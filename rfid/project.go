@@ -44,7 +44,7 @@ func (p Project) EntryTypeField() *string {
 func initializeProjects(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		//newSimpleIndex("completed", "creationDate", true, true, false),
 		lastUpdatedIndexModel,
@@ -151,7 +151,7 @@ func (mods updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
 
 func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	urlEncodedProjectName := r.PathValue("id") // TODO: USE!
-	projNameStr, err := urlDecodeString(urlEncodedProjectName)
+	projNameStr, err := UrlDecodeString(urlEncodedProjectName)
 	if err != nil {
 		http.Error(w, "bad project name in url", http.StatusBadRequest)
 		return

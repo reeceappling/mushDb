@@ -60,6 +60,7 @@ NOTES.txtOLD
 
 # old charts
 fungi-tracker
+fungi-tracker/*
 k8s
 letsencrypt
 

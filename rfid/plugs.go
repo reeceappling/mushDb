@@ -118,7 +118,7 @@ func (pl PlugsJar) setTransferParent(ctx context.Context, xfer Transfer) (error,
 func initializePlugs(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlugsCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		// TODO: which indices are needed?
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?

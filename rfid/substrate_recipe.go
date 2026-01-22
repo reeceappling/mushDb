@@ -38,7 +38,7 @@ func (recipe SubstrateRecipe) EntryTypeField() *string {
 func initializeSubstrates(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateRecipesCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, true),
 		standardIndexModel,
 		aliasesIndexModel,

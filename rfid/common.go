@@ -8,18 +8,17 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
-	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/exp/maps"
 	"image/jpeg"
 	"image/png"
 	"mime/multipart"
 	"net/http"
 	"net/url"
 	"reflect"
-	"slices"
 	"strings"
 	"time"
 )
@@ -30,12 +29,12 @@ var ErrFailedToFinalizeMods = errors.New("failed to finalize mods")
 
 // TODO: ALL CREATION ENDPOINTS
 // TODO: USE!
-func urlEncodeString(toEncode string) string {
+func UrlEncodeString(toEncode string) string {
 	return url.QueryEscape(toEncode)
 }
 
 // TODO: USE!
-func urlDecodeString(encoded string) (string, error) {
+func UrlDecodeString(encoded string) (string, error) {
 	return url.QueryUnescape(encoded)
 }
 
@@ -60,54 +59,6 @@ type CollectionItem interface { // TODO: ADD USER TO THIS?
 //	basicFruit() Fruit
 //	Permissioned
 //}
-
-func initializeDb(ctx context.Context) error {
-	// Db will auto-create if it does not exist
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	collNames, err := db.ListCollectionNames(ctx, bson.D{})
-	if err != nil {
-		return err
-	}
-	// Create all collections that don't already exist
-	for _, name := range []string{
-		BagsCollectionName,
-		FruitsCollName,
-		FruitingChamberCollectionName,
-		GrainJarCollectionName,
-		LcSyringeCollectionName,
-		LCCollectionName,
-		MssCollectionName,
-		PlatesCollectionName,
-		PlugsCollectionName,
-		SlantsCollectionName,
-		SporePrintCollectionName,
-		SporeSwabCollectionName,
-		StasisTubeCollectionName,
-		// Alternate entry constants
-		AgarBatchCollectionName,
-		AgarRecipesCollectionName,
-		LcRecipesCollectionName,
-		PcRunCollectionName,
-		ProjectsCollectionName,
-		SalesCollectionName,
-		SpeciesCollectionName,
-		SubspeciesCollectionName,
-		SubstrateBatchCollectionName,
-		SubstrateRecipesCollectionName,
-		TransfersCollName,
-		UserCollName,
-	} {
-		// Create if needed
-		if !slices.Contains(collNames, name) {
-			err = db.CreateCollection(ctx, name)
-			if err != nil {
-				return err
-			}
-		}
-
-	}
-	return nil
-}
 
 var lastUpdatedIndexModel = mongo.IndexModel{
 	Keys:    bson.D{{"lastUpdated", -1}},
@@ -347,6 +298,39 @@ func withItemsRemoved[T any](field string, items ...T) bson.D {
 	return bson.D{{"$pull", bson.D{{field, itemsEquality}}}}
 }
 
+func createIndexes(ctx context.Context, coll *mongo.Collection, toCreate []mongo.IndexModel) error {
+	if len(toCreate) == 0 {
+		return nil
+	}
+	toCreateNames := map[string]mongo.IndexModel{}
+	for _, idx := range toCreate {
+		if idx.Options.Name == nil {
+			return errors.New("cannot create an index without name")
+		}
+		toCreateNames[*idx.Options.Name] = idx
+	}
+	// Get current indices
+	idxCursor, err := coll.Indexes().List(ctx)
+	if err != nil {
+		return err
+	}
+	for idxCursor.Next(ctx) {
+		var existingIndex mongo.IndexModel // TODO: ensure ok
+		if err = idxCursor.Decode(&existingIndex); err != nil {
+			return errors.Join(errors.New("cursor decode error for existing index"), err)
+		}
+		// Remove all existing indexes from toCreate
+		if existingIndex.Options != nil && existingIndex.Options.Name != nil {
+			delete(toCreateNames, *existingIndex.Options.Name)
+		}
+	}
+	if err = idxCursor.Err(); err != nil {
+		return errors.Join(errors.New("mongo cursor error after UserPerms project iteration"), err)
+	}
+	_, err = coll.Indexes().CreateMany(ctx, maps.Values(toCreateNames))
+	return err
+}
+
 func newSimpleIndex(indexName, key string, descending, sparse, unique bool) mongo.IndexModel {
 	keyElement := bson.E{Key: key, Value: 1}
 	if descending {
@@ -364,23 +348,6 @@ func newSimpleIndex(indexName, key string, descending, sparse, unique bool) mong
 func indicesSame(a, b mongo.IndexModel) bool { // TODO: use?
 	return (a.Keys.(bson.D)[0].Key == b.Keys.(bson.D)[0].Key) && reflect.DeepEqual(a.Options, b.Options)
 }
-
-func stringsToNotes(notes []string, when ...time.Time) []Note {
-	thisTime := unixTimeForNow()
-	if len(when) > 0 {
-		thisTime = unixTimeFor(when[0])
-	}
-	return sliceutils.Map(notes, func(s string) Note {
-		return Note{
-			Time: thisTime,
-			Note: s,
-		}
-	})
-}
-
-//func stringsToNotesField(notes []string, when ...time.Time) NotesField {
-//	return NotesField{stringsToNotes(notes, when...)}
-//}
 
 var ErrInvalidEntryType = errors.New("invalid entry type")
 

@@ -110,7 +110,7 @@ func (sw SporeSwab) id() []byte {
 func initializeSporeSwabs(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SporeSwabCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		//newSimpleIndex("parent", "parent", false, false, false),
 		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),

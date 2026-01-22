@@ -72,17 +72,18 @@ func (recipe JarRecipe) CollectionName() string {
 func initializeJarRecipes(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false),
-		//newSimpleIndex("grains", "grains.grain", false, false, false),
-		standardIndexModel,
-		//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
-		//newSimpleIndex("sugars", "sugars.type", false, false, false),
-		//newSimpleIndex("additives", "additives.additive", false, false, false),
-		//Notes (no index unless tags)
-		projectsIndexModel,
-		lastUpdatedIndexModel,
-	})
+	err := createIndexes(ctx, coll,
+		[]mongo.IndexModel{
+			newSimpleIndex("name", "name", false, false, false),
+			//newSimpleIndex("grains", "grains.grain", false, false, false),
+			standardIndexModel,
+			//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
+			//newSimpleIndex("sugars", "sugars.type", false, false, false),
+			//newSimpleIndex("additives", "additives.additive", false, false, false),
+			//Notes (no index unless tags)
+			projectsIndexModel,
+			lastUpdatedIndexModel,
+		})
 	if err != nil {
 		return err
 	}

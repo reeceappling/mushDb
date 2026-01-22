@@ -139,33 +139,33 @@ func (f FruitingChamber) EntryTypeField() *string {
 func initializeFruitingChamber(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(FruitingChamberCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		creationDateIndexModel,
-		//newSimpleIndex("recipe", "recipe", false, false, false), // TODO: this is harvest date
-		// TODO: newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
-		//newSimpleIndex("cupsGrain","cupsGrain", false, false, false),
-		//newSimpleIndex("mixedSubstratePerGrain","mixedSubstratePerGrain", false, false, false),
-		//newSimpleIndex("casingPerGrain","casingPerGrain", false, false, false),
-		newSimpleIndex("species", "species", false, true, false),
-		newSimpleIndex("subspecies", "subspecies", false, true, false),
-		//newSimpleIndex("innoc", "innoc", false, true, false),
-		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
-		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
-		//transfersOutIndexModel,
-		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
-		//Pics (no index)
-		//TODO: Contams
-		// Flushes
-		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
-		// MostRecentImage
-		//saleIndexModel,
-		//newSimpleIndex("disposed", "disposed", false, true, false),
-		//Notes (no index) (maybe later with tags?)
-		lastUpdatedIndexModel,
-		projectsIndexModel,
-		// TODO: projectsIndexModel,
-	})
+	err := createIndexes(ctx, coll,
+		[]mongo.IndexModel{
+			creationDateIndexModel,
+			//newSimpleIndex("recipe", "recipe", false, false, false), // TODO: this is harvest date
+			// TODO: newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
+			//newSimpleIndex("cupsGrain","cupsGrain", false, false, false),
+			//newSimpleIndex("mixedSubstratePerGrain","mixedSubstratePerGrain", false, false, false),
+			//newSimpleIndex("casingPerGrain","casingPerGrain", false, false, false),
+			newSimpleIndex("species", "species", false, true, false),
+			newSimpleIndex("subspecies", "subspecies", false, true, false),
+			//newSimpleIndex("innoc", "innoc", false, true, false),
+			//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
+			//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
+			//transfersOutIndexModel,
+			//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
+			//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+			//Pics (no index)
+			//TODO: Contams
+			// Flushes
+			//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
+			// MostRecentImage
+			//saleIndexModel,
+			//newSimpleIndex("disposed", "disposed", false, true, false),
+			//Notes (no index) (maybe later with tags?)
+			lastUpdatedIndexModel,
+			projectsIndexModel,
+		})
 	if err != nil {
 		return err
 	}

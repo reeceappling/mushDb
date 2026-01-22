@@ -125,7 +125,7 @@ func (s Slant) id() []byte {
 func initializeSlants(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(SlantsCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
 		//newSimpleIndex("stickType", "stickType", false, true, false),
 		creationDateIndexModel,

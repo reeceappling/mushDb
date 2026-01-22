@@ -13,8 +13,8 @@ type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
-	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
-	StandardField              `bson:"inline"` // If this is a standard recipe
+	Agar                       int `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField              `bson:"inline"`               // If this is a standard recipe
 	NutrientsField             `bson:"inline"`
 	SugarsField                `bson:"inline"`
 	AdditivesField             `bson:"inline"`
@@ -82,7 +82,7 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 func initializeAgarRecipes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(AgarRecipesCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false), // TODO: names unique?
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("agar", "agar", true, false, false),

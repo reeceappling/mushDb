@@ -41,7 +41,7 @@ func (recipe LcRecipe) EntryTypeField() *string {
 func initializeLcRecipes(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcRecipesCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false),
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),

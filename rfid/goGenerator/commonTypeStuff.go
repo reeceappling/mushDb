@@ -34,7 +34,11 @@ var ({{range $typ, $info := .MainCollTypes}}
 
 ` + header + `
 import (
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"context"
+	"errors"
+	"slices"
 )
 
 const (
@@ -52,6 +56,28 @@ func mainCollMap(name string) (item MainCollectionItem, exists bool) {
 	{{end}}default: return nil, false
 	}
 }
+func initializeDb(ctx context.Context) error {
+	// Db will auto-create if it does not exist
+	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	collNames, err := db.ListCollectionNames(ctx, bson.D{})
+	if err != nil {
+		return err
+	}
+	// Create all collections that don't already exist
+	for _, name := range ` + collNameListTpl + ` {
+		// Create if needed
+		if !slices.Contains(collNames, name) {
+			err = db.CreateCollection(ctx, name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+// TODO: get rid of one of the following two?
+func typeForEntryType` + itemTypeFor + `}
+func typeForSource` + itemTypeFor + `}
 
 // Methods{{range $typ, $info := .MainCollTypes}}
 ` + setPermsMethodTpl + `
@@ -120,6 +146,24 @@ const entryTypeMethodTpl = `func ({{$info.Receiver}} {{$typ}}) EntryType() strin
 const sourceTypeMethodTpl = `func ({{$info.Receiver}} {{$typ}}) SourceType() string {
 	return {{$info.EntryTypeConstName}}
 }`
+
+const collNameListTpl = `[]string{
+//Main Collections
+{{range $typ, $info := .MainCollTypes}}	{{$info.CollConstName}},
+{{end}}	// Alt collections
+{{range $typ, $info := .OtherCollTypes}}	{{$info.CollConstName}},
+{{end}}
+	}`
+
+const itemTypeFor = `(src string) (MainCollectionItem, error) {
+	out, exists := map[string]MainCollectionItem{
+{{range $typ, $info := .MainCollTypes}}{{$info.EntryTypeConstName}}: &{{$typ}}{},
+{{end}}
+	}[src]
+	if !exists {
+		return nil, errors.New(src + " is not a valid entry type")
+	}
+	return out, nil`
 
 type mainCollInfo struct {
 	Receiver            string

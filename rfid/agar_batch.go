@@ -95,7 +95,7 @@ func initializeAgarBatches(ctx context.Context) error {
 	// Indices
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(AgarBatchCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		newSimpleIndex("recipe", "recipe", false, false, false),
 		//newSimpleIndex("color", "color", false, false, false),

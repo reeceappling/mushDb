@@ -82,45 +82,26 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 	return item, nil
 }
 
-func typeForSource(src string) MainCollectionItem {
-	out, exists := map[string]MainCollectionItem{
-		BagSourceType:             &Bag{},
-		FruitSourceType:           &Fruit{},
-		FruitingChamberSourceType: &FruitingChamber{},
-		GrainJarSourceType:        &GrainJar{},
-		LcSourceType:              &LiquidCulture{},
-		LcSyringeSourceType:       &LcSyringe{},
-		MssSourceType:             &MSS{},
-		PlateSourceType:           &Plate{},
-		PlugSourceType:            &PlugsJar{},
-		SlantSourceType:           &Slant{},
-		SporePrintSourceType:      &SporePrint{},
-		SporeSwabSourceType:       &SporeSwab{},
-		StasisTubeSourceType:      &StasisTube{},
-	}[src]
-	if !exists {
-		panic(src + " is an invalid source type")
-	}
-	return out
-}
-
-func GetCollectionItemInTxn(ctx context.Context, id MainCollectionId, sourceType string) (out MainCollectionItem, err error) {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	out = typeForSource(sourceType) // TODO: this should be sourceType instead
-	err = db.Collection(out.CollectionName()).FindOne(ctx, bson.D{{"_id", id}}).Decode(&out)
-	if err != nil {
-		return nil, err // mongo.ErrNoDocuments if 404
-	}
-	// TODO: auth info????
-	//authinfo, err := GetAuthInfo(ctx)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if out.Permissions().PermissionFor(authinfo) == perms.None {
-	//	err = errors.New("no perms on getMainCollItemInTxn")
-	//}
-	return
-}
+//func GetCollectionItemInTxn(ctx context.Context, id MainCollectionId, sourceType string) (out MainCollectionItem, err error) {
+//	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+//	out, err = typeForSource(sourceType) // TODO: this should be sourceType instead
+//	if err != nil {
+//		return out, err
+//	}
+//	err = db.Collection(out.CollectionName()).FindOne(ctx, bson.D{{"_id", id}}).Decode(&out)
+//	if err != nil {
+//		return nil, err // mongo.ErrNoDocuments if 404
+//	}
+//	// TODO: auth info????
+//	//authinfo, err := GetAuthInfo(ctx)
+//	//if err != nil {
+//	//	return nil, err
+//	//}
+//	//if out.Permissions().PermissionFor(authinfo) == perms.None {
+//	//	err = errors.New("no perms on getMainCollItemInTxn")
+//	//}
+//	return
+//}
 
 func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id AlternateCollectionId, item T) (out T, err error) {
 	out = item

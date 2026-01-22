@@ -25,7 +25,7 @@ func (run PCRun) EntryTypeField() *string {
 func initializePCRun(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PcRunCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		// TODO: newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
 		//RunTime (likely no index)    string                `bson:"runtime" json:"runtime"`

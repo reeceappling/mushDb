@@ -117,7 +117,7 @@ func initializePlates(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	println("2")
 	coll := db.Collection(PlatesCollectionName)
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, true, false),
@@ -371,8 +371,9 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	println("Wrote plate update:", string(bsOut))
+	println("Writing plate update:", string(bsOut))
 	_, err = w.Write(bsOut)
+	println("Wrote plate update:", string(bsOut))
 	handleWriteErr(err, w)
 }
 

@@ -124,7 +124,7 @@ func initializeBags(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(BagsCollectionName)
 	// Indices
-	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
+	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		//newSimpleIndex("recipe", "recipe", false, false, false),
 		//newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
 		//newSimpleIndex("pcRun", "pcRun", false, true, false),

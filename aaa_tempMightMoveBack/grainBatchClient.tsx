@@ -121,7 +121,7 @@ export default function GrainBatchDisplay(
                     }
                 })
                 .catch((error) => {
-                    setErr(error)
+                    setErr(JSON.stringify(error))
                 });
         }
         const handleFormChangeBoil = (val: number) => {
@@ -186,7 +186,7 @@ export function NewGrainBatchForm({handlers, recipe}: { handlers: NewEntryInput<
                 }
             })
             .catch((err) => {
-                setErr(err.message)
+                setErr(JSON.stringify(err))
             });
     }
     return <div>
@@ -257,7 +257,7 @@ export function GrainBatchSelector(
                 setRecent(out)
             })
             .catch((err) => {
-                setErr(err.message)
+                setErr(JSON.stringify(err))
             });
     }, []) // TODO: OK????? [] or nothing?
     return <div>

@@ -28,7 +28,6 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -895,83 +894,73 @@ var rootHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *h
 	}
 })
 
-//	func getRfidHandler() http.Handler {
-//		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//			ctx := r.Context()
-//			id := r.PathValue("id")
-//			idBytes := []byte(id)
-//			if len(idBytes) != rfid.RfidByteSize {
-//				http.Error(w, "invalid id format. Must be 8 bytes", http.StatusBadRequest)
-//				return
-//			}
-//			item, err := rfid.GetMainCollectionItem(ctx, [rfid.RfidByteSize]byte(idBytes), nil) // TODO: WONT WORK
-//			if err != nil {
-//				if errors.Is(err, mongo.ErrNoDocuments) {
-//					http.Error(w, "not found", http.StatusNotFound)
-//					return
-//				}
-//				http.Error(w, "failed to retrieve item", http.StatusInternalServerError)
-//				return
-//			}
-//			out, err := json.Marshal(item)
-//			if err != nil {
-//				http.Error(w, "failed to marshal item", http.StatusInternalServerError)
-//				return
-//			}
-//
-//			_, err = w.Write(out)
-//			if err != nil {
-//				rfid.HandleHttpWriteError(err)
-//			}
-//		})
-//	}
-type clientServerStringConverter struct {
-	toClient, toServer func(client string) utils.ErrAnd[string]
-}
-
-var base58Converter = clientServerStringConverter{
-	toClient: func(binaryIdStr string) utils.ErrAnd[string] {
-		out, err := rfid.Base2BytesToBase58([]byte(binaryIdStr))
+// TODO: use this somewhere!
+// getItemTypeForId request body is just a base58 string of the mainCollectionId
+func getItemTypeForId() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer r.Body.Close()
+		bs, err := io.ReadAll(r.Body)
 		if err != nil {
-			return utils.TandErr("", err)
+			http.Error(w, "Error reading body: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
-		return utils.ErrAndT(string(out))
-	},
-	toServer: func(b58id string) utils.ErrAnd[string] {
-		bs, err := rfid.Base58Str(b58id).Base2Bytes()
+		req := rfid.MainCollectionId{}
+		if err = json.Unmarshal(bs, &req); err != nil {
+			http.Error(w, "Error parsing body: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		itemType, err := rfid.FindItemTypeForId(r.Context(), req)
 		if err != nil {
-			return utils.TandErr("", err)
+			http.Error(w, "Error finding item type: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
-		return utils.ErrAndT(string(bs))
-	},
-}
-var emailConverter = clientServerStringConverter{
-	toClient: func(urlEncodedEmail string) utils.ErrAnd[string] {
-		return utils.TandErr(urlDecodeString(urlEncodedEmail))
-	},
-	toServer: func(humanReadable string) utils.ErrAnd[string] {
-		return utils.ErrAndT(urlEncodeString(humanReadable))
-	},
+		_, err = w.Write([]byte(itemType.EntryType()))
+		if err != nil {
+			rfid.HandleHttpWriteError(err)
+		}
+
+	})
 }
 
-func urlEncodeString(toEncode string) string {
-	return url.QueryEscape(toEncode)
-}
+func getRfidHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		id := r.PathValue("id")
+		idBytes := []byte(id)
+		if len(idBytes) != rfid.RfidByteSize {
+			http.Error(w, "invalid id format. Must be 8 bytes", http.StatusBadRequest)
+			return
+		}
+		item, err := rfid.GetMainCollectionItemWithId(ctx, [rfid.RfidByteSize]byte(idBytes))
+		if err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				http.Error(w, "not found: "+err.Error(), http.StatusNotFound)
+				return
+			}
+			http.Error(w, "failed to retrieve item: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		user, err := rfid.GetAuthInfo(ctx)
+		if err != nil {
+			http.Error(w, "failed to retrieve user: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// Validate user can read this entry
+		if item.Permissions().HighestPermFor(user) == nil {
+			http.Error(w, "permission denied", http.StatusForbidden)
+			return
+		}
+		out, err := json.Marshal(item)
+		if err != nil {
+			http.Error(w, "failed to marshal item", http.StatusInternalServerError)
+			return
+		}
 
-// TODO: USE!
-func urlDecodeString(encoded string) (string, error) {
-	return url.QueryUnescape(encoded)
-}
-
-var spacedNameConverter = clientServerStringConverter{
-	toClient: func(spaced string) utils.ErrAnd[string] {
-		// Take spaces and make them underscores?
-		return utils.ErrAndT(strings.ReplaceAll(spaced, " ", "_"))
-	},
-	toServer: func(underscored string) utils.ErrAnd[string] {
-		// replace underscores with spaces
-		return utils.ErrAndT(strings.ReplaceAll(underscored, "_", " "))
-	},
+		_, err = w.Write(out)
+		if err != nil {
+			rfid.HandleHttpWriteError(err)
+		}
+	})
 }
 
 // TODO: FIXME!!!!
