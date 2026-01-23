@@ -170,12 +170,12 @@ type MainCollectionId [RfidByteSize]byte
 //}
 //
 //// UnmarshalBSONValue implements the bson.ValueUnmarshaler interface
-//func (id *MainCollectionId) UnmarshalBSONValue(t bsontype.Type, data []byte) error {
+//func (id *MainCollectionId) UnmarshalBSONValue(t bsontype.Type, Data []byte) error {
 //	if t != bson.TypeString {
 //		return fmt.Errorf("invalid bson type %s, expected string", t.String())
 //	}
 //	// Read the BSON string and parse it back into a time.Time
-//	s, _, ok := bsoncore.ReadString(data)
+//	s, _, ok := bsoncore.ReadString(Data)
 //	if !ok {
 //		return fmt.Errorf("invalid bson string value")
 //	}
@@ -546,12 +546,13 @@ func UpdateById() http.HandlerFunc {
 			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
 			return
 		}
-		bs, _ := json.Marshal(resolvedPerms) // TODO; del
-		println(string(bs))                  // TOFO: del
-		if resolvedPerms.isGuest() {
-			http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
-			return
-		}
+		bs, _ := json.Marshal(resolvedPerms)  // TODO; del
+		println("resolved perms", string(bs)) // TODO: del
+		//if resolvedPerms.isGuest() { // TODO: reenable
+		//	println("guest tried to edit")
+		//	http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
+		//	return
+		//}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
 			"agarBatch":  updateAgarBatchHandler,

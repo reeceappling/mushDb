@@ -3,6 +3,7 @@ package pics
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"os"
 )
@@ -19,7 +20,10 @@ func GetFilePath(ctx context.Context) string {
 
 func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, error) {
 	filePath := GetFilePath(ctx)
-	resolvedPrefix := "/"
+	if filePath == "" {
+		filePath = "/images" // TODO: FIXME!!!!
+	}
+	resolvedPrefix := ""
 	for _, prefix := range prefixPath {
 		resolvedPrefix = resolvedPrefix + prefix + "/"
 	}
@@ -29,11 +33,22 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 			return "", err
 		}
 		fileNameWithPrefixPath := resolvedPrefix + name.String()
-		whereToWrite := filePath + fileNameWithPrefixPath
+		whereToWrite := filePath + "/" + fileNameWithPrefixPath
+		if err = os.MkdirAll(filePath+"/"+resolvedPrefix, 777); err != nil {
+			fmt.Printf("Error creating directory: %s\n", err)
+			return fileNameWithPrefixPath, err
+		}
 		if _, err = os.Stat(whereToWrite); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return fileNameWithPrefixPath, os.WriteFile(whereToWrite, bs, 0666)
+				println("filePath" + filePath)
+				println("writing file to " + whereToWrite) // TODO: del
+				err = os.WriteFile(whereToWrite, bs, 777)
+				if err != nil {
+					println("failed to write file", err.Error())
+				}
+				return fileNameWithPrefixPath, err
 			}
+			println("file exists already!", err.Error()) // TODO: fix
 			return "", err
 		} else {
 			continue

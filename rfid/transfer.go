@@ -152,13 +152,13 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	bs, errr := io.ReadAll(p1)
 	if errr != nil {
 		err = errr
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Get any images

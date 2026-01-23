@@ -1,4 +1,7 @@
 version: '3.8'
+include:
+  # TODO: - docker-compose-web-prod.yaml
+  - docker-compose-web-dev.yaml
 services:
   # Service to maintain cloudflare tunnel (because homelab is behind CGNAT)
   cloudflared:
@@ -11,10 +14,20 @@ services:
     command: tunnel --no-autoupdate run
     networks:
       - mushNet
+#  initializer:
+#    image: alpine
+#    container_name: vol-initializer
+#    restart: "no"
+#    entrypoint: |
+#      /bin/sh -c "chown -R 503:12 /images && chmod -R 777 /images"
+#    volumes:
+#      - pictures:/images
   # Main go api
   api:
     image: mush-api:latest
+    command: ./server
     restart: unless-stopped
+#    user: 503:12
     build:
       context: ./
       dockerfile: ./DockerfileApi
@@ -45,29 +58,7 @@ services:
       - mushdb
     depends_on:
       - mushdb
-  # React/Next.js webserver
-  web:
-    image: mush-web:latest
-    restart: unless-stopped
-    build:
-      context: ./rfid/client
-      dockerfile: ./Dockerfile
-      args:
-        MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-http}
-        MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
-        MAIN_API_EXTERNAL_PORT: ${MAIN_API_EXTERNAL_PORT:-80}
-        MAIN_API_INTERNAL_HOST: "api"
-        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID?error}
-      tags:
-        - "mush-web:latest"
-    environment:
-      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID?error}
-      NEXT_PRIVATE_BASE_API_URL: "http://api:3000"
-      NEXT_PUBLIC_BASE_API_URL: https://mush.appli.ng
-      #Was http
-      #NEXT_PUBLIC_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL:-http}://${MAIN_API_EXTERNAL_HOST:-localhost}"
-    networks:
-      - mushNet
+#      - initializer
   mushdb: # fungi database container
     image: mongo:4
     restart: unless-stopped
@@ -130,11 +121,14 @@ networks:
 volumes:
   mongo_repl_config:
   pictures:
-    driver: local
-    driver_opts:
-      type: none
-      device: ${LOCAL_IMAGES_DIR:?error}
-      o: bind
+    labels:
+      com.example.description: "Persistent volume for images"
+#    driver: local
+#    driver_opts:
+#      type: none
+#      device: ${LOCAL_IMAGES_DIR:?error}
+#      o: bind
+
   mongodb-data:
 #    driver: local
 #    driver_opts:

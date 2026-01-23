@@ -154,13 +154,13 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -291,16 +291,16 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
@@ -316,9 +316,9 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 		// TODO: perms? AclField:                acl,
 	}
 	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
-	//finalPerms := data.Perms
-	//if data.Perms != nil {
-	//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+	//finalPerms := Data.Perms
+	//if Data.Perms != nil {
+	//	spec, subsp, err := getSpeciesAndSubspecies(ctx, Data.Species, Data.SubSpecies)
 	//	if err != nil {
 	//		return dbErr(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: ok?
 	//	}
@@ -333,7 +333,7 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 	//if err != nil {
 	//	return dbErr(w, err.Error(), http.StatusInternalServerError)
 	//}
-	//acl, err := data.AclForUser(ctx, perms)
+	//acl, err := Data.AclForUser(ctx, perms)
 	//if err != nil {
 	//	return dbErr(w, err.Error(), http.StatusInternalServerError)
 	//}

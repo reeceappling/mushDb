@@ -3,6 +3,7 @@ package main
 import (
 	"compress/gzip"
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -73,10 +74,15 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 var oauthConfig *oauth2.Config
 
 func main() {
+	picsPath := os.Getenv("PICS_PATH")
+	if picsPath == "" {
+		panic("env var missing for PICS_PATH")
+	}
+	ctx := pics.SetFilePath(context.Background(), picsPath)
 	// TODO: MAKE SURE TO STORE USERID ON COOKIES AS WELL?
 	var err error
 	authSvc := rfid.NewAuthService(utils.Pointer(2*time.Minute), utils.Pointer(1*time.Hour))
-	ctx := authSvc.OnContext(context.Background())
+	ctx = authSvc.OnContext(ctx)
 
 	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
 	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
@@ -228,7 +234,7 @@ func main() {
 
 	http.Handle("/login", CorsMiddleware(rateLimiter(ctxMiddleware(handleLogin(webProxyHandler, dbUser, dbPass)))))
 	http.Handle("/logout", CorsMiddleware(rateLimiter(ctxMiddleware(handleLogout))))
-	http.Handle("/guestLogin", rateLimiter(ctxMiddleware(handleLogin(webProxyHandler, dbUser, dbPass))))
+	http.Handle("/guestLogin", rateLimiter(ctxMiddleware(handleGuestLogin())))
 	http.Handle("/auth/{provider}", CorsMiddleware(rateLimiter(ctxMiddleware(handleAuthProvider()))))
 	http.Handle("/auth/{provider}/callback", CorsMiddleware(rateLimiter(ctxMiddleware(handleAuthCallback()))))
 
@@ -258,16 +264,12 @@ func main() {
 	println("Defining db interaction endpoints")
 	//http.Handle("/db/get/rfid/{id}", getRfidHandler())             // TODO: GET RID OF???             // TODO: ensure this works for base58s
 	http.Handle("/db/get/{variant}/{id}", rateLimiter(ctxInternalAuthMiddleware(getAnyCollectionHandler()))) // TODO: GET RID OF??? // TODO: make this work for base58 mains as well
-	println("1")                                                                                             // TODO: del
 	http.Handle(fmt.Sprintf(`%s{%s...}`, imagesEndpoint, imageSubPathKey), ctxInternalAuthMiddleware(getImageHandler()))
 	// Creation handlers
-	println("2") // TODO: del
 	http.Handle("/db/create/{variant}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.HandleCreate()))))
 	// update handlers
-	println("3")                                                                                                      // TODO: del
 	http.Handle("/db/update/{endpt}/{id}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.UpdateById())))) // TODO: THIS SHOULD BE PATCH REQUEST?
 	// import handlers
-	println("4") // TODO: del
 	http.Handle("/db/import/{endpt}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.ImportHandler()))))
 	// List handlers
 	http.Handle("/db/list/{variant}", ctxInternalAuthMiddleware(rfid.ListEntriesHandler()))
@@ -412,23 +414,23 @@ func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManag
 	rateLimiterMiddleware := stdlib.NewMiddleware(limiter.New(rateLimiterStorage, rate, limiter.WithTrustForwardHeader(true)))
 	rateLimiter = rateLimiterMiddleware.Handler
 	// PicsPath and rfid middleware
-
-	rfidMiddleware = mgr.Middleware()
 	// Pics path middleware
 	picsPath := os.Getenv("PICS_PATH")
 	if picsPath == "" {
 		panic("env var missing for PICS_PATH")
 	}
 	ctx = pics.SetFilePath(ctx, picsPath)
-	// Auth Middleware
-	svc := rfid.GetAuthService(ctx)                             // TODO: reenable
-	webAuthMiddleware = svc.AuthOrRedirectMiddleware(loginPath) // TODO: reenable
-	internalAuthMiddleware = svc.AuthOrDenyMiddleware()         // TODO: reenable
 	ctxMiddleware = func(next http.Handler) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			next.ServeHTTP(w, r.WithContext(ctx)) // TODO: ok?
 		}
 	}
+	rfidMiddleware = mgr.Middleware()
+	// Auth Middleware
+	svc := rfid.GetAuthService(ctx)                             // TODO: reenable
+	webAuthMiddleware = svc.AuthOrRedirectMiddleware(loginPath) // TODO: reenable
+	internalAuthMiddleware = svc.AuthOrDenyMiddleware()         // TODO: reenable
+
 	ctxRfidMiddleware = func(next http.Handler) http.HandlerFunc {
 		return ctxMiddleware(rfidMiddleware(next))
 	}
@@ -450,28 +452,39 @@ func envVarOrDefault(varName, defaultResult string) string {
 
 func handleGuestLogin() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		svc := rfid.GetAuthService(r.Context())
-		sessId, err := svc.SigninGuestUser(r.Context())
+		ctx := r.Context()
+		println("creating new session id for guest")
+		sessId, err := rfid.GetAuthService(ctx).SigninGuestUser(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// TODO: REDIRECT????
-		_, err = w.Write([]byte("SIGNED IN AS GUEST SESSION " + sessId))
+		println("adding guest session to goth store")
+		session, err := gothic.Store.New(r, string(sessId))
 		if err != nil {
-			println("failed to write guest login response: " + err.Error())
+			// TODO: delete guest session
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		//switch r.Method {
-		//case http.MethodGet:
-		//	viewHandler.ServeHTTP(w, r)
-		//case http.MethodPost:
-		//	time.Sleep(3 * time.Second) // TODO: Make user wait for login, lower likelihood of attack
-		//	gothic.BeginAuthHandler(w, r)
-		//default:
-		//	http.Error(w, "Unsupported http request method: "+http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		//}
+		println("adding session id to session")
+		err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
+		if err != nil {
+			// TODO: del sess?
+			err = errors.Join(errors.New("sessId storage fail"), err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		println("saving guest session")
+		err = session.Save(r, w)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		dst := r.URL.Query().Get("destination")
+		if dst == "" {
+			dst = "https://mush.appli.ng/view/plate/1" // TODO: CHANGE!?
+		}
+		http.Redirect(w, r, dst, http.StatusTemporaryRedirect)
 
 	})
 }
@@ -870,12 +883,15 @@ func getImageHandler() http.Handler {
 			http.Error(w, "image name must not be blank", http.StatusBadRequest)
 			return
 		}
+		println("trying to read picture file: " + filepath.Join(pics.GetFilePath(ctx), imgSubPath)) // TODO: DEL
 		bytes, err := os.ReadFile(filepath.Join(pics.GetFilePath(ctx), imgSubPath))
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
+				println("file does not exist!") // TODO: fix
 				http.Error(w, "image not found", http.StatusNotFound)
 				return
 			}
+			println("failed to get image!") // TODO: fix
 			http.Error(w, "Error retrieving image. "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -978,6 +994,7 @@ func getAnyCollectionHandler() http.Handler {
 
 		entryType := r.PathValue("variant")
 		var bytes []byte
+		var tempBs []byte
 		switch entryType {
 		case "project", "species", "subspecies": // Items with possible spaces in names
 			// TODO: ensure to convert id from url format to server format
@@ -993,6 +1010,11 @@ func getAnyCollectionHandler() http.Handler {
 				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 				return
 			}
+			tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
+			if err != nil {
+				http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		case "user": // User (can have @)
 			// TODO: ensure to convert id from url format to server format
 			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId([]byte(id)), &rfid.User{})
@@ -1003,6 +1025,11 @@ func getAnyCollectionHandler() http.Handler {
 			bytes, err = json.Marshal(out)
 			if err != nil {
 				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
+				return
+			}
+			tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
+			if err != nil {
+				http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 		// Cases which are alt colls with base58->binary ids
@@ -1024,6 +1051,11 @@ func getAnyCollectionHandler() http.Handler {
 			bytes, err = json.Marshal(out)
 			if err != nil {
 				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
+				return
+			}
+			tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
+			if err != nil {
+				http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 		default: // Main collection ids
@@ -1117,12 +1149,16 @@ func getAnyCollectionHandler() http.Handler {
 					http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 					return
 				}
+				tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
+				if err != nil {
+					http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+					return
+				}
 			}
 			// If not a main collection itemType, try for alt
 
 		}
-
-		println("wrote bytes", string(bytes)) // TODO: this!
+		println("wrote bytes", string(tempBs)) // TODO: this!
 		_, err := w.Write(bytes)
 		if err != nil {
 			rfid.HandleHttpWriteError(err)
@@ -1336,4 +1372,115 @@ func googleAuthHandleCallbackCode(r *http.Request) (email string, err error) {
 	////println("redirecting to " + r.Host + urlToRedir)
 	////http.Redirect(w, r, r.Host+urlToRedir, http.StatusTemporaryRedirect) // TODO: fix
 	//println("redirecting to " + urlToRedir)
+}
+
+var _ goth.Provider = &guestLoginProvider{}
+var _ goth.Session = &guestSession{}
+
+type guestLoginProvider struct {
+	providerName string
+}
+
+func (p *guestLoginProvider) Name() string {
+	return p.providerName
+}
+
+func (p *guestLoginProvider) SetName(name string) {
+	p.providerName = name
+}
+
+func (p *guestLoginProvider) BeginAuth(state string) (goth.Session, error) {
+	return &guestSession{
+		AuthURL: "", // TODO: FIXME!
+	}, nil
+}
+
+func (p *guestLoginProvider) UnmarshalSession(data string) (goth.Session, error) {
+	// UnmarshalSession will unmarshal a JSON string into a session.
+	sess := &guestSession{}
+	err := json.NewDecoder(strings.NewReader(data)).Decode(sess)
+	return sess, err
+}
+
+func (p *guestLoginProvider) FetchUser(session goth.Session) (goth.User, error) {
+	sess, ok := session.(*guestSession)
+	if !ok {
+		return goth.User{}, errors.New("was not guest session")
+	}
+	user := goth.User{
+		AccessToken:  sess.AccessToken,
+		Provider:     p.Name(),
+		RefreshToken: sess.RefreshToken,
+		ExpiresAt:    sess.ExpiresAt,
+		IDToken:      sess.IDToken,
+	}
+
+	// Extract the user data we got from Google into our goth.User.
+	user.Name = "guest"
+	user.FirstName = ""
+	user.LastName = ""
+	user.NickName = "guest"
+	user.Email = ""
+	user.AvatarURL = ""
+	user.UserID = ""
+	return user, nil
+}
+
+func (p *guestLoginProvider) Debug(b bool) {
+	// No-op
+}
+
+func (p *guestLoginProvider) RefreshToken(refreshToken string) (*oauth2.Token, error) {
+	token := &oauth2.Token{RefreshToken: refreshToken}
+	//ts := p.config.TokenSource(goth.ContextForClient(http.DefaultClient), token)
+	//newToken, err := ts.Token()
+	var err error
+	newToken := token
+	if err != nil {
+		return nil, err
+	}
+	return newToken, err
+}
+
+func (p *guestLoginProvider) RefreshTokenAvailable() bool {
+	return true
+}
+
+type guestSession struct {
+	AuthURL      string
+	AccessToken  string
+	RefreshToken string
+	ExpiresAt    time.Time
+	IDToken      string
+}
+
+func (s guestSession) GetAuthURL() (string, error) {
+	if s.AuthURL == "" {
+		return "", errors.New(goth.NoAuthUrlErrorMessage)
+	}
+	return s.AuthURL, nil
+}
+
+func (s guestSession) Marshal() string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
+
+func (s *guestSession) Authorize(provider goth.Provider, params goth.Params) (string, error) {
+	//p := provider.(*guestLoginProvider)
+	accessToken := rand.Text()
+	refreshToken := rand.Text()
+	//token, err := p.config.Exchange(goth.ContextForClient(p.Client()), params.Get("code"))
+	//if err != nil {
+	//	return "", err
+	//}
+	//
+	//if !token.Valid() {
+	//	return "", errors.New("Invalid token received from provider")
+	//}
+
+	s.AccessToken = accessToken
+	s.RefreshToken = refreshToken
+	s.ExpiresAt = time.Now().Add(1 * time.Hour)
+	return accessToken, nil
 }

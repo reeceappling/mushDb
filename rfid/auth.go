@@ -440,16 +440,15 @@ func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 	return func(onAuthed, handleNoSessionCookie http.Handler, handleAuthErr func(error) http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
-			println("COOKIES!")
-			cs := r.Cookies()
-			if len(cs) == 0 {
-				println("NO COOKIES FOUND")
-			}
-			for _, c := range cs {
-				println(c.Name, c.Path, c.Domain, c.Value) // TODO: del
-			}
+			//println("COOKIES!")
+			//cs := r.Cookies()
+			//if len(cs) == 0 {
+			//	println("NO COOKIES FOUND")
+			//}
+			//for _, c := range cs {
+			//	println(c.Name, c.Path, c.Domain, c.Value) // TODO: del
+			//}
 			svc := GetAuthService(ctx)
-			println("Getting session id")
 			sessionId, err := SessionIdFromRequest(r)
 			if err != nil {
 				println("no session id found on request", err.Error()) // TODO: del

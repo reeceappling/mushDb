@@ -283,13 +283,13 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)

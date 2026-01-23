@@ -223,9 +223,9 @@ type updatePlateRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
-	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
-	Contams SplitEntries[contamForm, ContaminationLessLocation]
+	Notes   AllEntries[Note]                                         `json:"notes"`
+	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"images"`
+	Contams SplitEntries[contamForm, ContaminationLessLocation]      `json:"contams"`
 	WriteTagToField
 	PermsOnRequest
 }
@@ -269,7 +269,7 @@ type resolvedUpdatePlateRequest struct {
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	println("RECEIVED UPDATE PLATE REQUEST") // TODO: THIS
-	data := updatePlateRequest{}
+	data := &updatePlateRequest{}
 	b58Id := Base58Str(r.PathValue("id"))
 	id, err := b58Id.toMainCollectionId()
 	if err != nil {
@@ -277,7 +277,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	println("CREATED READER") // TODO: THIS
-	reader, err := multipartReaderForRequest(r, w, &data)
+	reader, err := multipartReaderForRequest(r, w, data)
 	if err != nil {
 		// Already written
 		return
@@ -288,15 +288,18 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	println("GETTING IMAGES") // TODO: THIS
-	newPics, newContams, _, err := getMultipartImages(r.Context(), "jar", w, reader, b58Id)
+	newPics, newContams, _, err := getMultipartImages(r.Context(), "plate", w, reader, b58Id)
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
 	println("REFORMING") // TODO: THIS
+	for i, picNote := range data.Images.Existing[0].Data.Notes.asEntries() {
+		println("note", i, picNote.Note)
+	}
 	out := data.reform()
 	for i, _ := range data.Images.New {
 		loc, exists := newPics[i]
@@ -328,14 +331,17 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	coll := client.Database(dbName).Collection(PlatesCollectionName)
-	existing := Plate{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	existing := &Plate{}
+	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
 	if err != nil {
 		// TODO: an issue here?
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
+	for i, note := range out.Notes.asEntries() { // TODO: del
+		println("Note", i, note.Note)
+	}
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.PermsOnRequest)
 }
 
 func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) {
@@ -371,9 +377,9 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	println("Writing plate update:", string(bsOut))
+	println("Writing update:", string(bsOut))
 	_, err = w.Write(bsOut)
-	println("Wrote plate update:", string(bsOut))
+	println("Wrote update:", string(bsOut))
 	handleWriteErr(err, w)
 }
 
@@ -382,7 +388,7 @@ type importPlateRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *int
+	Generation *int `json:"generation,omitempty"`
 	// pic as "img"
 	WriteTagToField
 	PermsOnRequest
@@ -402,7 +408,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
-	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}

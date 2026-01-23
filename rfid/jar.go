@@ -335,13 +335,13 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	bs, errr := io.ReadAll(p1)
 	if errr != nil {
 		err = errr
-		http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	user, err := GetAuthInfo(r.Context()) // TODO: fix
@@ -349,14 +349,14 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), Data.Species, Data.SubSpecies)
 	//if err != nil {
 	//	http.Error(w, "failed to get species and subspecies: "+err.Error(), http.StatusInternalServerError)
 	//	return
 	//}
-	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
+	//finalPerms := minimalPermsBetween(Data.Perms, sp, subsp)
 	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Email)
-	//err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	//err = writeRfidTagIfNecessary(r.Context(), Data.WriteTagTo, id)
 	//if err != nil {
 	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 	//	return
@@ -512,7 +512,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
-	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "cannot write to new perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}

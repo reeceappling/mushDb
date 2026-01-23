@@ -210,15 +210,22 @@ func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, re
 	bs, errr := io.ReadAll(p)
 	if errr != nil {
 		err = errr
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	println("before", string(bs)) // TODO: del
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, result)
 	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	bs2, err := json.Marshal(result)
+	if err != nil {
+		http.Error(w, "failed to marshal Data from form: "+err.Error(), http.StatusBadRequest)
+		return // TODO: del
+	}
+	println("after", string(bs2)) // TODO: del
 	return
 }
 
@@ -283,7 +290,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 		switch parts[0] {
 		case "newPic":
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
-			if err != nil {
+			if errr != nil {
 				err = errr
 				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
@@ -322,8 +329,8 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 	// TODO:?????
 	//// CHECK THAT ALL NEW PICS EXIST
 	//// PROCESS ALL NEW PICS AND CONTAMS
-	//out := data.reform()
-	//for i, _ := range data.Images.New {
+	//out := Data.reform()
+	//for i, _ := range Data.Images.New {
 	//	loc, exists := newPics[i]
 	//	if !exists {
 	//		http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
@@ -331,13 +338,13 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 	//	}
 	//	out.Images.New[i].Location = imageLocation(loc)
 	//}
-	//for i, _ := range data.Contams.New {
+	//for i, _ := range Data.Contams.New {
 	//	if loc, exists := newContams[i]; exists {
 	//		finalLoc := imageLocation(loc)
 	//		out.Contams.New[i].Location = &finalLoc
 	//	}
 	//}
-	//for i, _ := range data.Flushes.New {
+	//for i, _ := range Data.Flushes.New {
 	//	loc, exists := newFlushes[i]
 	//	if !exists {
 	//		http.Error(w, fmt.Sprintf("error, location for new flush index %d not found (should never happen)", i), http.StatusInternalServerError)

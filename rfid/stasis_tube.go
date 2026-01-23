@@ -281,13 +281,13 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	bs, errr := io.ReadAll(p1)
 	if errr != nil {
 		err = errr
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -424,7 +424,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
 	//	return // TODO: ok? check species or no?
 	//}
@@ -487,9 +487,9 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, db := Db(r)
 	coll := db.Collection(StasisTubeCollectionName)
-	//TODO: finalPerms := data.Perms
-	//if data.Perms != nil {
-	//	spec, subsp, err := getSpeciesAndSubspecies(ctx, data.Species, data.SubSpecies)
+	//TODO: finalPerms := Data.Perms
+	//if Data.Perms != nil {
+	//	spec, subsp, err := getSpeciesAndSubspecies(ctx, Data.Species, Data.SubSpecies)
 	//	if err != nil {
 	//		return dbErr(w, err.Error(), http.StatusInternalServerError)
 	//	}

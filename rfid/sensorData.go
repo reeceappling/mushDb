@@ -59,7 +59,7 @@ func AddSensorDataHandler() http.Handler {
 		if err != nil {
 			// TODO: something
 		}
-		// TODO: validate caller is authorized to add data
+		// TODO: validate caller is authorized to add Data
 		nodeName := r.PathValue("nodeName")
 		err = addSensorDataFor(nodeName, req.Data)
 		if err != nil {
@@ -74,6 +74,6 @@ func AddSensorDataHandler() http.Handler {
 
 func addSensorDataFor(nodeName string, data []SensorData) error {
 
-	// TODO: this! Add sensor data to db (or file?)
+	// TODO: this! Add sensor Data to db (or file?)
 	return errors.New("NOT IMPLEMENTED")
 }

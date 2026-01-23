@@ -573,13 +573,13 @@ func notesWereModified(existing []Note, updated AllEntries[Note]) (hasChanged bo
 		return true
 	}
 	for i, finalExisting := range updated.Existing {
-		if finalExisting.disabled {
+		if finalExisting.Disabled {
 			return true
 		}
-		if finalExisting.data.Note != existing[i].Note {
+		if finalExisting.Data.Note != existing[i].Note {
 			return true
 		}
-		if finalExisting.data.Time != existing[i].Time { // TODO: do we even want this?
+		if finalExisting.Data.Time != existing[i].Time { // TODO: do we even want this?
 			return true
 		}
 	}
@@ -591,10 +591,10 @@ func picsWereModified(existing []PicWithNotes, updated SplitEntries[picWithNotes
 		return true
 	}
 	for i, finalExisting := range updated.Existing {
-		if finalExisting.disabled ||
-			finalExisting.data.Img != string(existing[i].Location) || // TODO: ensure ok
-			finalExisting.data.Time != existing[i].Time || // TODO: do we even want this?
-			notesWereModified(existing[i].Notes, finalExisting.data.Notes) {
+		if finalExisting.Disabled ||
+			finalExisting.Data.Img != string(existing[i].Location) || // TODO: ensure ok
+			finalExisting.Data.Time != existing[i].Time || // TODO: do we even want this?
+			notesWereModified(existing[i].Notes, finalExisting.Data.Notes) {
 			return true
 		}
 	}
@@ -607,16 +607,16 @@ func contamsWereModified(existing []Contamination, updated SplitEntries[contamFo
 		return true
 	}
 	for i, finalExisting := range updated.Existing {
-		if finalExisting.disabled ||
-			finalExisting.data.Time != existing[i].Time || // TODO: do we even want this?
-			finalExisting.data.Mold != existing[i].Mold ||
-			finalExisting.data.Bacteria != existing[i].Bacteria ||
-			finalExisting.data.Confirmed != existing[i].Confirmed ||
-			notesWereModified(existing[i].Notes, finalExisting.data.Notes) {
+		if finalExisting.Disabled ||
+			finalExisting.Data.Time != existing[i].Time || // TODO: do we even want this?
+			finalExisting.Data.Mold != existing[i].Mold ||
+			finalExisting.Data.Bacteria != existing[i].Bacteria ||
+			finalExisting.Data.Confirmed != existing[i].Confirmed ||
+			notesWereModified(existing[i].Notes, finalExisting.Data.Notes) {
 			return true
 		}
 		if existing[i].Location != nil {
-			if finalExisting.data.Location == nil || *finalExisting.data.Location != string(*existing[i].Location) { // TODO: ensure ok
+			if finalExisting.Data.Location == nil || *finalExisting.Data.Location != string(*existing[i].Location) { // TODO: ensure ok
 				return true
 			}
 		}
@@ -637,12 +637,12 @@ func (upd *Mods) updateNotesIfNeeded(updatedEntries AllEntries[Note], existing [
 	}
 	finalNotes := make([]Note, 0, len(existing)+len(updatedEntries.New))
 	for _, final := range updatedEntries.Existing {
-		if !final.disabled {
-			finalNotes = append(finalNotes, final.data)
+		if !final.Disabled {
+			finalNotes = append(finalNotes, final.Data)
 		}
 	}
 	for _, final := range updatedEntries.New {
-		finalNotes = append(finalNotes, final.data)
+		finalNotes = append(finalNotes, final.Data)
 	}
 	// Set notes
 	return upd.Set("notes", finalNotes) // TODO: ensure ok
@@ -667,10 +667,11 @@ func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries
 	if !picsWereModified(existing, updatedEntries) {
 		return upd
 	}
+	// TODO: THIS IS NOT WORKING????
 	finalPics := make([]PicWithNotes, 0, len(existing)+len(updatedEntries.New))
 	for _, final := range updatedEntries.Existing {
-		if !final.disabled {
-			finalPics = append(finalPics, final.data.convert())
+		if !final.Disabled {
+			finalPics = append(finalPics, final.Data.convert())
 		}
 	}
 	finalPics = append(finalPics, updatedEntries.New...)
@@ -692,8 +693,8 @@ func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, C
 	}
 	finalEntries := make([]Contamination, 0, len(existing)+len(updatedEntries.New))
 	for _, final := range updatedEntries.Existing {
-		if !final.disabled {
-			finalEntries = append(finalEntries, final.data.convert())
+		if !final.Disabled {
+			finalEntries = append(finalEntries, final.Data.convert())
 		}
 	}
 	finalEntries = append(finalEntries, updatedEntries.New...)

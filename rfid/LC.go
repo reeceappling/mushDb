@@ -260,13 +260,13 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	bs, errr := io.ReadAll(p1)
 	if errr != nil {
 		err = errr
-		http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	//authinfo, err := GetAuthInfo(r.Context())
@@ -338,12 +338,12 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	//spec, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	//spec, subsp, err := getSpeciesAndSubspecies(r.Context(), Data.Species, Data.SubSpecies)
 	//if err != nil {
 	//	http.Error(w, fmt.Sprintf("failed to get species and subspecies: %s", err), http.StatusInternalServerError)
 	//	return
 	//}
-	//finalPerms := minimalPermsBetween(data.Perms, spec, subsp)
+	//finalPerms := minimalPermsBetween(Data.Perms, spec, subsp)
 	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Email) // Add email to perms if not already there
 	ctx, db := Db(r)
 	coll := db.Collection(LCCollectionName)

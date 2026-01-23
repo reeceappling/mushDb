@@ -415,13 +415,13 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 			bs, errr := io.ReadAll(p)
 			if errr != nil {
 				err = errr
-				http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
+				http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			// PARSE INTO CORRECT DATA FORMAT
 			err = json.Unmarshal(bs, &data)
 			if err != nil {
-				http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
+				http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			dataProcessed = true
@@ -438,7 +438,7 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 		}
 	}
 	if !dataProcessed {
-		err = errors.New("no non-image data found on form request")
+		err = errors.New("no non-image Data found on form request")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -449,11 +449,11 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 		pix = []PicWithNotes{*importedPic}
 	}
 	// TODO: spec/subspec perms? Or just perms for current user?
-	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), Data.Species, Data.SubSpecies)
 	//if err != nil {
 	//	http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
 	//}
-	//finalPerms := minimalPermsBetween(data.Perms, sp, subsp)
+	//finalPerms := minimalPermsBetween(Data.Perms, sp, subsp)
 	//if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
 	//	return

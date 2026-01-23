@@ -194,13 +194,13 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	bs, errr := io.ReadAll(p)
 	if errr != nil {
 		err = errr
-		http.Error(w, "failed to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "failed to unmarshal data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Get any images
@@ -437,16 +437,16 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	bs, errr := io.ReadAll(p1)
 	if errr != nil {
 		err = errr
-		http.Error(w, "unable to read data from form: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		http.Error(w, "unable to unmarshal json form data: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//if err = data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}

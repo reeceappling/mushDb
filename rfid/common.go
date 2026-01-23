@@ -482,9 +482,9 @@ func getCollectionItemsFromCursor(ctx context.Context, cursor *mongo.Cursor, ent
 }
 
 type picWithNotesForm struct {
-	Time  unixTime
-	Img   string
-	Notes AllEntries[Note]
+	Time  unixTime         `json:"time"`
+	Img   string           `json:"img"`
+	Notes AllEntries[Note] `json:"notes"`
 }
 
 func (pwn picWithNotesForm) convert() PicWithNotes {
@@ -496,12 +496,12 @@ func (pwn picWithNotesForm) convert() PicWithNotes {
 }
 
 type contamForm struct {
-	Time      unixTime
-	Confirmed bool
-	Bacteria  bool
-	Mold      bool
-	Notes     AllEntries[Note]
-	Location  *string // MAY OR MAY NOT EXIST ON RESPONSE
+	Time      unixTime         `json:"time"`
+	Confirmed bool             `json:"confirmed"`
+	Bacteria  bool             `json:"bacteria"`
+	Mold      bool             `json:"mold"`
+	Notes     AllEntries[Note] `json:"notes"`
+	Location  *string          `json:"location,omitempty"` // MAY OR MAY NOT EXIST ON RESPONSE
 }
 
 func (cf contamForm) convert() Contamination {
@@ -543,10 +543,10 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 	}
 	return notesWereModified(existing.Notes, updated.Notes)
 	for i, updatedNote := range updated.Notes.Existing {
-		if updatedNote.disabled {
+		if updatedNote.Disabled {
 			return false
 		}
-		if updatedNote.data.Note != existing.Notes[i].Note {
+		if updatedNote.Data.Note != existing.Notes[i].Note {
 			return false
 		}
 	}
@@ -608,13 +608,13 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 //	// Do changes/removals
 //	for i, newExisting := range updatedExisting {
 //		indexKey := fmt.Sprintf(`%s.%d`, id, i)
-//		if newExisting.disabled {
+//		if newExisting.Disabled {
 //			upd.Unset(indexKey) // TODO: value of 1 was here?
 //			//removals = append(removals, bson.E{currentKey, 1}) // TODO: make sure ok
 //			continue
 //		}
-//		if !areEqual(newExisting.data, existing[i]) {
-//			upd.Set(indexKey, newExisting.data)
+//		if !areEqual(newExisting.Data, existing[i]) {
+//			upd.Set(indexKey, newExisting.Data)
 //		}
 //	}
 //	// TODO: Changes (sets) first if exist (not sure if possible the way we do it)
@@ -633,12 +633,12 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 //	removals := []bson.E{}
 //	chgs := []bson.E{}
 //	for i, newExisting := range updatedExisting {
-//		if newExisting.disabled {
+//		if newExisting.Disabled {
 //			removals = append(removals, bson.E{fmt.Sprintf(`%s.%d`, id, i), 1})
 //			continue
 //		}
-//		if !areEqual(newExisting.data, existing[i]) {
-//			chgs = append(chgs, bson.E{fmt.Sprintf(`%s.%d`, id, i), newExisting.data})
+//		if !areEqual(newExisting.Data, existing[i]) {
+//			chgs = append(chgs, bson.E{fmt.Sprintf(`%s.%d`, id, i), newExisting.Data})
 //		}
 //	}
 //	// Changes first if exist
@@ -782,7 +782,7 @@ func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection { 
 	return db.Collection(item.CollectionName())
 }
 func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T) error { // TODO; USE THIS EVERYWHERE!
-	return CollectionFor(*item, db).FindOne(ctx, bson.D{{"_id", (*item).IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
+	return CollectionFor(*item, db).FindOne(ctx, bson.D{{"_id", (*item).IdValue( /* TODO: PROBABLY WONT WORK*/)}}).Decode(item)
 }
 
 func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
@@ -791,10 +791,11 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if !user.HasPermissionToEdit(existing) {
-		dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		return
-	}
+	// TODO: REENABLE!!!!
+	//if user.isGuest() || !user.HasPermissionToEdit(existing) {
+	//	dbErr(w, "unauthorized to edit", http.StatusForbidden)
+	//	return
+	//}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
