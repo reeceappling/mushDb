@@ -195,7 +195,7 @@ func GetSubspeciesNameInTxn(ctx context.Context, name string) (out Subspecies, e
 }
 
 func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, result *T) (reader *multipart.Reader, err error) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
+	//r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err = r.MultipartReader()
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
@@ -213,19 +213,19 @@ func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, re
 		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	println("before", string(bs)) // TODO: del
+	//println("before", string(bs)) // TODO: del
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, result)
 	if err != nil {
 		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	bs2, err := json.Marshal(result)
-	if err != nil {
-		http.Error(w, "failed to marshal Data from form: "+err.Error(), http.StatusBadRequest)
-		return // TODO: del
-	}
-	println("after", string(bs2)) // TODO: del
+	//bs2, err := json.Marshal(result)
+	//if err != nil {
+	//	http.Error(w, "failed to marshal Data from form: "+err.Error(), http.StatusBadRequest)
+	//	return // TODO: del
+	//}
+	//println("after", string(bs2)) // TODO: del
 	return
 }
 
@@ -289,6 +289,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 		}
 		switch parts[0] {
 		case "newPic":
+			println("found a new pic!")
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
 			if errr != nil {
 				err = errr
@@ -299,8 +300,10 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newPics[num] = newFileNameWithPrefixPath
 		case "newContam":
+			println("found a new contam!")
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "contam")
 			if errr != nil {
+				println("failed to save a new contam", errr.Error())
 				err = errr
 				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
@@ -309,8 +312,11 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newContams[num] = newFileNameWithPrefixPath
 		case "newFlush":
+			println("found a new flush!")
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "flush")
 			if errr != nil {
+				println("failed to save a new flush picture", errr.Error())
+
 				err = errr
 				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new flush: "+err.Error(), http.StatusBadRequest)

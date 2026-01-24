@@ -282,6 +282,12 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
+	reqBs, err := json.MarshalIndent(data, "", " ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	println(string(reqBs)) // TODO: del
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -315,9 +321,10 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		if loc, exists := newContams[i]; exists {
 			finalLoc := imageLocation(loc)
 			out.Contams.New[i].Location = &finalLoc
+		} else {
+			println("no contam location for", i)
 		}
 	}
-	println("Starting TX") // TODO: THIS
 	/* TODO:
 	* Our responsiveness last year was very slow
 	* FEEDBACK FROM KATE:

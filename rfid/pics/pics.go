@@ -48,7 +48,7 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 				}
 				return fileNameWithPrefixPath, err
 			}
-			println("file exists already!", err.Error()) // TODO: fix
+			println("file exists already!", err.Error()) // TODO: continue???
 			return "", err
 		} else {
 			continue
