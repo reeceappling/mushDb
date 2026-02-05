@@ -3,9 +3,11 @@ package rfid
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"io"
 	"net/http"
 )
@@ -52,38 +54,64 @@ func initializeProjects(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, testItem := range []Project{
-		{
-			Name:              testProj,
-			CreationDateField: CreationDateField{exampleTime},
-			Completed:         &exampleTime,
-			NotesField:        NotesField{exampleNotes()},
-			LastUpdatedField:  LastUpdatedField{exampleTime},
-			Perms:             exProjPerms,
-		},
-		{
-			Name:              exProjWrite,
-			CreationDateField: CreationDateField{exampleTime},
-			Completed:         nil,
-			NotesField:        NotesField{exampleNotes()},
-			LastUpdatedField:  LastUpdatedField{exampleTime},
-			Perms:             exProjPerms,
-		}, {
-			Name:              exProjRead,
-			CreationDateField: CreationDateField{exampleTime},
-			Completed:         nil,
-			NotesField:        NotesField{exampleNotes()},
-			LastUpdatedField:  LastUpdatedField{exampleTime},
-			Perms:             exProjPerms,
-		},
-	} {
+	for _, testItem := range testProjects {
 		// If test item does not exist or does not match, then create/update it
-		err = coll.FindOneAndReplace(ctx, bson.D{{"_id", testItem.Name}}, testItem).Err()
-		if err == nil {
-			return err
+		_, errRep := coll.ReplaceOne(ctx, bson.D{{"_id", testItem.Name}}, testItem, options.Replace().SetUpsert(true))
+		err = errors.Join(errRep, err)
+		if err != nil {
 		}
 	}
-	return nil
+	return err
+}
+
+var testProjects = []Project{
+	{
+		Name:              "testProjectAdmin",
+		CreationDateField: CreationDateField{exampleTime},
+		Completed:         nil,
+		NotesField: NotesField{Notes: []Note{{
+			Time: exampleTime,
+			Note: "test user should be admin",
+		}}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		Perms: map[string]*bool{
+			testUserEmail: utils.Pointer(true),
+		},
+	}, {
+		Name:              "testProjectWrite",
+		CreationDateField: CreationDateField{exampleTime},
+		Completed:         &exampleTime,
+		NotesField: NotesField{Notes: []Note{{
+			Time: exampleTime,
+			Note: "test user should be able to write but not admin",
+		}}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		Perms: map[string]*bool{
+			testUserEmail: utils.Pointer(false), // Test User can write but not admin
+		},
+	}, {
+		Name:              "testProjectRead",
+		CreationDateField: CreationDateField{exampleTime},
+		Completed:         nil,
+		NotesField: NotesField{Notes: []Note{{
+			Time: exampleTime,
+			Note: "test user should be able to read",
+		}}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		Perms: map[string]*bool{
+			testUserEmail: nil, // Test User can read related entries
+		},
+	}, {
+		Name:              "testProjectNone",
+		CreationDateField: CreationDateField{exampleTime},
+		Completed:         nil,
+		NotesField: NotesField{Notes: []Note{{
+			Time: exampleTime,
+			Note: "test user should not be able to do anything",
+		}}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		Perms:            nil,
+	},
 }
 
 type createProjectRequest struct {
@@ -176,12 +204,19 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	println("RECEIVED: ", string(bs))
 	req := updateProjectRequest{}
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	bs, err = json.MarshalIndent(req, "", "\t")
+	println("RECEIVED: ", string(bs)) // TODO: del
+	if err != nil {                   // TODO: del
+		http.Error(w, "failed to marshal body: "+err.Error(), http.StatusBadRequest)
+		return
+	} // TODO: del
 	ctx, db := Db(r)
 	coll := db.Collection(ProjectsCollectionName)
 	existing := Project{}
@@ -204,10 +239,9 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	// TODO: add/remove users (on users)
 	// Validate user is admin of project
 	existingUserPerm := existing.Perms[user.Email]
-	if existingUserPerm == nil || !*existingUserPerm {
+	if !user.isAdmin() && (existingUserPerm == nil || !*existingUserPerm) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}

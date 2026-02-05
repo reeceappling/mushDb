@@ -29,6 +29,7 @@ import {GrainBatch} from "./grainBatchServer";
 import {JarRecipeArea} from "@/app/components/jarRecipeClient";
 import {NumberField} from "@base-ui/react";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
+import {NewEntryNotes} from "../rfid/client/src/app/components/formSubcomponents/notes";
 
 function AssertGrainBatch(input: any): asserts input is GrainBatch {
     // TODO: FIX THIS WHOLE FUNC
@@ -191,11 +192,7 @@ export function NewGrainBatchForm({handlers, recipe}: { handlers: NewEntryInput<
     }
     return <div>
         <ErrorDisplay err={err}/>
-        <NoteEntriesGroup preexisting={false} readonly={false} updateParent={(v) => {
-            setNotes(v.map((x) => {
-                return x.data
-            }))
-        }}/>
+        <NewEntryNotes setNotes={setNotes} />
         <input type="submit" value="Update" onSubmit={newGrainBatchSubmit}/>
     </div>
 }

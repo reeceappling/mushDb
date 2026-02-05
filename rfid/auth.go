@@ -491,7 +491,9 @@ func SetAuthInfo(ctxIn context.Context, perms ResolvedUserPerms) context.Context
 
 func (serv *AuthService) necessaryFirstMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r.WithContext(serv.OnContext(r.Context())))
+		ctx := r.Context()
+		ctx = serv.OnContext(ctx)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

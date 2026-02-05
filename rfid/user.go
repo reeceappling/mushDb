@@ -3,8 +3,10 @@ package rfid
 import (
 	"context"
 	"errors"
+	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type User struct {
@@ -21,19 +23,30 @@ func (u User) IdValue() any {
 	return u.Email
 }
 
-func initializeUsers(ctx context.Context, usern, unhashedPass string) error {
+func initializeUsers(ctx context.Context) error {
 	//Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName)
-	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		//newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
-		//newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
-		//newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
-	})
-	if err != nil {
-		return err
+	//err := createIndexes(ctx, coll, []mongo.IndexModel{
+	//	//newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
+	//	//newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
+	//	//newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
+	//})
+	//if err != nil {
+	//	return err
+	//}
+	// TODO: DELETE THIS AFTER TESTING!!!!
+	testUser := User{
+		Email: testUserEmail,
+		Perms: UserPerms{
+			Admin:    utils.Pointer(false),
+			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
+		},
 	}
-	return nil
+	_, err := coll.ReplaceOne(ctx, bson.D{{"_id", testUser.Email}}, testUser, options.Replace().SetUpsert(true))
+	return err
 }
+
+const testUserEmail = "nessapatch2408@gmail.com"
 
 func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	userIsAdmin := u.Perms.Admin
@@ -55,7 +68,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 
 	// Resolve project perms // TODO: MAKE SURE THIS WORKS
 	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
-		Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.Projects}})
+		Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.Projects}}) // TODO: not sure I like this. Means that more projects will need to be on more users??
 	if err != nil {
 		return out, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
 	}

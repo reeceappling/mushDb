@@ -103,20 +103,13 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 //	return
 //}
 
-func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id AlternateCollectionId, item T) (out T, err error) {
+func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id U, item T) (out T, err error) {
 	out = item
-	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
 		Collection(item.CollectionName()).
-		FindOne(ctx, bson.D{{"_id", id}})
-	if encodedResult.Err() != nil {
-		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
-	}
-	err = encodedResult.Decode(&out)
-	if err != nil {
-		return out, err
-	}
-	return out, nil
+		FindOne(ctx, bson.D{{"_id", id}}).Decode(out)
+	return out, err
 }
 
 // TODO: used to be in txn!

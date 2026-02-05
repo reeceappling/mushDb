@@ -21,7 +21,7 @@ type Subspecies struct {
 	NotesField       `bson:"inline"`
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
-	DefaultAcl       *ACL `bson:"defaultAcl" json:"defaultAcl"` // TODO; NEW!!! // Only used when importing!
+	DefaultAcl       *ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // TODO; NEW!!! // Only used when importing!
 }
 
 func (subsp Subspecies) EntryTypeField() *string {

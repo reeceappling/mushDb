@@ -2,6 +2,29 @@ package rfid
 
 import "time"
 
+const ( // MainCollection test ints
+	idTestPlate = iota // Blanket write
+	idTestBag
+	idTestFC
+	idTestJar
+	idTestMSS
+	idTestSlant
+	idTestStasis
+	idTestLC
+	idTestSp
+	idTestFruit
+	idTestSwab
+	idTestPlug
+	// TODO: get rid of the rest!
+	idTestPlateBlanketRead
+	idTestPlateUserWrite
+	idTestPlateUserRead
+	idTestPlateProjectWrite
+	idTestPlateProjectRead
+	idTestPlateUserWriteProjRead
+	idTestPlateUserOutsideProject
+)
+
 const (
 	idTestingOnly = iota
 	idLmea
@@ -17,24 +40,14 @@ const (
 	idGrainWaterAgar
 	idJarOatWithVermGypsum
 	idAntibioticAgar
-	idTestBag
+
 	idExampleTransfer
-	idTestFC
-	idTestJar
-	idTestMSS
-	idTestSlant
-	idTestStasis
-	idTestLC
+
 	idTestBottle
 	idTestBatch
-	idTestSp
-	idTestFruit
-	idTestSwab
-	idTestPlug
+
 	idTestGrainBatch
 )
-
-const idTestPlate int = 0
 
 var ogTime = unixTimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))
 

@@ -255,12 +255,12 @@ func finishCreateMainCollectionEntry(ctx context.Context, coll *mongo.Collection
 func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toInsert CollectionItem, w http.ResponseWriter) {
 	_, err := coll.InsertOne(ctx, toInsert)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	bsOut, err := json.Marshal(toInsert)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to marshal one: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = w.Write(bsOut)

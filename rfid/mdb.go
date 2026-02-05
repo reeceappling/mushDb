@@ -15,7 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 	"math/big"
 	"net/http"
-	"reflect"
+	"strconv"
 	"time"
 )
 
@@ -30,7 +30,7 @@ var (
 type Base58Str string
 
 func (b58str Base58Str) ToBinaryCollectionId() (BinaryCollectionId, error) {
-	bs, err := b58str.Base2Bytes()
+	bs, err := b58str.Base2Bytes() // TODO: ensure this works fine for short values (ex: small base58 string should still output 12bytes for altId)
 	if err != nil {
 		return "", err
 	}
@@ -61,10 +61,31 @@ func (b58str Base58Str) Base2Bytes() ([]byte, error) {
 	return convertBase10StringToLittleEndianBytes(string(baseTenBytes))
 }
 
+//func padBytes(src, dst []byte) {
+//	if len(src) == len(dst) {
+//		copy(dst, src)
+//	}
+//	if len(src) > len(dst) {
+//		// TODO: handle
+//	}
+//	sizeDiff := len(dst) - len(src)
+//
+//	for i:=0; i<len(dst); i++ {
+//		if i<sizeDiff {
+//			dst[i]=0
+//		}
+//		dst[i]=src[i-sizeDiff]
+//	}
+//}
+
 func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
-	if string(b58str) == "1" {
-		return [8]byte{0, 0, 0, 0, 0, 0, 0, 0}, nil
+	intVal, err := strconv.Atoi(string(b58str))
+	if err == nil && intVal < 128 && intVal > 0 { // TODO: fix for zero???
+		return [8]byte{0, 0, 0, 0, 0, 0, 0, uint8(intVal - 1)}, nil // TODO: validate works ok!
 	}
+	//if string(b58str) == "1" {
+	//	return [8]byte{0, 0, 0, 0, 0, 0, 0, 0}, nil
+	//} // TODO: fix this for
 	out := [RfidByteSize]byte{}
 	bs, err := b58str.Base2Bytes()
 	if err != nil {
@@ -82,6 +103,7 @@ func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
 }
 
 func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
+	println("converting base58 string", b58str)
 	out := [12]byte{}
 	bs, err := b58str.Base2Bytes()
 	if err != nil {
@@ -417,12 +439,11 @@ func newCollectionId(ctx context.Context, collectionName string) (MainCollection
 //
 //}
 
-func getLastNEntries(ctx context.Context, variant string, updated bool, nresults int) ([]CollectionItem, error) {
-	entryType, err := entryTypeFor(variant)
-	if err != nil {
-		return nil, err
-	}
+func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T) ([]T, error) {
 	findBson := bson.D{{}}
+	if filterOutStandard {
+		findBson = bson.D{{"standard", false}}
+	}
 	sortField := "$natural"
 	if updated {
 		sortField = "lastUpdated"
@@ -432,16 +453,15 @@ func getLastNEntries(ctx context.Context, variant string, updated bool, nresults
 		//SetLimit(int64(nresults)). // TODO: no limit because user can be unable to view some items
 		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
 	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
-
 	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
-		Collection(entryType.CollectionName()).
+		Collection(temp.CollectionName()).
 		Find(ctx, findBson, opts)
 	if err != nil {
 		return nil, err
 	}
 	// TODO: ensure that user can read each item!!!!!!!!!!
-	return getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType), &nresults)
+	return getCollectionItemsFromCursor[T](ctx, cursor, &nresults)
 }
 
 func FindItemTypeForId(ctx context.Context, id MainCollectionId) (MainCollectionItem, error) {
@@ -464,8 +484,13 @@ func HandleCreate() http.HandlerFunc {
 			http.Error(w, "guest users cannot create entries", http.StatusForbidden)
 			return
 		}
-		endpt := r.PathValue("endpt")
-		handler, exists := map[string]http.HandlerFunc{
+		endpt := r.PathValue("variant")
+		//switch endpt {
+		//case "agarBatch": createAgarBatchHandler(w,r)
+		//case "agarRecipe": createAgarRecipeHandler(w,r)
+		//case "bag": createBagHandler(w,r)
+		//}
+		handle, exists := map[string]http.HandlerFunc{
 			"agarBatch":  createAgarBatchHandler,
 			"agarRecipe": createAgarRecipeHandler,
 			"bag":        createBagHandler,
@@ -491,12 +516,14 @@ func HandleCreate() http.HandlerFunc {
 			"substrateRecipe": createSubstrateRecipeHandler,
 			"substrateBatch":  createSubstrateBatchHandler,
 			"transfer":        createTransferHandler,
-			//"User":"", // TODO: probably don't need
+			//"user":"", // TODO: probably don't need
 		}[endpt]
 		if !exists {
 			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
+			return
 		}
-		GetPermsMiddleware(handler).ServeHTTP(w, r)
+		handle(w, r)
+		//GetPermsMiddleware(handler).ServeHTTP(w, r)
 	}
 }
 

@@ -268,6 +268,7 @@ func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permiss
 	return newPerm(out)
 }
 
+// TODO: change to "admin/read/write" ?
 type ProjectPerms map[string]*bool // TODO: USE // map of email to perm. nil is readOnly, false is write but not edit the project, true is full control over project
 
 func (pp ProjectPerms) Equal(other ProjectPerms) bool {
@@ -308,3 +309,29 @@ func newAlwaysReadableAcl(ctx context.Context, thisUserPerms ResolvedUserPerms, 
 		BlanketPerm: newPerm(false),
 	}.AclForUser(ctx, thisUserPerms)
 }
+
+var testAclStrings = []string{
+	"blanket read",
+	"Test user can write",
+	"Test user can read",
+	"Test project can write (and so can test user)",
+	"Test project can read (and so can test user)",
+	"Test project can read but user can write",
+	"Project without test user can write, so user cannot",
+}
+var testAcls = []*ACL{{
+	BlanketPerm: true, // Blanket read
+}, {
+	Users: map[string]bool{testUserEmail: true}, // Test user can write
+}, {
+	Users: map[string]bool{testUserEmail: false}, // Test user can read
+}, {
+	Projects: map[projectName]bool{testProjects[0].Name: true}, // Test project can write (and so can test user)
+}, {
+	Projects: map[projectName]bool{testProjects[0].Name: false}, // Test project can read (and so can test user)
+}, {
+	Users:    map[string]bool{testUserEmail: true}, // Test project can read but user can write
+	Projects: map[projectName]bool{testProjects[0].Name: false},
+}, {
+	Projects: map[projectName]bool{testProjects[3].Name: true}, // Project without test user can write, so user cannot
+}}

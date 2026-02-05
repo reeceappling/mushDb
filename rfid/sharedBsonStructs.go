@@ -370,7 +370,7 @@ var antibiotics = []antibiotic{HydrogenPeroxide, Doxycycline}
 
 var (
 	HydrogenPeroxide antibiotic = "HydrogenPeroxide"
-	Doxycycline      antibiotic = "doxycycline"
+	Doxycycline      antibiotic = "Doxycycline"
 )
 
 // TODO: use
@@ -539,6 +539,17 @@ func (upd *Mods) updateProjectPermsIfNeeded(future, existing ProjectPerms) *Mods
 	if future.Equal(existing) { // TODO: validate works
 		return upd
 	}
+	// TODO: THIS IS NOT WORKING PROPERLY!!!!!
+	bs, err := json.MarshalIndent(existing, "", " ") // TODO: del
+	if err != nil {                                  // TODO: del
+		panic(err) // TODO; del // TODO: del
+	} // TODO: del
+	println("existing", string(bs))               // TODO: del
+	bs, err = json.MarshalIndent(future, "", " ") // TODO: del
+	if err != nil {                               // TODO: del
+		panic(err) // TODO; del
+	} // TODO: del
+	println("final", string(bs)) // TODO: del
 	return upd.Set("perms", future)
 }
 

@@ -10,6 +10,8 @@ import (
 	"net/http"
 )
 
+var _ CollectionItem = &SubstrateRecipe{}
+
 type SubstrateRecipeField struct {
 	Substrate AlternateCollectionId `bson:"recipe" json:"recipe"`
 }

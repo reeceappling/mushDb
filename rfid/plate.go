@@ -16,7 +16,7 @@ import (
 
 type Plate struct { // TODO: CACHE RESPONSES?!!!!!
 	MainCollectionIdField             `bson:"inline"`
-	AgarBatchField                    `bson:"inline"` // TODO: will be empty for preexisting
+	AgarBatchField                    `bson:"inline"` // will be empty for preexisting
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -167,7 +167,57 @@ func initializePlates(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	return addTestMainEntries(ctx, testItem)
+	err = addTestMainEntries(ctx, testItem)
+	if err != nil {
+		return err
+	}
+	// TODO: del after
+	testPlateIds := []int{idTestPlateBlanketRead, idTestPlateUserWrite,
+		idTestPlateUserRead,
+		idTestPlateProjectWrite,
+		idTestPlateProjectRead,
+		idTestPlateUserWriteProjRead,
+		idTestPlateUserOutsideProject,
+	}
+	testPlates := make([]*Plate, len(testPlateIds))
+	platesMade := map[Base58Str]string{}
+	for i, permInt := range testPlateIds {
+		id := mainCollIdForint(permInt)
+		platesMade[id.asBase58()] = testAclStrings[i]
+		testPlates[i] = &Plate{
+			MainCollectionIdField:   MainCollectionIdField{id},
+			AgarBatchField:          AgarBatchField{&exAltId},
+			CreationDateField:       CreationDateField{exampleTime},
+			SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
+			SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
+			InnocField:              InnocField{&exAltId}, // TODO: multiple?
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{&exGenSinceSpore},
+				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+			},
+			TransfersOutField:                 TransfersOutField{exAlts},
+			ParentTypeField:                   ParentTypeField{&exParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&testId}, // TODO: ok? // TODO: multiple?
+			PicsField:                         PicsField{exPics},
+			ContaminationsField:               ContaminationsField{exContams},
+			KnownFruitableField:               KnownFruitableField{exBool},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+			MostRecentImageField:              MostRecentImageField{&exPics[0]},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+			AclField:                          AclField{ACL: testAcls[i]},
+		}
+	}
+	err = addTestMainEntries(ctx, testPlates...)
+	if err != nil {
+		return err
+	}
+	println("test plate urls: ") // TODO: del
+	for id, str := range platesMade {
+		println(id, str)
+	}
+	return nil
 }
 
 type createPlateRequest struct {

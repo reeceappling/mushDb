@@ -442,9 +442,10 @@ func SessionUserProjectsHandler() http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		println("sending projects list: ", string(bs))
 		_, err = w.Write(bs)
 		if err != nil {
-			HandleHttpWriteError(err)
+			handleWriteErr(err, w)
 		}
 	}
 }

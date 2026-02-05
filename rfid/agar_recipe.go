@@ -47,6 +47,7 @@ func (req updateAgarRecipeRequest) modsFor(existing *AgarRecipe, aclField AclFie
 
 func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	b58Id := Base58Str(r.PathValue("id"))
+	println("TRYING TO UPDATE", b58Id) // TODO: DELETEME
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -64,10 +65,11 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	println("base58 reconverted: ", id.asBase58()) // TODO; DEL
 	ctx, db := Db(r)
 	coll := db.Collection(AgarRecipesCollectionName)
 
-	existing, err := GetAltCollectionItem(ctx, id, AgarRecipe{})
+	existing, err := GetAltCollectionItem(ctx, id, &AgarRecipe{}) // TODO: fix this elsewhere? Should this be a pointer?
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -76,7 +78,7 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
 
 func initializeAgarRecipes(ctx context.Context) error {

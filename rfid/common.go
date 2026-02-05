@@ -133,7 +133,7 @@ func updateTogether() bson.D {
 //
 //}
 
-func Initialize(ctx context.Context) error { // TODO: use me!
+func Initialize(ctx context.Context) error {
 	for i, initializer := range map[string]func(context.Context) error{
 		"db": initializeDb,
 		// Initialize main collections
@@ -163,11 +163,9 @@ func Initialize(ctx context.Context) error { // TODO: use me!
 		"pc run":     initializePCRun,
 		"sales":      initializeSales,
 		"transfer":   initializeTransfers,
-
-		// Other collections
-		"Projects": initializeProjects,
+		"projects":   initializeProjects,
 		// initialize users
-		// TODO: ???
+		"users": initializeUsers,
 	} {
 		if err := initializer(ctx); err != nil {
 			return errors.Join(fmt.Errorf(`%s initializer failed`, i), err)
@@ -422,49 +420,55 @@ func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work f
 	}
 }
 
-func getStandardEntries(ctx context.Context, variant string) (out []CollectionItem, err error) {
-	entryType, err := entryTypeFor(variant)
-	if err != nil {
-		return
-	}
+func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T, err error) {
 	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
-		Collection(entryType.CollectionName()).
-		Find(ctx, bson.D{{"standard", true}})
+		Collection(temp.CollectionName()).
+		Find(ctx, bson.D{{"standard", true}}) // TODO: NOT WORKING PROPERLY!!!!!
 	if err != nil {
-		return
+		return nil, err
 	}
-	return getCollectionItemsFromCursor(ctx, cursor, reflect.TypeOf(entryType), nil)
+	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
 }
 
-func getCollectionItemsFromCursor(ctx context.Context, cursor *mongo.Cursor, entryType reflect.Type, numItems *int) ([]CollectionItem, error) {
-	results := []CollectionItem{}
+func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
+	results := []T{}
 	if numItems != nil {
-		results = make([]CollectionItem, 0, *numItems)
+		results = make([]T, 0, *numItems)
 	}
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
-	for numItems != nil && len(results) < *numItems {
+	for numItems == nil || len(results) < *numItems {
 		if cursor.TryNext(ctx) {
-			result := reflect.New(reflect.TypeOf(entryType))
+			var result T
+
+			//result := reflect.New(reflect.TypeOf(entryType)). // TODO: elem ok here?
 			if err := cursor.Decode(&result); err != nil {
 				return nil, err
-			}
-			permedItem, ok := result.Interface().(Permissioned)
+			} // TODO: no pointer ok here?
+			permedItem, ok := interface{}(result).(Permissioned)
 			if ok {
 				if permedItem.Permissions().HighestPermFor(user) == nil {
 					// Skip this entry
 					continue
 				}
 			}
-			resultCollItem, ok := result.Interface().(CollectionItem)
-			if !ok {
-				return nil, fmt.Errorf(`invalid collection result at index %d. THIS SHOULD NEVER HAPPEN`, len(results))
-			}
+			// TODO: ok to get rid of this?
+			//resultCollItem, ok := interface{}(result).(CollectionItem)
+			//if !ok {
+			//	err = fmt.Errorf(`invalid collection result at index %d. THIS SHOULD NEVER HAPPEN`, len(results))
+			//	bs, errr := json.MarshalIndent(result, "", " ")
+			//	if errr != nil {
+			//		err = errors.Join(err, errr)
+			//	} else {
+			//		println(string(bs))
+			//	}
+			//	return nil, fmt.Errorf(`invalid collection result at index %d. THIS SHOULD NEVER HAPPEN`, len(results))
+			//}
 
-			results = append(results, resultCollItem)
+			results = append(results, result)
 			continue
 		}
 		cursorClosed := cursor.ID() == 0
