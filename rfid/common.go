@@ -33,14 +33,13 @@ func UrlEncodeString(toEncode string) string {
 	return url.QueryEscape(toEncode)
 }
 
-// TODO: USE!
 func UrlDecodeString(encoded string) (string, error) {
 	return url.QueryUnescape(encoded)
 }
 
 var (
-	_ CollectionItem = Project{}
-	_ CollectionItem = Sale{}
+	_ CollectionItem = &Project{}
+	_ CollectionItem = &Sale{}
 )
 
 type CollectionItem interface { // TODO: ADD USER TO THIS?
@@ -99,40 +98,6 @@ func updateTogether() bson.D {
 
 // TODO: HOW TO SORT AND STUFF IS ABOVE
 
-//// TODO: FIX
-//func getLatestN(ctx context.Context, collectionName string, n int64) ([]interface, error) { // TODO: reimplement/use
-//	opts := &options.FindOptions{
-//		AllowDiskUse:        nil, // TODO:???
-//		AllowPartialResults: nil,
-//		BatchSize:           nil,
-//		Collation:           nil,
-//		Comment:             nil,
-//		CursorType:          nil,
-//		Hint:                nil, // TODO: something here?
-//		Limit:               &n,
-//		Max:                 nil,
-//		MaxAwaitTime:        nil,
-//		MaxTime:             nil,
-//		Min:                 nil,
-//		NoCursorTimeout:     nil,
-//		OplogReplay:         nil,
-//		Projection:          nil,
-//		ReturnKey:           nil,
-//		ShowRecordID:        utils.Pointer(true), // TODO: ensure ok
-//		Skip:                nil,
-//		Snapshot:            nil,
-//		Sort:                nil, // TODO: this
-//		Let:                 nil,
-//	}
-//	//opts = opts.SetHint() // TODO: FIXME
-//	opts = opts.SetSort(bson.D{{"$natural", -1 }}) /* TODO: sort newest to oldest */
-//	opts.SetLimit(n)
-//	ctx.Value(mongoClientContextKey).(*mongo.Client).
-//		Database(dbName).
-//		Collection(collectionName).Find(ctx, bson.D{{}}
-//
-//}
-
 func Initialize(ctx context.Context) error {
 	for i, initializer := range map[string]func(context.Context) error{
 		"db": initializeDb,
@@ -159,11 +124,12 @@ func Initialize(ctx context.Context) error {
 		"species":          initializeSpecies,
 		"subspecies":       initializeSubspecies,
 		// Initialize other alt collections
-		"agar batch": initializeAgarBatches,
-		"pc run":     initializePCRun,
-		"sales":      initializeSales,
-		"transfer":   initializeTransfers,
-		"projects":   initializeProjects,
+		"agar batch":        initializeAgarBatches,
+		"pc run":            initializePCRun,
+		"sales":             initializeSales,
+		"transfer":          initializeTransfers,
+		"projects":          initializeProjects,
+		"substrate batches": initializeSubstrateBatches,
 		// initialize users
 		"users": initializeUsers,
 	} {
@@ -198,7 +164,6 @@ func Initialize(ctx context.Context) error {
 		println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
 	}
 
-	// TODO: populate all test items
 	return nil
 }
 
@@ -473,7 +438,7 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 		}
 		cursorClosed := cursor.ID() == 0
 		if cursorClosed && len(results) == 0 {
-			return results, mongo.ErrNoDocuments // TODO: ok?
+			return results, mongo.ErrNoDocuments // TODO: ok? or will this cause other problems?
 		}
 		if err := cursor.Err(); err != nil {
 			return nil, err
@@ -782,10 +747,10 @@ func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {
 	return
 }
 
-func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection { // TODO; USE THIS EVERYWHERE!
+func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection {
 	return db.Collection(item.CollectionName())
 }
-func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T) error { // TODO; USE THIS EVERYWHERE!
+func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T) error {
 	return CollectionFor(*item, db).FindOne(ctx, bson.D{{"_id", (*item).IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
 }
 
@@ -795,11 +760,14 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO: REENABLE!!!!
-	//if user.isGuest() || !user.HasPermissionToEdit(existing) {
-	//	dbErr(w, "unauthorized to edit", http.StatusForbidden)
-	//	return
-	//}
+	if user.isGuest() {
+		dbErr(w, "guests cannot edit", http.StatusForbidden)
+		return
+	}
+	if !user.HasPermissionToEdit(existing) {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -814,6 +782,10 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if user.isGuest() {
+		dbErr(w, "guests cannot edit", http.StatusForbidden)
 		return
 	}
 	if !user.HasPermissionToEdit(existing) {
@@ -834,6 +806,10 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if user.isGuest() {
+		dbErr(w, "guests cannot edit", http.StatusForbidden)
 		return
 	}
 	if !user.HasPermissionToEdit(existing) {

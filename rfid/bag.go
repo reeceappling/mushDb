@@ -22,17 +22,17 @@ type Bag struct {
 	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *unixTime `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField                      `bson:"inline"`                                                 // Initial wetness (refer to scale on field struct)
-	KnownFruitableField               `bson:"inline"`                                                 // set on transfer in, or once fruited
-	SpeciesOptionalField              `bson:"inline"`                                                 // set on transfer in
-	SubspeciesOptionalField           `bson:"inline"`                                                 // set on transfer in
-	InnocField                        `bson:"inline"`                                                 // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField                 `bson:"inline"`                                                 // Set on transfer out
-	MainCollectionOptionalParentField `bson:"inline"`                                                 // Set on transfer in
-	ParentTypeField                   `bson:"inline"`                                                 // (main)lc, plate, or jar only (alt) can come from lcSyringe
-	PicsField                         `bson:"inline"`                                                 // Updated independently
-	ContaminationsField               `bson:"inline"`                                                 // Updated independently
+	SealDate                          *unixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
+	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
+	SpeciesOptionalField              `bson:"inline"` // set on transfer in
+	SubspeciesOptionalField           `bson:"inline"` // set on transfer in
+	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                 `bson:"inline"` // Set on transfer out
+	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
+	ParentTypeField                   `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	PicsField                         `bson:"inline"` // Updated independently
+	ContaminationsField               `bson:"inline"` // Updated independently
 	MostRecentImageField              `bson:"inline"`
 	FlushesField                      `bson:"inline"` // Updated independently
 	SaleField                         `bson:"inline"`
@@ -79,7 +79,7 @@ func (b Bag) setTransferParent(ctx context.Context, xfer Transfer) (error, func(
 	}
 }
 
-// TODO: create bag via jar (or LCSyringe) instead
+// TODO: create bag via jar (or LCSyringe) instead?
 func (b Bag) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
@@ -120,7 +120,6 @@ func (b Bag) id() []byte {
 }
 
 func initializeBags(ctx context.Context) error {
-	// TODO: INDICES!
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(BagsCollectionName)
 	// Indices
@@ -134,7 +133,7 @@ func initializeBags(ctx context.Context) error {
 		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 		//newSimpleIndex("sealDate", "sealDate", true, true, false), // BAG ONLY
 		//// TODO: wetness
-		//// TODO: knownFruitable?
+		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		//newSimpleIndex("species", "species", false, false, false),
 		//newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//newSimpleIndex("innoc", "innoc", false, true, false),
@@ -184,14 +183,14 @@ func initializeBags(ctx context.Context) error {
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 		AclField:                          AclField{&testAcl},
 	}
-	return addTestMainEntries(ctx, testItem) // TODO: use everywhere
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createBagRequest struct {
 	SubstrateBatchField
 	WetnessField
 	PcRunField
-	FilterSize string // TODO: ????
+	FilterSize string // TODO: ???? Also handle on ts side
 	CreationDateField
 	NotesField
 	WriteTagToField

@@ -211,7 +211,7 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(LcRecipesCollectionName)
-	existing, err := GetAltCollectionItem(r.Context(), id, LcRecipe{})
+	existing, err := GetAltCollectionItem(r.Context(), id, &LcRecipe{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -220,5 +220,5 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }

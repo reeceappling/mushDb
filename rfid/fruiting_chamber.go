@@ -209,6 +209,7 @@ type createFruitingChamberRequest struct {
 	// TODO: removed: Recipe // substrate recipe // TODO: do not use this. Pull from batch
 	SubstrateBatchField
 	ParentJar          MainCollectionId
+	GrainCups          float64
 	MixedSubstrateCups float64
 	CasingCups         float64
 	NotesField
@@ -258,9 +259,9 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		MainCollectionIdField:       MainCollectionIdField{id},
 		SubstrateRecipeField:        batch.SubstrateRecipeField,
 		SubstrateBatchOptionalField: data.SubstrateBatchField.asOptional(),
-		CupsGrain:                   float64(parentJar.SizeCups),
-		MixedSubstratePerGrain:      data.MixedSubstrateCups / float64(parentJar.SizeCups),
-		CasingPerGrain:              data.CasingCups / float64(parentJar.SizeCups),
+		CupsGrain:                   data.GrainCups,
+		MixedSubstratePerGrain:      data.MixedSubstrateCups / data.GrainCups,
+		CasingPerGrain:              data.CasingCups / data.GrainCups,
 		CreationDateField:           CreationDateField{now},
 		NotesField:                  NotesField{data.Notes},
 		LastUpdatedField:            LastUpdatedField{now},
@@ -528,12 +529,12 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// TODO: ensure this is ok
-	if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-		if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
-			dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
+	// TODO: ensure this is ok. Handle sales elsewhere????
+	//if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
+	//	if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
+	//		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+	//		return
+	//	}
+	//}
 	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
 }

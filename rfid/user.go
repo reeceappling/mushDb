@@ -10,7 +10,7 @@ import (
 )
 
 type User struct {
-	Email string    `bson:"_id" json:"_id"`                         // TODO: INDEX? MUST BE UNIQUE
+	Email string    `bson:"_id" json:"_id"`
 	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: PROJECTS COME FROM PERMS
 	// All can view?
 }
@@ -81,7 +81,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 		}
 		perm, exists := project.Perms[u.Email]
 		if !exists {
-			// TODO: ERROR
+			// TODO: ERROR?
 		} else {
 			userProjPerms[project.Name] = perm
 		}

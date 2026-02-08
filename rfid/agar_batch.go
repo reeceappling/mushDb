@@ -117,7 +117,7 @@ func initializeAgarBatches(ctx context.Context) error {
 		LastUpdatedField:           LastUpdatedField{exampleTime},
 		AclField:                   allCanReadAcl(),
 	}
-	return addTestAltEntries(ctx, testItem) // TODO: do this everywhere
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createAgarBatchRequest struct {

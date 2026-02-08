@@ -118,7 +118,7 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(PcRunCollectionName)
-	existing, err := GetAltCollectionItem(r.Context(), id, PCRun{})
+	existing, err := GetAltCollectionItem(r.Context(), id, &PCRun{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -127,7 +127,7 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
 
 type PcRunField struct {

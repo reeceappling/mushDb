@@ -35,8 +35,31 @@ func allCanWriteAcl() AclField {
 
 type ACL struct {
 	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite
-	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite // TODO: project name?
+	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite
 	BlanketPerm bool                       `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // false is public cannot read by default. // TODO: ENSURE PROPERLY SET EVERYWHERE
+}
+
+// TODO: USE THIS EVERYWHERE NEEDED!!!
+func (acl *ACL) Clone() *ACL {
+	if acl == nil {
+		return nil
+	}
+	out := ACL{
+		BlanketPerm: acl.BlanketPerm,
+	}
+	if acl.Users != nil {
+		out.Users = make(map[string]bool)
+		for email, canWrite := range acl.Users {
+			out.Users[email] = canWrite
+		}
+	}
+	if acl.Projects != nil {
+		out.Projects = make(map[projectName]bool)
+		for name, canWrite := range acl.Projects {
+			out.Projects[name] = canWrite
+		}
+	}
+	return &out
 }
 
 func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
@@ -94,7 +117,6 @@ func (acl *ACL) simplified() *ACL {
 	return acl
 }
 
-// TODO: USE THIS!!!!!!
 func (acl *ACL) Equivalent(other *ACL) bool {
 	if acl == nil {
 		return other == nil
@@ -136,10 +158,15 @@ func (acl *ACL) userIdPermission(email string) *ReadWritePerm {
 
 // TODO: ensure this works
 func (acl *ACL) HighestPermFor(perms ResolvedUserPerms) *ReadWritePerm {
-	if acl == nil || (perms.admin != nil && (*perms.admin)) {
+	if acl == nil || perms.isAdmin() {
 		return newPerm(true)
 	}
-	// TODO: handle guest?
+	if perms.isGuest() {
+		if acl.BlanketPerm {
+			return newPerm(false)
+		}
+		return nil
+	}
 	// Handle blanket perm
 	var maxPerm *ReadWritePerm = nil
 	if acl.BlanketPerm {

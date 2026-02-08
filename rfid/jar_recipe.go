@@ -243,7 +243,7 @@ func (req updateJarRecipeRequest) modsFor(existing *JarRecipe, aclField AclField
 		Finalized()
 }
 
-func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) { // TODO: txn?
+func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	b58Id := Base58Str(r.PathValue("id"))
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)

@@ -66,7 +66,7 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 			return nil, errr
 		}
 		println("standard entries: ", string(tempBs)) // TODO: del
-		// TODO: REMOVE ALL STANDARD FROM LATEST??????
+		// Standard is filtered out from latest already
 		outObj := map[string][]T{"standard": stdEntries, "recent": latestEntries}
 		bs, err = json.Marshal(outObj)
 		if err != nil {
@@ -272,6 +272,7 @@ func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx conte
 			if mongo.IsDuplicateKeyError(err) {
 				continue
 			}
+			// TODO: update existing if needed?
 			println("error adding basic alt entries: " + err.Error())
 			return err
 		}

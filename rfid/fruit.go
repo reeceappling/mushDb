@@ -339,11 +339,11 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest) // TODO: DO THIS EVERYWHERE!
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
 }
 
 type importFruitRequest struct {
-	// TODO: REMOVED ParentType string // "store" or "outside" // TODO: FIX?
+	// TODO: REMOVED ParentType string "store" or "outside" // TODO: FIX?
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
@@ -388,7 +388,8 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 
 		if isFile := fileName != ""; isFile {
 			if filesProcessed > 0 {
-				// TODO: ERROR! DONT CREATE MORE THAN 1 IMAGE!
+				http.Error(w, "imported fruits can only be sent with one image: "+err.Error(), http.StatusBadRequest)
+				return
 			}
 			// Process file
 			fieldBytes, err := multipartToImageBytes(p, w)
@@ -448,30 +449,42 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	// TODO: spec/subspec perms? Or just perms for current user?
-	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), Data.Species, Data.SubSpecies)
-	//if err != nil {
-	//	http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
-	//}
-	//finalPerms := minimalPermsBetween(Data.Perms, sp, subsp)
-	//if err = finalPerms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "email cannot write with the provided perms: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
+	// TODO: PERMS ON REQUEST INSTEAD?????
+	user, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	if err != nil {
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		return
+	}
+	var finalPerms *ACL = nil
+	if subsp != nil {
+		finalPerms = subsp.DefaultAcl.Clone()
+	} else {
+		sp.DefaultAcl.Clone()
+	}
+	// Add user to the acl as a writer (since they own this?)
+	finalPerms.Users[user.Email] = true
+
+	// TODO: Even if user cannot write, allow them to import???
 	now := unixTimeForNow()
 	ctx := r.Context()
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitsCollName)
 	toInsert := &Fruit{
 		MainCollectionIdField:   MainCollectionIdField{id},
-		CreationDateField:       CreationDateField{unixTimeForNow()}, // TODO: ok?
-		SpeciesField:            data.SpeciesField,                   // TODO: validate
-		SubspeciesOptionalField: data.SubspeciesOptionalField,        // TODO: validate
+		CreationDateField:       CreationDateField{unixTimeForNow()},
+		SpeciesField:            data.SpeciesField,
+		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		GenSporeField:           GenSporeField{gen},
 		ParentTypeField:         ParentTypeField{nil},
 		PicsField:               PicsField{pix},
 		MostRecentImageField:    MostRecentImageField{importedPic},
 		NotesField:              NotesField{data.Notes},
 		LastUpdatedField:        LastUpdatedField{now},
+		AclField:                AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, coll, toInsert, data.PermsOnRequest, w)
 }

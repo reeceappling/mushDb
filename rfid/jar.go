@@ -134,10 +134,10 @@ func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err 
 	return j, err
 }
 
-type innoculateJarFromRequest struct { // TODO: this
-	parent MainCollectionId // TODO: can this be alt?
-
-}
+//type innoculateJarFromRequest struct { // TODO: this
+//	parent MainCollectionId // TODO: can this be alt?
+//
+//}
 
 func initializeJars(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
@@ -234,8 +234,6 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 	}
 	return nil
 }
-
-// TODO: no innoculateJarHandler. Comes from create transfer handler
 
 type createJarRequest struct {
 	Recipe AlternateCollectionId // grain recipe
@@ -344,23 +342,27 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	user, err := GetAuthInfo(r.Context()) // TODO: fix
+	user, err := GetAuthInfo(r.Context())
 	if err != nil {
 		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-	//sp, subsp, err := getSpeciesAndSubspecies(r.Context(), Data.Species, Data.SubSpecies)
-	//if err != nil {
-	//	http.Error(w, "failed to get species and subspecies: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//finalPerms := minimalPermsBetween(Data.Perms, sp, subsp)
-	//finalPerms.Users = finalPerms.Users.WithAuthor(authinfo.Email)
-	//err = writeRfidTagIfNecessary(r.Context(), Data.WriteTagTo, id)
-	//if err != nil {
-	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
+	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	if err != nil {
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		return
+	}
+	var finalPerms *ACL = nil
+	if subsp != nil {
+		finalPerms = subsp.DefaultAcl.Clone()
+	} else {
+		sp.DefaultAcl.Clone()
+	}
+	// Add user to the acl as a writer
+	finalPerms.Users[user.Email] = true
+
+	// TODO: Even if user cannot write, allow them to import???
+
 	// Try to get pic if exists
 	picsSaved := []string{}
 	defer func() {
@@ -415,11 +417,11 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		pix = []PicWithNotes{*importedPic}
 	}
 	ctx, db := Db(r)
-	acl, err := data.PermsOnRequest.AclForUser(ctx, user)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	//acl, err := data.PermsOnRequest.AclForUser(ctx, user) // TODO: USE THIS?
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&data.Recipe},
@@ -435,7 +437,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-		AclField:             acl,
+		AclField:             AclField{finalPerms}, // TODO: acl from request instead???
 	}
 
 	coll := db.Collection(GrainJarCollectionName)

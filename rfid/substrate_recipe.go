@@ -111,7 +111,7 @@ func initializeSubstrates(ctx context.Context) error {
 		AliasesField:               AliasesField{[]string{"testSubstrate", "example substrate"}},
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(), // TODO: write?
+		AclField:                   allCanWriteAcl(), // TODO: write?
 	}
 	// TODO: add built-in entries
 	return addTestAltEntries(ctx, testItem)

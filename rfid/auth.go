@@ -452,7 +452,6 @@ func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 			sessionId, err := SessionIdFromRequest(r)
 			if err != nil {
 				println("no session id found on request", err.Error()) // TODO: del
-				// TODO: handleNoSessionCookie
 				handleAuthErr(err).ServeHTTP(w, r)
 				return
 			}
@@ -463,7 +462,6 @@ func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 				handleAuthErr(err).ServeHTTP(w, r)
 				return
 			}
-			// TODO: validate user perms are correct
 			// TODO: ensure session cookies persist!
 			println("Serving next success handler")
 			onAuthed.ServeHTTP(w, r.WithContext(SetAuthInfo(r.Context(), sess.Data)))

@@ -15,7 +15,6 @@ const ( // MainCollection test ints
 	idTestFruit
 	idTestSwab
 	idTestPlug
-	// TODO: get rid of the rest!
 	idTestPlateBlanketRead
 	idTestPlateUserWrite
 	idTestPlateUserRead
@@ -66,7 +65,7 @@ func altCollIdFieldForint(i int) AlternateCollectionIdField {
 }
 
 func mainCollIdForint(i int) MainCollectionId { // TODO: FIX FOR uint8 overflow
-	return MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)})
+	return [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)}
 }
 
 func mainCollIdFieldForint(i int) MainCollectionIdField {

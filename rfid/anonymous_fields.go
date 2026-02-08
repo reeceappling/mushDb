@@ -40,7 +40,8 @@ type AlternateCollectionIdField struct {
 func (field AlternateCollectionIdField) DbId() AlternateCollectionId {
 	return field.Id
 }
-func (field AlternateCollectionIdField) IdValue() any { return field.DbId() } // TODO: DEL!
+
+func (field AlternateCollectionIdField) IdValue() any { return field.DbId() }
 
 type AlternateCollectionOptionalParentField struct {
 	Parent *AlternateCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
@@ -82,21 +83,21 @@ type LiquidsField struct {
 }
 
 func (field LiquidsField) Validate() error {
-	totalPct := 0.0 // TODO: make percentage int rather than float?
+	totalPct := 0.0
 	for i, item := range field.Liquids {
 		if !slices.Contains(fluids, item.Name) {
 			return fmt.Errorf(`invalid antibiotic at position %d: %s`, i, item.Name)
 		}
 		totalPct += item.Pct
 	}
-	if math.Abs(totalPct-100.0) > 1.0 { // TODO: ok?
+	if math.Abs(totalPct-100.0) > 1.0 {
 		return fmt.Errorf(`total liquids percentage too high or low. Expected 100.0, got %f`, totalPct)
 	}
 	return nil
 }
 
 type MainCollectionIdField struct {
-	Id MainCollectionId `bson:"_id" json:"_id"` // TODO; INLINE ALL!
+	Id MainCollectionId `bson:"_id" json:"_id"`
 }
 
 func (field MainCollectionIdField) DbId() BinaryCollectionId {
@@ -116,8 +117,8 @@ type NameIdField struct {
 }
 
 func (field NameIdField) IdValue() any {
-	return field.Name
-} // TODO: DELETE?
+	return field.DbId()
+}
 func (field NameIdField) DbId() string {
 	return field.Name
 }
@@ -138,7 +139,6 @@ type NutrientsField struct {
 }
 
 func (field NutrientsField) Validate() error {
-	// TODO: anything else in here?
 	for i, nute := range field.Nutrients {
 		if !slices.Contains(nutrients, nute.Nutrient) {
 			return fmt.Errorf(`invalid nutrient at position %d: %s`, i, nute.Nutrient)
@@ -171,7 +171,7 @@ func GenerationsFieldFor(gen *Generation) GenerationsFields {
 	}
 }
 
-type GenSporeField struct { // TODO: only used on fruit and embedded in GenerationsFields?
+type GenSporeField struct { // only used on fruit and embedded in GenerationsFields
 	GenSinceSpore *Generation `bson:"genSpore,omitempty" json:"genSpore,omitempty"`
 }
 
@@ -204,7 +204,7 @@ type PressureCookedTouchingWaterOptionalField struct {
 	PressureCookedTouchingWater *bool `bson:"pressureCookedTouchingWater,omitempty" json:"pressureCookedTouchingWater,omitempty"`
 }
 
-type KnownFruitableField struct { // TODO: what about fields that already know? Like on fruits?
+type KnownFruitableField struct {
 	KnownFruitable *bool `bson:"knownFruitable,omitempty" json:"knownFruitable,omitempty"` // set on transfer in, or once fruited
 }
 
@@ -216,19 +216,11 @@ type StandardField struct {
 	Standard bool `bson:"standard" json:"standard"` // If this is a standard recipe
 }
 
-func (field StandardField) updateIfDifferent(existing StandardField, upd *Mods) *Mods { // TODO: remove???
-	if field.Standard != existing.Standard {
-		upd.Set("standard", field.Standard)
-	}
-	return upd
-}
-
 type SugarsField struct {
 	Sugars []sugarMeasurement `bson:"sugars,omitempty" json:"sugars,omitempty"`
 }
 
 func (field SugarsField) Validate() error {
-	// TODO: anything else in here?
 	for i, item := range field.Sugars {
 		if !slices.Contains(sugars, item.Type) {
 			return fmt.Errorf(`invalid sugar at position %d: %s`, i, item.Type)

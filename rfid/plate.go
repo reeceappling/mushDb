@@ -576,6 +576,25 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		pix = []PicWithNotes{*importedPic}
 	}
 
+	user, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	if err != nil {
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		return
+	}
+	var finalPerms *ACL = nil
+	if subsp != nil {
+		finalPerms = subsp.DefaultAcl.Clone()
+	} else {
+		sp.DefaultAcl.Clone()
+	}
+	// Add user to the acl as a writer
+	finalPerms.Users[user.Email] = true
+
 	ctx, db := Db(r)
 	coll := db.Collection(PlatesCollectionName)
 
@@ -593,6 +612,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:                 data.KnownFruitableField,
 		MostRecentImageField:                MostRecentImageField{importedPic},
 		LastUpdatedField:                    LastUpdatedField{unixTimeForNow()},
+		AclField:                            AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
 }

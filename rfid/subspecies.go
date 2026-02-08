@@ -21,7 +21,7 @@ type Subspecies struct {
 	NotesField       `bson:"inline"`
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
-	DefaultAcl       *ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // TODO; NEW!!! // Only used when importing!
+	DefaultAcl       *ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // Only used when importing mainCollectionItems
 }
 
 func (subsp Subspecies) EntryTypeField() *string {
@@ -48,7 +48,7 @@ func initializeSubspecies(ctx context.Context) error {
 			NameIdField:  NameIdField{"white beech"},
 			SpeciesField: SpeciesField{"beech"},
 			AliasesField: AliasesField{},
-			NotesField:   NotesField{Notes: []Note{{Time: ogTime, Note: "something to do with light, fixme"}}}, // TODO: something to do with light?
+			NotesField:   NotesField{Notes: []Note{{Time: ogTime, Note: "something to do with light, fixme"}}},
 			AclField:     allCanWriteAcl(),
 		},
 		// Brown Beech
@@ -56,7 +56,7 @@ func initializeSubspecies(ctx context.Context) error {
 			NameIdField:  NameIdField{"brown beech"},
 			SpeciesField: SpeciesField{"beech"},
 			AliasesField: AliasesField{},
-			NotesField:   NotesField{Notes: []Note{{Time: ogTime, Note: "something to do with light, fixme"}}}, // TODO: something to do with light?
+			NotesField:   NotesField{Notes: []Note{{Time: ogTime, Note: "something to do with light, fixme"}}},
 			AclField:     allCanWriteAcl(),
 		},
 	}
@@ -73,7 +73,6 @@ func initializeSubspecies(ctx context.Context) error {
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		AclField:         allCanReadAcl(), // TODO: write?
 	}
-	// TODO: add built-in entries
 	return addTestAltEntries(ctx, testItem)
 }
 
@@ -107,7 +106,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := Subspecies{
 		NameIdField:      NameIdField{req.Name},
 		SpeciesField:     req.SpeciesField,
-		AliasesField:     req.AliasesField, // TODO: ensure none exist elsewhere
+		AliasesField:     req.AliasesField, // TODO: ensure none exist elsewhere (should just work via mongo)
 		NotesField:       req.NotesField,
 		LastUpdatedField: LastUpdatedField{unixTimeForNow()},
 		AclField:         spec.AclField,   // Use parent perms
@@ -167,7 +166,7 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(SubspeciesCollectionName)
-	existing, err := GetSubspeciesNameInTxn(ctx, subspeciesName) // TODO: get species specifically
+	existing, err := GetSubspeciesNameInTxn(ctx, subspeciesName)
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -176,6 +175,6 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	// TODO: validate aliases
+	// TODO: validate aliases are not replicas? (should be done by mongo)
 	finishStringIdAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest) // TODO: use on species, project, user(?)
 }

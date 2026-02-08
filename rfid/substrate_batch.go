@@ -13,7 +13,7 @@ import (
 	sliceutils "slices"
 )
 
-type SubstrateBatch struct { // TODO: use this
+type SubstrateBatch struct {
 	AlternateCollectionIdField `bson:"inline"`
 	// Initial wetness is quantified on each bag/box
 	CreationDateField    `bson:"inline"` // Date of first hydration
@@ -27,8 +27,7 @@ func (batch SubstrateBatch) EntryTypeField() *string { // TODO: make these not p
 	panic("substrate batch has no entry type field")
 }
 
-// TODO; USE!
-func initializeSubstrateBatches(ctx context.Context) error {
+func initializeSubstrateBatches(ctx context.Context) error { // TODO: overhaul to match others
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateBatchCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
@@ -57,8 +56,8 @@ func initializeSubstrateBatches(ctx context.Context) error {
 					Note: "test coir batch",
 				},
 			}},
-			//PermsField:       PermsField{Perms: defaultPerms},
-			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime}, // TODO: ok?
+			AclField:         allCanWriteAcl(),
+			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
 		},
 		// HWFP
 		{
@@ -71,8 +70,8 @@ func initializeSubstrateBatches(ctx context.Context) error {
 					Note: "test hwfp batch",
 				},
 			}},
-			//PermsField:       PermsField{Perms: defaultPerms},
-			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime}, // TODO: ok?
+			AclField:         allCanWriteAcl(),
+			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
 		},
 	} {
 		var existing SubstrateBatch
@@ -112,7 +111,7 @@ func initializeSubstrateBatches(ctx context.Context) error {
 			updated++
 		}
 	}
-	// Add test entry // TODO: is this necessary?
+	// Add test entry
 	existingEntry := SubstrateBatch{}
 	testItem := SubstrateBatch{
 		AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
@@ -120,7 +119,7 @@ func initializeSubstrateBatches(ctx context.Context) error {
 		SubstrateRecipeField:       SubstrateRecipeField{altCollIdForint(idTestingOnly)},
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
-		//PermsField:                 PermsField{},
+		AclField:                   allCanWriteAcl(),
 	}
 	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
 	if err == nil {
@@ -155,6 +154,7 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, db := Db(r)
 	coll := db.Collection(SubstrateRecipesCollectionName)
+	// TODO: all can read but only user can write perms
 	//resolvedUserPerms, err := GetAuthInfo(r.Context())
 	//if err != nil {
 	//	http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
@@ -170,7 +170,7 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate}, // TODO: validate
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedFieldForNow(),
-		// TODO: AclField:                   acl,
+		AclField:                   allCanWriteAcl(), // TODO: all can read but only user can write perms
 	}
 	// Validate
 	_, err = toInsert.SubstrateRecipeField.Get(ctx)
@@ -242,6 +242,6 @@ func (field SubstrateBatchField) asOptional() SubstrateBatchOptionalField {
 	return SubstrateBatchOptionalField{&field.SubstrateBatch}
 }
 
-type SubstrateBatchOptionalField struct { // TODO: MOVE
+type SubstrateBatchOptionalField struct {
 	SubstrateBatch *AlternateCollectionId `bson:"substrateBatch,omitempty" json:"substrateBatch,omitempty"`
 }
