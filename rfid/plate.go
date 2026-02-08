@@ -14,26 +14,43 @@ import (
 	"slices"
 )
 
-type Plate struct { // TODO: CACHE RESPONSES?!!!!!
-	MainCollectionIdField             `bson:"inline"`
-	AgarBatchField                    `bson:"inline"` // will be empty for preexisting
-	CreationDateField                 `bson:"inline"`
-	SpeciesOptionalField              `bson:"inline"`
-	SubspeciesOptionalField           `bson:"inline"`
-	InnocField                        `bson:"inline"`
-	GenerationsFields                 `bson:"inline"`
-	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	MainCollectionOptionalParentField `bson:"inline"`
-	PicsField                         `bson:"inline"`
-	ContaminationsField               `bson:"inline"`
-	KnownFruitableField               `bson:"inline"` // TODO: handle being yes if clone, among other yeses
-	SaleField                         `bson:"inline"`
-	DisposedField                     `bson:"inline"`
-	MostRecentImageField              `bson:"inline"`
-	NotesField                        `bson:"inline"`
-	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"`
+type CondensationCoverageAtSealTimeField struct {
+	CondensationCoverageAtSealTime *int `bson:"condensationCoverageAtSealTime,omitempty" json:"condensationCoverageAtSealTime,omitempty"` // TODO: (0-100), HANDLE EVERYWHERE, NEW!
+}
+type PourCoverageField struct {
+	PourCoverage *int `bson:"pourCoverage,omitempty" json:"pourCoverage,omitempty"` // PourCoverage TODO: (0-100) (or nil for imports), HANDLE EVERYWHERE, NEW!
+}
+type WetAtCooledTimeField struct {
+	WetAtCooledTime *bool `bson:"wetAtCooledTime,omitempty" json:"wetAtCooledTime,omitempty"` // WetAtCooledTime TODO: (nil==unknown or imported, false==known and not wet, true=known and wet), HANDLE EVERYWHERE, NEW!
+}
+type AgarOnOutsideAtPourTimeField struct {
+	AgarOnOutsideAtPourTime *bool `bson:"agarOnOutsideAtPourTime,omitempty" json:"agarOnOutsideAtPourTime,omitempty"` // Only when mispours happen with plates above this one // TODO: HANDLE EVERYWHERE, NEW!
+}
+
+type Plate struct {
+	MainCollectionIdField               `bson:"inline"`
+	AgarBatchField                      `bson:"inline"` // will be empty for preexisting
+	CreationDateField                   `bson:"inline"`
+	CondensationCoverageAtSealTimeField `bson:"inline"`
+	PourCoverageField                   `bson:"inline"`
+	WetAtCooledTimeField                `bson:"inline"`
+	AgarOnOutsideAtPourTimeField        `bson:"inline"`
+	SpeciesOptionalField                `bson:"inline"`
+	SubspeciesOptionalField             `bson:"inline"`
+	InnocField                          `bson:"inline"`
+	GenerationsFields                   `bson:"inline"`
+	TransfersOutField                   `bson:"inline"`
+	ParentTypeField                     `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	MainCollectionOptionalParentField   `bson:"inline"`
+	PicsField                           `bson:"inline"`
+	ContaminationsField                 `bson:"inline"`
+	KnownFruitableField                 `bson:"inline"` // TODO: handle being yes if clone, among other yeses
+	SaleField                           `bson:"inline"`
+	DisposedField                       `bson:"inline"`
+	MostRecentImageField                `bson:"inline"`
+	NotesField                          `bson:"inline"`
+	LastUpdatedField                    `bson:"inline"`
+	AclField                            `bson:"inline"`
 }
 
 func (p Plate) IdValue() any {
@@ -120,6 +137,10 @@ func initializePlates(ctx context.Context) error {
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
 		creationDateIndexModel,
+		//newSimpleIndex("condensationCoverageAtSealTime", "condensationCoverageAtSealTime", true, true, false),
+		//newSimpleIndex("pourCoverage", "pourCoverage", false, true, false),
+		//newSimpleIndex("wetAtCooledTime", "wetAtCooledTime", true, true, false),
+		//newSimpleIndex("agarOnOutsideAtPourTime", "agarOnOutsideAtPourTime", true, true, false),
 		newSimpleIndex("species", "species", false, true, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//newSimpleIndex("innoc", "innoc", false, true, false),
@@ -184,13 +205,28 @@ func initializePlates(ctx context.Context) error {
 	for i, permInt := range testPlateIds {
 		id := mainCollIdForint(permInt)
 		platesMade[id.asBase58()] = testAclStrings[i]
+		var tempCoverage = &i
+		var tempBool *bool = utils.Pointer(false)
+		switch i {
+		case 1:
+			tempCoverage = nil
+			tempBool = nil
+		case 2:
+			tempBool = utils.Pointer(true)
+		default:
+			// Do nothing different
+		}
 		testPlates[i] = &Plate{
-			MainCollectionIdField:   MainCollectionIdField{id},
-			AgarBatchField:          AgarBatchField{&exAltId},
-			CreationDateField:       CreationDateField{exampleTime},
-			SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
-			SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
-			InnocField:              InnocField{&exAltId}, // TODO: multiple?
+			MainCollectionIdField:               MainCollectionIdField{id},
+			AgarBatchField:                      AgarBatchField{&exAltId},
+			CreationDateField:                   CreationDateField{exampleTime},
+			CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{CondensationCoverageAtSealTime: tempCoverage},
+			PourCoverageField:                   PourCoverageField{PourCoverage: tempCoverage},
+			WetAtCooledTimeField:                WetAtCooledTimeField{WetAtCooledTime: tempBool},
+			AgarOnOutsideAtPourTimeField:        AgarOnOutsideAtPourTimeField{AgarOnOutsideAtPourTime: tempBool},
+			SpeciesOptionalField:                SpeciesOptionalField{&testEntryStringId},
+			SubspeciesOptionalField:             SubspeciesOptionalField{&testEntryStringId},
+			InnocField:                          InnocField{&exAltId}, // TODO: multiple?
 			GenerationsFields: GenerationsFields{
 				GenSporeField:        GenSporeField{&exGenSinceSpore},
 				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
@@ -222,6 +258,10 @@ func initializePlates(ctx context.Context) error {
 
 type createPlateRequest struct {
 	AgarBatch AlternateCollectionId `json:"agarBatch"`
+	CondensationCoverageAtSealTimeField
+	PourCoverageField
+	WetAtCooledTimeField
+	AgarOnOutsideAtPourTimeField
 	WriteTagToField
 }
 
@@ -254,10 +294,14 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 	client := r.Context().Value(mongoClientContextKey).(*mongo.Client)
 	coll := client.Database(dbName).Collection(PlatesCollectionName)
 	toInsert := Plate{
-		MainCollectionIdField: MainCollectionIdField{id},
-		AgarBatchField:        AgarBatchField{AgarBatch: &data.AgarBatch},
-		CreationDateField:     CreationDateField{now},
-		LastUpdatedField:      LastUpdatedField{now},
+		MainCollectionIdField:               MainCollectionIdField{id},
+		AgarBatchField:                      AgarBatchField{AgarBatch: &data.AgarBatch},
+		CreationDateField:                   CreationDateField{now},
+		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField, // TODO: handle on typescript side
+		PourCoverageField:                   data.PourCoverageField,                   // TODO: handle on typescript side
+		WetAtCooledTimeField:                data.WetAtCooledTimeField,                // TODO: handle on typescript side
+		AgarOnOutsideAtPourTimeField:        data.AgarOnOutsideAtPourTimeField,        // TODO: handle on typescript side
+		LastUpdatedField:                    LastUpdatedField{now},
 		// No Perms here for basic plates
 		AclField: allCanWriteAcl(),
 	}
@@ -446,6 +490,10 @@ type importPlateRequest struct {
 	SubspeciesOptionalField
 	KnownFruitableField
 	Generation *int `json:"generation,omitempty"`
+	CondensationCoverageAtSealTimeField
+	PourCoverageField
+	WetAtCooledTimeField
+	AgarOnOutsideAtPourTimeField
 	// pic as "img"
 	WriteTagToField
 	PermsOnRequest
@@ -532,15 +580,19 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(PlatesCollectionName)
 
 	toInsert := Plate{
-		MainCollectionIdField:   MainCollectionIdField{id},
-		CreationDateField:       data.CreationDateField,
-		SpeciesOptionalField:    data.SpeciesField.AsOptional(),
-		SubspeciesOptionalField: data.SubspeciesOptionalField,
-		GenerationsFields:       GenerationsFieldFor(gen),
-		PicsField:               PicsField{pix},
-		KnownFruitableField:     data.KnownFruitableField,
-		MostRecentImageField:    MostRecentImageField{importedPic},
-		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+		MainCollectionIdField:               MainCollectionIdField{id},
+		CreationDateField:                   data.CreationDateField,
+		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField,
+		PourCoverageField:                   data.PourCoverageField,
+		WetAtCooledTimeField:                data.WetAtCooledTimeField,
+		AgarOnOutsideAtPourTimeField:        data.AgarOnOutsideAtPourTimeField,
+		SpeciesOptionalField:                data.SpeciesField.AsOptional(),
+		SubspeciesOptionalField:             data.SubspeciesOptionalField,
+		GenerationsFields:                   GenerationsFieldFor(gen),
+		PicsField:                           PicsField{pix},
+		KnownFruitableField:                 data.KnownFruitableField,
+		MostRecentImageField:                MostRecentImageField{importedPic},
+		LastUpdatedField:                    LastUpdatedField{unixTimeForNow()},
 	}
 	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
 }
