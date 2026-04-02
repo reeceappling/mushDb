@@ -333,15 +333,23 @@ autoIndexId	Boolean	(Optional) If true, automatically create index on _id field.
 */
 
 // TODO: auth mechanisms https://www.mongodb.com/docs/drivers/go/current/fundamentals/auth/
-func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPort int) (context.Context, *mongo.Client, error) {
+func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPort int, replicaSetName *string) (context.Context, *mongo.Client, error) {
 	hostAndPort := dbHostName
 	if dbPort != 0 && dbPort != 27017 {
 		hostAndPort = fmt.Sprintf("%s:%d", dbHostName, dbPort)
 	}
-
+	// TODO: WORKING URI FOR NON-REPLICATED (no transactions)
+	userPassUriComponent := fmt.Sprintf("%s:%s", usern, pass)
+	params := ""
+	if replicaSetName != nil {
+		params = fmt.Sprintf("replicaSet=%s", *replicaSetName)
+	}
+	uri := fmt.Sprintf("mongodb://%s@%s/?%s", userPassUriComponent, hostAndPort, params) // TODO: NAME OF DB 	// TODO: deleteMe
+	// TODO: WORKINGuri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
+	
+	//uri := fmt.Sprintf("mongodb://%s:%s@%s/?replicaSet=rs0", usern, pass, hostAndPort)27017/?replicaSet=rs0
 	//uri := fmt.Sprintf("mongodb://%s", hostAndPort)
 	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
-	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
 
 	// TODO: SET UP INITIAL USER IF USER DOES NOT EXIST!
 	// TODO: THIS SHOULD BE DONE VIA: https://stackoverflow.com/questions/42912755/how-to-create-a-db-for-mongodb-container-on-start-up
@@ -349,16 +357,16 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 	println(fmt.Sprintf(`trying to connect with %s %s`, usern, pass))
 	opts := options.Client().
 		ApplyURI(uri).
-		SetDirect(true).
+		SetDirect(true). // TODO: is this ok for replica set?
 
 		//SetHosts([]string{hostAndPort}).
 		SetServerSelectionTimeout(time.Second * 20).
 		//SetAuth(options.Credential{Username: usern, Password: pass}). // TODO: get rid of?
 		//SetAuth(options.Credential{Username: usern, Password: pass}).
-		//SetAppName("mainApi").
+		SetAppName("mainApi"). // TODO: ok?
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(5 * time.Second). // TODO: no?
-		SetTimeout(10 * time.Second)        // TODO: no?
+		SetTimeout(10 * time.Second) // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {

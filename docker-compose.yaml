@@ -67,10 +67,18 @@ services:
 #        chmod 400 /opt/keyfile/keyfile2
 #        chown 999:999 /opt/keyfile/keyfile2
 #        exec docker-entrypoint.sh $$@
-    # command: [--bind_ip_all,--replSet, rs0 ]
-    #command: [--auth,--bind_ip_all,--keyFile,/opt/keyfile/keyfile2,--replSet, rs0]
-    #command: [--auth,--bind_ip_all,--keyFile,/opt/keyfile/keyfile2,--replSet, rs0]
-    command: [--auth]
+    # TODO: Next line is NOT working, but needed for transactions
+    command: ["--auth", "--keyFile,/opt/keyfile/keyfile2","--bind_ip_all", "--replSet", "rs0"]
+    # TODO: WORKING command: [--auth]
+    healthcheck:
+      # TODO: validate working
+      test: test $$(echo 'rs.initiate({_id':' "rs0", members':' [{_id':' 1, "host"':' "mushdb':'27017"}]}) || rs.status().ok' | mongosh -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD}) -eq 1
+      # TODO: validate working
+      # test: [ "CMD", "mongosh", "--eval", "rs.initiate()" ]
+      # test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'host.docker.internal:27017'}]}) }" | mongosh --port 27017 --quiet -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD}
+      interval: 10s
+      timeout: 5s
+      retries: 5
 #    healthcheck:
 #      test: test $$(echo 'rs.initiate({_id':' "rs0", members':' [{_id':' 1, "host"':' "mushdb':'27017"}]}) || rs.status().ok' | mongosh -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD}) -eq 1
 ##      #test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:1,host:'mushdb:27017'}]}) }" | mongosh -u $${MONGO_INITDB_ROOT_USERNAME} -p $${MONGO_INITDB_ROOT_PASSWORD} --port 27017 --quiet
