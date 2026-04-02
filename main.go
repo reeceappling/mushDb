@@ -189,6 +189,7 @@ func main() {
 	cleanupFreq := 2 * time.Minute
 	mgr := websocketSessions.NewSessionManager(&cleanupFreq, rfidRegistrySecret)
 	defer mgr.Cleanup()
+	ctx = rfid.StartGeneratingMCIDs(ctx, 5) // TODO: USE THIS ELSEWHERE VIA GETTER
 	ctx, rateLimiter, rfidMiddleware, webAuthMiddleware, _ /*internalAuthMiddleware*/, ctxInternalAuthMiddleware, ctxMiddleware, ctxRfidMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, dbUser, dbPass)
 	if err != nil {
 		panic("Error setting up middleware: " + err.Error())
@@ -281,6 +282,7 @@ func main() {
 	//http.Handle("/db/list/latest/{variant}", rfid.ListNewestEntriesHandler()) // TODO: maybe unnecessary?
 	// listAllStandard handlers
 	//http.Handle("/db/list/standard/{variant}", rfid.ListStandardEntriesHandler()) // TODO: maybe unnecessary?
+
 	if err = srv.ListenAndServe(); err != nil {
 		panic("failed to listen and serve for http: " + err.Error())
 	}
@@ -1042,7 +1044,7 @@ func getAnyCollectionHandler() http.Handler {
 				temp := []byte(id)
 				altId = [12]byte(temp)
 			}
-			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId(altId[:]), map[string]rfid.AltCollectionItem[rfid.AlternateCollectionId]{
+			baseItemFor := map[string]rfid.AltCollectionItem[rfid.AlternateCollectionId]{
 				"agarBatch":       &rfid.AgarBatch{},
 				"agarRecipe":      &rfid.AgarRecipe{},
 				"jarRecipe":       &rfid.JarRecipe{},
@@ -1051,7 +1053,8 @@ func getAnyCollectionHandler() http.Handler {
 				"sale":            &rfid.Sale{},
 				"substrateRecipe": &rfid.SubstrateRecipe{},
 				"transfer":        &rfid.Transfer{},
-			}[entryType])
+			}
+			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId(altId[:]), baseItemFor[entryType])
 			if err != nil {
 				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 				return

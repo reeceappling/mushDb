@@ -164,7 +164,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 		return
 	}
 
-	ids, err := generateCollectionIds(r.Context(), SporeSwabCollectionName, data.num)
+	ids, err := generateMainCollectionIds(r.Context(), SporeSwabCollectionName, data.num)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -281,11 +281,12 @@ type importSporeSwabRequest struct {
 
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: NO IMAGES
 	data := importSporeSwabRequest{}
-	id, err := newCollectionId(r.Context(), SporeSwabCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), SporeSwabCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	defer r.Body.Close()
 
 	// Process text (or object)

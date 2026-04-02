@@ -218,11 +218,12 @@ type createFruitingChamberRequest struct {
 
 func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := createFruitingChamberRequest{}
-	id, err := newCollectionId(r.Context(), FruitingChamberCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), FruitingChamberCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -287,11 +288,12 @@ type importFruitingChamberRequest struct {
 
 func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitingChamberRequest{}
-	id, err := newCollectionId(r.Context(), FruitingChamberCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), FruitingChamberCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: REDO THIS MULTIPART READER
 	defer r.Body.Close()

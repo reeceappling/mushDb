@@ -247,11 +247,12 @@ type createJarRequest struct {
 
 func createJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := createJarRequest{}
-	id, err := newCollectionId(r.Context(), GrainJarCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), GrainJarCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -310,11 +311,12 @@ type importJarRequest struct {
 
 func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := importJarRequest{}
-	id, err := newCollectionId(r.Context(), GrainJarCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), GrainJarCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do multipart streamlined way
 	defer r.Body.Close()

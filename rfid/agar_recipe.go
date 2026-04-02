@@ -68,7 +68,7 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(AgarRecipesCollectionName)
 
-	existing, err := GetAltCollectionItem(ctx, id, &AgarRecipe{}) // TODO: fix this elsewhere? Should this be a pointer?
+	existing, err := GetAltCollectionItem(ctx, id, &AgarRecipe{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {

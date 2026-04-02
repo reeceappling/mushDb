@@ -267,11 +267,12 @@ type createPlateRequest struct {
 
 func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 	data := createPlateRequest{}
-	id, err := newCollectionId(r.Context(), PlatesCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), PlatesCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -502,11 +503,12 @@ type importPlateRequest struct {
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data := importPlateRequest{}
-	id, err := newCollectionId(r.Context(), PlatesCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), PlatesCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	b58id := id.asBase58()
 	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {

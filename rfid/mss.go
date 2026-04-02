@@ -125,11 +125,12 @@ type createMssRequest struct {
 
 func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called from spore print page
 	data := createMssRequest{}
-	id, err := newCollectionId(r.Context(), MssCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), MssCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -193,11 +194,12 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := newCollectionId(r.Context(), MssCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), MssCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)

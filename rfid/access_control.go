@@ -39,6 +39,17 @@ type ACL struct {
 	BlanketPerm bool                       `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // false is public cannot read by default. // TODO: ENSURE PROPERLY SET EVERYWHERE
 }
 
+func cloneMap[T comparable, U any](m map[T]U) map[T]U { // TODO: use wherever needed
+	if m == nil {
+		return nil
+	}
+	out := make(map[T]U, len(m))
+	for key, val := range m {
+		out[key] = val
+	}
+	return out
+}
+
 // TODO: USE THIS EVERYWHERE NEEDED!!!
 func (acl *ACL) Clone() *ACL {
 	if acl == nil {
@@ -47,18 +58,8 @@ func (acl *ACL) Clone() *ACL {
 	out := ACL{
 		BlanketPerm: acl.BlanketPerm,
 	}
-	if acl.Users != nil {
-		out.Users = make(map[string]bool)
-		for email, canWrite := range acl.Users {
-			out.Users[email] = canWrite
-		}
-	}
-	if acl.Projects != nil {
-		out.Projects = make(map[projectName]bool)
-		for name, canWrite := range acl.Projects {
-			out.Projects[name] = canWrite
-		}
-	}
+	out.Users = cloneMap(acl.Users)
+	out.Projects = cloneMap(acl.Projects)
 	return &out
 }
 

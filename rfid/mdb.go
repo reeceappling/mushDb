@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/itchyny/base58-go"
+	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/goUtils/v2/utils/channels"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
@@ -184,6 +186,54 @@ const RfidByteSize = 8
 
 // type MainCollectionId string // TODO: WILL ALWAYS BE THE BINARY ID!!!!
 type MainCollectionId [RfidByteSize]byte
+
+type mcidNode struct {
+	val  MainCollectionId
+	prev *mcidNode
+	next *mcidNode
+}
+
+func startGeneratingIds(ctx context.Context, batchSize int) <-chan MainCollectionId {
+	out := make(chan MainCollectionId)
+	go func() {
+		_ = <-ctx.Done()
+		// TODO: DRAIN THE CHANNEL. First or last?
+		close(out)
+		channels.Drain(out)
+	}()
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				ids, err := generateMainCollectionIds(ctx, batchSize)
+				if err != nil {
+					println(err.Error())
+					continue
+				}
+				for _, id := range ids {
+					out <- id
+				}
+			}
+		}
+	}()
+	return out
+}
+
+func NextMainCollectionIdChan(ctx context.Context) <-chan MainCollectionId { // TODO: use
+	val, ok := ctx.Value("newMcidChan").(<-chan MainCollectionId)
+	if !ok {
+		panic("no mainCollIdChan found on context")
+	}
+	return val
+}
+
+// TODO: ctx should be cancellable here
+func StartGeneratingMCIDs(ctx context.Context, bufferSize int) context.Context {
+	var final <-chan MainCollectionId = startGeneratingIds(ctx, bufferSize)
+	return context.WithValue(ctx, "newMcidChan", final)
+}
 
 //// MarshalBSONValue implements the bson.ValueMarshaler interface
 //func (id MainCollectionId) MarshalBSONValue() (bsontype.Type, []byte, error) {
@@ -404,19 +454,30 @@ func mongoClientForURI(ctx context.Context, uri string) (context.Context, error)
 }
 
 func GetMongoClient(ctx context.Context) *mongo.Client {
-	return ctx.Value(mongoClientContextKey).(*mongo.Client) // TODO, ensure ok that this may not be set
+	val, exists := ctx.Value(mongoClientContextKey).(*mongo.Client)
+	if !exists {
+		panic("no mongo client found on context")
+	}
+	return val
 }
 
-func generateCollectionIds(ctx context.Context, collectionName string, n int) ([]MainCollectionId, error) {
-	// TODO: ensure this checks the new idMap collection!
+func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, error) {
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	out := make([]MainCollectionId, n)
 	for i, _ := range out {
+		found := utils.Set[string]{}
 		for { // TODO: break eventually
 			newId := randomRFID(RfidByteSize)
-			err := client.Database(dbName).Collection(collectionName).FindOne(ctx, bson.D{{"_id", newId}}).Err()
+			if found.Contains(string(newId[:])) {
+				continue
+			}
+
+			// get these ids from the map collection???
+			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bson.D{{"_id", newId}}).Err()
+			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, bson.D{{"_id", newId}}).Err()
 			if err != nil {
 				if errors.Is(err, mongo.ErrNoDocuments) {
+					found.Add(string(newId[:]))
 					out[i] = MainCollectionId(newId)
 					break
 				}
@@ -427,8 +488,8 @@ func generateCollectionIds(ctx context.Context, collectionName string, n int) ([
 	return out, nil
 }
 
-func newCollectionId(ctx context.Context, collectionName string) (MainCollectionId, error) {
-	ids, err := generateCollectionIds(ctx, collectionName, 1)
+func newMainCollectionId(ctx context.Context) (MainCollectionId, error) {
+	ids, err := generateMainCollectionIds(ctx, 1)
 	if err != nil {
 		return MainCollectionId{}, err
 	}

@@ -22,17 +22,17 @@ type Bag struct {
 	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *unixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
-	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
-	SpeciesOptionalField              `bson:"inline"` // set on transfer in
-	SubspeciesOptionalField           `bson:"inline"` // set on transfer in
-	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField                 `bson:"inline"` // Set on transfer out
-	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
-	ParentTypeField                   `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
-	PicsField                         `bson:"inline"` // Updated independently
-	ContaminationsField               `bson:"inline"` // Updated independently
+	SealDate                          *unixTime `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                      `bson:"inline"`                                                 // Initial wetness (refer to scale on field struct)
+	KnownFruitableField               `bson:"inline"`                                                 // set on transfer in, or once fruited
+	SpeciesOptionalField              `bson:"inline"`                                                 // set on transfer in
+	SubspeciesOptionalField           `bson:"inline"`                                                 // set on transfer in
+	InnocField                        `bson:"inline"`                                                 // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                 `bson:"inline"`                                                 // Set on transfer out
+	MainCollectionOptionalParentField `bson:"inline"`                                                 // Set on transfer in
+	ParentTypeField                   `bson:"inline"`                                                 // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	PicsField                         `bson:"inline"`                                                 // Updated independently
+	ContaminationsField               `bson:"inline"`                                                 // Updated independently
 	MostRecentImageField              `bson:"inline"`
 	FlushesField                      `bson:"inline"` // Updated independently
 	SaleField                         `bson:"inline"`
@@ -79,7 +79,7 @@ func (b Bag) setTransferParent(ctx context.Context, xfer Transfer) (error, func(
 	}
 }
 
-// TODO: create bag via jar (or LCSyringe) instead?
+// TODO: create bag via substrate batch???
 func (b Bag) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
@@ -143,6 +143,8 @@ func initializeBags(ctx context.Context) error {
 		////pics
 		////TODO: contams?
 		////flushes
+		// TODO: substrate recipe???
+		// TODO: substrate batch???
 		//newSimpleIndex("sale", "sale", false, true, false),
 		//newSimpleIndex("disposed", "disposed", false, true, false),
 		//notes
@@ -198,11 +200,12 @@ type createBagRequest struct {
 
 func createBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := createBagRequest{}
-	id, err := newCollectionId(r.Context(), BagsCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), BagsCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -386,11 +389,12 @@ type importBagRequest struct {
 
 func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := importBagRequest{}
-	id, err := newCollectionId(r.Context(), BagsCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	//id, err := newMainCollectionId(r.Context(), BagsCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	id := <-NextMainCollectionIdChan(r.Context())
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err := r.MultipartReader()

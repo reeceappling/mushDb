@@ -188,11 +188,12 @@ type createSlantRequest struct {
 
 func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSlantRequest{}
-	id, err := newCollectionId(r.Context(), SlantsCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), SlantsCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -389,11 +390,12 @@ type importSlantRequest struct {
 
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSlantRequest{}
-	id, err := newCollectionId(r.Context(), SlantsCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), SlantsCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()

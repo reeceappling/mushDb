@@ -1,7 +1,10 @@
 # mushDb
+
 this is a group of docker containers I use to host hobbyist stuff
 the codebase is MESSY
+
 # Running Locally
+
 ```bash
 # With force recreate
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up --build --force-recreate
@@ -10,5 +13,264 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
 # Without rebuilding
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up
 ```
-# TODO:
-mongosh into the db to setup users
+
+## Regenerating Go Files
+
+```bash
+# Use subshell to change into the directory and run the script, so that we dont have to change back to the original directory after
+(cd rfid/goGenerator
+./buildAndGenerate.sh)
+```
+
+# TODO
+
+- [ ] Top Bar
+    - [ ] Navigation Menu
+        - [ ] Styling
+    - [ ] Login/out area
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] RFID area
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Agar Batch
+    - [ ] Creation form
+    - [ ] Display/Edit page
+- [ ] Agar Recipe
+    - [ ] Creation form
+    - [ ] Display/Edit page
+- [ ] Bag
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Fruits
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] CreateCloneArea
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Fruiting Chamber
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Jar
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Jar Recipe
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Liquid Culture
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] LC Recipe
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] LC Syringe
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] MSS
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] PC Run
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Selector?
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Plate
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Project
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Sale
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] SaleArea Styling
+    - [ ] SalesArea Styling
+- [ ] Slant
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] SlantStickSelector Styling
+- [ ] Species
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] SporePrint
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] SporeSwab
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] StasisTube
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Import page
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Subspecies
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Substrate Batch
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Substrate Recipe
+    - [ ] Creation form
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Transfer
+    - [ ] Creation form(s)
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Transfer Reason Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] User
+    - [ ] Creation form(s)
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Display/Edit page
+        - [ ] Styling
+        - [ ] Integration with backend
+    - [ ] Users Selector
+        - [ ] Styling
+        - [ ] Integration with backend
+- [ ] Misc
+    - [ ] Volume Selector Styling

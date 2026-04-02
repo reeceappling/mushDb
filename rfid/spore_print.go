@@ -172,11 +172,12 @@ type resolvedCreateSporePrintRequest struct {
 
 func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSporePrintRequest{}
-	id, err := newCollectionId(r.Context(), SporePrintCollectionName)
-	if err != nil {
-		http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context())
+	//if err != nil {
+	//	http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	b58Id := id.asBase58()
 	defer r.Body.Close()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
@@ -414,11 +415,12 @@ type importSporePrintRequest struct {
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporePrintRequest{}
-	id, err := newCollectionId(r.Context(), SporePrintCollectionName)
-	if err != nil {
-		http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context()) // TODO: USE THIS EVERYWHERE INSTEAD OF newMainCollectionId
+	//id, err := newMainCollectionId(r.Context())
+	//if err != nil {
+	//	http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()

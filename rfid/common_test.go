@@ -47,8 +47,9 @@ func TestCommon(t *testing.T) {
 	//t.Run("DB helper functions", func(t *testing.T) {
 	//	t.Run("pushToArray", func(t *testing.T) {
 	//		coll := db.Collection(mainCollectionName)
-	//		id, err := newCollectionId(ctx)
-	//		assert.NoError(t, err)
+	//      id := <-NextMainCollectionIdChan(r.Context())
+	//		//id, err := newMainCollectionId(ctx)
+	//		//assert.NoError(t, err)
 	//		now := time.Now()
 	//		before := now.AddDate(0, 0, -1)
 	//		nowUnix := unixTimeFor(now)

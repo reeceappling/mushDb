@@ -151,11 +151,12 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := newCollectionId(r.Context(), LcSyringeCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), LcSyringeCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -274,11 +275,12 @@ type importLcSyringeRequest struct {
 // TODO: USE!!!
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLcSyringeRequest{}
-	id, err := newCollectionId(r.Context(), LcSyringeCollectionName)
-	if err != nil {
-		http.Error(w, "failed to create new mainCollectionId", http.StatusInternalServerError)
-		// TODO: err
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), LcSyringeCollectionName)
+	//if err != nil {
+	//	http.Error(w, "failed to create new mainCollectionId", http.StatusInternalServerError)
+	//	// TODO: err
+	//}
 	defer r.Body.Close()
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)

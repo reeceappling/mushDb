@@ -7,7 +7,6 @@ import (
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"golang.org/x/exp/maps"
 	"io"
 	"net/http"
 )
@@ -356,8 +355,4 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
-}
-
-func getAllTransferReasonsHandler(w http.ResponseWriter, r *http.Request) { // TODO: use
-	writeAsJson(w, maps.Keys(transferReasons))
 }

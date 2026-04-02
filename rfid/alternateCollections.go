@@ -53,6 +53,7 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 		}
 		println(string(tempBs)) // TODO: del
 	} else {
+		// TODO: do we want to also display repeats on standard entries?
 		println("getting standard entries")
 		stdEntries, err := getStandardEntries(ctx, temp)
 		if err != nil {
@@ -88,11 +89,11 @@ func ListEntriesHandler() http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		// TODO: DEPENDING ON VARIANT, EITHER DO LATEST OR LATEST AND STANDARD!!!!!
 
-		var maxResults int = 10                                // TODO: ENSURE OK!
-		requested := r.PathValue("variant")                    // TODO: ENSURE OK!
+		var maxResults int = 10
+		requested := r.PathValue("variant")
 		doStandardToo := strings.Contains(requested, "Recipe") // "agarRecipe", "jarRecipe", "lcRecipe", "substrateRecipe"
 
-		if maxNum := r.URL.Query().Get("n"); maxNum != "" { // TODO: ENSURE OK!
+		if maxNum := r.URL.Query().Get("n"); maxNum != "" {
 			n, err := strconv.Atoi(maxNum)
 			if err != nil {
 				http.Error(w, fmt.Sprintf(`param n must be a number, or nonexistent (defaults to %d)`, maxResults), http.StatusBadRequest)
@@ -267,7 +268,6 @@ func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx conte
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
 	for _, item := range testItems {
 		_, err := coll.InsertOne(ctx, item, options.InsertOne())
-		// TODO: do something with the result?
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
 				continue

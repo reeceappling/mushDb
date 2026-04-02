@@ -170,11 +170,12 @@ type createStasisTubeRequest struct {
 
 func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := createStasisTubeRequest{}
-	id, err := newCollectionId(r.Context(), StasisTubeCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), StasisTubeCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -412,11 +413,12 @@ type importStasisTubeRequest struct {
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importStasisTubeRequest{}
-	id, err := newCollectionId(r.Context(), StasisTubeCollectionName)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	id := <-NextMainCollectionIdChan(r.Context())
+	//id, err := newMainCollectionId(r.Context(), StasisTubeCollectionName)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	b58id := id.asBase58()
 	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
