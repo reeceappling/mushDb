@@ -32,6 +32,19 @@ var transferReasons = map[transferReason]string{
 	"age":          "plate is veryold",
 }
 
+var sporePrintColors = map[SporePrintColor]string{
+	SpColorBlack:    string(SpColorBlack),
+	SpColorTanLight: string(SpColorTanLight),
+	SpColorClear:    string(SpColorClear),
+}
+
+var sporePrintDensities = map[SporePrintDensity]string{
+	SpDensityHeavy:       string(SpDensityHeavy),
+	SpDensityAvg:         string(SpDensityAvg),
+	SpDensitySparse:      string(SpDensitySparse),
+	spDensityNoneMinimal: string(spDensityNoneMinimal),
+}
+
 type Transfer struct { // TODO: does not include multi-jar transfers from jars to monotubs
 	AlternateCollectionIdField `bson:"inline"`
 	From                       []MainCollectionId `bson:"from" json:"from"` // TODO: THIS USED TO NOT BE A SLICE

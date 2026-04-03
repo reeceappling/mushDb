@@ -101,6 +101,7 @@ func (j GrainJar) setTransferChild(ctx context.Context, xfer Transfer, from gene
 		withSpecies(parentInfo.Species).
 		withKnownFruitable(parentInfo.KnownFruitable).
 		withSubspecies(parentInfo.SubSpecies).
+		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -120,11 +121,11 @@ func (j GrainJar) EntryTypeField() *string {
 	return utils.Pointer(GrainJarSourceType)
 }
 
-func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection { // TODO: DO THIS ON EVERYTHING!
-	return ctx.Client().Database(dbName).Collection(GrainJarCollectionName) // TODO: switch all references to jarCollectionName
+func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection {
+	return ctx.Client().Database(dbName).Collection(GrainJarCollectionName)
 }
 
-func (j *GrainJar) Refresh(ctx mongo.SessionContext) error { // TODO; DO THIS ON EVERYTHING!
+func (j *GrainJar) Refresh(ctx mongo.SessionContext) error {
 	return j.Collection(ctx).FindOne(ctx, bson.D{{"_id", j.Id}}).Decode(j)
 }
 
@@ -247,7 +248,7 @@ type createJarRequest struct {
 
 func createJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := createJarRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), GrainJarCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -305,13 +306,13 @@ type importJarRequest struct {
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest // TODO: maybe remove these perms and just use the default subspecies perms. Allow mods on edit page
 	// image as "img"
 }
 
 func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := importJarRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), GrainJarCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -351,14 +352,14 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer
 	finalPerms.Users[user.Email] = true

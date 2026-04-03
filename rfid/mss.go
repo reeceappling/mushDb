@@ -56,8 +56,8 @@ func (M MSS) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
-func (M MSS) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) { // TODO: I think these are the same for pretty much everywhere (except maybe sporeprint?), so we should get rid of this
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(MssCollectionName).Collection(MssCollectionName)
+func (M MSS) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(MssCollectionName)
 	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 	if err != nil {
 		return err, nil
@@ -125,7 +125,7 @@ type createMssRequest struct {
 
 func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called from spore print page
 	data := createMssRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), MssCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -176,7 +176,7 @@ type importMssRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	WriteTagToField
-	PermsOnRequest // TODO: use species perms instead????
+	PermsOnRequest // TODO: use species/subspecies perms instead? Remove this from both sides
 	// image as "img"
 	// No ParentType/Parent because these are assumed to be from outside sources
 }
@@ -194,12 +194,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := <-NextMainCollectionIdChan(r.Context())
-	//id, err := newMainCollectionId(r.Context(), MssCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
+	id := NextMainCollectionId()
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -213,14 +208,14 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer
 	finalPerms.Users[user.Email] = true

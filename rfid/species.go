@@ -197,7 +197,6 @@ func initializeSpecies(ctx context.Context) error {
 		LastUpdatedField:  LastUpdatedField{exampleTime},
 		AclField:          allCanReadAcl(), // TODO: write?
 	}
-	// TODO: add built-in entries
 	return addTestAltEntries(ctx, testItem)
 }
 
@@ -310,6 +309,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 
 func getSpecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
 	// TODO: DO THIS! ALSO ALLOW SEARCHING VIA SCIENTIFIC NAME OR ALIASES
+	// TODO: maybe use a trie???
 	panic("not yet implemented")
 }
 

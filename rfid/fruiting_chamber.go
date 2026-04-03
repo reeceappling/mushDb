@@ -104,7 +104,7 @@ func (f FruitingChamber) setTransferChild(ctx context.Context, xfer Transfer, fr
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
-		//updatePermsIfNeeded(xfer.Perms, f.Perms).
+		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -218,7 +218,7 @@ type createFruitingChamberRequest struct {
 
 func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := createFruitingChamberRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), FruitingChamberCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -288,7 +288,7 @@ type importFruitingChamberRequest struct {
 
 func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitingChamberRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), FruitingChamberCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)

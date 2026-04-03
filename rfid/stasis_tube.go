@@ -85,6 +85,7 @@ func (s StasisTube) setTransferChild(ctx context.Context, xfer Transfer, from ge
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
+		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -170,7 +171,7 @@ type createStasisTubeRequest struct {
 
 func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := createStasisTubeRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), StasisTubeCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -413,7 +414,7 @@ type importStasisTubeRequest struct {
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importStasisTubeRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), StasisTubeCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -494,14 +495,14 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer
 	finalPerms.Users[user.Email] = true

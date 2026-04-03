@@ -200,7 +200,7 @@ type createFruitResolved struct {
 
 func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FORMAT WITH DATA FIRST!
 	data := createFruitRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), FruitsCollName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -354,7 +354,7 @@ type importFruitRequest struct {
 
 func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?????
 	data := importFruitRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), FruitsCollName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -459,14 +459,14 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 	}
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer (since they own this?)
 	finalPerms.Users[user.Email] = true

@@ -623,8 +623,10 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 
 func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, error) {
 	// Get field bytes as an image
+	println("decoding jpg")
 	img, err := jpeg.Decode(p)
 	if err != nil {
+		println("decoding png")
 		img, err = png.Decode(p)
 		if err != nil {
 			http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
@@ -632,6 +634,7 @@ func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, er
 		}
 	}
 	buf := new(bytes.Buffer)
+	println("re-encoding as jpg")
 	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG??????
 	if err != nil {
 		http.Error(w, "failed to encode image to save! "+err.Error(), http.StatusInternalServerError)
@@ -667,6 +670,7 @@ var (
 	exSporePrint         = mainCollIdForint(idTestSp)
 	exFC                 = mainCollIdForint(idTestFC)
 	exLC                 = mainCollIdForint(idTestLC)
+	exLCS                = mainCollIdForint(idTestLCS)
 	exMSS                = mainCollIdForint(idTestMSS)
 	exPlugId             = mainCollIdForint(idTestPlug)
 	exSlant              = mainCollIdForint(idTestSlant)

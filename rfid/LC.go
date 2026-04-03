@@ -83,6 +83,7 @@ func (l LiquidCulture) setTransferChild(ctx context.Context, xfer Transfer, from
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
+		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -174,7 +175,7 @@ type createLiquidCultureRequest struct {
 
 func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := createLiquidCultureRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), LCCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -238,12 +239,7 @@ type importLiquidCultureRequest struct {
 
 func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLiquidCultureRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
-	//id, err := newMainCollectionId(r.Context(), LCCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
+	id := NextMainCollectionId()
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do the multipart reader differently
 	defer r.Body.Close()
@@ -347,14 +343,14 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer
 	finalPerms.Users[user.Email] = true

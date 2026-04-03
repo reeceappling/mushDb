@@ -17,10 +17,12 @@ import (
 )
 
 type SporePrint struct {
-	MainCollectionIdField `bson:"inline"` // TODO: was alt
+	MainCollectionIdField `bson:"inline"`
 	// Parent is always either fruit, or purchased
 	MainCollectionOptionalParentField `bson:"inline"` // TODO: handle now a pointer // TODO: used to be an altCollId       // TODO: likely won't exist for pre-existing
 	CreationDateField                 `bson:"inline"` // Print or receive date
+	SporePrintColorField              `bson:"inline"` // Set later on the print, not on creation from transfer // TODO: new! handle in TS!
+	SporePrintDensityField            `bson:"inline"` // Set later on the print, not on creation from transfer // TODO: new! rename! handle in TS!
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	PicsField                         `bson:"inline"`
@@ -30,6 +32,33 @@ type SporePrint struct {
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"`
+}
+
+type SporePrintColor string
+
+const (
+	SpColorBlack    SporePrintColor = "Black"
+	SpColorTanLight SporePrintColor = "LightTan"
+	SpColorClear    SporePrintColor = "Clear"
+)
+
+// TODO: endpoint to return these?
+type SporePrintDensity string
+
+const (
+	SpDensityHeavy       SporePrintDensity = "Heavy"
+	SpDensityAvg         SporePrintDensity = "Average"
+	SpDensitySparse      SporePrintDensity = "Sparse"
+	spDensityNoneMinimal SporePrintDensity = "None or Minimal"
+)
+
+// TODO: endpoint to return these?
+
+type SporePrintColorField struct {
+	Color *SporePrintColor `bson:"color,omitempty" json:"color,omitempty"`
+}
+type SporePrintDensityField struct {
+	Density *SporePrintDensity `bson:"density,omitempty" json:"density,omitempty"`
 }
 
 func (sp SporePrint) Innoculatable() bool {
@@ -78,6 +107,7 @@ func (sp SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from g
 		withParent(utils.Pointer(from.DbId())).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
+		withPerms(from.Permissions()).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sp.CollectionName()).UpdateByID(ctx, sp.Id, upd)
@@ -116,6 +146,8 @@ func initializeSporePrints(ctx context.Context) error {
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		//newSimpleIndex("parent", "parent", false, false, false),
 		//newSimpleIndex("printDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
+		//newSimpleIndex("color", "color", true, true, false),
+		//newSimpleIndex("density", "density", true, true, false),
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		// Pics
@@ -135,6 +167,8 @@ func initializeSporePrints(ctx context.Context) error {
 		MainCollectionIdField:             MainCollectionIdField{exSporePrint},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exFruitId},
 		CreationDateField:                 exampleTime.asCreationDate(),
+		SporePrintColorField:              SporePrintColorField{utils.Pointer(SpColorBlack)},
+		SporePrintDensityField:            SporePrintDensityField{utils.Pointer(SpDensityAvg)},
 		SpeciesField:                      SpeciesField{testEntryStringId},
 		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
 		PicsField:                         PicsField{exPics},
@@ -150,7 +184,7 @@ func initializeSporePrints(ctx context.Context) error {
 type createSporePrintRequest struct {
 	FruitId AlternateCollectionId `bson:"fruitId" json:"fruitId"`
 	NotesField
-	Pics []PicWithNotesLessLocation //"newPic-1"
+	Pics []PicWithNotesLessLocation //"newPic-1" // TODO: maybe do pics on the edit page?
 	// TODO: USE PARENT PERMS?
 }
 
@@ -172,7 +206,7 @@ type resolvedCreateSporePrintRequest struct {
 
 func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSporePrintRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context())
 	//if err != nil {
 	//	http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
@@ -274,7 +308,6 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	// TODO: add spore print to mapCollection
 	parent := Fruit{}
 	err = db.Collection(FruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
 	if err != nil {
@@ -302,16 +335,27 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		// Do not check permissions, just pass parent perms to child
 		AclField: parent.AclField,
 	}
+	err, rollback := addToIdMapCollection(ctx, &toInsert)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	_, err = db.Collection(SporePrintCollectionName).InsertOne(ctx, toInsert)
 	if err != nil {
+		err = errors.Join(err, rollback())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Update fruit with new print id
 	err = parent.addSporePrint(ctx, spid)
 	if err != nil {
+		majorError := errors.Join(db.Collection(SporePrintCollectionName).FindOneAndDelete(ctx, bson.D{{"_id", toInsert.Id}}).Err(), rollback())
+		if majorError != nil {
+			// TODO: MAJOR error! HANDLE!
+			panic("MAJOR ERROR ROLLING BACK")
+		}
 		// Rollback print insert
-		err = errors.Join(db.Collection(SporePrintCollectionName).FindOneAndDelete(ctx, bson.D{{"_id", toInsert.Id}}).Err(), err)
+		err = errors.Join(majorError, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -329,16 +373,20 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 type updateSporePrintRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
-	Notes AllEntries[Note]
-	Pics  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
+	SporePrintColorField   // TODO: validate? // TODO: add to typescript side and validate
+	SporePrintDensityField // TODO: validate? // TODO: add to typescript side and validate
+	Notes                  AllEntries[Note]
+	Pics                   SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	PermsOnRequest
 }
 
 func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 	return resolvedUpdateSporePrintRequest{
-		SaleField:     upr.SaleField,
-		DisposedField: upr.DisposedField,
-		Notes:         upr.Notes,
+		SporePrintColorField:   upr.SporePrintColorField,
+		SporePrintDensityField: upr.SporePrintDensityField,
+		SaleField:              upr.SaleField,
+		DisposedField:          upr.DisposedField,
+		Notes:                  upr.Notes,
 		Pics: SplitEntries[picWithNotesForm, PicWithNotes]{
 			Existing: upr.Pics.Existing,
 			New: slices.Map(upr.Pics.New, func(i PicWithNotesLessLocation) PicWithNotes {
@@ -352,6 +400,8 @@ func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 type resolvedUpdateSporePrintRequest struct {
 	SaleField
 	DisposedField
+	SporePrintColorField
+	SporePrintDensityField
 	Notes AllEntries[Note]
 	Pics  SplitEntries[picWithNotesForm, PicWithNotes]
 	PermsOnRequest
@@ -359,6 +409,8 @@ type resolvedUpdateSporePrintRequest struct {
 
 func (out resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclField AclField) (bson.D, error) {
 	return NewMods().
+		updateSporePrintColorIfNeeded(out.Color, existing.Color).
+		updateSporePrintDensityIfNeeded(out.Density, existing.Density).
 		updateSaleIfNeeded(out.Sale, existing.Sale).
 		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
 		updateNotesIfNeeded(out.Notes, existing.Notes).
@@ -406,6 +458,8 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 
 type importSporePrintRequest struct {
 	CreationDateField
+	SporePrintColorField   // TODO: add to typescript side and validate
+	SporePrintDensityField // TODO: add to typescript side and validate
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
@@ -415,7 +469,7 @@ type importSporePrintRequest struct {
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporePrintRequest{}
-	id := <-NextMainCollectionIdChan(r.Context()) // TODO: USE THIS EVERYWHERE INSTEAD OF newMainCollectionId
+	id := NextMainCollectionId() // TODO: USE THIS EVERYWHERE INSTEAD OF newMainCollectionId
 	//id, err := newMainCollectionId(r.Context())
 	//if err != nil {
 	//	http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
@@ -448,7 +502,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
+	// TODO: ???? //if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
@@ -513,14 +567,14 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer
 	finalPerms.Users[user.Email] = true
@@ -528,6 +582,8 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := SporePrint{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
+		SporePrintColorField:    data.SporePrintColorField,
+		SporePrintDensityField:  data.SporePrintDensityField,
 		SpeciesField:            data.SpeciesField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		PicsField:               PicsField{pix},

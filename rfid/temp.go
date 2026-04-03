@@ -260,6 +260,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			return
 		}
 		// Process file
+		println("PROCESSING FILE:", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		parts := strings.Split(fileName, "-")
 		if len(parts) != 2 {
 			err = errors.New("invalid image name: " + fileName)
@@ -267,6 +268,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
 			return
 		}
+		println("getting num", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		num, errr := strconv.Atoi(parts[1])
 		if errr != nil {
 			err = errr
@@ -274,12 +276,14 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
 			return
 		}
+		println("getting field bytes", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		fieldBytes, errr := multipartToImageBytes(p, w)
 		if errr != nil {
 			err = errr
 			// Already wrote in the above func
 			return
 		}
+		println("checking parts")
 		switch parts[0] {
 		case "newPic":
 			println("found a new pic!")
@@ -324,6 +328,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			return
 		}
 	}
+	println("returning from getMultipartImages") // TODO: THIS
 
 	// TODO:?????
 	//// CHECK THAT ALL NEW PICS EXIST

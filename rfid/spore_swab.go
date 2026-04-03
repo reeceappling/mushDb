@@ -163,12 +163,8 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	ids := NextMainCollectionIds(data.num)
 
-	ids, err := generateMainCollectionIds(r.Context(), SporeSwabCollectionName, data.num)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 	ctx, db := Db(r)
 	coll := db.Collection(SporeSwabCollectionName)
 
@@ -180,10 +176,9 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 	}
 
 	now := unixTimeForNow()
-	out := make([]interface{}, len(ids))
-	idsToMap := make([]MainCollectionId, len(ids))
-	for i, id := range ids {
-		idsToMap[i] = id
+	out := make([]interface{}, data.num)
+	idsToMap := ids
+	for i, _ := range out {
 		out[i] = SporeSwab{
 			MainCollectionIdField:             MainCollectionIdField{idsToMap[i]},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
@@ -195,10 +190,10 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 			// Do not check permissions, just pass parent perms to child
 			AclField: parent.AclField,
 		}
-
 	}
 
-	// TODO: add new swabs to mappings
+	// TODO: add new swabs to mappings via
+	// TODO: addToIdMapCollection()
 
 	_, err = coll.InsertMany(ctx, out)
 	if err != nil {
@@ -251,7 +246,7 @@ func (mods resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField
 
 func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateSporeSwabRequest{}
-	b58Id := Base58Str(r.PathValue("id")) // TODO: ensure ok
+	b58Id := Base58Str(r.PathValue("id"))
 	id, err := b58Id.toMainCollectionId()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -281,12 +276,7 @@ type importSporeSwabRequest struct {
 
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: NO IMAGES
 	data := importSporeSwabRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
-	//id, err := newMainCollectionId(r.Context(), SporeSwabCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
+	id := NextMainCollectionId()
 	defer r.Body.Close()
 
 	// Process text (or object)
@@ -313,14 +303,14 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 	}
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer
 	finalPerms.Users[user.Email] = true

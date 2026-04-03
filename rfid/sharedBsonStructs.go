@@ -717,6 +717,14 @@ func (upd *Mods) updateSaleIfNeeded(future, existing *AlternateCollectionId) *Mo
 	return updatePointerIfNeeded(upd, "sale", future, existing)
 }
 
+func (upd *Mods) updateSporePrintColorIfNeeded(future, existing *SporePrintColor) *Mods {
+	return updatePointerIfNeeded(upd, "color", future, existing)
+}
+
+func (upd *Mods) updateSporePrintDensityIfNeeded(future, existing *SporePrintDensity) *Mods {
+	return updatePointerIfNeeded(upd, "density", future, existing)
+}
+
 // TODO: Only used on plugs?
 func (upd *Mods) updateSalesIfNeeded(future, existing []AlternateCollectionId) *Mods { // TODO: validate works as intended (Should this be structured like notes?)
 	if upd.err != nil {
@@ -852,6 +860,12 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 		break
 	case "transferreasons", "transferreason":
 		toWrite = transferReasons
+		break
+	case "sporePrintColors", "sporePrintColor":
+		toWrite = sporePrintColors
+		break
+	case "sporePrintDensities", "sporePrintDensity":
+		toWrite = sporePrintDensities
 		break
 		// TODO: any other cases???
 	default:

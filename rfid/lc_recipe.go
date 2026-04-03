@@ -122,7 +122,6 @@ func initializeLcRecipes(ctx context.Context) error {
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 	}
-	// TODO: add built-in entries
 	return addTestAltEntries(ctx, testItem)
 }
 

@@ -189,7 +189,8 @@ func main() {
 	cleanupFreq := 2 * time.Minute
 	mgr := websocketSessions.NewSessionManager(&cleanupFreq, rfidRegistrySecret)
 	defer mgr.Cleanup()
-	ctx = rfid.StartGeneratingMCIDs(ctx, 5) // TODO: USE THIS ELSEWHERE VIA GETTER
+	// Start generating mainCollectionIds
+	rfid.StartGeneratingMCIDs(ctx, 12)
 	ctx, rateLimiter, rfidMiddleware, webAuthMiddleware, _ /*internalAuthMiddleware*/, ctxInternalAuthMiddleware, ctxMiddleware, ctxRfidMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, dbUser, dbPass)
 	if err != nil {
 		panic("Error setting up middleware: " + err.Error())

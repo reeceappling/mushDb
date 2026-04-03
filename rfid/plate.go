@@ -31,10 +31,10 @@ type Plate struct {
 	MainCollectionIdField               `bson:"inline"`
 	AgarBatchField                      `bson:"inline"` // will be empty for preexisting
 	CreationDateField                   `bson:"inline"`
-	CondensationCoverageAtSealTimeField `bson:"inline"`
-	PourCoverageField                   `bson:"inline"`
-	WetAtCooledTimeField                `bson:"inline"`
-	AgarOnOutsideAtPourTimeField        `bson:"inline"`
+	CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
+	PourCoverageField                   `bson:"inline"` // Percentage of bottom surface area agar coverage
+	WetAtCooledTimeField                `bson:"inline"` // Wet when initially cooled? True, false, or unknown
+	AgarOnOutsideAtPourTimeField        `bson:"inline"` // Agar got on the outside of the plate? True, false, or unknown
 	SpeciesOptionalField                `bson:"inline"`
 	SubspeciesOptionalField             `bson:"inline"`
 	InnocField                          `bson:"inline"`
@@ -44,7 +44,7 @@ type Plate struct {
 	MainCollectionOptionalParentField   `bson:"inline"`
 	PicsField                           `bson:"inline"`
 	ContaminationsField                 `bson:"inline"`
-	KnownFruitableField                 `bson:"inline"` // TODO: handle being yes if clone, among other yeses
+	KnownFruitableField                 `bson:"inline"`
 	SaleField                           `bson:"inline"`
 	DisposedField                       `bson:"inline"`
 	MostRecentImageField                `bson:"inline"`
@@ -109,7 +109,7 @@ func (p Plate) setTransferChild(ctx context.Context, xfer Transfer, from genetic
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.SubSpecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
-		withPerms(from.Permissions()). // TODO: USE THIS IN A LOT OF PLACES!!!!!
+		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
@@ -267,7 +267,7 @@ type createPlateRequest struct {
 
 func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 	data := createPlateRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), PlatesCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -420,16 +420,6 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 			println("no contam location for", i)
 		}
 	}
-	/* TODO:
-	* Our responsiveness last year was very slow
-	* FEEDBACK FROM KATE:
-	* Move teams immediately...
-	* Prepare thoughts for talking to megan.
-	* Make her realize that it was in a situation that was mostly out of my control, but am still a great engineer.
-	* Make her confident in testing skills, people skills, decision making skills.
-	* Build emotional bank account back up.
-	*
-	 */
 	ctx := r.Context()
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	coll := client.Database(dbName).Collection(PlatesCollectionName)
@@ -491,10 +481,7 @@ type importPlateRequest struct {
 	SubspeciesOptionalField
 	KnownFruitableField
 	Generation *int `json:"generation,omitempty"`
-	CondensationCoverageAtSealTimeField
 	PourCoverageField
-	WetAtCooledTimeField
-	AgarOnOutsideAtPourTimeField
 	// pic as "img"
 	WriteTagToField
 	PermsOnRequest
@@ -503,13 +490,14 @@ type importPlateRequest struct {
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data := importPlateRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), PlatesCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
 	//	return
 	//}
 	b58id := id.asBase58()
+	println("multipart reader if necessary")
 	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
 		// Already written
@@ -519,6 +507,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	//	http.Error(w, "email cannot write perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
+	println("writing tag if necessary")
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -535,6 +524,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	// Go to next part, if exists to get image
+	println("reading parts")
 	var importedPic *PicWithNotes = nil
 	p, err := reader.NextPart()
 	if err != nil {
@@ -577,22 +567,23 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-
+	println("getting auth info")
 	user, err := GetAuthInfo(r.Context())
 	if err != nil {
 		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
+	println("getting spsub")
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer
 	finalPerms.Users[user.Email] = true
@@ -603,10 +594,10 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
 		CreationDateField:                   data.CreationDateField,
-		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField,
+		CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{nil},
 		PourCoverageField:                   data.PourCoverageField,
-		WetAtCooledTimeField:                data.WetAtCooledTimeField,
-		AgarOnOutsideAtPourTimeField:        data.AgarOnOutsideAtPourTimeField,
+		WetAtCooledTimeField:                WetAtCooledTimeField{nil},
+		AgarOnOutsideAtPourTimeField:        AgarOnOutsideAtPourTimeField{nil},
 		SpeciesOptionalField:                data.SpeciesField.AsOptional(),
 		SubspeciesOptionalField:             data.SubspeciesOptionalField,
 		GenerationsFields:                   GenerationsFieldFor(gen),
@@ -616,5 +607,6 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:                    LastUpdatedField{unixTimeForNow()},
 		AclField:                            AclField{finalPerms},
 	}
+	println("inserting plate")
 	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
 }

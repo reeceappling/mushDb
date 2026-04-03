@@ -193,46 +193,50 @@ type mcidNode struct {
 	next *mcidNode
 }
 
-func startGeneratingIds(ctx context.Context, batchSize int) <-chan MainCollectionId {
-	out := make(chan MainCollectionId)
+// newMcids is an internal channel holding new mainCollectionIds that have been pre-verified to not already exist
+var newMcids chan MainCollectionId
+
+// TODO: ctx should be cancellable here
+func StartGeneratingMCIDs(ctx context.Context, batchSize int) {
+	if newMcids != nil {
+		return
+	}
+	newMcids = make(chan MainCollectionId)
 	go func() {
-		_ = <-ctx.Done()
-		// TODO: DRAIN THE CHANNEL. First or last?
-		close(out)
-		channels.Drain(out)
-	}()
-	go func() {
+		// Defer closing and draining the channel
+		defer func() {
+			close(newMcids)
+			channels.Drain(newMcids)
+		}()
 		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				ids, err := generateMainCollectionIds(ctx, batchSize)
-				if err != nil {
-					println(err.Error())
+			ids, err := generateMainCollectionIds(ctx, batchSize)
+			if err != nil {
+				println(err.Error())
+				continue
+			}
+			for _, id := range ids {
+				select {
+				case <-ctx.Done():
+					return
+				case newMcids <- id:
+					// Sent on channel, continue
 					continue
-				}
-				for _, id := range ids {
-					out <- id
 				}
 			}
 		}
 	}()
-	return out
+	return
 }
 
-func NextMainCollectionIdChan(ctx context.Context) <-chan MainCollectionId { // TODO: use
-	val, ok := ctx.Value("newMcidChan").(<-chan MainCollectionId)
-	if !ok {
-		panic("no mainCollIdChan found on context")
+func NextMainCollectionId() MainCollectionId { // TODO: use
+	return <-newMcids
+}
+func NextMainCollectionIds(num int) []MainCollectionId { // TODO: use
+	out := make([]MainCollectionId, num)
+	for i := 0; i < num; i++ {
+		out[i] = <-newMcids
 	}
-	return val
-}
-
-// TODO: ctx should be cancellable here
-func StartGeneratingMCIDs(ctx context.Context, bufferSize int) context.Context {
-	var final <-chan MainCollectionId = startGeneratingIds(ctx, bufferSize)
-	return context.WithValue(ctx, "newMcidChan", final)
+	return out
 }
 
 //// MarshalBSONValue implements the bson.ValueMarshaler interface

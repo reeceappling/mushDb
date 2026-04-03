@@ -148,7 +148,10 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
         - [ ] Integration with backend
     - [ ] Display/Edit page
         - [ ] Styling
+          - [ ] Ensure transfers work as needed
         - [ ] Integration with backend
+          - [ ] Ensure transfers work as needed
+          - [x] The rest of it
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend

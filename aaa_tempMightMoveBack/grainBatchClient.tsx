@@ -100,7 +100,7 @@ export default function GrainBatchDisplay(
                 method: "POST",
                 headers: {
                     credentials: 'include',
-                    SessionId: cookies.SessionId,
+                    'Cookie': cookies,
                     'Content-type': "application/json"
                 },
                 body: JSON.stringify({
@@ -172,7 +172,7 @@ export function NewGrainBatchForm({handlers, recipe}: { handlers: NewEntryInput<
             }),
             headers: {
                 credentials: 'include',
-                SessionId: cookies.SessionId,
+                'Cookie': cookies,
                 'Content-type': "application/json"
                 //Authorization: tokenFetch,
             },
@@ -243,7 +243,7 @@ export function GrainBatchSelector(
             method: 'GET',
             headers: {
                 credentials: 'include',
-                SessionId: cookies.SessionId,
+                'Cookie': cookies,
                 'Content-type': "application/json"
                 //Authorization: tokenFetch,
             },

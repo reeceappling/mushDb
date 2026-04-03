@@ -22,6 +22,7 @@ const ( // MainCollection test ints
 	idTestPlateProjectRead
 	idTestPlateUserWriteProjRead
 	idTestPlateUserOutsideProject
+	idTestLCS
 )
 
 const (

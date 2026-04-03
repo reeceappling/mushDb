@@ -12,9 +12,9 @@ import (
 	"slices"
 )
 
-// TODO: new are this, sporeSwab, agarBottle, plugs
+// TODO: new are this, sporeSwab, plugs
 
-// Naming convention "{ParentLCID}-#"
+// Naming convention "{ParentLCID}-#" // TODO: ?????
 
 //func parseName() // TODO: ???
 
@@ -99,7 +99,7 @@ func (sw LcSyringe) id() []byte {
 //	return false
 //}
 
-func initializeSyringes(ctx context.Context) error { // TODO; this
+func initializeSyringes(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcSyringeCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
@@ -123,7 +123,7 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 	}
 	// If test agar batch does not exist, then create it
 	testItem := &LcSyringe{
-		MainCollectionIdField:             MainCollectionIdField{Id: exLC}, // TODO: FIX!
+		MainCollectionIdField:             MainCollectionIdField{Id: exLCS},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exLC},
 		CreationDateField:                 exampleTime.asCreationDate(),
 		SpeciesField:                      SpeciesField{testEntryStringId},
@@ -132,7 +132,7 @@ func initializeSyringes(ctx context.Context) error { // TODO; this
 		DisposedField:                     DisposedField{&exampleTime},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		//PermsField:                        PermsField{}, // TODO: fix
+		AclField:                          allCanWriteAcl(),
 	}
 	return addTestMainEntries(ctx, testItem)
 }
@@ -151,7 +151,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), LcSyringeCollectionName)
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -241,7 +241,7 @@ func (mods resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField A
 
 func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateSyringeRequest{}
-	b58Id := Base58Str(r.PathValue("id")) // TODO: ensure ok
+	b58Id := Base58Str(r.PathValue("id"))
 	id, err := b58Id.toMainCollectionId()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -275,7 +275,7 @@ type importLcSyringeRequest struct {
 // TODO: USE!!!
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLcSyringeRequest{}
-	id := <-NextMainCollectionIdChan(r.Context())
+	id := NextMainCollectionId()
 	//id, err := newMainCollectionId(r.Context(), LcSyringeCollectionName)
 	//if err != nil {
 	//	http.Error(w, "failed to create new mainCollectionId", http.StatusInternalServerError)
@@ -302,21 +302,20 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError) // TODO: normalize
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var finalPerms *ACL = nil
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
-		sp.DefaultAcl.Clone()
+		finalPerms = sp.DefaultAcl.Clone()
 	}
 	// Add user to the acl as a writer
 	finalPerms.Users[user.Email] = true
 
 	ctx, db := Db(r)
 	coll := db.Collection(LcSyringeCollectionName)
-	// TODO: validate species, subspecies,
 	toInsert := LcSyringe{
 		MainCollectionIdField:   MainCollectionIdField{Id: id},
 		CreationDateField:       data.CreationDateField,
