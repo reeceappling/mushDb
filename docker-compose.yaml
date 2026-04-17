@@ -30,10 +30,12 @@ services:
       API_PORT: "8080"
       MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-http}
       MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
+      MONGO_INITDB_SETUP_USERNAME: ${MONGO_INITDB_SETUP_USERNAME:?error}
+      MONGO_INITDB_SETUP_PASSWORD: ${MONGO_INITDB_SETUP_PASSWORD:?error}
       MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
       MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
-      ADMIN_GMAIL: ${ADMIN_GMAIL}
+      ADMIN_GMAIL: ${ADMIN_GMAIL} #TODO: :?error
       RFID_SECRET: ${RFID_SECRET:?error}
       DB_HOST_PORT: "27017"
       DB_HOST_NAME: "mushdb"
@@ -55,11 +57,12 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?error}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?error}
+      MONGO_INITDB_SETUP_USERNAME: ${MONGO_INITDB_SETUP_USERNAME:?error}
+      MONGO_INITDB_SETUP_PASSWORD: ${MONGO_INITDB_SETUP_PASSWORD:?error}
       MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
       MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
-      $MONGO_INITDB_SETUP_USERNAME: ${MONGO_INITDB_SETUP_USERNAME:?error}
-      $MONGO_INITDB_SETUP_PASSWORD: ${MONGO_INITDB_SETUP_PASSWORD:?error}
+
     command: ["mongod", "--replSet", "rs0", "--keyFile", "/etc/mongodb.key", "--bind_ip_all"]
     # TODO: WORKS command: [--auth]
     healthcheck:
@@ -73,11 +76,11 @@ services:
     volumes:
       # TODO: ensure key exists next to docker-compose file. If not:
       # openssl rand -base64 741 > mongodb.key
-      # chmod 600 mongodb.key
+      # chmod 666 mongodb.key
       # chown mongodb:mongodb mongodb.key
-      - ./mongodb.key:/etc/mongodb.key
       - mongodb-data:/data/db
       - ./initDB:/docker-entrypoint-initdb.d
+      - ./mongodb.key:/etc/mongodb.key
     networks:
       - mushNet
 
@@ -103,7 +106,7 @@ networks:
   mushNet:
     name: mushNet
 volumes:
-  mongo_repl_config:
+#  mongo_repl_config:
   pictures:
     labels:
       com.example.description: "Persistent volume for images"

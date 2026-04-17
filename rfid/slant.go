@@ -227,6 +227,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 	finishCreateMainCollectionEntry(ctx, toInsert, w) // TODO: use in all main creates
 }
 
+// TODO: MOVE
 func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
 	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
 		err := addToIdMapCollection(sessCtx, toInsert) // TODO: do this everywhere
@@ -254,6 +255,8 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 		handleWriteErr(err, w)
 	}
 }
+
+// TODO: MOVE
 func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toInsert CollectionItem, w http.ResponseWriter) {
 	_, err := coll.InsertOne(ctx, toInsert)
 	if err != nil {
@@ -270,6 +273,8 @@ func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toI
 		handleWriteErr(err, w)
 	}
 }
+
+// TODO: MOVE
 func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, reqPerms PermsOnRequest, w http.ResponseWriter) {
 	// TODO: validate that species and subspecies exist???
 	genetics, err := toInsert.GeneticInfoAsParent()

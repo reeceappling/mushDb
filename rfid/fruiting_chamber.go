@@ -234,7 +234,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	// Validation
+	// Validation // TODO: do validation in transaction?
 
 	parentJar, err := LookupGrainJar(ctx, data.ParentJar)
 	if err != nil {
