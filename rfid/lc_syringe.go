@@ -47,26 +47,24 @@ func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
 	return nil
 }
 
-func (sw LcSyringe) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	// TODO: can this even happen?
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, sw.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", sw.Id}}, sw).Err()
-	}
-}
+//func (sw LcSyringe) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	// TODO: can this even happen?
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, sw.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (sw LcSyringe) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (sw LcSyringe) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	// TODO: cannot happen
 	panic("does not happen")
 }
@@ -168,7 +166,6 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx, db := Db(r)
-	coll := db.Collection(LcSyringeCollectionName)
 	// Validate inputs and grab parent
 	parent := &LiquidCulture{}
 	err = db.Collection(LCCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
@@ -195,7 +192,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		// Do not check permissions, just pass parent perms to child
 		AclField: parent.AclField,
 	}
-	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateSyringeRequest struct {

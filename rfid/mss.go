@@ -56,25 +56,23 @@ func (M MSS) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
-func (M MSS) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(MssCollectionName)
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, M.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.M{"_id": M.Id}, M).Err()
-	}
-}
+//func (M MSS) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(MssCollectionName)
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, M.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (M MSS) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (M MSS) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	return errors.New("mss cannot be a child in a normal transfer. Must be created manually from spore print or imported")
 }
 
@@ -143,8 +141,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		return
 	}
 	ctx, db := Db(r)
-	coll := db.Collection(MssCollectionName)
-	// Validate parent
+	// Validate parent // TODO: move into txn?
 	parent := SporePrint{}
 	err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
 	if err != nil {
@@ -167,7 +164,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		LastUpdatedField:                  LastUpdatedField{now},
 		AclField:                          parent.AclField, // NOTE: do NOT ensure email is authorized to write on parent, they will just be blocked from viewing.
 	}
-	finishCreateMainCollectionEntry(ctx, coll, toInsert, w)
+	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
 type importMssRequest struct {

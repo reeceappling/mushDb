@@ -66,25 +66,23 @@ func (s Slant) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return s.GenSinceSpore, s.GenSinceFruitOrSpore
 }
 
-func (s Slant) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(s.CollectionName())
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, s.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", s.Id}}, s).Err()
-	}
-}
+//func (s Slant) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(s.CollectionName())
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, s.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (s Slant) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (s Slant) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
@@ -104,7 +102,7 @@ func (s Slant) setTransferChild(ctx context.Context, xfer Transfer, from genetic
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SlantsCollectionName).UpdateByID(ctx, s.Id, upd)
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(SlantsCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -213,8 +211,6 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 
 	now := unixTimeForNow()
 	ctx := r.Context()
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(SlantsCollectionName)
 	toInsert := &Slant{
 		MainCollectionIdField: MainCollectionIdField{id},
 		AgarBatchField:        AgarBatchField{&data.AgarBatch},
@@ -228,21 +224,26 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, coll, toInsert, w) // TODO: use in all main creates
+	finishCreateMainCollectionEntry(ctx, toInsert, w) // TODO: use in all main creates
 }
 
-func finishCreateMainCollectionEntry(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, w http.ResponseWriter) {
-	err, rollback := addToIdMapCollection(ctx, toInsert) // TODO: do this everywhere
+func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
+	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		err := addToIdMapCollection(sessCtx, toInsert) // TODO: do this everywhere
+		if err != nil {
+			return nil, errors.Join(errors.New("failed to insert in map collection"), err)
+		}
+		_, err = mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
+		if err != nil {
+			return nil, errors.Join(errors.New("failed to insert main collection item"), err)
+		}
+		return nil, nil
+	})
 	if err != nil {
-		http.Error(w, "failed to insert in map collection: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = coll.InsertOne(ctx, toInsert)
-	if err != nil {
-		err = errors.Join(rollback(), err) // TODO: do this everywhere
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	bsOut, err := json.Marshal(toInsert)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -290,7 +291,7 @@ func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection
 		acl.ACL = sp.DefaultAcl
 	}
 	toInsert.SetPerms(acl)
-	finishCreateMainCollectionEntry(ctx, coll, toInsert, w)
+	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
 type updateSlantRequest updatePlateRequest

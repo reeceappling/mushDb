@@ -77,29 +77,29 @@ func (p Plate) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return p.GenSinceSpore, p.GenSinceFruitOrSpore
 }
 
-func (p Plate) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlatesCollectionName)
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, p.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", p.Id}}, p).Err()
-	}
-}
+//func (p Plate) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlatesCollectionName)
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	// TODO: if transfer has a fromPic on it, can we add it to the parent?
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, p.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (p Plate) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
 	}
+	// TODO: if xfer has a pic on it for the to, can we add it to the child?
 	upd, err := xfer.
 		PicsModsForChild().
 		withInnoc(xfer).
@@ -115,7 +115,7 @@ func (p Plate) setTransferChild(ctx context.Context, xfer Transfer, from genetic
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlatesCollectionName).UpdateByID(ctx, p.Id, upd)
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(PlatesCollectionName).UpdateByID(ctx, p.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -292,8 +292,6 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 
 	now := unixTimeForNow()
 	ctx := r.Context()
-	client := r.Context().Value(mongoClientContextKey).(*mongo.Client)
-	coll := client.Database(dbName).Collection(PlatesCollectionName)
 	toInsert := Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
 		AgarBatchField:                      AgarBatchField{AgarBatch: &data.AgarBatch},
@@ -311,7 +309,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w) // TODO: use in all main creates
+	finishCreateMainCollectionEntry(ctx, &toInsert, w) // TODO: use in all main creates
 }
 
 type updatePlateRequest struct {

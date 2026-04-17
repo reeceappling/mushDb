@@ -69,26 +69,24 @@ func (sp SporePrint) CanTransferTo(dst geneticSource) error {
 	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
 
-func (sp SporePrint) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	// TODO: can this even occur?
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sp.CollectionName())
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, sp.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", sp.Id}}, sp).Err()
-	}
-}
+//func (sp SporePrint) setTransferParent(ctx context.Context, xfer Transfer) error { // TODO: sessionContext instead?
+//	// TODO: can this even occur?
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sp.CollectionName())
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, sp.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (sp SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (sp SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	// TODO: can this happen????? should always be from a fruit right?
 	// This is a special case because it will always be 0-gen
 	parentInfo, err := from.GeneticInfoAsParent()
@@ -110,7 +108,7 @@ func (sp SporePrint) setTransferChild(ctx context.Context, xfer Transfer, from g
 		withPerms(from.Permissions()).
 		updateLastUpdatedIfNeeded().
 		Finalized()
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sp.CollectionName()).UpdateByID(ctx, sp.Id, upd)
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(sp.CollectionName()).UpdateByID(ctx, sp.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -335,30 +333,27 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		// Do not check permissions, just pass parent perms to child
 		AclField: parent.AclField,
 	}
-	err, rollback := addToIdMapCollection(ctx, &toInsert)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = db.Collection(SporePrintCollectionName).InsertOne(ctx, toInsert)
-	if err != nil {
-		err = errors.Join(err, rollback())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	// Update fruit with new print id
-	err = parent.addSporePrint(ctx, spid)
-	if err != nil {
-		majorError := errors.Join(db.Collection(SporePrintCollectionName).FindOneAndDelete(ctx, bson.D{{"_id", toInsert.Id}}).Err(), rollback())
-		if majorError != nil {
-			// TODO: MAJOR error! HANDLE!
-			panic("MAJOR ERROR ROLLING BACK")
+	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		err := addToIdMapCollection(sessCtx, &toInsert)
+		if err != nil {
+			return nil, err
 		}
-		// Rollback print insert
-		err = errors.Join(majorError, err)
+		// Update fruit with new print id
+		err = parent.addSporePrint(sessCtx, spid)
+		if err != nil {
+			return nil, errors.Join(errors.New("failed to add spore print to parent fruit"), err)
+		}
+		_, err = mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(SporePrintCollectionName).InsertOne(ctx, toInsert)
+		if err != nil {
+			return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+		}
+		return nil, nil
+	})
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	bsOut, err := json.Marshal(toInsert)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

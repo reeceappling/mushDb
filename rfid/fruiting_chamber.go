@@ -59,26 +59,24 @@ func (f FruitingChamber) generation() (sinceSpore *Generation, sinceSporeOrClone
 	return f.GenSinceSpore, f.GenSinceFruitOrSpore
 }
 
-func (f FruitingChamber) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, f.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", f.Id}}, f).Err()
-	}
-}
+//func (f FruitingChamber) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, f.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
 // TODO: create box via jar instead
-func (f FruitingChamber) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
@@ -110,7 +108,7 @@ func (f FruitingChamber) setTransferChild(ctx context.Context, xfer Transfer, fr
 	if err != nil {
 		return errors.New("failed to finalize") // TODO: ok?
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName).UpdateByID(ctx, f.Id, upd)
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(FruitingChamberCollectionName).UpdateByID(ctx, f.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -236,7 +234,6 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
 	// Validation
 
 	parentJar, err := LookupGrainJar(ctx, data.ParentJar)
@@ -268,7 +265,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:            LastUpdatedField{now},
 		AclField:                    parentJar.AclField,
 	}
-	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type importFruitingChamberRequest struct {

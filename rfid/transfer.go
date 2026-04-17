@@ -7,7 +7,10 @@ import (
 	"github.com/reeceappling/mushDb/rfid/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"io"
+	"mime/multipart"
 	"net/http"
 )
 
@@ -142,6 +145,35 @@ type createTransferRequest struct {
 	// TODO: perms from parent?
 }
 
+type CtxKey string
+
+const SessionCtxKey CtxKey = "mongoTxSession"
+
+func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error)) (any, error) {
+	sessionOptions := options.Session() // TODO: change?
+	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
+	if err != nil {
+		return nil, err
+	}
+	wc := writeconcern.Majority()
+	txnOptions := options.Transaction().SetWriteConcern(wc) // TODO: ok?
+	// Defers ending the session after the transaction is committed or ended
+	defer sess.EndSession(ctx)
+	return sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		if err = sess.StartTransaction(txnOptions); err != nil {
+			return nil, err
+		}
+		out, err := transact(sessCtx)
+		if err != nil {
+			return nil, errors.Join(err, sess.AbortTransaction(ctx))
+		}
+		if err = sess.CommitTransaction(ctx); err != nil {
+			return nil, errors.Join(err, sess.AbortTransaction(ctx))
+		}
+		return out, nil
+	}, txnOptions)
+}
+
 func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: CANNOT USE TRANSACTIONS!!!!!!
 	data := createTransferRequest{}
@@ -189,20 +221,26 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 	for {
 		// Go to next part or break
-		p, err := reader.NextPart()
+		var p *multipart.Part
+		p, err = reader.NextPart()
 		if err != nil {
-			if err != io.EOF {
+			if err == io.EOF {
+				err = nil
+			} else {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			break
 		}
-		fieldBytes, errr := multipartToImageBytes(p, w)
-		if errr != nil {
+		var fieldBytes []byte
+
+		fieldBytes, err = multipartToImageBytes(p, w)
+		if err != nil {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "transfer", string(b58id), "img")
+		var newFileNameWithPrefixPath string
+		newFileNameWithPrefixPath, err = pics.SaveFile(r.Context(), fieldBytes, "transfer", string(b58id), "img")
 		if err != nil {
 			http.Error(w, "failed to save image", http.StatusBadRequest)
 			return
@@ -211,18 +249,21 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		switch p.FileName() {
 		case "picFrom":
 			if fromPic != nil {
-				http.Error(w, "too many from images", http.StatusBadRequest)
+				err = errors.New("too many from images")
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			fromPic = &newFileNameWithPrefixPath
 		case "picTo":
 			if toPic != nil {
-				http.Error(w, "too many dest images", http.StatusBadRequest)
+				err = errors.New("too many dest images")
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 			toPic = &newFileNameWithPrefixPath
 		default:
-			http.Error(w, "invalid image name!", http.StatusBadRequest)
+			err = errors.New("invalid image name!")
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
@@ -232,14 +273,15 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	now := unixTimeForNow()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	// Get parent and child items
-	parent, errr := getGeneticItem(ctx, data.FromType, data.From)
-	if errr != nil {
-		http.Error(w, "failed to get parent item: "+errr.Error(), http.StatusBadRequest)
+	var parent, child geneticSource
+	parent, err = getGeneticItem(ctx, data.FromType, data.From)
+	if err != nil {
+		http.Error(w, "failed to get parent item: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	child, errr := getGeneticItem(ctx, data.ToType, data.To)
-	if errr != nil {
-		http.Error(w, "failed to get child item: "+errr.Error(), http.StatusBadRequest)
+	child, err = getGeneticItem(ctx, data.ToType, data.To)
+	if err != nil {
+		http.Error(w, "failed to get child item: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err = parent.CanTransferTo(child); err != nil {
@@ -256,7 +298,8 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// to make a transfer, the email must only be able to write to the child initially
 	if userChildPerm := child.Permissions().HighestPermFor(resolvedPerms); userChildPerm == nil || !(*userChildPerm) {
-		http.Error(w, "you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to", http.StatusUnauthorized)
+		err = errors.New("you do not have permissions to create this transfer, you likely cannot modify the parent, or the child is not eligible to be transferred to")
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 	// Create Transfer
@@ -274,54 +317,111 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedFieldForNow(),
 		AclField:                   AclField{ACL: parent.Permissions()},
 	}
-	_, err = db.Collection(TransfersCollName).InsertOne(ctx, xfer)
-	if err != nil {
-		http.Error(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	// Set rollback
-	rollbackXfer := func() error {
-		result, errrr := db.Collection(TransfersCollName).DeleteOne(ctx, bson.D{{"_id", xfer.Id}})
-		if errrr != nil {
-			return errrr
+	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)
+		if err != nil {
+			return nil, err
 		}
-		if result.DeletedCount == 0 {
-			return errors.New("transfer not deleted")
+
+		//err = parent.setTransferParent(ctx, xfer) // TODO: Del?
+		if err = setTransferParent(sessCtx, parent, xfer); err != nil { // TODO: should be session
+			return nil, errors.Join(errors.New("failed to set transfer parent"), err)
 		}
-		return nil
-	}
-	err, rollbackParent := parent.setTransferParent(ctx, xfer)
+
+		if err = child.setTransferChild(sessCtx, xfer, parent); err != nil {
+			return nil, errors.Join(errors.New("failed to set transfer child"), err)
+		}
+		return nil, nil
+	})
 	if err != nil {
-		err = errors.Join(errors.New("failed to set transfer parent"), rollbackXfer(), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
 	}
-	err = child.setTransferChild(ctx, xfer, parent)
-	if err != nil {
-		parentRollbackErr := rollbackParent()
-		if parentRollbackErr != nil {
-			// TODO: HUGE ERROR. FIGURE OUT
-		}
-		xferRollbackErr := rollbackXfer()
-		if xferRollbackErr != nil {
-			// TODO: HUGE ERROR. FIGURE OUT
-		}
-		err = errors.Join(errors.New("failed to set transfer child"), parentRollbackErr, xferRollbackErr, err)
-		http.Error(w, "failed to set transfer child: "+err.Error(), http.StatusInternalServerError)
+	bsOut, errMarshalling := json.Marshal(xfer)
+	if errMarshalling != nil { // Not err because err != nil at end will delete all images
+		// Do not rollback here. Data made it in successfully
+		http.Error(w, errMarshalling.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	bsOut, err := json.Marshal(xfer)
-	if err != nil {
+	_, errWriting := w.Write(bsOut)
+	if errWriting != nil {
 		// Do not rollback here. Data made it in successfully
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		handleWriteErr(errWriting, w)
 	}
-	_, err = w.Write(bsOut)
-	if err != nil {
-		// Do not rollback here. Data made it in successfully
-		handleWriteErr(err, w)
-	}
+	//ctx, sess, err := createMongoSession(ctx)
+	//if err != nil {
+	//	http.Error(w, "failed to create db session for transfer: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//defer sess.EndSession(ctx)
+	//opts := []*options.TransactionOptions{} // TODO: FIXME
+	//if err = sess.StartTransaction(opts...); err != nil {
+	//	http.Error(w, "failed to start transfer transaction: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//
+	////WithTransaction(ctx, func(ctx mongo.SessionContext)(any, error){
+	////	return nil, nil
+	////}, opts...)
+	//
+	//_, err = db.Collection(TransfersCollName).InsertOne(ctx, xfer)
+	//if err != nil {
+	//	err = errors.Join(err, sess.AbortTransaction(ctx))
+	//	http.Error(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	////// Set rollback
+	////rollbackXfer := func() error {
+	////	result, errrr := db.Collection(TransfersCollName).DeleteOne(ctx, bson.D{{"_id", xfer.Id}})
+	////	if errrr != nil {
+	////		return errrr
+	////	}
+	////	if result.DeletedCount == 0 {
+	////		return errors.New("transfer not deleted")
+	////	}
+	////	return nil
+	////}
+	//err = setTransferParent(ctx, parent, xfer)
+	////err = parent.setTransferParent(ctx, xfer) // TODO: Del?
+	//if err != nil {
+	//	err = errors.Join(errors.New("failed to set transfer parent"), sess.AbortTransaction(ctx), err)
+	//	//err = errors.Join(errors.New("failed to set transfer parent"), rollbackXfer(), err)
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//err = child.setTransferChild(ctx, xfer, parent)
+	//if err != nil {
+	//	err = errors.Join(err, sess.AbortTransaction(ctx))
+	//	//parentRollbackErr := rollbackParent()
+	//	//if parentRollbackErr != nil {
+	//	//	// TODO: HUGE ERROR. FIGURE OUT
+	//	//}
+	//	//xferRollbackErr := rollbackXfer()
+	//	//if xferRollbackErr != nil {
+	//	//	// TODO: HUGE ERROR. FIGURE OUT
+	//	//}
+	//	//err = errors.Join(errors.New("failed to set transfer child"), parentRollbackErr, xferRollbackErr, err)
+	//	http.Error(w, "failed to set transfer child: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//err = sess.CommitTransaction(ctx)
+	//if err != nil {
+	//	http.Error(w, "failed to commit transaction for transfer creation: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//
+	//bsOut, errMarshalling := json.Marshal(xfer)
+	//if errMarshalling != nil { // Not err because err != nil at end will delete all images
+	//	// Do not rollback here. Data made it in successfully
+	//	http.Error(w, errMarshalling.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//
+	//_, errWriting := w.Write(bsOut)
+	//if errWriting != nil {
+	//	// Do not rollback here. Data made it in successfully
+	//	handleWriteErr(errWriting, w)
+	//}
 }
 
 type updateTransferRequest struct {

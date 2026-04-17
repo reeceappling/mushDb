@@ -30,17 +30,15 @@ func getEntryTypeForId(ctx context.Context, id MainCollectionId) (string, error)
 	return result.EntryType, err
 }
 
-func addToIdMapCollection(ctx context.Context, item MainCollectionItem) (err error, rollback func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName)
+func addToIdMapCollection(ctx mongo.SessionContext, item MainCollectionItem) (err error) {
+	coll := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(idMapCollectionName)
 	id := item.DbId()
 	_, err = coll.InsertOne(ctx, idMapEntry{
 		Id:        id,
 		EntryType: item.EntryType(),
 	})
 	if err != nil {
-		return err, nil
+		return err
 	}
-	return nil, func() error {
-		return coll.FindOneAndDelete(ctx, bson.M{"_id": id}).Err()
-	}
+	return nil
 }

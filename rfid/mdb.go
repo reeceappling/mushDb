@@ -395,7 +395,8 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 
 	//uri := fmt.Sprintf("mongodb://%s", hostAndPort)
 	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
-	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
+	uri := fmt.Sprintf("mongodb://%s:%s@%s/?authSource=admin&replicaSet=rs0", usern, pass, hostAndPort)
+	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
 
 	// TODO: SET UP INITIAL USER IF USER DOES NOT EXIST!
 	// TODO: THIS SHOULD BE DONE VIA: https://stackoverflow.com/questions/42912755/how-to-create-a-db-for-mongodb-container-on-start-up
@@ -434,7 +435,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		return ctx, nil, errors.Join(errConn, err)
 
 	}
-	println("Client connected to db at " + uri)
+	println("Client connected to db at " + uri) // TODO: del because of usern and pass
 	return context.WithValue(ctx, mongoClientContextKey, client), client, nil
 }
 

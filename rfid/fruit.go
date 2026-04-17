@@ -61,25 +61,23 @@ func (f Fruit) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return f.GenSinceSpore, (*Generation)(utils.Pointer(0))
 }
 
-func (f Fruit) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitsCollName)
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, f.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", f.Id}}, f).Err()
-	}
-}
+//func (f Fruit) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitsCollName)
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, f.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (f Fruit) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (f Fruit) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	// Transferring TO a fruit is not a thing
 	return errors.New("fruits are invalid transfer children, must be created from a fruiter, or imported")
 }
@@ -96,9 +94,9 @@ func (f Fruit) EntryTypeField() *string {
 //	return f.Email[:]
 //}
 
-func (f Fruit) addSporePrint(ctx context.Context, printId MainCollectionId) error {
+func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId) error {
 	// update fruit
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitsCollName).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId))
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(FruitsCollName).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId))
 	if err != nil {
 		return err
 	}
@@ -227,7 +225,6 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	}
 	ctx := r.Context()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(FruitsCollName)
 	parent, err := typeForSource(data.ParentType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -265,7 +262,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
 		AclField:                          AclField{parent.Permissions()},
 	}
-	finishCreateMainCollectionEntry(ctx, coll, toInsert, w)
+	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
 type updateFruitRequest struct {

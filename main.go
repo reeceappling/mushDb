@@ -41,6 +41,8 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 	dbHostName := os.Getenv("DB_HOST_NAME")
 	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
 	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
+	dbSetupUser := os.Getenv("MONGO_INITDB_SETUP_USERNAME")
+	dbSetupPass := os.Getenv("MONGO_INITDB_SETUP_PASSWORD")
 	dbHostPortStr := os.Getenv("DB_HOST_PORT")
 	dbHostPort, err := strconv.Atoi(dbHostPortStr)
 	if err != nil {
@@ -57,14 +59,19 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 		return
 	}
 
-	println("Connecting to database")
-	ctx, client, err = rfid.NewMongoDbClient(ctxIn, dbUser, dbPass, dbHostName, dbHostPort)
+	println("Connecting to database as initializer")
+	ctx, client, err = rfid.NewMongoDbClient(ctxIn, dbSetupUser, dbSetupPass, dbHostName, dbHostPort)
 	if err != nil {
-		return ctx, nil, errors.Join(errors.New("failed to create MongoDB client"), err)
+		return ctx, nil, errors.Join(errors.New("failed to create MongoDB creation client"), err)
 	}
 	println("Initializing DB")
 	if err = rfid.Initialize(ctx); err != nil {
 		return ctx, nil, errors.Join(errors.New("failed to initialize database"), err)
+	}
+	println("Connecting to database standard application user")
+	ctx, client, err = rfid.NewMongoDbClient(ctxIn, dbUser, dbPass, dbHostName, dbHostPort)
+	if err != nil {
+		return ctx, nil, errors.Join(errors.New("failed to create MongoDB application client"), err)
 	}
 	println("DB setup and connection complete!")
 	return ctx, rfid.GetMongoClient(ctx), nil
@@ -85,6 +92,8 @@ func main() {
 
 	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
 	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
+	//dbSetupUser := os.Getenv("MONGO_INITDB_SETUP_USERNAME")
+	//dbSetupPass := os.Getenv("MONGO_INITDB_SETUP_PASSWORD")
 	// adminEmail := os.Getenv("ADMIN_EMAIL")
 
 	// TODO: make sure logger is set up correctly

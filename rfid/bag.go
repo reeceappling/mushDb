@@ -22,17 +22,17 @@ type Bag struct {
 	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *unixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
-	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
-	SpeciesOptionalField              `bson:"inline"` // set on transfer in
-	SubspeciesOptionalField           `bson:"inline"` // set on transfer in
-	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField                 `bson:"inline"` // Set on transfer out
-	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
-	ParentTypeField                   `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
-	PicsField                         `bson:"inline"` // Updated independently
-	ContaminationsField               `bson:"inline"` // Updated independently
+	SealDate                          *unixTime `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                      `bson:"inline"`                                                 // Initial wetness (refer to scale on field struct)
+	KnownFruitableField               `bson:"inline"`                                                 // set on transfer in, or once fruited
+	SpeciesOptionalField              `bson:"inline"`                                                 // set on transfer in
+	SubspeciesOptionalField           `bson:"inline"`                                                 // set on transfer in
+	InnocField                        `bson:"inline"`                                                 // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                 `bson:"inline"`                                                 // Set on transfer out
+	MainCollectionOptionalParentField `bson:"inline"`                                                 // Set on transfer in
+	ParentTypeField                   `bson:"inline"`                                                 // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	PicsField                         `bson:"inline"`                                                 // Updated independently
+	ContaminationsField               `bson:"inline"`                                                 // Updated independently
 	MostRecentImageField              `bson:"inline"`
 	FlushesField                      `bson:"inline"` // Updated independently
 	SaleField                         `bson:"inline"`
@@ -61,26 +61,24 @@ func (b Bag) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation
 	return b.GenSinceSpore, b.GenSinceFruitOrSpore
 }
 
-func (b Bag) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, b.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", b.Id}}, b).Err()
-	}
-}
+//func (b Bag) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, b.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
 // TODO: create bag via substrate batch???
-func (b Bag) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
@@ -101,7 +99,7 @@ func (b Bag) setTransferChild(ctx context.Context, xfer Transfer, from geneticSo
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName).UpdateByID(ctx, b.Id, upd)
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(BagsCollectionName).UpdateByID(ctx, b.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -223,7 +221,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	// Validate request
+	// Validate request // TODO: move validation within a session?
 	_, err = data.PcRunField.Get(ctx)
 	if err != nil {
 		http.Error(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
@@ -240,7 +238,6 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// TODO: validate filter size
 	// Denying guest edits is done in the upper handlers
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
 	toInsert := &Bag{
 		MainCollectionIdField:       MainCollectionIdField{id},
 		SubstrateRecipeField:        batch.SubstrateRecipeField,
@@ -253,7 +250,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:            LastUpdatedFieldForNow(),
 		AclField:                    allCanWriteAcl(),
 	}
-	finishCreateMainCollectionEntry(ctx, coll, toInsert, w)
+	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
 type updateBagRequest struct {

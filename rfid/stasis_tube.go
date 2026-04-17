@@ -53,25 +53,23 @@ func (s StasisTube) generation() (sinceSpore *Generation, sinceSporeOrClone *Gen
 	return s.GenSinceSpore, s.GenSinceFruitOrSpore
 }
 
-func (s StasisTube) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(s.CollectionName())
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, s.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", s.Id}}, s).Err()
-	}
-}
+//func (s StasisTube) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(s.CollectionName())
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, s.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (s StasisTube) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
@@ -91,7 +89,7 @@ func (s StasisTube) setTransferChild(ctx context.Context, xfer Transfer, from ge
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(StasisTubeCollectionName).UpdateByID(ctx, s.Id, upd)
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(StasisTubeCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -194,8 +192,7 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := unixTimeForNow()
-	ctx, db := Db(r)
-	coll := db.Collection(StasisTubeCollectionName)
+	ctx := r.Context()
 	toInsert := StasisTube{
 		MainCollectionIdField: MainCollectionIdField{id},
 		PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
@@ -208,7 +205,7 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateStasisTubeRequest struct {

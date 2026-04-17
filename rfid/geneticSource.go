@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type GeneticParentInfo struct {
@@ -44,13 +45,31 @@ type geneticSource interface {
 	SourceType() string
 	GeneticInfoAsParent() (GeneticParentInfo, error)
 	DbId() MainCollectionId
-	setTransferParent(ctx context.Context, xfer Transfer) (err error, rollback func() error)
-	setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error
+	//setTransferParent(ctx context.Context, xfer Transfer) error
+	setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error
 	generation() (sinceSpore *Generation, sinceSporeOrClone *Generation)
 	Permissioned
 	CanTransferTo(dst geneticSource) error
 	Innoculatable() bool
+	CollectionItem
 	SetPerms(AclField) // MUST be a pointer reciever
+}
+
+func setTransferParent(ctx mongo.SessionContext, parent geneticSource, xfer Transfer) error {
+	coll := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(parent.CollectionName())
+	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+	// TODO: if transfer has a fromPic on it, can we add it to the parent?
+	if err != nil {
+		return err
+	}
+	res, err := coll.UpdateByID(ctx, parent.DbId(), upd)
+	if err != nil {
+		return err
+	}
+	if res.ModifiedCount == 0 {
+		return ErrNoParentModifiedForTransfer
+	}
+	return nil
 }
 
 func childGensForParent(parent geneticSource) (parentInfo GeneticParentInfo, genSpore, genFruitSpore *Generation, err error) {

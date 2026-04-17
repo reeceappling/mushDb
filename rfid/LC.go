@@ -53,25 +53,23 @@ func (l LiquidCulture) generation() (sinceSpore *Generation, sinceSporeOrClone *
 	return l.GenSinceSpore, l.GenSinceFruitOrSpore
 }
 
-func (l LiquidCulture) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LCCollectionName)
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, l.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", l.Id}}, l).Err()
-	}
-}
+//func (l LiquidCulture) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LCCollectionName)
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, l.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (l LiquidCulture) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
@@ -89,7 +87,7 @@ func (l LiquidCulture) setTransferChild(ctx context.Context, xfer Transfer, from
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LCCollectionName).UpdateByID(ctx, l.Id, upd)
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(LCCollectionName).UpdateByID(ctx, l.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -198,8 +196,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := unixTimeForNow()
-	ctx, db := Db(r)
-	coll := db.Collection(LCCollectionName)
+	ctx, _ := Db(r)
 
 	_, err = data.LcRecipeField.Get(ctx)
 	if err != nil {
@@ -221,7 +218,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type importLiquidCultureRequest struct {

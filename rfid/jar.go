@@ -69,25 +69,23 @@ func (j GrainJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Gener
 	return j.GenSinceSpore, j.GenSinceFruitOrSpore
 }
 
-func (j GrainJar) setTransferParent(ctx context.Context, xfer Transfer) (error, func() error) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName)
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	if err != nil {
-		return err, nil
-	}
-	res, err := coll.UpdateByID(ctx, j.Id, upd)
-	if err != nil {
-		return err, nil
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer, nil
-	}
-	return nil, func() error {
-		return coll.FindOneAndReplace(ctx, bson.D{{"_id", j.Id}}, j).Err()
-	}
-}
+//func (j GrainJar) setTransferParent(ctx context.Context, xfer Transfer) error {
+//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName)
+//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+//	if err != nil {
+//		return err
+//	}
+//	res, err := coll.UpdateByID(ctx, j.Id, upd)
+//	if err != nil {
+//		return err
+//	}
+//	if res.ModifiedCount == 0 {
+//		return ErrNoParentModifiedForTransfer
+//	}
+//	return nil
+//}
 
-func (j GrainJar) setTransferChild(ctx context.Context, xfer Transfer, from geneticSource) error {
+func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
@@ -107,7 +105,7 @@ func (j GrainJar) setTransferChild(ctx context.Context, xfer Transfer, from gene
 	if err != nil {
 		return ErrFailedToFinalizeMods
 	}
-	res, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).UpdateByID(ctx, j.Id, upd)
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(GrainJarCollectionName).UpdateByID(ctx, j.Id, upd)
 	if err != nil {
 		return err
 	}
@@ -265,8 +263,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(GrainJarCollectionName)
+	ctx, _ := Db(r)
 	now := unixTimeForNow()
 	pcrun := PcRunField{data.PcRun}
 	toInsert := GrainJar{
@@ -295,7 +292,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type importJarRequest struct {
@@ -419,7 +416,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	ctx, db := Db(r)
+	ctx, _ := Db(r)
 	//acl, err := data.PermsOnRequest.AclForUser(ctx, user) // TODO: USE THIS?
 	//if err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -443,7 +440,6 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:             AclField{finalPerms}, // TODO: acl from request instead???
 	}
 
-	coll := db.Collection(GrainJarCollectionName)
 	_, err = toInsert.PcRunOptionalField.Get(ctx)
 	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
 		dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
@@ -454,7 +450,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateJarRequest struct {
