@@ -12,6 +12,8 @@ import (
 	"slices"
 )
 
+// TODO: newFromLC
+
 // TODO: new are this, sporeSwab, plugs
 
 // Naming convention "{ParentLCID}-#" // TODO: ?????

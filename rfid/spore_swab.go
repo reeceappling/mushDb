@@ -11,6 +11,8 @@ import (
 	"net/http"
 )
 
+// TODO: fromSporePrint,
+
 type SporeSwab struct { // TODO: FIX EVERYTHING IN THIS FILE BELOW THIS POINT!!!!
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either sporePrint, or purchased

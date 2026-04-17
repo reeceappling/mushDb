@@ -10,6 +10,10 @@ import (
 	"net/http"
 )
 
+// TODO: CreatePlates
+// TODO: CreateSlants
+// TODO:
+
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
 	// CreationDate is assumed to be the same as on PcRun

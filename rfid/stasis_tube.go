@@ -16,9 +16,13 @@ import (
 	"strings"
 )
 
+// TODO: newFromPcRunWaterContainer? (allow either creation from water jar, or direct through pc
+// TODO: fromPcRun (when put in pc while already containing water)
+
 type StasisTube struct { // TODO: instructions somewhere?
 	MainCollectionIdField             `bson:"inline"`
 	PcRunOptionalField                `bson:"inline"` // probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
+	WaterJarOptionalField             `bson:"inline"` // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -163,6 +167,7 @@ func initializeStasisTubes(ctx context.Context) error {
 }
 
 type createStasisTubeRequest struct {
+	//WaterJarOptionalField // TODO: ALLOW THIS! // TODO: ALLOW THIS ONLY IF ADDING AFTER PC RUN
 	PcRunField
 	WriteTagToField
 }

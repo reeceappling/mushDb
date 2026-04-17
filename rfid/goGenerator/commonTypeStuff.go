@@ -220,6 +220,7 @@ func createOtherCollTypes() map[string]otherCollInfo {
 		"Transfer":        infoForO("t", "TransfersCollName", "transfers", "AlternateCollectionId"),
 		"User":            infoForO("u", "UserCollName", "users", "string"),
 		"Project":         infoForO("p", "ProjectsCollectionName", "Projects", "string"),
+		"WaterJar":        infoForO("wj", "WaterJarsCollectionName", "WaterJars", "AlternateCollectionId"),
 	}
 	// Set special perms types (user, project)
 	for _, key := range []string{"User", "Project"} {

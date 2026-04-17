@@ -1,5 +1,7 @@
 package rfid
 
+// TODO: inNewBag
+
 import (
 	"context"
 	"encoding/json"

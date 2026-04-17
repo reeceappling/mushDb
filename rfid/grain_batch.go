@@ -1,5 +1,7 @@
 package rfid
 
+// TODO: new
+
 // TODO: DO THIS WHOLE THING???
 // TODO: what about mixed-grain batches????
 

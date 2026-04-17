@@ -13,6 +13,8 @@ import (
 	"net/http"
 )
 
+// TODO: new (PC is created first, so it can be referenced)
+
 type LiquidCulture struct {
 	MainCollectionIdField             `bson:"inline"`
 	PcRunOptionalField                `bson:"inline"` // likely won't exist for pre-existing or purchased

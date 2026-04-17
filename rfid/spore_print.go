@@ -16,6 +16,10 @@ import (
 	"strings"
 )
 
+// TODO: harvestFruit from bag/box page? How do I want to track which fruit without writing on them or tagging them? Create a flush collection?
+// TODO: createSporePrint from fruit page
+// TODO: createSerialSporePrint from sporePrint page
+
 type SporePrint struct {
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either fruit, or purchased

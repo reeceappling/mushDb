@@ -14,6 +14,9 @@ import (
 	"slices"
 )
 
+// TODO: newFromAgarBatchPouredPostPC ???
+// TODO: newFromAgarBatchPouredPrePC (typical)
+
 type Slant struct {
 	MainCollectionIdField `bson:"inline"`
 	AgarBatchField        `bson:"inline"` // TODO: will be empty for preexisting

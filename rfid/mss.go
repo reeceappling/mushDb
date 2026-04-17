@@ -11,10 +11,15 @@ import (
 	"net/http"
 )
 
+// TODO: newFromPCdwater ????
+// TODO: newFromSporePrint (typical but requires PC-d water to not be referenced)
+// TODO: add sterilizedWaterJar table and page
+
 type MSS struct {
 	// ALWAYS assume contaminated
 	MainCollectionIdField   `bson:"inline"`
 	CreationDateField       `bson:"inline"`
+	WaterJarOptionalField   `bson:"inline"` // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS
 	SpeciesField            `bson:"inline"`
 	SubspeciesOptionalField `bson:"inline"`
 	// NOTE: parentType is always either sporePrint or purchased
@@ -115,7 +120,8 @@ func initializeMSS(ctx context.Context) error {
 }
 
 type createMssRequest struct {
-	SporePrintId AlternateCollectionId
+	WaterJarOptionalField // TODO: HANDLE THIS! Allow creation with or without
+	SporePrintId          AlternateCollectionId
 	NotesField
 	WriteTagToField
 	// Uses parent perms, then email can modify if they have the perms for parent

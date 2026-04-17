@@ -18,6 +18,8 @@ type AltCollectionIdType interface {
 	AlternateCollectionId | string
 }
 
+var _ AltCollectionItem[AlternateCollectionId] = &WaterJar
+
 type AltCollectionItem[T AltCollectionIdType] interface {
 	CollectionItem
 	DbId() T

@@ -1,5 +1,7 @@
 package rfid
 
+// TODO: newFromAgarBatch (post-PC) typical
+
 import (
 	"context"
 	"encoding/json"
@@ -28,8 +30,9 @@ type AgarOnOutsideAtPourTimeField struct {
 }
 
 type Plate struct {
-	MainCollectionIdField               `bson:"inline"`
-	AgarBatchField                      `bson:"inline"` // will be empty for preexisting
+	MainCollectionIdField `bson:"inline"`
+	AgarBatchField        `bson:"inline"` // will be empty for preexisting
+	// TODO: do we want PC run on here too? and on others like it?
 	CreationDateField                   `bson:"inline"`
 	CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
 	PourCoverageField                   `bson:"inline"` // Percentage of bottom surface area agar coverage
@@ -268,11 +271,6 @@ type createPlateRequest struct {
 func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 	data := createPlateRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), PlatesCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {

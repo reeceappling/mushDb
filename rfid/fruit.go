@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+// TODO: newSporeSwab
+
 type Fruit struct { // KnownFruitable is always true for this, // creation date field is id
 	MainCollectionIdField   `bson:"inline"`
 	CreationDateField       `bson:"inline"` // This is harvest date

@@ -16,10 +16,13 @@ import (
 	"strings"
 )
 
+// TODO: new (PC is created first, so it can be referenced)
+
 type GrainJar struct {
-	MainCollectionIdField             `bson:"inline"`
-	SizeCups                          int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
-	JarRecipeField                    `bson:"inline"`
+	MainCollectionIdField `bson:"inline"`
+	SizeCups              int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
+	JarRecipeField        `bson:"inline"`
+	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // TODO: HANDLE IN JAVASCRIPT
 	BurstGrainsField                  `bson:"inline"`
 	PcRunOptionalField                `bson:"inline"`

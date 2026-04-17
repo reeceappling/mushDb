@@ -1,5 +1,8 @@
 package rfid
 
+// TODO: ? includeStasisTubes, includeAgarBatches, includePlugsJar
+// TODO: newAgarBatch (on agar batch page)
+
 import (
 	"context"
 	"encoding/json"
