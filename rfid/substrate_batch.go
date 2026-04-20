@@ -1,7 +1,5 @@
 package rfid
 
-// TODO: inNewBag
-
 import (
 	"context"
 	"encoding/json"
@@ -15,6 +13,9 @@ import (
 	sliceutils "slices"
 )
 
+// TODO: used in:
+// TODO: bag, FruitingChamber
+
 type SubstrateBatch struct {
 	AlternateCollectionIdField `bson:"inline"`
 	// Initial wetness is quantified on each bag/box
@@ -25,11 +26,7 @@ type SubstrateBatch struct {
 	AclField             `bson:"inline"`
 }
 
-func (batch SubstrateBatch) EntryTypeField() *string { // TODO: make these not pointers
-	panic("substrate batch has no entry type field")
-}
-
-func initializeSubstrateBatches(ctx context.Context) error { // TODO: overhaul to match others
+func initializeSubstrateBatches(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateBatchCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
@@ -44,8 +41,7 @@ func initializeSubstrateBatches(ctx context.Context) error { // TODO: overhaul t
 		return err
 	}
 	inserted, updated := 0, 0
-	//defaultPerms := &Perms{}           // TODO: ensure ok
-	createdDate := CreationDateField{} // TODO: ensure ok
+	createdDate := CreationDateField{}
 	for _, entry := range []SubstrateBatch{
 		// Coir
 		{
@@ -146,33 +142,31 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
+	// Validate
+	_, err = req.SubstrateRecipeField.Get(r.Context())
+	if err != nil {
+		http.Error(w, "did not find substrate recipe: "+err.Error(), http.StatusNotFound)
+	}
 	id := newAlternateCollectionId()
 
 	ctx, db := Db(r)
 	coll := db.Collection(SubstrateRecipesCollectionName)
-	// TODO: all can read but only user can write perms
-	//resolvedUserPerms, err := GetAuthInfo(r.Context())
-	//if err != nil {
-	//	http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
-	//	return
-	//}
-	//acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
-	//if err != nil {
-	//	return dbErr(w, "failed to resolve new ACL: "+err.Error(), http.StatusInternalServerError)
-	//}
+	// all can read but only user can write perms
+	resolvedUserPerms, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
+		return
+	}
+	acl := allCanReadAcl()
+	acl.ACL.Users[resolvedUserPerms.Email] = true // TODO: can this be simplified?
+	// Create entry to insert
 	toInsert := SubstrateBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		CreationDateField:          CreationDateField{CreationDate: unixTimeForNow()},
-		SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate}, // TODO: validate
+		SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate},
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedFieldForNow(),
-		AclField:                   allCanWriteAcl(), // TODO: all can read but only user can write perms
-	}
-	// Validate
-	_, err = toInsert.SubstrateRecipeField.Get(ctx)
-	if err != nil {
-		http.Error(w, "failed to validate substrate recipe: "+err.Error(), http.StatusBadRequest)
-		return
+		AclField:                   acl,
 	}
 	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
 }

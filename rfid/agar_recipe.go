@@ -9,12 +9,14 @@ import (
 	"net/http"
 )
 
+// TODO: required for: agarBatch
+
 type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
-	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
-	StandardField              `bson:"inline"` // If this is a standard recipe
+	Agar                       int `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField              `bson:"inline"`               // If this is a standard recipe
 	NutrientsField             `bson:"inline"`
 	SugarsField                `bson:"inline"`
 	AdditivesField             `bson:"inline"`
@@ -22,10 +24,6 @@ type AgarRecipe struct {
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
-}
-
-func (recipe AgarRecipe) EntryTypeField() *string {
-	return nil
 }
 
 type updateAgarRecipeRequest struct {
@@ -64,7 +62,6 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//println("base58 reconverted: ", id.asBase58()) // TODO; DEL
 	ctx, db := Db(r)
 	coll := db.Collection(AgarRecipesCollectionName)
 
@@ -84,7 +81,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(AgarRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false), // TODO: names unique?
+		newSimpleIndex("name", "name", false, false, false),
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("agar", "agar", true, false, false),
 		standardIndexModel,

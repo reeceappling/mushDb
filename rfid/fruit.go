@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+// TODO: required for
+// TODO: newSporeSwab, newSporePrint, clone(plate, slant)
 // TODO: newSporeSwab
 
 type Fruit struct { // KnownFruitable is always true for this, // creation date field is id
@@ -82,10 +84,6 @@ func (f Fruit) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 func (f Fruit) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	// Transferring TO a fruit is not a thing
 	return errors.New("fruits are invalid transfer children, must be created from a fruiter, or imported")
-}
-
-func (f Fruit) EntryTypeField() *string {
-	return nil
 }
 
 //func (f Fruit) altId() AlternateCollectionId {
@@ -196,11 +194,6 @@ type createFruitResolved struct {
 func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FORMAT WITH DATA FIRST!
 	data := createFruitRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), FruitsCollName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	b58Id := id.asBase58()
 	defer r.Body.Close()
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
@@ -349,11 +342,6 @@ type importFruitRequest struct {
 func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?????
 	data := importFruitRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), FruitsCollName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err := r.MultipartReader()

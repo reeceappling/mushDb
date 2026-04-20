@@ -13,6 +13,8 @@ import (
 	"net/http"
 )
 
+// TODO: needed for creating fruits (unless from box or agar)
+
 // TODO: new (subs batch created first, then PC, so they can be referenced)
 
 type Bag struct {
@@ -111,10 +113,6 @@ func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from gene
 	return nil
 }
 
-func (b Bag) EntryTypeField() *string {
-	return utils.Pointer(BagSourceType)
-}
-
 func (b Bag) id() []byte {
 	return []byte(b.Id.dbIdStr())
 }
@@ -201,11 +199,6 @@ type createBagRequest struct {
 func createBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := createBagRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), BagsCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -392,11 +385,6 @@ type importBagRequest struct {
 
 func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := importBagRequest{}
-	//id, err := newMainCollectionId(r.Context(), BagsCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	id := NextMainCollectionId()
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)

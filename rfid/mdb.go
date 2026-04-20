@@ -93,7 +93,10 @@ func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
 	if err != nil {
 		return out, err
 	}
-	if len(bs) != RfidByteSize { // TODO: what about too long?
+	if len(bs) == RfidByteSize {
+		return MainCollectionId(bs), nil
+	}
+	if len(bs) < RfidByteSize {
 		// TODO: ensure padding ok
 		result := [RfidByteSize]byte{}
 		for i, b := range bs {
@@ -101,7 +104,8 @@ func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
 		}
 		return result, nil
 	}
-	return MainCollectionId(bs), nil
+	// TODO: what about too long?
+	panic("too long not handled yet")
 }
 
 func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
@@ -111,7 +115,10 @@ func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
 	if err != nil {
 		return out, err
 	}
-	if len(bs) != 12 { // TODO: what about too long?
+	if len(bs) == 12 {
+		return AlternateCollectionId(bs), nil
+	}
+	if len(bs) < 12 {
 		// TODO: ensure padding ok
 		result := [12]byte{}
 		for i, b := range bs {
@@ -119,10 +126,12 @@ func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
 		}
 		return result, nil
 	}
+	// TODO: what about too long?
+	panic("longer alts not handled yet")
 	return AlternateCollectionId(bs), nil
 }
 
-// Tested, working // TODO: remove comment
+// Tested, working
 func Base2BytesToBase58(littleEndianBytes []byte) (Base58Str, error) {
 	if len(littleEndianBytes)%4 != 0 {
 		return "", errors.Join(errors.New("Base2BytesToBase58 failed"), ErrInvalidByteLength) // TODO: unnecesary?
@@ -147,7 +156,12 @@ func (id BinaryCollectionId) AsMainCollectionId() (MainCollectionId, error) {
 	bs := []byte(id)
 	if len(bs) != RfidByteSize {
 		// TODO: PAD UP TO 8?
-		return MainCollectionId{}, errors.Join(errors.New("bin as main failed"), ErrInvalidByteLength)
+		result := [RfidByteSize]byte{}
+		for i, b := range bs {
+			result[RfidByteSize-len(bs)+i] = b // TODO: validate ok
+		}
+
+		return result, errors.Join(errors.New("bin as main failed"), ErrInvalidByteLength)
 	}
 	return MainCollectionId(bs), nil
 }
@@ -155,15 +169,18 @@ func (id BinaryCollectionId) AsMainCollectionId() (MainCollectionId, error) {
 func (id BinaryCollectionId) AsAltCollectionId() (AlternateCollectionId, error) {
 	bs := []byte(id)
 	if len(bs) != 12 {
-		// TODO: PAD UP TO 12!
-		return AlternateCollectionId{}, errors.Join(errors.New("bin as alt failed"), ErrInvalidByteLength)
+		// TODO: PAD UP TO 12?
+		result := [12]byte{}
+		for i, b := range bs {
+			result[12-len(bs)+i] = b // TODO: validate ok
+		}
+		return result, errors.Join(errors.New("bin as alt failed"), ErrInvalidByteLength)
 	}
 	return AlternateCollectionId(bs), nil
 }
 
 func (id BinaryCollectionId) Bytes() []byte {
 	return []byte(id[:])
-	//return []byte(id)
 }
 
 func (id BinaryCollectionId) ToBase58Bytes() []byte {
@@ -197,6 +214,7 @@ type mcidNode struct {
 var newMcids chan MainCollectionId
 
 // TODO: ctx should be cancellable here
+// TODO: need to THOROUGHLY test this, ensure that it is generating properly, and that there are no duplicates across batches, and that it is properly cancelled when context is done, and that the channel is properly closed and drained when context is done
 func StartGeneratingMCIDs(ctx context.Context, batchSize int) {
 	if newMcids != nil {
 		return
@@ -208,8 +226,15 @@ func StartGeneratingMCIDs(ctx context.Context, batchSize int) {
 			close(newMcids)
 			channels.Drain(newMcids)
 		}()
+
+		// Initialize lastSet to ensure no duplicates across batches
+		var (
+			ids     []MainCollectionId
+			err     error = nil
+			lastSet       = utils.Set[string]{}
+		)
 		for {
-			ids, err := generateMainCollectionIds(ctx, batchSize)
+			ids, lastSet, err = generateMainCollectionIds(ctx, batchSize, lastSet)
 			if err != nil {
 				println(err.Error())
 				continue
@@ -395,13 +420,15 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 
 	//uri := fmt.Sprintf("mongodb://%s", hostAndPort)
 	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
-	uri := fmt.Sprintf("mongodb://%s:%s@%s/?authSource=admin&replicaSet=rs0", usern, pass, hostAndPort)
+	hostPortAndParams := fmt.Sprintf("%s/?authSource=admin&replicaSet=rs0", hostAndPort)
+	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostPortAndParams)
 	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
 
 	// TODO: SET UP INITIAL USER IF USER DOES NOT EXIST!
 	// TODO: THIS SHOULD BE DONE VIA: https://stackoverflow.com/questions/42912755/how-to-create-a-db-for-mongodb-container-on-start-up
 
-	println(fmt.Sprintf(`trying to connect with %s %s`, usern, pass))
+	println("trying to connect to database")
+	//println(fmt.Sprintf(`trying to connect to database`, usern, pass))
 	opts := options.Client().
 		ApplyURI(uri).
 		SetDirect(true).
@@ -431,11 +458,10 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		break
 	}
 	if !connOk {
-		errConn := errors.New("Ping failed to " + uri)
+		errConn := errors.New("Ping failed to " + hostPortAndParams)
 		return ctx, nil, errors.Join(errConn, err)
-
 	}
-	println("Client connected to db at " + uri) // TODO: del because of usern and pass
+	println("Client connected to db at " + hostPortAndParams)
 	return context.WithValue(ctx, mongoClientContextKey, client), client, nil
 }
 
@@ -466,14 +492,32 @@ func GetMongoClient(ctx context.Context) *mongo.Client {
 	return val
 }
 
-func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, error) {
+func chanWithPostSendHook[T any](out chan<- T, afterFinalSend func(T)) (inpC chan<- T) {
+	inp, out := make(chan T), make(chan T)
+	go func() {
+		defer close(out)
+		for val := range inp {
+			out <- val
+			// Once validated sent, do the onSend handler
+			afterFinalSend(val)
+		}
+	}()
+	return inp
+}
+
+func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[string]) ([]MainCollectionId, utils.Set[string], error) {
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-	out := make([]MainCollectionId, n)
-	for i, _ := range out {
-		found := utils.Set[string]{}
-		for { // TODO: break eventually
+	out := make([]MainCollectionId, 0, n)
+	found := utils.Set[string]{}
+	for ctFound := 0; ctFound < n; {
+		select {
+		case <-ctx.Done():
+			// Break if context complete
+			return nil, found, ctx.Err()
+		default:
 			newId := randomRFID(RfidByteSize)
-			if found.Contains(string(newId[:])) {
+			idStr := string(newId[:])
+			if found.Contains(idStr) || lastSet.Contains(idStr) {
 				continue
 			}
 
@@ -483,22 +527,16 @@ func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, 
 			if err != nil {
 				if errors.Is(err, mongo.ErrNoDocuments) {
 					found.Add(string(newId[:]))
-					out[i] = MainCollectionId(newId)
-					break
+					ctFound++ // Increment num valid found
+					out = append(out, MainCollectionId(newId))
+				} else {
+					return out, found, errors.Join(err, errors.New("failed to generate mainCollectionId"))
 				}
-				return out, errors.Join(err, errors.New("failed to generate mainCollectionId"))
 			}
+			// Item exists already, continue loop and do not add
 		}
 	}
-	return out, nil
-}
-
-func newMainCollectionId(ctx context.Context) (MainCollectionId, error) {
-	ids, err := generateMainCollectionIds(ctx, 1)
-	if err != nil {
-		return MainCollectionId{}, err
-	}
-	return ids[0], nil
+	return out, found, nil
 }
 
 //func getLastNEntriesForType[T]() { // TODO: do this
@@ -623,6 +661,7 @@ func ImportHandler() http.HandlerFunc {
 			"sporePrint":      importSporePrintHandler,
 			"sporeSwab":       importSporeSwabHandler,
 			"stasisTube":      importStasisTubeHandler,
+			// TODO: import water jar handler?
 		}[endpt]
 		if !exists {
 			http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)

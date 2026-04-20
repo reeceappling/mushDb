@@ -13,6 +13,8 @@ import (
 	"net/http"
 )
 
+// TODO: needed for creating fruits (unless fruits came from agar)
+
 // TODO: HANDLE MULTIPLE GRAIN INPUTS FOR MONOTUBS (DO MONOTUBS LATER)
 type FruitingChamber struct { // TODO: SHOEBOX
 	MainCollectionIdField             `bson:"inline"`
@@ -114,10 +116,6 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 	return nil
 }
 
-func (f FruitingChamber) EntryTypeField() *string {
-	return utils.Pointer(FruitingChamberSourceType)
-}
-
 //func (f FruitingChamber) basicFruit() Fruit {
 //	return Fruit{
 //		MainCollectionIdField:        MainCollectionIdField{MainCollectionId(primitive.NewObjectID())},
@@ -213,11 +211,6 @@ type createFruitingChamberRequest struct {
 func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := createFruitingChamberRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), FruitingChamberCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -282,11 +275,6 @@ type importFruitingChamberRequest struct {
 func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitingChamberRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), FruitingChamberCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: REDO THIS MULTIPART READER
 	defer r.Body.Close()

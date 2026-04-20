@@ -8,6 +8,8 @@ import (
 	"slices"
 )
 
+// TODO: sometimes needed for transfers
+
 // TODO: addPCRun (rename)
 
 // TODO: this whole thing whenever we need to
@@ -57,10 +59,6 @@ func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fro
 func (pl PlugsJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (pl PlugsJar) EntryTypeField() *string {
-	return nil
 }
 
 type Dowel struct { // TODO: use?

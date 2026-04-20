@@ -1,5 +1,7 @@
 package rfid
 
+// TODO: needed for grain jars
+
 // TODO: new
 
 // TODO: DO THIS WHOLE THING???
@@ -25,10 +27,6 @@ package rfid
 //	out := batch
 //	err := decodeItem(&out, encoded)
 //	return out, err
-//}
-//
-//func (batch GrainBatch) EntryTypeField() *string {
-//	return nil
 //}
 //
 //func (batch GrainBatch) CollectionName() string {

@@ -11,6 +11,8 @@ import (
 	"net/url"
 )
 
+// TODO: required for all mainCollectionItems, as well as subspecies
+
 type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
 	ScientificName    string          `bson:"scientificName" json:"scientificName"`
@@ -21,10 +23,6 @@ type Species struct {
 	AclField          `bson:"inline"`
 	DefaultAcl        *ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // TODO; NEW!!! // Only used when importing!
 
-}
-
-func (sp Species) EntryTypeField() *string {
-	return nil
 }
 
 const shiitakeName = "Shiitake"
@@ -116,7 +114,7 @@ func initializeSpecies(ctx context.Context) error {
 			AclField: allCanWriteAcl(),
 		},
 		// Beech
-		{ // TODO: WHITE AND BROWN
+		{
 			NameIdField:       NameIdField{"Beech"},
 			ScientificName:    "", // TODO: this
 			AliasesField:      AliasesField{[]string{"hen of the woods"}},
@@ -125,6 +123,7 @@ func initializeSpecies(ctx context.Context) error {
 				newNote(ogTime, "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin"),
 				newNote(ogTime, "50-60DegF, 80-90RH, FAE"),
 				newNote(ogTime, "Best Agar: LMEA"),
+				newNote(ogTime, "Can be white (patented) subspecies or brown"),
 			}},
 			AclField: allCanWriteAcl(),
 		},
@@ -141,7 +140,7 @@ func initializeSpecies(ctx context.Context) error {
 		StandardSubstrate: exAltId,
 		NotesField:        NotesField{exampleNotes()},
 		LastUpdatedField:  LastUpdatedField{exampleTime},
-		AclField:          allCanReadAcl(), // TODO: write?
+		AclField:          allCanReadAcl(),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
@@ -253,11 +252,11 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	finishStringIdAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
-func getSpecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
-	// TODO: DO THIS! ALSO ALLOW SEARCHING VIA SCIENTIFIC NAME OR ALIASES
-	// TODO: maybe use a trie???
-	panic("not yet implemented")
-}
+//func getSpecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
+//	// TODO: DO THIS! ALSO ALLOW SEARCHING VIA SCIENTIFIC NAME OR ALIASES
+//	// TODO: maybe use a trie???
+//	panic("not yet implemented")
+//}
 
 func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
 	sp := Species{}

@@ -13,6 +13,9 @@ import (
 	"net/http"
 )
 
+// TODO: needed for transfers sometimes
+// TODO: needed to create lcSyringes
+
 // TODO: new (PC is created first, so it can be referenced)
 
 type LiquidCulture struct {
@@ -81,10 +84,6 @@ func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer,
 		return ErrNoParentModifiedForTransfer
 	}
 	return nil
-}
-
-func (l LiquidCulture) EntryTypeField() *string {
-	return utils.Pointer(LcSourceType)
 }
 
 func (l LiquidCulture) id() []byte {
@@ -160,11 +159,6 @@ type createLiquidCultureRequest struct {
 func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := createLiquidCultureRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), LCCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {

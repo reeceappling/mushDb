@@ -11,6 +11,9 @@ import (
 	"net/http"
 )
 
+// TODO: needed for MSS-MSS transfers
+// TODO: needed for MSS-plate/slant transfers
+
 // TODO: newFromPCdwater ????
 // TODO: newFromSporePrint (typical but requires PC-d water to not be referenced)
 // TODO: add sterilizedWaterJar table and page
@@ -81,10 +84,6 @@ func (M MSS) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from gene
 	return errors.New("mss cannot be a child in a normal transfer. Must be created manually from spore print or imported")
 }
 
-func (M MSS) EntryTypeField() *string {
-	return utils.Pointer(MssSourceType)
-}
-
 func initializeMSS(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(MssCollectionName)
@@ -130,11 +129,6 @@ type createMssRequest struct {
 func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called from spore print page
 	data := createMssRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), MssCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {

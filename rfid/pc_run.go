@@ -1,5 +1,10 @@
 package rfid
 
+// TODO: needed for:
+// TODO: AgarBatch, Bag, Jar, LC, Plugs, Slant, StasisTube, WaterJar
+// TODO: needed for but provided from another:
+// TODO:  Plate, MSS,
+
 // TODO: ? includeStasisTubes, includeAgarBatches, includePlugsJar
 // TODO: newAgarBatch (on agar batch page)
 
@@ -19,10 +24,6 @@ type PCRun struct {
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
-}
-
-func (run PCRun) EntryTypeField() *string {
-	return nil
 }
 
 func initializePCRun(ctx context.Context) error {

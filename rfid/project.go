@@ -12,6 +12,8 @@ import (
 	"net/http"
 )
 
+// TODO: needed for: ???????????????
+
 type projectName string
 
 type Project struct {
@@ -37,10 +39,6 @@ func (p Project) AddUser(u User, perm *ReadWritePerm) string {
 
 func (p Project) IdValue() any {
 	return string(p.Name)
-}
-
-func (p Project) EntryTypeField() *string {
-	return nil
 }
 
 func initializeProjects(ctx context.Context) error {

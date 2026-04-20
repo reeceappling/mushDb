@@ -10,6 +10,8 @@ import (
 	"net/http"
 )
 
+// TODO: needed for lc, lcSyringe
+
 type LcRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
@@ -32,10 +34,6 @@ func (field LcRecipeField) Get(ctx context.Context) (out LcRecipe, err error) {
 		"_id": field.Recipe,
 	}).Decode(&out)
 	return out, err
-}
-
-func (recipe LcRecipe) EntryTypeField() *string {
-	return nil
 }
 
 func initializeLcRecipes(ctx context.Context) error {

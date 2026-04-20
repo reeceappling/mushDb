@@ -63,10 +63,6 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	AclField                   `bson:"inline"`
 }
 
-func (t Transfer) EntryTypeField() *string {
-	return nil
-}
-
 func (t Transfer) PicsModsForChild() *Mods {
 	if t.ToImage == nil {
 		return NewMods()
@@ -284,9 +280,6 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// TODO: set child perms to the parent perms!
-
-	// TODO: ensure email has perms to make this transfer? (can edit parent)
 	resolvedPerms, err := GetResolvedUserPerms(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -311,7 +304,8 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		ToImage:                    (*imageLocation)(toPic),
 		NotesField:                 data.NotesField,
 		LastUpdatedField:           LastUpdatedFieldForNow(),
-		AclField:                   AclField{ACL: parent.Permissions()},
+		//set child perms to the parent perms!
+		AclField: AclField{ACL: parent.Permissions()},
 	}
 	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
 		_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)
@@ -319,8 +313,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			return nil, err
 		}
 
-		//err = parent.setTransferParent(ctx, xfer) // TODO: Del?
-		if err = setTransferParent(sessCtx, parent, xfer); err != nil { // TODO: should be session
+		if err = setTransferParent(sessCtx, parent, xfer); err != nil {
 			return nil, errors.Join(errors.New("failed to set transfer parent"), err)
 		}
 
@@ -344,85 +337,11 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		// Do not rollback here. Data made it in successfully
 		handleWriteErr(errWriting, w)
 	}
-	//ctx, sess, err := createMongoSession(ctx)
-	//if err != nil {
-	//	http.Error(w, "failed to create db session for transfer: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//defer sess.EndSession(ctx)
-	//opts := []*options.TransactionOptions{} // TODO: FIXME
-	//if err = sess.StartTransaction(opts...); err != nil {
-	//	http.Error(w, "failed to start transfer transaction: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//
-	////WithTransaction(ctx, func(ctx mongo.SessionContext)(any, error){
-	////	return nil, nil
-	////}, opts...)
-	//
-	//_, err = db.Collection(TransfersCollName).InsertOne(ctx, xfer)
-	//if err != nil {
-	//	err = errors.Join(err, sess.AbortTransaction(ctx))
-	//	http.Error(w, "failed to create transfer: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	////// Set rollback
-	////rollbackXfer := func() error {
-	////	result, errrr := db.Collection(TransfersCollName).DeleteOne(ctx, bson.D{bson.E{Key: "_id", Value: xfer.Id}})
-	////	if errrr != nil {
-	////		return errrr
-	////	}
-	////	if result.DeletedCount == 0 {
-	////		return errors.New("transfer not deleted")
-	////	}
-	////	return nil
-	////}
-	//err = setTransferParent(ctx, parent, xfer)
-	////err = parent.setTransferParent(ctx, xfer) // TODO: Del?
-	//if err != nil {
-	//	err = errors.Join(errors.New("failed to set transfer parent"), sess.AbortTransaction(ctx), err)
-	//	//err = errors.Join(errors.New("failed to set transfer parent"), rollbackXfer(), err)
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//err = child.setTransferChild(ctx, xfer, parent)
-	//if err != nil {
-	//	err = errors.Join(err, sess.AbortTransaction(ctx))
-	//	//parentRollbackErr := rollbackParent()
-	//	//if parentRollbackErr != nil {
-	//	//	// TODO: HUGE ERROR. FIGURE OUT
-	//	//}
-	//	//xferRollbackErr := rollbackXfer()
-	//	//if xferRollbackErr != nil {
-	//	//	// TODO: HUGE ERROR. FIGURE OUT
-	//	//}
-	//	//err = errors.Join(errors.New("failed to set transfer child"), parentRollbackErr, xferRollbackErr, err)
-	//	http.Error(w, "failed to set transfer child: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//err = sess.CommitTransaction(ctx)
-	//if err != nil {
-	//	http.Error(w, "failed to commit transaction for transfer creation: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//
-	//bsOut, errMarshalling := json.Marshal(xfer)
-	//if errMarshalling != nil { // Not err because err != nil at end will delete all images
-	//	// Do not rollback here. Data made it in successfully
-	//	http.Error(w, errMarshalling.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//
-	//_, errWriting := w.Write(bsOut)
-	//if errWriting != nil {
-	//	// Do not rollback here. Data made it in successfully
-	//	handleWriteErr(errWriting, w)
-	//}
 }
 
 type updateTransferRequest struct {
 	NotesUpdateField
-	PermsOnRequest // TODO: ????????? handle in typescript and handler!
+	PermsOnRequest // TODO: should transfers always keep parent or child perms? // TODO: ????????? handle in typescript and handler!
 }
 
 func (req updateTransferRequest) modsFor(existing *Transfer, aclField AclField) (bson.D, error) {

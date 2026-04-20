@@ -12,6 +12,8 @@ import (
 	"slices"
 )
 
+// TODO: needed for xfers
+
 // TODO: newFromLC
 
 // TODO: new are this, sporeSwab, plugs
@@ -83,10 +85,6 @@ func (sw LcSyringe) generation() (sinceSpore *Generation, sinceSporeOrClone *Gen
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
-func (sw LcSyringe) EntryTypeField() *string {
-	return nil
-}
-
 func (sw LcSyringe) altId() MainCollectionId {
 	return sw.Id
 }
@@ -152,11 +150,6 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), LcSyringeCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -275,11 +268,6 @@ type importLcSyringeRequest struct {
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLcSyringeRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), LcSyringeCollectionName)
-	//if err != nil {
-	//	http.Error(w, "failed to create new mainCollectionId", http.StatusInternalServerError)
-	//	// TODO: err
-	//}
 	defer r.Body.Close()
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)

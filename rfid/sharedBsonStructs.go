@@ -564,6 +564,7 @@ func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 		// future is not empty, so set it
 		return upd.Set("aliases", future)
 	}
+	// TODO: validate no repeats in future or existing
 	if futureIsEmpty {
 		return upd.Unset("aliases") // unset aliases
 	}

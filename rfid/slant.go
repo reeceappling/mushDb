@@ -14,8 +14,8 @@ import (
 	"slices"
 )
 
-// TODO: newFromAgarBatchPouredPostPC ???
-// TODO: newFromAgarBatchPouredPrePC (typical)
+// TODO: sometimes needed for transfers
+// TODO: needed for clones
 
 type Slant struct {
 	MainCollectionIdField `bson:"inline"`
@@ -115,10 +115,6 @@ func (s Slant) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 	return nil
 }
 
-func (s Slant) EntryTypeField() *string {
-	return utils.Pointer(SlantSourceType)
-}
-
 func (s Slant) id() []byte {
 	return []byte(s.Id.dbIdStr())
 }
@@ -190,11 +186,6 @@ type createSlantRequest struct {
 func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSlantRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), SlantsCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -279,7 +270,6 @@ func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toI
 
 // TODO: MOVE
 func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, reqPerms PermsOnRequest, w http.ResponseWriter) {
-	// TODO: validate that species and subspecies exist???
 	genetics, err := toInsert.GeneticInfoAsParent()
 	if err != nil {
 		http.Error(w, "failed to get genetic info: "+err.Error(), http.StatusInternalServerError)
@@ -290,15 +280,16 @@ func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Set ACL to default from parent species/subspecies
+	// Set ACL to default from parent species/subspecies // TODO: view how slant does it, the user should be able to add what they want
 	// Note: users can always import, but they may not be able to write afterwards if they do not meet the permissions...
-	var acl = AclField{ACL: &ACL{}}
-	if subsp != nil {
-		acl.ACL = subsp.DefaultAcl
-	} else {
-		acl.ACL = sp.DefaultAcl
-	}
-	toInsert.SetPerms(acl)
+	//var acl = AclField{ACL: &ACL{}}
+	//if subsp != nil {
+	//	acl.ACL = subsp.DefaultAcl
+	//} else {
+	//	acl.ACL = sp.DefaultAcl
+	//}
+	//// TODO: add user to import!!!!!
+	//toInsert.SetPerms(acl)
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
@@ -400,11 +391,6 @@ type importSlantRequest struct {
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSlantRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), SlantsCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
@@ -432,10 +418,6 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "email cannot write to provided perms: "+err.Error(), http.StatusBadRequest)
-	//	return // TODO MAKE SURE TO ONLY TAKE SPECIES OVERLAP WITH REQUEST?
-	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)

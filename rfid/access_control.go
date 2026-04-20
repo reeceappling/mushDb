@@ -57,10 +57,10 @@ func (acl *ACL) Clone() *ACL {
 		return nil
 	}
 	out := ACL{
+		Users:       cloneMap(acl.Users),
+		Projects:    cloneMap(acl.Projects),
 		BlanketPerm: acl.BlanketPerm,
 	}
-	out.Users = cloneMap(acl.Users)
-	out.Projects = cloneMap(acl.Projects)
 	return &out
 }
 
@@ -88,11 +88,11 @@ func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
 	}
 	blanketPermIfc, ok := temp["blanketPerm"]
 	if !ok {
-		return errors.New("ACL blanketPerm must be a present boolean field")
+		return errors.New("ACL blanketPerm must be a present boolean field v1")
 	}
 	out.BlanketPerm, ok = blanketPermIfc.(bool)
 	if !ok {
-		return errors.New("ACL blanketPerm must be a present boolean field")
+		return errors.New("ACL blanketPerm must be a present boolean field v2")
 	}
 	*acl = *(out.simplified())
 	return nil
@@ -322,11 +322,12 @@ func (pp ProjectPerms) Equal(other ProjectPerms) bool {
 	return true
 }
 
-type UserPerms struct { // TODO: USE!
+type UserPerms struct {
 	Admin    *bool         `bson:"admin,omitempty" json:"admin,omitempty"` // nil == guest, false == regular email, true==Admin
 	Projects []projectName `bson:"projects,omitempty" json:"projects,omitempty"`
 }
 
+// TODO: use?
 func newAlwaysReadableAcl(ctx context.Context, thisUserPerms ResolvedUserPerms, usersThatCanEdit []string, projectsThatCanEdit []projectName) (AclField, error) {
 	return PermsOnRequest{
 		UserPerms: slices.MapToMap(usersThatCanEdit, func(i string) (string, bool) {
@@ -337,6 +338,9 @@ func newAlwaysReadableAcl(ctx context.Context, thisUserPerms ResolvedUserPerms, 
 		}),
 		BlanketPerm: newPerm(false),
 	}.AclForUser(ctx, thisUserPerms)
+}
+func alwaysWriteableAcl() AclField { // TODO: use?
+	return AclField{}
 }
 
 var testAclStrings = []string{

@@ -10,6 +10,8 @@ import (
 	"net/http"
 )
 
+// TODO: used in substrateBatch, species, (bag, fruiting chamber, get it either provided or from the substrateBatch)
+
 var _ CollectionItem = &SubstrateRecipe{}
 
 type SubstrateRecipeField struct {
@@ -31,10 +33,6 @@ type SubstrateRecipe struct {
 	NotesField                 `bson:"inline"` // ingredients in notes
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
-}
-
-func (recipe SubstrateRecipe) EntryTypeField() *string {
-	return nil
 }
 
 func initializeSubstrates(ctx context.Context) error {
@@ -99,9 +97,8 @@ func initializeSubstrates(ctx context.Context) error {
 		AliasesField:               AliasesField{[]string{"testSubstrate", "example substrate"}},
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanWriteAcl(), // TODO: write?
+		AclField:                   allCanWriteAcl(),
 	}
-	// TODO: add built-in entries
 	return addTestAltEntries(ctx, testItem)
 }
 
@@ -115,7 +112,7 @@ func (requestPerms PermsOnRequest) DefaultAcl() *ACL {
 	return &ACL{
 		Users:       requestPerms.UserPerms,
 		Projects:    requestPerms.ProjectPerms,
-		BlanketPerm: false,
+		BlanketPerm: requestPerms.BlanketPerm != nil, // TODO: is this ok?
 	}
 }
 

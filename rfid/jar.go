@@ -16,6 +16,8 @@ import (
 	"strings"
 )
 
+// TODO: needed for transfers
+
 // TODO: new (PC is created first, so it can be referenced)
 
 type GrainJar struct {
@@ -116,10 +118,6 @@ func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from
 		return ErrNoParentModifiedForTransfer
 	}
 	return nil
-}
-
-func (j GrainJar) EntryTypeField() *string {
-	return utils.Pointer(GrainJarSourceType)
 }
 
 func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection {
@@ -250,11 +248,6 @@ type createJarRequest struct {
 func createJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := createJarRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), GrainJarCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -313,11 +306,6 @@ type importJarRequest struct {
 func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := importJarRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), GrainJarCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do multipart streamlined way
 	defer r.Body.Close()

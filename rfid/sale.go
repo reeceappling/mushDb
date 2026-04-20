@@ -42,15 +42,12 @@ func (field SalesField) AddSale() {
 
 type Sale struct {
 	AlternateCollectionIdField `bson:"inline"`
+	// TODO: price????? other info?????
 	//Lot               AlternateCollectionId `bson:"_id" json:"_id"` // Lot number // TODO: REMOVED
 	CreationDateField `bson:"inline"` // This is sale date
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	AclField          `bson:"inline"`
-}
-
-func (s Sale) EntryTypeField() *string {
-	return nil
 }
 
 // TODO: func to create plugs sale?

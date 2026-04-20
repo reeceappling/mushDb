@@ -10,9 +10,9 @@ import (
 	"net/http"
 )
 
+// Required for
 // TODO: CreatePlates
-// TODO: CreateSlants
-// TODO:
+// TODO: CreateSlants (still required if the slants are directly PC'd
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
@@ -37,10 +37,6 @@ func (field AgarBatchField) Get(ctx context.Context) (out AgarBatch, err error) 
 		"_id": *field.AgarBatch,
 	}).Decode(&out)
 	return out, err
-}
-
-func (batch AgarBatch) EntryTypeField() *string {
-	return nil
 }
 
 //type NewAgarBatchRequest struct {

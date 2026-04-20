@@ -12,6 +12,8 @@ import (
 	"net/http"
 )
 
+// TODO: needed for grainJars
+
 const JarRecipesCollectionName = "jarRecipes"
 
 type JarRecipeField struct {
@@ -59,10 +61,6 @@ func (recipe JarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, err
 	out := recipe
 	err := decodeItem(&out, encoded)
 	return out, err
-}
-
-func (recipe JarRecipe) EntryTypeField() *string {
-	return nil
 }
 
 func (recipe JarRecipe) CollectionName() string {

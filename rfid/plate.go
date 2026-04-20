@@ -16,6 +16,9 @@ import (
 	"slices"
 )
 
+// TODO: sometimes needed for transfers
+// TODO: needed for clones
+
 type CondensationCoverageAtSealTimeField struct {
 	CondensationCoverageAtSealTime *int `bson:"condensationCoverageAtSealTime,omitempty" json:"condensationCoverageAtSealTime,omitempty"` // TODO: (0-100), HANDLE EVERYWHERE, NEW!
 }
@@ -109,10 +112,6 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		return ErrNoParentModifiedForTransfer
 	}
 	return nil
-}
-
-func (p Plate) EntryTypeField() *string {
-	return utils.Pointer(PlateSourceType)
 }
 
 func initializePlates(ctx context.Context) error {
@@ -456,11 +455,6 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data := importPlateRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), PlatesCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	b58id := id.asBase58()
 	println("multipart reader if necessary")
 	reader, err := multipartReaderForRequest(r, w, &data)
@@ -534,7 +528,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-	println("getting spsub")
+	println("getting speciest and subspecies")
 	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)

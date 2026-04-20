@@ -11,6 +11,11 @@ import (
 	"net/http"
 )
 
+// TODO: required for:
+// TODO: MSS
+// TODO:
+// TODO: Stasis tube (if filled with water later, probably not)
+
 type WaterJar struct { // TODO: HANDLE THIS EVERYWHERE! DO ALL TYPESCRIPT FOR THIS!
 	MainCollectionIdField `bson:"inline"`
 	CreationDateField     `bson:"inline"` // From PcRun
@@ -98,7 +103,7 @@ type createWaterJarRequest struct {
 	WriteTagToField
 }
 
-func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: THIS!
+func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: THIS! test ts!
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -128,7 +133,11 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		LastUpdatedField:      LastUpdatedField{unixTimeForNow()},
 	}
 
-	// TODO: HANDLE WriteTagTo
+	err = writeRfidTagIfNecessary(r.Context(), req.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	finishCreateAlternateEntry(ctx, db.Collection(WaterJarsCollectionName), toInsert, w)
 }
 

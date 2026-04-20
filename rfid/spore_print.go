@@ -73,53 +73,38 @@ func (sp SporePrint) CanTransferTo(dst geneticSource) error {
 	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
 
-//func (sp SporePrint) setTransferParent(ctx context.Context, xfer Transfer) error { // TODO: sessionContext instead?
-//	// TODO: can this even occur?
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sp.CollectionName())
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, sp.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
-
+// TODO: createSporePrint should be its own endpoint which accepts a fruit. It can also be called from other spore print pages to do "chaining"
 func (sp SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
-	// TODO: can this happen????? should always be from a fruit right?
-	// This is a special case because it will always be 0-gen
-	parentInfo, err := from.GeneticInfoAsParent()
-	if err != nil {
-		return err
-	}
-	if parentInfo.Species == nil {
-		return errors.New("parent must have a species")
-	}
-	if from.SourceType() != FruitSourceType {
-		return errors.New("only fruits are supported as a transfer source type into sporePrints")
-	}
-	upd, err := xfer.
-		PicsModsForChild().
-		withInnoc(xfer).
-		withParent(utils.Pointer(from.DbId())).
-		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
-		withPerms(from.Permissions()).
-		updateLastUpdatedIfNeeded().
-		Finalized()
-	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(sp.CollectionName()).UpdateByID(ctx, sp.Id, upd)
-	if err != nil {
-		return err
-	}
-	if res.ModifiedCount == 0 {
-		return ErrNoParentModifiedForTransfer
-	}
-	return nil
+	return errors.New("spore prints cannot be the destination of a transfer")
+	//// TODO: can this happen????? should always be from a fruit right?
+	//// This is a special case because it will always be 0-gen
+	//parentInfo, err := from.GeneticInfoAsParent()
+	//if err != nil {
+	//	return err
+	//}
+	//if parentInfo.Species == nil {
+	//	return errors.New("parent must have a species")
+	//}
+	//if from.SourceType() != FruitSourceType {
+	//	return errors.New("only fruits are supported as a transfer source type into sporePrints")
+	//}
+	//upd, err := xfer.
+	//	PicsModsForChild().
+	//	withInnoc(xfer).
+	//	withParent(utils.Pointer(from.DbId())).
+	//	withSpecies(parentInfo.Species).
+	//	withSubspecies(parentInfo.SubSpecies).
+	//	withPerms(from.Permissions()).
+	//	updateLastUpdatedIfNeeded().
+	//	Finalized()
+	//res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(sp.CollectionName()).UpdateByID(ctx, sp.Id, upd)
+	//if err != nil {
+	//	return err
+	//}
+	//if res.ModifiedCount == 0 {
+	//	return ErrNoParentModifiedForTransfer
+	//}
+	//return nil
 }
 
 func (sp SporePrint) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -132,10 +117,6 @@ func (sp SporePrint) GeneticInfoAsParent() (GeneticParentInfo, error) {
 
 func (sp SporePrint) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
-}
-
-func (sp SporePrint) EntryTypeField() *string {
-	return nil
 }
 
 func (sp SporePrint) id() []byte {
@@ -209,11 +190,6 @@ type resolvedCreateSporePrintRequest struct {
 func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSporePrintRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context())
-	//if err != nil {
-	//	http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	b58Id := id.asBase58()
 	defer r.Body.Close()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
@@ -431,6 +407,7 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		// Already wrote
 		return
 	}
+	// TODO: validate spore print color and density inputs
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
@@ -468,12 +445,7 @@ type importSporePrintRequest struct {
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporePrintRequest{}
-	id := NextMainCollectionId() // TODO: USE THIS EVERYWHERE INSTEAD OF newMainCollectionId
-	//id, err := newMainCollectionId(r.Context())
-	//if err != nil {
-	//	http.Error(w, "unable to create new mainCollId: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
+	id := NextMainCollectionId()
 	b58id := id.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
@@ -550,6 +522,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
+	// TODO: validate spore print color and density inputs
 
 	ctx, db := Db(r)
 	coll := db.Collection(SporePrintCollectionName)

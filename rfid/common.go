@@ -44,7 +44,6 @@ var (
 
 type CollectionItem interface { // TODO: ADD USER TO THIS?
 	CollectionName() string
-	//EntryTypeField() *string // TODO: GET RID OF // "entryType" field. Non-nil for main collection items
 	Decode(*mongo.SingleResult) (CollectionItem, error)
 	IdValue() any // binary string id?
 }
@@ -414,6 +413,8 @@ func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work f
 		return &Transfer{}, nil
 	case "user", "users":
 		return &User{}, nil
+	case "waterJar":
+		return &WaterJar{}, nil
 	default:
 		return nil, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name"))
 	}

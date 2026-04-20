@@ -13,7 +13,7 @@ type idMapEntry struct {
 	EntryType string           `bson:"entryType" json:"entryType"`
 }
 
-func initializeItemMapCollection(ctx context.Context) error {
+func initializeItemMapCollection(ctx context.Context) error { // TODO: USE!
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{

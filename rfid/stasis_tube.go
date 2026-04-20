@@ -21,15 +21,15 @@ import (
 
 type StasisTube struct { // TODO: instructions somewhere?
 	MainCollectionIdField             `bson:"inline"`
-	PcRunOptionalField                `bson:"inline"` // probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
-	WaterJarOptionalField             `bson:"inline"` // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS
+	PcRunOptionalField                `bson:"inline"` // All tubes must go through the PC. probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
+	WaterJarOptionalField             `bson:"inline"` // Only populated if the tubes are not PC'd with water inside // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // TODO: must be plate, slant, or purchased
+	ParentTypeField                   `bson:"inline"` // must be plate, slant, or empty (purchased/other)
 	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`
@@ -103,10 +103,6 @@ func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 	return nil
 }
 
-func (s StasisTube) EntryTypeField() *string {
-	return utils.Pointer(StasisTubeSourceType)
-}
-
 func (s StasisTube) id() []byte {
 	return []byte(s.Id.dbIdStr())
 }
@@ -175,11 +171,6 @@ type createStasisTubeRequest struct {
 func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := createStasisTubeRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), StasisTubeCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -249,16 +240,16 @@ type resolvedUpdateStasisTubeRequest struct {
 }
 
 func (req resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclField AclField) (bson.D, error) {
-	return NewMods(). // TODO: exactly the same as plate, ok?
-				updateKnownFruitableIfNeeded(req, existing).
-				updateSaleIfNeeded(req.Sale, existing.Sale).
-				updateDisposedIfNeeded(req, existing).
-				updateNotesIfNeeded(req, existing).
-				updatePicsIfNeeded(req.Images, existing.Pics).
-				updateContamsIfNeeded(req.Contams, existing.Contaminations).
-				updatePermsIfNeeded(aclField.ACL, existing.ACL).
-				updateLastUpdatedIfNeeded().
-				Finalized()
+	return NewMods().
+		updateKnownFruitableIfNeeded(req, existing).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
@@ -417,11 +408,6 @@ type importStasisTubeRequest struct {
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importStasisTubeRequest{}
 	id := NextMainCollectionId()
-	//id, err := newMainCollectionId(r.Context(), StasisTubeCollectionName)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	b58id := id.asBase58()
 	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
@@ -429,10 +415,6 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "email cannot write with overlapping perms: "+err.Error(), http.StatusUnauthorized)
-	//	return // TODO: ok? check species or no?
-	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)

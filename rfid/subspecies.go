@@ -24,10 +24,6 @@ type Subspecies struct {
 	DefaultAcl       *ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // Only used when importing mainCollectionItems
 }
 
-func (subsp Subspecies) EntryTypeField() *string {
-	return nil
-}
-
 func initializeSubspecies(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubspeciesCollectionName)
@@ -75,7 +71,7 @@ func initializeSubspecies(ctx context.Context) error {
 		AliasesField:     AliasesField{[]string{"testSubSpecies", "example subspecies"}},
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         allCanReadAcl(), // TODO: write?
+		AclField:         allCanReadAcl(),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
