@@ -321,7 +321,7 @@ type resolvedUpdateSlantRequest resolvedUpdatePlateRequest
 
 func (req resolvedUpdateSlantRequest) modsFor(existing *Slant, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateKnownFruitableIfNeeded(req, existing).
 		updateSaleIfNeeded(req.Sale, existing.Sale). // TODO: update to a different endpoint if possible
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
@@ -377,7 +377,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(SlantsCollectionName)
 	// go get current plate
 	existing := Slant{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

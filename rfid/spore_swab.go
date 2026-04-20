@@ -169,7 +169,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 	coll := db.Collection(SporeSwabCollectionName)
 
 	parent := SporePrint{}
-	err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
+	err = db.Collection(SporePrintCollectionName).FindOne(ctx, bsonFindFilter("_id", data.SporePrintId)).Decode(&parent)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -258,7 +258,7 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 
 	// go get current sporeSwab
 	existing := SporeSwab{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

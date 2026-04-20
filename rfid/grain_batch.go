@@ -61,7 +61,7 @@ package rfid
 //		NotesField:                 NotesField{exampleNotes()},
 //		LastUpdatedField:           LastUpdatedField{exampleTime},
 //	}
-//	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+//	err = coll.FindOne(ctx, bsonFindFilter("_id", exAltId)).Decode(&existingEntry)
 //	if err == nil {
 //		if reflect.DeepEqual(existingEntry, testItem) {
 //			return nil
@@ -171,7 +171,7 @@ package rfid
 //
 //	_, err = doTxn(r.Context(), func(ctx mongo.SessionContext) (interface{}, error) {
 //		coll := ctx.Client().Database(dbName).Collection(grainBatchesCollectionName)
-//		bsonId := bson.D{{"_id", existing.Email}}
+//		bsonId := bson.D{bson.E{Key: "_id", Value: existing.Email}}
 //		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 //		if err != nil {
 //			return dbErr(w, err.Error(), http.StatusInternalServerError)

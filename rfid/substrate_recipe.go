@@ -129,7 +129,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	// TODO: count instead?
 	projColl := client.Database(dbName).Collection(ProjectsCollectionName)
 	for projName, _ := range requestPerms.ProjectPerms {
-		err := projColl.FindOne(ctx, bson.D{{"_id", projName}}).Err()
+		err := projColl.FindOne(ctx, bsonFindFilter("_id", projName)).Err()
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return AclField{}, errors.New(string("could not find project " + projName))
@@ -141,7 +141,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	// TODO: count instead?
 	userColl := client.Database(dbName).Collection(UserCollName)
 	for userEmail, _ := range requestPerms.UserPerms {
-		err := userColl.FindOne(ctx, bson.D{{"_id", userEmail}}).Err()
+		err := userColl.FindOne(ctx, bsonFindFilter("_id", userEmail)).Err()
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return AclField{}, errors.New(string("could not find email " + userEmail))

@@ -42,7 +42,7 @@ func initializeUsers(ctx context.Context) error {
 			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
 		},
 	}
-	_, err := coll.ReplaceOne(ctx, bson.D{{"_id", testUser.Email}}, testUser, options.Replace().SetUpsert(true))
+	_, err := coll.ReplaceOne(ctx, bsonFindFilter("_id", testUser.Email), testUser, options.Replace().SetUpsert(true))
 	return err
 }
 

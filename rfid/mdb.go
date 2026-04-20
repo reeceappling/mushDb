@@ -478,8 +478,8 @@ func generateMainCollectionIds(ctx context.Context, n int) ([]MainCollectionId, 
 			}
 
 			// get these ids from the map collection???
-			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bson.D{{"_id", newId}}).Err()
-			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, bson.D{{"_id", newId}}).Err()
+			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", newId)).Err()
+			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, bsonFindFilter("_id", newId)).Err()
 			if err != nil {
 				if errors.Is(err, mongo.ErrNoDocuments) {
 					found.Add(string(newId[:]))
@@ -508,7 +508,7 @@ func newMainCollectionId(ctx context.Context) (MainCollectionId, error) {
 func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T) ([]T, error) {
 	findBson := bson.D{{}}
 	if filterOutStandard {
-		findBson = bson.D{{"standard", false}}
+		findBson = bsonFindFilter("standard", false)
 	}
 	sortField := "$natural"
 	if updated {

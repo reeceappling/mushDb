@@ -7,7 +7,6 @@ import (
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/rfid/pics"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"mime/multipart"
@@ -65,7 +64,7 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 
 // Perms have not been checked yet
 func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out MainCollectionItem, err error) {
-	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(resultItemType.CollectionName()).FindOne(ctx, bson.D{{"_id", id}})
+	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(resultItemType.CollectionName()).FindOne(ctx, bsonFindFilter("_id", id))
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -88,7 +87,7 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 //	if err != nil {
 //		return out, err
 //	}
-//	err = db.Collection(out.CollectionName()).FindOne(ctx, bson.D{{"_id", id}}).Decode(&out)
+//	err = db.Collection(out.CollectionName()).FindOne(ctx, bsonFindFilter("_id", id)).Decode(&out)
 //	if err != nil {
 //		return nil, err // mongo.ErrNoDocuments if 404
 //	}
@@ -108,7 +107,7 @@ func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx con
 	err = ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
 		Collection(item.CollectionName()).
-		FindOne(ctx, bson.D{{"_id", id}}).Decode(out)
+		FindOne(ctx, bsonFindFilter("_id", id)).Decode(out)
 	return out, err
 }
 
@@ -117,7 +116,7 @@ func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdTyp
 	out = item
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(item.CollectionName()).
-		FindOne(ctx, bson.D{{"_id", id}})
+		FindOne(ctx, bsonFindFilter("_id", id))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -146,7 +145,7 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 	out = Species{}
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(SpeciesCollectionName).
-		FindOne(ctx, bson.D{{"_id", name}})
+		FindOne(ctx, bsonFindFilter("_id", name))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -176,7 +175,7 @@ func GetSubspeciesNameInTxn(ctx context.Context, name string) (out Subspecies, e
 	out = Subspecies{}
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(SubspeciesCollectionName).
-		FindOne(ctx, bson.D{{"_id", name}})
+		FindOne(ctx, bsonFindFilter("_id", name))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}

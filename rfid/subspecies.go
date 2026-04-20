@@ -35,7 +35,7 @@ func initializeSubspecies(ctx context.Context) error {
 		newSimpleIndex("species", "species", false, false, false),
 		aliasesIndexModel,
 		//Notes (no index) (maybe later with tags?)
-		projectsIndexModel,
+		projectsIndexModel, // TODO: why are projects here?
 		lastUpdatedIndexModel,
 	})
 	if err != nil {

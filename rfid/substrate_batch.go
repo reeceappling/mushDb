@@ -71,7 +71,7 @@ func initializeSubstrateBatches(ctx context.Context) error { // TODO: overhaul t
 		},
 	} {
 		var existing SubstrateBatch
-		err := coll.FindOne(ctx, bson.D{{"_id", entry.Id}}).Decode(&existing)
+		err := coll.FindOne(ctx, bsonFindFilter("_id", entry.Id)).Decode(&existing)
 		if err != nil {
 			if err != mongo.ErrNoDocuments {
 				return err
@@ -100,7 +100,7 @@ func initializeSubstrateBatches(ctx context.Context) error { // TODO: overhaul t
 
 		// Update if necessary
 		if update {
-			err = coll.FindOneAndReplace(ctx, bson.D{{"_id", entry.Id}}, entry).Err()
+			err = coll.FindOneAndReplace(ctx, bsonFindFilter("_id", entry.Id), entry).Err()
 			if err != nil {
 				return err
 			}
@@ -117,7 +117,7 @@ func initializeSubstrateBatches(ctx context.Context) error { // TODO: overhaul t
 		LastUpdatedField:           LastUpdatedField{exampleTime},
 		AclField:                   allCanWriteAcl(),
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", exAltId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", exAltId)).Decode(&existingEntry)
 	if err == nil {
 		if reflect.DeepEqual(existingEntry, testItem) {
 			return nil

@@ -136,7 +136,7 @@ const collectionNameMethodTpl = `func ({{$info.Receiver}} {{$typ}}) CollectionNa
 }`
 const setPermsMethodTpl = `
 func ({{$info.Receiver}} *{{$typ}}) SetPerms(field AclField) {
-	{{ if $info.Receiver != "wj.AclField"}}{{$info.Receiver}}.AclField = field{{ end }}
+	{{ if ne $info.Receiver "wj" }}{{$info.Receiver}}.AclField = field{{ end }}
 }`
 const dbIdMethodTpl = `func ({{$info.Receiver}} {{$typ}}) DbId() MainCollectionId {
 	return {{$info.Receiver}}.Id

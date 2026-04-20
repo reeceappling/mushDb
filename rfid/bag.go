@@ -260,9 +260,9 @@ type updateBagRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
-	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
-	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
-	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
+	ImagesUpdateField  //"newPic-1"
+	ContamsUpdateField //"newContam-1"
+	FlushesUpdateField //"newFlush-1"
 	WriteTagToField
 	PermsOnRequest
 }
@@ -293,7 +293,7 @@ type resolvedUpdateBagRequest struct {
 
 func (req resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateKnownFruitableIfNeeded(req, existing).
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
@@ -310,8 +310,12 @@ const maxMultipartRequestSize = 32<<25 + 1024 //32<<20 + 1024 // TODO: is this m
 func getBag(ctx context.Context, id MainCollectionId) (*Bag, error) {
 	// go get current plate
 	existing := &Bag{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
+	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
 	return existing, err
+}
+
+func bsonFindFilter(key string, value any) bson.D {
+	return bson.D{bson.E{Key: key, Value: value}} // TODO: USE THIS EVERYWHERE
 }
 
 func updateBagHandler(w http.ResponseWriter, r *http.Request) {
@@ -365,7 +369,7 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
 	existing := &Bag{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

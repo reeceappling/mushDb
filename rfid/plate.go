@@ -284,8 +284,8 @@ type updatePlateRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
-	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"images"`
-	Contams SplitEntries[contamForm, ContaminationLessLocation]      `json:"contams"`
+	ImagesUpdateField
+	ContamsUpdateField
 	WriteTagToField
 	PermsOnRequest
 }
@@ -305,7 +305,7 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 
 func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateKnownFruitableIfNeeded(req, existing).
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
@@ -389,7 +389,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	coll := client.Database(dbName).Collection(PlatesCollectionName)
 	existing := &Plate{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
 	if err != nil {
 		// TODO: an issue here?
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
@@ -414,7 +414,7 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 	}
 	// write updates to db
 	println("updating") // TODO: del
-	bsonId := bson.D{{"_id", id}}
+	bsonId := bsonFindFilter("_id", id)
 	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 	if err != nil {
 		println("failed to update") // TODO: del

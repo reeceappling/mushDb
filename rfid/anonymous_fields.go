@@ -223,8 +223,16 @@ type KnownFruitableField struct {
 	KnownFruitable *bool `bson:"knownFruitable,omitempty" json:"knownFruitable,omitempty"` // set on transfer in, or once fruited
 }
 
-func (existing KnownFruitableField) UpdateKnownFruitableIfNeeded(upd *Mods, future *bool) {
-	updatePointerIfNeededNew(upd, "knownFruitable", future, existing.KnownFruitable)
+func (kff KnownFruitableField) knownToBeFruitable() *bool {
+	return kff.KnownFruitable
+}
+
+type hasKnownFruitableField interface {
+	knownToBeFruitable() *bool
+}
+
+func (existing KnownFruitableField) UpdateKnownFruitableIfNeeded(upd *Mods, future hasKnownFruitableField) {
+	updatePointerIfNeededNew(upd, "knownFruitable", future.knownToBeFruitable(), existing.KnownFruitable)
 }
 
 type StandardField struct {

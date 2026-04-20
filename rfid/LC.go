@@ -55,22 +55,6 @@ func (l LiquidCulture) generation() (sinceSpore *Generation, sinceSporeOrClone *
 	return l.GenSinceSpore, l.GenSinceFruitOrSpore
 }
 
-//func (l LiquidCulture) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LCCollectionName)
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, l.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
-
 func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
@@ -404,7 +388,7 @@ func (upr updateLiquidCultureRequest) reform() resolvedUpdateLiquidCultureReques
 
 func (req resolvedUpdateLiquidCultureRequest) modsFor(existing *LiquidCulture, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateKnownFruitableIfNeeded(req, existing).
 		updateConfirmedCleanIfNeeded(req.ConfirmedClean, existing.ConfirmedClean).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
@@ -470,7 +454,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(LCCollectionName)
 	// go get current LC
 	existing := LiquidCulture{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

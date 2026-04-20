@@ -56,7 +56,7 @@ func initializeProjects(ctx context.Context) error {
 	}
 	for _, testItem := range testProjects {
 		// If test item does not exist or does not match, then create/update it
-		_, errRep := coll.ReplaceOne(ctx, bson.D{{"_id", testItem.Name}}, testItem, options.Replace().SetUpsert(true))
+		_, errRep := coll.ReplaceOne(ctx, bsonFindFilter("_id", testItem.Name), testItem, options.Replace().SetUpsert(true))
 		err = errors.Join(errRep, err)
 		if err != nil {
 		}
@@ -228,7 +228,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	for u, _ := range req.Perms {
 		if _, exists := existing.Perms[u]; !exists {
 			// validate new user exists
-			result := db.Collection(UserCollName).FindOne(ctx, bson.D{{"_id", u}})
+			result := db.Collection(UserCollName).FindOne(ctx, bsonFindFilter("_id", u))
 			if err = result.Err(); err != nil {
 				dbErr(w, "user "+u+" not found", http.StatusNotFound)
 				return

@@ -368,7 +368,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	//}
 	////// Set rollback
 	////rollbackXfer := func() error {
-	////	result, errrr := db.Collection(TransfersCollName).DeleteOne(ctx, bson.D{{"_id", xfer.Id}})
+	////	result, errrr := db.Collection(TransfersCollName).DeleteOne(ctx, bson.D{bson.E{Key: "_id", Value: xfer.Id}})
 	////	if errrr != nil {
 	////		return errrr
 	////	}

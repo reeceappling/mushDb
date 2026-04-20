@@ -127,12 +127,12 @@ func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection {
 }
 
 func (j *GrainJar) Refresh(ctx mongo.SessionContext) error {
-	return j.Collection(ctx).FindOne(ctx, bson.D{{"_id", j.Id}}).Decode(j)
+	return j.Collection(ctx).FindOne(ctx, bsonFindFilter("_id", j.Id)).Decode(j)
 }
 
 func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err error) {
 	j = &GrainJar{}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(j)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(j)
 	return j, err
 }
 
@@ -216,7 +216,7 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 	if res == nil {
 		return errors.New("result should not be nil")
 	}
-	err = coll.FindOne(ctx, bson.D{{"_id", testId}}).Decode(&existingEntry)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", testId)).Decode(&existingEntry)
 	if err != nil {
 		return errors.New("not found at specified id. " + err.Error())
 	}
@@ -457,8 +457,8 @@ type updateJarRequest struct {
 	KnownFruitableField
 	DisposedField
 	SaleField
-	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
-	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
+	ImagesUpdateField  //"newPic-1"
+	ContamsUpdateField //"newContam-1"
 	WriteTagToField
 	PermsOnRequest
 }
@@ -487,7 +487,7 @@ type resolvedUpdateJarRequest struct {
 
 func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateKnownFruitableIfNeeded(req, existing).
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
@@ -548,7 +548,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(GrainJarCollectionName)
 	// go get current
 	existing := &GrainJar{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

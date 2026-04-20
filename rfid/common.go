@@ -60,7 +60,7 @@ type CollectionItem interface { // TODO: ADD USER TO THIS?
 //}
 
 var lastUpdatedIndexModel = mongo.IndexModel{
-	Keys:    bson.D{{"lastUpdated", -1}},
+	Keys:    bson.D{{Key: "lastUpdated", Value: -1}},
 	Options: options.Index().SetName("lastUpdated"),
 }
 var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
@@ -82,7 +82,7 @@ var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false)
 //	coll := db.Collection(FruitsCollName)
 //	_, err := coll.Find(ctx, bson.D{}, opts)
 //	return err
-//	//coll.UpdateByID(ctx, bson.D{{"_id": "someId"}}, ) // TODO: use this
+//	//coll.UpdateByID(ctx, bson.D{bson.E{Key: "_id": "someId"}}, ) // TODO: use this
 //}
 
 func withUpdateNow() primitive.E {
@@ -244,23 +244,36 @@ func pushToArrayInline[T any](fieldName string, vals ...T) bson.D {
 	switch len(vals) {
 	case 1:
 		return bson.D{{
-			"$push", bson.D{{fieldName, vals[0]}},
+			Key: "$push",
+			Value: bson.D{{
+				Key:   fieldName,
+				Value: vals[0],
+			}},
 		}}
 	case 0:
 		return bson.D{}
 	default:
-		return bson.D{{"$push", bson.D{{fieldName, bson.D{{"$each", vals}}}}}} // TODO: ensure this works
+		return bson.D{{
+			Key: "$push",
+			Value: bson.D{{
+				Key: fieldName,
+				Value: bson.D{{
+					Key:   "$each",
+					Value: vals,
+				}},
+			}},
+		}} // TODO: ensure this works
 	}
 }
 
 func pushToArrayNew[T any](fieldName string, vals ...T) bson.D { // TODO: rename
 	switch len(vals) {
 	case 1:
-		return bson.D{{fieldName, vals[0]}}
+		return bson.D{{Key: fieldName, Value: vals[0]}}
 	case 0:
 		return bson.D{}
 	default:
-		return bson.D{{fieldName, bson.D{{"$each", vals}}}}
+		return bson.D{{Key: fieldName, Value: bson.D{{Key: "$each", Value: vals}}}}
 	}
 }
 
@@ -269,17 +282,17 @@ func pushToArrayNew[T any](fieldName string, vals ...T) bson.D { // TODO: rename
 //}
 
 func withUpdate(t *time.Time) bson.E {
-	return bson.E{"lastUpdated", unixTimeFor(utils.Default(t, time.Now()))}
+	return bson.E{Key: "lastUpdated", Value: unixTimeFor(utils.Default(t, time.Now()))}
 }
 
 func withItemsRemoved[T any](field string, items ...T) bson.D {
 	itemsEquality := make([]bson.E, len(items))
 	for i, item := range items {
-		itemsEquality[i] = bson.E{"$eq", item}
+		itemsEquality[i] = bson.E{Key: "$eq", Value: item}
 	}
 
 	//{ "$pull": { <field1>: <value|condition>, <field2>: <value|condition>, ... } }
-	return bson.D{{"$pull", bson.D{{field, itemsEquality}}}}
+	return bson.D{{Key: "$pull", Value: bson.D{{Key: field, Value: itemsEquality}}}}
 }
 
 func createIndexes(ctx context.Context, coll *mongo.Collection, toCreate []mongo.IndexModel) error {
@@ -410,7 +423,7 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
 		Collection(temp.CollectionName()).
-		Find(ctx, bson.D{{"standard", true}}) // TODO: NOT WORKING PROPERLY!!!!!
+		Find(ctx, bsonFindFilter("standard", true)) // TODO: NOT WORKING PROPERLY!!!!!
 	if err != nil {
 		return nil, err
 	}
@@ -786,7 +799,7 @@ func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection {
 	return db.Collection(item.CollectionName())
 }
 func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T) error {
-	return CollectionFor(*item, db).FindOne(ctx, bson.D{{"_id", (*item).IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
+	return CollectionFor(*item, db).FindOne(ctx, bson.D{{Key: "_id", Value: (*item).IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
 }
 
 func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {

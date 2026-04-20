@@ -186,6 +186,7 @@ func typeForSource(src string) (MainCollectionItem, error) {
 }
 
 // Methods
+
 func (b *Bag) SetPerms(field AclField) {
 	b.AclField = field
 }
@@ -460,6 +461,7 @@ func (s StasisTube) Decode(encoded *mongo.SingleResult) (CollectionItem, error) 
 }
 
 func (wj *WaterJar) SetPerms(field AclField) {
+
 }
 func (wj WaterJar) DbId() MainCollectionId {
 	return wj.Id
@@ -489,6 +491,7 @@ func (batch AgarBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, erro
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (batch *AgarBatch) SetPerms(field AclField) {
 	batch.AclField = field
 }
@@ -501,6 +504,7 @@ func (recipe AgarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, er
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (recipe *AgarRecipe) SetPerms(field AclField) {
 	recipe.AclField = field
 }
@@ -513,6 +517,7 @@ func (recipe LcRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, erro
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (recipe *LcRecipe) SetPerms(field AclField) {
 	recipe.AclField = field
 }
@@ -525,6 +530,7 @@ func (run PCRun) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (run *PCRun) SetPerms(field AclField) {
 	run.AclField = field
 }
@@ -546,6 +552,7 @@ func (s Sale) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (s *Sale) SetPerms(field AclField) {
 	s.AclField = field
 }
@@ -558,6 +565,7 @@ func (sp Species) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (sp *Species) SetPerms(field AclField) {
 	sp.AclField = field
 }
@@ -570,6 +578,7 @@ func (subsp Subspecies) Decode(encoded *mongo.SingleResult) (CollectionItem, err
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (subsp *Subspecies) SetPerms(field AclField) {
 	subsp.AclField = field
 }
@@ -582,6 +591,7 @@ func (batch SubstrateBatch) Decode(encoded *mongo.SingleResult) (CollectionItem,
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (batch *SubstrateBatch) SetPerms(field AclField) {
 	batch.AclField = field
 }
@@ -594,6 +604,7 @@ func (recipe SubstrateRecipe) Decode(encoded *mongo.SingleResult) (CollectionIte
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (recipe *SubstrateRecipe) SetPerms(field AclField) {
 	recipe.AclField = field
 }
@@ -606,6 +617,7 @@ func (t Transfer) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
 	err := decodeItem(out, encoded)
 	return out, err
 }
+
 func (t *Transfer) SetPerms(field AclField) {
 	t.AclField = field
 }

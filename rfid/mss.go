@@ -149,7 +149,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 	ctx, db := Db(r)
 	// Validate parent // TODO: move into txn?
 	parent := SporePrint{}
-	err = db.Collection(SporePrintCollectionName).FindOne(ctx, bson.D{{"_id", data.SporePrintId}}).Decode(&parent)
+	err = db.Collection(SporePrintCollectionName).FindOne(ctx, bsonFindFilter("_id", data.SporePrintId)).Decode(&parent)
 	if err != nil {
 		dbErr(w, "failed to find sporePrint: "+err.Error(), http.StatusBadRequest)
 		return
@@ -283,14 +283,14 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 
 	// go get current entry
 	existing := MSS{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	//Validation
 	if data.Sale != nil && (existing.Sale == nil || *existing.Sale != *data.Sale) {
-		if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", data.Sale}}).Err(); err != nil {
+		if err = db.Collection(SalesCollectionName).FindOne(ctx, bsonFindFilter("_id", data.Sale)).Err(); err != nil {
 			dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 			return
 		}

@@ -61,7 +61,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 			return mongo.NewReplaceOneModel().SetReplacement(idMapEntry{
 				Id:        item.DbId(),
 				EntryType: item.EntryType(),
-			}).SetFilter(bson.D{{"_id", item.DbId()}}).SetUpsert(true)
+			}).SetFilter(bsonFindFilter("_id", item.DbId())).SetUpsert(true)
 		}))
 		if err != nil {
 			return nil, errors.Join(errors.New("failed to bulk write id maps"), err)
@@ -87,7 +87,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 func getTransferById(ctx context.Context, xferColl *mongo.Collection, id AlternateCollectionId) (*Transfer, error) {
 	var xfer Transfer
 	out := &xfer
-	xferResult := xferColl.FindOne(ctx, bson.D{{"_id", id}})
+	xferResult := xferColl.FindOne(ctx, bsonFindFilter("_id", id))
 	if err := xferResult.Err(); err != nil {
 		return nil, errors.Join(errors.New("failed to retrieve transfer by id"), err)
 	}

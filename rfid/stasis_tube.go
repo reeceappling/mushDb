@@ -218,8 +218,8 @@ type updateStasisTubeRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
-	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
-	Contams SplitEntries[contamForm, ContaminationLessLocation]
+	ImagesUpdateField
+	ContamsUpdateField
 	WriteTagToField
 	PermsOnRequest
 }
@@ -250,7 +250,7 @@ type resolvedUpdateStasisTubeRequest struct {
 
 func (req resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclField AclField) (bson.D, error) {
 	return NewMods(). // TODO: exactly the same as plate, ok?
-				updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+				updateKnownFruitableIfNeeded(req, existing).
 				updateSaleIfNeeded(req.Sale, existing.Sale).
 				updateDisposedIfNeeded(req, existing).
 				updateNotesIfNeeded(req, existing).
@@ -388,14 +388,14 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(StasisTubeCollectionName)
 	// go get current stasisTube
 	existing := StasisTube{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Validation
 	if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-		if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
+		if err = db.Collection(SalesCollectionName).FindOne(ctx, bsonFindFilter("_id", out.Sale)).Err(); err != nil {
 			dbErr(w, "failed to find new sale entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed
 			return
 		}

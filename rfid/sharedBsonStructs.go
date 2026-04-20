@@ -526,16 +526,16 @@ func (upd *Mods) Finalized() (bson.D, error) { // TODO: validate this works as i
 	}
 	out := bson.D{}
 	if upd.sets != nil && len(upd.sets) != 0 {
-		out = append(out, bson.E{"$set", upd.sets})
+		out = append(out, bson.E{Key: "$set", Value: upd.sets})
 	}
 	if upd.pushes != nil && len(upd.pushes) != 0 {
-		out = append(out, bson.E{"$push", upd.pushes})
+		out = append(out, bson.E{Key: "$push", Value: upd.pushes})
 	}
 	if upd.pulls != nil && len(upd.pulls) != 0 {
-		out = append(out, bson.E{"$pull", upd.pulls})
+		out = append(out, bson.E{Key: "$pull", Value: upd.pulls})
 	}
 	if upd.unsets != nil && len(upd.unsets) != 0 {
-		out = append(out, bson.E{"$unset", upd.unsets})
+		out = append(out, bson.E{Key: "$unset", Value: upd.unsets})
 	}
 	return out, nil
 }
@@ -586,8 +586,8 @@ func (upd *Mods) updateDisposedIfNeeded(future, existing Disposable) *Mods {
 	return updatePointerIfNeeded(upd, "disposed", future.DisposalInfo(), existingDisposal) // TODO: ok if this can be rolled back????
 }
 
-func (upd *Mods) updateKnownFruitableIfNeeded(future, existing *bool) *Mods {
-	return updatePointerIfNeeded(upd, "knownFruitable", future, existing)
+func (upd *Mods) updateKnownFruitableIfNeeded(future, existing hasKnownFruitableField) *Mods {
+	return updatePointerIfNeeded(upd, "knownFruitable", future.knownToBeFruitable(), existing.knownToBeFruitable())
 }
 
 func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {

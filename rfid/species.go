@@ -172,7 +172,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(SpeciesCollectionName)
 	// Validate
 	// TODO: Aliases?
-	err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
+	err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bsonFindFilter("_id", req.Substrate)).Err()
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -244,7 +244,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate substrate exists
 	if req.Substrate.asBase58() != existing.StandardSubstrate.asBase58() {
-		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.D{{"_id", req.Substrate}}).Err()
+		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bsonFindFilter("_id", req.Substrate)).Err()
 		if err != nil {
 			dbErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -262,7 +262,7 @@ func getSpecies(ctx context.Context, speciesName string, subspeciesName *string)
 func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
 	sp := Species{}
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	err := db.Collection(SpeciesCollectionName).FindOne(ctx, bson.D{{"_id", speciesName}}).Decode(&sp)
+	err := db.Collection(SpeciesCollectionName).FindOne(ctx, bsonFindFilter("_id", speciesName)).Decode(&sp)
 	if err != nil {
 		return sp, nil, err
 	}
@@ -270,7 +270,7 @@ func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspecies
 		return sp, nil, nil
 	}
 	subsp := Subspecies{}
-	err = db.Collection(SubspeciesCollectionName).FindOne(ctx, bson.D{{"_id", *subspeciesName}}).Decode(&subsp)
+	err = db.Collection(SubspeciesCollectionName).FindOne(ctx, bsonFindFilter("_id", *subspeciesName)).Decode(&subsp)
 	if err != nil {
 		return sp, nil, err
 	}

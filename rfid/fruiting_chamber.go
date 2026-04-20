@@ -416,11 +416,22 @@ type updateFruitingChamberRequest struct {
 	KnownFruitableField
 	DisposedField
 	SaleField
-	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
-	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
-	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
+	ImagesUpdateField  //"newPic-1"
+	ContamsUpdateField //"newContam-1"
+	FlushesUpdateField //"newFlush-1"
 	WriteTagToField
 	PermsOnRequest
+}
+
+// TODO: MOVE THESE 3!!!!
+type ImagesUpdateField struct {
+	Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"images"` //"newPic-1"
+}
+type ContamsUpdateField struct {
+	Contams SplitEntries[contamForm, ContaminationLessLocation] `json:"contams"` //"newContam-1"
+}
+type FlushesUpdateField struct {
+	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"flushes"` //"newFlush-1"
 }
 
 func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRequest {
@@ -449,7 +460,7 @@ type resolvedUpdateFruitingChamberRequest struct {
 
 func (req resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChamber, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateKnownFruitableIfNeeded(req, existing).
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
@@ -516,14 +527,14 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(FruitingChamberCollectionName)
 	// go get current FC
 	existing := &FruitingChamber{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// TODO: ensure this is ok. Handle sales elsewhere????
 	//if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-	//	if err = db.Collection(SalesCollectionName).FindOne(ctx, bson.D{{"_id", out.Sale}}).Err(); err != nil {
+	//	if err = db.Collection(SalesCollectionName).FindOne(ctx, bsonFindFilter("_id", out.Sale)).Err(); err != nil {
 	//		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 	//		return
 	//	}

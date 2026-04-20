@@ -101,7 +101,7 @@ func (sp SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, f
 		return errors.New("parent must have a species")
 	}
 	if from.SourceType() != FruitSourceType {
-		errors.New("only fruits are supported as a transfer source type into sporePrints")
+		return errors.New("only fruits are supported as a transfer source type into sporePrints")
 	}
 	upd, err := xfer.
 		PicsModsForChild().
@@ -311,7 +311,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	parent := Fruit{}
-	err = db.Collection(FruitsCollName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
+	err = db.Collection(FruitsCollName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(&parent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -447,7 +447,7 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(SporePrintCollectionName)
 	existing := SporePrint{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

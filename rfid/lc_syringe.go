@@ -170,7 +170,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	// Validate inputs and grab parent
 	parent := &LiquidCulture{}
-	err = db.Collection(LCCollectionName).FindOne(ctx, bson.D{{"_id", id}}).Decode(&parent)
+	err = db.Collection(LCCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(&parent)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -231,7 +231,7 @@ func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField Ac
 	updatePointerIfNeeded(mds, "confirmedClean", req.ConfirmedClean, existing.ConfirmedClean)
 	return mds.updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
-		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateKnownFruitableIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
@@ -253,7 +253,7 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(LcSyringeCollectionName)
 	// go get current LcSyringe
 	existing := LcSyringe{}
-	err = coll.FindOne(ctx, bson.D{{"_id", id}}).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

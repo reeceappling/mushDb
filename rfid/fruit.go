@@ -119,8 +119,7 @@ func (f Fruit) addSale(ctx mongo.SessionContext, printId AlternateCollectionId) 
 	//	return errors.New("invalid result") // TODO: ok?
 	//}
 	//return nil
-	panic("implement me") // TODO: this
-	return nil
+	return errors.New("not implemented, implement me")
 }
 
 func initializeFruits(ctx context.Context) error {
@@ -228,7 +227,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = db.Collection(parent.CollectionName()).FindOne(ctx, bson.D{{"_id", data.ParentId}}).Decode(&parent)
+	err = db.Collection(parent.CollectionName()).FindOne(ctx, bsonFindFilter("_id", data.ParentId)).Decode(&parent)
 	if err != nil {
 		http.Error(w, "failed to get parent: "+err.Error(), http.StatusInternalServerError)
 		return

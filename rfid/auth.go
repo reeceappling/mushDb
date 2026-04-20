@@ -12,7 +12,6 @@ import (
 	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/sessions/genericsessions"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
@@ -265,7 +264,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 	var u User // TODO: get this from db
 	email = oauthUser.Email
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName)
-	userResult := coll.FindOne(ctx, bson.D{{"_id", email}})
+	userResult := coll.FindOne(ctx, bsonFindFilter("_id", email))
 	raw, _ := userResult.Raw() // TODO; del
 	println(raw.String())      // TODO; del
 	err = userResult.Decode(&u)
@@ -300,7 +299,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 			return "", email, err
 		}
 		if adminEmail != "" && email == adminEmail {
-			if err = coll.FindOne(ctx, bson.D{{"_id", email}}).Decode(&u); err != nil {
+			if err = coll.FindOne(ctx, bsonFindFilter("_id", email)).Decode(&u); err != nil {
 				println("failed to check Admin user")
 				return "", email, err
 			}
