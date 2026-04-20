@@ -275,5 +275,15 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Users Selector
         - [ ] Styling
         - [ ] Integration with backend
+- [ ] WaterJar
+  - [ ] Creation form(s)
+      - [ ] Styling
+      - [ ] Integration with backend
+  - [ ] Display/Edit page
+      - [ ] Styling
+      - [ ] Integration with backend
+  - [ ] WaterJar Selector
+      - [ ] Styling
+      - [ ] Integration with backend
 - [ ] Misc
     - [ ] Volume Selector Styling

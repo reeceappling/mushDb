@@ -21,6 +21,7 @@ var (
 	_ MainCollectionItem = &LcSyringe{}
 	_ MainCollectionItem = &PlugsJar{} // TODO: has multiple sales
 	_ MainCollectionItem = &SporeSwab{}
+	_ MainCollectionItem = &WaterJar{}
 )
 
 type CollectionId interface { // TODO; USE????
@@ -50,30 +51,37 @@ func GetMainCollectionItemWithId(ctx context.Context, id MainCollectionId) (Main
 }
 
 func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...T) error {
-	_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
-		Collection(idMapCollectionName).BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
-		return mongo.NewReplaceOneModel().SetReplacement(idMapEntry{
-			Id:        item.DbId(),
-			EntryType: item.EntryType(),
-		}).SetFilter(bson.D{{"_id", item.DbId()}}).SetUpsert(true)
-	}))
-	// TODO: do something with the result?
-	if err != nil {
-		return errors.Join(errors.New("failed to bulk write id maps"), err)
+	if len(testItems) == 0 {
+		return errors.New("testItems is empty for main collection")
 	}
-
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
-	_, err = coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
-		return mongo.NewReplaceOneModel().
-			SetReplacement(item).
-			SetFilter(bson.M{"_id": item.DbId()}).
-			SetUpsert(true)
-	}))
-	if err != nil {
-		return errors.Join(errors.New("failed to bulk write"), err)
-	}
-	// TODO: do something with the result?
-	return err
+	_, txErr := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
+		_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+			Collection(idMapCollectionName).BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+			return mongo.NewReplaceOneModel().SetReplacement(idMapEntry{
+				Id:        item.DbId(),
+				EntryType: item.EntryType(),
+			}).SetFilter(bson.D{{"_id", item.DbId()}}).SetUpsert(true)
+		}))
+		if err != nil {
+			return nil, errors.Join(errors.New("failed to bulk write id maps"), err)
+		}
+		// TODO: do something with the result?
+		_, err = db.Collection(testItems[0].CollectionName()).
+			BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+				return mongo.NewReplaceOneModel().
+					SetReplacement(item).
+					SetFilter(bson.M{"_id": item.DbId()}).
+					SetUpsert(true)
+			}))
+		if err != nil {
+			return nil, errors.Join(errors.New("failed to bulk write"), err)
+		}
+		// TODO: do something with the result?
+		return nil, nil
+	})
+	PrintMainCollectionItemIds("Built-in", testItems)
+	return txErr
 }
 
 func getTransferById(ctx context.Context, xferColl *mongo.Collection, id AlternateCollectionId) (*Transfer, error) {

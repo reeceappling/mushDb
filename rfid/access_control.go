@@ -33,10 +33,11 @@ func allCanWriteAcl() AclField {
 	return AclField{ACL: nil}
 }
 
+// ACL being nil means anyone authenticated can do anything (read/write)
 type ACL struct {
 	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite
 	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite
-	BlanketPerm bool                       `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // false is public cannot read by default. // TODO: ENSURE PROPERLY SET EVERYWHERE
+	BlanketPerm bool                       `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // false is public cannot read by default. True means public can READ by default. // TODO: ENSURE PROPERLY SET EVERYWHERE
 }
 
 func cloneMap[T comparable, U any](m map[T]U) map[T]U { // TODO: use wherever needed

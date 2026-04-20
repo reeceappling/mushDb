@@ -48,16 +48,20 @@ func initializeSubspecies(ctx context.Context) error {
 			NameIdField:  NameIdField{"white beech"},
 			SpeciesField: SpeciesField{"beech"},
 			AliasesField: AliasesField{},
-			NotesField:   NotesField{Notes: []Note{{Time: ogTime, Note: "something to do with light, fixme"}}},
-			AclField:     allCanWriteAcl(),
+			NotesField: NotesField{Notes: []Note{
+				newNote(ogTime, "something to do with light, fixme"),
+			}},
+			AclField: allCanWriteAcl(),
 		},
 		// Brown Beech
 		{
 			NameIdField:  NameIdField{"brown beech"},
 			SpeciesField: SpeciesField{"beech"},
 			AliasesField: AliasesField{},
-			NotesField:   NotesField{Notes: []Note{{Time: ogTime, Note: "something to do with light, fixme"}}},
-			AclField:     allCanWriteAcl(),
+			NotesField: NotesField{Notes: []Note{
+				newNote(ogTime, "something to do with light, fixme"),
+			}},
+			AclField: allCanWriteAcl(),
 		},
 	}
 	err = addBasicAltEntries(ctx, basicEntries...)
@@ -129,18 +133,18 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSubspeciesRequest struct {
-	Notes AllEntries[Note] `json:"notes,omitempty"`
+	NotesUpdateField
 	AliasesField
 	PermsOnRequest
 	DefaultEntryPermsOnRequest PermsOnRequest // TODO: handle in TS
 }
 
-func (mods updateSubspeciesRequest) modsFor(existing *Subspecies, aclField AclField) (bson.D, error) {
+func (req updateSubspeciesRequest) modsFor(existing *Subspecies, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateAliasesIfNeeded(mods.Aliases, existing.Aliases).
-		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateDefaultEntryPermsIfNeeded(mods.DefaultEntryPermsOnRequest, existing.ACL).
+		updateDefaultEntryPermsIfNeeded(req.DefaultEntryPermsOnRequest, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }

@@ -31,7 +31,7 @@ func (recipe AgarRecipe) EntryTypeField() *string {
 type updateAgarRecipeRequest struct {
 	NameField
 	StandardField
-	Notes AllEntries[Note] `json:"notes"`
+	NotesUpdateField
 	PermsOnRequest
 }
 
@@ -39,7 +39,7 @@ func (req updateAgarRecipeRequest) modsFor(existing *AgarRecipe, aclField AclFie
 	return NewMods().
 		updateNameIfNeeded(req.Name, existing.Name).
 		updateStandardIfNeeded(req.Standard, existing.Standard).
-		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -99,6 +99,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Add built-in entries
 	basicEntries := []*AgarRecipe{
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
@@ -184,10 +185,12 @@ func initializeAgarRecipes(ctx context.Context) error {
 			AclField: allCanReadAcl(),
 		},
 	}
+
 	err = addBasicAltEntries(ctx, basicEntries...)
 	if err != nil {
 		return err
 	}
+	// Add test entries
 	testItem := &AgarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		NameField:                  NameField{testEntryStringId},
@@ -240,7 +243,8 @@ func initializeAgarRecipes(ctx context.Context) error {
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		AclField:         AclField{&testAcl},
 	}
-	// TODO: add built-in entries
+
+	// Add test entries
 	return addTestAltEntries(ctx, testItem)
 }
 

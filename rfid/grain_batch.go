@@ -120,7 +120,7 @@ package rfid
 //	SoakTimeHours *int             `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
 //	BoilTimeMins  *int             `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
 //	DryTimeHours  *int             `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
-//	Notes         AllEntries[Note] `json:"notes"`
+//	Notes         NoteMods
 //}
 //
 //func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: txn?
@@ -158,7 +158,7 @@ package rfid
 //	mods = updatePointerIfNeeded(mods, "boilTimeMins", req.BoilTimeMins, existing.BoilTimeMins)
 //	mods = updatePointerIfNeeded(mods, "dryTimeHours", req.DryTimeHours, existing.DryTimeHours)
 //	upd, err := mods.
-//		updateNotesIfNeeded(req.Notes, existing.Notes).
+//		updateNotesIfNeeded(req, existing).
 //		Finalized()
 //	if err != nil {
 //		http.Error(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)

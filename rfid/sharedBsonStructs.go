@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -68,6 +67,18 @@ type PicsField struct {
 	Pics []PicWithNotes `bson:"pics,omitempty" json:"pics,omitempty"`
 }
 
+func (pics PicsField) getLatestPicFromPicsField() *PicWithNotes {
+	var out *PicWithNotes = nil
+	var latest unixTime = 0
+	for _, pic := range pics.Pics {
+		if pic.Time > latest {
+			latest = pic.Time
+			out = &pic
+		}
+	}
+	return out
+}
+
 type FlushesField struct {
 	Flushes []PicWithNotes `bson:"flushes,omitempty" json:"flushes,omitempty"`
 }
@@ -77,18 +88,26 @@ type MostRecentImageField struct {
 }
 
 type PicWithNotes struct {
-	Time       unixTime      `bson:"time" json:"time"`
-	Location   imageLocation `bson:"location" json:"location"`
-	NotesField `bson:"inline"`
+	PicWithNotesLessLocation `bson:"inline"`
+	Location                 imageLocation `bson:"location" json:"location"`
+}
+
+func newPicWithNotes(tim unixTime, notes []Note, location imageLocation) PicWithNotes {
+	return PicWithNotes{
+		PicWithNotesLessLocation: newPicWithNotesLessLocation(tim, notes),
+		Location:                 location,
+	}
 }
 
 func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes {
 	out := make([]PicWithNotes, len(inp))
 	for i, pic := range inp {
 		out[i] = PicWithNotes{
-			Time:       pic.Time,
-			Location:   pic.Location,
-			NotesField: NotesField{[]Note{}},
+			PicWithNotesLessLocation: PicWithNotesLessLocation{
+				RequiredTimeField: RequiredTimeField{Time: pic.Time},
+				NotesField:        NotesField{[]Note{}},
+			},
+			Location: pic.Location,
 		}
 	}
 	return out
@@ -96,22 +115,41 @@ func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes {
 
 func (pwn PicWithNotes) withoutNotes() PicWithNotes {
 	return PicWithNotes{
-		Time:       pwn.Time,
-		Location:   pwn.Location,
-		NotesField: NotesField{[]Note{}},
+		PicWithNotesLessLocation: *pwn.PicWithNotesLessLocation.withoutNotes(),
+		Location:                 pwn.Location,
 	}
 }
 
+type RequiredTimeField struct {
+	Time unixTime `bson:"time" json:"time"`
+}
+
+func newRequiredTimeField(t unixTime) RequiredTimeField {
+	return RequiredTimeField{t}
+}
+
 type PicWithNotesLessLocation struct {
-	Time       unixTime `bson:"time" json:"time"`
-	NotesField `bson:"inline"`
+	RequiredTimeField `bson:"inline"`
+	NotesField        `bson:"inline"`
+}
+
+func newPicWithNotesLessLocation(t unixTime, notes []Note) PicWithNotesLessLocation {
+	return PicWithNotesLessLocation{
+		RequiredTimeField: newRequiredTimeField(t),
+		NotesField:        NotesField{notes},
+	}
+}
+func (p PicWithNotesLessLocation) withoutNotes() *PicWithNotesLessLocation {
+	return &PicWithNotesLessLocation{
+		RequiredTimeField: p.RequiredTimeField,
+		NotesField:        NotesField{Notes: []Note{}},
+	}
 }
 
 func (p PicWithNotesLessLocation) asPicWithNotes(location *string) PicWithNotes {
 	return PicWithNotes{
-		Time:       p.Time,
-		Location:   imageLocation(utils.Default(location, "")),
-		NotesField: p.NotesField,
+		PicWithNotesLessLocation: p,
+		Location:                 imageLocation(utils.Default(location, "")),
 	}
 }
 
@@ -123,31 +161,34 @@ type ContaminationsField struct {
 	Contaminations []Contamination `bson:"contamination,omitempty" json:"contamination,omitempty"`
 }
 
+func (contams ContaminationsField) getContamsLatestImage() *Contamination {
+	var out *Contamination = nil
+	var latest unixTime = 0
+	for _, contam := range contams.Contaminations {
+		if contam.Location != nil && contam.Time > latest {
+			latest = contam.Time
+			out = &contam
+		}
+	}
+	return out
+}
+
 type Contamination struct {
-	Time       unixTime       `bson:"time" json:"time"`
-	Confirmed  bool           `bson:"confirmed" json:"confirmed"`
-	Bacteria   bool           `bson:"bacteria" json:"bacteria"`
-	Mold       bool           `bson:"mold" json:"mold"`
-	Location   *imageLocation `bson:"location,omitempty" json:"location,omitempty"`
-	NotesField `bson:"inline"`
+	ContaminationLessLocation `bson:"inline"` // TODO: new, ensure ok
+	Location                  *imageLocation  `bson:"location,omitempty" json:"location,omitempty"`
 }
 
 type ContaminationLessLocation struct {
-	Time      unixTime `bson:"time" json:"time"`
-	Confirmed bool     `bson:"confirmed" json:"confirmed"`
-	Bacteria  bool     `bson:"bacteria" json:"bacteria"`
-	Mold      bool     `bson:"mold" json:"mold"`
-	NotesField
+	PicWithNotesLessLocation `bson:"inline"` // TODO: new, ensure ok
+	Confirmed                bool            `bson:"confirmed" json:"confirmed"`
+	Bacteria                 bool            `bson:"bacteria" json:"bacteria"`
+	Mold                     bool            `bson:"mold" json:"mold"`
 }
 
 func (c ContaminationLessLocation) asContamination(location *imageLocation) Contamination {
 	return Contamination{
-		Time:       c.Time,
-		Confirmed:  c.Confirmed,
-		Bacteria:   c.Bacteria,
-		Mold:       c.Mold,
-		Location:   location,
-		NotesField: c.NotesField,
+		ContaminationLessLocation: c,
+		Location:                  location,
 	}
 }
 
@@ -156,9 +197,8 @@ func (c Contamination) getPicWithNotes() *PicWithNotes {
 		return nil
 	}
 	return &PicWithNotes{
-		Time:       c.Time,
-		Location:   *c.Location,
-		NotesField: c.NotesField,
+		PicWithNotesLessLocation: c.PicWithNotesLessLocation,
+		Location:                 *c.Location,
 	}
 }
 
@@ -218,24 +258,43 @@ func (f fluid) AsLiquid(pct ...float64) liquid {
 }
 
 type Note struct {
-	Time unixTime `bson:"time" json:"time"`
-	Note string   `bson:"note" json:"note"`
+	RequiredTimeField `bson:"inline"`
+	Note              string `bson:"note" json:"note"`
 }
 
-func (n Note) GenerationIfExists() *int {
-	if !strings.Contains(n.Note, "Generation: ") {
-		return nil
+func newNote(tim unixTime, txt string) Note {
+	return Note{
+		RequiredTimeField: RequiredTimeField{tim},
+		Note:              txt,
 	}
-	spl := strings.Split(n.Note, " ")
-	if len(spl) != 2 {
-		return nil
-	}
-	out, err := strconv.Atoi(spl[1])
-	if err != nil {
-		return nil
-	}
-	return &out
 }
+
+type NotesUpdateField struct {
+	Notes AllEntries[Note] `json:"notes,omitempty"`
+}
+
+func (nuf NotesUpdateField) NoteChanges() AllEntries[Note] {
+	return nuf.Notes
+}
+
+type NoteMods interface {
+	NoteChanges() AllEntries[Note]
+}
+
+//func (n Note) GenerationIfExists() *int {
+//	if !strings.Contains(n.Note, "Generation: ") {
+//		return nil
+//	}
+//	spl := strings.Split(n.Note, " ")
+//	if len(spl) != 2 {
+//		return nil
+//	}
+//	out, err := strconv.Atoi(spl[1])
+//	if err != nil {
+//		return nil
+//	}
+//	return &out
+//}
 
 // TODO: add all of these to autogenned
 type nutrientMeasurement struct {
@@ -519,8 +578,12 @@ func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 	return upd
 }
 
-func (upd *Mods) updateDisposedIfNeeded(future, existing *unixTime) *Mods {
-	return updatePointerIfNeeded(upd, "disposed", future, existing) // TODO: ok if this can be rolled back????
+func (upd *Mods) updateDisposedIfNeeded(future, existing Disposable) *Mods {
+	existingDisposal := existing.DisposalInfo()
+	if existingDisposal != nil { // Only update if previously was not disposed, and now is
+		return upd
+	}
+	return updatePointerIfNeeded(upd, "disposed", future.DisposalInfo(), existingDisposal) // TODO: ok if this can be rolled back????
 }
 
 func (upd *Mods) updateKnownFruitableIfNeeded(future, existing *bool) *Mods {
@@ -635,24 +698,26 @@ func contamsWereModified(existing []Contamination, updated SplitEntries[contamFo
 	return false
 }
 
-func (upd *Mods) updateNotesIfNeeded(updatedEntries AllEntries[Note], existing []Note) *Mods { // TODO: make sure this always works the way we want it to!!! // TODO: lower-down notes?
+func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesField) *Mods { // TODO: make sure this always works the way we want it to!!! // TODO: lower-down notes?
 	if upd.err != nil {
 		return upd
 	}
-	if len(updatedEntries.Existing) != len(existing) {
+	existing := existingIn.GetNotes()
+	updated := updatedIn.NoteChanges()
+	if len(updated.Existing) != len(existing) {
 		upd.err = errors.Join(errors.New("length of existing notes must match"), upd.err)
 		return upd
 	}
-	if !notesWereModified(existing, updatedEntries) {
+	if !notesWereModified(existing, updated) {
 		return upd
 	}
-	finalNotes := make([]Note, 0, len(existing)+len(updatedEntries.New))
-	for _, final := range updatedEntries.Existing {
+	finalNotes := make([]Note, 0, len(existing)+len(updated.New))
+	for _, final := range updated.Existing {
 		if !final.Disabled {
 			finalNotes = append(finalNotes, final.Data)
 		}
 	}
-	for _, final := range updatedEntries.New {
+	for _, final := range updated.New {
 		finalNotes = append(finalNotes, final.Data)
 	}
 	// Set notes

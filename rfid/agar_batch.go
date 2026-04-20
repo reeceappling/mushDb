@@ -43,21 +43,21 @@ func (batch AgarBatch) EntryTypeField() *string {
 	return nil
 }
 
-type NewAgarBatchRequest struct {
-	PcRunField
-	AgarRecipeField
-	Color *string
-	Notes []string
-}
+//type NewAgarBatchRequest struct {
+//	PcRunField
+//	AgarRecipeField
+//	Color *string
+//	NotesCreationField
+//}
 
 type updateAgarBatchRequest struct {
-	Notes AllEntries[Note] `json:"notes"`
+	NotesUpdateField
 	PermsOnRequest
 }
 
 func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bson.D, error) {
 	return NewMods().
-		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(acl.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -121,7 +121,9 @@ func initializeAgarBatches(ctx context.Context) error {
 		LastUpdatedField:           LastUpdatedField{exampleTime},
 		AclField:                   allCanReadAcl(),
 	}
-	return addTestAltEntries(ctx, testItem)
+	err = addTestAltEntries(ctx, testItem)
+	println("test Agar Batch:", testAltId.asBase58())
+	return err
 }
 
 type createAgarBatchRequest struct {

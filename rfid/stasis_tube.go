@@ -217,7 +217,7 @@ type updateStasisTubeRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
+	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	Contams SplitEntries[contamForm, ContaminationLessLocation]
 	WriteTagToField
@@ -229,7 +229,7 @@ func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 		KnownFruitableField: upr.KnownFruitableField,
 		SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
-		Notes:               upr.Notes,
+		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		WriteTagToField:     upr.WriteTagToField,
@@ -241,21 +241,21 @@ type resolvedUpdateStasisTubeRequest struct {
 	KnownFruitableField
 	SaleField // TODO: validate exists
 	DisposedField
-	Notes   AllEntries[Note]
+	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	WriteTagToField
 	PermsOnRequest
 }
 
-func (mods resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclField AclField) (bson.D, error) {
 	return NewMods(). // TODO: exactly the same as plate, ok?
-				updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
-				updateSaleIfNeeded(mods.Sale, existing.Sale).
-				updateDisposedIfNeeded(mods.Disposed, existing.Disposed).
-				updateNotesIfNeeded(mods.Notes, existing.Notes).
-				updatePicsIfNeeded(mods.Images, existing.Pics).
-				updateContamsIfNeeded(mods.Contams, existing.Contaminations).
+				updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+				updateSaleIfNeeded(req.Sale, existing.Sale).
+				updateDisposedIfNeeded(req, existing).
+				updateNotesIfNeeded(req, existing).
+				updatePicsIfNeeded(req.Images, existing.Pics).
+				updateContamsIfNeeded(req.Contams, existing.Contaminations).
 				updatePermsIfNeeded(aclField.ACL, existing.ACL).
 				updateLastUpdatedIfNeeded().
 				Finalized()
@@ -475,11 +475,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = &PicWithNotes{
-			Time:       now,
-			Location:   imageLocation(newFileNameWithPrefixPath),
-			NotesField: NotesField{[]Note{}},
-		}
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {

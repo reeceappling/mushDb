@@ -71,11 +71,7 @@ func (t Transfer) PicsModsForChild() *Mods {
 	if t.ToImage == nil {
 		return NewMods()
 	}
-	pic := PicWithNotes{
-		Time:       t.CreationDate,
-		Location:   *t.ToImage,
-		NotesField: NotesField{[]Note{}},
-	}
+	pic := newPicWithNotes(t.CreationDate, []Note{}, *t.ToImage)
 	return NewMods().
 		withMostRecentImage(&pic).
 		withPics([]PicWithNotes{pic})
@@ -425,13 +421,13 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateTransferRequest struct {
-	Notes          AllEntries[Note] `json:"notes,omitempty"`
-	PermsOnRequest                  // TODO: ????????? handle in typescript and handler!
+	NotesUpdateField
+	PermsOnRequest // TODO: ????????? handle in typescript and handler!
 }
 
-func (mods updateTransferRequest) modsFor(existing *Transfer, aclField AclField) (bson.D, error) {
+func (req updateTransferRequest) modsFor(existing *Transfer, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateNotesIfNeeded(mods.Notes, existing.Notes). // TODO: make sure this works the way we want
+		updateNotesIfNeeded(req, existing). // TODO: make sure this works the way we want
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

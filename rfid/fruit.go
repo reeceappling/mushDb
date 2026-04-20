@@ -182,11 +182,7 @@ func (req createFruitRequest) reform() createFruitResolved {
 		ParentType:                req.ParentType,
 		NotesField:                NotesField{req.Notes},
 		PicsField: PicsField{sliceutils.Map(req.Pics, func(i PicWithNotesLessLocation) PicWithNotes {
-			return PicWithNotes{
-				Time:       i.Time,
-				Location:   "",
-				NotesField: NotesField{i.Notes},
-			}
+			return newPicWithNotes(i.Time, i.Notes, "")
 		})},
 	}
 }
@@ -269,15 +265,15 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 
 type updateFruitRequest struct {
 	DisposedField
-	Notes  AllEntries[Note]
+	NotesUpdateField
 	Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	PermsOnRequest
 }
 
 func (upr updateFruitRequest) reform() resolvedUpdateFruitRequest {
 	return resolvedUpdateFruitRequest{
-		DisposedField: upr.DisposedField,
-		Notes:         upr.Notes,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
 		Images: SplitEntries[picWithNotesForm, PicWithNotes]{
 			Existing: upr.Images.Existing,
 			New: sliceutils.Map(upr.Images.New, func(i PicWithNotesLessLocation) PicWithNotes {
@@ -290,16 +286,16 @@ func (upr updateFruitRequest) reform() resolvedUpdateFruitRequest {
 
 type resolvedUpdateFruitRequest struct {
 	DisposedField
-	Notes  AllEntries[Note]
+	NotesUpdateField
 	Images SplitEntries[picWithNotesForm, PicWithNotes] //"newPic-1"
 	PermsOnRequest
 }
 
-func (out resolvedUpdateFruitRequest) modsFor(existing *Fruit, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateFruitRequest) modsFor(existing *Fruit, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
-		updateNotesIfNeeded(out.Notes, existing.Notes).
-		updatePicsIfNeeded(out.Images, existing.Pics).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -407,9 +403,8 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			now := unixTimeForNow()
 			importedPic = &PicWithNotes{
-				Time:       now,
-				Location:   imageLocation(newFileNameWithPrefixPath),
-				NotesField: NotesField{[]Note{}},
+				PicWithNotesLessLocation: newPicWithNotesLessLocation(now, []Note{}),
+				Location:                 imageLocation(newFileNameWithPrefixPath),
 			}
 			filesProcessed++
 		} else {

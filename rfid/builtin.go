@@ -23,6 +23,7 @@ const ( // MainCollection test ints
 	idTestPlateUserWriteProjRead
 	idTestPlateUserOutsideProject
 	idTestLCS
+	idTestWaterJar
 )
 
 const (
@@ -53,8 +54,8 @@ var ogTime = unixTimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))
 
 func builtInNote(note string) Note {
 	return Note{
-		Time: ogTime,
-		Note: note,
+		RequiredTimeField: newRequiredTimeField(ogTime),
+		Note:              note,
 	}
 }
 func altCollIdForint(i int) AlternateCollectionId { // TODO: FIX FOR uint8 overflow

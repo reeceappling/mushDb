@@ -69,10 +69,9 @@ var testProjects = []Project{
 		Name:              "testProjectAdmin",
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         nil,
-		NotesField: NotesField{Notes: []Note{{
-			Time: exampleTime,
-			Note: "test user should be admin",
-		}}},
+		NotesField: NotesField{Notes: []Note{
+			newNote(exampleTime, "test user should be admin"),
+		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		Perms: map[string]*bool{
 			testUserEmail: utils.Pointer(true),
@@ -81,10 +80,9 @@ var testProjects = []Project{
 		Name:              "testProjectWrite",
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         &exampleTime,
-		NotesField: NotesField{Notes: []Note{{
-			Time: exampleTime,
-			Note: "test user should be able to write but not admin",
-		}}},
+		NotesField: NotesField{Notes: []Note{
+			newNote(exampleTime, "test user should be able to write but not admin"),
+		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		Perms: map[string]*bool{
 			testUserEmail: utils.Pointer(false), // Test User can write but not admin
@@ -93,10 +91,9 @@ var testProjects = []Project{
 		Name:              "testProjectRead",
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         nil,
-		NotesField: NotesField{Notes: []Note{{
-			Time: exampleTime,
-			Note: "test user should be able to read",
-		}}},
+		NotesField: NotesField{Notes: []Note{
+			newNote(exampleTime, "test user should be able to read"),
+		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		Perms: map[string]*bool{
 			testUserEmail: nil, // Test User can read related entries
@@ -105,10 +102,9 @@ var testProjects = []Project{
 		Name:              "testProjectNone",
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         nil,
-		NotesField: NotesField{Notes: []Note{{
-			Time: exampleTime,
-			Note: "test user should not be able to do anything",
-		}}},
+		NotesField: NotesField{Notes: []Note{
+			newNote(exampleTime, "test user should not be able to do anything"),
+		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		Perms:            nil,
 	},
@@ -162,17 +158,17 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateProjectRequest struct {
-	Completed *unixTime        `json:"completed,omitempty"`
-	Notes     AllEntries[Note] `json:"notes"`
-	Perms     ProjectPerms     `json:"perms"`
+	Completed *unixTime `json:"completed,omitempty"`
+	NotesUpdateField
+	Perms ProjectPerms `json:"perms"`
 	// TODO: update perms should update users too!
 }
 
-func (mods updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
+func (req updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
 	return NewMods().
-		updateProjectCompletedIfNeeded(mods.Completed, existing.Completed).
-		updateNotesIfNeeded(mods.Notes, existing.Notes).
-		updateProjectPermsIfNeeded(mods.Perms, existing.Perms).
+		updateProjectCompletedIfNeeded(req.Completed, existing.Completed).
+		updateNotesIfNeeded(req, existing).
+		updateProjectPermsIfNeeded(req.Perms, existing.Perms).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }

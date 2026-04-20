@@ -583,6 +583,7 @@ func HandleCreate() http.HandlerFunc {
 			"substrateBatch":  createSubstrateBatchHandler,
 			"transfer":        createTransferHandler,
 			//"user":"", // TODO: probably don't need
+			"waterJar": createWaterJarHandler,
 		}[endpt]
 		if !exists {
 			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
@@ -675,6 +676,7 @@ func UpdateById() http.HandlerFunc {
 			"substrateBatch":  updateSubstrateBatchHandler,
 			"transfer":        updateTransferHandler,
 			//"user":             updateUserHandler,
+			"waterJar": updateWaterJarHandler,
 		}[endpt]
 		if !exists {
 			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)

@@ -3,6 +3,7 @@ package rfid
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,13 +12,37 @@ import (
 )
 
 type WaterJar struct { // TODO: HANDLE THIS EVERYWHERE! DO ALL TYPESCRIPT FOR THIS!
-	AlternateCollectionIdField `bson:"inline"`
-	PcRunField                 `bson:"inline"` // Creation date assumed to be the same as pc run date
-	NotesField                 `bson:"inline"`
-	LastUpdatedField           `bson:"inline"`
+	MainCollectionIdField `bson:"inline"`
+	CreationDateField     `bson:"inline"` // From PcRun
+	PcRunField            `bson:"inline"` // Creation date assumed to be the same as pc run date
+	NotesField            `bson:"inline"`
+	DisposedField         `bson:"inline"`
+	LastUpdatedField      `bson:"inline"`
+}
+
+func (wj WaterJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
+	return GeneticParentInfo{}, errors.New("WaterJar has no genetic info")
+}
+
+func (wj WaterJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+	return errors.New("WaterJar is not genetic, so it cannot setTransferChild")
+}
+
+func (wj WaterJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
+	panic("WaterJar is not genetic, so it cannot have a generation")
+}
+
+func (wj WaterJar) CanTransferTo(dst geneticSource) error {
+	return errors.New("WaterJar is not genetic, so it cannot transfer to anything")
+}
+
+func (wj WaterJar) Innoculatable() bool {
+	// WaterJar is not genetic, so it cannot be innoculated
+	return false
 }
 
 func (wj WaterJar) Permissions() *ACL {
+	// Water jars always have full write perms
 	return nil
 }
 
@@ -44,10 +69,11 @@ func (field WaterJarField) Get(ctx context.Context) (out PCRun, err error) {
 	return out, err
 }
 
-func initializeWaterJars(ctx context.Context) error { // TODO: use this!
+func initializeWaterJars(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(WaterJarsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		creationDateIndexModel,
 		newSimpleIndex("pcRun", "pcRun", false, false, false),
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
@@ -57,17 +83,19 @@ func initializeWaterJars(ctx context.Context) error { // TODO: use this!
 	}
 	// If test agar batch does not exist, then create it
 	testItem := &WaterJar{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		PcRunField:                 PcRunField{exAltId},
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
+		MainCollectionIdField: MainCollectionIdField{exWaterId},
+		CreationDateField:     CreationDateField{exampleTime},
+		PcRunField:            PcRunField{exAltId},
+		NotesField:            NotesField{exampleNotes()},
+		LastUpdatedField:      LastUpdatedField{exampleTime},
 	}
-	return addTestAltEntries(ctx, testItem)
+	return addTestMainEntries(ctx, testItem)
 }
 
 type createWaterJarRequest struct {
 	PcRunField
 	NotesField
+	WriteTagToField
 }
 
 func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: THIS!
@@ -83,25 +111,36 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := newAlternateCollectionId()
+	id := NextMainCollectionId()
 	ctx, db := Db(r)
-	coll := db.Collection(WaterJarsCollectionName)
-	toInsert := WaterJar{
-		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		PcRunField:                 req.PcRunField,
-		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+	pcRun, err := req.PcRunField.Get(ctx)
+	if err != nil {
+		http.Error(w, "failed to get pc run: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+
+	toInsert := WaterJar{
+		MainCollectionIdField: MainCollectionIdField{id},
+		CreationDateField:     pcRun.CreationDateField,
+		PcRunField:            req.PcRunField,
+		NotesField:            req.NotesField,
+		DisposedField:         DisposedField{nil},
+		LastUpdatedField:      LastUpdatedField{unixTimeForNow()},
+	}
+
+	// TODO: HANDLE WriteTagTo
+	finishCreateAlternateEntry(ctx, db.Collection(WaterJarsCollectionName), toInsert, w)
 }
 
 type updateWaterJarRequest struct {
-	Notes AllEntries[Note] `json:"notes"`
+	NotesUpdateField
+	DisposedField
 }
 
 func (req updateWaterJarRequest) modsFor(existing *WaterJar, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateNotesIfNeeded(req, existing).
+		updateDisposedIfNeeded(req, existing).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -120,14 +159,14 @@ func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := b58Id.toAltCollectionId()
+	id, err := b58Id.toMainCollectionId()
 	if err != nil {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(WaterJarsCollectionName)
-	existing, err := GetAltCollectionItem(r.Context(), id, &WaterJar{})
+	existing, err := GetMainCollectionItem(r.Context(), id, &WaterJar{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -136,5 +175,11 @@ func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, PermsOnRequest{BlanketPerm: utils.Pointer(ReadWritePerm(true))})
+	wj, ok := existing.(*WaterJar)
+	if !ok {
+		http.Error(w, "mcItem was not WaterJar", http.StatusInternalServerError)
+		return
+	}
+	unnecessaryPerms := PermsOnRequest{BlanketPerm: utils.Pointer(ReadWritePerm(true))}
+	finishMainCollItemUpdate(ctx, w, coll, req.modsFor, wj, unnecessaryPerms)
 }

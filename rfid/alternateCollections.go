@@ -18,8 +18,6 @@ type AltCollectionIdType interface {
 	AlternateCollectionId | string
 }
 
-var _ AltCollectionItem[AlternateCollectionId] = &WaterJar
-
 type AltCollectionItem[T AltCollectionIdType] interface {
 	CollectionItem
 	DbId() T
@@ -172,6 +170,8 @@ func ListEntriesHandler() http.Handler {
 			bs, err = listEntriesHandlerInternal[*Transfer](r.Context(), true, maxResults, doStandardToo, &Transfer{})
 		case "user", "users":
 			bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
+		case "waterJar", "waterjar", "water jar", "Water jar", "sterilizedWater", "sterile water":
+			bs, err = listEntriesHandlerInternal[*WaterJar](r.Context(), true, maxResults, doStandardToo, &WaterJar{})
 		default:
 			http.Error(w, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name")).Error(), http.StatusBadRequest)
 		}
@@ -257,18 +257,66 @@ func HandleHttpWriteError(err error) {
 //	}
 //}
 
+func PrintAltCollectionItemIds[T AltCollectionItem[U], U AltCollectionIdType](Prefix string, testItems []T) error {
+	if len(testItems) == 0 {
+		println("Warning, no test items passed into PrintAltCollectionItemIds")
+		return errors.New("no test items passed into PrintAltCollectionItemIds")
+	}
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf(`%s %s entries:`, Prefix, testItems[0].CollectionName()) + "\n")
+	for _, item := range testItems {
+		switch id := item.IdValue().(type) {
+		case AlternateCollectionId:
+			sb.WriteString(string(id.asBase58()) + "\n")
+		case string:
+			sb.WriteString(id + "\n")
+		default:
+			return errors.New("invalid basic alt entry id, must be string or Alt Id")
+		}
+	}
+	println(sb.String())
+	return nil
+}
+
+func PrintMainCollectionItemIds[T MainCollectionItem](Prefix string, testItems []T) {
+	sb := strings.Builder{}
+	sb.WriteString(fmt.Sprintf(`%s %s entries:`, Prefix, testItems[0].CollectionName()) + "\n")
+	for _, item := range testItems {
+		sb.WriteString(string(item.DbId().asBase58()) + "\n")
+	}
+	println(sb.String())
+}
+
 func addTestAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, testItems ...T) error {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
-	_, err := coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
-		return mongo.NewReplaceOneModel().SetReplacement(item).SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
-	}))
-	// TODO: do something with the result?
+	if err := PrintAltCollectionItemIds("Test", testItems); err != nil {
+		return err
+	}
+	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(testItems[0].CollectionName())
+		return coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+			return mongo.NewReplaceOneModel().SetReplacement(item).SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
+		}))
+		// TODO: do something with the result?
+	})
+
 	return err
 }
 
 func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, testItems ...T) error {
+	if err := PrintAltCollectionItemIds("Builtin", testItems); err != nil {
+		return err
+	}
+	// TODO: txn or no?
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
 	for _, item := range testItems {
+		switch id := item.IdValue().(type) {
+		case AlternateCollectionId:
+			println(id.asBase58())
+		case string:
+			println(id)
+		default:
+			return errors.New("invalid basic alt entry id, must be string or Alt Id")
+		}
 		_, err := coll.InsertOne(ctx, item, options.InsertOne())
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {

@@ -405,11 +405,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = &PicWithNotes{
-			Time:       now,
-			Location:   imageLocation(newFileNameWithPrefixPath),
-			NotesField: NotesField{[]Note{}},
-		}
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {
@@ -457,7 +453,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateJarRequest struct {
-	Notes AllEntries[Note]
+	NotesUpdateField
 	KnownFruitableField
 	DisposedField
 	SaleField
@@ -472,7 +468,7 @@ func (upr updateJarRequest) reform() resolvedUpdateJarRequest {
 		KnownFruitableField: upr.KnownFruitableField,
 		SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
-		Notes:               upr.Notes,
+		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		PermsOnRequest:      upr.PermsOnRequest,
@@ -483,20 +479,20 @@ type resolvedUpdateJarRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
+	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	PermsOnRequest
 }
 
-func (out resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
-		updateSaleIfNeeded(out.Sale, existing.Sale).
-		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
-		updateNotesIfNeeded(out.Notes, existing.Notes).
-		updatePicsIfNeeded(out.Images, existing.Pics).
-		updateContamsIfNeeded(out.Contams, existing.Contaminations).
+		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

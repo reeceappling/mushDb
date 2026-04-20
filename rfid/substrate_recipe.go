@@ -60,10 +60,7 @@ func initializeSubstrates(ctx context.Context) error {
 			AlternateCollectionIdField: altCollIdFieldForint(idCoir),
 			StandardField:              StandardField{true},
 			NotesField: NotesField{[]Note{
-				{
-					Time: ogTime,
-					Note: "roughly 40g dry coir, 1 cup H20 per quart",
-				},
+				newNote(ogTime, "roughly 40g dry coir, 1 cup H20 per quart"),
 			}},
 			AclField: allCanReadAcl(),
 		},
@@ -74,14 +71,8 @@ func initializeSubstrates(ctx context.Context) error {
 			AlternateCollectionIdField: altCollIdFieldForint(idCoirVerm),
 			StandardField:              StandardField{true},
 			NotesField: NotesField{[]Note{
-				{
-					Time: ogTime,
-					Note: "Recipe: roughly 40g dry coir, up to 1/2 cup vermiculite, 1 cup H20 per quart",
-				},
-				{
-					Time: ogTime,
-					Note: "Vermiculite helps to keep more moisture in the substrate over time",
-				},
+				newNote(ogTime, "Recipe: roughly 40g dry coir, up to 1/2 cup vermiculite, 1 cup H20 per quart"),
+				newNote(ogTime, "Vermiculite helps to keep more moisture in the substrate over time"),
 			}},
 			AclField: allCanReadAcl(),
 		},
@@ -91,10 +82,7 @@ func initializeSubstrates(ctx context.Context) error {
 			AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
 			StandardField:              StandardField{true},
 			NotesField: NotesField{[]Note{
-				{
-					Time: ogTime,
-					Note: "Roughly equal parts wood pellets and water (maybe less water. Do less at first to ensure field capacity)",
-				},
+				newNote(ogTime, "Roughly equal parts wood pellets and water (maybe less water. Do less at first to ensure field capacity)"),
 			}},
 			AclField: allCanReadAcl(),
 		},
@@ -215,16 +203,16 @@ type updateSubstrateRecipeRequest struct {
 	NameField
 	AliasesField
 	StandardField
-	Notes AllEntries[Note] `json:"notes"`
+	NotesUpdateField
 	PermsOnRequest
 }
 
-func (mods updateSubstrateRecipeRequest) modsFor(existing *SubstrateRecipe, aclField AclField) (bson.D, error) {
+func (req updateSubstrateRecipeRequest) modsFor(existing *SubstrateRecipe, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateNameIfNeeded(mods.Name, existing.Name).
-		updateAliasesIfNeeded(mods.Aliases, existing.Aliases). // TODO: make sure no duplicates
-		updateStandardIfNeeded(mods.Standard, existing.Standard).
-		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updateNameIfNeeded(req.Name, existing.Name).
+		updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: make sure no duplicates
+		updateStandardIfNeeded(req.Standard, existing.Standard).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

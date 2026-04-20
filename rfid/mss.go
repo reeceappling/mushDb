@@ -238,7 +238,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateMssRequest struct {
-	Notes AllEntries[Note]
+	NotesUpdateField
 	DisposedField
 	SaleField
 	WriteTagToField
@@ -248,8 +248,8 @@ type updateMssRequest struct {
 func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateSaleIfNeeded(req.Sale, existing.Sale).
-		updateDisposedIfNeeded(req.Disposed, existing.Disposed).
-		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

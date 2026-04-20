@@ -24,17 +24,17 @@ type Bag struct {
 	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *unixTime `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField                      `bson:"inline"`                                                 // Initial wetness (refer to scale on field struct)
-	KnownFruitableField               `bson:"inline"`                                                 // set on transfer in, or once fruited
-	SpeciesOptionalField              `bson:"inline"`                                                 // set on transfer in
-	SubspeciesOptionalField           `bson:"inline"`                                                 // set on transfer in
-	InnocField                        `bson:"inline"`                                                 // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField                 `bson:"inline"`                                                 // Set on transfer out
-	MainCollectionOptionalParentField `bson:"inline"`                                                 // Set on transfer in
-	ParentTypeField                   `bson:"inline"`                                                 // (main)lc, plate, or jar only (alt) can come from lcSyringe
-	PicsField                         `bson:"inline"`                                                 // Updated independently
-	ContaminationsField               `bson:"inline"`                                                 // Updated independently
+	SealDate                          *unixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
+	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
+	SpeciesOptionalField              `bson:"inline"` // set on transfer in
+	SubspeciesOptionalField           `bson:"inline"` // set on transfer in
+	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                 `bson:"inline"` // Set on transfer out
+	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
+	ParentTypeField                   `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	PicsField                         `bson:"inline"` // Updated independently
+	ContaminationsField               `bson:"inline"` // Updated independently
 	MostRecentImageField              `bson:"inline"`
 	FlushesField                      `bson:"inline"` // Updated independently
 	SaleField                         `bson:"inline"`
@@ -259,7 +259,7 @@ type updateBagRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
+	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newFlush-1"
@@ -272,7 +272,7 @@ func (upr updateBagRequest) reform() resolvedUpdateBagRequest {
 		KnownFruitableField: upr.KnownFruitableField,
 		SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
-		Notes:               upr.Notes,
+		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		Flushes:             imageUpdates(upr.Flushes),
@@ -284,22 +284,22 @@ type resolvedUpdateBagRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
+	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
 	PermsOnRequest
 }
 
-func (out resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
-		updateSaleIfNeeded(out.Sale, existing.Sale).
-		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
-		updateNotesIfNeeded(out.Notes, existing.Notes).
-		updatePicsIfNeeded(out.Images, existing.Pics).
-		updateContamsIfNeeded(out.Contams, existing.Contaminations).
-		updateFlushesIfNeeded(out.Flushes, existing.Flushes).
+		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updateFlushesIfNeeded(req.Flushes, existing.Flushes).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -441,9 +441,8 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			now := unixTimeForNow()
 			importedPic = &PicWithNotes{
-				Time:       now,
-				Location:   imageLocation(newFileNameWithPrefixPath),
-				NotesField: NotesField{[]Note{}},
+				PicWithNotesLessLocation: newPicWithNotesLessLocation(now, []Note{}),
+				Location:                 imageLocation(newFileNameWithPrefixPath),
 			}
 			filesProcessed++
 		} else {

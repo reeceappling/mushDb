@@ -134,8 +134,9 @@ const decodeMethodTpl = `func ({{$info.Receiver}} {{$typ}}) Decode(encoded *mong
 const collectionNameMethodTpl = `func ({{$info.Receiver}} {{$typ}}) CollectionName() string {
 	return {{$info.CollConstName}}
 }`
-const setPermsMethodTpl = `func ({{$info.Receiver}} *{{$typ}}) SetPerms(field AclField) {
-	{{$info.Receiver}}.AclField = field
+const setPermsMethodTpl = `
+func ({{$info.Receiver}} *{{$typ}}) SetPerms(field AclField) {
+	{{ if $info.Receiver != "wj.AclField"}}{{$info.Receiver}}.AclField = field{{ end }}
 }`
 const dbIdMethodTpl = `func ({{$info.Receiver}} {{$typ}}) DbId() MainCollectionId {
 	return {{$info.Receiver}}.Id
@@ -203,6 +204,7 @@ var mainCollTypes = map[string]mainCollInfo{
 	"SporePrint":      infoFor("sp", "SporePrintSourceType", "sporePrint", "SporePrintCollectionName", "sporePrints"),
 	"SporeSwab":       infoFor("sw", "SporeSwabSourceType", "swab", "SporeSwabCollectionName", "sporeSwabs"),
 	"StasisTube":      infoFor("s", "StasisTubeSourceType", "stasisTube", "StasisTubeCollectionName", "stasisTubes"),
+	"WaterJar":        infoFor("wj", "WaterJarsSourceType", "waterJar", "WaterJarsCollectionName", "waterJars"),
 }
 var otherCollTypes map[string]otherCollInfo
 
@@ -220,7 +222,6 @@ func createOtherCollTypes() map[string]otherCollInfo {
 		"Transfer":        infoForO("t", "TransfersCollName", "transfers", "AlternateCollectionId"),
 		"User":            infoForO("u", "UserCollName", "users", "string"),
 		"Project":         infoForO("p", "ProjectsCollectionName", "Projects", "string"),
-		"WaterJar":        infoForO("wj", "WaterJarsCollectionName", "WaterJars", "AlternateCollectionId"),
 	}
 	// Set special perms types (user, project)
 	for _, key := range []string{"User", "Project"} {

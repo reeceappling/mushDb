@@ -4,7 +4,6 @@ import {JSX, useEffect, useState} from "react";
 import NotesArea, {
     IsValidNote,
     Note,
-    NoteEntriesGroup,
     NotesAreaInline
 } from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
@@ -81,7 +80,7 @@ function dataFormatFor<T>(init: T[] | undefined): Data<T>[] {
 
 export default function GrainBatchDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        id, readonly, data, headerLevel, isTopLevel, cookies
     }: DisplayInput) {
     try {
         AssertGrainBatch(data)
@@ -94,13 +93,13 @@ export default function GrainBatchDisplay(
         // grain non-changeable (base grain)
         // name non-changeable
         const [notes, setNotes] = useState<AllEntries<Note>>({existing: dataFormatFor(initial.notes), new: []})
-        const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+        ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
         const submit = () => {
             fetch(BaseExternalUrl + "/db/update/grainBatch/" + data._id, {
                 method: "POST",
                 headers: {
                     credentials: 'include',
-                    'Cookie': cookies,
+                    //'Cookie': cookies,
                     'Content-type': "application/json"
                 },
                 body: JSON.stringify({
@@ -162,7 +161,7 @@ export default function GrainBatchDisplay(
 export function NewGrainBatchForm({handlers, recipe}: { handlers: NewEntryInput<GrainBatch>, recipe: string }) {
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+    ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
     const newGrainBatchSubmit = () => {
         fetch(BaseExternalUrl + "/create/grainBatch", {
             method: 'Post',
@@ -172,7 +171,7 @@ export function NewGrainBatchForm({handlers, recipe}: { handlers: NewEntryInput<
             }),
             headers: {
                 credentials: 'include',
-                'Cookie': cookies,
+                //'Cookie': cookies,
                 'Content-type': "application/json"
                 //Authorization: tokenFetch,
             },
@@ -237,13 +236,13 @@ export function GrainBatchSelector(
 ) {
     const [recent, setRecent] = useState<GrainBatch[]>([])
     const [err, setErr] = useState<string | undefined>()
-    const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+    //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
     useEffect(() => {
         fetch(BaseExternalUrl + "db/list/grainBatches", {
             method: 'GET',
             headers: {
                 credentials: 'include',
-                'Cookie': cookies,
+                //'Cookie': cookies,
                 'Content-type': "application/json"
                 //Authorization: tokenFetch,
             },

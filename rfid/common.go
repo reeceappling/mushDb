@@ -116,6 +116,7 @@ func Initialize(ctx context.Context) error {
 		"fruit":       initializeFruits,
 		"spore print": initializeSporePrints,
 		"plugs":       initializePlugs,
+		"waterJar":    initializeWaterJars,
 		//Initialize Collections with predefined items
 		"agar Recipe":      initializeAgarRecipes,
 		"jar Recipe":       initializeJarRecipes,
@@ -148,6 +149,7 @@ func Initialize(ctx context.Context) error {
 		"stasisTube":      string(exStasis.asBase58()),
 		"fruit":           string(exFruitId.base58Bytes()),
 		"sporePrint":      string(exSporePrint.base58Bytes()),
+		"waterJar":        string(exWaterId.base58Bytes()),
 		// Standard Alt IDs
 		"agarBatch":       string(exAltId.base58Bytes()),
 		"agarRecipe":      string(exAltId.base58Bytes()),
@@ -181,6 +183,25 @@ func simplePointerUpdate[T any](mods []bson.E, key string, ptr *T) []bson.E {
 	}
 	out := append(mods, simpleUpdate(key, ptr))
 	return out
+}
+
+func getItemLatestImage(item CollectionItem) (*imageLocation, unixTime) { // TODO: consider using?
+	var loc *imageLocation = nil
+	var latest unixTime = 0
+	if itemWithPicsField, ok := item.(interface{ getLatestPicFromPicsField() *PicWithNotes }); ok {
+		if pwn := itemWithPicsField.getLatestPicFromPicsField(); pwn != nil {
+			loc = &pwn.Location
+			latest = pwn.Time
+		}
+	}
+	if contamItem, ok := item.(interface{ getContamsLatestImage() *Contamination }); ok {
+		if contam := contamItem.getContamsLatestImage(); contam != nil {
+			if contam.Location != nil && contam.Time > latest {
+				return contam.Location, contam.Time
+			}
+		}
+	}
+	return loc, latest
 }
 
 // TODO: USE THIS IN UPDATES!
@@ -451,26 +472,25 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 }
 
 type picWithNotesForm struct {
-	Time  unixTime         `json:"time"`
-	Img   string           `json:"img"`
-	Notes AllEntries[Note] `json:"notes"`
+	Time unixTime `json:"time"`
+	Img  string   `json:"img"`
+	NotesUpdateField
 }
 
 func (pwn picWithNotesForm) convert() PicWithNotes {
 	return PicWithNotes{
-		Time:       pwn.Time,
-		Location:   imageLocation(pwn.Img),
-		NotesField: NotesField{pwn.Notes.asEntries()},
+		PicWithNotesLessLocation: newPicWithNotesLessLocation(pwn.Time, pwn.Notes.asEntries()),
+		Location:                 imageLocation(pwn.Img),
 	}
 }
 
 type contamForm struct {
-	Time      unixTime         `json:"time"`
-	Confirmed bool             `json:"confirmed"`
-	Bacteria  bool             `json:"bacteria"`
-	Mold      bool             `json:"mold"`
-	Notes     AllEntries[Note] `json:"notes"`
-	Location  *string          `json:"location,omitempty"` // MAY OR MAY NOT EXIST ON RESPONSE
+	Time      unixTime `json:"time"`
+	Confirmed bool     `json:"confirmed"`
+	Bacteria  bool     `json:"bacteria"`
+	Mold      bool     `json:"mold"`
+	NotesUpdateField
+	Location *string `json:"location,omitempty"` // MAY OR MAY NOT EXIST ON RESPONSE
 }
 
 func (cf contamForm) convert() Contamination {
@@ -479,12 +499,16 @@ func (cf contamForm) convert() Contamination {
 		loc = utils.Pointer(imageLocation(*cf.Location))
 	}
 	return Contamination{
-		Time:       cf.Time,
-		Confirmed:  cf.Confirmed,
-		Bacteria:   cf.Bacteria,
-		Mold:       cf.Mold,
-		Location:   loc,
-		NotesField: NotesField{cf.Notes.asEntries()},
+		ContaminationLessLocation: ContaminationLessLocation{
+			PicWithNotesLessLocation: PicWithNotesLessLocation{
+				RequiredTimeField: RequiredTimeField{cf.Time},
+				NotesField:        NotesField{cf.Notes.asEntries()},
+			},
+			Confirmed: cf.Confirmed,
+			Bacteria:  cf.Bacteria,
+			Mold:      cf.Mold,
+		},
+		Location: loc,
 	}
 }
 
@@ -511,15 +535,15 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 		return false
 	}
 	return notesWereModified(existing.Notes, updated.Notes)
-	for i, updatedNote := range updated.Notes.Existing {
-		if updatedNote.Disabled {
-			return false
-		}
-		if updatedNote.Data.Note != existing.Notes[i].Note {
-			return false
-		}
-	}
-	return true
+	//for i, updatedNote := range updated.Notes.Existing {
+	//	if updatedNote.Disabled {
+	//		return false
+	//	}
+	//	if updatedNote.Data.Note != existing.Notes[i].Note {
+	//		return false
+	//	}
+	//}
+	//return true
 }
 
 //func setUnsetUnequalPointers[T comparable](key string, update *T, current *T, modsIn bson.D) bson.D {
@@ -658,6 +682,7 @@ var (
 	exAltId              = altCollIdForint(0)
 	exFruitId            = mainCollIdForint(idTestFruit)
 	exampleTime          = unixTimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
+	exReqTimeField       = RequiredTimeField{exampleTime}
 	exampleSpecies       = "beech"
 	exampleSubspecies    = utils.Pointer("brown beech")
 	exGenSinceSpore      = Generation(2)
@@ -676,6 +701,7 @@ var (
 	exSlant              = mainCollIdForint(idTestSlant)
 	exStasis             = mainCollIdForint(idTestStasis)
 	exSwabId             = mainCollIdForint(idTestSwab)
+	exWaterId            = mainCollIdForint(idTestWaterJar)
 	exAlts               = []AlternateCollectionId{exAltId, exAltId}
 	exProjWrite          = projectName("example write project ")
 	exProjRead           = projectName("example read project ")
@@ -714,32 +740,37 @@ var (
 		},
 		BlanketPerm: false,
 	}
-	exBool   = utils.Pointer(true)
-	exPicLoc = "test.jpg" // TODO: make sure this exists
-	exPic    = PicWithNotes{
-		Time:       exampleTime,
-		Location:   imageLocation(exPicLoc),
-		NotesField: NotesField{exampleNotes()},
+	exBool                     = utils.Pointer(true)
+	exPicLoc                   = "test.jpg" // TODO: make sure this exists\
+	exPicWithNotesLessLocation = PicWithNotesLessLocation{
+		RequiredTimeField: exReqTimeField,
+		NotesField:        NotesField{exampleNotes()},
 	}
-	exPics = []PicWithNotes{exPic, exPic}
-	ec     = Contamination{
-		Time:       exampleTime,
-		Confirmed:  false,
-		Bacteria:   false,
-		Mold:       true,
-		Location:   (*imageLocation)(&exPicLoc),
-		NotesField: NotesField{exampleNotes()},
+	exPic = PicWithNotes{
+		PicWithNotesLessLocation: exPicWithNotesLessLocation,
+		Location:                 imageLocation(exPicLoc),
+	}
+	exPics          = []PicWithNotes{exPic, exPic}
+	exContamLessLoc = ContaminationLessLocation{
+		PicWithNotesLessLocation: exPicWithNotesLessLocation,
+		Confirmed:                false,
+		Bacteria:                 false,
+		Mold:                     true,
+	}
+	ec = Contamination{
+		ContaminationLessLocation: exContamLessLoc,
+		Location:                  (*imageLocation)(&exPicLoc),
 	}
 	exContams = []Contamination{ec, ec}
 )
 
 func exampleNotes() []Note {
 	return []Note{{
-		Time: exampleTime,
-		Note: "example note A",
+		RequiredTimeField: exReqTimeField,
+		Note:              "example note A",
 	}, {
-		Time: exampleTime,
-		Note: "example note B",
+		RequiredTimeField: exReqTimeField,
+		Note:              "example note B",
 	}}
 }
 

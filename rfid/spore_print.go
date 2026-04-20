@@ -374,8 +374,8 @@ type updateSporePrintRequest struct {
 	DisposedField
 	SporePrintColorField   // TODO: validate? // TODO: add to typescript side and validate
 	SporePrintDensityField // TODO: validate? // TODO: add to typescript side and validate
-	Notes                  AllEntries[Note]
-	Pics                   SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
+	NotesUpdateField
+	Pics SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
 	PermsOnRequest
 }
 
@@ -385,7 +385,7 @@ func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 		SporePrintDensityField: upr.SporePrintDensityField,
 		SaleField:              upr.SaleField,
 		DisposedField:          upr.DisposedField,
-		Notes:                  upr.Notes,
+		NotesUpdateField:       upr.NotesUpdateField,
 		Pics: SplitEntries[picWithNotesForm, PicWithNotes]{
 			Existing: upr.Pics.Existing,
 			New: slices.Map(upr.Pics.New, func(i PicWithNotesLessLocation) PicWithNotes {
@@ -401,19 +401,19 @@ type resolvedUpdateSporePrintRequest struct {
 	DisposedField
 	SporePrintColorField
 	SporePrintDensityField
-	Notes AllEntries[Note]
-	Pics  SplitEntries[picWithNotesForm, PicWithNotes]
+	NotesUpdateField
+	Pics SplitEntries[picWithNotesForm, PicWithNotes]
 	PermsOnRequest
 }
 
-func (out resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateSporePrintColorIfNeeded(out.Color, existing.Color).
-		updateSporePrintDensityIfNeeded(out.Density, existing.Density).
-		updateSaleIfNeeded(out.Sale, existing.Sale).
-		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
-		updateNotesIfNeeded(out.Notes, existing.Notes).
-		updatePicsIfNeeded(out.Pics, existing.Pics).
+		updateSporePrintColorIfNeeded(req.Color, existing.Color).
+		updateSporePrintDensityIfNeeded(req.Density, existing.Density).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Pics, existing.Pics).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -544,12 +544,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-
-		importedPic = &PicWithNotes{
-			Time:       now,
-			Location:   imageLocation(newFileNameWithPrefixPath),
-			NotesField: NotesField{[]Note{}},
-		}
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {

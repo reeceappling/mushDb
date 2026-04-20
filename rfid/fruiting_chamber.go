@@ -84,11 +84,7 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 	mods := NewMods()
 	pictures := []PicWithNotes{}
 	if xfer.ToImage != nil {
-		pic := PicWithNotes{
-			Time:       xfer.CreationDate,
-			Location:   *xfer.ToImage,
-			NotesField: NotesField{[]Note{}},
-		}
+		pic := newPicWithNotes(xfer.CreationDate, []Note{}, *xfer.ToImage)
 		pictures = []PicWithNotes{pic}
 		mods = mods.
 			withMostRecentImage(&pic).
@@ -357,11 +353,8 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = &PicWithNotes{
-			Time:       now,
-			Location:   imageLocation(newFileNameWithPrefixPath),
-			NotesField: NotesField{[]Note{}},
-		}
+
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {
@@ -419,7 +412,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateFruitingChamberRequest struct {
-	Notes AllEntries[Note]
+	NotesUpdateField
 	KnownFruitableField
 	DisposedField
 	SaleField
@@ -435,7 +428,7 @@ func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRe
 		KnownFruitableField: upr.KnownFruitableField,
 		SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
-		Notes:               upr.Notes,
+		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		Flushes:             imageUpdates(upr.Flushes),
@@ -447,22 +440,22 @@ type resolvedUpdateFruitingChamberRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
+	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
 	PermsOnRequest
 }
 
-func (out resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChamber, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChamber, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(out.KnownFruitable, existing.KnownFruitable).
-		updateSaleIfNeeded(out.Sale, existing.Sale).
-		updateDisposedIfNeeded(out.Disposed, existing.Disposed).
-		updateNotesIfNeeded(out.Notes, existing.Notes).
-		updatePicsIfNeeded(out.Images, existing.Pics).
-		updateContamsIfNeeded(out.Contams, existing.Contaminations).
-		updateFlushesIfNeeded(out.Flushes, existing.Flushes).
+		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updateFlushesIfNeeded(req.Flushes, existing.Flushes).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

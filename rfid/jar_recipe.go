@@ -128,6 +128,7 @@ func initializeJarRecipes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Add test entries
 	// If test jar recipe does not exist, then create it
 	testItem := &JarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
@@ -156,7 +157,6 @@ func initializeJarRecipes(ctx context.Context) error {
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 	}
-	// TODO: add built-in entries
 	return addTestAltEntries(ctx, testItem)
 }
 
@@ -228,7 +228,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 type updateJarRecipeRequest struct {
 	NameField
 	StandardField
-	Notes AllEntries[Note] `json:"notes"`
+	NotesUpdateField
 	PermsOnRequest
 }
 
@@ -236,7 +236,7 @@ func (req updateJarRecipeRequest) modsFor(existing *JarRecipe, aclField AclField
 	return NewMods().
 		updateNameIfNeeded(req.Name, existing.Name).
 		updateStandardIfNeeded(req.Standard, existing.Standard).
-		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateNotesIfNeeded(req, existing).
 		// TODO: for perms updates, disallow removing self???
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().

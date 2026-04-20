@@ -30,18 +30,10 @@ func (sp Species) EntryTypeField() *string {
 const shiitakeName = "Shiitake"
 const shiitakeSciName = "Lentinula edodes"
 
-var shiitakeNotes = NotesField{[]Note{{
-	Time: ogTime,
-	Note: "Colonization conditions: Hardwood sawdust with 15% bran, or pegs into a log. Indirect sun 8-12hrs. 80-90% humidity, 60-68degF, and regular FAE",
-},
-	{
-		Time: ogTime,
-		Note: "Fruiting conditions: Needs roughly 3mo incubation, damage block to encourage fruiting.",
-	},
-	{
-		Time: ogTime,
-		Note: "Best Agar: LMEA",
-	},
+var shiitakeNotes = NotesField{[]Note{
+	newNote(ogTime, "Colonization conditions: Hardwood sawdust with 15% bran, or pegs into a log. Indirect sun 8-12hrs. 80-90% humidity, 60-68degF, and regular FAE"),
+	newNote(ogTime, "Fruiting conditions: Needs roughly 3mo incubation, damage block to encourage fruiting."),
+	newNote(ogTime, "Best Agar: LMEA"),
 }}
 
 func initializeSpecies(ctx context.Context) error {
@@ -68,19 +60,10 @@ func initializeSpecies(ctx context.Context) error {
 			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
 			NotesField: NotesField{[]Note{
-				{
-					Time: ogTime,
-					Note: "Colonization conditions: FIXME",
-				},
-				{
-					Time: ogTime,
-					Note: "Fruiting conditions: Prefer higher humidity than pinks FIXME",
-				},
-				{
-					Time: ogTime,
-					Note: "Best Agar: LMEA",
-				}},
-			},
+				newNote(ogTime, "Colonization conditions: FIXME"),
+				newNote(ogTime, "Fruiting conditions: Prefer higher humidity than pinks FIXME"),
+				newNote(ogTime, "Best Agar: LMEA"),
+			}},
 			AclField: allCanWriteAcl(),
 		},
 
@@ -90,19 +73,11 @@ func initializeSpecies(ctx context.Context) error {
 			ScientificName:    "Pleurotus Djamor",
 			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
-			NotesField: NotesField{[]Note{{
-				Time: ogTime,
-				Note: "Colonization conditions: FIXME",
-			},
-				{
-					Time: ogTime,
-					Note: "Fruiting conditions: Prefer higher FAE than kings FIXME",
-				},
-				{
-					Time: ogTime,
-					Note: "Best Agar: LMEA",
-				}},
-			},
+			NotesField: NotesField{[]Note{
+				newNote(ogTime, "Colonization conditions: FIXME"),
+				newNote(ogTime, "Fruiting conditions: Prefer higher FAE than kings FIXME"),
+				newNote(ogTime, "Best Agar: LMEA"),
+			}},
 			AclField: allCanWriteAcl(),
 		},
 		// Enoki
@@ -111,19 +86,11 @@ func initializeSpecies(ctx context.Context) error {
 			ScientificName:    "Flammulina filiformis",
 			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
-			NotesField: NotesField{[]Note{{
-				Time: ogTime,
-				Note: "Colonization conditions: FIXME",
-			},
-				{
-					Time: ogTime,
-					Note: "Fruiting conditions: Grow in a high-CO2 environment, with the only light being high-up in the enclosure to ensure they grow tall and thin, FAE==0, humidity=70+",
-				},
-				{
-					Time: ogTime,
-					Note: "Best Agar: LMEA",
-				}},
-			},
+			NotesField: NotesField{[]Note{
+				newNote(ogTime, "Colonization conditions: FIXME"),
+				newNote(ogTime, "Fruiting conditions: Grow in a high-CO2 environment, with the only light being high-up in the enclosure to ensure they grow tall and thin, FAE==0, humidity=70+"),
+				newNote(ogTime, "Best Agar: LMEA"),
+			}},
 			AclField: allCanWriteAcl(),
 		},
 		// Shiitake
@@ -141,23 +108,11 @@ func initializeSpecies(ctx context.Context) error {
 			ScientificName:    "Grifola frondosa",
 			AliasesField:      AliasesField{[]string{"hen of the woods"}},
 			StandardSubstrate: woodPelletsId,
-			NotesField: NotesField{[]Note{{
-				Time: ogTime,
-				Note: "Colonization conditions: FIXME",
-			},
-				{
-					Time: ogTime,
-					Note: "Fruiting conditions: 50-70degF (64-66 is ideal). >90% humidity. Cold shock to begin fruiting ",
-				},
-				{
-					Time: ogTime,
-					Note: "Resistant to high temps",
-				},
-				{
-					Time: ogTime,
-					Note: "Best Agar: LMEA",
-				}},
-			},
+			NotesField: NotesField{[]Note{
+				newNote(ogTime, "Colonization conditions: FIXME"),
+				newNote(ogTime, "Fruiting conditions: 50-70degF (64-66 is ideal). >90% humidity. Cold shock to begin fruiting"),
+				newNote(ogTime, "Best Agar: LMEA"),
+			}},
 			AclField: allCanWriteAcl(),
 		},
 		// Beech
@@ -167,18 +122,9 @@ func initializeSpecies(ctx context.Context) error {
 			AliasesField:      AliasesField{[]string{"hen of the woods"}},
 			StandardSubstrate: woodPelletsId,
 			NotesField: NotesField{[]Note{
-				{
-					Time: ogTime,
-					Note: "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin",
-				},
-				{
-					Time: ogTime,
-					Note: "50-60DegF, 80-90RH, FAE",
-				},
-				{
-					Time: ogTime,
-					Note: "Best Agar: LMEA",
-				},
+				newNote(ogTime, "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin"),
+				newNote(ogTime, "50-60DegF, 80-90RH, FAE"),
+				newNote(ogTime, "Best Agar: LMEA"),
 			}},
 			AclField: allCanWriteAcl(),
 		},
@@ -245,19 +191,19 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateSpeciesRequest struct {
 	Substrate AlternateCollectionId `json:"standardSubstrate"`
-	Notes     AllEntries[Note]      `json:"notes,omitempty"`
+	NotesUpdateField
 	AliasesField
 	PermsOnRequest
 	DefaultEntryPermsOnRequest PermsOnRequest // TODO: handle in TS
 }
 
-func (out updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (bson.D, error) {
+func (req updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (bson.D, error) {
 	return NewMods().
-		UpdateValueIfNeeded("standardSubstrate", out.Substrate, existing.StandardSubstrate). // TODO: validate ok
-		updateNotesIfNeeded(out.Notes, existing.Notes).
-		updateAliasesIfNeeded(out.Aliases, existing.Aliases).
+		UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
+		updateNotesIfNeeded(req, existing).
+		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateDefaultEntryPermsIfNeeded(out.DefaultEntryPermsOnRequest, existing.ACL).
+		updateDefaultEntryPermsIfNeeded(req.DefaultEntryPermsOnRequest, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }

@@ -136,7 +136,7 @@ func initializeLCs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
+	// If test LC does not exist, then create it
 	testId := mainCollIdForint(idTestLC)
 	testItem := &LiquidCulture{
 		MainCollectionIdField:   MainCollectionIdField{testId},
@@ -316,11 +316,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = &PicWithNotes{
-			Time:       now,
-			Location:   imageLocation(newFileNameWithPrefixPath),
-			NotesField: NotesField{[]Note{}},
-		}
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
@@ -384,7 +380,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateLiquidCultureRequest struct {
-	Notes AllEntries[Note]
+	NotesUpdateField
 	KnownFruitableField
 	DisposedField
 	ConfirmedClean *bool
@@ -399,21 +395,21 @@ func (upr updateLiquidCultureRequest) reform() resolvedUpdateLiquidCultureReques
 		ConfirmedClean:      upr.ConfirmedClean,
 		KnownFruitableField: upr.KnownFruitableField,
 		DisposedField:       upr.DisposedField,
-		Notes:               upr.Notes,
+		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
-func (mods resolvedUpdateLiquidCultureRequest) modsFor(existing *LiquidCulture, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateLiquidCultureRequest) modsFor(existing *LiquidCulture, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
-		updateConfirmedCleanIfNeeded(mods.ConfirmedClean, existing.ConfirmedClean).
-		updateDisposedIfNeeded(mods.Disposed, existing.Disposed).
-		updateNotesIfNeeded(mods.Notes, existing.Notes).
-		updatePicsIfNeeded(mods.Images, existing.Pics).
-		updateContamsIfNeeded(mods.Contams, existing.Contaminations).
+		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateConfirmedCleanIfNeeded(req.ConfirmedClean, existing.ConfirmedClean).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -423,7 +419,7 @@ type resolvedUpdateLiquidCultureRequest struct {
 	KnownFruitableField
 	Sales []AlternateCollectionId // TODO: maybe do this via a "newSale" endpoint?
 	DisposedField
-	Notes          AllEntries[Note]
+	NotesUpdateField
 	ConfirmedClean *bool
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams        SplitEntries[contamForm, Contamination]

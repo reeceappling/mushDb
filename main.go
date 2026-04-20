@@ -491,6 +491,7 @@ func handleGuestLogin() http.Handler {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		redirectToBasePage(r, w)
 		dst := r.URL.Query().Get("destination")
 		if dst == "" {
 			dst = "https://mush.appli.ng/view/plate/1" // TODO: CHANGE!?
@@ -695,12 +696,16 @@ func handleAuthCallback() http.Handler {
 		}
 		//http.SetCookie(w, c) // TODO: if this works do it everywhere
 		// TODO: redirect to original page
-		dst := r.URL.Query().Get("destination")
-		if dst == "" {
-			dst = "https://mush.appli.ng/view/plate/1" // TODO: CHANGE!
-		}
-		http.Redirect(w, r, dst, http.StatusTemporaryRedirect)
+		redirectToBasePage(r, w)
 	})
+}
+
+func redirectToBasePage(r *http.Request, w http.ResponseWriter) {
+	dst := r.URL.Query().Get("destination")
+	if dst == "" {
+		dst = "https://mush.appli.ng/view/plate/1" // TODO: CHANGE!
+	}
+	http.Redirect(w, r, dst, http.StatusTemporaryRedirect)
 }
 
 var handleLogout http.HandlerFunc = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

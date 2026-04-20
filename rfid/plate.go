@@ -80,23 +80,6 @@ func (p Plate) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return p.GenSinceSpore, p.GenSinceFruitOrSpore
 }
 
-//func (p Plate) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlatesCollectionName)
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	// TODO: if transfer has a fromPic on it, can we add it to the parent?
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, p.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
-
 func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
@@ -133,9 +116,7 @@ func (p Plate) EntryTypeField() *string {
 }
 
 func initializePlates(ctx context.Context) error {
-	println("1")
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	println("2")
 	coll := db.Collection(PlatesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
@@ -166,9 +147,19 @@ func initializePlates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	testPlateIds := []int{idTestPlateBlanketRead, idTestPlateUserWrite,
+		idTestPlateUserRead,
+		idTestPlateProjectWrite,
+		idTestPlateProjectRead,
+		idTestPlateUserWriteProjRead,
+		idTestPlateUserOutsideProject,
+	}
+	platesMade := map[Base58Str]string{}
+	testPlates := make([]*Plate, 0, len(testPlateIds)+1)
 	// If test plate does not exist, then create it
 	testId := mainCollIdForint(idTestPlate) // 0th id, b58==1
-	testItem := &Plate{
+	platesMade[testId.asBase58()] = "test plate with id 1"
+	testPlates = append(testPlates, &Plate{
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		AgarBatchField:          AgarBatchField{&exAltId},
 		CreationDateField:       CreationDateField{exampleTime},
@@ -190,21 +181,7 @@ func initializePlates(ctx context.Context) error {
 		MostRecentImageField:              MostRecentImageField{&exPics[0]},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	}
-	err = addTestMainEntries(ctx, testItem)
-	if err != nil {
-		return err
-	}
-	// TODO: del after
-	testPlateIds := []int{idTestPlateBlanketRead, idTestPlateUserWrite,
-		idTestPlateUserRead,
-		idTestPlateProjectWrite,
-		idTestPlateProjectRead,
-		idTestPlateUserWriteProjRead,
-		idTestPlateUserOutsideProject,
-	}
-	testPlates := make([]*Plate, len(testPlateIds))
-	platesMade := map[Base58Str]string{}
+	})
 	for i, permInt := range testPlateIds {
 		id := mainCollIdForint(permInt)
 		platesMade[id.asBase58()] = testAclStrings[i]
@@ -219,7 +196,7 @@ func initializePlates(ctx context.Context) error {
 		default:
 			// Do nothing different
 		}
-		testPlates[i] = &Plate{
+		testPlates = append(testPlates, &Plate{
 			MainCollectionIdField:               MainCollectionIdField{id},
 			AgarBatchField:                      AgarBatchField{&exAltId},
 			CreationDateField:                   CreationDateField{exampleTime},
@@ -246,17 +223,9 @@ func initializePlates(ctx context.Context) error {
 			NotesField:                        NotesField{exampleNotes()},
 			LastUpdatedField:                  LastUpdatedField{exampleTime},
 			AclField:                          AclField{ACL: testAcls[i]},
-		}
+		})
 	}
-	err = addTestMainEntries(ctx, testPlates...)
-	if err != nil {
-		return err
-	}
-	println("test plate urls: ") // TODO: del
-	for id, str := range platesMade {
-		println(id, str)
-	}
-	return nil
+	return addTestMainEntries(ctx, testPlates...)
 }
 
 type createPlateRequest struct {
@@ -314,7 +283,7 @@ type updatePlateRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]                                         `json:"notes"`
+	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"images"`
 	Contams SplitEntries[contamForm, ContaminationLessLocation]      `json:"contams"`
 	WriteTagToField
@@ -326,7 +295,7 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 		KnownFruitableField: upr.KnownFruitableField,
 		SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
-		Notes:               upr.Notes,
+		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
 		WriteTagToField:     upr.WriteTagToField,
@@ -334,14 +303,14 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 	}
 }
 
-func (mods resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField) (bson.D, error) {
+func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
-		updateSaleIfNeeded(mods.Sale, existing.Sale).
-		updateDisposedIfNeeded(mods.Disposed, existing.Disposed).
-		updateNotesIfNeeded(mods.Notes, existing.Notes).
-		updatePicsIfNeeded(mods.Images, existing.Pics).
-		updateContamsIfNeeded(mods.Contams, existing.Contaminations).
+		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -351,7 +320,7 @@ type resolvedUpdatePlateRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
-	Notes   AllEntries[Note]
+	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
 	WriteTagToField
@@ -549,11 +518,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = &PicWithNotes{
-			Time:       now,
-			Location:   imageLocation(newFileNameWithPrefixPath),
-			NotesField: NotesField{[]Note{}},
-		}
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {

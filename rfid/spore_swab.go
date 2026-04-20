@@ -214,31 +214,31 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: N
 type updateSporeSwabRequest struct { // TODO: fix everything below this
 	SaleField
 	DisposedField
-	Notes AllEntries[Note]
+	NotesUpdateField
 	PermsOnRequest
 }
 
 func (upr updateSporeSwabRequest) reform() resolvedUpdateSporeSwabRequest {
 	return resolvedUpdateSporeSwabRequest{
-		SaleField:      upr.SaleField,
-		DisposedField:  upr.DisposedField,
-		Notes:          upr.Notes,
-		PermsOnRequest: upr.PermsOnRequest,
+		SaleField:        upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateSporeSwabRequest struct {
 	SaleField
 	DisposedField
-	Notes AllEntries[Note]
+	NotesUpdateField
 	PermsOnRequest
 }
 
-func (mods resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateSaleIfNeeded(mods.Sale, existing.Sale).
-		updateDisposedIfNeeded(mods.Disposed, existing.Disposed).
-		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

@@ -53,10 +53,7 @@ func initializeSubstrateBatches(ctx context.Context) error { // TODO: overhaul t
 			CreationDateField:          createdDate,
 			SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idCoir)},
 			NotesField: NotesField{[]Note{
-				{
-					Time: ogTime,
-					Note: "test coir batch",
-				},
+				newNote(ogTime, "test coir batch"),
 			}},
 			AclField:         allCanWriteAcl(),
 			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
@@ -67,10 +64,7 @@ func initializeSubstrateBatches(ctx context.Context) error { // TODO: overhaul t
 			CreationDateField:          createdDate,
 			SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idWoodPellets)},
 			NotesField: NotesField{[]Note{
-				{
-					Time: ogTime,
-					Note: "test hwfp batch",
-				},
+				newNote(ogTime, "test hwfp batch"),
 			}},
 			AclField:         allCanWriteAcl(),
 			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
@@ -184,13 +178,13 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSubstrateBatchRequest struct {
-	Notes AllEntries[Note] `json:"notes"`
+	NotesUpdateField
 	PermsOnRequest
 }
 
-func (mods updateSubstrateBatchRequest) modsFor(existing *SubstrateBatch, aclField AclField) (bson.D, error) {
+func (req updateSubstrateBatchRequest) modsFor(existing *SubstrateBatch, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateNotesIfNeeded(mods.Notes, existing.Notes).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

@@ -159,6 +159,14 @@ type DisposedField struct {
 	Disposed *unixTime `bson:"disposed,omitempty" json:"disposed,omitempty"`
 }
 
+func (df DisposedField) DisposalInfo() *unixTime {
+	return df.Disposed
+}
+
+type Disposable interface {
+	DisposalInfo() *unixTime
+}
+
 type GenerationsFields struct {
 	GenSporeField        `bson:"inline"`
 	GenSinceFruitOrSpore *Generation `bson:"genFruitOrSpore,omitempty" json:"genFruitOrSpore,omitempty"`
@@ -186,12 +194,19 @@ func LastUpdatedFieldForNow() LastUpdatedField {
 type NotesField struct {
 	Notes []Note `bson:"notes,omitempty" json:"notes,omitempty"`
 }
+type HasNotesField interface {
+	GetNotes() []Note
+}
+
+func (field NotesField) GetNotes() []Note {
+	return field.Notes
+}
 
 func (field NotesField) withAllTimesSetTo(t time.Time) NotesField {
 	return NotesField{sliceutils.Map(field.Notes, func(n Note) Note {
 		return Note{
-			Time: unixTimeFor(t),
-			Note: n.Note,
+			RequiredTimeField: newRequiredTimeField(unixTimeFor(t)),
+			Note:              n.Note,
 		}
 	})}
 }

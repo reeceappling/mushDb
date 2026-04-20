@@ -118,13 +118,13 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSaleRequest struct {
-	Notes          AllEntries[Note]
+	NotesUpdateField
 	PermsOnRequest // TODO: ???? handle in typescript and handler!
 }
 
 func (req updateSaleRequest) modsFor(existing *Sale, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

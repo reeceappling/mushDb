@@ -202,7 +202,7 @@ type updateSyringeRequest struct {
 	DisposedField
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
 	KnownFruitableField       // TODO: handle in react
-	Notes               AllEntries[Note]
+	NotesUpdateField
 	PermsOnRequest
 }
 
@@ -212,7 +212,7 @@ func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
 		DisposedField:       upr.DisposedField,
 		ConfirmedClean:      upr.ConfirmedClean,
 		KnownFruitableField: upr.KnownFruitableField,
-		Notes:               upr.Notes,
+		NotesUpdateField:    upr.NotesUpdateField,
 		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
@@ -222,17 +222,17 @@ type resolvedUpdateSyringeRequest struct {
 	DisposedField
 	ConfirmedClean *bool `json:"confirmedClean,omitempty"`
 	KnownFruitableField
-	Notes AllEntries[Note]
+	NotesUpdateField
 	PermsOnRequest
 }
 
-func (mods resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField AclField) (bson.D, error) {
 	mds := NewMods()
-	updatePointerIfNeeded(mds, "confirmedClean", mods.ConfirmedClean, existing.ConfirmedClean)
-	return mds.updateSaleIfNeeded(mods.Sale, existing.Sale).
-		updateDisposedIfNeeded(mods.Disposed, existing.Disposed).
-		updateKnownFruitableIfNeeded(mods.KnownFruitable, existing.KnownFruitable).
-		updateNotesIfNeeded(mods.Notes, existing.Notes).
+	updatePointerIfNeeded(mds, "confirmedClean", req.ConfirmedClean, existing.ConfirmedClean)
+	return mds.updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateKnownFruitableIfNeeded(req.KnownFruitable, existing.KnownFruitable).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

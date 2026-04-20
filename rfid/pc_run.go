@@ -88,13 +88,13 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updatePcRunRequest struct {
-	Notes AllEntries[Note] `json:"notes"`
+	NotesUpdateField
 	PermsOnRequest
 }
 
 func (req updatePcRunRequest) modsFor(existing *PCRun, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateNotesIfNeeded(req.Notes, existing.Notes).
+		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
