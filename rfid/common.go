@@ -133,9 +133,11 @@ func Initialize(ctx context.Context) error {
 		// initialize users
 		"users": initializeUsers,
 	} {
+		println("trying", i, "initializer")
 		if err := initializer(ctx); err != nil {
 			return errors.Join(fmt.Errorf(`%s initializer failed`, i), err)
 		}
+		println("completed initializing", i)
 	}
 	for name, b58IdStr := range map[string]string{
 		// Mains IDs
@@ -146,17 +148,17 @@ func Initialize(ctx context.Context) error {
 		"mss":             string(exMSS.asBase58()),
 		"slant":           string(exSlant.asBase58()),
 		"stasisTube":      string(exStasis.asBase58()),
-		"fruit":           string(exFruitId.base58Bytes()),
-		"sporePrint":      string(exSporePrint.base58Bytes()),
-		"waterJar":        string(exWaterId.base58Bytes()),
+		"fruit":           string(exFruitId.asBase58()),
+		"sporePrint":      string(exSporePrint.asBase58()),
+		"waterJar":        string(exWaterId.asBase58()),
 		// Standard Alt IDs
-		"agarBatch":       string(exAltId.base58Bytes()),
-		"agarRecipe":      string(exAltId.base58Bytes()),
-		"jarRecipe":       string(exAltId.base58Bytes()),
-		"lcRecipe":        string(exAltId.base58Bytes()),
-		"sale":            string(exAltId.base58Bytes()),
-		"substrateRecipe": string(exAltId.base58Bytes()),
-		"transfer":        string(exAltId.base58Bytes()),
+		"agarBatch":       string(exAltId.asBase58()),
+		"agarRecipe":      string(exAltId.asBase58()),
+		"jarRecipe":       string(exAltId.asBase58()),
+		"lcRecipe":        string(exAltId.asBase58()),
+		"sale":            string(exAltId.asBase58()),
+		"substrateRecipe": string(exAltId.asBase58()),
+		"transfer":        string(exAltId.asBase58()),
 		// String Alt IDs
 		"project":    testEntryStringId,
 		"species":    testEntryStringId,
@@ -184,9 +186,9 @@ func simplePointerUpdate[T any](mods []bson.E, key string, ptr *T) []bson.E {
 	return out
 }
 
-func getItemLatestImage(item CollectionItem) (*imageLocation, unixTime) { // TODO: consider using?
-	var loc *imageLocation = nil
-	var latest unixTime = 0
+func getItemLatestImage(item CollectionItem) (*ImageLocation, UnixTime) { // TODO: consider using?
+	var loc *ImageLocation = nil
+	var latest UnixTime = 0
 	if itemWithPicsField, ok := item.(interface{ getLatestPicFromPicsField() *PicWithNotes }); ok {
 		if pwn := itemWithPicsField.getLatestPicFromPicsField(); pwn != nil {
 			loc = &pwn.Location
@@ -413,7 +415,7 @@ func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work f
 		return &Transfer{}, nil
 	case "user", "users":
 		return &User{}, nil
-	case "waterJar":
+	case "waterJar", "waterJars":
 		return &WaterJar{}, nil
 	default:
 		return nil, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name"))
@@ -486,7 +488,7 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 }
 
 type picWithNotesForm struct {
-	Time unixTime `json:"time"`
+	Time UnixTime `json:"time"`
 	Img  string   `json:"img"`
 	NotesUpdateField
 }
@@ -494,12 +496,12 @@ type picWithNotesForm struct {
 func (pwn picWithNotesForm) convert() PicWithNotes {
 	return PicWithNotes{
 		PicWithNotesLessLocation: newPicWithNotesLessLocation(pwn.Time, pwn.Notes.asEntries()),
-		Location:                 imageLocation(pwn.Img),
+		Location:                 ImageLocation(pwn.Img),
 	}
 }
 
 type contamForm struct {
-	Time      unixTime `json:"time"`
+	Time      UnixTime `json:"time"`
 	Confirmed bool     `json:"confirmed"`
 	Bacteria  bool     `json:"bacteria"`
 	Mold      bool     `json:"mold"`
@@ -508,9 +510,9 @@ type contamForm struct {
 }
 
 func (cf contamForm) convert() Contamination {
-	var loc *imageLocation = nil
+	var loc *ImageLocation = nil
 	if cf.Location != nil {
-		loc = utils.Pointer(imageLocation(*cf.Location))
+		loc = utils.Pointer(ImageLocation(*cf.Location))
 	}
 	return Contamination{
 		ContaminationLessLocation: ContaminationLessLocation{
@@ -762,7 +764,7 @@ var (
 	}
 	exPic = PicWithNotes{
 		PicWithNotesLessLocation: exPicWithNotesLessLocation,
-		Location:                 imageLocation(exPicLoc),
+		Location:                 ImageLocation(exPicLoc),
 	}
 	exPics          = []PicWithNotes{exPic, exPic}
 	exContamLessLoc = ContaminationLessLocation{
@@ -773,7 +775,7 @@ var (
 	}
 	ec = Contamination{
 		ContaminationLessLocation: exContamLessLoc,
-		Location:                  (*imageLocation)(&exPicLoc),
+		Location:                  (*ImageLocation)(&exPicLoc),
 	}
 	exContams = []Contamination{ec, ec}
 )

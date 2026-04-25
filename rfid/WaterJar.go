@@ -52,7 +52,7 @@ func (wj WaterJar) Permissions() *ACL {
 }
 
 type WaterJarOptionalField struct {
-	WaterSource *AlternateCollectionId `bson:"waterSource,omitempty" json:"waterSource,omitempty"`
+	WaterSource *MainCollectionId `bson:"waterSource,omitempty" json:"waterSource,omitempty"`
 }
 
 func (field WaterJarOptionalField) Get(ctx context.Context) (out PCRun, err error) {
@@ -64,13 +64,11 @@ func (field WaterJarOptionalField) Get(ctx context.Context) (out PCRun, err erro
 }
 
 type WaterJarField struct {
-	WaterSource AlternateCollectionId `bson:"waterSource" json:"waterSource"`
+	WaterSource MainCollectionId `bson:"waterSource" json:"waterSource"`
 }
 
 func (field WaterJarField) Get(ctx context.Context) (out PCRun, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(WaterJarsCollectionName).FindOne(ctx, bson.M{
-		"_id": field.WaterSource,
-	}).Decode(&out)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(WaterJarsCollectionName).FindOne(ctx, bsonFindFilter("_id", field.WaterSource)).Decode(&out)
 	return out, err
 }
 
@@ -94,6 +92,8 @@ func initializeWaterJars(ctx context.Context) error {
 		NotesField:            NotesField{exampleNotes()},
 		LastUpdatedField:      LastUpdatedField{exampleTime},
 	}
+	println("binary water jar id initial:"+string(exWaterId[:]), len(exWaterId[:]))
+	println("created waterJar with id: " + exWaterId.asBase58())
 	return addTestMainEntries(ctx, testItem)
 }
 
@@ -117,14 +117,14 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		return
 	}
 	id := NextMainCollectionId()
-	ctx, db := Db(r)
+	ctx, _ := Db(r)
 	pcRun, err := req.PcRunField.Get(ctx)
 	if err != nil {
 		http.Error(w, "failed to get pc run: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	toInsert := WaterJar{
+	toInsert := &WaterJar{
 		MainCollectionIdField: MainCollectionIdField{id},
 		CreationDateField:     pcRun.CreationDateField,
 		PcRunField:            req.PcRunField,
@@ -138,7 +138,7 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateAlternateEntry(ctx, db.Collection(WaterJarsCollectionName), toInsert, w)
+	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
 type updateWaterJarRequest struct {
@@ -155,30 +155,23 @@ func (req updateWaterJarRequest) modsFor(existing *WaterJar, aclField AclField) 
 }
 
 func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
-	defer r.Body.Close()
-	bs, err := io.ReadAll(r.Body)
+	// TODO: make this a func that can be called from most mainCollItem updates ------
+	_, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
-		http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	req := updateWaterJarRequest{}
-	err = json.Unmarshal(bs, &req)
-	if err != nil {
-		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toMainCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
+	if err = ReadSimpleStructuredBody(r, w, &req); err != nil {
 		return
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(WaterJarsCollectionName)
+	println("binary water jar id:"+string(id[:]), len(id[:])) // TODO: del
 	existing, err := GetMainCollectionItem(r.Context(), id, &WaterJar{})
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
+			println("FAILED TO FIND WATER JAR")
 			stat = http.StatusNotFound
 		}
 		http.Error(w, err.Error(), stat)

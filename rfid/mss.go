@@ -251,12 +251,19 @@ func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, e
 
 func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateMssRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
 	defer r.Body.Close()
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	mainCollId, err := StandardizeMainCollectionId(idStr) // TODO: do this in every update handler that needs it
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := *mainCollId
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)

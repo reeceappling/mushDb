@@ -4,13 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
-	sliceutils "slices"
 )
 
 // TODO: used in:
@@ -40,9 +37,8 @@ func initializeSubstrateBatches(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	inserted, updated := 0, 0
-	createdDate := CreationDateField{}
-	for _, entry := range []SubstrateBatch{
+	createdDate := CreationDateField{exampleTime}
+	err = addTestAltEntries(ctx, []SubstrateBatch{
 		// Coir
 		{
 			AlternateCollectionIdField: altCollIdFieldForint(idCoir),
@@ -65,46 +61,8 @@ func initializeSubstrateBatches(ctx context.Context) error {
 			AclField:         allCanWriteAcl(),
 			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
 		},
-	} {
-		var existing SubstrateBatch
-		err := coll.FindOne(ctx, bsonFindFilter("_id", entry.Id)).Decode(&existing)
-		if err != nil {
-			if err != mongo.ErrNoDocuments {
-				return err
-			}
-			// if not exists, add it to the db
-			_, err = coll.InsertOne(ctx, entry)
-			if err != nil {
-				return err
-			}
-			inserted++
-			continue
-		}
-		// If exists, ensure it is the same as it was. Add notes if necessary
-		update := false
-
-		// Notes
-		finalNotes := []Note{}
-		copy(finalNotes, existing.Notes)
-		for _, note := range entry.Notes {
-			if !sliceutils.Contains(finalNotes, note) {
-				finalNotes = append(finalNotes, note)
-				update = true
-			}
-		}
-		entry.Notes = finalNotes
-
-		// Update if necessary
-		if update {
-			err = coll.FindOneAndReplace(ctx, bsonFindFilter("_id", entry.Id), entry).Err()
-			if err != nil {
-				return err
-			}
-			updated++
-		}
-	}
+	}...)
 	// Add test entry
-	existingEntry := SubstrateBatch{}
 	testItem := SubstrateBatch{
 		AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
 		CreationDateField:          CreationDateField{exampleTime},
@@ -113,17 +71,7 @@ func initializeSubstrateBatches(ctx context.Context) error {
 		LastUpdatedField:           LastUpdatedField{exampleTime},
 		AclField:                   allCanWriteAcl(),
 	}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", exAltId)).Decode(&existingEntry)
-	if err == nil {
-		if reflect.DeepEqual(existingEntry, testItem) {
-			return nil
-		}
-	}
-	err = testExistingEntry(ctx, coll, exAltId, testItem, existingEntry)
-	if inserted+updated > 0 {
-		println(fmt.Sprintf(`SubstrateRecipe: inserted %d, updated %d`, inserted, updated))
-	}
-	return err
+	return addTestAltEntries(ctx, testItem)
 }
 
 type createSubstrateBatchRequest struct {

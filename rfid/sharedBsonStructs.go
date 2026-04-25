@@ -25,17 +25,17 @@ func init() {
 	}
 }
 
-type imageLocation string
-type unixTime int64 // unixMilli!
+type ImageLocation string
+type UnixTime int64 // unixMilli!
 
-func unixTimeFor(t time.Time) unixTime {
-	return unixTime(t.UnixMilli())
+func unixTimeFor(t time.Time) UnixTime {
+	return UnixTime(t.UnixMilli())
 }
-func unixTimeForNow() unixTime {
+func unixTimeForNow() UnixTime {
 	return unixTimeFor(time.Now())
 }
 
-func (t unixTime) asCreationDate() CreationDateField {
+func (t UnixTime) asCreationDate() CreationDateField {
 	return CreationDateField{t}
 }
 
@@ -52,7 +52,7 @@ type subdocWithImage interface {
 // TODO: USE
 func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes { // TODO: use?
 	var out *PicWithNotes = nil
-	latestTime := unixTime(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
+	latestTime := UnixTime(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
 	for _, subdoc := range possibleSubdocs {
 		pwn := subdoc.getPicWithNotes()
 		if pwn.Time > latestTime {
@@ -69,7 +69,7 @@ type PicsField struct {
 
 func (pics PicsField) getLatestPicFromPicsField() *PicWithNotes {
 	var out *PicWithNotes = nil
-	var latest unixTime = 0
+	var latest UnixTime = 0
 	for _, pic := range pics.Pics {
 		if pic.Time > latest {
 			latest = pic.Time
@@ -89,10 +89,10 @@ type MostRecentImageField struct {
 
 type PicWithNotes struct {
 	PicWithNotesLessLocation `bson:"inline"`
-	Location                 imageLocation `bson:"location" json:"location"`
+	Location                 ImageLocation `bson:"location" json:"location"`
 }
 
-func newPicWithNotes(tim unixTime, notes []Note, location imageLocation) PicWithNotes {
+func newPicWithNotes(tim UnixTime, notes []Note, location ImageLocation) PicWithNotes {
 	return PicWithNotes{
 		PicWithNotesLessLocation: newPicWithNotesLessLocation(tim, notes),
 		Location:                 location,
@@ -121,10 +121,10 @@ func (pwn PicWithNotes) withoutNotes() PicWithNotes {
 }
 
 type RequiredTimeField struct {
-	Time unixTime `bson:"time" json:"time"`
+	Time UnixTime `bson:"time" json:"time"`
 }
 
-func newRequiredTimeField(t unixTime) RequiredTimeField {
+func newRequiredTimeField(t UnixTime) RequiredTimeField {
 	return RequiredTimeField{t}
 }
 
@@ -133,7 +133,7 @@ type PicWithNotesLessLocation struct {
 	NotesField        `bson:"inline"`
 }
 
-func newPicWithNotesLessLocation(t unixTime, notes []Note) PicWithNotesLessLocation {
+func newPicWithNotesLessLocation(t UnixTime, notes []Note) PicWithNotesLessLocation {
 	return PicWithNotesLessLocation{
 		RequiredTimeField: newRequiredTimeField(t),
 		NotesField:        NotesField{notes},
@@ -149,7 +149,7 @@ func (p PicWithNotesLessLocation) withoutNotes() *PicWithNotesLessLocation {
 func (p PicWithNotesLessLocation) asPicWithNotes(location *string) PicWithNotes {
 	return PicWithNotes{
 		PicWithNotesLessLocation: p,
-		Location:                 imageLocation(utils.Default(location, "")),
+		Location:                 ImageLocation(utils.Default(location, "")),
 	}
 }
 
@@ -163,7 +163,7 @@ type ContaminationsField struct {
 
 func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 	var out *Contamination = nil
-	var latest unixTime = 0
+	var latest UnixTime = 0
 	for _, contam := range contams.Contaminations {
 		if contam.Location != nil && contam.Time > latest {
 			latest = contam.Time
@@ -175,7 +175,7 @@ func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 
 type Contamination struct {
 	ContaminationLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Location                  *imageLocation  `bson:"location,omitempty" json:"location,omitempty"`
+	Location                  *ImageLocation  `bson:"location,omitempty" json:"location,omitempty"`
 }
 
 type ContaminationLessLocation struct {
@@ -185,7 +185,7 @@ type ContaminationLessLocation struct {
 	Mold                     bool            `bson:"mold" json:"mold"`
 }
 
-func (c ContaminationLessLocation) asContamination(location *imageLocation) Contamination {
+func (c ContaminationLessLocation) asContamination(location *ImageLocation) Contamination {
 	return Contamination{
 		ContaminationLessLocation: c,
 		Location:                  location,
@@ -220,30 +220,30 @@ func imageUpdates(Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation
 	}
 }
 
-type liquid struct {
-	Name fluid   `bson:"name" json:"name"`
+type Liquid struct {
+	Name Fluid   `bson:"name" json:"name"`
 	Pct  float64 `bson:"pct" json:"pct"`
 }
 
-func (l liquid) withPct(pct float64) liquid {
-	return liquid{
+func (l Liquid) withPct(pct float64) Liquid {
+	return Liquid{
 		Name: l.Name,
 		Pct:  pct,
 	}
 }
 
-type fluid string
+type Fluid string
 
-var fluids = []fluid{Water, DistilledWater, GrainWater}
+var fluids = []Fluid{Water, DistilledWater, GrainWater}
 
 // TODO: add all of these to autogenned
 var (
-	Water          = fluid("water")
-	DistilledWater = fluid("distilledWater")
-	GrainWater     = fluid("grain water")
+	Water          = Fluid("water")
+	DistilledWater = Fluid("distilledWater")
+	GrainWater     = Fluid("grain water")
 )
 
-func (f fluid) AsLiquid(pct ...float64) liquid {
+func (f Fluid) AsLiquid(pct ...float64) Liquid {
 	val := 100.0
 	if len(pct) != 0 {
 		val = pct[0]
@@ -251,7 +251,7 @@ func (f fluid) AsLiquid(pct ...float64) liquid {
 	if val > 100.0 || val <= 0.0 {
 		panic("invalid fluid percentage") // TODO: ok?
 	}
-	return liquid{
+	return Liquid{
 		Name: f,
 		Pct:  val,
 	}
@@ -262,7 +262,7 @@ type Note struct {
 	Note              string `bson:"note" json:"note"`
 }
 
-func newNote(tim unixTime, txt string) Note {
+func newNote(tim UnixTime, txt string) Note {
 	return Note{
 		RequiredTimeField: RequiredTimeField{tim},
 		Note:              txt,
@@ -297,34 +297,34 @@ type NoteMods interface {
 //}
 
 // TODO: add all of these to autogenned
-type nutrientMeasurement struct {
-	Nutrient nutrient `bson:"nutrient" json:"nutrient"` // Nutrient name
+type NutrientMeasurement struct {
+	Nutrient Nutrient `bson:"nutrient" json:"nutrient"` // Nutrient name
 	Amount   float64  `bson:"amount" json:"amount"`     // Amount per 1L agar
 	Unit     string   `bson:"unit" json:"unit"`         // mL, tsp, tbsp, drop, pinch, cup, etc
 }
 
-type nutrient string
+type Nutrient string
 
 // TODO: add all of these to autogenned
-var nutrients = []nutrient{LME, Potato}
+var nutrients = []Nutrient{LME, Potato}
 var (
-	LME    nutrient = "light malt extract"
-	Potato nutrient = "potato flakes"
+	LME    Nutrient = "light malt extract"
+	Potato Nutrient = "potato flakes"
 )
 
 // TODO: add all of these to autogenned
-type sugarMeasurement struct {
-	Type   sugar   `bson:"type" json:"type"`     // Sugar Username
+type SugarMeasurement struct {
+	Type   Sugar   `bson:"type" json:"type"`     // Sugar Username
 	Amount float64 `bson:"amount" json:"amount"` // Amount per 1L agar
 	Unit   string  `bson:"unit" json:"unit"`
 }
 
-type sugar string
+type Sugar string
 
-var sugars = []sugar{Dextrose, Honey, MapleSyrup}
+var sugars = []Sugar{Dextrose, Honey, MapleSyrup}
 
-func newSugarMeasurement(add sugar, amount float64, unit string) sugarMeasurement {
-	return sugarMeasurement{
+func newSugarMeasurement(add Sugar, amount float64, unit string) SugarMeasurement {
+	return SugarMeasurement{
 		Type:   add,
 		Amount: amount,
 		Unit:   unit,
@@ -333,16 +333,16 @@ func newSugarMeasurement(add sugar, amount float64, unit string) sugarMeasuremen
 
 // TODO: add all of these to autogenned
 var (
-	Dextrose   sugar = "dextrose" // This is corn syrup
-	Honey      sugar = "honey"
-	MapleSyrup sugar = "maple syrup"
+	Dextrose   Sugar = "dextrose" // This is corn syrup
+	Honey      Sugar = "honey"
+	MapleSyrup Sugar = "maple syrup"
 )
 
-type grain string
+type Grain string
 
-var grains = []grain{Rye, Wheat, Oats, Millett, Popcorn, BirdSeed}
+var grains = []Grain{Rye, Wheat, Oats, Millett, Popcorn, BirdSeed}
 
-func (g grain) Validate() error {
+func (g Grain) Validate() error {
 	if !slices.Contains(grains, g) {
 		return errors.New("invalid grain")
 	}
@@ -351,12 +351,12 @@ func (g grain) Validate() error {
 
 // TODO: add all of these to autogenned
 var (
-	Rye      grain = "rye"
-	Wheat    grain = "wheat"
-	Millett  grain = "millett"
-	Oats     grain = "oats"
-	Popcorn  grain = "popcorn"
-	BirdSeed grain = "birdseed"
+	Rye      Grain = "rye"
+	Wheat    Grain = "wheat"
+	Millett  Grain = "millett"
+	Oats     Grain = "oats"
+	Popcorn  Grain = "popcorn"
+	BirdSeed Grain = "birdseed"
 )
 
 func writeAsJson(w http.ResponseWriter, obj any) {
@@ -369,36 +369,36 @@ func writeAsJson(w http.ResponseWriter, obj any) {
 	handleWriteErr(err, w)
 }
 
-type additiveMeasurement struct {
-	Additive additive `bson:"additive" json:"additive"` // Nutrient name
+type AdditiveMeasurement struct {
+	Additive Additive `bson:"additive" json:"additive"` // Nutrient name
 	Amount   float64  `bson:"amount" json:"amount"`     // Amount per 1L agar
 	Unit     string   `bson:"unit" json:"unit"`         // mL, tsp, tbsp, drop, pinch, cup, etc
 }
 
-func newAdditiveMeasurement(add additive, amount float64, unit string) additiveMeasurement {
-	return additiveMeasurement{
+func newAdditiveMeasurement(add Additive, amount float64, unit string) AdditiveMeasurement {
+	return AdditiveMeasurement{
 		Additive: add,
 		Amount:   amount,
 		Unit:     unit,
 	}
 }
 
-type colorant string
+type Colorant string
 
-var colorants = []colorant{clearColor, black, blue, yellow, orange, red}
+var colorants = []Colorant{clearColor, black, blue, yellow, orange, red}
 
 // TODO: add all of these to autogenned
 var (
-	clearColor colorant = "Clear"
-	black      colorant = "Black"
-	blue       colorant = "Blue"
-	green      colorant = "Green"
-	yellow     colorant = "Yellow"
-	orange     colorant = "Orange"
-	red        colorant = "Red" // MOST REDS ARE FUNGICIDAL
+	clearColor Colorant = "Clear"
+	black      Colorant = "Black"
+	blue       Colorant = "Blue"
+	green      Colorant = "Green"
+	yellow     Colorant = "Yellow"
+	orange     Colorant = "Orange"
+	red        Colorant = "Red" // MOST REDS ARE FUNGICIDAL
 )
 
-var colors = map[string]colorant{
+var colors = map[string]Colorant{
 	string(clearColor): clearColor,
 	string(black):      black,
 	string(blue):       blue,
@@ -407,33 +407,33 @@ var colors = map[string]colorant{
 	string(orange):     orange,
 }
 
-func ValidColor(c colorant) bool {
+func ValidColor(c Colorant) bool {
 	_, ok := colors[string(c)]
 	return ok
 }
 
-type additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
-var additives = []additive{Vermiculite, Perlite, Gypsum}
+type Additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
+var additives = []Additive{Vermiculite, Perlite, Gypsum}
 
 // TODO: add all of these to autogenned
 var (
-	Vermiculite additive = "vermiculite"
-	Perlite     additive = "perlite"
-	Gypsum      additive = "gypsum"
+	Vermiculite Additive = "vermiculite"
+	Perlite     Additive = "perlite"
+	Gypsum      Additive = "gypsum"
 )
 
-type antibiotic string
+type Antibiotic string
 
 // TODO: add all of these to autogenned
-var antibiotics = []antibiotic{HydrogenPeroxide, Doxycycline}
+var antibiotics = []Antibiotic{HydrogenPeroxide, Doxycycline}
 
 var (
-	HydrogenPeroxide antibiotic = "HydrogenPeroxide"
-	Doxycycline      antibiotic = "Doxycycline"
+	HydrogenPeroxide Antibiotic = "HydrogenPeroxide"
+	Doxycycline      Antibiotic = "Doxycycline"
 )
 
 // TODO: use
-var antibioticDosages = map[antibiotic]string{ // TODO: USE THIS!
+var antibioticDosages = map[Antibiotic]string{ // TODO: USE THIS!
 	Doxycycline:      "unknown as of right now", // TODO: figure out measurements
 	HydrogenPeroxide: "unknown as of right now", // TODO: figure out measurements
 }
@@ -595,7 +595,7 @@ func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {
 	return updatePointerIfNeeded(upd, "confirmedClean", future, existing)
 }
 
-func (upd *Mods) updateProjectCompletedIfNeeded(future, existing *unixTime) *Mods {
+func (upd *Mods) updateProjectCompletedIfNeeded(future, existing *UnixTime) *Mods {
 	return updatePointerIfNeeded(upd, "completed", future, existing)
 }
 
@@ -699,6 +699,15 @@ func contamsWereModified(existing []Contamination, updated SplitEntries[contamFo
 	return false
 }
 
+func PrettyPrintJson(prefix string, toPrint any) {
+	outBs, err := json.MarshalIndent(toPrint, "", " ")
+	if err != nil {
+		println(prefix, "failed to get bytes for pretty print")
+		return
+	}
+	println(prefix, string(outBs))
+}
+
 func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesField) *Mods { // TODO: make sure this always works the way we want it to!!! // TODO: lower-down notes?
 	if upd.err != nil {
 		return upd
@@ -707,6 +716,24 @@ func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesFiel
 	updated := updatedIn.NoteChanges()
 	if len(updated.Existing) != len(existing) {
 		upd.err = errors.Join(errors.New("length of existing notes must match"), upd.err)
+		exNotesBs, err := json.Marshal(existing) // TODO: delete later
+		if err != nil {
+			println("failed to get bytes for existing notes")
+			return upd
+		}
+		upNotesBs, err := json.Marshal(updated.Existing)
+		if err != nil {
+			println("failed to get bytes for updated notes")
+			return upd
+		}
+		toOutput := struct {
+			Existing string
+			Updated  string
+		}{
+			Existing: string(exNotesBs),
+			Updated:  string(upNotesBs),
+		}
+		PrettyPrintJson("noteUpdDiscrepancy", toOutput) // TODO: delete later
 		return upd
 	}
 	if !notesWereModified(existing, updated) {
@@ -738,6 +765,7 @@ func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries
 		return upd
 	}
 	if len(updatedEntries.Existing) != len(existing) {
+		// TODO: print this out????
 		upd.err = errors.Join(errors.New("length of existing "+fieldName+" must match"), upd.err)
 		return upd
 	}
@@ -822,7 +850,7 @@ func (upd *Mods) withInnoc(xfer Transfer) *Mods {
 func (upd *Mods) withKnownFruitable(knownFruitable *bool) *Mods {
 	return setPointerIfNonNil(upd, "knownFruitable", knownFruitable)
 }
-func (upd *Mods) withLastUpdated(lastUpdatedTime unixTime) *Mods {
+func (upd *Mods) withLastUpdated(lastUpdatedTime UnixTime) *Mods {
 	return upd.Set("lastUpdated", lastUpdatedTime)
 }
 func (upd *Mods) withMostRecentImage(parentType *PicWithNotes) *Mods {

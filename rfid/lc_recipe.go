@@ -53,17 +53,17 @@ func initializeLcRecipes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	allWater := LiquidsField{[]liquid{Water.AsLiquid()}}
-	allLME := NutrientsField{[]nutrientMeasurement{{
+	allWater := LiquidsField{[]Liquid{Water.AsLiquid()}}
+	allLME := NutrientsField{[]NutrientMeasurement{{
 		Nutrient: LME,
 		Amount:   0.667,
 		Unit:     "g/pt",
 	}}}
 	// Add builtin
 	basicEntries := []*LcRecipe{
-		// LME LC - Light Malt Extract LC
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idMeaLC)},
+			NameField:                  NameField{"Basic LME LC"}, // Light Malt Extract LC
 			LiquidsField:               allWater,
 			NutrientsField:             allLME,
 			SugarsField:                SugarsField{},
@@ -74,12 +74,12 @@ func initializeLcRecipes(ctx context.Context) error {
 			}},
 			AclField: allCanReadAcl(),
 		},
-		// Sugary LME LC
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idMeaSugLC)},
+			NameField:                  NameField{"Basic Sugary LME LC"}, // Sugary LME LC
 			LiquidsField:               allWater,
 			NutrientsField:             allLME,
-			SugarsField: SugarsField{[]sugarMeasurement{{
+			SugarsField: SugarsField{[]SugarMeasurement{{
 				Type:   Honey,
 				Amount: 2.0,
 				Unit:   "drops/pt",
@@ -97,9 +97,10 @@ func initializeLcRecipes(ctx context.Context) error {
 	// Add test entries
 	testItem := &LcRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		NameField:                  NameField{"testJarRecipeName"},
+		NameField:                  NameField{"testLcRecipeName"},
 		StandardField:              StandardField{false},
-		NutrientsField: NutrientsField{[]nutrientMeasurement{
+		LiquidsField:               allWater,
+		NutrientsField: NutrientsField{[]NutrientMeasurement{
 			{
 				Nutrient: LME,
 				Amount:   1,
@@ -111,15 +112,16 @@ func initializeLcRecipes(ctx context.Context) error {
 				Unit:     "ug",
 			},
 		}},
-		SugarsField: SugarsField{[]sugarMeasurement{
+		SugarsField: SugarsField{[]SugarMeasurement{
 			newSugarMeasurement(Honey, 1, "large drop per quart jar"),
 		}},
-		AdditivesField: AdditivesField{[]additiveMeasurement{
+		AdditivesField: AdditivesField{[]AdditiveMeasurement{
 			newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
 			newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
 		}},
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
+		AclField:         allCanWriteAcl(),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
@@ -189,24 +191,15 @@ func (req updateLcRecipeRequest) modsFor(existing *LcRecipe, aclField AclField) 
 }
 
 func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
-	defer r.Body.Close()
-	bs, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
 	req := updateLcRecipeRequest{}
-	err = json.Unmarshal(bs, &req)
+	_, id, err := altCollIdFromRequest(r, w) // TODO: use this everywhere
 	if err != nil {
-		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
-		return
+	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
+		return // Writes already if err
 	}
+
 	ctx, db := Db(r)
 	coll := db.Collection(LcRecipesCollectionName)
 	existing, err := GetAltCollectionItem(r.Context(), id, &LcRecipe{})

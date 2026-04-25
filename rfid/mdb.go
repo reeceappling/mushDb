@@ -427,8 +427,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 	// TODO: SET UP INITIAL USER IF USER DOES NOT EXIST!
 	// TODO: THIS SHOULD BE DONE VIA: https://stackoverflow.com/questions/42912755/how-to-create-a-db-for-mongodb-container-on-start-up
 
-	println("trying to connect to database")
-	//println(fmt.Sprintf(`trying to connect to database`, usern, pass))
+	println("trying to connect to database", usern, pass)
 	opts := options.Client().
 		ApplyURI(uri).
 		SetDirect(true).
@@ -439,26 +438,27 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAuth(options.Credential{Username: usern, Password: pass}).
 		//SetAppName("mainApi").
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
-		SetConnectTimeout(5 * time.Second). // TODO: no?
-		SetTimeout(10 * time.Second)        // TODO: no?
+		SetConnectTimeout(10 * time.Second). // TODO: no?
+		SetTimeout(15 * time.Second)         // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
 		return ctx, nil, errors.Join(errors.New("failed to connect to db"), err)
 	}
 	connOk := false
-	for i := 0; i < 5; i++ {
-		println(fmt.Sprintf(`Testing connection attempt no.%d`, i))
+	for i := 0; i < 2; i++ {
+		println(fmt.Sprintf(`Testing connection attempt no.%d for user %s at %s`, i, usern, uri)) // TODO:" no uri
 		err = client.Ping(ctx, nil)
 		if err != nil {
-			time.Sleep(5 * time.Second)
+			time.Sleep(2 * time.Second)
 			continue
 		}
 		connOk = true
 		break
 	}
 	if !connOk {
-		errConn := errors.New("Ping failed to " + hostPortAndParams)
+		errConn := errors.New("Ping failed to " + hostPortAndParams + ". " + err.Error())
+		println("Ping failed to "+uri, err.Error()) // TODO: del
 		return ctx, nil, errors.Join(errConn, err)
 	}
 	println("Client connected to db at " + hostPortAndParams)

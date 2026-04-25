@@ -329,18 +329,19 @@ type resolvedUpdatePlateRequest struct {
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	println("RECEIVED UPDATE PLATE REQUEST") // TODO: THIS
 	data := &updatePlateRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	println("CREATED READER") // TODO: THIS
-	reader, err := multipartReaderForRequest(r, w, data)
+	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		// Already written
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	id := *mainCollId
+	b58Id := mainCollId.asBase58()
 	reqBs, err := json.MarshalIndent(data, "", " ")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -353,9 +354,9 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	println("GETTING IMAGES") // TODO: THIS
-	newPics, newContams, _, err := getMultipartImages(r.Context(), "plate", w, reader, b58Id)
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plate", &data, b58Id)
 	if err != nil {
-		// Already wrote
+		// Already wrotw
 		return
 	}
 
@@ -373,12 +374,12 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Images.New[i].Location = imageLocation(loc)
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	println("PARSING CONTAMS") // TODO: THIS
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
-			finalLoc := imageLocation(loc)
+			finalLoc := ImageLocation(loc)
 			out.Contams.New[i].Location = &finalLoc
 		} else {
 			println("no contam location for", i)
@@ -462,6 +463,11 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
+	// TODO: CONVERT TO newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "bag", &data, b58Id)
+	//	if err != nil {
+	//		// Already wrotw
+	//		return
+	//	}
 	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write perms: "+err.Error(), http.StatusBadRequest)
 	//	return
@@ -512,7 +518,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {

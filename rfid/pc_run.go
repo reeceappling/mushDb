@@ -1,12 +1,15 @@
 package rfid
 
-// TODO: needed for:
+// TODO: needed directly for:
 // TODO: AgarBatch, Bag, Jar, LC, Plugs, Slant, StasisTube, WaterJar
+
 // TODO: needed for but provided from another:
 // TODO:  Plate, MSS,
 
 // TODO: ? includeStasisTubes, includeAgarBatches, includePlugsJar
 // TODO: newAgarBatch (on agar batch page)
+
+// TODO: fully test this functionality first!!!!
 
 import (
 	"context"
@@ -40,7 +43,7 @@ func initializePCRun(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
+	// If test run does not exist, then create it
 	testItem := &PCRun{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		CreationDateField:          CreationDateField{exampleTime},

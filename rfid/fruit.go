@@ -65,34 +65,10 @@ func (f Fruit) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return f.GenSinceSpore, (*Generation)(utils.Pointer(0))
 }
 
-//func (f Fruit) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitsCollName)
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, f.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
-
 func (f Fruit) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	// Transferring TO a fruit is not a thing
 	return errors.New("fruits are invalid transfer children, must be created from a fruiter, or imported")
 }
-
-//func (f Fruit) altId() AlternateCollectionId {
-//	return AlternateCollectionId(f.Email)
-//}
-//
-//func (f Fruit) id() []byte {
-//	return f.Email[:]
-//}
 
 func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId) error {
 	// update fruit
@@ -198,7 +174,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	defer r.Body.Close()
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
 	if err != nil {
-		// Already wrote
+		// Already wrotw
 		return
 	}
 	// CHECK THAT ALL NEW PICS EXIST
@@ -211,7 +187,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 			http.Error(w, fmt.Sprintf("error, location for picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Pics[i].Location = imageLocation(loc)
+		out.Pics[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
@@ -240,7 +216,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	}
 	toInsert := &Fruit{
 		MainCollectionIdField:             MainCollectionIdField{id},
-		CreationDateField:                 CreationDateField{unixTime(time.Now().UnixMilli())},
+		CreationDateField:                 CreationDateField{UnixTime(time.Now().UnixMilli())},
 		SpeciesField:                      SpeciesField{*parentGenetics.Species},
 		SubspeciesOptionalField:           parentGenetics.SubspeciesOptionalField,
 		GenSporeField:                     parentGenetics.GenSporeField,
@@ -294,17 +270,30 @@ func (req resolvedUpdateFruitRequest) modsFor(existing *Fruit, aclField AclField
 }
 
 func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
-	data := updateFruitRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
-	if err != nil {
-		// Already wrote
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	b58Id := mainCollId.asBase58()
+	data := updateFruitRequest{}
+	id := *mainCollId
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
+	if err != nil {
+		// Already written
+		return
+	}
+	//newPics, _, _, err := getMultipartImages(r.Context(), "fruit", w, reader, b58Id)
+	//if err != nil {
+	//	// Already wrotw
+	//	return
+	//}
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
 	out := data.reform()
@@ -315,7 +304,7 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Images.New[i].Location = imageLocation(loc)
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
@@ -391,7 +380,7 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 			now := unixTimeForNow()
 			importedPic = &PicWithNotes{
 				PicWithNotesLessLocation: newPicWithNotesLessLocation(now, []Note{}),
-				Location:                 imageLocation(newFileNameWithPrefixPath),
+				Location:                 ImageLocation(newFileNameWithPrefixPath),
 			}
 			filesProcessed++
 		} else {

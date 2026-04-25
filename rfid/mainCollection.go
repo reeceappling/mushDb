@@ -6,6 +6,7 @@ import (
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"sync"
 )
 
 var (
@@ -54,7 +55,10 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 	if len(testItems) == 0 {
 		return errors.New("testItems is empty for main collection")
 	}
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	_, txErr := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		defer wg.Done()
 		db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
 		_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 			Collection(idMapCollectionName).BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
@@ -67,6 +71,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 			return nil, errors.Join(errors.New("failed to bulk write id maps"), err)
 		}
 		// TODO: do something with the result?
+		println("writing items to " + testItems[0].CollectionName())
 		_, err = db.Collection(testItems[0].CollectionName()).
 			BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
 				return mongo.NewReplaceOneModel().
@@ -80,6 +85,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 		// TODO: do something with the result?
 		return nil, nil
 	})
+	wg.Wait()
 	PrintMainCollectionItemIds("Built-in", testItems)
 	return txErr
 }

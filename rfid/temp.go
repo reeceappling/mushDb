@@ -41,10 +41,12 @@ func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 		out = MainCollectionId(idBytes)
 		return &out, nil
 	}
-	realId, err := Base58Str(idBytes).toMainCollectionId()
+	println("ID BYTES NOT LENGTH 8! CONVERTING!")
+	realId, err := Base58Str(id).toMainCollectionId()
 	if err != nil {
 		return nil, err
 	}
+	println("CONVERTED TO: " + string(realId[:]))
 	return &realId, nil
 }
 
@@ -55,15 +57,18 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 		out = [12]byte(idBytes)
 		return &out, nil
 	}
+	println("ID BYTES NOT LENGTH 12! CONVERTING!")
 	realId, err := Base58Str(idBytes).toAltCollectionId()
 	if err != nil {
 		return nil, err
 	}
+	println("CONVERTED TO: " + string(realId[:]))
 	return &realId, nil
 }
 
 // Perms have not been checked yet
 func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out MainCollectionItem, err error) {
+	println("reading mcitem from " + resultItemType.CollectionName())
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(resultItemType.CollectionName()).FindOne(ctx, bsonFindFilter("_id", id))
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404

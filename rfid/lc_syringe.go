@@ -199,7 +199,11 @@ type updateSyringeRequest struct {
 	PermsOnRequest
 }
 
-func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
+func (upr updateSyringeRequest) baseItem() *LcSyringe {
+	return &LcSyringe{}
+}
+
+func (upr updateSyringeRequest) reform() reformedRequest[*LcSyringe] {
 	return resolvedUpdateSyringeRequest{
 		SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
@@ -231,17 +235,53 @@ func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField Ac
 		Finalized()
 }
 
-func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
-	data := updateSyringeRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+// TODO: MOVE
+func mainCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id MainCollectionId, err error) {
+	var idStr string
+	idStr, err = UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	b58id, id = mainCollId.asBase58(), *mainCollId
+	return
+}
+func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id AlternateCollectionId, err error) {
+	var idStr string
+	idStr, err = UrlDecodeString(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "failed to url decode altCollId string: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	altCollId, err := StandardizeAltCollectionId(idStr)
+	if err != nil {
+		http.Error(w, "failed to standardize alt collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	b58id, id = altCollId.asBase58(), *altCollId
+	return
+}
+
+func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
+	//mainUpdateHandler[*LcSyringe](w, r, updateSyringeRequest{})
+	req := updateSyringeRequest{}
+	_, id, err := mainCollIdFromRequest(r, w) // TODO: use this everywhere
+	if err != nil {
+		return
+	}
+	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
+		return // Writes already if err
 	}
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
-	out := data.reform()
+	out := req.reform()
 	ctx, db := Db(r)
 	coll := db.Collection(LcSyringeCollectionName)
 	// go get current LcSyringe
@@ -251,7 +291,44 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.GetPermsOnRequest())
+}
+
+// TODO: use and move!
+func mainUpdateHandler[T MainCollectionItem](w http.ResponseWriter, r *http.Request, req simpleUpdateHandler[T]) {
+	_, id, err := mainCollIdFromRequest(r, w) // TODO: use this everywhere
+	if err != nil {
+		return // Writes already if err
+	}
+	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
+		return // Writes already if err
+	}
+	// CHECK THAT ALL NEW PICS EXIST
+	// PROCESS ALL NEW PICS AND CONTAMS
+	out := req.reform()
+	existing := req.baseItem()
+	ctx, db := Db(r)
+	coll := db.Collection(existing.CollectionName())
+	// go get current LcSyringe
+
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	if err != nil {
+		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.GetPermsOnRequest())
+}
+
+// TODO: MOVE
+type simpleUpdateHandler[T CollectionItem] interface {
+	baseItem() T
+	reform() reformedRequest[T]
+}
+
+// TODO: MOVE
+type reformedRequest[T CollectionItem] interface {
+	modsFor(existing T, aclField AclField) (bson.D, error)
+	GetPermsOnRequest() PermsOnRequest
 }
 
 type importLcSyringeRequest struct {

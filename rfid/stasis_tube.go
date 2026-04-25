@@ -254,11 +254,19 @@ func (req resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclFiel
 
 func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateStasisTubeRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := *mainCollId
+	b58Id := mainCollId.asBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
 	reader, err := r.MultipartReader() // TODO: do streamlined
@@ -367,11 +375,11 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Images.New[i].Location = imageLocation(loc)
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
-			finalLoc := imageLocation(loc)
+			finalLoc := ImageLocation(loc)
 			out.Contams.New[i].Location = &finalLoc
 		}
 	}
@@ -457,7 +465,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {

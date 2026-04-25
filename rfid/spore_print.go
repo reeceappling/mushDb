@@ -282,7 +282,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Pics[i].Location = imageLocation(loc)
+		out.Pics[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
@@ -351,7 +351,7 @@ type updateSporePrintRequest struct {
 	SporePrintColorField   // TODO: validate? // TODO: add to typescript side and validate
 	SporePrintDensityField // TODO: validate? // TODO: add to typescript side and validate
 	NotesUpdateField
-	Pics SplitEntries[picWithNotesForm, PicWithNotesLessLocation]
+	ImagesUpdateField //"newPic-1"
 	PermsOnRequest
 }
 
@@ -362,13 +362,8 @@ func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 		SaleField:              upr.SaleField,
 		DisposedField:          upr.DisposedField,
 		NotesUpdateField:       upr.NotesUpdateField,
-		Pics: SplitEntries[picWithNotesForm, PicWithNotes]{
-			Existing: upr.Pics.Existing,
-			New: slices.Map(upr.Pics.New, func(i PicWithNotesLessLocation) PicWithNotes {
-				return i.asPicWithNotes(nil)
-			}),
-		},
-		PermsOnRequest: upr.PermsOnRequest,
+		Images:                 imageUpdates(upr.Images),
+		PermsOnRequest:         upr.PermsOnRequest,
 	}
 }
 
@@ -378,7 +373,7 @@ type resolvedUpdateSporePrintRequest struct {
 	SporePrintColorField
 	SporePrintDensityField
 	NotesUpdateField
-	Pics SplitEntries[picWithNotesForm, PicWithNotes]
+	Images SplitEntries[picWithNotesForm, PicWithNotes]
 	PermsOnRequest
 }
 
@@ -389,7 +384,7 @@ func (req resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclFiel
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
-		updatePicsIfNeeded(req.Pics, existing.Pics).
+		updatePicsIfNeeded(req.Images, existing.Pics).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -397,11 +392,19 @@ func (req resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclFiel
 
 func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateSporePrintRequest{}
-	b58Id := Base58Str(r.PathValue("id")) // TODO: ensure ok
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := *mainCollId
+	b58Id := mainCollId.asBase58()
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "sporePrint", &data, b58Id)
 	if err != nil {
 		// Already wrote
@@ -412,13 +415,13 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
 	out := data.reform()
-	for i, _ := range data.Pics.New {
+	for i, _ := range data.Images.New {
 		loc, exists := newPics[i]
 		if !exists {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Pics.New[i].Location = imageLocation(loc)
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 
 	ctx, db := Db(r)
@@ -516,7 +519,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {

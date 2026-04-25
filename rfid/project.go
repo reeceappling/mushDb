@@ -19,7 +19,7 @@ type projectName string
 type Project struct {
 	Name              projectName `bson:"_id" json:"_id"`
 	CreationDateField `bson:"inline"`
-	Completed         *unixTime `bson:"completed,omitempty" json:"completed,omitempty"` // TODO: index?
+	Completed         *UnixTime `bson:"completed,omitempty" json:"completed,omitempty"` // TODO: index?
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	Perms             ProjectPerms `bson:"perms" json:"perms"`
@@ -156,7 +156,7 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateProjectRequest struct {
-	Completed *unixTime `json:"completed,omitempty"`
+	Completed *UnixTime `json:"completed,omitempty"`
 	NotesUpdateField
 	Perms ProjectPerms `json:"perms"`
 	// TODO: update perms should update users too!

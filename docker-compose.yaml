@@ -68,8 +68,11 @@ services:
     healthcheck:
       # Automatically initiates the replica set if it isn't already active
       test: >
-        mongo --username ${MONGO_INITDB_USERNAME:?error} --password ${MONGO_INITDB_PASSWORD:?error} --authenticationDatabase ${MONGO_INITDB_DATABASE:?error} --quiet 
-        --eval "rs.status().ok || rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'localhost:27017' }] })"
+        mongo --username ${MONGO_INITDB_ROOT_USERNAME:?error} --password ${MONGO_INITDB_ROOT_PASSWORD:?error} --authenticationDatabase admin --quiet 
+        --eval "rs.status().ok || rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mushdb:27017' }] })"
+#      test: >
+#        mongo --username ${MONGO_INITDB_USERNAME:?error} --password ${MONGO_INITDB_PASSWORD:?error} --authenticationDatabase ${MONGO_INITDB_DATABASE:?error} --quiet
+#        --eval "rs.status().ok || rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mushdb:27017' }] })"
       interval: 10s
       timeout: 5s
       retries: 5
@@ -80,7 +83,8 @@ services:
       # chown mongodb:mongodb mongodb.key
       - mongodb-data:/data/db
       - ./initDB:/docker-entrypoint-initdb.d
-      - ./mongodb.key:/etc/mongodb.key
+#      - ./etc:/etc:ro
+      - ./etc/mongodb.key:/etc/mongodb.key:ro
     networks:
       - mushNet
 

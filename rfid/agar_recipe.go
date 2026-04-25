@@ -15,8 +15,8 @@ type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
-	Agar                       int `bson:"agar" json:"agar"` // agar grams per 1L
-	StandardField              `bson:"inline"`               // If this is a standard recipe
+	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField              `bson:"inline"` // If this is a standard recipe
 	NutrientsField             `bson:"inline"`
 	SugarsField                `bson:"inline"`
 	AdditivesField             `bson:"inline"`
@@ -81,7 +81,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(AgarRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false),
+		newSimpleIndex("name", "name", false, false, false), // TODO: unique (last) may need to be true
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("agar", "agar", true, false, false),
 		standardIndexModel,
@@ -101,9 +101,9 @@ func initializeAgarRecipes(ctx context.Context) error {
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
 			NameField:                  NameField{"LMEA - Light Malt Extract Agar"},
-			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
+			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
-			NutrientsField: NutrientsField{[]nutrientMeasurement{
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
 				{
 					Nutrient: LME,
 					Amount:   20,
@@ -118,14 +118,14 @@ func initializeAgarRecipes(ctx context.Context) error {
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idPda)},
 			NameField:                  NameField{"PDA - Potato Dextrose Agar"},
-			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
+			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
-			NutrientsField: NutrientsField{[]nutrientMeasurement{{
+			NutrientsField: NutrientsField{[]NutrientMeasurement{{
 				Nutrient: Potato,
 				Amount:   18,
 				Unit:     "g",
 			}}},
-			SugarsField: SugarsField{[]sugarMeasurement{{
+			SugarsField: SugarsField{[]SugarMeasurement{{
 				Type:   Dextrose,
 				Amount: 1,
 				Unit:   "g",
@@ -137,7 +137,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idWaterAgar)},
 			NameField:                  NameField{"Water Agar"},
-			LiquidsField:               LiquidsField{[]liquid{Water.AsLiquid()}},
+			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField:             NutrientsField{},
 			SugarsField:                SugarsField{},
@@ -148,7 +148,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idGrainWaterAgar)},
 			NameField:                  NameField{"Grain Water Agar"},
-			LiquidsField: LiquidsField{[]liquid{
+			LiquidsField: LiquidsField{[]Liquid{
 				GrainWater.AsLiquid().withPct(50.0),
 				DistilledWater.AsLiquid().withPct(50.0),
 			}},
@@ -164,9 +164,9 @@ func initializeAgarRecipes(ctx context.Context) error {
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idAntibioticAgar)},
 			NameField:                  NameField{"Antibiotic Agar"},
-			LiquidsField:               LiquidsField{[]liquid{DistilledWater.AsLiquid()}},
+			LiquidsField:               LiquidsField{[]Liquid{DistilledWater.AsLiquid()}},
 			Agar:                       20,
-			NutrientsField: NutrientsField{[]nutrientMeasurement{
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
 				{
 					Nutrient: LME,
 					Amount:   20,
@@ -174,7 +174,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 				},
 			}},
 			SugarsField:      SugarsField{},
-			AntibioticsField: AntibioticsField{[]antibiotic{Doxycycline}},
+			AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline}},
 			StandardField:    StandardField{true},
 			NotesField: NotesField{[]Note{
 				builtInNote("50mg doxycycline per ?????"),
@@ -191,13 +191,13 @@ func initializeAgarRecipes(ctx context.Context) error {
 	testItem := &AgarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 		NameField:                  NameField{testEntryStringId},
-		LiquidsField: LiquidsField{[]liquid{
+		LiquidsField: LiquidsField{[]Liquid{
 			Water.AsLiquid().withPct(40.0),
 			DistilledWater.AsLiquid().withPct(60.0),
 		}},
 		Agar:          20,
 		StandardField: StandardField{false},
-		NutrientsField: NutrientsField{[]nutrientMeasurement{
+		NutrientsField: NutrientsField{[]NutrientMeasurement{
 			{
 				Nutrient: LME,
 				Amount:   19,
@@ -209,7 +209,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 				Unit:     "g",
 			},
 		}},
-		SugarsField: SugarsField{[]sugarMeasurement{{
+		SugarsField: SugarsField{[]SugarMeasurement{{
 			Type:   Dextrose,
 			Amount: 1,
 			Unit:   "g",
@@ -218,7 +218,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			Amount: 2,
 			Unit:   "g",
 		}}},
-		AdditivesField: AdditivesField{[]additiveMeasurement{
+		AdditivesField: AdditivesField{[]AdditiveMeasurement{
 			{
 				Additive: Vermiculite,
 				Amount:   0.2,
@@ -235,7 +235,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 				Unit:     "pinch",
 			},
 		}},
-		AntibioticsField: AntibioticsField{[]antibiotic{Doxycycline, HydrogenPeroxide}},
+		AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		AclField:         AclField{&testAcl},

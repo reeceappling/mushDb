@@ -53,7 +53,7 @@ type JarRecipe struct {
 }
 
 type GrainPercentage struct {
-	Grain      grain `bson:"grain" json:"grain"`
+	Grain      Grain `bson:"grain" json:"grain"`
 	Percentage int   `bson:"percentage" json:"percentage"`
 }
 
@@ -109,10 +109,10 @@ func initializeJarRecipes(ctx context.Context) error {
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOatWithVermGypsum)},
 			Grains:                     []GrainPercentage{{Grain: Oats, Percentage: 100}},
 			StandardField:              StandardField{true},
-			SugarsField: SugarsField{[]sugarMeasurement{
+			SugarsField: SugarsField{[]SugarMeasurement{
 				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
 			}},
-			AdditivesField: AdditivesField{[]additiveMeasurement{
+			AdditivesField: AdditivesField{[]AdditiveMeasurement{
 				newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
 				newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
 			}},
@@ -133,7 +133,7 @@ func initializeJarRecipes(ctx context.Context) error {
 		NameField:                  NameField{"testJarRecipeName"},
 		Grains:                     []GrainPercentage{{Grain: BirdSeed, Percentage: 100}},
 		StandardField:              StandardField{false},
-		NutrientsField: NutrientsField{[]nutrientMeasurement{
+		NutrientsField: NutrientsField{[]NutrientMeasurement{
 			{
 				Nutrient: LME,
 				Amount:   1,
@@ -145,10 +145,10 @@ func initializeJarRecipes(ctx context.Context) error {
 				Unit:     "ug",
 			},
 		}},
-		SugarsField: SugarsField{[]sugarMeasurement{
+		SugarsField: SugarsField{[]SugarMeasurement{
 			newSugarMeasurement(Honey, 1, "large drop per quart jar"),
 		}},
-		AdditivesField: AdditivesField{[]additiveMeasurement{
+		AdditivesField: AdditivesField{[]AdditiveMeasurement{
 			newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
 			newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
 		}},

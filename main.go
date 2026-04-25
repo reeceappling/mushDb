@@ -21,7 +21,6 @@ import (
 	"github.com/ulule/limiter/v3"
 	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -43,6 +42,8 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
 	dbSetupUser := os.Getenv("MONGO_INITDB_SETUP_USERNAME")
 	dbSetupPass := os.Getenv("MONGO_INITDB_SETUP_PASSWORD")
+	println(dbSetupUser, dbSetupPass)
+	println(dbUser, dbPass)
 	dbHostPortStr := os.Getenv("DB_HOST_PORT")
 	dbHostPort, err := strconv.Atoi(dbHostPortStr)
 	if err != nil {
@@ -60,13 +61,16 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 	}
 
 	println("Connecting to database as initializer")
-	ctx, client, err = rfid.NewMongoDbClient(ctxIn, dbSetupUser, dbSetupPass, dbHostName, dbHostPort)
-	if err != nil {
-		return ctx, nil, errors.Join(errors.New("failed to create MongoDB creation client"), err)
+	ctxA, clientInitial, errA := rfid.NewMongoDbClient(ctxIn, dbSetupUser, dbSetupPass, dbHostName, dbHostPort)
+	if errA != nil {
+		return ctxA, nil, errors.Join(errors.New("failed to create MongoDB creation client"), errA)
 	}
 	println("Initializing DB")
-	if err = rfid.Initialize(ctx); err != nil {
-		return ctx, nil, errors.Join(errors.New("failed to initialize database"), err)
+	if err = rfid.Initialize(ctxA); err != nil {
+		return ctxA, nil, errors.Join(errors.New("failed to initialize database"), err)
+	}
+	if err = clientInitial.Disconnect(ctxA); err != nil {
+		return ctxA, nil, errors.Join(errors.New("failed to disconnect database on start"), err)
 	}
 	println("Connecting to database standard application user")
 	ctx, client, err = rfid.NewMongoDbClient(ctxIn, dbUser, dbPass, dbHostName, dbHostPort)
@@ -1049,27 +1053,37 @@ func getAnyCollectionHandler() http.Handler {
 				return
 			}
 		// Cases which are alt colls with base58->binary ids
-		case "agarBatch", "agarRecipe", "jarRecipe", "lcRecipe", "pcRun", "sale", "substrateRecipe", "transfer":
-			altId := [12]byte{}
-			if len(id) < 12 {
-				for i, byt := range altId {
-					altId[12-len(altId)+i] = byt
-				}
-			} else {
-				temp := []byte(id)
-				altId = [12]byte(temp)
+		case "agarBatch", "agarRecipe", "jarRecipe", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
+			// TODO: maybe de-urlencode here to account for named recipes?
+			altId, err := rfid.StandardizeAltCollectionId(id)
+			if err != nil {
+				http.Error(w, "failed to standardize alt coll id: "+err.Error(), http.StatusInternalServerError)
+				return
 			}
-			baseItemFor := map[string]rfid.AltCollectionItem[rfid.AlternateCollectionId]{
+			//altId := [12]byte{}
+			//if len(id) < 12 {
+			//	for i, byt := range altId {
+			//		altId[12-len(altId)+i] = byt
+			//	}
+			//} else {
+			//	temp := []byte(id)
+			//	altId = [12]byte(temp)
+			//}
+			baseItem, exists := map[string]rfid.AltCollectionItem[rfid.AlternateCollectionId]{
 				"agarBatch":       &rfid.AgarBatch{},
-				"agarRecipe":      &rfid.AgarRecipe{},
-				"jarRecipe":       &rfid.JarRecipe{},
-				"lcRecipe":        &rfid.LcRecipe{},
+				"agarRecipe":      &rfid.AgarRecipe{}, // TODO: handle recipe name?
+				"jarRecipe":       &rfid.JarRecipe{},  // TODO: handle recipe name?
+				"lcRecipe":        &rfid.LcRecipe{},   // TODO: handle recipe name?
 				"pcRun":           &rfid.PCRun{},
 				"sale":            &rfid.Sale{},
-				"substrateRecipe": &rfid.SubstrateRecipe{},
+				"substrateBatch":  &rfid.SubstrateBatch{},
+				"substrateRecipe": &rfid.SubstrateRecipe{}, // TODO: handle recipe name?
 				"transfer":        &rfid.Transfer{},
+			}[entryType]
+			if !exists {
+				http.Error(w, "invalid entry type in getAnyCollHandler: "+entryType, http.StatusBadRequest)
 			}
-			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId(altId[:]), baseItemFor[entryType])
+			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId(altId[:]), baseItem)
 			if err != nil {
 				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 				return
@@ -1099,7 +1113,8 @@ func getAnyCollectionHandler() http.Handler {
 				"slant":      &rfid.Slant{}, // generally only goes to plate
 				"sporePrint": &rfid.SporePrint{},
 				"sporeSwab":  &rfid.SporeSwab{},
-				"stasis":     &rfid.StasisTube{}, // generally only goes to plate
+				"stasisTube": &rfid.StasisTube{}, // generally only goes to plate
+				"waterJar":   &rfid.WaterJar{},
 			}[entryType]; exists {
 				println("MAINCOLLID EXISTS") // TODO: del
 				// ensure id is in correct format
@@ -1111,36 +1126,36 @@ func getAnyCollectionHandler() http.Handler {
 				}
 				println("GETTING ITEM") // TODO: del
 				// TODO: DELETE CURSOR PARTs????
-				dbName, _ := os.LookupEnv("MONGO_INITDB_DATABASE")
-				coll := ctx.Value("mongoClient").(*mongo.Client).Database(dbName).Collection(rfid.PlatesCollectionName)
-				cursor, err := coll.Find(ctx, bson.D{})
-				if err != nil {
-					println("cursor err", err.Error())
-					http.Error(w, "fcursor err: "+err.Error(), http.StatusInternalServerError)
-					return
-				}
-				println("checking cursor")
-				for cursor.Next(ctx) {
-					temp := rfid.Plate{}
-
-					err = cursor.Decode(&temp)
-					if err != nil {
-						println("failed to get plate from cursor ", err.Error()) // TODO: del
-						println(cursor.Current.String())
-						http.Error(w, "failed to get main collection itemType: "+err.Error(), http.StatusInternalServerError)
-						return
-					}
-					println(cursor.Current.String())
-					println("id for obj:", string(temp.Id[:]), string(temp.Id.ToBinaryCollectionId().ToBase58Bytes()))
-				}
-				println("done checking cursor")
-				docs, err := coll.CountDocuments(ctx, bson.D{})
-				if err != nil {
-					println("error counting docs ", err.Error()) // TODO: del
-					http.Error(w, "failed to get main collection itemType: "+err.Error(), http.StatusInternalServerError)
-					return
-				}
-				println("docs counted", docs)
+				//dbName, _ := os.LookupEnv("MONGO_INITDB_DATABASE")
+				//coll := ctx.Value("mongoClient").(*mongo.Client).Database(dbName).Collection(mainCollItem.CollectionName()) // TODO: this is incorrect! EVERYTHING IS BEING STORED IN THE PLATES COLLECTION???
+				//cursor, err := coll.Find(ctx, bson.D{})
+				//if err != nil {
+				//	println("cursor err", err.Error())
+				//	http.Error(w, "fcursor err: "+err.Error(), http.StatusInternalServerError)
+				//	return
+				//}
+				//println("checking cursor")
+				//for cursor.Next(ctx) {
+				//	temp := rfid.Plate{}
+				//
+				//	err = cursor.Decode(&temp)
+				//	if err != nil {
+				//		println("failed to get item from cursor ", err.Error()) // TODO: del
+				//		println(cursor.Current.String())
+				//		http.Error(w, "failed to get main collection itemType: "+err.Error(), http.StatusInternalServerError)
+				//		return
+				//	}
+				//	println(cursor.Current.String())
+				//	println("id for obj:", string(temp.Id[:]), string(temp.Id.ToBinaryCollectionId().ToBase58Bytes()))
+				//}
+				//println("done checking cursor")
+				//docs, err := coll.CountDocuments(ctx, bson.D{})
+				//if err != nil {
+				//	println("error counting docs ", err.Error()) // TODO: del
+				//	http.Error(w, "failed to get main collection itemType: "+err.Error(), http.StatusInternalServerError)
+				//	return
+				//}
+				//println("docs counted", docs)
 				out, err := rfid.GetMainCollectionItem(ctx, *mainCollId, mainCollItem)
 				if err != nil {
 					println("failed to get mainCollItem for "+string(mainCollId.ToBinaryCollectionId().ToBase58Bytes()), err.Error()) // TODO: del
@@ -1336,69 +1351,69 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func googleAuthHandleCallbackCode(r *http.Request) (email string, err error) {
-	ctx := r.Context()
-	code := r.URL.Query().Get("code") // TODO: CHANGE? NOT IN QUERY
-	println("code", code)
-	println("cfg token url", oauthConfig.Endpoint.TokenURL)
-	println("redir url", oauthConfig.RedirectURL)
-	t, err := oauthConfig.Exchange(ctx, code)
-	if err != nil {
-		switch err.(type) {
-		case *oauth2.RetrieveError:
-			temp := err.(*oauth2.RetrieveError)
-			println("was a retrieve err!!!!")
-			println("errBody", string(temp.Body))
-			println("temp URI", string(temp.ErrorURI))
-			//bodyBytes, errr := io.ReadAll(temp.Response.Body)
-			//if errr != nil {
-			//	println("err body read failed", err.Error()) // TODO: del
-			//	return "", err
-			//}
-			//println(string(bodyBytes))
-			println("-------------------")
-			println("headers")
-			for key, vals := range temp.Response.Header {
-				println(key, strings.Join(vals, ","))
-			}
-			println("-------------------")
-			println("cookies")
-			for _, c := range temp.Response.Cookies() {
-				println(c.Name, c.Path, c.Domain, c.Value)
-			}
-			return
-		default:
-			println("exchange failed", err.Error()) // TODO: del
-			return "", err
-		}
-
-	}
-	println("token", t) // TODO: del
-	resp, err := oauthConfig.Client(ctx, t).Get("https://www.googleapis.com/oauth2/v2/userinfo")
-	if err != nil {
-		println("exchange failed", err.Error()) // TODO: del
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	var v map[string]any // TODO: USE
-
-	// Reading the JSON body using JSON decoder
-	err = json.NewDecoder(resp.Body).Decode(&v)
-	if err != nil {
-		println("decoder failed", err.Error()) // TODO: del
-		return "", err
-	}
-	for k, val := range v { // TODO: del
-		println(k, val)
-	}
-	return "", errors.New("FIXME!")
-	//urlToRedir, _ := url.QueryUnescape(r.URL.Query().Get("state"))
-	//// TODO: fix
-	////println("redirecting to " + r.Host + urlToRedir)
-	////http.Redirect(w, r, r.Host+urlToRedir, http.StatusTemporaryRedirect) // TODO: fix
-	//println("redirecting to " + urlToRedir)
-}
+//func googleAuthHandleCallbackCode(r *http.Request) (email string, err error) {
+//	ctx := r.Context()
+//	code := r.URL.Query().Get("code") // TODO: CHANGE? NOT IN QUERY
+//	println("code", code)
+//	println("cfg token url", oauthConfig.Endpoint.TokenURL)
+//	println("redir url", oauthConfig.RedirectURL)
+//	t, err := oauthConfig.Exchange(ctx, code)
+//	if err != nil {
+//		switch err.(type) {
+//		case *oauth2.RetrieveError:
+//			temp := err.(*oauth2.RetrieveError)
+//			println("was a retrieve err!!!!")
+//			println("errBody", string(temp.Body))
+//			println("temp URI", string(temp.ErrorURI))
+//			//bodyBytes, errr := io.ReadAll(temp.Response.Body)
+//			//if errr != nil {
+//			//	println("err body read failed", err.Error()) // TODO: del
+//			//	return "", err
+//			//}
+//			//println(string(bodyBytes))
+//			println("-------------------") // TODO: delete
+//			println("headers")
+//			for key, vals := range temp.Response.Header {
+//				println(key, strings.Join(vals, ","))
+//			}
+//			println("-------------------") // TODO: delete
+//			println("cookies")
+//			for _, c := range temp.Response.Cookies() {
+//				println(c.Name, c.Path, c.Domain, c.Value)
+//			}
+//			return
+//		default:
+//			println("exchange failed", err.Error()) // TODO: del
+//			return "", err
+//		}
+//
+//	}
+//	println("token", t) // TODO: del
+//	resp, err := oauthConfig.Client(ctx, t).Get("https://www.googleapis.com/oauth2/v2/userinfo")
+//	if err != nil {
+//		println("exchange failed", err.Error()) // TODO: del
+//		return "", err
+//	}
+//	defer resp.Body.Close()
+//
+//	var v map[string]any // TODO: USE
+//
+//	// Reading the JSON body using JSON decoder
+//	err = json.NewDecoder(resp.Body).Decode(&v)
+//	if err != nil {
+//		println("decoder failed", err.Error()) // TODO: del
+//		return "", err
+//	}
+//	for k, val := range v { // TODO: del
+//		println(k, val)
+//	}
+//	return "", errors.New("FIXME!")
+//	//urlToRedir, _ := url.QueryUnescape(r.URL.Query().Get("state"))
+//	//// TODO: fix
+//	////println("redirecting to " + r.Host + urlToRedir)
+//	////http.Redirect(w, r, r.Host+urlToRedir, http.StatusTemporaryRedirect) // TODO: fix
+//	//println("redirecting to " + urlToRedir)
+//}
 
 var _ goth.Provider = &guestLoginProvider{}
 var _ goth.Session = &guestSession{}

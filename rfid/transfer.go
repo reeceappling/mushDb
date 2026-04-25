@@ -56,8 +56,8 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	ToType                     string             `json:"toType"`           //sourceType
 	CreationDateField          `bson:"inline"`    // TODO; changed from date to creationDate
 	Reason                     transferReason     `bson:"reason" json:"reason"`
-	FromImage                  *imageLocation     `bson:"fromImage,omitempty" json:"fromImage,omitempty"`
-	ToImage                    *imageLocation     `bson:"toImage,omitempty" json:"toImage,omitempty"`
+	FromImage                  *ImageLocation     `bson:"fromImage,omitempty" json:"fromImage,omitempty"`
+	ToImage                    *ImageLocation     `bson:"toImage,omitempty" json:"toImage,omitempty"`
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
@@ -116,8 +116,8 @@ func initializeTransfers(ctx context.Context) error {
 		ToType:                     "jar",
 		CreationDateField:          CreationDateField{exampleTime},
 		Reason:                     "A_REASONABLE_TRANSFER_REASON",
-		FromImage:                  (*imageLocation)(&exPicLoc),
-		ToImage:                    (*imageLocation)(&exPicLoc),
+		FromImage:                  (*ImageLocation)(&exPicLoc),
+		ToImage:                    (*ImageLocation)(&exPicLoc),
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
 		AclField:                   allCanReadAcl(),
@@ -150,11 +150,8 @@ func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error
 	wc := writeconcern.Majority()
 	txnOptions := options.Transaction().SetWriteConcern(wc) // TODO: ok?
 	// Defers ending the session after the transaction is committed or ended
-	defer sess.EndSession(ctx)
 	return sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
-		if err = sess.StartTransaction(txnOptions); err != nil {
-			return nil, err
-		}
+		defer sess.EndSession(ctx)
 		out, err := transact(sessCtx)
 		if err != nil {
 			return nil, errors.Join(err, sess.AbortTransaction(ctx))
@@ -167,7 +164,6 @@ func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error
 }
 
 func createTransferHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: CANNOT USE TRANSACTIONS!!!!!!
 	data := createTransferRequest{}
 	id := newAlternateCollectionId()
 	b58id := id.asBase58()
@@ -300,8 +296,8 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		ToType:                     data.ToType,
 		CreationDateField:          CreationDateField{now},
 		Reason:                     transferReason(data.Reason),
-		FromImage:                  (*imageLocation)(fromPic),
-		ToImage:                    (*imageLocation)(toPic),
+		FromImage:                  (*ImageLocation)(fromPic),
+		ToImage:                    (*ImageLocation)(toPic),
 		NotesField:                 data.NotesField,
 		LastUpdatedField:           LastUpdatedFieldForNow(),
 		//set child perms to the parent perms!

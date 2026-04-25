@@ -342,7 +342,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
 
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {
@@ -462,24 +462,27 @@ func (req resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChambe
 
 func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateFruitingChamberRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-	reader, err := multipartReaderForRequest(r, w, &data)
-	if err != nil {
-		// Already written
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := *mainCollId
+	b58Id := mainCollId.asBase58()
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	newPics, newContams, newFlushes, err := getMultipartImages(r.Context(), "fruitingChamber", w, reader, b58Id)
+	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "fruitingChamber", &data, b58Id)
 	if err != nil {
-		// Already wrote
+		// Already wrotw
 		return
 	}
 
@@ -492,11 +495,11 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Images.New[i].Location = imageLocation(loc)
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
-			finalLoc := imageLocation(loc)
+			finalLoc := ImageLocation(loc)
 			out.Contams.New[i].Location = &finalLoc
 		}
 	}
@@ -506,7 +509,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new flush index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Flushes.New[i].Location = imageLocation(loc)
+		out.Flushes.New[i].Location = ImageLocation(loc)
 	}
 
 	ctx := r.Context()

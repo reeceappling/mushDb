@@ -53,9 +53,9 @@ func initializeSubstrates(ctx context.Context) error {
 	basicEntries := []*SubstrateRecipe{
 		// Coir
 		{
+			AlternateCollectionIdField: altCollIdFieldForint(idCoir),
 			NameField:                  NameField{"Coir"},
 			AliasesField:               AliasesField{[]string{}},
-			AlternateCollectionIdField: altCollIdFieldForint(idCoir),
 			StandardField:              StandardField{true},
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "roughly 40g dry coir, 1 cup H20 per quart"),
@@ -64,9 +64,9 @@ func initializeSubstrates(ctx context.Context) error {
 		},
 		// Coir and Vermiculite
 		{
+			AlternateCollectionIdField: altCollIdFieldForint(idCoirVerm),
 			NameField:                  NameField{"CVG"},
 			AliasesField:               AliasesField{[]string{"Coir with Vermiculite"}},
-			AlternateCollectionIdField: altCollIdFieldForint(idCoirVerm),
 			StandardField:              StandardField{true},
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "Recipe: roughly 40g dry coir, up to 1/2 cup vermiculite, 1 cup H20 per quart"),
@@ -75,9 +75,9 @@ func initializeSubstrates(ctx context.Context) error {
 			AclField: allCanReadAcl(),
 		},
 		{
+			AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
 			NameField:                  NameField{"HWFP"},
 			AliasesField:               AliasesField{[]string{"Hardwood Fuel Pellets"}},
-			AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
 			StandardField:              StandardField{true},
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "Roughly equal parts wood pellets and water (maybe less water. Do less at first to ensure field capacity)"),
@@ -106,6 +106,10 @@ type PermsOnRequest struct {
 	UserPerms    map[string]bool      `json:"userPerms,omitempty"` // Bool is canEdit
 	ProjectPerms map[projectName]bool `json:"projectPerms,omitempty"`
 	BlanketPerm  *ReadWritePerm       `json:"blanketPerm,omitempty"` // If true then these entries are publicly readable
+}
+
+func (requestPerms PermsOnRequest) GetPermsOnRequest() PermsOnRequest {
+	return requestPerms
 }
 
 func (requestPerms PermsOnRequest) DefaultAcl() *ACL {

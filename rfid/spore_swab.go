@@ -200,11 +200,18 @@ func (req updateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField
 
 func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateSporeSwabRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := *mainCollId
 
 	out := data
 	ctx, db := Db(r)

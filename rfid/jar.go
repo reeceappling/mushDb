@@ -22,7 +22,7 @@ import (
 
 type GrainJar struct {
 	MainCollectionIdField `bson:"inline"`
-	SizeCups              int `bson:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
+	SizeCups              int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
 	JarRecipeField        `bson:"inline"`
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // TODO: HANDLE IN JAVASCRIPT
@@ -201,6 +201,7 @@ func initializeJars(ctx context.Context) error {
 		MostRecentImageField:              MostRecentImageField{&exPics[0]},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		SizeCups:                          4,
 	}
 	return addTestMainEntries(ctx, testItem)
 }
@@ -236,6 +237,7 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 }
 
 type createJarRequest struct {
+	// TODO: ALSO CREATE WITH sizeCups
 	Recipe AlternateCollectionId // grain recipe
 	WetnessField
 	BurstGrainsField
@@ -292,6 +294,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importJarRequest struct {
+	// TODO: ALSO IMPORT WITH sizeCups
 	Recipe AlternateCollectionId // Jar Recipe
 	CreationDateField
 	SpeciesField
@@ -393,7 +396,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {
@@ -474,32 +477,34 @@ type resolvedUpdateJarRequest struct {
 }
 
 func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
-	return NewMods().
-		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
-		updateDisposedIfNeeded(req, existing).
-		updateNotesIfNeeded(req, existing).
-		updatePicsIfNeeded(req.Images, existing.Pics).
-		updateContamsIfNeeded(req.Contams, existing.Contaminations).
-		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateLastUpdatedIfNeeded().
-		Finalized()
+	return NewMods(). // TODO: update more if needed
+				updateKnownFruitableIfNeeded(req, existing).
+				updateSaleIfNeeded(req.Sale, existing.Sale).
+				updateDisposedIfNeeded(req, existing).
+				updateNotesIfNeeded(req, existing).
+				updatePicsIfNeeded(req.Images, existing.Pics).
+				updateContamsIfNeeded(req.Contams, existing.Contaminations).
+				updatePermsIfNeeded(aclField.ACL, existing.ACL).
+				updateLastUpdatedIfNeeded().
+				Finalized()
 }
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateJarRequest{}
-	defer r.Body.Close()
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	defer r.Body.Close() // TODO: may not need?
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	reader, err := multipartReaderForRequest(r, w, &data)
+	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		// Already written
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	id := *mainCollId
+	b58Id := mainCollId.asBase58()
 	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "cannot write to new perms: "+err.Error(), http.StatusBadRequest)
 	//	return
@@ -509,7 +514,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	newPics, newContams, _, err := getMultipartImages(r.Context(), "jar", w, reader, b58Id)
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "jar", &data, b58Id)
 	if err != nil {
 		// Already wrotw
 		return
@@ -524,11 +529,11 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Images.New[i].Location = imageLocation(loc)
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
-			finalLoc := imageLocation(loc)
+			finalLoc := ImageLocation(loc)
 			out.Contams.New[i].Location = &finalLoc
 		}
 	}

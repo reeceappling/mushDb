@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type AltCollectionIdType interface {
@@ -118,7 +119,7 @@ func ListEntriesHandler() http.Handler {
 		case "lc", "liquidculture", "liquid culture",
 			"lcs", "liquidcultures", "liquid cultures":
 			bs, err = listEntriesHandlerInternal[*LiquidCulture](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{})
-		case "lcSyringe", "lcSyringes":
+		case "lcsyringe", "lcsyringes":
 			bs, err = listEntriesHandlerInternal[*LcSyringe](r.Context(), true, maxResults, doStandardToo, &LcSyringe{})
 		case "plugs", "plug", "peg", "pegs":
 			bs, err = listEntriesHandlerInternal[*PlugsJar](r.Context(), true, maxResults, doStandardToo, &PlugsJar{})
@@ -149,9 +150,9 @@ func ListEntriesHandler() http.Handler {
 			"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
 			bs, err = listEntriesHandlerInternal[*LcRecipe](r.Context(), true, maxResults, doStandardToo, &LcRecipe{})
 		case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
-			"pcruns", "pc runs", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
+			"pcruns", "pc runs", "pcRuns", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
 			bs, err = listEntriesHandlerInternal[*PCRun](r.Context(), true, maxResults, doStandardToo, &PCRun{})
-		case "project", "Projects":
+		case "project", "projects":
 			bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{})
 		case "sale", "sales":
 			bs, err = listEntriesHandlerInternal[*Sale](r.Context(), true, maxResults, doStandardToo, &Sale{})
@@ -162,15 +163,19 @@ func ListEntriesHandler() http.Handler {
 		case "sporeprint", "spore print", "print",
 			"sporeprints", "spore prints", "prints":
 			bs, err = listEntriesHandlerInternal[*SporePrint](r.Context(), true, maxResults, doStandardToo, &SporePrint{})
+		case "sporeswab", "sporeswabs", "swab", "swabs":
+			bs, err = listEntriesHandlerInternal[*SporeSwab](r.Context(), true, maxResults, doStandardToo, &SporeSwab{})
 		case "substrate", "substraterecipe", "substrate recipe",
 			"substrates", "substraterecipes", "substrate recipes":
 			bs, err = listEntriesHandlerInternal[*SubstrateRecipe](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{})
+		case "substratebatch", "substratebatches":
+			bs, err = listEntriesHandlerInternal[*SubstrateBatch](r.Context(), true, maxResults, doStandardToo, &SubstrateBatch{})
 		case "transfer", "xfer",
 			"transfers", "xfers":
 			bs, err = listEntriesHandlerInternal[*Transfer](r.Context(), true, maxResults, doStandardToo, &Transfer{})
 		case "user", "users":
 			bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
-		case "waterJar", "waterjar", "water jar", "Water jar", "sterilizedWater", "sterile water":
+		case "waterjar", "waterjars", "water jar", "water jars", "sterilizedwater", "sterilizedwaterjar", "sterilewater", "sterilewaterjar":
 			bs, err = listEntriesHandlerInternal[*WaterJar](r.Context(), true, maxResults, doStandardToo, &WaterJar{})
 		default:
 			http.Error(w, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name")).Error(), http.StatusBadRequest)
@@ -288,17 +293,21 @@ func PrintMainCollectionItemIds[T MainCollectionItem](Prefix string, testItems [
 }
 
 func addTestAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, testItems ...T) error {
-	if err := PrintAltCollectionItemIds("Test", testItems); err != nil {
-		return err
-	}
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		defer wg.Done()
 		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(testItems[0].CollectionName())
 		return coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
+			// TODO: bson.M vs bson.D?
 			return mongo.NewReplaceOneModel().SetReplacement(item).SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
 		}))
 		// TODO: do something with the result?
 	})
-
+	wg.Wait()
+	if err := PrintAltCollectionItemIds("Test", testItems); err != nil {
+		return err
+	}
 	return err
 }
 

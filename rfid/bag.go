@@ -26,7 +26,7 @@ type Bag struct {
 	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *unixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	SealDate                          *UnixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
 	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
 	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
 	SpeciesOptionalField              `bson:"inline"` // set on transfer in
@@ -64,22 +64,6 @@ func (b Bag) GeneticInfoAsParent() (GeneticParentInfo, error) {
 func (b Bag) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return b.GenSinceSpore, b.GenSinceFruitOrSpore
 }
-
-//func (b Bag) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, b.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
 
 // TODO: create bag via substrate batch???
 func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
@@ -216,7 +200,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	// Validate request // TODO: move validation within a session?
+	// Validate request
 	_, err = data.PcRunField.Get(ctx)
 	if err != nil {
 		http.Error(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
@@ -307,32 +291,46 @@ func getBag(ctx context.Context, id MainCollectionId) (*Bag, error) {
 	return existing, err
 }
 
+// TODO: move to common
 func bsonFindFilter(key string, value any) bson.D {
-	return bson.D{bson.E{Key: key, Value: value}} // TODO: USE THIS EVERYWHERE
+	return bson.D{bson.E{Key: key, Value: value}}
 }
 
 func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateBagRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-	reader, err := multipartReaderForRequest(r, w, &data)
-	if err != nil {
-		// Already written
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	//id := *mainCollId
+	b58Id := mainCollId.asBase58()
+	//reader, err := multipartReaderForRequest(r, w, &data) // TODO: worked before
+	//if err != nil {
+	//	// Already written
+	//	return
+	//}
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, *mainCollId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	newPics, newContams, newFlushes, err := getMultipartImages(r.Context(), "bag", w, reader, b58Id)
+	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "bag", &data, b58Id)
 	if err != nil {
 		// Already wrotw
 		return
 	}
+	//newPics, newContams, newFlushes, err := getMultipartImages(r.Context(), "bag", w, reader, b58Id)
+	//if err != nil {
+	//	// Already wrotw
+	//	return
+	//}
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
@@ -343,11 +341,11 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Images.New[i].Location = imageLocation(loc)
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
-			finalLoc := imageLocation(loc)
+			finalLoc := ImageLocation(loc)
 			out.Contams.New[i].Location = &finalLoc
 		}
 	}
@@ -357,12 +355,12 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new flush index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Flushes.New[i].Location = imageLocation(loc)
+		out.Flushes.New[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
 	existing := &Bag{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
@@ -434,7 +432,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 			now := unixTimeForNow()
 			importedPic = &PicWithNotes{
 				PicWithNotesLessLocation: newPicWithNotesLessLocation(now, []Note{}),
-				Location:                 imageLocation(newFileNameWithPrefixPath),
+				Location:                 ImageLocation(newFileNameWithPrefixPath),
 			}
 			filesProcessed++
 		} else {

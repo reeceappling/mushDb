@@ -60,6 +60,7 @@ transferred
 Caddyfile
 NOTES.txtOLD
 */keyfile
+etc/mongodb.key
 
 # old charts
 fungi-tracker

@@ -19,7 +19,7 @@ type AgarBatch struct { // This is >=1 media bottles of the same recipe that wen
 	// CreationDate is assumed to be the same as on PcRun
 	PcRunField       `bson:"inline"`
 	AgarRecipeField  `bson:"inline"`
-	Color            colorant `bson:"color" json:"color"`
+	Color            Colorant `bson:"color" json:"color"`
 	NotesField       `bson:"inline"`
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
@@ -59,10 +59,27 @@ func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bs
 		Finalized()
 }
 
+// TODO: MOVE
+func ReadSimpleStructuredBody[T any](r *http.Request, w http.ResponseWriter, req *T) error {
+	defer r.Body.Close()
+	bytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		println("failed to read body: " + err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	if err = json.Unmarshal(bytes, &req); err != nil {
+		println("bad body format: " + string(bytes))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	return nil
+}
 func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	b58Id := Base58Str(r.PathValue("id"))
 	req := updateAgarBatchRequest{}
+
 	bytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -123,7 +140,7 @@ func initializeAgarBatches(ctx context.Context) error {
 }
 
 type createAgarBatchRequest struct {
-	Color colorant `json:"color"`
+	Color Colorant `json:"color"`
 	PcRunField
 	AgarRecipeField
 	NotesField

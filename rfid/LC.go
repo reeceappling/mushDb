@@ -294,7 +294,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
@@ -361,7 +361,7 @@ type updateLiquidCultureRequest struct {
 	NotesUpdateField
 	KnownFruitableField
 	DisposedField
-	ConfirmedClean *bool
+	ConfirmedClean *bool                                                    `json:"confirmedClean,omitempty"`
 	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	Contams        SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
 	WriteTagToField
@@ -404,28 +404,51 @@ type resolvedUpdateLiquidCultureRequest struct {
 	PermsOnRequest
 }
 
+// TODO: MOVE ME
+func Ternary[T any](val bool, ifTrue, ifFalse T) T {
+	if val {
+		return ifTrue
+	}
+	return ifFalse
+}
+
+// TODO: MOVE
+func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
+	if val == nil {
+		return ifNil
+	}
+	if *val {
+		return ifTrue
+	}
+	return ifFalse
+}
+
 func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateLiquidCultureRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-	}
-	reader, err := multipartReaderForRequest(r, w, &data)
-	if err != nil {
-		// Already written
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := *mainCollId
+	b58Id := mainCollId.asBase58()
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	newPics, newContams, _, err := getMultipartImages(r.Context(), "lc", w, reader, b58Id)
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "lc", &data, b58Id) // TODO: "lc" ok here?
 	if err != nil {
 		// Already wrotw
 		return
 	}
+	println("CONFIRMED CLEAN:", TernaryPtr(data.ConfirmedClean, "isClean", "isDirty", "empty"))
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
@@ -436,11 +459,11 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		req.Images.New[i].Location = imageLocation(loc)
+		req.Images.New[i].Location = ImageLocation(loc)
 	}
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
-			finalLoc := imageLocation(loc)
+			finalLoc := ImageLocation(loc)
 			req.Contams.New[i].Location = &finalLoc
 		}
 	}

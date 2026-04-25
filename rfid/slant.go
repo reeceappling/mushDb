@@ -270,16 +270,16 @@ func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toI
 
 // TODO: MOVE
 func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, reqPerms PermsOnRequest, w http.ResponseWriter) {
-	genetics, err := toInsert.GeneticInfoAsParent()
-	if err != nil {
-		http.Error(w, "failed to get genetic info: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	sp, subsp, err := genetics.GetSpeciesSubspecies(ctx)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+	//genetics, err := toInsert.GeneticInfoAsParent() // TODO: maybe switch this back?
+	//if err != nil {
+	//	http.Error(w, "failed to get genetic info: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//sp, subsp, err := genetics.GetSpeciesSubspecies(ctx)
+	//if err != nil {
+	//	http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	// Set ACL to default from parent species/subspecies // TODO: view how slant does it, the user should be able to add what they want
 	// Note: users can always import, but they may not be able to write afterwards if they do not meet the permissions...
 	//var acl = AclField{ACL: &ACL{}}
@@ -325,11 +325,19 @@ func (req resolvedUpdateSlantRequest) modsFor(existing *Slant, aclField AclField
 
 func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateSlantRequest{}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toMainCollectionId()
+	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := *mainCollId
+	b58Id := mainCollId.asBase58()
 	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
 		// Already written
@@ -340,7 +348,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	newPics, newContams, _, err := getMultipartImages(r.Context(), "lc", w, reader, b58Id)
+	newPics, newContams, _, err := getMultipartImages(r.Context(), "slant", w, reader, b58Id) // TODO: SOME OTHER AREAS NEED TO DO THIS INSTEAD OF fullMultipartWithNoBreaks becaues rfid writer is in-between
 	if err != nil {
 		// Already wrotw
 		return
@@ -355,11 +363,11 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
-		out.Images.New[i].Location = imageLocation(loc)
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
-			finalLoc := imageLocation(loc)
+			finalLoc := ImageLocation(loc)
 			out.Contams.New[i].Location = &finalLoc
 		}
 	}
@@ -462,7 +470,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		now := unixTimeForNow()
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, imageLocation(newFileNameWithPrefixPath)))
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
 	if data.Generation != nil {

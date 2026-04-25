@@ -10,7 +10,7 @@ import (
 )
 
 type AdditivesField struct {
-	Additives []additiveMeasurement `bson:"additives,omitempty" json:"additives,omitempty"`
+	Additives []AdditiveMeasurement `bson:"additives,omitempty" json:"additives,omitempty"`
 }
 
 func (field AdditivesField) Validate() error {
@@ -62,7 +62,7 @@ func (field WetnessField) Validate() error {
 }
 
 type AntibioticsField struct {
-	Antibiotics []antibiotic `bson:"antibiotics,omitempty" json:"antibiotics,omitempty"`
+	Antibiotics []Antibiotic `bson:"antibiotics,omitempty" json:"antibiotics,omitempty"`
 }
 
 func (field AntibioticsField) Validate() error {
@@ -79,7 +79,7 @@ func (field AntibioticsField) Validate() error {
 //}
 
 type LiquidsField struct {
-	Liquids []liquid `bson:"liquids" json:"liquids"`
+	Liquids []Liquid `bson:"liquids" json:"liquids"`
 }
 
 func (field LiquidsField) Validate() error {
@@ -135,7 +135,7 @@ func (field NameField) updateIfNeeded(existing NameField, upd *Mods) *Mods {
 }
 
 type NutrientsField struct {
-	Nutrients []nutrientMeasurement `bson:"nutrients,omitempty" json:"nutrients,omitempty"`
+	Nutrients []NutrientMeasurement `bson:"nutrients,omitempty" json:"nutrients,omitempty"`
 }
 
 func (field NutrientsField) Validate() error {
@@ -152,19 +152,19 @@ type ParentTypeField struct {
 }
 
 type CreationDateField struct {
-	CreationDate unixTime `bson:"creationDate" json:"creationDate"`
+	CreationDate UnixTime `bson:"creationDate" json:"creationDate"`
 }
 
 type DisposedField struct {
-	Disposed *unixTime `bson:"disposed,omitempty" json:"disposed,omitempty"`
+	Disposed *UnixTime `bson:"disposed,omitempty" json:"disposed,omitempty"`
 }
 
-func (df DisposedField) DisposalInfo() *unixTime {
+func (df DisposedField) DisposalInfo() *UnixTime {
 	return df.Disposed
 }
 
 type Disposable interface {
-	DisposalInfo() *unixTime
+	DisposalInfo() *UnixTime
 }
 
 type GenerationsFields struct {
@@ -184,7 +184,7 @@ type GenSporeField struct { // only used on fruit and embedded in GenerationsFie
 }
 
 type LastUpdatedField struct {
-	LastUpdated unixTime `bson:"lastUpdated" json:"lastUpdated"`
+	LastUpdated UnixTime `bson:"lastUpdated" json:"lastUpdated"`
 }
 
 func LastUpdatedFieldForNow() LastUpdatedField {
@@ -240,7 +240,7 @@ type StandardField struct {
 }
 
 type SugarsField struct {
-	Sugars []sugarMeasurement `bson:"sugars,omitempty" json:"sugars,omitempty"`
+	Sugars []SugarMeasurement `bson:"sugars,omitempty" json:"sugars,omitempty"`
 }
 
 func (field SugarsField) Validate() error {

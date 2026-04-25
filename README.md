@@ -14,6 +14,18 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up
 ```
 
+## Viewing Logs
+For each service, only the last 50 lines
+```bash
+docker compose --env-file env/.env.devhttps logs --tail 50 api
+docker compose logs --tail 50 web
+docker compose logs --tail 50 mushdb
+```
+following the api logs
+```bash
+docker compose logs -f  api
+```
+
 ## Regenerating Go Files
 
 ```bash
@@ -27,6 +39,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
 - [ ] Top Bar
     - [ ] Navigation Menu
         - [ ] Styling
+          - [ ] Bar Colors
+          - [ ] Text Colors
+          - [ ] Positioning
     - [ ] Login/out area
         - [ ] Styling
         - [ ] Integration with backend
@@ -35,17 +50,31 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
         - [ ] Integration with backend
 - [ ] Agar Batch
     - [ ] Creation form
+      - [ ] Styling
+      - [ ] Integration with backend
     - [ ] Display/Edit page
+      - [ ] Styling
+      - [x] Integration with backend
 - [ ] Agar Recipe
     - [ ] Creation form
+      - [ ] Styling
+      - [x] Integration with backend
     - [ ] Display/Edit page
+      - [ ] Styling
+      - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
 - [ ] Bag
     - [ ] Creation form
         - [ ] Styling
         - [ ] Integration with backend
-    - [ ] Display/Edit page
+      - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -56,6 +85,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -69,6 +101,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -79,6 +114,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -89,6 +127,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
     - [ ] Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -99,6 +140,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -109,6 +153,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
     - [ ] Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -119,6 +166,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -129,6 +179,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -139,6 +192,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Selector?
         - [ ] Styling
         - [ ] Integration with backend
@@ -150,8 +206,11 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
         - [ ] Styling
           - [ ] Ensure transfers work as needed
         - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
           - [ ] Ensure transfers work as needed
-          - [x] The rest of it
+          - [ ] Ensure setInitial works properly
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -162,6 +221,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [ ] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -172,6 +234,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+          - [ ] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
     - [ ] SaleArea Styling
     - [ ] SalesArea Styling
 - [ ] Slant
@@ -181,6 +246,11 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
+          - [ ] Ensure transfers work as needed
+          - [ ] Ensure setInitial works properly
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -192,6 +262,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [ ] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -202,6 +275,10 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+              - [x] Updating was broken with pictures
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -212,6 +289,10 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+          - [ ] Implement spore swab inline 
+          - [ ] First pass of main stuff
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -222,6 +303,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Import page
         - [ ] Styling
         - [ ] Integration with backend
@@ -232,6 +316,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [ ] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -242,6 +329,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -252,6 +342,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [x] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -262,6 +355,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [ ] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Transfer Reason Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -272,6 +368,9 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
     - [ ] Display/Edit page
         - [ ] Styling
         - [ ] Integration with backend
+            - [ ] First pass of main stuff
+            - [ ] Completed main stuff
+            - [ ] Any niche stuff
     - [ ] Users Selector
         - [ ] Styling
         - [ ] Integration with backend
@@ -282,6 +381,10 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
   - [ ] Display/Edit page
       - [ ] Styling
       - [ ] Integration with backend
+          - [x] First pass of main stuff
+          - [ ] Updated/Rehashed things to match backend
+          - [ ] Completed main stuff
+          - [ ] Any niche stuff
   - [ ] WaterJar Selector
       - [ ] Styling
       - [ ] Integration with backend
