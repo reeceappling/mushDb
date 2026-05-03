@@ -1,0 +1,76 @@
+div {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+*, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+
+#transferDisplay {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+    & .fromToImage {
+        box-sizing: border-box;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        & > img {
+            object-fit: contain;
+            max-height: 50vh;
+            max-width: 100%;
+        }
+
+    }
+    & .fromToLink {
+        & .xferEntryLink:hover {
+            color: var(--clr-success-0); /* TODO: ensure ok */
+        }
+        box-sizing: border-box;
+        font-size: 1.2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    & .fromToArea {
+        box-sizing: border-box;
+        display: grid;
+        width: 100%;
+        row-gap: 0.5em;
+        column-gap: 1em;
+        grid-template-rows: [header-start] 2em [header-end images-start] 1fr [images-end];
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+    "header header"
+    "images images";
+            justify-content: center;
+            align-items: center;
+        & > div {
+            box-sizing: border-box;
+            /*width: 100%;*/
+            /*width: 100%;*/
+            /*max-width: 100%;*/
+            /*display: flex;*/
+            /*justify-content: center;*/
+            /*align-items: flex-start;*/
+            &.fromToLinkArea {
+                /*width: 100%;*/
+                /*column-gap: 1em;*/
+            }
+            &.fromToImageArea {
+                /*width: 100%;*/
+                /*& > .fromToImage {*/
+                /*    max-height: 50vh;*/
+                /*    max-width: 100%;*/
+                /*    object-fit: contain;*/
+                /*}*/
+            }
+            /*& > *:first-child {*/
+            /*    float: right;*/
+            /*}*/
+            /*& > *:last-child {*/
+            /*    float: left;*/
+            /*}*/
+        }
+    }
+}

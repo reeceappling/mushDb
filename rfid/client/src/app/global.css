@@ -1,0 +1,843 @@
+/* app/globals.css */
+@import "tailwindcss";
+
+div {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+*, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+
+.basicButton {
+    @apply bg-buttonGray text-black px-4 py-2 rounded hover:bg-buttonGrayHover
+}
+
+.basicButtonSmall {
+    @apply bg-buttonGray text-black px-0 py-0 rounded hover:bg-buttonGrayHover
+}
+
+.greenButton {
+    @apply bg-buttonGreen text-black px-4 py-2 rounded hover:bg-buttonGreenHover
+}
+
+.removeButton {
+    @apply bg-buttonRemove text-black px-2 py-0 rounded hover:bg-buttonRemoveActive
+}
+
+.removeButtonSmall {
+    @apply bg-buttonRemove text-black px-0 py-0 rounded hover:bg-buttonRemoveActive
+}
+
+.tailwindSelector {
+    @apply bg-input text-black px-2 py-0 rounded
+}
+
+html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden; /* The "fail-safe" to hide any tiny overflows */
+}
+
+.depth0 {
+    padding: 8px;
+}
+.depthContainer, .subForm {
+    border-radius: 1rem;
+}
+
+
+.depth1, .depth2, .depth3, .depth4 {
+    padding: 8px;
+    /*margin: 8px; !* TODO: ensure ok*!*/
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+    &.depthContainer {
+        border-radius: 1rem;
+    }
+    &.subForm {
+        /*padding: 0.5em;*/
+        border-radius: 1rem;
+        &.depth1 {
+            border-color: var(--color-surface-2);
+        }
+        &:not(.depth1) {
+            border-color: var(--color-surface-0);
+        }
+    }
+}
+
+/*5 is the size of 1 text-sm*/
+.inputGrid {
+    display: grid;
+    grid-auto-rows: min-content;
+    column-gap: 1rem;
+
+    &.inputGrid3 {
+        grid-template-columns: min-content min-content min-content;
+    }
+
+    &.inputGrid4 {
+        grid-template-columns: min-content min-content min-content min-content;
+    }
+}
+
+.notesGrid {
+    display: grid;
+    grid-auto-rows: min-content;
+    grid-template-columns: min-content min-content min-content min-content;
+}
+
+
+@theme {
+    /* Map your custom variables to Tailwind utilities */
+    --color-input: #BCBED5FF;
+    --color-buttonGray: var(--color-surface-5);
+    --color-buttonGrayHover: var(--color-surface-tonal-4);
+    --color-buttonGreen: var(--clr-success-2);
+    --color-buttonGreenHover: var(--clr-success-1);
+    --color-buttonRemove: var(--color-danger);
+    --color-buttonRemoveActive: var(--clr-danger-0);
+    --color-cardDepth1: var(--color-surface-tonal-0);
+    --color-cardDepth2: var(--color-surface-tonal-1);
+    --color-cardDepth3: var(--color-surface-tonal-2);
+    --color-cardDepth4: var(--color-surface-tonal-3);
+}
+
+.needToTest { /* TODO: REMOVE FOR REAL STUFF */
+    border-color: #f00000;
+    border-width: 2px;
+    border-style: dotted;
+}
+
+:root {
+    /* Main theme */
+    --color-primary-0: #f0f0f0;
+    --color-primary-1: #f1f1f1;
+    --color-primary-2: #f3f3f3;
+    /*Best used for surface elements like cards, backgrounds, and other surface elements.*/
+    --color-surface-0: #0a1128;
+    --color-surface-1: #1d253b;
+    --color-surface-2: #1d253b;
+    --color-surface-3: #32394f;
+    --color-surface-4: #484f63;
+    --color-surface-5: #bcbed5;
+    /*A tonal surface variant, best used for surface elements like cards, backgrounds, and other surface elements.*/
+    --color-surface-tonal-0: #1c243a;
+    --color-surface-tonal-1: #2f374c;
+    --color-surface-tonal-2: #434a5e;
+    --color-surface-tonal-3: #585f71;
+    --color-surface-tonal-4: #585f71;
+    --color-surface-tonal-5: #6d7484;
+    /*Use for things that went right: confirmations, success messages, positive badges.*/
+    --clr-success-0: #22946e;
+    --clr-success-1: #5ba989;
+    --clr-success-2: #86bfa6;
+    /*Use when something needs attention soon: cautions, upcoming issues, soft alerts.*/
+    --clr-warning-0: #a87a2a;
+    --clr-warning-1: #ba945a;
+    --clr-warning-2: #cbae84;
+    /*Use when something is broken or destructive: errors, critical alerts, delete actions.*/
+    --clr-danger-0: #9c2121;
+    --clr-danger-1: #b4544c;
+    --clr-danger-2: #ca7f77;
+    /*Use to highlight helpful extras: tips, hints, general info banners.*/
+    --clr-info-0: #21498a;
+    --clr-info-1: #4b6ca2;
+    --clr-info-2: #7590ba;
+    --color-success: var(--clr-success-1);
+    --color-warning: var(--clr-warning-1);
+    --color-danger: var(--clr-danger-1);
+    --color-info: var(--clr-info-1);
+    --primaryText: var(--color-primary-0);
+    --topBarColor: var(--clr-info-0);
+    --topBarTextColor: var(--color-surface-5);
+    --topBarHoverColor: var(--clr-info-1);
+    --topBarClickColor: var(--clr-info-2);
+    --topBarSubmenuColor: var(--clr-info-2);
+    --topBarSubmenuTextColor: black;
+    --topBarSubmenuHoverColor: color-mix(in srgb, var(--clr-info-2) 25%, var(--clr-success-2) 75%); /* TODO: ensure #80AFAD*/
+    --topBarSubmenuClickColor: var(--clr-success-2);
+    --background: var(--color-surface-0);
+    --outerCardColor: var(--color-surface-1);
+
+    --smallestSpace: 0.1rem;
+    --verySmallSpace: 0.25rem;
+    --smallSpace: 0.5rem;
+    --medSpace: 1rem;
+    --aboveAvgImageMaxHeight: min(40vh, 40vw); /* TODO: ok?*/
+    --aboveAvgImageHeight: max(30vh, 30vw); /* TODO: ok?*/
+
+    @media (prefers-color-scheme: dark) {
+    }
+}
+
+.additiveEntry, .antibioticEntry, .liquidEntry, .sugarEntry, .nutrientEntry {
+    &.readonly {
+        /* TODO: THIS */
+    }
+
+    &.editable {
+        & > * {
+            display: inline-block;
+        }
+    }
+
+}
+
+.additiveEntryGroup {
+    &.readonly {
+        /* TODO: THIS */
+    }
+
+    &.editable {
+        & > * { /* Each single entry */
+            display: block;
+
+            & > * { /* Each part of the entry */
+                display: inline-block;
+            }
+        }
+
+    }
+
+}
+
+.listPageItem.latestListDisplay { /* List pages! */
+    /* TODO: THIS*/
+}
+
+html, body {
+    color: var(--primaryText);
+}
+
+#rfidTopArea {
+    display: flex;
+    flex-direction: column;
+
+    max-width: 50vw;
+    min-width: 25vw;
+}
+
+.centerH {
+    justify-content: center;
+    max-width: fit-content;
+    margin-inline: auto; /* TODO: ew */
+    text-align: center; /* TODO: ensure ok */
+}
+
+.centerV {
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.centerVText {
+    padding-top: 30px;
+    padding-bottom: 30px;
+}
+
+.centerHChildren {
+    & > * {
+        justify-content: center;
+        max-width: fit-content;
+    }
+}
+
+.centerH:has(> .imageSelector > .preview) {
+    max-width: 100%; /* TODO: width: auto*/
+    max-height: calc(var(--aboveAvgImageMaxHeight) + 1.5em);
+    /*height: calc(var(--aboveAvgImageHeight) + 1.5em);*/
+    display: block;
+}
+
+.centerH > .imageSelector:has(> .preview) {
+    max-width:100%;/*width: auto;*/
+    max-height: var(--aboveAvgImageMaxHeight);
+    /*height: var(--aboveAvgImageHeight);*/
+    display: block;
+}
+
+.imageSelector > .preview {
+    max-width: 100%;
+    /*width: auto;*/
+    max-height: 50vh;/*var(--aboveAvgImageMaxHeight);*/
+    /*height: 50vh; !* TODO: ok?*!*/
+    display: block;
+}
+
+/*@media (prefers-color-scheme: dark) {*/
+/*    :root {*/
+/*        !*--background: #0a0a0a;!* TODO: THIS! *!*!*/
+/*        !*--foreground: #ededed; !* TODO: THIS! *!*!*/
+/*    }*/
+/*}*/
+
+body {
+    color: var(--color-primary-0);
+    background: var(--color-surface-0);
+    font-family: Arial, Helvetica, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    html {
+        color-scheme: dark;
+    }
+}
+
+.picDisplay {
+    max-width: 100%;
+    max-height: 40vh;
+}
+
+.bottomButton {
+    width: 100%;
+}
+
+.fullPage {
+    width: 100%; /* TODO: was vw */
+    min-height: 100vh;
+    height: fit-content;
+}
+
+.idHolder {
+    width: 100%;
+}
+
+.flexBox {
+    display: flex;
+}
+
+.flexBoxGroup {
+    display: flex;
+    align-items: flex-start;
+    align-content: center;
+    row-gap: var(--smallSpace);
+    column-gap: 0em;
+    flex-wrap: wrap;
+
+    & > * {
+        width: 30%;
+    }
+
+    & .areaHeader { /* TODO: make like centerH */
+        margin: 0 auto;
+        justify-content: center;
+    }
+}
+
+.flexBoxGroup .areaWrapper {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: center;
+    align-items: center;
+}
+
+.flexBoxGroup .areaHeader {
+    /* TODO: STYLE TEXT */
+}
+
+.fullWidth {
+    width: 100%;
+    max-height: 100%;
+}
+
+.rwSelector {
+    & > * {
+        margin-top: var(--smallSpace);
+    }
+}
+
+/*img.previewImage {*/
+/*    height: 100%;*/
+/*    width: auto;*/
+/*}*/
+
+.hidden {
+    display: none;
+}
+
+/*.sectionHolder > .dateHolder {*/
+/*    justify-content: center;*/
+/*    padding-bottom: var(--smallSpace);*/
+/*}*/
+
+/*.createdUpdatedArea .dateHeader {*/
+/*    justify-content: center;*/
+/*    padding-bottom: var(--smallSpace);*/
+/*}*/
+
+/*.createdUpdatedArea {*/
+/*    display: grid;*/
+/*    grid-template-columns: 1fr 1fr;*/
+/*    !*grid-gap: 20px;*!*/
+/*    !*#border: 1px solid black;*!*/
+/*    width: 50%;*/
+/*}*/
+
+/*.createdUpdatedDisposedArea {*/
+/*    display: flex;*/
+/*    align-content: flex-start;*/
+/*    align-items: center;*/
+/*    !*grid-gap: 20px;*!*/
+/*    !*#border: 1px solid black;*!*/
+/*}*/
+
+/*.createdUpdatedDisposedArea .dateHeader {*/
+/*    justify-content: center;*/
+/*    padding-bottom: var(--smallSpace);*/
+/*}*/
+
+/*.createdUpdatedDisposedArea > .disposedArea > .areaHeader {*/
+/*    padding-bottom: var(--smallSpace);*/
+/*}*/
+
+.areaHeader {
+    justify-content: center;
+    max-width: fit-content;
+}
+
+@media (max-width: 600px) {
+    .mriParent {
+        display: grid;
+        max-width: 100%;
+        box-sizing: border-box;
+        grid-template-columns: 1fr; /* Stack vertically for smaller screens */
+        padding: 1rem;
+        border: 1px solid #ccc;
+        align-content: center;
+    }
+}
+
+.mriParent {
+    max-width: 100%;
+    box-sizing: border-box;
+    /* Side-by-side for larger screens */
+    display: grid;
+    grid-template-columns: 25% 1fr; /* TODO: 25%? 20em? what to do??? /* Image and notes side-by-side */
+    align-items: start;
+    /*padding: 1rem; !* TODO: get rid of*!*/
+    /*border: 1px solid #ccc; !* TODO: get rid of*!*/
+
+    & > div {
+        max-width: 100%;
+        box-sizing: border-box;
+        /* TODO: ensure displays properly!!!*/
+        /*display: inline-block;*/
+        vertical-align: top;
+
+        &:first-child {
+            & img {
+                width: 100%;
+                height: 100%;
+                object-fit: contain; /* or 'contain' to avoid cropping */
+            }
+            max-width: 100%;
+            box-sizing: border-box;
+            width: 100%;
+            height: auto;
+            min-height: 5vh;
+            max-height: 75vh;
+        }
+
+        &:not(:first-child) {
+            width: 100%; /* TODO: 75?*/
+
+            & > * {
+                display: inline-block;
+            }
+        }
+    }
+}
+
+.mriInfoHolder {
+    /* TODO: STYLING THE DATES AND NOTES! */
+
+    & > div {
+        &:first-child {
+            /* TODO: the date of the image! */
+        }
+
+        &.notes, & .notes {
+            /* TODO: the notes of the image! */
+        }
+    }
+}
+
+.picRow {
+    width: 100%;
+    /*align-content: center;*/
+    margin: var(--smallSpace);
+    /*padding: 10px; !* TODO: ok?*!*/
+    /*display: flex;*/
+
+    & > * {
+        /*display: inline-block;*/
+        /*justify-content: center;*/
+        vertical-align: top;
+    }
+}
+
+.picRow.disabled {
+    background-color: var(--clr-danger-2);
+}
+.disabled {
+    &.picLeft, &.picRight, &.inline, &.contamOverviewTable{
+        background-color: var(--clr-danger-0);
+    }
+
+}
+
+.picRow > .picLeft {
+    margin: 1em; /* TODO: ok?*/
+}
+
+.contamRow.disabled {
+    background-color: var(--clr-danger-2);
+    & > .picLeft {
+
+    }
+}
+
+.noteWrapper.disabled {
+    background-color: var(--clr-danger-2);
+}
+
+.picLeft {
+    display: block;
+    width: 100%;
+    float: right;
+
+    & > * {
+        display: block;
+        vertical-align: top;
+    }
+}
+
+.topLevelImageSelector > .picLeft {
+    float: none;
+}
+
+.picRight {
+    margin-inline: 0;
+    float: left;
+    padding-left: 1em;
+    max-width: 100%;
+}
+
+.gapTop {
+    margin-top: var(--smallSpace); /* TODO: ENSURE OK */
+}
+
+.medGapTop {
+    margin-top: var(--medSpace); /* TODO: ENSURE OK */
+}
+
+.gapBottom {
+    margin-bottom: var(--smallSpace); /* TODO: ENSURE OK */
+}
+
+.medGapBottom {
+    margin-bottom: var(--medSpace); /* TODO: ENSURE OK */
+}
+
+.inlineChildren {
+    & > * {
+        display: inline-block;
+    }
+}
+
+.wetnessSliderContainer {
+    width: fit-content;
+    display: flex; /* Makes children sit side-by-side */
+
+    & > * {
+        flex: auto;
+    }
+}
+
+.wetnessLabel {
+    margin-right: 1em;
+}
+
+.wetnessSlider {
+    height: fit-content;
+    /*flex: auto; !* TODO: does not work*!*/
+}
+
+.createdItem {
+    background-color: darkgreen; /* TODO: CHANGE */
+}
+
+.createdItem:first-child {
+    background-color: green; /* TODO: CHANGE */
+}
+
+
+.contamRow {
+    & > * {
+        display: inline-block;
+        vertical-align: top;
+        padding: var(--smallSpace);
+    }
+}
+
+.contamOverviewTable {
+    & > * {
+        display: block;
+        vertical-align: top;
+        padding: var(--smallestSpace);
+    }
+}
+
+.note {
+    display: inline-block;
+
+    & > * {
+        display: inline-block;
+        margin: var(--smallSpace);
+    }
+}
+
+.noteValue {
+    margin-top: 1em; /*TODO:ENSURE_OK*/
+}
+
+.inline {
+    display: inline-block;
+}
+
+/*.gensDisplay > * {*/
+/*    display: block;*/
+/*}*/
+
+.gensParent > * {
+    margin: var(--smallSpace); /* TODO: ENSURE OK*/
+}
+
+.gridCol {
+    display: grid;
+    grid-template-columns: 1fr;
+}
+
+.projectsFlex {
+    padding-top: 0.25em;
+    display: flex;
+    justify-content: center;
+    column-gap: 2em;
+    flex-wrap: wrap;
+
+    & > * {
+        margin-inline: 0;
+        padding-bottom: var(--smallSpace);
+        width: fit-content;
+    }
+}
+
+.transfersOutFlex {
+    font-size: 1.15em;
+    padding-top: 0.25em;
+    display: flex;
+    max-width: 100%;
+    box-sizing: border-box;
+    justify-content: center;
+    column-gap: 2em;
+    flex-wrap: wrap;
+
+    & > * {
+        max-width: 100%;
+        box-sizing: border-box;
+        margin-inline: 0;
+        padding-bottom: var(--smallSpace);
+        width: fit-content;
+    }
+}
+
+.picsGroup {
+    width: 100%;
+}
+
+.contentsOnly { /* TODO: this is causing deletable backgrounds to not show up*/
+    display: contents;
+}
+
+.picsRows {
+    display: grid;
+    grid-template-columns: 25% 75%;
+    grid-gap: 1em;
+}
+
+.contamsRows {
+    display: grid;
+    grid-template-columns: 25% auto auto;
+    grid-gap: 1em;
+}
+
+.noteSpaced {
+    margin-left: var(--smallSpace);
+}
+
+.Error {
+    color: black;
+    background-color: red;
+    outline-color: black; /* TODO: NECESSARY? */
+    margin: auto;
+    padding: 0.25em;
+}
+
+.dayInput {
+    width: 2em;
+}
+
+.monthInput {
+    width: 2em;
+}
+
+.yearInput {
+    width: 4em;
+}
+
+.spreadContainedV > *:not(:last-child) {
+    & > * {
+        padding-bottom: var(--smallSpace);
+    }
+}
+
+.fltLeft {
+    float: left;
+}
+
+.fltRight {
+    float: right;
+}
+
+.newTransferArea {
+    width: fit-content;
+    max-width: 100%;
+
+    & > * {
+        margin-top: 1em;
+    }
+}
+
+.newTransferRow2 {
+    display: grid;
+    justify-items: center;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: min-content;
+
+    & > * {
+        justify-content: center;
+        max-width: fit-content;
+    }
+}
+
+.newTransferRow3 {
+    display: grid;
+    justify-items: center;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 1em;
+    /* TODO: alignment and justification z*/
+    grid-template-rows: min-content;
+
+    & > * {
+        justify-content: center;
+        max-width: fit-content;
+    }
+}
+
+.newTransferRow5 {
+    display: grid;
+    grid-template-columns: 2fr 1fr 0.5fr 1fr 2fr;
+    grid-template-rows: min-content;
+}
+
+.reason-to {
+    justify-self: right;
+    grid-area: 1 / 1 / 2 / 2;
+}
+
+.id-to {
+    & > * {
+        justify-content: center;
+        max-width: fit-content;
+    }
+
+    grid-area: 1 / 2 / 2 / 3;
+}
+
+.type-to {
+    grid-area: 1 / 3 / 2 / 4;
+}
+
+.image-from {
+    & > * {
+        text-align: center;
+    }
+
+    grid-area: 1 / 1 / 2 / 2;
+}
+
+.image-to {
+    & > * {
+        text-align: center;
+    }
+
+    grid-area: 1 / 2 / 2 / 3;
+}
+
+.cancelNewXfer {
+    grid-area: 1 / 2 / 2 / 3;
+}
+
+.submitNewXfer {
+    grid-area: 1 / 4 / 2 / 5;
+}
+
+.inlineSubArea {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.selectorRow {
+
+}
+
+.subFormCreator {
+    min-width: 90%;
+    padding: 2em;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    outline-color: red;
+}
+
+.bottomButton {
+    margin-top: var(--smallSpace);
+    padding: 1em;
+}
+
+.padContent {
+    padding: 0.5em;
+}
+
+.padChildrenSides {
+    padding-left: 1em;
+    padding-right: 1em;
+}
+
+.padBottom {
+    padding-bottom: 1em;
+}
+
+.mLeft {
+    margin-left: 2em;
+}

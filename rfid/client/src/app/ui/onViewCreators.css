@@ -1,0 +1,71 @@
+div {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+*, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+
+.ovcArea {
+    /* TODO: OnViewCreators!? */
+    &:nth-child(1) {
+        /* TODO: 2nd child should be the links table */
+    }
+    & .ovcCreatorBodyWrapper {
+        /* TODO: ALL INTERNALS HERE! */
+        & > div {
+            /*width: 100%;  TODO: ok?*/
+            /* TODO: should be the main body */
+        }
+        & > button {
+            /* TODO: should be only the close buttons for the creator body */
+        }
+    }
+}
+/* Top Bar*/
+.ovcBar {
+    /* TODO: OnViewCreators*/
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    gap: 10px; /* Adds space between boxes */
+    & .ovcBarItem {
+        flex: 1; /* Makes all boxes the same width */
+        /*border: 1px solid black;*/
+        /*padding: 0px; TODO: ok?*/
+        &:hover{
+            background-color: var(--clr-info-1);
+        }
+    }
+    & .ovcBarItem {
+        flex: 1; /* Makes all boxes the same width */
+        /*border: 1px solid black;*/
+        /*padding: 0px; TODO: ok?*/
+    }
+    &.ovcBarQuad {
+        /* TODO: OnViewCreators*/
+    }
+    &.ovcBarTri {
+        /* TODO: OnViewCreators*/
+    }
+}
+.ovcBarItem {
+    &.currentlyActive {
+        /* TODO: this */
+    }
+    &.selectable {
+        /* TODO: this */
+        &:hover {
+            /* TODO: hover?*/
+        }
+        /* TODO: click? any others?*/
+    }
+}
+table.ovcLinksTable tbody > tr {
+    &:first-child {
+        /* TODO: this */
+    }
+    /* TODO: all others */
+}
