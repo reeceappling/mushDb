@@ -1,0 +1,55 @@
+div {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+*, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+
+.flexedArea {
+    display: flex;
+    gap: 0.25rem; /* TODO: ok? */
+    flex-wrap: wrap; /* Allows items to move to a new line */
+    justify-content: space-between;
+    align-items: flex-start; /* TODO: ok? https://css-tricks.com/snippets/css/a-guide-to-flexbox/ */
+    align-content: flex-start;
+    max-width: 100%; /* TODO: was width*/
+    & > * {
+        flex: 1 0 auto;
+        /*border: 1px solid rebeccapurple; TODO: any borders?*/
+        &.flexedSinglesGroup {
+            display: grid;
+            justify-content: center;
+            row-gap: var(--smallestSpace);
+            & > *, & .disposedArea, & > .dateHolder {
+                display: block;/* TODO: ensure ok*/
+                & > * {
+                    display: inline-block;/* TODO: ensure ok*/
+                }
+                &.dateEditable {
+                    display: inline-block;
+                    & > * {
+                        display: block;
+                    }
+                }
+            }
+        }
+        & .dateHeader, & .dateValue {
+            display: inline-block;
+        }
+        & div.specSubspecArea {
+            & > div {
+                margin-bottom: var(--smallestSpace);
+            }
+        }
+        & .parentDisplay, & .innocDisplay, & .lcRecipeArea, & .pcRunArea, &.pcRunArea, &.agarRecipeArea, & .knownFruitableArea, & .saleArea, & .agarBatchAreaWrapper {
+            & > * {
+                display: inline-block;
+            }
+        }
+        & .confirmedCleanArea > div, & .confirmedCleanSelector > *, &.pcRunArea > * {
+            display: inline-block;
+        }
+    }
+}
