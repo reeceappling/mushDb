@@ -249,7 +249,7 @@ func mainCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	b58id, id = mainCollId.asBase58(), *mainCollId
+	b58id, id = mainCollId.AsBase58(), *mainCollId
 	return
 }
 func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id AlternateCollectionId, err error) {
@@ -264,7 +264,7 @@ func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58S
 		http.Error(w, "failed to standardize alt collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	b58id, id = altCollId.asBase58(), *altCollId
+	b58id, id = altCollId.AsBase58(), *altCollId
 	return
 }
 

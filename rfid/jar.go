@@ -309,7 +309,7 @@ type importJarRequest struct {
 func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := importJarRequest{}
 	id := NextMainCollectionId()
-	b58id := id.asBase58()
+	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do multipart streamlined way
 	defer r.Body.Close()
 	reader, err := r.MultipartReader()
@@ -504,7 +504,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := *mainCollId
-	b58Id := mainCollId.asBase58()
+	b58Id := mainCollId.AsBase58()
 	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "cannot write to new perms: "+err.Error(), http.StatusBadRequest)
 	//	return

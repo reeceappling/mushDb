@@ -93,7 +93,7 @@ func initializeWaterJars(ctx context.Context) error {
 		LastUpdatedField:      LastUpdatedField{exampleTime},
 	}
 	println("binary water jar id initial:"+string(exWaterId[:]), len(exWaterId[:]))
-	println("created waterJar with id: " + exWaterId.asBase58())
+	println("created waterJar with id: " + exWaterId.AsBase58())
 	return addTestMainEntries(ctx, testItem)
 }
 

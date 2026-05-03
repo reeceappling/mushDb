@@ -170,7 +170,7 @@ type createFruitResolved struct {
 func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FORMAT WITH DATA FIRST!
 	data := createFruitRequest{}
 	id := NextMainCollectionId()
-	b58Id := id.asBase58()
+	b58Id := id.AsBase58()
 	defer r.Body.Close()
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
 	if err != nil {
@@ -281,7 +281,7 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	b58Id := mainCollId.asBase58()
+	b58Id := mainCollId.AsBase58()
 	data := updateFruitRequest{}
 	id := *mainCollId
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
@@ -331,7 +331,7 @@ type importFruitRequest struct {
 func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?????
 	data := importFruitRequest{}
 	id := NextMainCollectionId()
-	b58id := id.asBase58()
+	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err := r.MultipartReader()
 	if err != nil {

@@ -135,7 +135,7 @@ func initializeAgarBatches(ctx context.Context) error {
 		AclField:                   allCanReadAcl(),
 	}
 	err = addTestAltEntries(ctx, testItem)
-	println("test Agar Batch:", testAltId.asBase58())
+	println("test Agar Batch:", testAltId.AsBase58())
 	return err
 }
 

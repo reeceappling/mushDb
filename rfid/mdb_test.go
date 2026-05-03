@@ -10,7 +10,7 @@ import (
 func TestBase58(t *testing.T) {
 	t.Run("basic 0 is 1", func(t *testing.T) {
 		exId := MainCollectionId([8]byte{0, 0, 0, 0, 0, 0, 0, 0})
-		assert.Equal(t, Base58Str("0"), exId.asBase58())
+		assert.Equal(t, Base58Str("0"), exId.AsBase58())
 	})
 	t.Run("basic 0 is 0", func(t *testing.T) {
 		decoded, err := base58.BitcoinEncoding.Decode([]byte("1"))

@@ -1216,6 +1216,17 @@ func getAnyCollectionHandler() http.Handler {
 //	},
 //}
 
+const goodTestRfid = "goodTestRfid"
+const badTestRfid = "badTestRfid"
+
+func withGoodBadTestWriters(actualWriters []string) []string {
+	out := make([]string, 2, len(actualWriters)+2)
+	out[0] = goodTestRfid
+	out[1] = badTestRfid
+	out = append(out, actualWriters...)
+	return out
+}
+
 var getRfidReaderNamesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	mgr := websocketSessions.GetSessionManager(r.Context())
@@ -1223,7 +1234,9 @@ var getRfidReaderNamesHandler http.HandlerFunc = func(w http.ResponseWriter, r *
 		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
 		return
 	}
-	out, err := json.Marshal(mgr.Sessions())
+	rfidReaderSessions := mgr.Sessions()
+	totalSessions := withGoodBadTestWriters(rfidReaderSessions)
+	out, err := json.Marshal(totalSessions)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -1241,6 +1254,17 @@ var (
 
 var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	readerName := shared.RfidReaderName(r.PathValue("readerName"))
+	if readerName == goodTestRfid {
+		_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
+		if err != nil {
+			println("failed to write internal result", err)
+		}
+		return
+	} else if readerName == badTestRfid {
+		http.Error(w, "bad test rfid reader/writer selected", http.StatusInternalServerError)
+		return
+	}
 	mgr := websocketSessions.GetSessionManager(r.Context())
 	if mgr == nil {
 		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
@@ -1270,7 +1294,6 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
 	}
-	readerName := shared.RfidReaderName(r.PathValue("readerName"))
 	binaryUID, err := mgr.ReadRfid(readerName)
 	if err != nil {
 		// TODO: what type of error?
@@ -1293,9 +1316,19 @@ type writeTagRequest struct {
 // TODO: consider moving to reader/internal side?
 var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	mgr := websocketSessions.GetSessionManager(r.Context())
-	if mgr == nil {
-		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
+	if r.Header.Get("Accept") != "text/html" {
+		http.Error(w, invalidAcceptHeader, http.StatusBadRequest)
+		return
+	}
+
+	bodyIn, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "unable to read request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	req := writeTagRequest{}
+	if err = json.Unmarshal(bodyIn, &req); err != nil {
+		http.Error(w, "invalid request body structure", http.StatusBadRequest)
 		return
 	}
 	if r.Method != "POST" {
@@ -1307,23 +1340,24 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		http.Error(w, unacceptableContentType, http.StatusBadRequest)
 		return
 	}
-	if r.Header.Get("Accept") != "text/html" {
-		http.Error(w, invalidAcceptHeader, http.StatusBadRequest)
+	writerName := shared.RfidReaderName(r.PathValue("writerName"))
+	if writerName == goodTestRfid { // TODO: del
+		_, err = w.Write(req.Data) // TODO: is this still ok if incoming was base58?
+		if err != nil {
+			println("failed to write internal result", err)
+		}
+		return
+	} else if writerName == badTestRfid {
+		http.Error(w, "bad test rfid reader/writer selected", http.StatusInternalServerError)
 		return
 	}
 
-	bodyIn, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "unable to read request body: "+err.Error(), http.StatusBadRequest)
+	mgr := websocketSessions.GetSessionManager(r.Context())
+	if mgr == nil {
+		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	req := writeTagRequest{}
-	if err = json.Unmarshal(bodyIn, &req); err != nil {
-		http.Error(w, "invalid request body structure", http.StatusBadRequest)
-		return
-	}
-	if len(req.Data) != 8 {
+	if len(req.Data) != 8 { // TODO: this is a base58 string, shouldnt it always be that?
 		// could be base58str
 		req.Data, err = rfid.Base58Str(req.Data).Base2Bytes()
 		if err != nil || len(req.Data) != 8 {
@@ -1336,8 +1370,7 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	toWrite := [8]byte(req.Data)
+	toWrite := [8]byte(req.Data) // TODO: ensure base2?
 	if err = mgr.WriteRfid(writerName, toWrite); err != nil {
 		// TODO: what type of error?
 		http.Error(w, err.Error(), http.StatusInternalServerError)

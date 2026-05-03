@@ -23,6 +23,8 @@ import (
 	"time"
 )
 
+const GoodTestRfidTag = "goodTestRdfidItem"
+
 var ErrNoParentModifiedForTransfer = errors.New("parent not found for transfer update. Shouldnt occur")
 var ErrMissingOptionalField = errors.New("missing optional field")
 var ErrFailedToFinalizeMods = errors.New("failed to finalize mods")
@@ -141,24 +143,24 @@ func Initialize(ctx context.Context) error {
 	}
 	for name, b58IdStr := range map[string]string{
 		// Mains IDs
-		"plate":           string(exPlate.asBase58()),
-		"bag":             string(exBag.asBase58()),
-		"fruitingChamber": string(exFC.asBase58()),
-		"jar":             string(exJar.asBase58()),
-		"mss":             string(exMSS.asBase58()),
-		"slant":           string(exSlant.asBase58()),
-		"stasisTube":      string(exStasis.asBase58()),
-		"fruit":           string(exFruitId.asBase58()),
-		"sporePrint":      string(exSporePrint.asBase58()),
-		"waterJar":        string(exWaterId.asBase58()),
+		"plate":           string(exPlate.AsBase58()),
+		"bag":             string(exBag.AsBase58()),
+		"fruitingChamber": string(exFC.AsBase58()),
+		"jar":             string(exJar.AsBase58()),
+		"mss":             string(exMSS.AsBase58()),
+		"slant":           string(exSlant.AsBase58()),
+		"stasisTube":      string(exStasis.AsBase58()),
+		"fruit":           string(exFruitId.AsBase58()),
+		"sporePrint":      string(exSporePrint.AsBase58()),
+		"waterJar":        string(exWaterId.AsBase58()),
 		// Standard Alt IDs
-		"agarBatch":       string(exAltId.asBase58()),
-		"agarRecipe":      string(exAltId.asBase58()),
-		"jarRecipe":       string(exAltId.asBase58()),
-		"lcRecipe":        string(exAltId.asBase58()),
-		"sale":            string(exAltId.asBase58()),
-		"substrateRecipe": string(exAltId.asBase58()),
-		"transfer":        string(exAltId.asBase58()),
+		"agarBatch":       string(exAltId.AsBase58()),
+		"agarRecipe":      string(exAltId.AsBase58()),
+		"jarRecipe":       string(exAltId.AsBase58()),
+		"lcRecipe":        string(exAltId.AsBase58()),
+		"sale":            string(exAltId.AsBase58()),
+		"substrateRecipe": string(exAltId.AsBase58()),
+		"transfer":        string(exAltId.AsBase58()),
 		// String Alt IDs
 		"project":    testEntryStringId,
 		"species":    testEntryStringId,

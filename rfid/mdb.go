@@ -147,7 +147,7 @@ func Base2BytesToBase58(littleEndianBytes []byte) (Base58Str, error) {
 
 type BinaryCollectionId string // THIS IS ALWAYS IN BINARY FORMAT SERVERSIDE
 
-func (id BinaryCollectionId) asBase58() Base58Str {
+func (id BinaryCollectionId) AsBase58() Base58Str {
 	b58bs, _ := Base2BytesToBase58(id.Bytes())
 	return b58bs
 }
@@ -184,11 +184,11 @@ func (id BinaryCollectionId) Bytes() []byte {
 }
 
 func (id BinaryCollectionId) ToBase58Bytes() []byte {
-	return []byte(id.asBase58())
+	return []byte(id.AsBase58())
 }
 
 func (id BinaryCollectionId) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%s"`, id.asBase58())), nil
+	return []byte(fmt.Sprintf(`"%s"`, id.AsBase58())), nil
 }
 
 func (id *BinaryCollectionId) UnmarshalJSON(bs []byte) (err error) {
@@ -288,7 +288,7 @@ func NextMainCollectionIds(num int) []MainCollectionId { // TODO: use
 //}
 
 func (id MainCollectionId) base58Bytes() []byte {
-	return []byte(id.asBase58())
+	return []byte(id.AsBase58())
 }
 
 func (id MainCollectionId) ToBinaryCollectionId() BinaryCollectionId {
@@ -298,7 +298,7 @@ func (id MainCollectionId) ToBinaryCollectionId() BinaryCollectionId {
 func (id MainCollectionId) MarshalJSON() ([]byte, error) {
 	//marshalling := [RfidByteSize]byte(id)
 	//println("Marshalling " + string(marshalling[0:]))
-	bs58 := id.asBase58()
+	bs58 := id.AsBase58()
 	//println(bs58) // TODO: CLEANUP
 	out := []byte(`"` + string(bs58) + `"`)
 	//println("Marshalled: " + string(out))
@@ -306,11 +306,12 @@ func (id MainCollectionId) MarshalJSON() ([]byte, error) {
 }
 
 func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
-	var b58Str string
+	var b58Str Base58Str
+	// TODO: works with var b58Str string
 	if err := json.Unmarshal(bs, &b58Str); err != nil {
 		return err
 	}
-	val, err := Base58Str(b58Str).toMainCollectionId()
+	val, err := b58Str.toMainCollectionId()
 	if err != nil {
 		return err
 	}
@@ -321,8 +322,8 @@ func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
 func (id MainCollectionId) dbIdStr() string { // Returns Most efficient string
 	return string(id[:])
 }
-func (id MainCollectionId) asBase58() Base58Str { // TODO: make sure that everywhere this is used, it is being used properly, and doesnt need to be in binary format
-	return id.ToBinaryCollectionId().asBase58() // TODO: make sure ok
+func (id MainCollectionId) AsBase58() Base58Str { // TODO: make sure that everywhere this is used, it is being used properly, and doesnt need to be in binary format
+	return id.ToBinaryCollectionId().AsBase58() // TODO: make sure ok
 }
 func (id MainCollectionId) IdField() MainCollectionIdField { // Returns Most efficient string
 	return MainCollectionIdField{id}
@@ -378,7 +379,7 @@ func (id AlternateCollectionId) String() string {
 	return string(id[:])
 }
 
-func (id AlternateCollectionId) asBase58() Base58Str {
+func (id AlternateCollectionId) AsBase58() Base58Str {
 	out, err := Base2BytesToBase58(id[:])
 	if err != nil {
 		panic("Error getting AltCollId str " + err.Error())
@@ -388,7 +389,7 @@ func (id AlternateCollectionId) asBase58() Base58Str {
 }
 
 func (id AlternateCollectionId) base58Bytes() []byte {
-	return []byte(id.asBase58())
+	return []byte(id.AsBase58())
 }
 func (id AlternateCollectionId) asIdField() AlternateCollectionIdField {
 	return AlternateCollectionIdField{id}

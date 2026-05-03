@@ -337,7 +337,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := *mainCollId
-	b58Id := mainCollId.asBase58()
+	b58Id := mainCollId.AsBase58()
 	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
 		// Already written
@@ -399,7 +399,7 @@ type importSlantRequest struct {
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSlantRequest{}
 	id := NextMainCollectionId()
-	b58id := id.asBase58()
+	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
 	reader, err := r.MultipartReader() // TODO: do streamlined

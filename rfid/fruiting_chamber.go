@@ -275,7 +275,7 @@ type importFruitingChamberRequest struct {
 func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitingChamberRequest{}
 	id := NextMainCollectionId()
-	b58id := id.asBase58()
+	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: REDO THIS MULTIPART READER
 	defer r.Body.Close()
 	reader, err := r.MultipartReader()
@@ -474,7 +474,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := *mainCollId
-	b58Id := mainCollId.asBase58()
+	b58Id := mainCollId.AsBase58()
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

@@ -310,7 +310,7 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//id := *mainCollId
-	b58Id := mainCollId.asBase58()
+	b58Id := mainCollId.AsBase58()
 	//reader, err := multipartReaderForRequest(r, w, &data) // TODO: worked before
 	//if err != nil {
 	//	// Already written
@@ -384,7 +384,7 @@ type importBagRequest struct {
 func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := importBagRequest{}
 	id := NextMainCollectionId()
-	b58id := id.asBase58()
+	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err := r.MultipartReader()
 	if err != nil {

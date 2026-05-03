@@ -86,7 +86,9 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 		return nil, nil
 	})
 	wg.Wait()
-	PrintMainCollectionItemIds("Built-in", testItems)
+	if testItems[0].CollectionName() != PlatesCollectionName {
+		PrintMainCollectionItemIds("Built-in", testItems)
+	}
 	return txErr
 }
 

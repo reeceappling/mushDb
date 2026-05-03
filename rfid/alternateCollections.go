@@ -272,7 +272,7 @@ func PrintAltCollectionItemIds[T AltCollectionItem[U], U AltCollectionIdType](Pr
 	for _, item := range testItems {
 		switch id := item.IdValue().(type) {
 		case AlternateCollectionId:
-			sb.WriteString(string(id.asBase58()) + "\n")
+			sb.WriteString(string(id.AsBase58()) + "\n")
 		case string:
 			sb.WriteString(id + "\n")
 		default:
@@ -287,7 +287,7 @@ func PrintMainCollectionItemIds[T MainCollectionItem](Prefix string, testItems [
 	sb := strings.Builder{}
 	sb.WriteString(fmt.Sprintf(`%s %s entries:`, Prefix, testItems[0].CollectionName()) + "\n")
 	for _, item := range testItems {
-		sb.WriteString(string(item.DbId().asBase58()) + "\n")
+		sb.WriteString(string(item.DbId().AsBase58()) + "\n")
 	}
 	println(sb.String())
 }
@@ -320,7 +320,7 @@ func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx conte
 	for _, item := range testItems {
 		switch id := item.IdValue().(type) {
 		case AlternateCollectionId:
-			println(id.asBase58())
+			println(id.AsBase58())
 		case string:
 			println(id)
 		default:

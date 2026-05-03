@@ -24,6 +24,7 @@ const ( // MainCollection test ints
 	idTestPlateUserOutsideProject
 	idTestLCS
 	idTestWaterJar
+	idTestPlateEmpty
 )
 
 const (

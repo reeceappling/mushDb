@@ -190,7 +190,7 @@ type resolvedCreateSporePrintRequest struct {
 func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSporePrintRequest{}
 	id := NextMainCollectionId()
-	b58Id := id.asBase58()
+	b58Id := id.AsBase58()
 	defer r.Body.Close()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	reader, err := r.MultipartReader() // TODO: do streamlined
@@ -404,7 +404,7 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := *mainCollId
-	b58Id := mainCollId.asBase58()
+	b58Id := mainCollId.AsBase58()
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "sporePrint", &data, b58Id)
 	if err != nil {
 		// Already wrote
@@ -449,7 +449,7 @@ type importSporePrintRequest struct {
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporePrintRequest{}
 	id := NextMainCollectionId()
-	b58id := id.asBase58()
+	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
 	reader, err := r.MultipartReader() // TODO: do streamlined

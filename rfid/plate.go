@@ -154,11 +154,47 @@ func initializePlates(ctx context.Context) error {
 		idTestPlateUserOutsideProject,
 	}
 	platesMade := map[Base58Str]string{}
-	testPlates := make([]*Plate, 0, len(testPlateIds)+1)
+	testPlates := []*Plate{}
 	// If test plate does not exist, then create it
+	firstPlate := basicTestPlate()
+	testId := firstPlate.Id
+	platesMade[testId.AsBase58()] = "test plate with id 1" // TODO: reenable once we confirm that pictures are staying saved
+	testPlates = append(testPlates, &firstPlate)           // TODO: reenable once we confirm that pictures are staying saved
+	emptyPlate := emptyTestPlate()
+	emptyTestId := emptyPlate.Id
+	platesMade[emptyTestId.AsBase58()] = "test empty plate"
+
+	testPlates = append(testPlates, &emptyPlate)
+	for i, permInt := range testPlateIds {
+		id := mainCollIdForint(permInt)
+		platesMade[id.AsBase58()] = testAclStrings[i]
+		var tempCoverage = &i
+		var tempBool = utils.Pointer(false)
+		switch i {
+		case 1:
+			tempCoverage = nil
+			tempBool = nil
+		case 2:
+			tempBool = utils.Pointer(true)
+		default:
+			// Do nothing different
+		}
+		newTestPlate := testPlateFor(id, &exAltId, exampleTime, tempCoverage, tempCoverage, tempBool, tempBool,
+			&testEntryStringId, &testEntryStringId, &exAltId, &exGenSinceSpore, &exGenSinceFruitSpore, exAlts,
+			&exParentType, &testId, exPics, exContams, exBool, &exAltId, &exampleTime, &exPics[0], exampleNotes(),
+			exampleTime, testAcls[i])
+		testPlates = append(testPlates, &newTestPlate)
+	}
+	println("Built-in plates entries:")
+	for tempId, name := range platesMade {
+		println(tempId, name)
+	}
+	return addTestMainEntries(ctx, testPlates...)
+}
+
+func basicTestPlate() Plate {
 	testId := mainCollIdForint(idTestPlate) // 0th id, b58==1
-	platesMade[testId.asBase58()] = "test plate with id 1"
-	testPlates = append(testPlates, &Plate{
+	return Plate{
 		MainCollectionIdField:   MainCollectionIdField{testId},
 		AgarBatchField:          AgarBatchField{&exAltId},
 		CreationDateField:       CreationDateField{exampleTime},
@@ -180,51 +216,89 @@ func initializePlates(ctx context.Context) error {
 		MostRecentImageField:              MostRecentImageField{&exPics[0]},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	})
-	for i, permInt := range testPlateIds {
-		id := mainCollIdForint(permInt)
-		platesMade[id.asBase58()] = testAclStrings[i]
-		var tempCoverage = &i
-		var tempBool *bool = utils.Pointer(false)
-		switch i {
-		case 1:
-			tempCoverage = nil
-			tempBool = nil
-		case 2:
-			tempBool = utils.Pointer(true)
-		default:
-			// Do nothing different
-		}
-		testPlates = append(testPlates, &Plate{
-			MainCollectionIdField:               MainCollectionIdField{id},
-			AgarBatchField:                      AgarBatchField{&exAltId},
-			CreationDateField:                   CreationDateField{exampleTime},
-			CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{CondensationCoverageAtSealTime: tempCoverage},
-			PourCoverageField:                   PourCoverageField{PourCoverage: tempCoverage},
-			WetAtCooledTimeField:                WetAtCooledTimeField{WetAtCooledTime: tempBool},
-			AgarOnOutsideAtPourTimeField:        AgarOnOutsideAtPourTimeField{AgarOnOutsideAtPourTime: tempBool},
-			SpeciesOptionalField:                SpeciesOptionalField{&testEntryStringId},
-			SubspeciesOptionalField:             SubspeciesOptionalField{&testEntryStringId},
-			InnocField:                          InnocField{&exAltId}, // TODO: multiple?
-			GenerationsFields: GenerationsFields{
-				GenSporeField:        GenSporeField{&exGenSinceSpore},
-				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-			},
-			TransfersOutField:                 TransfersOutField{exAlts},
-			ParentTypeField:                   ParentTypeField{&exParentType},
-			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&testId}, // TODO: ok? // TODO: multiple?
-			PicsField:                         PicsField{exPics},
-			ContaminationsField:               ContaminationsField{exContams},
-			KnownFruitableField:               KnownFruitableField{exBool},
-			SaleField:                         SaleField{&exAltId},
-			DisposedField:                     DisposedField{&exampleTime},
-			MostRecentImageField:              MostRecentImageField{&exPics[0]},
-			NotesField:                        NotesField{exampleNotes()},
-			LastUpdatedField:                  LastUpdatedField{exampleTime},
-			AclField:                          AclField{ACL: testAcls[i]},
-		})
 	}
-	return addTestMainEntries(ctx, testPlates...)
+}
+func emptyTestPlate() Plate {
+	testEmptyId := mainCollIdForint(idTestPlateEmpty) // 0th id, b58==1
+	return Plate{
+		MainCollectionIdField:   MainCollectionIdField{testEmptyId},
+		AgarBatchField:          AgarBatchField{&exAltId},
+		CreationDateField:       CreationDateField{exampleTime},
+		SpeciesOptionalField:    SpeciesOptionalField{},
+		SubspeciesOptionalField: SubspeciesOptionalField{},
+		InnocField:              InnocField{},
+		GenerationsFields: GenerationsFields{
+			GenSporeField: GenSporeField{},
+		},
+		TransfersOutField:                 TransfersOutField{},
+		ParentTypeField:                   ParentTypeField{},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{},
+		PicsField:                         PicsField{},
+		ContaminationsField:               ContaminationsField{},
+		KnownFruitableField:               KnownFruitableField{},
+		SaleField:                         SaleField{},
+		DisposedField:                     DisposedField{},
+		MostRecentImageField:              MostRecentImageField{},
+		NotesField:                        NotesField{},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
+	}
+}
+func testPlateFor(
+	id MainCollectionId,
+	agarBatchId *AlternateCollectionId,
+	creationDate UnixTime,
+	condensationCoverageAtSealTime,
+	pourCoverage *int,
+	wetAtCooledTime,
+	agarOnOutsideAtPourTime *bool,
+	species,
+	subspecies *string,
+	innoc *AlternateCollectionId,
+	genSpore, genFruit *Generation,
+	xfersOut []AlternateCollectionId,
+	parentType *string, parent *MainCollectionId,
+	picsForItem []PicWithNotes,
+	contams []Contamination,
+	knownFruitable *bool,
+	sale *AlternateCollectionId,
+	disposed *UnixTime,
+	mostRecentImage *PicWithNotes,
+	notes []Note,
+	lastUpdated UnixTime,
+	acl *ACL,
+) Plate {
+	return Plate{ // TODO: reenable later. Just making sure pics stay populated between deploys.
+		MainCollectionIdField:               MainCollectionIdField{id},
+		AgarBatchField:                      AgarBatchField{agarBatchId},
+		CreationDateField:                   CreationDateField{creationDate},
+		CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{condensationCoverageAtSealTime},
+		PourCoverageField:                   PourCoverageField{pourCoverage},
+		WetAtCooledTimeField:                WetAtCooledTimeField{wetAtCooledTime},
+		AgarOnOutsideAtPourTimeField:        AgarOnOutsideAtPourTimeField{agarOnOutsideAtPourTime},
+		SpeciesOptionalField:                SpeciesOptionalField{species},
+		SubspeciesOptionalField:             SubspeciesOptionalField{subspecies},
+		InnocField:                          InnocField{innoc},
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{genSpore},
+			GenSinceFruitOrSpore: genFruit,
+		},
+		TransfersOutField:                 TransfersOutField{xfersOut},
+		ParentTypeField:                   ParentTypeField{parentType},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{parent}, // TODO: ok? // TODO: multiple?
+		PicsField:                         PicsField{picsForItem},
+		ContaminationsField:               ContaminationsField{contams},
+		KnownFruitableField:               KnownFruitableField{knownFruitable},
+		SaleField:                         SaleField{sale},
+		DisposedField:                     DisposedField{disposed},
+		MostRecentImageField:              MostRecentImageField{mostRecentImage},
+		NotesField:                        NotesField{notes},
+		LastUpdatedField:                  LastUpdatedField{lastUpdated},
+		AclField:                          AclField{acl},
+	}
+}
+
+func EmptyTestPlateBinaryId() MainCollectionId {
+	return mainCollIdForint(idTestPlateEmpty)
 }
 
 type createPlateRequest struct {
@@ -341,7 +415,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := *mainCollId
-	b58Id := mainCollId.asBase58()
+	b58Id := mainCollId.AsBase58()
 	reqBs, err := json.MarshalIndent(data, "", " ")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -428,15 +502,18 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	println("marshalling") // TODO: del
 	bsOut, err := json.Marshal(existing)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	println("Writing update:", string(bsOut))
+	bsOut2, err2 := json.MarshalIndent(existing, "", " ") // TODO: delete later
+	if err2 != nil {
+		dbErr(w, err2.Error(), http.StatusInternalServerError)
+		return
+	}
+	println("Writing update:", string(bsOut2))
 	_, err = w.Write(bsOut)
-	println("Wrote update:", string(bsOut))
 	handleWriteErr(err, w)
 }
 
@@ -456,7 +533,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	data := importPlateRequest{}
 	id := NextMainCollectionId()
-	b58id := id.asBase58()
+	b58id := id.AsBase58()
 	println("multipart reader if necessary")
 	reader, err := multipartReaderForRequest(r, w, &data)
 	if err != nil {
