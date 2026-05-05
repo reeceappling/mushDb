@@ -7,6 +7,7 @@ import "@/app/ui/subform.css"
 import "@/app/ui/topBar.css"
 import "@/app/ui/onViewCreators.css"
 import "@/app/ui/transferDisplay.css"
+import "@/app/ui/listPage.css" // TODO: consider moving
 import { Geist, Geist_Mono } from "next/font/google"; // TODO: FIX
 
 // TODO: ensure all ok

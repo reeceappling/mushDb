@@ -13,7 +13,7 @@ import {
     InlineExpansionArea, InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    IsString,
+    IsString, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -34,8 +34,15 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import { InlineEntry } from "./agarRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {StasisTubeData} from "@/app/components/stasisTubeServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -373,4 +380,16 @@ export function SubspeciesFormArea({subspecies}:{
     subspecies: string,
 }){ // TODO: LINK!
     return <div>{"Subspecies: "+subspecies}</div>
+}
+
+export function SubspeciesListPageTable({data, onClick}: ListPageItems<SubspeciesData>) {
+    const cols: ListTableColumn<SubspeciesData>[] = [
+        NewColumn("Subspecies", (v)=>v._id),
+        NewColumn("Species", (v)=>v.species),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

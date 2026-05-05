@@ -17,7 +17,7 @@ import {
     HandleTxtResponse,
     HandleJsonResponse,
     SendMultipartRequest,
-    setFormData, InlineExpansionButton
+    setFormData, InlineExpansionButton, ListPageItems
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -63,9 +63,16 @@ import {FruitRecentSelector} from "@/app/components/fruitClient";
 import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {MssData} from "@/app/components/mssServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {PlateData} from "@/app/components/plateServer";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -448,4 +455,20 @@ export function SporePrintRecentSelector({onSelect}:{onSelect:(selected?: SporeP
     return <RecentSelectorV2<SporePrintData> listUrlType={"sporePrints"} assertion={AssertSporePrint} singleConstructor={(val, i)=>{
         return <SporePrintInline data={val} expandByDefault={false} onClick={onSelect}/>
     }} />
+}
+
+export function SporePrintListPageTable({data, onClick}: ListPageItems<SporePrintData>) {
+    const cols: ListTableColumn<SporePrintData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

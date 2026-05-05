@@ -16,7 +16,7 @@ import {
     DisplayInput, HandleJsonResponse,
     InlineExpansionArea, InlineExpansionButton,
     InlineProps,
-    InlineSubArea, IsString, NewEntryInput,
+    InlineSubArea, IsString, ListPageItems, NewEntryInput,
     OptionalArrayOfType, OptionalKey, SingleListProps
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
@@ -33,9 +33,16 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {InlineEntry} from "@/app/components/agarRecipeClient";
+import {SlantData} from "@/app/components/slantServer";
 // TODO: list page not working
 
 export function AssertSpecies(input: any): asserts input is SpeciesData {
@@ -369,4 +376,16 @@ export function ExistingSpeciesSelector(
         {closeButton}
         </DepthProvider>
     </div>
+}
+
+export function SpeciesListPageTable({data, onClick}: ListPageItems<SpeciesData>) {
+    const cols: ListTableColumn<SpeciesData>[] = [
+        NewColumn("Name", (v)=>v._id),
+        NewColumn("Scientific", (v)=>v.scientificName),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

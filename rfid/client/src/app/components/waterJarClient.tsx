@@ -11,7 +11,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalSimpleKey,
@@ -28,8 +28,15 @@ import {NewMssForm, RecentSelectorV2} from "@/app/components/mssClient";
 import {MssData} from "@/app/components/mssServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
 import { InlineEntry } from "./agarRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
+import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -228,4 +235,22 @@ export function WaterJarRecentSelector({onSelect}: { onSelect: (selected?: Water
                                                return <WaterJarInline data={val} expandByDefault={false}
                                                                       onClick={onSelect}/>
                                            }}/>
+}
+
+export function WaterJarListPageTable({data, onClick}: ListPageItems<WaterJarData>) {
+    const cols: ListTableColumn<WaterJarData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("PcRun", (v)=>v.pcRun),
+        NewColumn("Disposed", (v)=>{
+            return v.disposed?NumberToDateStr(v.disposed):""
+        }),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

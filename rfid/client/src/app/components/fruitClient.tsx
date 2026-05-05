@@ -25,7 +25,7 @@ import {
     InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    IsString,
+    IsString, ListPageItems,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -69,10 +69,17 @@ import {RecentSelectorV2} from "@/app/components/mssClient";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {InlineEntry} from "@/app/components/agarRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {BagData} from "@/app/components/bagServer";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -568,4 +575,17 @@ export function FruitRecentSelector({onSelect}: { onSelect: (selected?: FruitDat
     return <RecentSelectorV2<FruitData> listUrlType={"fruits"} assertion={AssertFruit} singleConstructor={(val, i) => {
         return <FruitInline data={val} expandByDefault={false} onClick={onSelect}/>
     }}/>
+}
+
+export function FruitListPageTable({data, onClick}: ListPageItems<FruitData>) {
+    const cols: ListTableColumn<FruitData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Harvest", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Species", v=>v.species ),
+        NewColumn("Subspecies", (v)=>v.subspecies || ""),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

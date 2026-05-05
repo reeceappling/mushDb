@@ -40,7 +40,7 @@ import {
     InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    IsString,
+    IsString, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -68,7 +68,13 @@ import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NewAgarBatchForm, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewAgarBatchForm, NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
@@ -674,3 +680,46 @@ export function RecentAgarRecipeSelector(
 //         {standardArea()}
 //     </div>
 // }
+
+export function AgarRecipeListPageTable({data, onClick}: ListPageItems<AgarRecipeData>) {
+    const cols: ListTableColumn<AgarRecipeData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Name", (v)=>v.name), // TODO: shortname?
+        NewColumn("Liquids", (v)=>{
+            return <div>
+                {v.liquids.map((l,i)=>{
+                    return <div key={l.name+i}>{l.name}</div>
+                })}
+            </div>
+        }),
+        NewColumn("Nutrients", (v)=>{
+            return <div>
+            {v.nutrients && v.nutrients.map((v,i)=>{
+                return <div key={v.nutrient+i}>{v.nutrient}</div> // TODO: any more??
+            })}
+        </div>}),
+        NewColumn("Sugars", (v)=>{
+            return <div>
+                {v.sugars && v.sugars.map((v,i)=>{
+                    return <div key={v.type+i}>{v.type}</div> // TODO: any more??
+                })}
+            </div>}),
+        NewColumn("Additives", (v)=>{
+            return <div>
+                {v.additives && v.additives.map((v,i)=>{
+                    return <div key={v.additive+i}>{v.additive}</div> // TODO: any more??
+                })}
+            </div>}),
+        NewColumn("Antibiotics", (v)=>{
+            return <div>
+                {v.antibiotics && v.antibiotics.map((v,i)=>{
+                    return <div key={i}>{v}</div>
+                })}
+            </div>}),
+        NewColumn("Last Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        })
+        // TODO: bonus area for notes???
+    ]
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+}

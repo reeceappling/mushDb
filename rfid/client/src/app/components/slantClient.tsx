@@ -25,7 +25,7 @@ import {
     ImportDisplayInput,
     InlineExpansionArea, InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
@@ -43,7 +43,13 @@ import {
     PicsDisplay,
     SpeciesArea, SubspeciesArea
 } from "@/app/components/formSubcomponents/commonClient";
-import {AgarBatchArea, FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    AgarBatchArea,
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn, NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {
     ContaminationForm, ContamsDisplay, InitialContamState, InitialNotesState, IsValidContamination,
     NewContaminationForm
@@ -65,6 +71,7 @@ import {OvcForXfers} from "@/app/components/bagClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
+import {PlateData} from "@/app/components/plateServer";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -389,3 +396,19 @@ export function SlantInline({data, expandByDefault, onClick, showMainPageButton,
 //         })}
 //     </div>
 // }
+
+export function SlantListPageTable({data, onClick}: ListPageItems<SlantData>) {
+    const cols: ListTableColumn<SlantData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}

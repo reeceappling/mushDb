@@ -20,7 +20,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey
@@ -29,7 +29,13 @@ import {ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonC
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {NewWaterJarForm} from "@/app/components/waterJarClient";
-import {FlexedArea, FlexedSinglesGroup, NewAgarBatchForm, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewAgarBatchForm, NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {NewBagForm} from "@/app/components/bagClient";
 import {NewJarForm} from "@/app/components/jarClient";
 import {NewLcForm} from "@/app/components/lcClient";
@@ -587,3 +593,18 @@ export function PcRunArea({binaryId, headerLevel, offset}: {
 //         })}
 //     </div>
 // }
+
+export function PcRunListPageTable({data, onClick}: ListPageItems<PcRunData>) {
+    const cols: ListTableColumn<PcRunData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Date", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Runtime Mins", (v)=>v.runtimeMinutes),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}

@@ -2,14 +2,10 @@
 
 import React, {JSX, useEffect, useState} from "react";
 import {useQuery,} from '@tanstack/react-query'
-import NotesArea, {NotesAreaOld, IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
-import {
-    AddCreatedTriColFunction,
-    AllEntries,
-    OnViewCreatorQuadCol
-} from "@/app/components/formSubcomponents/shared";
+import NotesArea, {IsValidNote, Note, NotesAreaInline, NotesAreaOld} from "@/app/components/formSubcomponents/notes";
+import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
-import DateArea from "@/app/components/formSubcomponents/date";
+import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {AgarBatchData, AgarColor} from "@/app/components/agarBatchServer";
 import EntryLink from "@/app/components/formSubcomponents/entryLink";
 import {
@@ -19,6 +15,7 @@ import {
     InlineExpansionButton,
     InlineProps,
     InlineSubArea,
+    ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -150,20 +147,22 @@ export default function AgarBatchDisplay(
         ]
         return (
             <DisplayFormWrapper entryType={"agarBatch"}>
-                <ID txt={"Agar Batch"} id={data._id} entryType={"agarBatch"} linkPage={false} allowOpenMainPage={false} data-cy-id={"Id"}/>
+                <ID txt={"Agar Batch"} id={data._id} entryType={"agarBatch"} linkPage={false} allowOpenMainPage={false}
+                    data-cy-id={"Id"}/>
                 <ErrorDisplay data-cy-id={"Error"} err={err} headerLevel={headerLevel}/>
                 <FlexedArea>
-                    <DateArea data-cy-id={"LastUpdated"} pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>{/* TODO: ensure this is now inline*/}
+                    <DateArea data-cy-id={"LastUpdated"} pre={"Last Updated: "} when={initial.lastUpdated}
+                              readonly={true}/>{/* TODO: ensure this is now inline*/}
                     <div data-cy-id={"Color"}>{"Color: " + data.color}</div>
                     <PcRunArea data-cy-id={"Run"} binaryId={initial.pcRun} headerLevel={headerLevel}/>
                     <AgarRecipeArea data-cy-id={"Recipe"} agarRecipeBinId={initial.agarRecipe}/>
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
 
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     agarBatchSubmit()
                 }}>{"Update"}</button>}
@@ -185,10 +184,10 @@ export function NotesFormArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN S
     readonly?: boolean,
     initial?: Note[], // TODO: ensure everywhere is using this properly
     updateParent?: (entries: AllEntries<Note>) => void,
-}){
+}) {
     const [count, setCount] = useState(0)
     useEffect(() => {
-        setCount(count+1);
+        setCount(count + 1);
     }, [initial]);
     return <div key={count}>
         <div className={"areaHeader"/* TODO: ok? */}>{"Notes"}</div>
@@ -197,11 +196,12 @@ export function NotesFormArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN S
 }
 
 // TODO: MOVE
-export function FlexedArea(props:React.PropsWithChildren<{}>){
+export function FlexedArea(props: React.PropsWithChildren<{}>) {
     return <div className={"flexedArea"}>{props.children}</div>
 }
+
 // TODO: MOVE
-export function FlexedSinglesGroup(props:React.PropsWithChildren<{}>){
+export function FlexedSinglesGroup(props: React.PropsWithChildren<{}>) {
     return <div className={"flexedSinglesGroup"}>{props.children}</div>
 }
 
@@ -273,7 +273,13 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     </NewEntryFormWrapper>
 }
 
-export function AgarBatchInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<AgarBatchData>) {
+export function AgarBatchInline({
+                                    data,
+                                    expandByDefault,
+                                    onClick,
+                                    showMainPageButton,
+                                    idIsLink
+                                }: InlineProps<AgarBatchData>) {
     // TODO: DO INLINES NEED DEPTH PROVIDERS??????
     const notes = data.notes || []
     const [expanded, setExpanded] = useState(expandByDefault)
@@ -281,9 +287,10 @@ export function AgarBatchInline({data, expandByDefault, onClick, showMainPageBut
         return {expanded: expanded, setExpanded: setExpanded}
     }
     const pcRunDisplayId = data.pcRun
-    return  <InlineEntry onClick={onClick}>
+    return <InlineEntry onClick={onClick}>
         <InlineSubArea data-cy-id="InlineTop" props={{}}> {/* TODO: do we need data-cy-id on this?*/}
-            <ID data-cy-id="Id" id={data._id} txt={"Agar Batch"} entryType={"agarBatch"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+            <ID data-cy-id="Id" id={data._id} txt={"Agar Batch"} entryType={"agarBatch"}
+                allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
             <div data-cy-id="Recipe">
                 <EntryLink props={{displayedId: data.agarRecipe, linkId: data.agarRecipe, entryType: "agarRecipe"}}>
                     <div>{data.agarRecipe}</div>
@@ -308,6 +315,87 @@ export function AgarBatchInline({data, expandByDefault, onClick, showMainPageBut
                                expanded={expanded}/>
     </InlineEntry>
 }
+
+// TODO: MOVE!
+export function ListPageTableRow<T>(props: React.PropsWithChildren<{ data: T, onClick: (item: T) => void, className?: string }>) {
+    return <tr className={"listPageTableRow nonHeaderRow"+(props.className?" "+props.className : "")} onClick={() => {
+        props.onClick && props.onClick(props.data)
+    }}>{props.children}</tr>
+}
+
+// TODO: MOVE!
+export interface ListTableColumn<T> {
+    key: string
+    f: (v:T)=>string
+}
+// TODO: MOVE!
+export function NewColumn<T>(key:string,f:(v:T)=>any):ListTableColumn<T> {
+    return {key:key,f:f}
+}
+
+// TODO: MOVE!
+export function ListPageTable<T>({data, onClick, cols,className}: {
+    data: T[],
+    onClick?: (v: T) => void,
+    cols: ListTableColumn<T>[],
+    className?: string,
+}){
+    return <table className={"listPageTable"}>
+        <tr className={"listPageTableRow headerRow"}>
+            {cols.map((col,i)=>{
+                return <th key={i} >{col.key}</th>
+            })}
+        </tr>
+        {data.map((item,i) => {
+            return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
+                {cols.map((col,i)=>{
+                    return <td key={i}>{col.f(item)}</td>
+                })}
+            </ListPageTableRow>
+        })}
+    </table>
+}
+
+// TODO: MOVE!
+export function NumberToDateStr(n: number): string {
+    const d = new Date(n)
+    return (d.getMonth()+1)+"/"+d.getDate()+"/"+d.getFullYear()
+}
+
+export function AgarBatchListPageTable({data, onClick}: ListPageItems<AgarBatchData>) {
+    const cols: ListTableColumn<AgarBatchData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Color", (v)=>v.color),
+        NewColumn("PC Run", (v)=>v.pcRun),
+        NewColumn("Agar Recipe", (v)=>v.agarRecipe),
+        NewColumn("Last Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for notes????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+// export function AgarBatchListPageTable({data, onClick}: ListPageItems<AgarBatchData>) {
+//     return <table className={"listPageTable"}>
+//         <tr>
+//             <th>{"ID"}</th>
+//             <th>{"Color"}</th>
+//             <th>{"PC Run"}</th>
+//             <th>{"Agar Recipe"}</th>
+//             <th>{"Last Updated"}</th>
+//         </tr>
+//         {data.map((item) => {
+//             return <ListPageTableRow data={item} onClick={(v)=>{onClick && onClick(v)}}>
+//                 <td>{item._id}</td>
+//                 <td>{item.color}</td>
+//                 <td>{item.pcRun}</td>
+//                 <td>{item.agarRecipe}</td>
+//                 <td>{item.lastUpdated}</td>
+//             </ListPageTableRow>
+//         })}
+//         </table>
+// }
 
 export function AgarBatchArea({agarBatchId, headerLevel, offset}: {
     agarBatchId?: string,

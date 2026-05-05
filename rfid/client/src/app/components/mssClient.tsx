@@ -7,7 +7,7 @@ import {
     InlineExpansionArea, InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    IsString, NewEntryInput,
+    IsString, ListPageItems, NewEntryInput,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
 } from "@/app/components/common";
@@ -44,11 +44,18 @@ import {WaterJarRecentSelector} from "@/app/components/waterJarClient";
 import {LatestListDisplay} from "@/app/components/clientGeneric";
 import {InlineEntry} from "@/app/components/agarRecipeClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import NotesArea from "@/app/components/formSubcomponents/notes";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {LcSyringe} from "@/app/components/lcSyringeServer";
 
 export function AssertMss(input: any): asserts input is MssData {
     if (typeof input !== 'object') {
@@ -389,4 +396,20 @@ export function MssRecentSelector({onSelect}:{onSelect:(selected?: MssData) => v
     return <RecentSelectorV2<MssData> listUrlType={"mss"} assertion={AssertMss} singleConstructor={(val, i)=>{ // TODO: is this "msss"?
         return <MssInline data={val} expandByDefault={false} onClick={onSelect}/>
     }} />
+}
+
+export function MssListPageTable({data, onClick}: ListPageItems<MssData>) {
+    const cols: ListTableColumn<MssData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

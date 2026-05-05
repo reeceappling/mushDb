@@ -16,7 +16,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalSimpleKey
@@ -31,7 +31,13 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/contaminatio
 import {SelectorProps} from "@/app/components/selector";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {NewJarForm} from "@/app/components/jarClient";
 import {JarData} from "@/app/components/jarServer";
@@ -339,4 +345,18 @@ export function GrainBatchSelector(
         {/* TODO: CREATOR, IF ALLOWED, with increased depth */
         }
     </div>
+}
+
+export function GrainBatchListPageTable({data, onClick}: ListPageItems<GrainBatchData>) {
+    const cols: ListTableColumn<GrainBatchData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

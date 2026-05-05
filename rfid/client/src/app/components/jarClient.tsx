@@ -7,7 +7,7 @@ import {
     ImportDisplayInput,
     InlineExpansionArea, InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
@@ -73,9 +73,16 @@ import {GrainBatchData} from "@/app/components/grainBatchServer";
 import { DepthProvider } from "./formSubcomponents/depthContext/depth";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {InlineEntry} from "@/app/components/agarRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -481,3 +488,19 @@ export function JarInline({data, expandByDefault, onClick, showMainPageButton, i
 //         })}
 //     </div>
 // }
+
+export function JarListPageTable({data, onClick}: ListPageItems<JarData>) {
+    const cols: ListTableColumn<JarData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}

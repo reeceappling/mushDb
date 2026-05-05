@@ -149,6 +149,11 @@ export function HeaderLevel(lvl?: number) {
     return lvl || defaultHeaderLevel
 }
 
+export interface ListPageItems<T> {
+    data: T[],
+    onClick?: (v: T) => void
+}
+
 export interface InlineProps<T> {
     data: T,
     expandByDefault?: boolean,

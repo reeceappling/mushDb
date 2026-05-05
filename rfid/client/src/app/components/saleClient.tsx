@@ -15,7 +15,7 @@ import {
     DisplayInput, HandleJsonResponse,
     HeaderLevel, InlineExpansionArea, InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     OptionalArrayOfType,
     OptionalKey
 } from "@/app/components/common";
@@ -30,8 +30,15 @@ import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {PlateData} from "@/app/components/plateServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -280,4 +287,18 @@ export function SalesArea(
             })}
             {(!readonly&&allowCreate) && addArea()}
         </div>
+}
+
+export function SaleListPageTable({data, onClick}: ListPageItems<SaleData>) {
+    const cols: ListTableColumn<SaleData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

@@ -22,7 +22,7 @@ import {
     ImportDisplayInput,
     InlineExpansionArea, InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
@@ -59,9 +59,16 @@ import {SlantData} from "@/app/components/slantServer";
 import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
 import {OvcForXfers} from "@/app/components/bagClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {SporeSwab} from "@/app/components/sporeSwabServer";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
@@ -365,3 +372,19 @@ export function StasisTubeInline({data, expandByDefault, onClick, showMainPageBu
 //         })}
 //     </div>
 // }
+
+export function StasisTubeListPageTable({data, onClick}: ListPageItems<StasisTubeData>) {
+    const cols: ListTableColumn<StasisTubeData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}

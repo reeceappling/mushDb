@@ -27,7 +27,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -84,9 +84,16 @@ import {OnViewCreatorsQuadColArea, QuadColLastCol} from "@/app/components/pcRunC
 import {TransferData} from "@/app/components/transferServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {InlineEntry} from "@/app/components/agarRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {AgarBatchData} from "@/app/components/agarBatchServer";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -595,4 +602,20 @@ export function BagInline({data, expandByDefault, onClick, showMainPageButton, i
         <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
                                expanded={expanded}/>
     </InlineEntry>
+}
+
+export function BagListPageTable({data, onClick}: ListPageItems<BagData>) {
+    const cols: ListTableColumn<BagData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+        NewColumn("Species", (v)=>v.species || ""),
+        NewColumn("Subspec.", (v)=>v.subspecies || ""),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

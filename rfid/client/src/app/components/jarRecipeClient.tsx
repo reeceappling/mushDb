@@ -29,7 +29,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -62,8 +62,15 @@ import {NewGrainBatchForm} from "@/app/components/grainBatchClient";
 import {GrainBatchData} from "@/app/components/grainBatchServer";
 import { DepthProvider } from "./formSubcomponents/depthContext/depth";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {LcRecipeData} from "@/app/components/lcRecipeServer";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -467,3 +474,40 @@ export function JarRecipeSelector(
 //         {standardArea()}
 //     </div>
 // }
+
+export function JarRecipeListPageTable({data, onClick}: ListPageItems<JarRecipeData>) {
+    const cols: ListTableColumn<JarRecipeData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Name", (v)=>v.name), // TODO: shortname?
+        NewColumn("Grains", (v)=>{
+            return <div>
+                {v.grains.map((g,i)=>{
+                    return <div key={g.grain+i}>{g.grain}</div>
+                })}
+            </div>
+        }),
+        NewColumn("Nutrients", (v)=>{
+            return <div>
+                {v.nutrients && v.nutrients.map((v,i)=>{
+                    return <div key={v.nutrient+i}>{v.nutrient}</div> // TODO: any more??
+                })}
+            </div>}),
+        NewColumn("Sugars", (v)=>{
+            return <div>
+                {v.sugars && v.sugars.map((v,i)=>{
+                    return <div key={v.type+i}>{v.type}</div> // TODO: any more??
+                })}
+            </div>}),
+        NewColumn("Additives", (v)=>{
+            return <div>
+                {v.additives && v.additives.map((v,i)=>{
+                    return <div key={v.additive+i}>{v.additive}</div> // TODO: any more??
+                })}
+            </div>}),
+        NewColumn("Last Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        })
+        // TODO: bonus area for notes???
+    ]
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+}

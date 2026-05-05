@@ -13,7 +13,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey
@@ -35,8 +35,15 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {InlineEntry} from "./agarRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {StasisTubeData} from "@/app/components/stasisTubeServer";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
     if (typeof input !== 'object') {
@@ -399,3 +406,18 @@ export function SubstrateBatchSelector( // TODO: ensure ok!!!
 //         })}
 //     </div>
 // }
+
+export function SubstrateBatchListPageTable({data, onClick}: ListPageItems<SubstrateBatchData>) {
+    const cols: ListTableColumn<SubstrateBatchData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Recipe", (v)=>v.recipe),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}

@@ -16,7 +16,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -48,7 +48,13 @@ import {ACL} from "@/app/components/accessControlServer";
 import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
@@ -392,3 +398,20 @@ export function LcSyringeInline({
 //         })}
 //     </div>
 // }
+
+export function LcSyringeListPageTable({data, onClick}: ListPageItems<LcSyringe>) {
+    const cols: ListTableColumn<LcSyringe>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Clean",v=>v.confirmedClean?(v.confirmedClean?"clean":"dirty"):"?"),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}

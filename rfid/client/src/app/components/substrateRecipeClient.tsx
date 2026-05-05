@@ -21,7 +21,7 @@ import {
     InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    IsString,
+    IsString, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey
@@ -34,13 +34,20 @@ import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {InlineEntry} from "./agarRecipeClient";
+import {LcRecipeData} from "@/app/components/lcRecipeServer";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -482,3 +489,15 @@ export function SubstrateRecipeSelector( // TODO: overhaul!
 //         {standardArea()}
 //     </div>
 // }
+
+export function SubstrateRecipeListPageTable({data, onClick}: ListPageItems<SubstrateRecipeData>) {
+    const cols: ListTableColumn<SubstrateRecipeData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Name", (v)=>v.name), // TODO: shortname?
+        NewColumn("Last Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        })
+        // TODO: bonus area for notes??? aliases?
+    ]
+    return <ListPageTable className={"text-m"} cols={cols} data={data} onClick={onClick}/>
+}

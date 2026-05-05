@@ -25,7 +25,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -50,7 +50,13 @@ import {
     SpeciesArea,
     SubspeciesArea
 } from "@/app/components/formSubcomponents/commonClient";
-import {AgarBatchArea, FlexedArea, FlexedSinglesGroup, NotesFormArea,} from "@/app/components/agarBatchClient";
+import {
+    AgarBatchArea,
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn, NewColumn,
+    NotesFormArea, NumberToDateStr,
+} from "@/app/components/agarBatchClient";
 import {
     ContaminationForm,
     ContamsDisplay,
@@ -74,6 +80,7 @@ import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from ".
 import {InlineEntry} from "@/app/components/agarRecipeClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
+import {LcData} from "@/app/components/lcServer";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
@@ -526,3 +533,19 @@ export function PlateInline({data, expandByDefault, onClick, showMainPageButton,
 //         })}
 //     </div>
 // }
+
+export function PlateListPageTable({data, onClick}: ListPageItems<PlateData>) {
+    const cols: ListTableColumn<PlateData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}

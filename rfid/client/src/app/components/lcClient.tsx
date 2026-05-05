@@ -24,7 +24,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -84,7 +84,14 @@ import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {LcSyringe} from "@/app/components/lcSyringeServer";
 import {InlineEntry} from "@/app/components/agarRecipeClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
+import {JarData} from "@/app/components/jarServer";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -509,3 +516,20 @@ export function LcInline({data, expandByDefault, onClick, showMainPageButton, id
 //         })}
 //     </div>
 // }
+
+export function LcListPageTable({data, onClick}: ListPageItems<LcData>) {
+    const cols: ListTableColumn<LcData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Clean",v=>v.confirmedClean?(v.confirmedClean?"clean":"dirty"):"?"),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}

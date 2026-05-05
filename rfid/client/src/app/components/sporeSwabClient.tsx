@@ -5,7 +5,7 @@ import {
     DisplayInput, HandleJsonResponse, HandleTxtResponse,
     ImportDisplayInput, InlineExpansionArea, InlineExpansionButton,
     InlineProps, InlineSubArea,
-    IsString,
+    IsString, ListPageItems,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -32,7 +32,13 @@ import {SporeSwab} from "@/app/components/sporeSwabServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {InlineEntry} from "@/app/components/agarRecipeClient";
 import ID from "@/app/components/formSubcomponents/id";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesData} from "@/app/components/speciesServer";
@@ -317,4 +323,20 @@ export function SporeSwabInline(
         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded} expanded={expanded}/>
 
     </InlineEntry>// TODO: VALIDATE WORKS AS EXPECTED
+}
+
+export function SporeSwabListPageTable({data, onClick}: ListPageItems<SporeSwab>) {
+    const cols: ListTableColumn<SporeSwab>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

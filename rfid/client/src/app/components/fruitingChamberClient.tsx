@@ -21,7 +21,7 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea,
+    InlineSubArea, ListPageItems,
     MainCollectionInputOrRead,
     NewEntryInput,
     OptionalArrayOfType,
@@ -75,7 +75,13 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {OvcForNewFruit} from "@/app/components/bagClient";
 import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
@@ -604,3 +610,19 @@ export function FruitingChamberInline({
 //         })}
 //     </div>
 // }
+
+export function FruitingChamberListPageTable({data, onClick}: ListPageItems<FruitingChamberData>) {
+    const cols: ListTableColumn<FruitingChamberData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Spec", (v)=>v.species||""),
+        NewColumn("Subspec", v=>v.subspecies||"" ),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
