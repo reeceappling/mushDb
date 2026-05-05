@@ -3,10 +3,9 @@
 // TODO: grain batches list and display need fixing
 // TODO: plugs list and display need fixing
 // TODO: projects list and display need fixing
-// TODO: sale list page not properly linking on click
+// TODO: sporeSwab view not working. https://mush.appli.ng/view/sporeSwab/2g1j95Bw5gB
 // TODO: transfers list needs fixing. Display appears fine
 // TODO: users list needs fixing. Display needs changing?
-// TODO: CONSIDER CHANGING MANY OF THE LIST PAGES TO GRIDS!!!!!
 
 import {OptionalKey, OptionalSimpleKey} from "@/app/components/common";
 import {ACL} from "@/app/components/accessControlServer";

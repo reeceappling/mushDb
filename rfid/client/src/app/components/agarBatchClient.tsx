@@ -343,13 +343,13 @@ export function ListPageTable<T>({data, onClick, cols,className}: {
     return <table className={"listPageTable"}>
         <tr className={"listPageTableRow headerRow"}>
             {cols.map((col,i)=>{
-                return <th key={i} >{col.key}</th>
+                return <th className="text-left" key={i} >{col.key}</th>
             })}
         </tr>
         {data.map((item,i) => {
             return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
                 {cols.map((col,i)=>{
-                    return <td key={i}>{col.f(item)}</td>
+                    return <td className="text-left" key={i}>{col.f(item)}</td>
                 })}
             </ListPageTableRow>
         })}
