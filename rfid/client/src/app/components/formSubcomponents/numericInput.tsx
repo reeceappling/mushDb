@@ -506,3 +506,125 @@ export const InputNumber: FC<NumericInputOnlyProps> = (
         >{errorMessage}</div>
     </>
 };
+
+export const InputNumber2: FC<NumericInputOnlyProps> = (
+    {
+        readonly = false,
+        value,
+        step = 1,
+        max = Infinity,
+        min = -Infinity,
+        onChange = () => {
+        },
+        mode = Modes.floating,
+        placeholder, // placeholder number
+        errorMessage = 'error!',
+    }) => {
+    const id = useId();
+    const handleKeyDown = useCallback(
+        (event: KeyboardEvent<HTMLInputElement>) => {
+            const inputValue = (event.target as HTMLInputElement).value;
+            if (event.key === 'ArrowUp') {
+                const nextValue = Number(inputValue || 0) + step;
+                if (nextValue <= max) {
+                    onChange(nextValue.toString());
+                }
+            }
+            if (event.key === 'ArrowDown') {
+                const nextValue = Number(inputValue || 0) - step;
+                if (nextValue >= min) {
+                    onChange(nextValue.toString());
+                }
+            }
+        },
+        [max, min, onChange, step]
+    );
+    const handleChange = useCallback(
+        (event: ChangeEvent<HTMLInputElement>) => {
+            onChange(event.target.value);
+        },
+        [onChange]
+    );
+    const pattern = patternMapping[mode];
+    return <>
+        <input
+            disabled={readonly}
+            inputMode="decimal"
+            autoComplete="off"
+            pattern={pattern}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            value={value !== undefined ? value : ''}
+            type="text"
+            id={id}
+            className={"peer block w-7 rounded-none border-2 border-gray-300 bg-input px-1 text-right text-sm font-normal tabular-nums text-gray-900 placeholder:text-gray-400 invalid:border-red-600 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
+            placeholder={placeholder}
+            aria-describedby={`${id}-helper-text`}
+        />
+        <div
+            className={errClassName2}
+            id={`${id}-helper-text`} // TODO: ?????????????
+        >{errorMessage}</div>
+    </>
+};
+
+export const InputNumber4: FC<NumericInputOnlyProps> = (
+    {
+        readonly = false,
+        value,
+        step = 1,
+        max = Infinity,
+        min = -Infinity,
+        onChange = () => {
+        },
+        mode = Modes.floating,
+        placeholder, // placeholder number
+        errorMessage = 'error!',
+    }) => {
+    const id = useId();
+    const handleKeyDown = useCallback(
+        (event: KeyboardEvent<HTMLInputElement>) => {
+            const inputValue = (event.target as HTMLInputElement).value;
+            if (event.key === 'ArrowUp') {
+                const nextValue = Number(inputValue || 0) + step;
+                if (nextValue <= max) {
+                    onChange(nextValue.toString());
+                }
+            }
+            if (event.key === 'ArrowDown') {
+                const nextValue = Number(inputValue || 0) - step;
+                if (nextValue >= min) {
+                    onChange(nextValue.toString());
+                }
+            }
+        },
+        [max, min, onChange, step]
+    );
+    const handleChange = useCallback(
+        (event: ChangeEvent<HTMLInputElement>) => {
+            onChange(event.target.value);
+        },
+        [onChange]
+    );
+    const pattern = patternMapping[mode];
+    return <>
+        <input
+            disabled={readonly}
+            inputMode="decimal"
+            autoComplete="off"
+            pattern={pattern}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            value={value !== undefined ? value : ''}
+            type="text"
+            id={id}
+            className={"peer block w-11 rounded-none border-2 border-gray-300 bg-input px-1 text-right text-sm font-normal tabular-nums text-gray-900 placeholder:text-gray-400 invalid:border-red-600 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
+            placeholder={placeholder}
+            aria-describedby={`${id}-helper-text`}
+        />
+        <div
+            className={errClassName2}
+            id={`${id}-helper-text`} // TODO: ?????????????
+        >{errorMessage}</div>
+    </>
+};

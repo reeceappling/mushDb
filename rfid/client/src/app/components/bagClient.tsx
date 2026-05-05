@@ -1,11 +1,10 @@
 'use client'
 
-import {useState} from "react";
+import React, {useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
     AllEntries,
-    Data,
     OnViewCreatorQuadCol,
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
@@ -18,7 +17,7 @@ import {
     NewPicWithNotesForm,
     PicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {AddToTransfers, InnocDisplay, NewTransferArea, TransfersOutDisplay} from "@/app/components/transferClient";
+import {InnocDisplay, NewTransferArea, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     DisplayInput,
     DisposedSaleContamArea,
@@ -50,7 +49,6 @@ import {
     ParentDisplay,
     PicsDisplay,
     SpeciesArea,
-    SpeciesFormArea, SpeciesSubspeciesFormArea,
     SubspeciesArea
 } from "@/app/components/formSubcomponents/commonClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
@@ -88,6 +86,7 @@ import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@
 import {InlineEntry} from "@/app/components/agarRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -301,6 +300,7 @@ export default function BagDisplay(
                 {/* TODO: ok?<div className={"sectionHolder"}>*/}
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={data._id} txt={"Bag"} entryType={"bag"}/>
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>{/* TODO: validate that this is working as intended*/}
                     <FlexedSinglesGroup>
@@ -328,7 +328,8 @@ export default function BagDisplay(
                         <WetnessDisplay value={initial.wetness}/>{/* TODO: FIX */}
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
-                        <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>
+                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                        {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                         <ParentDisplay parent={initial.parent} parentType={initial.parentType}
                                        headerLevel={headerLevel}/>
                         <InnocDisplay innoc={initial.innoc}/>
@@ -341,11 +342,9 @@ export default function BagDisplay(
                                      cookies={cookies}/>
                 <PicsDisplay pix={pics} readonly={readonly} updateParent={setPics}/>{/* Pics */}
                 {/* Flushes */}
-                <TestAndValidate todos={["second pictures area exists?"]}>{"second pictures area exists?"}
                 <PicsDisplay pix={flushes} readonly={readonly}
                              updateParent={setFlushes} addButtonText={"Create New Flush"}
                              sectionHeader={"Flushes: "}/>
-                </TestAndValidate>
 
                 <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams}
                                 readonly={readonly} headerLevel={headerLevel}/>
@@ -356,10 +355,10 @@ export default function BagDisplay(
                 {/* Write tag area */}
                 {readonly ? null : <ReaderWriterSelector txt={"Writer to write to: "} onSelect={setWriteTagTo}
                                                          headerLevel={headerLevel}/>}
-                {readonly ? null : <input type="submit" value="Update" className={"bottomButton"} onClick={bagSubmit} onSubmit={(e) => {
-                    e.preventDefault();
-                }}/>}
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    bagSubmit()
+                }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
     } catch (err) {
@@ -369,7 +368,7 @@ export default function BagDisplay(
 
 export function WetnessDisplay({value}: { value?: number }) {
     return <TestAndValidate todos={["fix"]}>
-        <div>{"Wetness: " + (value ? value : "null")}</div>
+        <div>{"Wetness: " + (value ? value+"/10" : "unknown")}</div>
     </TestAndValidate>
 }
 

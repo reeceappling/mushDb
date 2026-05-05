@@ -14,7 +14,7 @@ import {SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import TextBox from "@/app/components/formSubcomponents/textbox";
-import {
+import ReaderWriterSelector, {
     ReadTagFunc,
     RfidSelectorWithReadButton
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
@@ -22,6 +22,7 @@ import {useRfidReaderContext} from "@/app/components/formSubcomponents/readerWri
 import {validatorForAssertion} from "@/app/components/substrateRecipeClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import * as React from "react";
+import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 
 export function SendMultipartRequest(url: string, cookies: string, formData: FormData) {
     return fetch(url, {
@@ -50,14 +51,17 @@ export function MainCollectionInputOrRead({label, onIdSelected, copyText}: {
     }
     return <div>
         {/* INPUT FOR MAINCOLLECTIONID */}
-        <TextBox label={label || "Main Collection Id Input: "} value={id} fieldName={"mainCollIdInput"}
-                 updateTextHandler={updateId} readonly={false}/>
+        <InputTextInlineTitle label={"ID TO:"} value={id} readonly={false} errorMessage={undefined/* TODO: ???*/} placeholder={"Destination"} onChange={(s)=>updateId(s || "")}/>
+        {/*<TextBox label={label || "Main Collection Id Input: "} value={id} fieldName={"mainCollIdInput"}*/}
+        {/*         updateTextHandler={updateId} readonly={false}/>*/}
         {/* BUTTON TO READ MAIN COLL ID */}
-        {/* TODO: remove extra unnecessary button*/}
-        <RfidSelectorWithReadButton handleTagRead={updateId} readButtonTxt={"read from current tag reader"}
-                                    readerWriterTxt={"select rfid reader"} onWriterSelect={(wr)=>{
+        <ReaderWriterSelector txt={"select rfid reader"} onSelect={(wr)=>{
             ReadTagFunc(dispatch, undefined, state.selected).then(updateId)
-        }}/>
+        }} />
+        {/*<RfidSelectorWithReadButton handleTagRead={updateId} readButtonTxt={"read from current tag reader"}*/}
+        {/*                            readerWriterTxt={"select rfid reader"} onWriterSelect={(wr)=>{*/}
+        {/*    ReadTagFunc(dispatch, undefined, state.selected).then(updateId)*/}
+        {/*}}/>*/}
         {/* BUTTON TO USE LAST READ ID */}
         {state.lastReadTag !== undefined && <div>
             <button className={"basicButton"} onClick={() => {
@@ -66,8 +70,6 @@ export function MainCollectionInputOrRead({label, onIdSelected, copyText}: {
         </div>}
     </div>
 }
-
-// TODO: TRANSFERS SHOULD NOT BE WRITTEN ON UPDATES! ENSURE THIS!!!!
 
 export function AssertArrayResult<T>(input: any, validateEntry: (inp: any) => void): asserts input is T[] {
     if (!Array.isArray(input)) {
@@ -209,38 +211,80 @@ export function InlineExpansionButton(
     }) {
     return <div data-cy-id="InlineExpansionButtonWrapper">
         <button className={"basicButton"} data-cy-id="InlineExpansionButton" onClick={(e) => {
-            e.stopPropagation(); // TODO: ensure this works
+            e.stopPropagation();
             setExpanded(!expanded)
         }}>{expanded ? "See less" : "See more"}</button>
     </div>
 }
-
-export function ConfirmedCleanSelector( // TODO: MUST BE SWITCHED TO ALLOW PASSING IN THE INITIAL VALUE! // TODO: validate works now
-    {selProps, initial}:
-    {
-        selProps: SelectorProps<boolean>, initial?: boolean
-    }) {
-    const strForBool = (s?: boolean) => {
-        return ((s === undefined) ? "unknown" : (s ? "clean" : "contaminated"))
+export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr, falseStr}: {
+    pre: string,
+    updateParent?: (v?: boolean) => void,
+    initial?: boolean,
+    trueStr: string,
+    falseStr: string
+}) {
+    if (initial !== undefined) {
+        return <div>{pre + (initial ? trueStr : falseStr)}</div>
     }
-    const [selected, setSelected] = useState<string>(strForBool(initial))
+    const strForBool = (s?: boolean) => {
+        return ((s === undefined) ? "unknown" : (s ? trueStr : falseStr))
+    }
+    const [selected, setSelected] = useState<boolean | undefined>(initial)
     const boolForStr = (s: string) => {
-        return ((s === "unknown") ? undefined : (s === "clean"))
+        return ((s === "unknown") ? undefined : (s === trueStr))
     }
 
     const selectHandler = (e: SyntheticEvent<HTMLSelectElement, Event>) => {
-        let val = e.currentTarget.value
-        selProps.doSelect(boolForStr(val))
+        let val = boolForStr(e.currentTarget.value)
+        updateParent && updateParent(val)
         setSelected(val)
     }
-    return <div className={"confirmedCleanSelector"}>{/* TODO: STYLING!!!!*/}
-        <div>{"Confirmed Clean: "}</div>
-        <select className={"tailwindSelector"} value={selected} onChange={selectHandler}>
+    return <div>
+        <div>{pre}</div>
+        <select className={"tailwindSelector"} value={strForBool(selected)} onChange={selectHandler}>
             <option value={"unknown"}>{"unknown"}</option>
-            <option value={"clean"}>{"clean"}</option>
-            <option value={"contaminated"}>{"contaminated"}</option>
+            <option value={trueStr}>{trueStr}</option>
+            <option value={falseStr}>{falseStr}</option>
         </select>
     </div>
+}
+
+export function ConfirmedCleanSelector(// TODO: validate works now via a test LC
+    {updateParent, initial}:
+    {
+        updateParent:(b?:boolean)=>void, initial?: boolean
+    }) {
+    return <TwoValuePlusUnknownSelector pre={"Confirmed Clean: "} updateParent={updateParent} initial={initial} trueStr={"clean"} falseStr={"contaminated"}/>
+
+    // const strForBool = (s?: boolean) => {
+    //     return ((s === undefined) ? "unknown" : (s ? "clean" : "contaminated"))
+    // }
+    // const [selected, setSelected] = useState<string>(strForBool(initial))
+    // const boolForStr = (s: string) => {
+    //     return ((s === "unknown") ? undefined : (s === "clean"))
+    // }
+    //
+    // const selectHandler = (e: SyntheticEvent<HTMLSelectElement, Event>) => {
+    //     let val = e.currentTarget.value
+    //     selProps.doSelect(boolForStr(val))
+    //     setSelected(val)
+    // }
+    // return <div className={"confirmedCleanSelector"}>{/* TODO: STYLING!!!!*/}
+    //     <div>{"Confirmed Clean: "}</div>
+    //     <select className={"tailwindSelector"} value={selected} onChange={selectHandler}>
+    //         <option value={"unknown"}>{"unknown"}</option>
+    //         <option value={"clean"}>{"clean"}</option>
+    //         <option value={"contaminated"}>{"contaminated"}</option>
+    //     </select>
+    // </div>
+}
+
+export function YesNoSelector({pre, updateParent, initial}: {
+    pre: string,
+    updateParent?: (v?: boolean) => void,
+    initial?: boolean
+}) {
+    return <TwoValuePlusUnknownSelector pre={pre} updateParent={updateParent} initial={initial} trueStr={"yes"} falseStr={"no"}/>
 }
 
 export function ConfirmedCleanArea(
@@ -252,20 +296,17 @@ export function ConfirmedCleanArea(
         headerLevel?: number
         onSelect?: (c?: boolean) => void
     }) {
-    if (readonly) {
-        return <div className={"confirmedCleanArea"}>
-            <div>{"Confirmed Clean:"}</div>
-            <div>{(initial === undefined) ? "Unknown" : (initial ? "Yes" : "No")}</div>
-        </div>
-    }
-    return <div className={"confirmedCleanArea"}><ConfirmedCleanSelector initial={initial} selProps={
-        {
-            doSelect: (v) => {
-                onSelect && onSelect(v)
-            },
-            headerLevel: headerLevel,
-        }
-    }/></div>
+    return <YesNoSelector pre={"Confirmed Clean:"} initial={initial} updateParent={onSelect}/>
+    // if (readonly) {
+    //     return <div className={"confirmedCleanArea"}>
+    //         <div>{"Confirmed Clean:"}</div>
+    //         <div>{(initial === undefined) ? "Unknown" : (initial ? "Yes" : "No")}</div>
+    //     </div>
+    // }
+    // return <div className={"confirmedCleanArea"}><ConfirmedCleanSelector initial={initial} updateParent={(v)=> {
+    //     onSelect && onSelect(v)
+    // }
+    // }/></div>
 
 }
 

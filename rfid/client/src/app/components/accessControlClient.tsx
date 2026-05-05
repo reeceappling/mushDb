@@ -1,40 +1,12 @@
 'use client'
 
-// TODO: TOMORROW: GOING THROUGH VIEW/UPDATE PAGES ALPHABETICALLY. FINISHED JAR LAST!!!!!
-
-// TODO: display: need to do swab and everything below it
-
-/* TODO: pages to troubleshoot function of:
- ()== partiall done, []==DONE
-1. agarBatch: View, Import
-2. agarRecipe: Create, View
-3. bag: View, Import
-4. fruit: View, Import
-5. fruitingChamber: View, Import
-6. jar: View, Import
-7. jarRecipe: Create, View
-8. lc: View, Import
-9. lcRecipe: Create, View
-10. lcSyringe: View, Import
-11. mss: View, Import
-12. pcRun: Create, View
-13. plate: View, Import
-14. plugs: View, Import
-15. project: View
-16. sale: Create? View
-17. slant: View, Import
-18. species: (View (need to ensure updates are working properly))
-19. sporePrint: View, Import
-20. sporeSwab: View, Import
-21. stasisTube: View, Import
-22. subspecies: Create?, [View]
-23. substrateBatch: Create?, View
-24. substrateRecipe: Create, View
-25. transfer: Create?, View
-26. user: Create?, View
-*/
-
-// TODO: Toggler for ACL Forms
+// TODO: grain batches list and display need fixing
+// TODO: plugs list and display need fixing
+// TODO: projects list and display need fixing
+// TODO: sale list page not properly linking on click
+// TODO: transfers list needs fixing. Display appears fine
+// TODO: users list needs fixing. Display needs changing?
+// TODO: CONSIDER CHANGING MANY OF THE LIST PAGES TO GRIDS!!!!!
 
 import {OptionalKey, OptionalSimpleKey} from "@/app/components/common";
 import {ACL} from "@/app/components/accessControlServer";
@@ -44,7 +16,8 @@ import {ProjectsSelector, ReadWriteSelector} from "@/app/components/projectClien
 import {UserSelector} from "@/app/components/userClient";
 import {useContext, useState} from "react";
 import {DepthContext, DepthProvider, Subsection} from "@/app/components/formSubcomponents/depthContext/depth";
-import {structuredClone} from "next/dist/compiled/@edge-runtime/primitives";
+import {RemoveButton} from "@/app/components/formSubcomponents/commonClient";
+import * as React from "react";
 
 export function AssertACL(input: any): asserts input is ACL { // TODO: FIX THIS!!!! NEEDS TO DO MAP STUFF PROPERLY!
     if (typeof input !== 'object') {
@@ -233,9 +206,9 @@ export function ProjectsDisplay({readonly, perms, onClick, updateParent}: {
                                  update(newProjs)
                              }} disabled={false}/>
                 <text>{"Can " + (values[1] ? "edit" : "view")}</text>
-                <button className={"removeButton"} onClick={() => {
+                <RemoveButton txt={"Remove project"} click={()=>{
                     removeProject(values[0])
-                }}>{"Remove project"}</button>
+                }} />
             </div>
         })}
         {"Add a project:"}
@@ -321,9 +294,9 @@ export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent}
                     update(newUsrs)
                 }} />
                 <text>{"Can " + (values[1] ? "edit" : "view")}</text>
-                <button className={"removeButton"} onClick={() => {
+                <RemoveButton txt={"Remove user"} click={()=>{
                     removeUsr(values[0])
-                }}>{"Remove user"}</button>
+                }} />
             </div>
         })}
         {"Add a user:"}

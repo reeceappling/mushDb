@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from "react";
+import React, {useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
@@ -44,7 +44,6 @@ import {
     ParentDisplay,
     PicsDisplay,
     SpeciesArea,
-    SpeciesSubspeciesFormArea,
     SubspeciesArea
 } from "@/app/components/formSubcomponents/commonClient";
 import {FruitData} from "@/app/components/fruitServer";
@@ -73,6 +72,7 @@ import {InlineEntry} from "@/app/components/agarRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -261,13 +261,11 @@ export default function FruitDisplay(
             <DisplayFormWrapper entryType={"fruit"}>
                 <ErrorDisplay err={err}/>
                 <ID txt={"Fruit"} id={data._id} entryType={"fruit"}/>
-                {/*/!* TODO: likely get rid of!*!/<CreateCloneArea fruitId={data._id} onCloneCreated={(xfer) => {*/}
-                {/*        setTransfersOut([...transfersOut, xfer._id])*/}
-                {/*    }} headerLevel={headerLevel} readonly={readonly} cookies={cookies}/>*/}
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
-                        <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>
+                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
                         <ParentDisplay parent={initial.parent} parentType={initial.parentType}
                                        headerLevel={headerLevel}/>
                     </FlexedSinglesGroup>
@@ -284,15 +282,15 @@ export default function FruitDisplay(
                 <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
                                      allowNewTransferCreation={false}
                                      cookies={cookies}/>
-                {/* TODO: likely get rid of!*/}{sporePrintsArea()}
                 <PicsDisplay pix={pics} updateParent={setPics} readonly={readonly}/>{/* Pics */}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
-                </TogglableAreaWithDepth>                {readonly ? null : <input type="submit" value="Update" onClick={fruitSubmit} onSubmit={(e) => {
-                    e.preventDefault();
-                }}/>}
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                </TogglableAreaWithDepth>
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    fruitSubmit()
+                }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
     } catch (err) {

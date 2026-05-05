@@ -11,6 +11,8 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import {dataFor} from "@/app/components/agarRecipeClient";
 import {useContext, useEffect, useState} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
+import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export const ExampleImageLocation: string = "test.jpg"
 
@@ -130,25 +132,31 @@ export function ContamsDisplay(
             doUpdateParent(data)
     }
     const depth = useContext(DepthContext)
+    const disableButtonCreator = (i: number)=>{
+       if (readonly){
+           return <div></div>
+       }
+       return <RemoveToggle disabled={current.existing[i].disabled} keptTxt={"Delete"} removedTxt={"Don't delete"} keptClass={"removeButtonSmall"} removedClass={"basicButtonSmall"} click={()=>{disableExistingFields(i)}}/>
+    }
     // TODO: OVERHAUL WITH EITHER GRID OR FLEXBOX?
     return <div key={count} className={"depthContainer depth"+depth}>
         <div className={"areaHeader"}>{"Contaminations:"}</div>
         <div className={"contamsRows"}>
             {current.existing.map((ctm, i) => {
-                const disableButton= (!readonly ? <button className={ctm.disabled?"removeButtonSmall":"basicButtonSmall"} onClick={()=>{disableExistingFields(i)}}>
-                    {(ctm.disabled ? "Don't delete" : "Delete") + " contam"}
-                </button>:<div></div>)
+
+                const disableButton= disableButtonCreator(i)
                 return <div key={i} className={"contentsOnly contamRow" + (ctm.disabled ? " disabled" : "")}>
                     <div className={"picLeft" + (ctm.disabled ? " disabled" : "")}>
-                        {(ctm.data.location !== undefined) ? <>
-                            {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
-                            <img className={"picDisplay"} src={ImageLocationFor(ctm.data.location)}
+                        {(ctm.data.location !== undefined) && <img className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"} src={ImageLocationFor(ctm.data.location)}
                              alt={"existing contamination image " + i}/>
-                        {disableButton}</>:disableButton}
+                        }
+                        {disableButton}
                     </div>
                     <div className={"contamOverviewTable" + (ctm.disabled ? " disabled" : "")}>
                         <DateArea when={ctm.data.time} readonly={true}/>
+                        <TestAndValidate todos={["toggle for confirmed and handle on the serverside"]}>
                         <div>{ctm.data.confirmed ? "Confirmed" : "Unconfirmed"}</div>
+                        </TestAndValidate>
                         {readonly ?
                             <div>{"Bacteria: "+(ctm.data.bacteria?"yes":"no")}</div>:
                             <div>
@@ -249,7 +257,7 @@ export function ContamsDisplay(
         </div>}
 
         {!readonly && <div className={"centerH gapTop"}>
-            <button className={"basicButton"} onClick={addNewFields}>{"Add New Contamination"}</button>
+            <button className={"greenButton"} onClick={addNewFields}>{"Add New Contamination"}</button>
         </div>}
     </div>
 }

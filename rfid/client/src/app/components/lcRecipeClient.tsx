@@ -180,34 +180,36 @@ export default function LcRecipeDisplay(
                 <TestAndValidate todos={["Put name at top????"]}>
                     <ID id={data._id} txt={"Liquid Culture Recipe"} entryType={"lcRecipe"}/>
                 </TestAndValidate>
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <TestAndValidate todos={["allow name changes?"]}>
                             <NameArea currentName={data.name} readonly={readonly} headerLevel={headerLevel}
                                       setName={setRecName}/>
                         </TestAndValidate>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
                         <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
                                       headerLevel={headerLevel}/>
+                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
 
 
-                <LiquidsArea initialValues={dataFor(initial.liquids || [])} headerLevel={headerLevel} readonly={true}/>
-                <NutrientsArea initialValues={dataFor(initial.nutrients || [])} headerLevel={headerLevel} readonly={true}/>
-                <SugarsArea initialValues={dataFor(initial.sugars || [])} headerLevel={headerLevel} readonly={true}/>
-                <AdditivesArea initialValues={dataFor(initial.additives || [])} headerLevel={headerLevel} readonly={true}/>
+                <LiquidsArea initialValues={dataFor(initial.liquids || [])} headerLevel={headerLevel} readonly={true}/>{/* TODO: viewOnlyArea*/}
+                <NutrientsArea initialValues={dataFor(initial.nutrients || [])} headerLevel={headerLevel} readonly={true}/>{/* TODO: viewOnlyArea*/}
+                <SugarsArea initialValues={dataFor(initial.sugars || [])} headerLevel={headerLevel} readonly={true}/>{/* TODO: viewOnlyArea*/}
+                <AdditivesArea initialValues={dataFor(initial.additives || [])} headerLevel={headerLevel} readonly={true}/>{/* TODO: viewOnlyArea*/}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
 
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
-                {readonly ? null : <input type="submit" value="Update" onClick={lcRecipeSubmit} onSubmit={(e) => {
-                    e.preventDefault();
-                }}/>}
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    lcRecipeSubmit()
+                }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
     } catch (err) {
@@ -320,11 +322,11 @@ function depthAndEntryClasses(depth: number, entryType?: string) {
 }
 
 // TODO: MOVE!
-export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string }>) { // TODO: USE THIS EVERYWHERE!
+export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string,className?:string }>) { // TODO: USE THIS EVERYWHERE!
     const depth = useContext(DepthContext)
     return <DepthProvider>
         <div
-            className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
+            className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType)+(props.className?" "+props.className:"")}>{/* TODO: likely not working as expected. +1?*/}
             {props.children}
         </div>
     </DepthProvider>

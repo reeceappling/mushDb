@@ -39,9 +39,14 @@ export function middleware(req: NextRequest) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
     );
 
-    if (corsOrigins.includes('*') || corsOrigins.includes(origin || '')) {
-        res.headers.set('Access-Control-Allow-Origin', origin || '*');
+    if (typeof window !== "undefined") {
+        if (corsOrigins.includes('*') || corsOrigins.includes(origin || '')) {
+            res.headers.set('Access-Control-Allow-Origin', origin || '*');
+        }
+    } else {
+        // Anything that may happen non-client-side? // TODO: ensure ok
     }
+
 
     return res;
 }

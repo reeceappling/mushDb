@@ -10,8 +10,10 @@ import {SelectorResetsOnSelectForCustom} from "@/app/components/selector";
 import {validatorForAssertion} from "@/app/components/substrateRecipeClient";
 import {DisplayFormWrapper} from "@/app/components/lcRecipeClient";
 import {FlexedArea, FlexedSinglesGroup} from "@/app/components/agarBatchClient";
+// TODO: list not working
+// TODO: ensure display is working and looks good
 
-function AssertUser(input: any): asserts input is UserData {
+export function AssertUser(input: any): asserts input is UserData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
@@ -106,9 +108,10 @@ export default function UserDisplay(
                 {/*    newPerms.admin=adm*/}
                 {/*    setPerms(newPerms)*/}
                 {/*}}/>*/}
-                {readonly ? null : <div><input type="submit" value="Update" onClick={userSubmit} onSubmit={(e) => {
-                    e.preventDefault();
-                }}/></div>}
+                {readonly ? null : <div><button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    userSubmit()
+                }}>{"Update"}</button></div>}
                 {/* TODO: unlikely to need: <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/> TODO: where to put?*/}
             </DisplayFormWrapper>
         )

@@ -6,6 +6,7 @@ import {AllEntries, Data, GroupProps, RevertableAreaProps} from "@/app/component
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 
 export type Note = {
     time: number
@@ -56,13 +57,11 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
                         out.existing[i] = structuredClone(nd)
                         updateCurrent(out)
                     }}/>
-                    {!readonly && (
-                        <button className={current.existing[i].disabled ? "removeButtonSmall" : "basicButtonSmall"}
-                                onClick={() => {
-                                    let out = structuredClone(current)
-                                    out.existing[i].disabled = !out.existing[i].disabled
-                                    updateCurrent(out)
-                                }}>{current.existing[i].disabled ? "Don't Delete" : "Delete Note"}</button>)}
+                    {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={()=>{
+                        let out = structuredClone(current)
+                        out.existing[i].disabled = !out.existing[i].disabled
+                        updateCurrent(out)
+                    }}/>}
                 </div>
             })}</div>
 
@@ -70,7 +69,6 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
     const createNewNote = ()=>{
         return {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}} // TODO: fixme
     }
-    const deleteNewNote = (toDelete: Note)=>{}
     // TODO: 5/3/26 creating 3 new notes and deleting the second does not update the new notes visually properly
     const newArea = () => {
         if (readonly) {
@@ -87,13 +85,12 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
                         out.new[i] = structuredClone(nd)
                         updateCurrent(out)
                     }}/>
-                    <button className={"removeButton"} onClick={() => {
+                    <RemoveNewNoteButton click={()=>{
                         const out = structuredClone(current)
                         out.new[i].disabled = true;
                         const toParent = structuredClone(out)
                         toParent.new = toParent.new.filter(item => !(item.disabled))
-                        updateCurrent(toParent)
-                    }}>{"Delete Note"}</button>
+                        updateCurrent(toParent)}} />
                 </div>
             })}
             <div>
@@ -116,6 +113,12 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
     </div>
 
 }
+function RemoveNoteButton({disabled,click}:{disabled:boolean,click:()=>void}){
+    return <RemoveToggle disabled={disabled} click={click} keptTxt={"Delete Note"} removedTxt={"Don't Delete"} keptClass={"removeButtonSmall"} removedClass={"basicButtonSmall"}/>
+}
+function RemoveNewNoteButton({click}:{click:()=>void}){
+    return <RemoveNoteButton disabled={false} click={click}/>
+}
 
 // TODO: this one is working, but should we use NotesArea instead????
 export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SOME NOTES ARE DELETED, FIX!
@@ -137,13 +140,11 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
                         out.existing[i] = nd
                         updateParent && updateParent(out)
                     }}/>
-                    {!readonly &&
-                        <button className={current.existing[i].disabled ? "removeButtonSmall" : "basicButtonSmall"}
-                                onClick={() => {
-                                    let out = {...current}
-                                    out.existing[i].disabled = !current.existing[i].disabled
-                                    updateParent && updateParent(out)
-                                }}>{current.existing[i].disabled ? "Don't Delete" : "Delete Note"}</button>}
+                    {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={() => {
+                            let out = structuredClone(current)
+                            out.existing[i].disabled = !current.existing[i].disabled
+                            updateParent && updateParent(out)
+                        }}/>}
                 </div>
             })}
         </div>
@@ -164,13 +165,13 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
                         out.new[i] = nd
                         updateParent && updateParent(out)
                     }}/>
-                    <button onClick={() => {
+                    <RemoveNewNoteButton click={() => {
                         let out = {...(current || {existing: [], new: []})}
                         out.new[i].disabled = true;
                         let toParent = {...out}
                         toParent.new = toParent.new.filter(item => !item.disabled)
                         updateParent && updateParent(toParent)
-                    }}>{"Delete Note"}</button>
+                    }}/>
                 </div>
             })}
             <div>
@@ -220,13 +221,11 @@ export function NotesGrid({
                         out.existing[i] = nd
                         updateParent && updateParent(out)
                     }}/>
-                    {!readonly &&
-                        <button className={current.existing[i].disabled ? "removeButtonSmall" : "basicButtonSmall"}
-                                onClick={() => {
-                                    let out = {...current}
-                                    out.existing[i].disabled = !current.existing[i].disabled
-                                    updateParent && updateParent(out)
-                                }}>{current.existing[i].disabled ? "Don't Delete" : "Delete Note"}</button>}
+                    {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={() => {
+                        let out = structuredClone(current)
+                        out.existing[i].disabled = !current.existing[i].disabled
+                        updateParent && updateParent(out)
+                    }}/>}
                 </div>
             })}
         </div>
@@ -247,13 +246,13 @@ export function NotesGrid({
                         out.new[i] = nd
                         updateParent && updateParent(out)
                     }}/>
-                    <button onClick={() => {
+                    <RemoveNewNoteButton click={() => {
                         let out = {...(current || {existing: [], new: []})}
                         out.new[i].disabled = true;
                         let toParent = {...out}
                         toParent.new = toParent.new.filter(item => !item.disabled)
                         updateParent && updateParent(toParent)
-                    }}>{"Delete Note"}</button>
+                    }}/>
                 </div>
             })}
             <div>
@@ -303,12 +302,11 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
                         updateParent && updateParent(out)
                     }}/>
                     {!readonly &&
-                        <button className={current.existing[i].disabled ? "removeButtonSmall" : "basicButtonSmall"}
-                                onClick={() => {
-                                    let out = {...current}
-                                    out.existing[i].disabled = !current.existing[i].disabled
-                                    updateParent && updateParent(out)
-                                }}>{current.existing[i].disabled ? "Don't Delete" : "Delete Note"}</button>}
+                        <RemoveNoteButton disabled={current.existing[i].disabled} click={() => {
+                            let out = structuredClone(current)
+                            out.existing[i].disabled = !current.existing[i].disabled
+                            updateParent && updateParent(out)
+                        }}/>}
                 </div>
             })}
         </div>
@@ -329,13 +327,13 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
                         out.new[i] = nd
                         updateParent && updateParent(out)
                     }}/>
-                    <button onClick={() => {
+                    <RemoveNewNoteButton click={() => {
                         let out = {...(current || {existing: [], new: []})}
                         out.new[i].disabled = true;
                         let toParent = {...out}
                         toParent.new = toParent.new.filter(item => !item.disabled)
                         updateParent && updateParent(toParent)
-                    }}>{"Delete Note"}</button>
+                    }}/>
                 </div>
             })}
             <div>
@@ -577,7 +575,6 @@ export function NoteEntriesGroup({
         {((inputFields || [])).map((input, index) => {
             return (
                 <div className={noteClasses(input)} key={index}>
-                    {readonly ? "READONLY" : "NOT READONLY"}
                     {input.disabled ? "disabled" : null /* TODO: remove? */}
                     <DateArea pre={readonly ? undefined : "Date: "} when={input.data.time} readonly={readonly}
                               updateParent={(n) => {

@@ -1,14 +1,21 @@
 'use client'
 
 import React, {useState} from "react";
-import NotesAreaOld, {IsValidNote, NewEntryNotes, Note, NoteEntriesGroup} from "@/app/components/formSubcomponents/notes";
+import NotesAreaOld, {
+    IsValidNote,
+    NewEntryNotes,
+    Note,
+    NoteEntriesGroup,
+    NotesAreaInline
+} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {
     DisplayInput, HandleJsonResponse,
-    HeaderLevel,
+    HeaderLevel, InlineExpansionArea, InlineExpansionButton,
     InlineProps,
+    InlineSubArea,
     OptionalArrayOfType,
     OptionalKey
 } from "@/app/components/common";
@@ -18,13 +25,15 @@ import {SaleData} from "@/app/components/saleServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import EntryLink from "@/app/components/formSubcomponents/entryLink";
 import {useCookies} from "react-cookie";
-import {dataFor} from "@/app/components/agarRecipeClient";
+import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+// TODO: list page not working
+// TODO: ensure display page doing what we want
 
 export function AssertSale(input: any): asserts input is SaleData {
     if (typeof input !== 'object') {
@@ -116,7 +125,10 @@ export default function SaleDisplay(
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
-                {readonly ? null : <input type="submit" value="Update" onClick={saleUpdateSubmit} onSubmit={(e)=>{e.preventDefault();}}/>}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    saleUpdateSubmit()
+                }}>{"Update"}</button>}
                 {/* TODO: ?<OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>*/}
             </DisplayFormWrapper>
         )
@@ -173,33 +185,22 @@ export function NewSaleForm(
 }
 
 export function SaleInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SaleData>) {
-    const notes = data.notes || []
     const [expanded, setExpanded] = useState(expandByDefault)
-    const expansionArea = () => {
-        if (expanded) {
-            return null
-        }
-        return <div className={"fullWidth"}>
-            <div>{"Notes: "}</div>
-            {notes.map((n) => {
-                return <div>
-                    {NumberToDate(new Date(n.time)) + " - " + n.note}
-                </div>
-            })}
-        </div>
-    }
     const b58id = data._id
-    return <div>
-        <div>
+    return <InlineEntry onClick={onClick}>
+        <InlineSubArea props={{}}>
             <ID id={b58id} txt={"Sale"} entryType={"sale"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
             <DateArea pre={"Sold on: "} when={data.creationDate} readonly={true}/>
             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
             <button className={"basicButton"} onClick={() => {
                 setExpanded(!expanded)
             }}>{expanded ? "See Less" : "See More"}</button>
-        </div>
-        {expansionArea()}
-    </div>
+        </InlineSubArea>
+        <InlineExpansionArea props={{expanded:expanded}}>
+            <NotesAreaInline notes={data.notes} offset={-1}/>
+        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+                                                     expanded={expanded}/>
+    </InlineEntry>
 }
 
 export function SaleArea(
@@ -219,10 +220,10 @@ export function SaleArea(
     }
     if (sale === undefined) {
         return <div>
-            <TestAndValidate todos={["fully test this"]}>
+            <TestAndValidate todos={["overhaul this for sales"]}>
             <div className={"saleArea"}>
                 <div className={"inline"}>{"Available to sell"}</div>
-                {!readonly && <button className={"basicButton inline"/* TODO: ok? */} onClick={()=>{setOpen(!open)}}>{open?"Close sale creation area":"Mark as sold"}</button> /* TODO: FIX ME SO THIS CREATES A NEW SALE!*/}
+                {!readonly && <button className={"basicButtonSmall inline"} onClick={()=>{setOpen(!open)}}>{open?"Close sale creation area":"Mark as sold"}</button> /* TODO: FIX ME SO THIS CREATES A NEW SALE!*/}
             </div>
             {open &&
                 <NewSaleForm headerLevel={headerLevel} onCreate={s=>saleCreated(s._id)} />

@@ -214,7 +214,7 @@ function OvcArea(props: React.PropsWithChildren<{}>) {
 // TODO: MOVE!
 /* View lc/2Aui6ejTFsd for testing */
 export function OnViewCreatorsQuadColArea({OnViewCreators,readonly}: { OnViewCreators: OnViewCreatorQuadCol[], readonly: boolean}) {
-    if (readonly) {
+    if (readonly || !OnViewCreators) {
         return null
     }
     const [activeTab, setActiveTab] = useState<string | undefined>();
@@ -259,7 +259,7 @@ export function OnViewCreatorsQuadColArea({OnViewCreators,readonly}: { OnViewCre
 
 // TODO: MOVE!
 export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: { OnViewCreators: OnViewCreatorTriCol[], readonly: boolean }) {
-    if (readonly) {
+    if (readonly || !OnViewCreators) {
         return null
     }
     const [activeTab, setActiveTab] = useState<string | undefined>();
@@ -484,9 +484,10 @@ export default function PcRunDisplay(
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
-                {readonly ? null : <input type="submit" value="Update" onClick={pcRunUpdate} onSubmit={(e) => {
-                    e.preventDefault();
-                }}/>}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    pcRunUpdate()
+                }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
     } catch

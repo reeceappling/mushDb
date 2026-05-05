@@ -1,6 +1,6 @@
 'use client'
 
-import {useContext, useState} from "react";
+import React, {useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcData} from "@/app/components/lcServer";
@@ -205,7 +205,7 @@ export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}
                                     headerLevel={headerLevel/*cookies={cookies}*/}/>
-        <ConfirmedCleanSelector selProps={{doSelect: setConfirmedClean, headerLevel: headerLevel}}/>
+        <ConfirmedCleanSelector updateParent={setConfirmedClean}/>
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
         <GenerationArea readonly={false} updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
@@ -301,6 +301,8 @@ export default function LcDisplay(
         ]
         return <DisplayFormWrapper entryType={"lc"}>
             <ID txt={"Liquid Culture"} id={data._id} entryType={"lc"}/>
+            {readonly ||
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>}{/* TODO: where to put?*/}
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <FlexedArea>
@@ -353,10 +355,11 @@ export default function LcDisplay(
             </TogglableAreaWithDepth>
             {readonly || <>
                 <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-                <button className={"bottomButton"} onClick={lcSubmit}>{"Update"}</button>
+                <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    lcSubmit()
+                }}>{"Update"}</button>
             </>}
-            {readonly ||
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>}{/* TODO: where to put?*/}
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: Liquid Culture data format incorrect: " + err}</div>
@@ -367,22 +370,13 @@ export function SpeciesSubspeciesArea({species, subspecies}: {
     subspecies?: string,
     species?: string,
 }) {
-    const specArea = <div>
-        {"Species: " + (species ? species : "none")}{/* TODO: LINK!?*/}
-    </div>
-    if (subspecies) {
-        return <>
-            {/* <div className={"specSubspecArea"}> */}
-            {specArea}
-            <div>
-                {"Subspecies: " + subspecies}{/* TODO: LINK!*/}
-            </div>
-            {/*</div>*/}
-        </>
-    }
-    return <>{/* <div className={"specSubspecArea"}> */}
-        {specArea}
-        {/*</div>*/}
+    return <>
+        <div>
+            {"Species: " + (species || "")}{/* TODO: LINK!?*/}
+        </div>
+        <div>
+            {"Subspecies: " + (subspecies||"")}{/* TODO: LINK!*/}
+        </div>
     </>
 }
 

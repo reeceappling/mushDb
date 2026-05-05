@@ -29,6 +29,12 @@ div {
 .removeButtonSmall {
     @apply bg-buttonRemove text-black px-0 py-0 rounded hover:bg-buttonRemoveActive
 }
+.buttonSmall {
+    @apply text-black w-full rounded
+}
+.buttonFullWidth {
+    @apply text-black w-full rounded
+}
 
 .tailwindSelector {
     @apply bg-input text-black px-2 py-0 rounded

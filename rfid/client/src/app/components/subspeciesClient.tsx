@@ -1,6 +1,6 @@
 'use client'
 
-import {JSX, useEffect, useState} from "react";
+import React, {JSX, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -36,6 +36,8 @@ import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/dep
 import { InlineEntry } from "./agarRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+// TODO: list page not working
+// TODO: ensure display page doing what we want
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
@@ -130,6 +132,7 @@ export default function SubspeciesDisplay(
                 </FlexedArea>
                 <AliasesArea aliases={aliases} readonly={readonly} headerLevel={headerLevel} updateParent={setAliases}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+                {/* TODO: ACL/DefaultACL buttons side-by-side*/}
                 <TestAndValidate todos={["make these side-by-side?"]}>
                     <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
                                    closeTxt={"minimize perms area"}>
@@ -140,7 +143,10 @@ export default function SubspeciesDisplay(
                         <DefaultAclDisplay readonly={readonly} ACL={defaultAcl} updateParent={setDefaultAcl}/>
                     </TogglableAreaWithDepth>
                 </TestAndValidate>
-                {readonly ? null : <input type="submit" value="Update" onClick={update} onSubmit={(e)=>{e.preventDefault();}}/>}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    update()
+                }}>{"Update"}</button>}
                 {/* TODO: unlikely: <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>*/}
             </DisplayFormWrapper>
         )
@@ -219,7 +225,7 @@ export function SubspeciesInline(
     const aliases = props.data.aliases || []
     const notes = props.data.notes || []
     const [expanded, setExpanded] = useState(props.expandByDefault)
-    return <InlineEntry onClick={props.onClick}>
+    return <InlineEntry onClick={props.onClick}><TestAndValidate todos={["ensure working and looks good"]}>
         <InlineSubArea props={{}}>
             <ID id={props.data._id} txt={"Subspecies"} entryType={"subspecies"} allowOpenMainPage={props.showMainPageButton} linkPage={props.idIsLink}/>
             {showSpeciesName &&
@@ -241,6 +247,7 @@ export function SubspeciesInline(
             <DateArea pre={"Last Updated: "} when={props.data.lastUpdated} readonly={true}/>
         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
                                expanded={expanded}/>
+    </TestAndValidate>
     </InlineEntry>
 }
 

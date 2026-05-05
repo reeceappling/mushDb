@@ -1,3 +1,4 @@
+'use client'
 import {SyntheticEvent, useState} from "react";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 

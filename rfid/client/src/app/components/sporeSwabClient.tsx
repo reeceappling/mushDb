@@ -14,8 +14,8 @@ import {
 import {
     DisposedDisplay,
     ErrorDisplay,
-    MostRecentImageDisplay, ParentDisplay,
-    PicsDisplay, SpeciesArea, SpeciesSubspeciesFormArea, SubspeciesArea,
+    ParentDisplay,
+    SpeciesArea, SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     IsValidNote,
@@ -47,7 +47,10 @@ import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SaleArea} from "@/app/components/saleClient";
 import {OvcForXfers} from "@/app/components/bagClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+
+// TODO: list page not working
+// TODO: ensure display page doing what we want
 
 export function AssertSporeSwab(input: any): asserts input is SporeSwab {
     if (typeof input !== 'object') {
@@ -215,7 +218,8 @@ export default function SporeSwabDisplay(
                         <DateArea pre={"Print Date: "} readonly={true} when={initial.creationDate}/>
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                         <DisposedDisplay readonly={false} disposed={disposed} setDisposedOnParent={setDisposed}/>
-                        <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>
+                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                        {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                        </TestAndValidate>
                 </FlexedSinglesGroup>
             </FlexedArea>
@@ -224,9 +228,10 @@ export default function SporeSwabDisplay(
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
-            {readonly ? null : <input type="submit" value="Update" onClick={submit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>}
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                e.stopPropagation();
+                submit()
+            }}>{"Update"}</button>}
             <OnViewCreatorsTriColArea OnViewCreators={ovcs}
                                       readonly={readonly}/> {/*swab to agar and that's about it */}
         </DisplayFormWrapper>

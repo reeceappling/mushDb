@@ -121,7 +121,7 @@ function CopyLatestReadTagButton() {
             })
         }
     }
-    return <button className={"basicButton"} onClick={onClick}>{"Copy last read tag value"}</button>
+    return <button className={"basicButtonSmall"} onClick={onClick}>{"Copy last read tag value"}</button>
 }
 
 function LastReadTag() {
@@ -130,7 +130,7 @@ function LastReadTag() {
         return <div>
             <div className={"centerH"}>{"Last read tag value: "}</div>
             <div className={"centerH"}>{state.lastReadTag}
-                <button className={"basicButton"} onClick={() => {
+                <button className={"basicButtonSmall"} onClick={() => {
                     state.lastReadTag && navigator.clipboard.writeText(state.lastReadTag)
                 }}>{"Copy"}</button>
             </div>
@@ -198,10 +198,10 @@ function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
         }
 
     }
-    // if(state.lastReaderUsed==state.selected){
-    //     return null
-    // } // TODO: ?
-    return <TailwindButton txt={"Read Tag"} click={onClick}/>
+    return <button className={"basicButtonSmall"} onClick={e=>{
+        e.stopPropagation();
+        onClick();
+    }}>{"Read Tag"}</button>
 }
 
 export function TopBarViewMenu() {

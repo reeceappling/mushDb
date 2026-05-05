@@ -4,7 +4,7 @@ import {useQuery} from "@tanstack/react-query";
 import {getOptionsResponse} from "./server";
 import {SelectorResetsOnSelectFor} from "@/app/components/selector";
 import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
-import {LiquidEntryForNew} from "@/app/components/formSubcomponents/commonClient";
+import {LiquidEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import * as React from "react";
 
@@ -97,9 +97,9 @@ export function LiquidEntriesGroupForNew({currentEntries, updateParent}: {
                         return existingLiquid.name !== l.name ? existingLiquid : l
                     }))
                 }}/>
-                <button key={l.name+2} className={"removeButton"} onClick={()=>{
+                <RemoveButton txt={"Remove"} key={l.name+2} click={()=>{
                     updateParent([...(currentEntries || [])].filter((existing) => existing.name !== l.name))
-                }}>{"Remove"}</button>
+                }} />
             </>
         })}
         </div>}

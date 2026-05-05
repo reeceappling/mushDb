@@ -133,6 +133,7 @@ export default function WaterJarDisplay(
         <DisplayFormWrapper entryType={"waterJar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID txt={"Water Jar"} id={initial._id} entryType={"waterJar"} />
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/> {/*TODO: where to put?*/}
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} readonly={readonly}
@@ -141,8 +142,10 @@ export default function WaterJarDisplay(
             </FlexedArea>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
-            {readonly || <button className={"bottomButton"} onClick={submit}>{"Update"}</button>}
-            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/> {/*TODO: where to put?*/}
+            {readonly || <button className={"bottomButton greenButton"} onClick={(e)=>{
+                e.stopPropagation();
+                submit()
+            }}>{"Update"}</button>}
         </DisplayFormWrapper>
     )
 }

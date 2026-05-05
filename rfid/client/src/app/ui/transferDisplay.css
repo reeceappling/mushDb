@@ -47,30 +47,51 @@ div {
             align-items: center;
         & > div {
             box-sizing: border-box;
-            /*width: 100%;*/
-            /*width: 100%;*/
-            /*max-width: 100%;*/
-            /*display: flex;*/
-            /*justify-content: center;*/
-            /*align-items: flex-start;*/
+
             &.fromToLinkArea {
-                /*width: 100%;*/
-                /*column-gap: 1em;*/
             }
             &.fromToImageArea {
-                /*width: 100%;*/
-                /*& > .fromToImage {*/
-                /*    max-height: 50vh;*/
-                /*    max-width: 100%;*/
-                /*    object-fit: contain;*/
-                /*}*/
             }
-            /*& > *:first-child {*/
-            /*    float: right;*/
-            /*}*/
-            /*& > *:last-child {*/
-            /*    float: left;*/
-            /*}*/
         }
+    }
+}
+
+.transfersGrid {
+    display: grid;
+    grid-auto-rows: min-content;
+    grid-template-columns: min-content 1fr;
+    gap: 1em;
+    & > div { /* Ensure existing transfer links never wrap */
+        &:first-child {
+            min-width: 3em;
+            width: fit-content;
+            & a {
+                white-space: nowrap;        /* Text never wraps */
+                display: inline-block;      /* Keeps it together */
+            }
+        }
+    }
+}
+.existingTransferItem {
+    width: fit-content;
+    white-space: nowrap;        /* Text never wraps */
+    display: inline-block;      /* Keeps it together */
+}
+.transferHeader {
+    width: 100%;
+    position: absolute;
+    left: 50%;
+    & > div {
+        width: fit-content;
+        transform: translateX(-50%);
+    }
+}
+#transferCreator {
+    display: grid;
+    grid-template-rows: 1fr; /* Content takes space, element at bottom */
+    & > .pushToBottom {
+        align-self: end;
+        margin-bottom: 0;
+        margin-top: auto;
     }
 }

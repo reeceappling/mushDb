@@ -1,3 +1,4 @@
+'use client'
 export default function TestAndValidate(props: React.PropsWithChildren<{todos?:string[]}>) {
     return <>
         {props.children}

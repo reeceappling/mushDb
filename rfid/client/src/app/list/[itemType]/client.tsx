@@ -50,6 +50,16 @@ import {AgarRecipeInline, AssertAgarRecipe} from "@/app/components/agarRecipeCli
 import {GrainBatchData} from "@/app/components/grainBatchServer";
 import {AssertGrainBatch, GrainBatchInline} from "@/app/components/grainBatchClient";
 import {LatestListDisplay, LatestMostRecentListDisplay} from "@/app/components/clientGeneric";
+import {AssertSpecies, SpeciesInline} from "@/app/components/speciesClient";
+import {SpeciesData} from "@/app/components/speciesServer";
+import {ProjectData} from "@/app/components/projectServer";
+import {AssertProject} from "@/app/components/projectClient";
+import {SaleData} from "@/app/components/saleServer";
+import {AssertSale, SaleInline} from "@/app/components/saleClient";
+import {TransferData} from "@/app/components/transferServer";
+import {AssertTransfer} from "@/app/components/transferClient";
+import {UserData} from "@/app/components/userServer";
+import {AssertUser} from "@/app/components/userClient";
 
 export default function ListDisplay({itemType,inpData}:{itemType: string, inpData: any}){
     try {
@@ -154,10 +164,16 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
                 }/>
             // // case "plugs": // TODO: THIS
             // //     return <PlugsDisplay data={inpData} readonly={false} id={id} isTopLevel={true} headerLevel={TopPageHeaderLevel} cookies={allCookies}/>// TODO: FIX!
-            // case "projects":
-            //     return <ProjectDisplay data={inpData} readonly={false} id={id} isTopLevel={true} headerLevel={TopPageHeaderLevel} cookies={allCookies}/>// TODO: FIX!
-            // case "sales":
-            //     return <SaleDisplay data={inpData} readonly={false} id={id} isTopLevel={true} headerLevel={TopPageHeaderLevel} cookies={allCookies}/>// TODO: FIX!
+            // case "projects":// TODO: TEST
+            //     AssertArrayResult<ProjectData>(inpData, AssertProject)
+            //     return <LatestListDisplay data={inpData} constructor={(val, i)=>
+            //         <ProjectInline data={val} expandByDefault={false} onClick={()=>{window.location.assign(BaseExternalUrl+"/view/project/"+encodeURI(val._id))}}/>
+            //     }/>
+            case "sales":// TODO: TEST
+                AssertArrayResult<SaleData>(inpData, AssertSale)
+                return <LatestListDisplay data={inpData} constructor={(val, i)=>
+                    <SaleInline data={val} expandByDefault={false} onClick={()=>{window.location.assign(BaseExternalUrl+"/view/sale/"+encodeURI(val._id))}}/>
+                }/>
             case "slants":
                 AssertArrayResult<SlantData>(inpData, AssertSlant)
                 return <LatestListDisplay data={inpData} constructor={(val, i)=>
@@ -165,9 +181,14 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
                         window.location.assign(BaseExternalUrl + "/view/slant/" + encodeURI(val._id))
                     }}/>
                 }/>
-            // case "species":// TODO: TEST
-            //     //return <SpeciesInline data={} expandByDefault={false} onClick={()=>{window.location.assign(BaseExternalUrl+"/view/species/"+entry._id)}}
-            //     return <SpeciesDisplay data={inpData} readonly={false} id={id} isTopLevel={true} headerLevel={TopPageHeaderLevel} cookies={allCookies}/>// TODO: FIX!
+            case "species":// TODO: TEST
+                AssertArrayResult<SpeciesData>(inpData, AssertSpecies)
+                return <LatestListDisplay data={inpData} constructor={(val, i)=>
+                    <SpeciesInline data={val} expandByDefault={false} onClick={()=>{
+                        console.log("redirecting to: "+BaseExternalUrl+"/view/species/"+encodeURI(val._id))
+                        window.location.assign(BaseExternalUrl+"/view/species/"+encodeURI(val._id))}
+                    }/>
+                }/>
             case "sporePrints":
                 AssertArrayResult<SporePrintData>(inpData, AssertSporePrint)
                 return <LatestListDisplay data={inpData} constructor={(val, i)=>
@@ -190,13 +211,12 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
                     }}/>
                 }/>
             case "subspecies": // TODO: test functionality. Unsure if we even want to be able to list these
-                // TODO: NOT WORKING, LIKELY NOT A DUAL LIST
-                return <ErrorDisplay err={"NOT IMPLEMENTED"} />
-                // AssertDualListResult<SubspeciesData>(inpData, AssertSubspecies)
-                // return <LatestMostRecentListDisplay data={inpData} constructor={(val, i)=> {
-                //     return <SubspeciesInline key={i} showSpeciesName={true} props={{data:val, expandByDefault:false, onClick:() => { // TODO: showSpeciesName true ok?
-                //         window.location.assign(BaseExternalUrl + "/view/subspecies/" + encodeURI(val._id))}}} /> // TODO: url ok?
-                // }}/>
+                console.log("data to display: "+JSON.stringify(inpData)) // TODO: delete
+                AssertArrayResult<SubspeciesData>(inpData, AssertSubspecies)
+                return <LatestListDisplay data={inpData} constructor={(val, i)=> {
+                    return <SubspeciesInline key={i} showSpeciesName={true} props={{data:val, expandByDefault:false, onClick:() => { // TODO: showSpeciesName true ok?
+                        window.location.assign(BaseExternalUrl + "/view/subspecies/" + encodeURI(val._id))}}} /> // TODO: url ok?
+                }}/>
             case "substrateRecipes":
                 // TODO: allow lookup or navigation by recipe name
                 AssertDualListResult<SubstrateRecipeData>(inpData, AssertSubstrateRecipe)
@@ -212,7 +232,19 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
                     }}/>
                 }/>
             // case "transfers":
-            //     return <TransferDisplay data={inpData} readonly={false} id={id} isTopLevel={true} headerLevel={TopPageHeaderLevel} cookies={allCookies}/>// TODO: FIX!
+            //     AssertArrayResult<TransferData>(inpData, AssertTransfer)
+            //     return <LatestListDisplay data={inpData} constructor={(val, i)=>
+            //         <TransferInline data={val} expandByDefault={false} onClick={() => {
+            //             window.location.assign(BaseExternalUrl + "/view/transfer/" + encodeURI(val._id)) // TODO: ensure url ok
+            //         }}/>
+            //     }/>
+            // case "users":
+            //     AssertArrayResult<UserData>(inpData, AssertUser)
+            //     return <LatestListDisplay data={inpData} constructor={(val, i)=>
+            //         <UserInline data={val} expandByDefault={false} onClick={() => {
+            //             window.location.assign(BaseExternalUrl + "/view/user/" + encodeURI(val._id)) // TODO: ensure url ok
+            //         }}/>
+            //     }/>
             // case "users": // TODO: this
             //     return <UserDisplay data={inpData} readonly={false} id={id} isTopLevel={true} headerLevel={TopPageHeaderLevel} cookies={allCookies}/>// TODO: FIX!
             case "waterJars":

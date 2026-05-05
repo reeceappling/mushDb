@@ -145,7 +145,32 @@ func initializeLCs(ctx context.Context) error {
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
 	}
-	return addTestMainEntries(ctx, testItem)
+	testId2 := mainCollIdForint(idTestLC2)
+	testItem2 := &LiquidCulture{
+		MainCollectionIdField:   MainCollectionIdField{testId2},
+		PcRunOptionalField:      PcRunOptionalField{nil},
+		LcRecipeField:           LcRecipeField{exAltId},
+		CreationDateField:       CreationDateField{exampleTime},
+		SpeciesOptionalField:    SpeciesOptionalField{nil},
+		SubspeciesOptionalField: SubspeciesOptionalField{nil},
+		InnocField:              InnocField{nil},
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{nil},
+			GenSinceFruitOrSpore: nil,
+		},
+		TransfersOutField:                 TransfersOutField{nil},
+		ParentTypeField:                   ParentTypeField{nil},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: nil},
+		PicsField:                         PicsField{nil},
+		ConfirmedCleanField:               ConfirmedCleanField{nil},
+		ContaminationsField:               ContaminationsField{nil},
+		KnownFruitableField:               KnownFruitableField{nil},
+		DisposedField:                     DisposedField{nil},
+		MostRecentImageField:              MostRecentImageField{nil},
+		NotesField:                        NotesField{nil},
+		LastUpdatedField:                  LastUpdatedField{exampleTime},
+	}
+	return addTestMainEntries(ctx, testItem, testItem2)
 }
 
 type createLiquidCultureRequest struct {

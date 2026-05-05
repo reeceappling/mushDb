@@ -38,6 +38,9 @@ import {JarData} from "@/app/components/jarServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {InlineEntry} from "./agarRecipeClient";
 
+// TODO: GRAIN BATCHES LIST IS NOT WORKING!
+// TODO: ENSURE DISPLAY IS LOOKING GOOD
+
 export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
     // TODO: FIX THIS WHOLE FUNC
     if (typeof input !== 'object') {
@@ -203,9 +206,10 @@ export default function GrainBatchDisplay(
                 </FlexedArea>
 
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                {readonly ? null : <input type="submit" value="Update" onClick={submit} onSubmit={(e) => {
-                    e.preventDefault();
-                }}/>}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    submit()
+                }}>{"Update"}</button>}
                 <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
             </TestAndValidate>
         </DisplayFormWrapper>
@@ -253,9 +257,11 @@ export function NewGrainBatchForm({handlers, recipe}: {
             <JarRecipeSelector doSelect={setJarRecipe} headerLevel={3} allowCreation={handlers.isTopLevel}
                                creatorInPage={handlers.isTopLevel/* TODO: isTopLevel*/}/>}
         <NewEntryNotes setNotes={setNotes}/>
-        <input type="submit" value="Update" onClick={newGrainBatchSubmit} onSubmit={(e) => {
-            e.preventDefault();
-        }}/></NewEntryFormWrapper>
+        <button className={"bottomButton greenButton"} onClick={(e)=>{
+            e.stopPropagation();
+            newGrainBatchSubmit()
+        }}>{"Update"}</button>
+    </NewEntryFormWrapper>
 }
 
 export function GrainBatchInline({

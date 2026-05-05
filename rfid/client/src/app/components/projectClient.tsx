@@ -36,6 +36,8 @@ import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipe
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {TailwindButton} from "@/app/components/tailwind/components";
+// TODO: list page not working
+// TODO: ensure display page doing what we want
 
 export function AssertProject(input: any): asserts input is ProjectData {
     if (typeof input !== 'object') {
@@ -171,7 +173,10 @@ export default function ProjectDisplay(
                 <TestAndValidate todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
                     <ProjectPermsArea perms={perms} setPerms={setPerms} readonly={readonly}/>
                 </TestAndValidate>
-                {readonly ? null : <input type="submit" value="Update" onClick={projectSubmit} onSubmit={(e)=>{e.preventDefault();}}/>}{/* TODO: change all onSubmits to onClicks if this works*/}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    projectSubmit()
+                }}>{"Update"}</button>}{/* TODO: change all onSubmits to onClicks if this works*/}
                 {/* TODO: ?<OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>*/}
             </DisplayFormWrapper>
         )

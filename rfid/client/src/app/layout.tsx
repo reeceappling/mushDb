@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./global.css"; // Also includes postcss/tailwind
 import "@/app/ui/global.css"
 import "@/app/ui/mostRecentImage.css"
@@ -8,6 +7,7 @@ import "@/app/ui/subform.css"
 import "@/app/ui/topBar.css"
 import "@/app/ui/onViewCreators.css"
 import "@/app/ui/transferDisplay.css"
+import { Geist, Geist_Mono } from "next/font/google"; // TODO: FIX
 
 // TODO: ensure all ok
 

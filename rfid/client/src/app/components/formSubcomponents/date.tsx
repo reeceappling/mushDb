@@ -5,6 +5,8 @@ import {HeaderLevel} from "@/app/components/common";
 import H from "@/app/components/formSubcomponents/utils/headers";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {NoSsr} from "@mui/material";
+import {InputNumber, InputNumber2, InputNumber4} from "@/app/components/formSubcomponents/numericInput";
+import { InputMask, unformat } from '@react-input/mask';
 interface DateProps {
     pre?: string,
     when?: number,
@@ -34,15 +36,18 @@ export default function DateArea(
         }
     }
     const updateMonth = (s: string) => {
-        let n = NumbersOnlyFromText(s)
+        let nInit = NumbersOnlyFromText(s)
+
         let err: string | undefined = undefined
-        if(n<1||n>12){
+        const n = nInit-1
+        if(nInit<1||nInit>12){
             err = "Month must be [1,12]"
         } else {
             if(!dateValid(day.n, n, year.n)){
                 err = "invalid date"
             }
         }
+
         setMonth({n:n,err:err})
         if(updateParent!=undefined){
             updateParent(new Date().setFullYear(year.n, n, day.n))
@@ -90,14 +95,30 @@ export default function DateArea(
         }
         return undefined
     }
+    // const dmyStr = (d:number,m:number,y:number)=>{
+    //     let out = ""
+    //     if (m<10){
+    //         out=out+"0"
+    //     }
+    //     out=out+m+"/"
+    //     if (d<10){
+    //         out+="0"
+    //     }
+    //     out =out+d+"/"
+    //     out=out+y
+    //     return out
+    // }
     return (
         <NoSsr><div className={"dateHolder"}>
             {(pre !== "" && pre !== undefined) && <div>{pre}</div> /* TODO: P OK? */}
             <div className={'dateEditable'}>
                 <div className={"inlineChildren"}>
-                    <input className={"monthInput"} type="text" value={month.n+1} onChange={(e)=>{updateMonth(e.currentTarget.value)}}/>
-                    <input className={"dayInput"} type="text" value={day.n} onChange={(e)=>{updateDay(e.currentTarget.value)}}/>
-                    <input className={"yearInput"} type="text" value={year.n} onChange={(e)=>{updateYear(e.currentTarget.value)}}/>
+                    <InputNumber2 step={1} min={1} max={12} readonly={false} mode={"integer"} errorMessage={month.err} value={""+(month.n+1)}  onChange={(e)=>{updateMonth(e||"")}}/>
+                    <InputNumber2 step={1} min={1} max={31} readonly={false} mode={"integer"} errorMessage={day.err} value={""+day.n}  onChange={(e)=>{updateDay(e||"")}}/>
+                    <InputNumber4 step={1} min={2000} max={10000} readonly={false} mode={"integer"} errorMessage={year.err} value={""+year.n}  onChange={(e)=>{updateYear(e||"")}}/>
+                    {/*<input className={"monthInput"} type="text" value={month.n+1} onChange={(e)=>{updateMonth(e.currentTarget.value)}}/>*/}
+                    {/*<input className={"dayInput"} type="text" value={day.n} onChange={(e)=>{updateDay(e.currentTarget.value)}}/>*/}
+                    {/*<input className={"yearInput"} type="text" value={year.n} onChange={(e)=>{updateYear(e.currentTarget.value)}}/>*/}
                     {!readonly && <button className={"basicButtonSmall"} onClick={setDateToNow}>{"Set date to now"}</button>}
                 </div>
                 <ErrorDisplay err={currentErr()}/>

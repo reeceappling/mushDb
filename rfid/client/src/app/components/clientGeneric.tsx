@@ -8,7 +8,7 @@ import {CookiesProvider} from "react-cookie";
 import {GoogleOAuthProvider} from "@react-oauth/google";
 import {ListResult} from "@/app/components/formSubcomponents/shared";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {PageTypeContext, PageTypeProvider} from "@/app/components/formSubcomponents/pageTypeContext/depth";
+import {PageTypeContext, PageTypeProvider} from "@/app/components/formSubcomponents/pageTypeContext/pageType";
 
 
 export default function PageWrapper(

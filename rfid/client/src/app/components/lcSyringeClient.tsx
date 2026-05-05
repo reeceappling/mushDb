@@ -30,7 +30,6 @@ import {
     GensInlineDisplay,
     ParentDisplay,
     SpeciesArea,
-    SpeciesSubspeciesFormArea,
     SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -52,6 +51,7 @@ import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringe {
     if (typeof input !== 'object') {
@@ -159,9 +159,9 @@ export function LcSyringeImportDisplay({onImport, cookies}: { onImport: (lcs: Lc
     return <ImportEntryFormWrapper entryType={"lcSyringe"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies/*cookies={cookies}*/}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
-        <ConfirmedCleanSelector selProps={{doSelect: setConfirmedClean}}/>
+        <ExistingSpeciesSelector doSelect={setSpecies}/>
+        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
+        <ConfirmedCleanSelector updateParent={setConfirmedClean}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationArea readonly={false} updateParent={setGeneration}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
@@ -233,13 +233,15 @@ export default function LcSyringeDisplay(
     return <DisplayFormWrapper entryType={"lcSyringe"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <ID id={data._id} txt={"Liquid Culture Syringe"} entryType={"lcSyringe"}/>
+        <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
         <FlexedArea>
             <FlexedSinglesGroup>
                 <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
                                             disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
-                <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>
+                <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                 <ParentDisplay parent={initial.parent} parentType={"lc"} headerLevel={headerLevel}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
@@ -261,10 +263,10 @@ export default function LcSyringeDisplay(
             <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
         </TogglableAreaWithDepth>
         {readonly ? null : <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
-        {readonly ? null : <input type="submit" value="Update" onClick={lcSyringeSubmit} onSubmit={(e) => {
-            e.preventDefault();
-        }}/>}
-        <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+        {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+            e.stopPropagation();
+            lcSyringeSubmit()
+        }}>{"Update"}</button>}
     </DisplayFormWrapper>
 
 }

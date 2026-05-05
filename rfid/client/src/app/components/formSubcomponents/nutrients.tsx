@@ -7,8 +7,9 @@ import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
-import {LiquidEntryForNew, NutrientEntryForNew} from "@/app/components/formSubcomponents/commonClient";
+import {LiquidEntryForNew, NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {Liquid, LiquidsTypeSelectorForNew} from "@/app/components/formSubcomponents/liquids";
+import * as React from "react";
 
 interface NutrientsAreaProps {
     readonly: boolean,
@@ -92,9 +93,9 @@ export function NutrientsEntriesGroupForNew({currentEntries, updateParent}: {cur
                         return existing.nutrient !== n.nutrient ? existing : updated
                     }))
                 }}/>
-                <button key={n.nutrient+2} className={"removeButton"} onClick={()=>{
+                <RemoveButton key={n.nutrient+2} txt={"Remove"} click={()=>{
                     updateParent([...(currentEntries || [])].filter((existing) => existing.nutrient !== n.nutrient))
-                }}>{"Remove"}</button>
+                }} />
             </>
         })}
         </div>}

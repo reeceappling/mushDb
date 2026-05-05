@@ -195,31 +195,34 @@ export default function JarRecipeDisplay(
             <TestAndValidate todos={["Put name at top????"]}>
                 <ID id={data._id} txt={"Grain Jar Recipe"} entryType={"jarRecipe"} />
             </TestAndValidate>
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
             <FlexedArea>
                 <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
-                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                    <TestAndValidate todos={["allow to be changeable?", "sometimes deletes name when doing updates"]}>
+                        <NameArea currentName={initial.name} readonly={readonly} headerLevel={headerLevel}/>
+                    </TestAndValidate>
+
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     <StandardArea isStandard={isStandard} readonly={readonly} setStandard={setIsStandard}
                                   headerLevel={headerLevel}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <TestAndValidate todos={["allow to be changeable?", "sometimes deletes name when doing updates"]}>
-                <NameArea currentName={initial.name} readonly={readonly} headerLevel={headerLevel}/>
-            </TestAndValidate>
             {jarGrainsArea()}
 
-            <NutrientsArea initialValues={dataFormatFor(initial.nutrients)} headerLevel={headerLevel} readonly={true}/>
-            <SugarsArea initialValues={dataFormatFor(initial.sugars)} headerLevel={headerLevel} readonly={true}/>
-            <AdditivesArea initialValues={dataFormatFor(initial.additives)} headerLevel={headerLevel} readonly={true}/>
+            <NutrientsArea initialValues={dataFormatFor(initial.nutrients)} headerLevel={headerLevel} readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
+            <SugarsArea initialValues={dataFormatFor(initial.sugars)} headerLevel={headerLevel} readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
+            <AdditivesArea initialValues={dataFormatFor(initial.additives)} headerLevel={headerLevel} readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
-            {readonly ? null : <input type="submit" value="Update" onClick={submit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>}
-            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                e.stopPropagation();
+                submit()
+            }}>{"Update"}</button>}
+
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: Jar Recipe data format incorrect: " + err}</div>

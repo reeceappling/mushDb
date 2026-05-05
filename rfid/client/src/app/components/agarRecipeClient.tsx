@@ -1,6 +1,6 @@
 'use client'
 
-import {JSX, useEffect, useState} from "react";
+import React, {JSX, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
@@ -218,11 +218,11 @@ export default function AgarRecipeDisplay(
                 <TestAndValidate todos={["Put name at top????"]}>
                     <ID id={data._id} txt={"Agar Recipe"} entryType={"agarRecipe"}/>
                 </TestAndValidate>
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <NameArea currentName={name} setName={setName}
-                                  readonly={readonly}/>{/*TODO: Allow changing???*/}
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                                  readonly={readonly}/>{/*TODO: Allow changing??? Make this area longer!*/}
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
                         <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
@@ -231,26 +231,27 @@ export default function AgarRecipeDisplay(
                             <div>{"Agar g/L: "}</div>
                             <div>{initial.agar}</div>
                         </div>
+                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
 
 
-                <LiquidsArea initialValues={dataFor(initial.liquids)} readonly={true}/>{/* TODO: FIX THIS*/}
-                <NutrientsArea initialValues={dataFor(initial.nutrients)} readonly={true}/>{/* TODO: FIX THIS*/}
-                <SugarsArea initialValues={dataFor(initial.sugars)} readonly={true}/>{/* TODO: FIX THIS*/}
-                <AdditivesArea readonly={true} initialValues={dataFor(initial.additives)}/>
-                <AntibioticsDisplay antibiotics={initial.antibiotics}/>
+                <LiquidsArea initialValues={dataFor(initial.liquids)} readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
+                <NutrientsArea initialValues={dataFor(initial.nutrients)} readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
+                <SugarsArea initialValues={dataFor(initial.sugars)} readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
+                <AdditivesArea readonly={true} initialValues={dataFor(initial.additives)}/>{/* TODO: FIX AND REFORMAT THIS*/}
+                <AntibioticsDisplay antibiotics={initial.antibiotics}/>{/* TODO: FIX AND REFORMAT THIS*/}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
                 {/* TODO: fix the ADD A PROJECT area*/}
                 {readonly ? null :
-                    <input type="submit" value="Update" className={"bottomButton"} onClick={agarRecipeSubmit}
-                           onSubmit={(e) => {
-                               e.preventDefault();
-                           }}/>}
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                    <button className={"bottomButton greenButton"} onClick={(e)=>{
+                        e.stopPropagation();
+                        agarRecipeSubmit()
+                    }}>{"Update"}</button>}
+
             </DisplayFormWrapper>
         )
     } catch (err) {

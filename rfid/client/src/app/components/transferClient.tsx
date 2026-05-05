@@ -6,7 +6,7 @@ import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID, {IdPageLink} from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {TransferData} from "@/app/components/transferServer";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {ImageLocationFor} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {
@@ -23,12 +23,14 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {useQuery} from "@tanstack/react-query";
 import {SelectorFor} from "@/app/components/selector";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AclDisplay, IsValidAcl, MarshalAcl} from "@/app/components/accessControlClient";
+import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
+// TODO: list not working
+// TODO: ensure display is working and looks good
 
 export function AssertTransfer(input: any): asserts input is TransferData {
     if (typeof input !== 'object') {
@@ -168,10 +170,15 @@ export default function TransferDisplay(
             </FlexedArea>
             {fromToArea()}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-            <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
-            {readonly ? null : <div><input type="submit" value="Update" onClick={transferSubmit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/></div>}
+            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+            </TogglableAreaWithDepth>
+            {readonly ? null : <div>
+                <button className={"bottomButton greenButton"} onClick={(e) => {
+                    e.stopPropagation();
+                    transferSubmit()
+                }}>{"Update"}</button>
+            </div>}
             {/* TODO: unlikely to need: <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/> TODO: where to put?*/}
         </DisplayFormWrapper>
     } catch (err) {
@@ -179,18 +186,6 @@ export default function TransferDisplay(
     }
 }
 
-// export function NewTransferAreaGivenTo({idFrom, typeFrom, validTypesFrom, onTransferCreated}: {
-//     idFrom: string[],
-//     typeFrom: string[],
-//     validTypesFrom: string[],
-//     onTransferCreated: (xfer: TransferData) => void
-// }){
-//     // TODO: do this!
-//     // TODO: Use this!
-// }
-
-// TODO: ENSURE ALL NEW TRANSFERS ADOPT MOST STRINGENT PERMS AND ONLY WORKS IF THE USER CAN WRITE TO THE PARENT
-// TODO: ENSURE idFrom and typeFrom are PROPERLY ARRAYS
 export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cookies}: {
     idFrom: string,
     typeFrom: string,
@@ -206,7 +201,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
     const [notes, setNotes] = useState<Note[]>([])
     const [reason, setReason] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
-    const submitNewTransfer = () => { // TODO: CHANGE TO NEW FORMAT!!!!!
+    const submitNewTransfer = () => {
         if (!idFrom || idFrom === "") {
             setErr("ID From cannot be blank!")
             return
@@ -225,20 +220,128 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
             to: idTo,
             fromType: typeFrom,
             reason: reason,
-        }
-        if (notes !== undefined && notes.length > 0) {
-            dataObj.notes = notes
+            notes: notes,
         }
         formData.set('data', JSON.stringify(dataObj))
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         // Send request
-        console.log("sending multipart transfer request") // TODO: THIS!
         SendMultipartRequest(BaseExternalUrl + "/db/create/transfer", cookies, formData)
             .then(HandleJsonResponse)
             .then((newEntry) => {
                 AssertTransfer(newEntry)
-                console.log("returning new transfer entry to component for listing") // TODO: THIS!
+                onCreated && onCreated(newEntry)
+            })
+            .catch((er) => {
+                setErr(JSON.stringify(er))
+            });
+    }
+    const toggleOpen = () => {
+        setIsOpen(!isOpen)
+    }
+    if (!isOpen) {
+        return <div className={"pushToBottom"}>
+            <button className={"buttonFullWidth greenButton"} onClick={toggleOpen}>{"Create New Transfer"}</button>
+        </div>
+    }
+    const newTransferNotifArea = () => {
+        return <div>
+            <div>
+                <button className={"basicButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    toggleOpen();
+                }}>{"Close Transfer Creator"}</button>
+                {/* TODO: THIS THING??? */}
+            </div>
+        </div>
+    }
+    const xferImgArea = (txt: string, update: (f: File | undefined) => void, className: string) => {
+        return <div className={className}>
+            <div>{txt}</div>
+            <div>
+                <ImageSelector updateParent={update}/>
+            </div>
+        </div>
+    }
+
+    return <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling */}
+        {newTransferNotifArea()}
+        <ErrorDisplay err={err}/>
+        <div className={"newTransferRow3"}>
+            <div className={"reason-to"}>
+                <div>{"Transfer Reason: "}</div>
+                <TransferReasonSelector onSelect={setReason}/>
+            </div>
+            <div className={"id-to"}>
+                <MainCollectionInputOrRead onIdSelected={setIdTo} label={"ID TO: "}/>
+            </div>
+        </div>
+        <div className={"newTransferRow2"}>
+            {xferImgArea("Image from:", setPicFrom, "image-from")}
+            {xferImgArea("Image to:", setPicTo, "image-to")}
+        </div>
+        <div className={"new-xfer-notes gapTop"}>
+            <TestAndValidate todos={["notes should properly be populated"]}>
+                <NewEntryNotes setNotes={setNotes}/>
+            </TestAndValidate>
+        </div>
+        <div className={"newTransferRow5"}>
+            <div className={"submitNewXfer"}>
+                <button className={"greenButtonSmall"} onClick={() => {
+                    submitNewTransfer()
+                }}>{"Submit"}</button>
+            </div>
+            <div className={"cancelNewXfer"}>
+                <button className={"basicButtonSmall"} onClick={toggleOpen}>{"Cancel"}</button>
+            </div>
+        </div>
+    </NewEntryFormWrapper>
+}
+
+export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated, cookies}: {
+    idFrom: string,
+    typeFrom: string,
+    validTypesTo: string[],
+    onCreated: (xfer: TransferData) => void,
+    cookies: string,
+}) {
+    const [isOpen, setIsOpen] = useState(false)
+
+    const [idTo, setIdTo] = useState<string | undefined>()
+    const [picFrom, setPicFrom] = useState<File | undefined>()
+    const [picTo, setPicTo] = useState<File | undefined>()
+    const [notes, setNotes] = useState<Note[]>([])
+    const [reason, setReason] = useState<string | undefined>()
+    const [err, setErr] = useState<string | undefined>()
+    const submitNewTransfer = () => {
+        if (!idFrom || idFrom === "") {
+            setErr("ID From cannot be blank!")
+            return
+        }
+        if (!idTo || idTo === "") {
+            setErr("ID To cannot be blank!")
+            return
+        }
+        if (!reason || reason === "") {
+            setErr("reason cannot be blank!")
+            return
+        }
+        let formData = new FormData();
+        let dataObj: any = {
+            from: idFrom,
+            to: idTo,
+            fromType: typeFrom,
+            reason: reason,
+            notes: notes,
+        }
+        formData.set('data', JSON.stringify(dataObj))
+        picFrom && formData.set('picFrom', picFrom, 'picFrom')
+        picTo && formData.set('picTo', picTo, 'picTo')
+        // Send request
+        SendMultipartRequest(BaseExternalUrl + "/db/create/transfer", cookies, formData)
+            .then(HandleJsonResponse)
+            .then((newEntry) => {
+                AssertTransfer(newEntry)
                 onCreated && onCreated(newEntry)
             })
             .catch((er) => {
@@ -250,7 +353,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
     }
     if (!isOpen) {
         return <div>
-            <button className={"basicButtonSmall"} onClick={toggleOpen}>{"Create New Transfer"}</button>
+            <button className={"buttonFullWidth greenButton"} onClick={toggleOpen}>{"Create New Transfer"}</button>
         </div>
     }
     const newTransferNotifArea = () => {
@@ -270,38 +373,43 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
         </div>
     }
 
-    return <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling */}
-        <ErrorDisplay err={err}/>
+    return <>
         {newTransferNotifArea()}
-        {/* TODO: OVERHAUL THE TRANFER CREATOR TOP ROW */}
-        <div className={"newTransferRow3"}>
-            <div className={"reason-to"}>
-                <div>{"Transfer Reason: "}</div><TransferReasonSelector onSelect={setReason}/>
+        <></>
+        <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling */}
+            <ErrorDisplay err={err}/>
+
+            <div className={"newTransferRow3"}>
+                <div className={"reason-to"}>
+                    <div>{"Transfer Reason: "}</div>
+                    <TransferReasonSelector onSelect={setReason}/>
+                </div>
+                <div className={"id-to"}>
+                    <MainCollectionInputOrRead onIdSelected={setIdTo} label={"ID TO: "}/>
+                </div>
             </div>
-            <div className={"id-to"}>
-                <MainCollectionInputOrRead onIdSelected={setIdTo} label={"ID TO: "}/>
+            <div className={"newTransferRow2"}>
+                {xferImgArea("Image from:", setPicFrom, "image-from")}
+                {xferImgArea("Image to:", setPicTo, "image-to")}
             </div>
-        </div>
-        <div className={"newTransferRow2"}>
-            {xferImgArea("Image from:", setPicFrom, "image-from")}
-            {xferImgArea("Image to:", setPicTo, "image-to")}
-        </div>
-        <div className={"new-xfer-notes gapTop"}>
-            <TestAndValidate todos={["notes should properly be populated"]}>
-                <NewEntryNotes setNotes={setNotes}/>
-            </TestAndValidate>
-        </div>
-        <div className={"newTransferRow5"}>
-            <div className={"submitNewXfer"}>
-                <button onClick={() => {
-                    submitNewTransfer()
-                }}>{"Submit"}</button>
+            <div className={"new-xfer-notes gapTop"}>
+                <TestAndValidate todos={["notes should properly be populated"]}>
+                    <NewEntryNotes setNotes={setNotes}/>
+                </TestAndValidate>
             </div>
-            <div className={"cancelNewXfer"}>
-                <button onClick={toggleOpen}>{"Cancel"}</button>
+            <div className={"newTransferRow5"}>
+                <div className={"submitNewXfer"}>
+                    <button className={"greenButton buttonFullWidth"} onClick={(e) => {
+                        e.stopPropagation();
+                        submitNewTransfer()
+                    }}>{"Submit"}</button>
+                </div>
+                <div className={"cancelNewXfer"}>
+                    <button onClick={toggleOpen}>{"Cancel"}</button>
+                </div>
             </div>
-        </div>
-    </NewEntryFormWrapper>
+        </NewEntryFormWrapper>
+    </>
 }
 
 export function AddToTransfers(set: (s: string[]) => void, current: string[]) {
@@ -310,11 +418,9 @@ export function AddToTransfers(set: (s: string[]) => void, current: string[]) {
     }
 }
 
-// TODO: TRANSFERS OUT DISPLAY WITH MULTI-FROMs
-
-export function TransfersOutDisplay( // TODO: OVERHAUL!
+export function TransfersOutDisplay(
     {
-        thisId, // TODO: BINARY, RIGHT?
+        thisId,
         thisEntryType,
         transfersOut,
         allowNewTransferCreation,
@@ -330,6 +436,9 @@ export function TransfersOutDisplay( // TODO: OVERHAUL!
         validTypesTo?: string[],
         cookies: string,
     }) {
+    if (!allowNewTransferCreation) {
+        return <TransfersOutViewOnlyDisplay transfersOut={transfersOut} headerTxt={headerTxt}/>
+    }
     const depth = useContext(DepthContext)
     const validNewXferTypes = validTypesTo || ["bag", "jar", "lc", "plate", "slant", "stasisTube"]
     const [xfers, setXfers] = useState<string[]>(transfersOut || [])
@@ -340,31 +449,78 @@ export function TransfersOutDisplay( // TODO: OVERHAUL!
         setXfers(spreadXfers)
         setNewXfers([])
     }, [transfersOut])
-    if (resultsHidden){
-        return <div className={"centerH"}><button onClick={()=>{setResultsHidden(!resultsHidden)}}>{"Show Transfers"}</button></div>
+    if (resultsHidden) {
+        return <div className={"centerH"}>
+            <button className={"basicButtonSmall"} onClick={() => {
+                setResultsHidden(!resultsHidden)
+            }}>{"Show Transfers"}</button>
+        </div>
     }
 
     return <DepthProvider>
         <div className={"subForm transfersOutForm depth" + depth}>
-            {headerTxt && <div className={"centerH"}>{headerTxt}</div>}
-            <div className={"centerH"}><button onClick={()=>{setResultsHidden(true)}}>{"Hide Transfers"}</button></div>
-            {!resultsHidden && <div className={"transfersOutFlex"}>{/* TODO: ensure closeable! Also split up the old and new transfers */}
-                {newXfers.concat(xfers)?.map((xfer) => { // TODO: FLEXBOX? Ensure concat is ok here
-                    return <EntryLinkWrapper props={{
-                        linkId: xfer,
-                        entryType: "transfer",
-                        openInNewTab: false, // TODO: ok?
-                    }}>{xfer}</EntryLinkWrapper> // TODO: wrap div if needed
-                })}
-            </div>}
+            {headerTxt && <div className={"transferHeader"}><div className={"text-xl"}>{headerTxt}</div></div>}
+            <div className={"transfersGrid"}>{/*</div>}*/}
+                <div className={"centerH"}>
+                    <button className={"basicButtonSmall"} onClick={() => {
+                        setResultsHidden(true)
+                    }}>{"Hide Transfers"}</button>
+                </div>
+                <div>{/* Placeholder for header*/}</div>
+                <div>
+                    <div>{"Existing:"}</div>
+                    {!resultsHidden && <div>{/* TODO: classes?*/}
+                        {xfers.map((xfer, i) => { // TODO: FLEXBOX?
+                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
+                                linkId: xfer,
+                                entryType: "transfer",
+                                openInNewTab: false, // TODO: ok?
+                            }}>{xfer}</EntryLinkWrapper></div>
+                        })}
+                        {newXfers.map((xfer, i) => { // TODO: FLEXBOX?
+                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
+                                linkId: xfer,
+                                entryType: "transfer",
+                                openInNewTab: false, // TODO: ok?
+                            }}>{xfer}</EntryLinkWrapper></div>
+                        })}
+                    </div>}
+                </div>
 
-            <div className={"centerH"}>
-                {allowNewTransferCreation &&
-                    <NewTransferArea idFrom={thisId} typeFrom={thisEntryType} validTypesTo={validNewXferTypes}
-                                     onCreated={(newXfer: TransferData) => {
-                                         setNewXfers([...newXfers, newXfer._id])
-                                     }} cookies={cookies}/>}
+                <div id={"transferCreator"} className={"mt-2"}>{/* TODO: make button float to bottom???? */}
+                    {allowNewTransferCreation &&
+                        <NewTransferArea idFrom={thisId} typeFrom={thisEntryType} validTypesTo={validNewXferTypes}
+                                         onCreated={(newXfer: TransferData) => {
+                                             setNewXfers([...newXfers, newXfer._id])
+                                         }} cookies={cookies}/>}
+                </div>
             </div>
+        </div>
+    </DepthProvider>
+}
+
+export function TransfersOutViewOnlyDisplay(
+    {
+        transfersOut,
+        headerTxt,
+    }: {
+        transfersOut?: string[],
+        headerTxt?: string,
+    }) {
+    const depth = useContext(DepthContext)
+    if (!transfersOut){
+        return null
+    }
+    return <DepthProvider>
+        {headerTxt && <div className={"transferHeader"}><div className={"text-xl"}>{headerTxt}</div></div>}
+        <div className={"transfersOutViewOnlyForm depth" + depth}>
+            {transfersOut.map((xfer, i) => { // TODO: FLEXBOX for inline?
+                return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
+                    linkId: xfer,
+                    entryType: "transfer",
+                    openInNewTab: false, // TODO: ok?
+                }}>{xfer}</EntryLinkWrapper></div>
+            })}
         </div>
     </DepthProvider>
 }
@@ -379,7 +535,7 @@ export function InnocDisplay(
         <IdPageLink id={innoc} entryType={"transfer"}/>
     return <div className={"innocDisplay"}>
         <div>{"Innoculation ID: "}</div>
-        <div>{out||"none"}</div>
+        <div>{out || "none"}</div>
     </div>
 }
 
@@ -389,7 +545,7 @@ export function TransferReasonSelector(
         onSelect?: (ab?: string) => void
     }) {
     const {isPending, error, data} = useQuery({
-        queryKey: ['transferReasonOptions'], // TODO: FIX THIS!!!!!
+        queryKey: ['transferReasonOptions'],
         queryFn: () => {
             // TODO: delete lines before fetch for the real server
             const map = new Map<string, string>();
@@ -408,8 +564,6 @@ export function TransferReasonSelector(
     if (isPending || error !== null) {
         return <div>{isPending ? "TRANSFER REASON SELECTOR LOADING" : "TRANSFER REASON SELECTOR ERROR: " + error.message}</div>
     }
-    // TODO: Does this selector need more depth???
-    // TODO: maybe do selector a little differently because this one is a map?
     return <SelectorFor disabled={onSelect === undefined} options={["", ...data.keys()]} initial={current || ""}
                         updateParent={(s) => {
                             if (s === "") {
@@ -429,12 +583,3 @@ function convertObjectToStringMap(obj: { [key: string]: string }): Map<string, s
     }
     return map;
 }
-
-// TODO: fix!
-// export function TransferListDisplay({data, onClick}: SingleListProps<TransferData>) {
-//     return <div>
-//         {data.map((b,i)=>{
-//             return <TransferInline data={b} onClick={()=>{onClick(b)}} key={i}/>
-//         })}
-//     </div>
-// }

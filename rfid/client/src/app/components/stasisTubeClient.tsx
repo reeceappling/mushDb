@@ -34,19 +34,18 @@ import {
 import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {
-    DisposedDisplay, ErrorDisplay,
-    GensInlineDisplay, GensFormDisplay, MostRecentImageDisplay, OpenMainPage,
+    ErrorDisplay,
+    GensInlineDisplay, GensFormDisplay, MostRecentImageDisplay,
     ParentDisplay,
     PicsDisplay,
-    SpeciesArea, SpeciesSubspeciesFormArea, SubspeciesArea
+    SpeciesArea, SubspeciesArea
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     ContaminationForm, ContamsDisplay, InitialContamState, InitialNotesState, IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
 import {StasisTubeData} from "@/app/components/stasisTubeServer";
-import {OnViewCreatorsQuadColArea, OnViewCreatorsTriColArea, PcRunArea} from "@/app/components/pcRunClient";
+import {OnViewCreatorsQuadColArea, PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -54,8 +53,7 @@ import {SaleArea} from "@/app/components/saleClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {useCookies} from "react-cookie";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {SlantData} from "@/app/components/slantServer";
 import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
@@ -63,6 +61,7 @@ import {OvcForXfers} from "@/app/components/bagClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
@@ -257,6 +256,7 @@ export default function StasisTubeDisplay(
             <DisplayFormWrapper entryType={"stasisTube"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={data._id} txt={"Stasis Tube"} entryType={"stasisTube"}/>
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} />
                 <FlexedArea>
                     <FlexedSinglesGroup>
@@ -272,20 +272,23 @@ export default function StasisTubeDisplay(
 
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
-                        <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies} />
+                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                        {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies} />*/}
                         <InnocDisplay innoc={initial.innoc} openInNewTab={false}/>
                         <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut} validTypesTo={["plate","stasisTube","jar"/* TODO: ANYMORE????*/]} cookies={cookies}/>
+                <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut} validTypesTo={["plate","stasisTube","jar"/* TODO: ANYMORE????*/]} cookies={cookies} headerTxt={"Transfers"}/>
                 <PicsDisplay pix={images} updateParent={setImages} readonly={readonly} headerLevel={headerLevel} />{/* Pics */}
                 <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
-                {readonly ? null : <input type="submit" value="Update" onClick={stasisTubeSubmit} onSubmit={(e)=>{e.preventDefault();}}/>}
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    stasisTubeSubmit()
+                }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
     } catch (err) {

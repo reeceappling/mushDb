@@ -1,3 +1,4 @@
+'use client'
 import {ReactNode} from "react";
 
 export default function H({level, offset, children}: { level?: number, offset?: number, children: ReactNode}){

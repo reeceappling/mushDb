@@ -1,6 +1,6 @@
 'use client'
 
-import {useState} from "react";
+import React, {useState} from "react";
 import NotesArea, {NotesAreaOld, IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -41,7 +41,7 @@ import {
     MostRecentImageDisplay,
     ParentDisplay,
     PicsDisplay,
-    SpeciesArea, SpeciesSubspeciesFormArea,
+    SpeciesArea,
     SubspeciesArea
 } from "@/app/components/formSubcomponents/commonClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
@@ -77,6 +77,7 @@ import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
@@ -270,7 +271,8 @@ export default function FruitingChamberDisplay( // TODO: REDO WHOLE SECTION!
                                             headerLevel={headerLevel}/>{/* Gens since spore and spore/fruit*/}
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
-                        <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>
+                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                        {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                         <InnocDisplay innoc={initial.innoc} openInNewTab={false}/>{/* Innoc */}
                         <ParentDisplay parent={initial.parent} parentType={initial.parentType}
                                        headerLevel={headerLevel}/>{/* Parent */}
@@ -298,9 +300,10 @@ export default function FruitingChamberDisplay( // TODO: REDO WHOLE SECTION!
                 </TogglableAreaWithDepth>
                 {/*<EntryPermsArea originalPerms={initial.perms} setEntryPerms={setPerms}/>*/}
                 {readonly ? null :
-                    <input type="submit" value="Update" onClick={fruitingChamberSubmit} onSubmit={(e) => {
-                        e.preventDefault();
-                    }}/>}
+                    <button className={"bottomButton greenButton"} onClick={(e)=>{
+                        e.stopPropagation();
+                        fruitingChamberSubmit()
+                    }}>{"Update"}</button>}
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
             </DisplayFormWrapper>
         )

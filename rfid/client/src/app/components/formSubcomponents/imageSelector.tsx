@@ -29,18 +29,18 @@ export default function ImageSelector({updateParent, buttonText}:{buttonText?:st
             return
         }
     }
-    return <TestAndValidate todos={["ensure working"]}><div className={"imageSelector picLeft"}>
+    return <div className={"imageSelector picLeft"}>
         {file !== undefined && <div className={"preview"}> {/* TODO: FIX SIZE!*/}
             <img className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>
         </div>}
         <div className={"centerH"}>
-            <button onClick={() => {
+            <button className={"basicButtonSmall"} onClick={() => {
                 if (inputElement) {
-                    inputElement.click(); // TODO: ENSURE OK
+                    inputElement.click();
                 }
             }}>{buttonText || "Choose File"}</button>
             <input className="hidden" type="file" ref={setInputRef} accept="image/*;capture=camera" capture="user"
                    onChange={handleImageSelected}/>
         </div>
-    </div></TestAndValidate>
+    </div>
 }

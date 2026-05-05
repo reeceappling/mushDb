@@ -26,8 +26,8 @@ import ID from "@/app/components/formSubcomponents/id";
 import {
     ErrorDisplay,
     GensInlineDisplay, GensFormDisplay,
-    MostRecentImageDisplay, OpenMainPage, ParentDisplay, PicsDisplay,
-    SpeciesArea, SpeciesSubspeciesFormArea,
+    MostRecentImageDisplay, ParentDisplay, PicsDisplay,
+    SpeciesArea,
     SubspeciesArea
 } from "@/app/components/formSubcomponents/commonClient";
 import {JarRecipeArea, JarRecipeSelector} from "@/app/components/jarRecipeClient";
@@ -75,6 +75,7 @@ import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@
 import {InlineEntry} from "@/app/components/agarRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -343,7 +344,8 @@ export default function JarDisplay(
                     {jarSizeArea()}
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies} />
+                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies} />*/}
                     <JarRecipeArea headerLevel={headerLevel} recipeId={initial.recipe}/>
                     <PcRunArea binaryId={initial.pcRun} headerLevel={headerLevel}/>
 
@@ -361,16 +363,17 @@ export default function JarDisplay(
 
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"jar"} transfersOut={transfersOut} allowNewTransferCreation={!readonly} cookies={cookies}/>
             <PicsDisplay pix={pics} readonly={readonly} updateParent={setPics}/>
-            <TestAndValidate todos={["toggle for confirmed"]}>
-                <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
-            </TestAndValidate>
+            <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
 
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
             {readonly ? null : <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />}
-            {readonly ? null : <input type="submit" value="Update" onClick={submit} onSubmit={(e)=>{e.preventDefault();}}/>}
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                e.stopPropagation();
+                submit()
+            }}>{"Update"}</button>}
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
         </DisplayFormWrapper>
     } catch (err) {

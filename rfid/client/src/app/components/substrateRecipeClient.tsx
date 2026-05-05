@@ -159,27 +159,29 @@ export default function SubstrateRecipeDisplay(
                 <TestAndValidate todos={["Put name at top????"]}>
                     <ID id={data._id} txt={"Substrate Recipe"} entryType={"substrateRecipe"}/>
                 </TestAndValidate>
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/*TODO: CONSIDER MOVING THIS!*/}
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <NameArea currentName={name} setName={setName} readonly={readonly} headerLevel={headerLevel}/>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
                         <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
                                       headerLevel={headerLevel}/>
+                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
 
-                <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases} headerLevel={headerLevel}/>
+                <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases} headerLevel={headerLevel}/>{/* TODO: if empty do not display*/}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
                                         closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly ? null : <input type="submit" value="Update" onClick={substrateSubmit} onSubmit={(e) => {
-                    e.preventDefault();
-                }}/>}
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/*TODO: CONSIDER MOVING THIS!*/}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    substrateSubmit()
+                }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
     } catch (err) {

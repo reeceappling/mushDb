@@ -15,12 +15,12 @@ import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWrite
 import {
     DisposedDisplay,
     ErrorDisplay,
-    OpenMainPage, ParentDisplay,
-    SpeciesArea, SpeciesSubspeciesFormArea,
+    ParentDisplay,
+    SpeciesArea,
     SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import EntryLink from "@/app/components/formSubcomponents/entryLink";
-import NotesAreaOld, {
+import {
     IsValidNote, NewEntryNotes,
     Note,
     NotesAreaInline
@@ -31,9 +31,9 @@ import {MssData} from "@/app/components/mssServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {AddToTransfers, TransfersOutDisplay} from "@/app/components/transferClient";
+import {TransfersOutDisplay} from "@/app/components/transferClient";
 import {SaleArea} from "@/app/components/saleClient";
-import {AllEntries, Data, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
@@ -42,12 +42,13 @@ import {WaterJarData} from "@/app/components/waterJarServer";
 import {SporePrintRecentSelector} from "@/app/components/sporePrintClient";
 import {WaterJarRecentSelector} from "@/app/components/waterJarClient";
 import {LatestListDisplay} from "@/app/components/clientGeneric";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {InlineEntry} from "@/app/components/agarRecipeClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import NotesArea from "@/app/components/formSubcomponents/notes";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
 export function AssertMss(input: any): asserts input is MssData {
     if (typeof input !== 'object') {
@@ -233,13 +234,15 @@ export default function MssDisplay(
             {/* TODO: TITLE? */}
             <ErrorDisplay err={err} headerLevel={headerLevel} />
             <ID id={data._id} txt={"Multispore Syringe"} entryType={"mss"} />
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
                     <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel} canCreateSale={true}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>
+                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                     <ParentDisplay parent={data.parent} parentType={"sporePrint"} headerLevel={headerLevel} />{/* TODO: can this be spore swab????*/}
                 </FlexedSinglesGroup>
             </FlexedArea>
@@ -249,8 +252,10 @@ export default function MssDisplay(
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
             {readonly ? null : <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>/* TODO: ok?*/}
-            {readonly ? null : <input type="submit" value="Update" onClick={mssSubmit} onSubmit={(e)=>{e.preventDefault();}}/>}
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                e.stopPropagation();
+                mssSubmit()
+            }}>{"Update"}</button>}
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: MuliSpore Syringe data format incorrect: " + err}</div>

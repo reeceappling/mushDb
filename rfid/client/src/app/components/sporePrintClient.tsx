@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     InlineSubArea,
@@ -16,7 +16,6 @@ import {
     OptionalKey,
     HandleTxtResponse,
     HandleJsonResponse,
-    SingleListProps,
     SendMultipartRequest,
     setFormData, InlineExpansionButton
 } from "@/app/components/common";
@@ -24,18 +23,16 @@ import {
     DisposedDisplay,
     ErrorDisplay,
     MostRecentImageDisplay,
-    OpenMainPage,
-    PicsDisplay, SpeciesArea, SpeciesSubspeciesFormArea, SporePrintColorArea, SporePrintDensityArea, SubspeciesArea,
+    PicsDisplay, SpeciesArea, SporePrintColorArea, SporePrintDensityArea, SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     InitialPicsEntries,
     IsValidPicWithNotesIncoming,
     NewPicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
-import NotesAreaOld, {
+import {
     IsValidNote, NewEntryNotes,
     Note,
-    NoteEntriesGroup,
     NotesAreaInline
 } from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
@@ -55,24 +52,20 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {redirect} from "next/navigation";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {useCookies} from "react-cookie";
 import {NewMssForm, RecentSelectorV2} from "@/app/components/mssClient";
-import TestAndValidate from "@/app/components/testing/untested";
-import {FruitData, FruitSelector} from "@/app/components/fruitServer";
+import {FruitData} from "@/app/components/fruitServer";
 import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {OnViewCreatorsQuadColArea, OnViewCreatorsTriColArea, QuadColLastCol} from "@/app/components/pcRunClient";
+import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {FruitRecentSelector} from "@/app/components/fruitClient";
-import {OvcForNewFruit, OvcForXfers} from "@/app/components/bagClient";
-import {AddToTransfers, NewTransferArea} from "@/app/components/transferClient";
-import {TransferData} from "@/app/components/transferServer";
 import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {MssData} from "@/app/components/mssServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -301,7 +294,7 @@ export default function SporePrintDisplay(
                     <DisposedDisplay readonly={false} disposed={disposed} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>
+                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
                     <div>
                         <div>{"Parent: "}</div>
                         {data.parent?
@@ -321,7 +314,10 @@ export default function SporePrintDisplay(
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
-            {readonly ? null : <input type="submit" value="Update" onClick={submit} onSubmit={(e)=>{e.preventDefault();}}/>}
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                e.stopPropagation();
+                submit()
+            }}>{"Update"}</button>}
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: Spore print data format incorrect: " + err}</div>

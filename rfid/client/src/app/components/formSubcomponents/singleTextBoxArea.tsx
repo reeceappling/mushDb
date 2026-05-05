@@ -1,6 +1,7 @@
 import {ChangeEvent, useState} from "react";
 import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import * as React from "react";
+import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 
 export default function TextBoxArea(props: AreaProps<string>){
     return FormListArea(StringEntriesGroup)(props)
@@ -69,7 +70,10 @@ function StringEntriesGroup({initialEntries, preexisting, readonly, updateParent
                     {/* TODO: INPUT TAG */}
                     <input name='txt' value={input.data} onChange={event => handleFormChangeText(index, event)} readOnly={readonly} /> {/* TODO: CHANGE INPUT NAME? */}
                     {readonly ? null :
-                        <button className={input.disabled?"removeButton":"basicButton"} onClick={()=>{preexisting?disableField(index)():removeFields(index)()}}>{preexisting ? (input.disabled?"enable":"disable") : "remove"}</button>}
+                        <button className={input.disabled?"removeButton":"basicButton"} onClick={(e)=>{
+                            e.stopPropagation();
+                            preexisting?disableField(index)():removeFields(index)()
+                        }}>{preexisting ? (input.disabled?"enable":"disable") : "remove"}</button>}
                 </div>)
         })}
         {preexisting ? null : <button className={"basicButton"} onClick={addFields}>{"Add More.."}</button>}

@@ -47,6 +47,20 @@ import TestAndValidate from "@/app/components/testing/untested";
 //     }}>{props.children}</div>
 // }
 
+export function RemoveToggle({disabled,click,keptClass,removedClass,keptTxt,removedTxt}:{disabled:boolean,click:()=>void,keptClass:string,removedClass?:string,keptTxt:string,removedTxt?:string}){
+    return <button className={disabled ? removedClass:keptClass}
+                   onClick={(e)=>{
+                       e.stopPropagation();
+                       click();
+                   }}>{disabled ? removedTxt : keptTxt}</button>
+}
+export function RemoveButton({txt,click}:{click:()=>void,txt:string}){
+    return <button className={"removeButtonSmall"} onClick={(e)=>{
+        e.stopPropagation();
+        click();
+    }}>{txt}</button>
+}
+
 
 export function LiquidEntryForNew({currentValue, updateParent, key}: {
     currentValue: Liquid,
@@ -437,18 +451,15 @@ export function MostRecentImageDisplay(
     const mostRecentImageHeader = headerTxt || "Image Upload Date: "
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <TestAndValidate todos={["reformat. Notes should be to the right"]}>
         <div className={"mriParent depthContainer depth"+depth}>
             <div>
                 <img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>
             </div>
             <div className={"mriInfoHolder"}>
-            {/*<div className={"mriInfoHolder"}>*/}
                 <DateArea pre={(showHeader ? mostRecentImageHeader : undefined)} when={data.time} readonly={true}/>
                 <NotesAreaMostRecentImage readonly={true} current={{existing: dataFor(data.notes), new: []}}/>
             </div>
         </div>
-        </TestAndValidate>
     </DepthProvider>
 }
 
@@ -484,22 +495,22 @@ export const SpeciesArea = (
     </div>
 }
 
-export function SpeciesFormArea({species}:{
-    species?: string,
-}){
-    return <div>
-        {"Species: "+(species?species:"undefined")}{/* TODO: LINK!?*/}
-    </div>
-}
-export function SpeciesSubspeciesFormArea({species,subspecies}:{
-    species?: string,
-    subspecies?: string,
-}){
-    return <>
-        <SpeciesFormArea species={species}/>
-        {subspecies && <SubspeciesFormArea subspecies={subspecies}/>}
-    </>
-}
+// export function SpeciesFormArea({species}:{
+//     species?: string,
+// }){
+//     return <div>
+//         {"Species: "+(species?species:"undefined")}{/* TODO: LINK!?*/}
+//     </div>
+// }
+// export function SpeciesSubspeciesFormArea({species,subspecies}:{
+//     species?: string,
+//     subspecies?: string,
+// }){
+//     return <>
+//         <SpeciesFormArea species={species}/>
+//         {subspecies && <SubspeciesFormArea subspecies={subspecies}/>}
+//     </>
+// }
 
 export const SubspeciesArea = (
     {
@@ -676,16 +687,17 @@ export function DisposedDisplay(
 }
 
 export const ErrorDisplay = ({ // TODO: USE
-                                 err, headerLevel, offset
+                                 err, headerLevel, offset,classNames
                              }: {
     err?: string
     headerLevel?: number // TODO: REMOVE
     offset?: number // TODO: REMOVE?
+    classNames?: string
 }) => {
     if (err === undefined) {
         return null
     }
-    return <div className={"Error centerH"}>
+    return <div className={"Error centerH"+(classNames?" "+classNames:"")}>
         <p>{err}</p>
     </div>
 }
@@ -793,6 +805,9 @@ export function AliasesArea(
         updateParent?: (s: string[]) => void
     }) {
     if (readonly) {
+        if (!aliases) {
+            return null
+        }
         return <div>
             <div>{"Aliases :"}</div>
             {(aliases || []).map((a, i) => {

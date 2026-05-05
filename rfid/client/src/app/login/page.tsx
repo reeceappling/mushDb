@@ -1,7 +1,8 @@
 import React, {Suspense} from "react";
 import PageWrapper from "@/app/components/clientGeneric";
 import AuthArea from "@/app/components/authClient";
-import {CookiesProvider} from "react-cookie";
+// import {CookiesProvider} from "react-cookie";
+
 export default async function Page({
                                        params,
                                    }: {

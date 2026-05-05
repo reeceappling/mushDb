@@ -257,6 +257,7 @@ export default function SlantDisplay(
             <DisplayFormWrapper entryType={"slant"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={data._id} txt={"Slant"} entryType={"slant"} />
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
@@ -292,8 +293,11 @@ export default function SlantDisplay(
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
                 <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                {readonly ? null : <input type="submit" value="Update" onClick={slantSubmit} onSubmit={(e)=>{e.preventDefault();}}/>}
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    slantSubmit()
+                }}>{"Update"}</button>}
+
             </DisplayFormWrapper>
         )
     } catch (err) {

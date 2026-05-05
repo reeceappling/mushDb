@@ -147,6 +147,7 @@ export default function SubstrateBatchDisplay(
             <DisplayFormWrapper entryType={"substrateBatch"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={data._id} txt={"Substrate Batch"} entryType={"substrateBatch"}/>
+                <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>{/* TODO: MOVE?*/}
                 <FlexedArea>
                     <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
                         <DateArea pre={"Creation Date: "} when={initial.creationDate} readonly={true}/>
@@ -161,10 +162,10 @@ export default function SubstrateBatchDisplay(
                                         closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly ? null : <input type="submit" value="Update" onClick={substrateSubmit} onSubmit={(e) => {
-                    e.preventDefault();
-                }}/>}
-                <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>{/* TODO: MOVE?*/}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    substrateSubmit()
+                }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
     } catch (err) {
@@ -232,9 +233,10 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
             </TestAndValidate>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
-            <input type="submit" value="Update" onClick={submit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>
+            <button className={"bottomButton greenButton"} onClick={(e)=>{
+                e.stopPropagation();
+                submit()
+            }}>{"Update"}</button>
         </NewEntryFormWrapper>
     )
 }

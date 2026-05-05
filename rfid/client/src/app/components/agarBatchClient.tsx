@@ -1,6 +1,6 @@
 'use client'
 
-import {JSX, useEffect, useState} from "react";
+import React, {JSX, useEffect, useState} from "react";
 import {useQuery,} from '@tanstack/react-query'
 import NotesArea, {NotesAreaOld, IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
@@ -163,7 +163,12 @@ export default function AgarBatchDisplay(
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
 
-                {readonly ? null : <button className={"bottomButton basicButton"} onClick={agarBatchSubmit}>{"Update"}</button>}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    agarBatchSubmit()
+                }}>{"Update"}</button>}
+                {/* TODO: styling for onViewCreators!!!!*/}
+                {/* TODO: REFORMAT ALL LIST PAGES!!!!*/}
                 <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
             </DisplayFormWrapper>
         )

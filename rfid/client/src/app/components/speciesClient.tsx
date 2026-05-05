@@ -35,6 +35,8 @@ import {DisplayFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InlineEntry} from "@/app/components/agarRecipeClient";
+// TODO: list page not working
 
 export function AssertSpecies(input: any): asserts input is SpeciesData {
     if (typeof input !== 'object') {
@@ -142,16 +144,18 @@ export default function SpeciesDisplay(
                 </FlexedArea>
                 <AliasesArea aliases={aliases} readonly={readonly} updateParent={setAliases} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <TestAndValidate todos={["ONLY ONE ACL, ONE DEFAULT ACL","ENSURE MODIFYING ACLS WORKS AS NEEDED"]}>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view default ACL"} closeTxt={"minimize default ACL area"}>
                     <DefaultAclDisplay readonly={readonly} ACL={defaultAcl} updateParent={setDefaultAcl}/>
                 </TogglableAreaWithDepth>
-                </TestAndValidate>
+                {/* TODO: view subspecies???? */}
 
-                {readonly ? null : <input type="submit" value="Update" onClick={update} onSubmit={(e)=>{e.preventDefault();}}/>}
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    e.stopPropagation();
+                    update()
+                }}>{"Update"}</button>}
                 {/* TODO: ? <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>*/}
             </DisplayFormWrapper>
         )
@@ -221,7 +225,7 @@ export function NewSpeciesForm(
 
 export function SpeciesInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SpeciesData>) {
     const [expanded, setExpanded] = useState(expandByDefault)
-    return <div className={"fullWidth"}>
+    return <InlineEntry  onClick={onClick}>
         <InlineSubArea props={{}}>
             <TestAndValidate todos={["BOLD THIS SO THAT WE KNOW TO CLICK IT"]}>
                 <ID id={data._id} txt={"Species"} entryType={"species"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
@@ -235,7 +239,7 @@ export function SpeciesInline({data, expandByDefault, onClick, showMainPageButto
             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true} />
         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
                                expanded={expanded}/>
-    </div>
+    </InlineEntry>
 }
 
 export function ExistingSpeciesSelector(
