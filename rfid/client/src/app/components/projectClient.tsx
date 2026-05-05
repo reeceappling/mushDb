@@ -177,7 +177,9 @@ export default function ProjectDisplay(
                     </FlexedSinglesGroup>
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <TestAndValidate todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
+                <TestAndValidate todos={[
+                    "setting a user to view only and updating will remove the user from the project :(",
+                "allow users to be removed!"]}>{/* TODO: THIS*/}
                     <ProjectPermsArea perms={perms} setPerms={setPerms} readonly={readonly}/> {/* TODO: HEAVILY TEST! Also ensure this is properly covered on the go side!*/}
                 </TestAndValidate>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{

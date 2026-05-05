@@ -137,7 +137,7 @@ export default async function Page({
                     return res.text().then(txt => {
                         throw new Error("response not ok: " + txt)
                     }).catch(err => {
-                        throw new Error("response not ok and failed to decode: ")
+                        throw new Error("response not ok and failed to decode: "+JSON.stringify(err));
                     })
                 }
                 console.log("got response")

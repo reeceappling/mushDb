@@ -174,7 +174,7 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
             case "projects": // TODO: check
                 AssertArrayResult<ProjectData>(inpData, AssertProject)
                 return <ProjectListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/sale/" + encodeURI(v._id))}
+                    window.location.assign(BaseExternalUrl + "/view/project/" + encodeURI(v._id))}
                 } />
             case "sales":
                 AssertArrayResult<SaleData>(inpData, AssertSale)

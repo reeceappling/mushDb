@@ -81,9 +81,18 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 		}
 		perm, exists := project.Perms[u.Email]
 		if !exists {
-			// TODO: ERROR?
+			return out, errors.New("user not on project")
 		} else {
-			userProjPerms[project.Name] = perm
+			switch perm {
+			case "admin":
+				userProjPerms[project.Name] = utils.Pointer(true)
+			case "write":
+				userProjPerms[project.Name] = utils.Pointer(false)
+			case "read":
+				userProjPerms[project.Name] = nil
+			default:
+				return out, errors.New("invalid user perm on project: " + perm)
+			}
 		}
 	}
 	if err = cursor.Err(); err != nil {
