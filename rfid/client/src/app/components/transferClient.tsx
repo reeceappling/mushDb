@@ -11,7 +11,7 @@ import {ImageLocationFor} from "@/app/components/formSubcomponents/picWithNotes"
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {
     DisplayInput,
-    HandleJsonResponse,
+    HandleJsonResponse, ListPageItems,
     MainCollectionInputOrRead,
     OptionalArrayOfType,
     OptionalKey,
@@ -26,9 +26,16 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
+import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -582,4 +589,29 @@ function convertObjectToStringMap(obj: { [key: string]: string }): Map<string, s
         }
     }
     return map;
+}
+
+export function TransferListPageTable({data, onClick}: ListPageItems<TransferData>) {
+    const cols: ListTableColumn<TransferData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Date", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Src", (v)=>{
+            return <EntryLinkWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
+                <div>{v.from}</div>
+            </EntryLinkWrapper>
+        }),
+        NewColumn("Dst", (v)=>{
+            return <EntryLinkWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
+                <div>{v.to}</div>
+            </EntryLinkWrapper>
+        }),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+        NewColumn("Reason", v=>v.reason),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

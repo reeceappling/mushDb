@@ -3,9 +3,10 @@ import {SelectorProps} from "@/app/components/selector";
 import {ProjectPerms} from "@/app/components/perms";
 
 export function TestProjectOk(){
-    let perms = new Map<string, boolean>();
-    perms.set("USERNAME 1", true)
-    perms.set("USERNAME 2", false)
+    let perms = new Map<string, string>();
+    perms.set("USERNAME 1", "admin")
+    perms.set("USERNAME 2", "write")
+    perms.set("USERNAME 3", "read")
     const a: ProjectData = {
         _id: "(PROJECT NAME HERE)",
         creationDate: 123,
@@ -29,7 +30,7 @@ export type ProjectData = {
     completed?: number
     notes?: Note[]
     lastUpdated: number
-    perms: Map<string, boolean | undefined> // Map of userId to canWrite // TODO: consider changing from bool to "read/write/admin" if serialization of mapped undefineds gets weird...
+    perms?: Map<string, string> // Map of userId to canWrite // TODO: consider changing from bool to "read/write/admin" if serialization of mapped undefineds gets weird...
 }
 
 // Confirmed to be working without going to get data
@@ -37,7 +38,7 @@ export function ProjectSelector(sp: SelectorProps<ProjectData>){
     // TODO: FIX THIS?
     return <select className={"tailwindSelector"} onChange={e => { // TODO: DISABLE THIS RETURN!
         // TODO: FIX NEXT LINE
-        sp.doSelect({_id: e.currentTarget.value, creationDate: 0, lastUpdated: 0, perms: new Map<string, boolean>()})
+        sp.doSelect({_id: e.currentTarget.value, creationDate: 0, lastUpdated: 0, perms: new Map<string, string>()})
     }}>
         <option value={"A"}>{"A"}</option>
         <option value={"B"}>{"B"}</option>

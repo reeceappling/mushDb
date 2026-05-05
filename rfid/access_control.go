@@ -298,7 +298,7 @@ func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permiss
 }
 
 // TODO: change to "admin/read/write" ?
-type ProjectPerms map[string]*bool // TODO: USE // map of email to perm. nil is readOnly, false is write but not edit the project, true is full control over project
+type ProjectPerms map[string]string // TODO: USE // map of email to perm. nil is readOnly, false is write but not edit the project, true is full control over project
 
 func (pp ProjectPerms) Equal(other ProjectPerms) bool {
 	if len(pp) != len(other) {
@@ -309,15 +309,7 @@ func (pp ProjectPerms) Equal(other ProjectPerms) bool {
 		if !exists {
 			return false
 		}
-		if permA == nil {
-			if permB != nil {
-				return false
-			}
-		} else {
-			if permB == nil || *permA != *permB {
-				return false
-			}
-		}
+		return permA == permB
 	}
 	return true
 }

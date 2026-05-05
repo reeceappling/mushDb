@@ -104,19 +104,17 @@ export function IsValidAcl(input: any): boolean {
 }
 
 // TODO: validate ok
-export function IsStringMapToBoolOrUndef(data: any): data is Record<string, boolean | undefined> {
+export function IsStringMapToString(data: any): data is Record<string, boolean | undefined> {
     // 1. Check if the input is an object and not null.
-    if (typeof data !== 'object' || data === null || data === undefined) {
+    if (typeof data !== 'object') {
         return false;
     }
 
     // 2. Iterate over all keys of the object.
     for (const key in data) {
         if (Object.prototype.hasOwnProperty.call(data, key)) {
-            // In JavaScript, object keys are always strings.
-            // We only need to check the type of each value.
-            if (!(typeof data[key] === 'boolean' || typeof data[key] === 'undefined')) {
-                // If any value is not a boolean, it fails the check.
+            if (typeof data[key] !== 'string') {
+                console.log("typeof entry: "+typeof data[key]) // TODO: delete
                 return false;
             }
         }

@@ -16,8 +16,8 @@ import {
     HeaderLevel,
     InlineExpansionArea, InlineExpansionButton,
     InlineProps,
-    InlineSubArea, NewEntryInput,
-    OptionalArrayOfType,
+    InlineSubArea, ListPageItems, NewEntryInput,
+    OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey, RequiredKey
 } from "@/app/components/common";
 import {redirect} from "next/navigation";
@@ -29,13 +29,20 @@ import {ProjectWithPerm} from "@/app/components/perms";
 import {useCookies} from "react-cookie";
 import {dataFor} from "@/app/components/agarRecipeClient";
 import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector";
-import {IsStringMapToBool, IsStringMapToBoolOrUndef} from "@/app/components/accessControlClient";
+import {IsStringMapToBool, IsStringMapToString} from "@/app/components/accessControlClient";
 import {HandleErr, UserSelector} from "@/app/components/userClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {FlexedArea, FlexedSinglesGroup, NotesFormArea} from "@/app/components/agarBatchClient";
+import {
+    FlexedArea,
+    FlexedSinglesGroup, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea, NumberToDateStr
+} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {TailwindButton} from "@/app/components/tailwind/components";
+import {SaleData} from "@/app/components/saleServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -51,7 +58,7 @@ export function AssertProject(input: any): asserts input is ProjectData {
     ])
     for (let [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
-            throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
+            throw new Error('Project assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
@@ -61,16 +68,16 @@ export function AssertProject(input: any): asserts input is ProjectData {
     ])
     for (let [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
-            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
+            throw new Error('Project assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['perms', IsStringMapToBoolOrUndef],
+    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['perms', IsStringMapToString], // TODO: THIS IS NOT WORKING PROPERLY!!! CHANGE TO STRING FORMAT!!!!
     ])
-    for (let [key, validator] of complexRequiredKeys) {
-        if (!RequiredKey(key, input, validator)) {
-            throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
+    for (let [key, validator] of complexOptionalKeys) {
+        if (!OptionalKey(key, input, validator)) {
+            throw new Error('Project assertion failure: required key ' + key + ' was not valid. was '+JSON.stringify(input[key]));
         }
     }
     // complex optional array keys
@@ -92,15 +99,15 @@ export default function ProjectDisplay(
     try {
         AssertProject(data)
         const [initial, setInitial] = useState(data)
-        const initPerms =  new Map<string, boolean | undefined>(Object.entries(data.perms) as [string, boolean | undefined][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
+        const initPerms =  new Map<string, string>(Object.entries(data.perms||{}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
 
         const [completed, setCompleted] = useState(data.completed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [perms, setPerms] = useState<Map<string, boolean | undefined>>(initPerms)
+        const [perms, setPerms] = useState<Map<string, string>>(initPerms)
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: ProjectData)=>{
             setInitial(updated)
-            const ps =  new Map<string, boolean | undefined>(Object.entries(updated.perms) as [string, boolean | undefined][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
+            const ps =  new Map<string, string>(Object.entries(updated.perms||{}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
 
             setCompleted(updated.completed)
             setNotes(InitialNotesState(updated.notes))
@@ -171,13 +178,12 @@ export default function ProjectDisplay(
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TestAndValidate todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
-                    <ProjectPermsArea perms={perms} setPerms={setPerms} readonly={readonly}/>
+                    <ProjectPermsArea perms={perms} setPerms={setPerms} readonly={readonly}/> {/* TODO: HEAVILY TEST! Also ensure this is properly covered on the go side!*/}
                 </TestAndValidate>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
                     projectSubmit()
-                }}>{"Update"}</button>}{/* TODO: change all onSubmits to onClicks if this works*/}
-                {/* TODO: ?<OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>*/}
+                }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
     } catch (err) {
@@ -353,9 +359,9 @@ export function PermToNumber(p: boolean | undefined): number {
     return 2
 }
 
-export function ReadWriteAdminSelector({readonly,onUpdate, value}:{value?:boolean,readonly:boolean,onUpdate?:(b?: boolean)=>void}){
-    const strForVal = (b?: boolean)=>{
-        return (value===undefined)?"can view":(value===true?"is admin":"can edit")
+export function ReadWriteAdminSelector({readonly,onUpdate, value}:{value:string,readonly:boolean,onUpdate?:(valOut: string)=>void}){
+    const strForVal = (str?: string)=>{
+        return (value==="read")?"can view":(value==="admin"?"is admin":"can edit")
     }
     if (readonly) {
         return <text>{strForVal(value)}</text>
@@ -363,13 +369,13 @@ export function ReadWriteAdminSelector({readonly,onUpdate, value}:{value?:boolea
     return <SelectorFor options={["can view", "can edit", "is admin"]} initial={strForVal(value)}
                         updateParent={s => {
                             if (s === "is admin") {
-                                onUpdate && onUpdate(true)
+                                onUpdate && onUpdate("admin")
                             }
                             if (s === "can edit") {
-                                onUpdate && onUpdate(false)
+                                onUpdate && onUpdate("write")
                             }
                             if (s === "can view") {
-                                onUpdate && onUpdate(undefined)
+                                onUpdate && onUpdate("read")
                             }
                             return
                         }} disabled={false}/>
@@ -385,9 +391,9 @@ export function ReadWriteSelector({readonly,onUpdate, value}:{value:boolean,read
                         }} disabled={false}/>
 }
 
-export function ProjectPermsArea({perms, setPerms, readonly}: { // TODO: this whole thing?
-    perms?: Map<string, boolean | undefined>,
-    setPerms?: (pp: Map<string, boolean | undefined>) => void,
+export function ProjectPermsArea({perms, setPerms, readonly}: {
+    perms?: Map<string, string>, // TODO: to string!
+    setPerms?: (pp: Map<string, string>) => void, // TODO: to string!
     readonly: boolean,
 }) {
     if(readonly && !perms){
@@ -404,8 +410,8 @@ export function ProjectPermsArea({perms, setPerms, readonly}: { // TODO: this wh
         })}
         {/* AREA TO ADD USER */}
         <UserSelector onSelect={(u)=>{
-            let out = (perms !==undefined && perms.size>0)?new Map<string, boolean | undefined>(perms):new Map<string, boolean | undefined>()
-            setPerms && setPerms(out.set(u._id, undefined))
+            let out = (perms !==undefined && perms.size>0)?new Map<string, string>(perms):new Map<string, string>()
+            setPerms && setPerms(out.set(u._id, "read"))
         }} blacklist={(perms!==undefined&&perms.size>0)?[...perms.entries()].map(u=>{return u[0]}):[]}/>
     </TestAndValidate>
     </div>
@@ -655,4 +661,21 @@ export function ProjectsSelector(inp: {
             inp.onSelect(pr)
         }}/>
     </div>
+}
+
+export function ProjectListPageTable({data, onClick}: ListPageItems<ProjectData>) {
+    const cols: ListTableColumn<ProjectData>[] = [
+        NewColumn("Name", (v)=>v._id),
+        NewColumn("Completed", (v)=>{
+            return v.completed?NumberToDateStr(v.completed):""
+        }),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    // TODO: expansion for everything else????
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }

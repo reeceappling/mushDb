@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -71,8 +70,8 @@ var testProjects = []Project{
 			newNote(exampleTime, "test user should be admin"),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]*bool{
-			testUserEmail: utils.Pointer(true),
+		Perms: map[string]string{
+			testUserEmail: "admin",
 		},
 	}, {
 		Name:              "testProjectWrite",
@@ -82,8 +81,8 @@ var testProjects = []Project{
 			newNote(exampleTime, "test user should be able to write but not admin"),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]*bool{
-			testUserEmail: utils.Pointer(false), // Test User can write but not admin
+		Perms: map[string]string{
+			testUserEmail: "write",
 		},
 	}, {
 		Name:              "testProjectRead",
@@ -93,8 +92,8 @@ var testProjects = []Project{
 			newNote(exampleTime, "test user should be able to read"),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]*bool{
-			testUserEmail: nil, // Test User can read related entries
+		Perms: map[string]string{
+			testUserEmail: "read",
 		},
 	}, {
 		Name:              "testProjectNone",
@@ -147,8 +146,8 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		CreationDateField: CreationDateField{now},
 		NotesField:        req.NotesField,
 		LastUpdatedField:  LastUpdatedField{now},
-		Perms: ProjectPerms(map[string]*bool{
-			user.Email: utils.Pointer(true),
+		Perms: ProjectPerms(map[string]string{
+			user.Email: "admin",
 		}),
 	}
 	finishCreateAlternateEntry(ctx, coll, toInsert, w)
@@ -235,7 +234,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Validate user is admin of project
 	existingUserPerm := existing.Perms[user.Email]
-	if !user.isAdmin() && (existingUserPerm == nil || !*existingUserPerm) {
+	if !user.isAdmin() && (existingUserPerm != "admin") {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
