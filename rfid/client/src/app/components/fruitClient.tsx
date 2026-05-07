@@ -60,7 +60,7 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {BagSelectorTable, NewBagForm, OvcForXfers} from "@/app/components/bagClient";
+import {OvcForXfers} from "@/app/components/bagClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
@@ -68,7 +68,7 @@ import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {RecentSelectorV2} from "@/app/components/mssClient";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {AssertAgarRecipe, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {
     FlexedArea,
     FlexedSinglesGroup, ListPageTable,
@@ -79,7 +79,6 @@ import {
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
-import {BagData} from "@/app/components/bagServer";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -442,14 +441,11 @@ export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
         {/* Optional fields*/}
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}
-                                    headerLevel={headerLevel/*cookies={cookies}*/}/>
+                                    headerLevel={headerLevel}/>
         <ImageSelector updateParent={setImageFile}/>
-        {/*<EntryPermsArea setEntryPerms={setPerms}/>*/}
         <NewEntryNotes setNotes={setNotes}/>
         {/* SUBMIT AREA */}
-        <input type="submit" value="Submit" onClick={submitImportFruit} onSubmit={(e) => {
-            e.preventDefault();
-        }}/>
+        <button className={"bottomButton greenButton"} onClick={submitImportFruit} >{"Import"}</button>
     </ImportEntryFormWrapper>
 }
 

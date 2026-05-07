@@ -14,7 +14,7 @@ import {SelectorFor} from "@/app/components/selector";
 import {ProjectsSelector, ReadWriteSelector} from "@/app/components/projectClient";
 import {UserSelector} from "@/app/components/userClient";
 import {useContext, useState} from "react";
-import {DepthContext, DepthProvider, Subsection} from "@/app/components/formSubcomponents/depthContext/depth";
+import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
 

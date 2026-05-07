@@ -44,7 +44,12 @@ import {
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
+import {
+    AssertLcRecipe,
+    DisplayFormWrapper,
+    LcRecipeSelectorTable,
+    NewEntryFormWrapper, NewLcRecipeForm
+} from "@/app/components/lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {ExistingDualSelector, ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
 import {LcRecipeData} from "@/app/components/lcRecipeServer";
@@ -54,6 +59,7 @@ import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
+        console.error('Input is not an object! Input is ' + typeof input)
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
 
@@ -66,6 +72,7 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
     ])
     for (let [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
+            console.error('SubRec assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
             throw new Error('SubRec assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
@@ -75,6 +82,7 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
+            console.error('SubRec assertion failure: optional key ' + key + ' was not valid');
             throw new Error('SubRec assertion failure: optional key ' + key + ' was not valid');
         }
     }
@@ -85,6 +93,7 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
     ])
     for (let [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
+            console.error('SubRec assertion failure: optional array key ' + key + ' was not valid');
             throw new Error('SubRec assertion failure: optional array key ' + key + ' was not valid');
         }
     }
@@ -235,7 +244,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
             <ErrorDisplay err={err}/>
             <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} readonly={false} headerTxt={"Substrate Name: "}/>
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}/>
-            <TestAndValidate todos={["this whole thing"]}>
+            <TestAndValidate todos={["this whole thing"]}>{/* TODO: ensure NEW is not displayed*/}
                 <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases}/>
             </TestAndValidate>
             <NewEntryNotes setNotes={setNotes}/>
@@ -528,10 +537,14 @@ export function SubstrateRecipeSelector( // TODO: USE ELSEWHERE
     const table = (items: SubstrateRecipeData[]):JSX.Element=>{
         return <SubstrateRecipeSelectorTable data={items} onClick={doSelect}/>
     }
-
+    const creator = ()=>{
+        if (creatorInPage) {
+            return <NewSubstrateRecipeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>
+        }
+        return <div>{"LINK TO CREATOR HERE FIXME"}</div>
+    }
     return <ExistingDualSelector entryType={"substrateRecipe"} entryTypes={"substrateRecipes"} doSelect={doSelect} asserter={AssertSubstrateRecipe}
                                    table={table}>
-        {allowCreate && (creatorInPage?<NewSubstrateRecipeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>:
-            <div>{"LINK TO CREATOR HERE FIXME"}</div>)}
+        {allowCreate && <>{creator()}</>}
     </ExistingDualSelector>
 }

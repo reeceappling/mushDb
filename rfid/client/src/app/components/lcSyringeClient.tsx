@@ -7,7 +7,7 @@ import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/component
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcData} from "@/app/components/lcServer";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
-import GenerationArea from "@/app/components/formSubcomponents/generationInput";
+import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     ConfirmedCleanArea,
     ConfirmedCleanSelector,
@@ -118,7 +118,7 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringe {
     return
 }
 
-export function LcSyringeImportDisplay({onImport, cookies}: { onImport: (lcs: LcSyringe) => void, cookies: string }) {
+export function LcSyringeImportDisplay({cookies}: {cookies: string }) {
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
@@ -147,16 +147,14 @@ export function LcSyringeImportDisplay({onImport, cookies}: { onImport: (lcs: Lc
             method: 'Post',
             body: JSON.stringify(dataObj),
             headers: {
-                'Cookie': cookies, // TODO: ensure this is everywhere
+                // 'Cookie': cookies, // TODO: ensure this is everywhere
                 credentials: 'include',
                 'Content-type': "application/json"
-                //Authorization: tokenFetch,
             },
         })
             .then(HandleJsonResponse)
             .then((newLcSyringe) => {
                 AssertLcSyringe(newLcSyringe)
-                onImport(newLcSyringe)
                 redirect(BaseExternalUrl + "/view/lcSyringe/" + newLcSyringe._id)
             })
             .catch((err) => {
@@ -170,9 +168,9 @@ export function LcSyringeImportDisplay({onImport, cookies}: { onImport: (lcs: Lc
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
         <ConfirmedCleanSelector updateParent={setConfirmedClean}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
-        <GenerationArea readonly={false} updateParent={setGeneration}/>
+        <GenerationInput updateParent={setGeneration}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"greenButton"} onClick={ImportLcSyringe}>{"Submit"}</button>
+        <button className={"greenButton bottomButton"} onClick={ImportLcSyringe}>{"Submit"}</button>
     </ImportEntryFormWrapper>
 }
 

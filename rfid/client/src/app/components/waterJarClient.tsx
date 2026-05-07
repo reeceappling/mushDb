@@ -42,6 +42,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {SlantData} from "@/app/components/slantServer";
 import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
+import {SelectorWrapper} from "@/app/components/lcClient";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -209,10 +210,14 @@ export function NewWaterJarForm(
     }
     return <NewEntryFormWrapper entryType={"waterJar"}>
         <ErrorDisplay err={err}/>
-        {pcRunIn !== undefined && <RecentPCRunSelector doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>}
+        <SelectorWrapper title={"PC Run"} nameFunc={(v:PcRunData):string=>{
+            return v._id
+        }} current={pcRun}>{/* TODO: validate working */}
+            <RecentPCRunSelector doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>
+        </SelectorWrapper>
         {/* TODO: NOTES AREA */}
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"bottomButton"} onClick={createJar}>{"Create"}</button>
+        <button className={"greenButton buttonFullWidth"} onClick={createJar}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
 

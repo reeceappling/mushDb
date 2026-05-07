@@ -41,8 +41,8 @@ func initializeSubspecies(ctx context.Context) error {
 	basicEntries := []Subspecies{
 		// White Beech
 		{
-			NameIdField:  NameIdField{"white beech"},
-			SpeciesField: SpeciesField{"beech"},
+			NameIdField:  NameIdField{"White Beech"},
+			SpeciesField: SpeciesField{"Beech"},
 			AliasesField: AliasesField{},
 			NotesField: NotesField{Notes: []Note{
 				newNote(ogTime, "something to do with light, fixme"),
@@ -51,8 +51,8 @@ func initializeSubspecies(ctx context.Context) error {
 		},
 		// Brown Beech
 		{
-			NameIdField:  NameIdField{"brown beech"},
-			SpeciesField: SpeciesField{"beech"},
+			NameIdField:  NameIdField{"Brown Beech"},
+			SpeciesField: SpeciesField{"Beech"},
 			AliasesField: AliasesField{},
 			NotesField: NotesField{Notes: []Note{
 				newNote(ogTime, "something to do with light, fixme"),

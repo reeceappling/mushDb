@@ -31,7 +31,7 @@ import {
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
+import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "./lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {
     FlexedArea,
@@ -46,6 +46,7 @@ import {SlantData} from "@/app/components/slantServer";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {AssertSlant, NewSlantForm, SlantListPageTable} from "@/app/components/slantClient";
+import {SelectorWrapper} from "@/app/components/lcClient";
 // TODO: list page not working
 
 export function AssertSpecies(input: any): asserts input is SpeciesData {
@@ -224,7 +225,9 @@ export function NewSpeciesForm(
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"Name :"} setName={setName}/>
             <NameArea classNames={"inlineChildren"} currentName={sciName} headerTxt={"Scientific Name :"} setName={setSciName}/>
             <AliasesArea aliases={aliases} updateParent={setAliases} readonly={false}/> {/* TODO: OVERHAUL */}
-            {substrateIn === undefined && <div>{"Std substrate"}<SubstrateRecipeSelector doSelect={setSub} allowCreate={handlers.isTopLevel} creatorInPage={false/* TODO: isTopLevel and embedded creators*/}/></div>}
+            <SelectorWrapper current={sub} title={"Standard Substrate"} nameFunc={(v: SubstrateRecipeData) => v._id}>
+                <SubstrateRecipeSelector doSelect={setSub} allowCreate={handlers.isTopLevel} creatorInPage={false}/>
+            </SelectorWrapper>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
             <CreateNewEntryButton onSubmit={submitNewSpecies}/>
@@ -364,7 +367,7 @@ export function ExistingSpeciesSelector(
         setSelectorOpen(false)
     }}>{"Close Species Selector"}</button>
     return <div className={"gapBottom"}>
-        <DepthProvider>{/* TODO: is this necessary here?*/}
+        <Subform>{/* TODO: is this necessary here?*/}
         {closeButton}{/* TODO: THIS DOES NOT WORK */}
             <SpeciesSelector doSelect={s=>{
                 doSelect(s)
@@ -382,7 +385,7 @@ export function ExistingSpeciesSelector(
         {/*    </div>*/}
         {/*})}*/}
         {closeButton}
-        </DepthProvider>
+        </Subform>
     </div>
 }
 

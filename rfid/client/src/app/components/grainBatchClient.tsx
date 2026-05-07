@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useEffect, useState} from "react";
+import React, {JSX, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
@@ -10,7 +10,6 @@ import {
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
-    AssertArrayResult,
     DisplayInput,
     HandleJsonResponse,
     InlineExpansionArea,
@@ -28,7 +27,6 @@ import {JarRecipeArea, JarRecipeSelector} from "@/app/components/jarRecipeClient
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {SelectorProps} from "@/app/components/selector";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {
@@ -43,16 +41,12 @@ import {NewJarForm} from "@/app/components/jarClient";
 import {JarData} from "@/app/components/jarServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {
-    AssertFruitingChamber,
-    FruitingChamberListPageTable,
-    FruitingChamberSelectorTable, NewFruitingChamberForm
-} from "@/app/components/fruitingChamberClient";
 
 // TODO: GRAIN BATCHES LIST IS NOT WORKING!
 // TODO: ENSURE DISPLAY IS LOOKING GOOD
+// TODO: also plugs not working at all
+// TODO: list users also not working (all of this as of 5/7/26)
 
 export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
     // TODO: FIX THIS WHOLE FUNC

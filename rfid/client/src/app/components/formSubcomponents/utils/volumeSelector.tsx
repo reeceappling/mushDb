@@ -13,7 +13,7 @@ function VolumeSelectorInternal({options,initialValue,onChange}:
         setCurrent(e.currentTarget.value)
         onChange(e.currentTarget.value)
     }
-    return <select value={current} onChange={onSelect}>
+    return <select className="tailwindSelector" value={current} onChange={onSelect}>
         {options.map(function (name, i) {
             return <option value={name} key={i}>{name}</option>
         })}
@@ -36,7 +36,7 @@ export function VolumeSelector({onChange,defaultUnit}:{defaultUnit?:string,onCha
         }
         onChange(num * mul)
     }
-    return <div>
+    return <>
         <NumericalArea min={0.0} max={50.0} mode={'floating'} onChange={(s?: string)=>{
             if(!s){
                 return
@@ -49,5 +49,5 @@ export function VolumeSelector({onChange,defaultUnit}:{defaultUnit?:string,onCha
             handleChange(num, s)
             setVol(s)
         }}/>
-    </div>
+    </>
 }

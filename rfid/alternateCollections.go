@@ -174,27 +174,49 @@ func ListEntriesHandler() http.Handler {
 }
 func ListSubspeciesHandler() http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		spec, err := UrlDecodeString(r.PathValue("variant"))
 		if err != nil {
 			http.Error(w, "got bad species name. "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		findBson := bsonFindFilter("species", spec)
-		sortField := "$natural" // TODO: FIX!
+		sortField := "$natural" // TODO: FIX to sort for name!
 		// TODO: pagination?
 		opts := options.Find().
 			SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
 		//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
 		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
 			Database(dbName).
-			Collection(temp.CollectionName()).
+			Collection(SubspeciesCollectionName).
 			Find(ctx, findBson, opts)
 		if err != nil {
-			return nil, err
+			if errors.Is(err, mongo.ErrNoDocuments) { // TODO: NOT WORKING PROPERLY FOR BEECH!
+				_, err = w.Write([]byte("[]"))
+				handleWriteErr(err, w)
+				return
+			}
+			http.Error(w, "failed to list subspecies. "+err.Error(), http.StatusInternalServerError)
+			return
 		}
-		// TODO: ensure that user can read each item!!!!!!!!!!
-		return getCollectionItemsFromCursor[T](ctx, cursor, &nresults)
-		http.Error(w, "not implemented", http.StatusNotImplemented) // TODO: do this!
+		// TODO: ensure that user can read each item!!!!!!!!!! NOT DONE YET
+		subspecs, err := getCollectionItemsFromCursor[Subspecies](ctx, cursor, nil)
+		if err != nil {
+			if errors.Is(err, mongo.ErrNoDocuments) {
+				_, err = w.Write([]byte("[]"))
+				handleWriteErr(err, w)
+				return
+			}
+			http.Error(w, "failed to list subspecies after getting. "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		bs, err := json.Marshal(subspecs)
+		if err != nil {
+			http.Error(w, "failed to marshal subspecies after getting. "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		_, err = w.Write(bs)
+		handleWriteErr(err, w)
 	}
 	return http.HandlerFunc(handler)
 }

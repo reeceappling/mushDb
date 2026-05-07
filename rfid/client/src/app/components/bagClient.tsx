@@ -27,7 +27,8 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea, ListPageItems,
+    InlineSubArea,
+    ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -42,8 +43,8 @@ import {
 import {
     DisposedDisplay,
     ErrorDisplay,
-    GensInlineDisplay,
     GensFormDisplay,
+    GensInlineDisplay,
     MostRecentImageDisplay,
     NameArea,
     ParentDisplay,
@@ -56,11 +57,12 @@ import {CreatedLinkFor, SubstrateRecipeArea, SubstrateRecipeSelector} from "@/ap
 import {
     ContaminationForm,
     ContamsDisplay,
-    InitialContamState, InitialNotesState,
+    InitialContamState,
+    InitialNotesState,
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
-import GenerationArea from "@/app/components/formSubcomponents/generationInput";
+import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {TopLevelImageSelector} from "@/app/components/formSubcomponents/imageSelector";
 import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
@@ -70,9 +72,9 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {FruitListPageTable, NewFruitForm} from "@/app/components/fruitClient";
+import {NewFruitForm} from "@/app/components/fruitClient";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector, SubspeciesFormArea} from "@/app/components/subspeciesClient";
+import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {FruitData} from "@/app/components/fruitServer";
 import {SubstrateBatchArea, SubstrateBatchSelector} from "@/app/components/substrateBatchClient";
 import WetnessSlider from "@/app/components/formSubcomponents/utils/slider";
@@ -83,24 +85,17 @@ import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea, QuadColLastCol} from "@/app/components/pcRunClient";
 import {TransferData} from "@/app/components/transferServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {
-    AssertAgarRecipe,
-    ExistingDualSelector,
-    ExistingRecentSelector,
-    InlineEntry
-} from "@/app/components/agarRecipeClient";
-import {
-    AgarBatchSelectorTable,
     FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn, NewAgarBatchForm,
+    FlexedSinglesGroup,
+    ListPageTable,
+    ListTableColumn,
     NewColumn,
-    NotesFormArea, NumberToDateStr
+    NotesFormArea,
+    NumberToDateStr
 } from "@/app/components/agarBatchClient";
-import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
-import {AgarBatchData} from "@/app/components/agarBatchServer";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {SelectorWrapper, SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 
 export function AssertBag(input: any): asserts input is BagData {
@@ -187,7 +182,8 @@ export function OvcForXfers(parentId: string, parentType: string, validTypesTo: 
     return {
         txt: altTxt || "New Transfer",
         newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-            return <NewTransferArea cookies={cookies} idFrom={parentId} typeFrom={parentType} validTypesTo={validTypesTo}
+            return <NewTransferArea cookies={cookies} idFrom={parentId} typeFrom={parentType}
+                                    validTypesTo={validTypesTo}
                                     onCreated={(xfer: TransferData) => {
                                         addTransferOut && addTransferOut(xfer)
                                         onCreate([{
@@ -242,7 +238,7 @@ export default function BagDisplay(
                 <div>{"Filter Size: " + filterSize}</div>
             </div>
         }
-        const updateInitial = (updated: BagData)=> {
+        const updateInitial = (updated: BagData) => {
             setInitial(updated)
             setKnownFruitable(updated.knownFruitable)
             setSale(updated.sale)
@@ -365,12 +361,12 @@ export default function BagDisplay(
                                 readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
                 {/* Write tag area */}
                 {readonly ? null : <ReaderWriterSelector txt={"Writer to write to: "} onSelect={setWriteTagTo}
                                                          headerLevel={headerLevel}/>}
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     bagSubmit()
                 }}>{"Update"}</button>}
@@ -383,7 +379,7 @@ export default function BagDisplay(
 
 export function WetnessDisplay({value}: { value?: number }) {
     return <TestAndValidate todos={["fix"]}>
-        <div>{"Wetness: " + (value ? value+"/10" : "unknown")}</div>
+        <div>{"Wetness: " + (value ? value + "/10" : "unknown")}</div>
     </TestAndValidate>
 }
 
@@ -466,7 +462,8 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             <ErrorDisplay err={err}/>
             <div>{"Creating Bag: "}</div>
             {substrateBatchIn !== undefined &&
-                <SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreate={handlers.isTopLevel} creatorInPage={false}/>/*TODO: handle isTopLevel and creation in page*/}
+                <SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreate={handlers.isTopLevel}
+                                        creatorInPage={false}/>/*TODO: handle isTopLevel and creation in page*/}
             <WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {
                 setWetness(value)
             }}/>
@@ -557,20 +554,20 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
         {/* Required Fields */}
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <DateArea pre={"Seal Date: "} when={Date.now()} updateParent={setSealDate}/>
-        <SubstrateRecipeSelector doSelect={setRecipe}/>{/* TODO: depth?*/}
+        <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: SubstrateRecipeData) => v._id}>
+            <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={false} creatorInPage={false}/>
+        </SelectorWrapper>
         {filterSizeSelector(setFilterSize, filterSize)}
-        <ExistingSpeciesSelector doSelect={setSpecies/*cookies={cookies}*/}/>
+        <ExistingSpeciesSelector doSelect={setSpecies}/>
 
         {/* Optional fields*/}
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
-        <GenerationArea readonly={false} updateParent={setGeneration}/>
+        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
+        <GenerationInput updateParent={setGeneration} />
         <KnownFruitableArea doSelect={setKnownFruitable}/>
 
         <TopLevelImageSelector updateParent={setImageFile} buttonText={"Upload image"}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-
-        {/* SUBMIT AREA TODO: swap out all submission buttons with a component */}
-        <button onClick={submitImportBag} className={"bottomButton"}>{"Submit"}</button>
+        <button onClick={submitImportBag} className={"greenButton bottomButton"}>{"Submit"}</button>
     </ImportEntryFormWrapper>
 }
 
@@ -613,19 +610,19 @@ export function BagInline({data, expandByDefault, onClick, showMainPageButton, i
 
 export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagData>) {
     let cols: ListTableColumn<BagData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Created", (v)=>{
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
         }),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
-        NewColumn("Species", (v)=>v.species || ""),
-        NewColumn("Subspec.", (v)=>v.subspecies || ""),
+        NewColumn("Species", (v) => v.species || ""),
+        NewColumn("Subspec.", (v) => v.subspecies || ""),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: BagData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"bag",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: BagData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "bag", openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -646,12 +643,12 @@ export function BagSelector( // TODO: USE ELSEWHERE
         doSelect: (val: BagData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: BagData[]):JSX.Element=>{
+    const table = (items: BagData[]): JSX.Element => {
         return <BagSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"bag"} entryTypes={"bags"} doSelect={doSelect} asserter={AssertBag}
-                                 table={table}>
-        {allowCreate && <NewBagForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+                                   table={table}>
+        {allowCreate && <NewBagForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

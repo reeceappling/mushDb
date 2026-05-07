@@ -3,9 +3,6 @@
 import React, {useEffect, useState} from "react";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {CredentialResponse, GoogleLogin} from "@react-oauth/google";
-import bcrypt from 'bcryptjs'
-import { useCookies } from 'react-cookie';
-import {BaseExternalUrl, GoogleApiClient} from "@/app/components/Constants";
 
 // TODO: ADD LOGOUT BUTTON SOMEWHERE!
 export interface AuthAreaProps {

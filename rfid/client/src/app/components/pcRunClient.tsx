@@ -255,7 +255,7 @@ export function OnViewCreatorsQuadColArea({OnViewCreators,readonly}: { OnViewCre
         </OvcCreatorBodyWrapper>
     }
     return <TestAndValidate todos={["TEST THIS WHOLE THING!"]}>
-        <DepthProvider><OvcArea> {/* TODO: style ovcArea*/}
+        <DepthProvider><OvcArea>
             <OvcTopBar setActiveTab={setActiveTab} OnViewCreators={OnViewCreators} hasExtraCol={true}
                        activeTab={activeTab}/>
             <OvcLinksTableQuad created={created} tableHidden={createdTableHidden} toggleHidden={toggleHidden}/>
@@ -293,7 +293,7 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: { OnViewCre
         const closeButton = <OnViewCreatorCloseButton handleClose={() => {
             setActiveTab(undefined)
         }} activeTab={activeTab}/>
-        return <OvcCreatorBodyWrapper> {/* TODO: style ovcCreatorBodyWrapper*/}
+        return <OvcCreatorBodyWrapper>
             {closeButton}
             {creator.newCreationArea(addCreated)}
             {closeButton}

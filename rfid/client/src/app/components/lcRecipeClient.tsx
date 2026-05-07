@@ -298,21 +298,16 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} headerTxt={"Standard recipe? "}
                           readonly={false}/>
             <div>{"Liquids"}</div>
-            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
             <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>
             <div>{"Nutrients"}</div>
-            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
             <NutrientsEntriesGroupForNew currentEntries={nutrients} updateParent={setNutrients}/>
             <div>{"Sugars"}</div>
-            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
             <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
             <div>{"Additives"}</div>
-            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
             <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
-            {/* TODO: Make large? */}
-            <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
+            <button className={"greenButton buttonFullWidth"} onClick={createEntry}>{"Create"}</button>
         </NewEntryFormWrapper>
     )
 }

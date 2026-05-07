@@ -13,7 +13,7 @@ import {
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {AddToTransfers, InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
-import GenerationArea from "@/app/components/formSubcomponents/generationInput";
+import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayInput,
     DisposedSaleContamArea,
@@ -180,7 +180,7 @@ export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput
         <ExistingSpeciesSelector doSelect={setSpecies/*cookies={cookies}*/}/>
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
-        <GenerationArea readonly={false} updateParent={setGeneration}/>
+        <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
         {/*<EntryPermsArea setEntryPerms={setPerms}/>*/}
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />

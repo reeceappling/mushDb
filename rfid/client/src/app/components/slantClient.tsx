@@ -16,7 +16,7 @@ import {
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {AddToTransfers, InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
-import GenerationArea from "@/app/components/formSubcomponents/generationInput";
+import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayInput,
     DisposedSaleContamArea,
@@ -186,7 +186,7 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
         <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
         {species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel/*cookies={cookies}*/}/>:null}
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
-        <GenerationArea readonly={false} updateParent={setGeneration} headerLevel={headerLevel}/>
+        <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
         <SlantStickSelector setStickType={setStickType}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} headerLevel={headerLevel}/>

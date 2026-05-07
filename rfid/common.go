@@ -701,8 +701,8 @@ var (
 	exFruitId            = mainCollIdForint(idTestFruit)
 	exampleTime          = unixTimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
 	exReqTimeField       = RequiredTimeField{exampleTime}
-	exampleSpecies       = "beech"
-	exampleSubspecies    = utils.Pointer("brown beech")
+	exampleSpecies       = "Beech"
+	exampleSubspecies    = utils.Pointer("Brown Beech")
 	exGenSinceSpore      = Generation(2)
 	exGenSinceFruitSpore = Generation(1)
 	exParentType         = "plate"

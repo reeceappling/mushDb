@@ -31,7 +31,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {HandleErr} from "@/app/components/userClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
+import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "@/app/components/lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
 import {
@@ -315,7 +315,7 @@ export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
         </div>
     }
     if (!selectable) {
-        return <TestAndValidate todos={["subspecies not selectable"]}><div>{"."}</div></TestAndValidate>
+        return null
     }
     if (!selected && !selectorOpen) {
         return <div className={"centerHChildren gapTop gapBottom"}>
@@ -345,24 +345,16 @@ export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
     }
 
     return <div className={"centerHChildren gapTop gapBottom"}>
+        <Subform>
         {errArea()}
         {toggleButton()}
-        <div className={"fullWidth"}>
-            <DepthProvider>{/* TODO: necessary?*/}
-            {subspeciesList.map((sub, i) => {
-                // TODO: MAKE SURE THIS IS WIDE ENOUGH!
-                return <SubspeciesInline key={i} showSpeciesName={species === undefined} props={{
-                    data: sub, onClick: (subsp) => {
-                        doSelect(subsp)
-                        setSelectorOpen(false)
-                        setSelected(subsp)
-                    }
-                }
-                }/>
-            })}
-            </DepthProvider>
-        </div>
+        <SubspeciesSelector doSelect={s=>{
+            setSelected(s)
+            setSelectorOpen(false)
+            doSelect(s)
+        }} />
         {toggleButton()}
+        </Subform>
     </div>
 }
 

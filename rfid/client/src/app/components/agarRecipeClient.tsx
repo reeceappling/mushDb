@@ -497,12 +497,15 @@ export function ExistingDualSelector<T>(props: React.PropsWithChildren<{
     useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
         try {
             AssertDualListResult<T>(result, props.asserter) // TODO: unnecessary?
-            setLoaded(true)
             setData(result)
+            setLoaded(true)
+            return
         } catch (e) {
+            console.error(e)
             throw e
         }
     }).catch(e => {
+        console.error(e)
         setErr("error on listItems request: " + JSON.stringify(e))
     })},[])
     if (!loaded || data === undefined) {

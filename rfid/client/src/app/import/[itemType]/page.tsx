@@ -43,7 +43,7 @@ export default async function Page({
             case "lc":
                 return <LcImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
             case "lcSyringe":
-                return <LcSyringeImportDisplay onImport={(lcs)=>{location.assign("/view/lcSyringe/"+lcs._id)/*redirect(BaseExternalUrl+"/view/lcSyringe/"+lcs._id)}*/}} cookies={allCookies}/>
+                return <LcSyringeImportDisplay cookies={allCookies}/>
             // LcRecipe cannot be imported
             case "mss":
                 return <MssImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;

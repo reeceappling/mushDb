@@ -84,6 +84,8 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 var oauthConfig *oauth2.Config
 
 func main() {
+	// TODO: need to clear out the db for actually using it!
+	
 	picsPath := os.Getenv("PICS_PATH")
 	if picsPath == "" {
 		panic("env var missing for PICS_PATH")

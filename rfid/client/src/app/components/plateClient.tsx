@@ -15,7 +15,7 @@ import {
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
-import GenerationArea from "@/app/components/formSubcomponents/generationInput";
+import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayInput,
     DisposedSaleContamArea,
@@ -79,17 +79,14 @@ import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import TestAndValidate from "@/app/components/testing/untested";
-import {AssertPcRun, NewPcRunForm, OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
+import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
 import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
 import Box from "@mui/material/Box";
 import Slider from "@mui/material/Slider";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {PcRunData} from "@/app/components/pcRunServer";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
@@ -160,7 +157,18 @@ export function PourCoverageSelector({value, setPourCoverage}: {
     value?: number,
     setPourCoverage: (value?: number) => void,
 }) {
-    return <OptionalSliderSelector txt={"Pour Coverage"} label={"Pour Coverage (%)"} initial={value} min={0} def={100} max={100} updateParent={setPourCoverage}/>
+    return <OptionalSliderSelector txt={"Pour Coverage"} label={"Pour Coverage (%)"} initial={value} min={0} def={100}
+                                   max={100} updateParent={setPourCoverage}/>
+}
+export function PourCoverageSelectorRequired({value, setPourCoverage}: {
+    value?: number,
+    setPourCoverage: (value?: number) => void,
+}) {
+    return <NumberSlider defaultValue={100} min={0} max={100} label={"pour coverage"}
+                         onChange={(e, v, a) => {
+                             e.stopPropagation();
+                             setPourCoverage(v)
+                         }}/>
 }
 
 export default function PlateDisplay(
@@ -391,10 +399,11 @@ function CondensationCoverageSelector({coverage, updateParent}: {
     coverage?: number,
     updateParent?: (cov?: number) => void
 }) {
-    return <OptionalSliderSelector txt={"Condensation Coverage: "} label={"Condensation Coverage: "} min={0} max={100} def={50} initial={coverage} updateParent={updateParent}/>
+    return <OptionalSliderSelector txt={"Condensation Coverage: "} label={"Condensation Coverage: "} min={0} max={100}
+                                   def={50} initial={coverage} updateParent={updateParent}/>
 }
 
-function OptionalSliderSelector({txt,label,initial, min, max, updateParent,def}: {
+function OptionalSliderSelector({txt, label, initial, min, max, updateParent, def}: {
     txt: string,
     label: string,
     initial?: number,
@@ -416,7 +425,7 @@ function OptionalSliderSelector({txt,label,initial, min, max, updateParent,def}:
                               updateParent && updateParent(v)
                           }}/>
         </div>}
-        <input className={"ml-[1rem]"}type="checkbox" checked={isDefined} onChange={() => {
+        <input className={"ml-[1rem]"} type="checkbox" checked={isDefined} onChange={() => {
             setIsUndefined(!isDefined)
             updateParent && updateParent(undefined)
         }}/>
@@ -481,12 +490,13 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
             <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
         </div> : null}
         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
-        <GenerationArea initial={generation} readonly={false} updateParent={setGeneration}/>
-        <div
-            className={"centerH"}> {/* TODO: SOMETHING IS GOING WEIRD HERE WITH SIZING DIVS! BOTTOM DIV STICKS OUT WITH FILECHOOSE BUTTON */}
+        <GenerationInput updateParent={setGeneration}/>
+        {/* TODO: Test coverage slider */}
+        <PourCoverageSelectorRequired value={pourCoverage} setPourCoverage={setPourCoverage}/>
+        <div className={"centerH"}>
             <ImageSelector updateParent={setImageFile}/>
         </div>
-        <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
+
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={ImportPlate}>{"Import Plate"}</button>
     </ImportEntryFormWrapper>
@@ -556,8 +566,10 @@ export function NewPlateForm(
         <ErrorDisplay err={err}/>
         <AgarBatchSelector doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/>
         <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
-        <CondensationCoverageSelector coverage={condensationCoverageAtSealTime} updateParent={setCondensationCoverageAtSealTime}/>
-        <YesNoSelector pre={"Wet at cooled time: "} initial={undefined} updateParent={setWetAtCooledTime} className={"inlineChildren"}/>
+        <CondensationCoverageSelector coverage={condensationCoverageAtSealTime}
+                                      updateParent={setCondensationCoverageAtSealTime}/>
+        <YesNoSelector pre={"Wet at cooled time: "} initial={undefined} updateParent={setWetAtCooledTime}
+                       className={"inlineChildren"}/>
         <YesNoSelector pre={"Agar on outside at pour time: "} initial={undefined}
                        updateParent={setAgarOnOutsideAtPourTime} className={"inlineChildren"}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
@@ -636,8 +648,8 @@ export function PlateListPageTable({data, onClick, withLink}: ListPageItems<Plat
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: PlateData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"plate",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: PlateData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "plate", openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -647,8 +659,9 @@ export function PlateListPageTable({data, onClick, withLink}: ListPageItems<Plat
 }
 
 export function PlateSelectorTable({data, onClick}: ListPageItems<PlateData>) {
-    return <PlateListPageTable data={data} onClick={onClick} withLink={true} />
+    return <PlateListPageTable data={data} onClick={onClick} withLink={true}/>
 }
+
 export function PlateSelector( // TODO: USE ELSEWHERE
     {
         doSelect,
@@ -657,13 +670,13 @@ export function PlateSelector( // TODO: USE ELSEWHERE
         doSelect: (val: PlateData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: PlateData[]):JSX.Element=>{
+    const table = (items: PlateData[]): JSX.Element => {
         return <PlateSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"plate"} entryTypes={"plates"} doSelect={doSelect} asserter={AssertPlate}
                                    table={table}>
-        {allowCreate && <NewPlateForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+        {allowCreate && <NewPlateForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }
 

@@ -40,6 +40,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {PlateData} from "@/app/components/plateServer";
 import {AssertPlate, NewPlateForm, PlateListPageTable, PlateSelectorTable} from "@/app/components/plateClient";
 import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
+import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -234,16 +235,14 @@ export function NewProjectForm(
     }
     const projectNameArea = () => {
         return <div>
-            <div>{"Project Name: "}</div>
-            <input type={"text"} value={name || ""} onChange={handleChangeName}/>
+            <InputTextInlineTitle label={"Project Name"} readonly={false} value={name || ""} onChange={setName} />
         </div>
     }
     return <NewEntryFormWrapper entryType={"project"}>
         <ErrorDisplay err={err}/>
         {projectNameArea()}
-        {/* TODO TODO: ensure notes delete themselves when disabled*/}
         <NewEntryNotes setNotes={setNotes}/>
-        <TailwindButton txt={"Create"} click={createProject}/>
+        <button className={"greenButton buttonFullWidth"} onClick={createProject}>{"Create Project"}</button>
     </NewEntryFormWrapper>
 
 }

@@ -331,11 +331,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
         <div>{"Additives"}</div>
         <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
         <NewEntryNotes setNotes={setNotes}/>
-        <TestAndValidate todos={["make large"]}>
-            <input type="submit" value="Create" onClick={newJarRecipeSubmit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>
-        </TestAndValidate>
+        <button className={"greenButton buttonFullWidth"} onClick={newJarRecipeSubmit}>{"Create Jar Recipe"}</button>
     </NewEntryFormWrapper>
 }
 

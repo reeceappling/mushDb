@@ -2,7 +2,6 @@
 
 import {defaultHeaderLevel} from "@/app/components/formSubcomponents/utils/headers";
 import {JSX, ReactNode, SetStateAction, SyntheticEvent, useState} from "react";
-import {SelectorProps} from "@/app/components/selector";
 import {
     Contamination,
     ContaminationForm,
@@ -10,13 +9,11 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NumberToDate} from "@/app/components/formSubcomponents/date";
-import {ListResult, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import TextBox from "@/app/components/formSubcomponents/textbox";
 import ReaderWriterSelector, {
     ReadTagFunc,
-    RfidSelectorWithReadButton
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {useRfidReaderContext} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
 import {
@@ -27,23 +24,15 @@ import {
 import TestAndValidate from "@/app/components/testing/untested";
 import * as React from "react";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertAgarBatch} from "@/app/components/agarBatchClient";
-import {AgarBatchData} from "@/app/components/agarBatchServer";
 import {AssertBag} from "@/app/components/bagClient";
-import {BagData} from "@/app/components/bagServer";
 import {AssertFruit} from "@/app/components/fruitClient";
-import {FruitData} from "@/app/components/fruitServer";
 import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {AssertGrainBatch} from "@/app/components/grainBatchClient";
 import {AssertJar} from "@/app/components/jarClient";
 import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
-import {JarRecipeData} from "@/app/components/jarRecipeServer";
-import {LcRecipeData} from "@/app/components/lcRecipeServer";
 import {AssertLcRecipe} from "@/app/components/lcRecipeClient";
-import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {AssertLc} from "@/app/components/lcClient";
 import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
 import {AssertMss} from "@/app/components/mssClient";
@@ -194,63 +183,46 @@ export function ListItemsRequest(entryType:string){
             throw new Error('response not ok. Status='+res.status+', body='+res.text())
         }
         return res.json().then(result=>{
+            let asserter:(x:any)=>void = ()=>false
             switch(entryType){
-                case "agarBatches":
-                    AssertArrayResult(result, AssertAgarBatch); break;
-                case "agarRecipes":
-                    AssertDualListResult<AgarRecipeData>(result, AssertAgarRecipe); break;
-                case "bags":
-                    AssertArrayResult(result, AssertBag); break;
-                case "fruits":
-                    AssertArrayResult(result, AssertFruit); break;
-                case "fruitingChambers":
-                    AssertArrayResult(result, AssertFruitingChamber); break;
-                case "grainBatches":
-                    AssertArrayResult(result, AssertGrainBatch); break;
-                case "jars":
-                    AssertArrayResult(result, AssertJar); break;
-                case "jarRecipes":
-                    AssertDualListResult<JarRecipeData>(result, AssertJarRecipe); break;
-                case "lcs":
-                    AssertArrayResult(result, AssertLc); break;
-                case "lcRecipes":
-                    AssertDualListResult<LcRecipeData>(result, AssertLcRecipe); break;
-                case "lcSyringes":
-                    AssertArrayResult(result, AssertLcSyringe); break;
-                case "mss": // TODO: ensure ok
-                    AssertArrayResult(result, AssertMss); break;
-                case "pcRuns":
-                    AssertArrayResult(result, AssertPcRun); break;
-                case "plates":
-                    AssertArrayResult(result, AssertPlate); break;
-                case "projects":
-                    AssertArrayResult(result, AssertProject); break;
-                case "sales":
-                    AssertArrayResult(result, AssertSale); break;
-                case "slants":
-                    AssertArrayResult(result, AssertSlant); break;
-                case "species":
-                    AssertArrayResult(result, AssertSpecies); break;
-                case "sporePrints":
-                    AssertArrayResult(result, AssertSporePrint); break;
-                case "sporeSwabs":
-                    AssertArrayResult(result, AssertSporeSwab); break;
-                case "stasisTubes":
-                    AssertArrayResult(result, AssertStasisTube); break;
-                case "subspecies":
-                    AssertArrayResult(result, AssertSubspecies); break;
-                case "substrateBatches":
-                    AssertArrayResult(result, AssertSubstrateBatch); break;
-                case "substrateRecipes":
-                    AssertArrayResult(result, AssertSubstrateRecipe); break;
-                case "transfers":
-                    AssertArrayResult(result, AssertTransfer); break;
-                case "users":
-                    AssertArrayResult(result, AssertUser); break;
-                case "waterJars":
-                    AssertArrayResult(result, AssertWaterJar); break;
+                case "agarBatches": asserter = AssertAgarBatch; break;
+                case "agarRecipes":asserter = AssertAgarRecipe; break;
+                case "bags": asserter = AssertBag; break;
+                case "fruits": asserter = AssertFruit; break;
+                case "fruitingChambers": asserter = AssertFruitingChamber; break;
+                case "grainBatches": asserter = AssertGrainBatch; break;
+                case "jars": asserter = AssertJar; break;
+                case "jarRecipes": asserter = AssertJarRecipe; break;
+                case "lcs": asserter = AssertLc; break;
+                case "lcRecipes": asserter = AssertLcRecipe; break;
+                case "lcSyringes": asserter = AssertLcSyringe; break;
+                case "mss": asserter = AssertMss; break;
+                case "pcRuns": asserter = AssertPcRun; break;
+                case "plates": asserter = AssertPlate; break;
+                case "projects": asserter = AssertProject; break;
+                case "sales": asserter = AssertSale; break;
+                case "slants": asserter = AssertSlant; break;
+                case "species": asserter = AssertSpecies; break;
+                case "sporePrints": asserter = AssertSporePrint; break;
+                case "sporeSwabs": asserter = AssertSporeSwab; break;
+                case "stasisTubes": asserter = AssertStasisTube; break;
+                case "subspecies": asserter = AssertSubspecies; break;
+                case "substrateBatches": asserter = AssertSubstrateBatch; break;
+                case "substrateRecipes": asserter = AssertSubstrateRecipe; break;
+                case "transfers": asserter = AssertTransfer; break;
+                case "users": asserter = AssertUser; break;
+                case "waterJars": asserter = AssertWaterJar; break;
                 default:
                     throw new Error("invalid type but got response. Should never happen"); break;
+            }
+            switch(entryType){
+                case "agarRecipes":
+                case "jarRecipes":
+                case "lcRecipes":
+                case "substrateRecipes":
+                    AssertDualListResult(result, asserter); break;
+                default:
+                    AssertArrayResult(result, asserter); break;
             }
             return result
         })
@@ -612,7 +584,7 @@ export function updateApiUrlFor(itemType: string, id: string) {
 
 // TODO: fix inputs and use this everywhere we can???
 export function CreateNewEntryButton(handler: { onSubmit: () => void }) {
-    return <button className={"greenButton"} onClick={handler.onSubmit}>{"Create!"}</button>
+    return <button className={"greenButton buttonFullWidth"} onClick={handler.onSubmit}>{"Create!"}</button>
 }
 
 export function resolvePicsFormData(picsIn: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>) {
