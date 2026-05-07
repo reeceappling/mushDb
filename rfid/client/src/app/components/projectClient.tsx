@@ -1,48 +1,45 @@
 'use client'
 
-import React, {ChangeEvent, useEffect, useState} from "react";
-import NotesAreaOld, {
-    IsValidNote, NewEntryNotes,
-    Note,
-    NoteEntriesGroup,
-    NotesAreaInline
-} from "@/app/components/formSubcomponents/notes";
-import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
+import React, {ChangeEvent, JSX, useContext, useEffect, useState} from "react";
+import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
+import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {
     DisplayInput,
     HandleJsonResponse,
-    HeaderLevel,
-    InlineExpansionArea, InlineExpansionButton,
-    InlineProps,
-    InlineSubArea, ListPageItems, NewEntryInput,
-    OptionalArrayOfType, OptionalKey,
-    OptionalSimpleKey, RequiredKey
+    ListPageItems,
+    NewEntryInput,
+    OptionalArrayOfType,
+    OptionalKey,
+    OptionalSimpleKey
 } from "@/app/components/common";
-import {redirect} from "next/navigation";
-import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {ProjectData, ProjectSelector,} from "@/app/components/projectServer";
+import {ErrorDisplay, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
+import {ProjectData,} from "@/app/components/projectServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
 import {ProjectWithPerm} from "@/app/components/perms";
-import {useCookies} from "react-cookie";
-import {dataFor} from "@/app/components/agarRecipeClient";
 import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector";
-import {IsStringMapToBool, IsStringMapToString} from "@/app/components/accessControlClient";
+import {IsStringMapToString} from "@/app/components/accessControlClient";
 import {HandleErr, UserSelector} from "@/app/components/userClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {
     FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
+    FlexedSinglesGroup,
+    ListPageTable,
     ListTableColumn,
     NewColumn,
-    NotesFormArea, NumberToDateStr
+    NotesFormArea,
+    NumberToDateStr
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {TailwindButton} from "@/app/components/tailwind/components";
-import {SaleData} from "@/app/components/saleServer";
+import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {PlateData} from "@/app/components/plateServer";
+import {AssertPlate, NewPlateForm, PlateListPageTable, PlateSelectorTable} from "@/app/components/plateClient";
+import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -77,7 +74,7 @@ export function AssertProject(input: any): asserts input is ProjectData {
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
-            throw new Error('Project assertion failure: required key ' + key + ' was not valid. was '+JSON.stringify(input[key]));
+            throw new Error('Project assertion failure: required key ' + key + ' was not valid. was ' + JSON.stringify(input[key]));
         }
     }
     // complex optional array keys
@@ -99,15 +96,15 @@ export default function ProjectDisplay(
     try {
         AssertProject(data)
         const [initial, setInitial] = useState(data)
-        const initPerms =  new Map<string, string>(Object.entries(data.perms||{}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
+        const initPerms = new Map<string, string>(Object.entries(data.perms || {}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
 
         const [completed, setCompleted] = useState(data.completed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [perms, setPerms] = useState<Map<string, string>>(initPerms)
         const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: ProjectData)=>{
+        const updateInitial = (updated: ProjectData) => {
             setInitial(updated)
-            const ps =  new Map<string, string>(Object.entries(updated.perms||{}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
+            const ps = new Map<string, string>(Object.entries(updated.perms || {}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
 
             setCompleted(updated.completed)
             setNotes(InitialNotesState(updated.notes))
@@ -129,9 +126,11 @@ export default function ProjectDisplay(
             }
             return <div>
                 <div>{"Completed: "}</div>
-                <input type={"checkbox"} checked={!!completed} onChange={()=>{
+                <input type={"checkbox"} checked={!!completed} onChange={() => {
                     // TODO: ensure onChange does not need anything
-                }} onClick={handleCompletedClick} onSubmit={(e)=>{e.preventDefault();}}/>
+                }} onClick={handleCompletedClick} onSubmit={(e) => {
+                    e.preventDefault();
+                }}/>
             </div>
         }
         const projectSubmit = () => {
@@ -140,14 +139,14 @@ export default function ProjectDisplay(
                 completed: completed,
                 perms: Object.fromEntries(perms), // TODO: ensure this is being done on any maps that are being marshalled!!!!!
             }
-            console.log("sending perms: "+JSON.stringify(Object.fromEntries(perms)))
+            console.log("sending perms: " + JSON.stringify(Object.fromEntries(perms)))
 
 
-            fetch(BaseExternalUrl + "/db/update/project/"+encodeURIComponent(data._id), { // TODO: question marks in id cause issues
+            fetch(BaseExternalUrl + "/db/update/project/" + encodeURIComponent(data._id), { // TODO: question marks in id cause issues
                 method: "POST",
                 headers: {
                     credentials: 'include',
-                     'Cookie': cookies,
+                    'Cookie': cookies,
                     'Content-type': "application/json"
                 },
                 body: JSON.stringify(body)
@@ -157,7 +156,7 @@ export default function ProjectDisplay(
                     updateInitial(entry)
                 })
                 .catch((err) => {
-                    HandleErr(err,setErr)
+                    HandleErr(err, setErr)
                 });
         }
         return (
@@ -177,12 +176,11 @@ export default function ProjectDisplay(
                     </FlexedSinglesGroup>
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <TestAndValidate todos={[
-                    "setting a user to view only and updating will remove the user from the project :(",
-                "allow users to be removed!"]}>{/* TODO: THIS*/}
-                    <ProjectPermsArea perms={perms} setPerms={setPerms} readonly={readonly}/> {/* TODO: HEAVILY TEST! Also ensure this is properly covered on the go side!*/}
+                <TestAndValidate todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
+                    <ProjectPermsArea perms={perms} setPerms={setPerms}
+                                      readonly={readonly}/> {/* TODO: HEAVILY TEST! Also ensure this is properly covered on the go side!*/}
                 </TestAndValidate>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     projectSubmit()
                 }}>{"Update"}</button>}
@@ -194,7 +192,7 @@ export default function ProjectDisplay(
 }
 
 export function NewProjectForm(
-    {handlers}: {handlers: NewEntryInput<ProjectData>}) { // TODO: add cookies?
+    {handlers}: { handlers: NewEntryInput<ProjectData> }) { // TODO: add cookies?
     const [name, setName] = useState<string | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     // TODO: load up user on server side into the userperms as write (unless blanket is write)
@@ -361,9 +359,13 @@ export function PermToNumber(p: boolean | undefined): number {
     return 2
 }
 
-export function ReadWriteAdminSelector({readonly,onUpdate, value}:{value:string,readonly:boolean,onUpdate?:(valOut: string)=>void}){
-    const strForVal = (str?: string)=>{
-        return (value==="read")?"can view":(value==="admin"?"is admin":"can edit")
+export function ReadWriteAdminSelector({readonly, onUpdate, value}: {
+    value: string,
+    readonly: boolean,
+    onUpdate?: (valOut: string) => void
+}) {
+    const strForVal = (str?: string) => {
+        return (value === "read") ? "can view" : (value === "admin" ? "is admin" : "can edit")
     }
     if (readonly) {
         return <text>{strForVal(value)}</text>
@@ -383,13 +385,17 @@ export function ReadWriteAdminSelector({readonly,onUpdate, value}:{value:string,
                         }} disabled={false}/>
 }
 
-export function ReadWriteSelector({readonly,onUpdate, value}:{value:boolean,readonly:boolean,onUpdate?:(b: boolean)=>void}){
+export function ReadWriteSelector({readonly, onUpdate, value}: {
+    value: boolean,
+    readonly: boolean,
+    onUpdate?: (b: boolean) => void
+}) {
     if (readonly) {
-        return <text>{value?"can edit":"can view"}</text>
+        return <text>{value ? "can edit" : "can view"}</text>
     }
     return <SelectorFor options={["can view", "can edit"]} initial={value ? "can edit" : "can view"}
                         updateParent={s => {
-                            onUpdate && onUpdate(s==="can edit")
+                            onUpdate && onUpdate(s === "can edit")
                         }} disabled={false}/>
 }
 
@@ -398,25 +404,46 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
     setPerms?: (pp: Map<string, string>) => void, // TODO: to string!
     readonly: boolean,
 }) {
-    if(readonly && !perms){
+    const depth = useContext(DepthContext)
+    if (readonly && !perms) {
         return null
     }
-    return <div><TestAndValidate todos={["title area"]}>
-        {perms!==undefined && perms.size>0 && [...perms.entries()].map((p) => { // TODO: how to handle the undefineds?
-            return <div key={p[0]}>
-                {p[0]}
-                <ReadWriteAdminSelector readonly={readonly} value={p[1]} onUpdate={(b) => {
-                    setPerms && setPerms(new Map(perms).set(p[0], b))
-                }}/>
+    return <DepthProvider>
+        <div className={"subForm depth" + depth}>
+            <div className={"centerH text-lg mb-1"}>{"Permissions"}</div>
+            <div className={"projectPermsUsers"}>
+                {/* TODO: make this into a grid or table*/}
+                {perms !== undefined && perms.size > 0 && [...perms.entries()].map((p) => { // TODO: how to handle the undefineds?
+                    return <>
+                        <div key={p[0] + "name"}>{p[0]}</div>
+                        <ReadWriteAdminSelector key={p[0] + "sel"} readonly={readonly} value={p[1]}
+                                                onUpdate={(b) => {
+                                                    setPerms && setPerms(new Map(perms).set(p[0], b))
+                                                }}/>
+                        <RemoveButton key={p[0] + "remv"} click={() => {
+                            const updated = new Map<string, string>()
+                            perms.entries().forEach(v => {
+                                if (v[0] !== p[0]) {
+                                    updated.set(v[0], v[1])
+                                }
+                            })
+                            setPerms && setPerms(updated)
+                        }} txt={"Remove"}/>
+                    </>
+                })}
             </div>
-        })}
-        {/* AREA TO ADD USER */}
-        <UserSelector onSelect={(u)=>{
-            let out = (perms !==undefined && perms.size>0)?new Map<string, string>(perms):new Map<string, string>()
-            setPerms && setPerms(out.set(u._id, "read"))
-        }} blacklist={(perms!==undefined&&perms.size>0)?[...perms.entries()].map(u=>{return u[0]}):[]}/>
-    </TestAndValidate>
-    </div>
+
+            {/* AREA TO ADD USER */}
+            <div className={"inlineChildren"}>{"Add user: "}<UserSelector onSelect={(u) => {
+                let out = structuredClone(perms) || new Map<string, string>()
+                out.set(u._id, "read")
+                setPerms && setPerms(out)
+            }} blacklist={(perms !== undefined && perms.size > 0) ? [...perms.entries()].map(u => {
+                return u[0]
+            }) : []}/>
+            </div>
+        </div>
+    </DepthProvider>
 }
 
 // // TODO: FIX FOR NEW PROJECT PERMS!
@@ -622,62 +649,90 @@ export function ProjectsSelector(inp: {
     const [err, setErr] = useState<string | undefined>(undefined)
     // TODO: does this need incremented depth?
     useEffect(() => {
-            fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: do we also want to pull the user's perms for each project?
-                method: "GET",
-                headers: {
-                    credentials: 'include',
-                    // TODO: SessionId: sessionId,
-                    'Content-type': "application/json"
-                }
-            }).then(HandleJsonResponse).then((projs) => {
-                try {
-                    return projs as string[] // TODO: FIXME!
-                } catch (err) {
-                    throw err
-                }
-            }).then(projs => {
-                setProjects(projs)
-                setLoading(false)
-                setErr(undefined)
-                return
-            }).catch(err => {
-                HandleErr(err, setErr)
-                return
-            })
-        }, [])
+        fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: do we also want to pull the user's perms for each project?
+            method: "GET",
+            headers: {
+                credentials: 'include',
+                // TODO: SessionId: sessionId,
+                'Content-type': "application/json"
+            }
+        }).then(HandleJsonResponse).then((projs) => {
+            try {
+                return projs as string[] // TODO: FIXME!
+            } catch (err) {
+                throw err
+            }
+        }).then(projs => {
+            setProjects(projs)
+            setLoading(false)
+            setErr(undefined)
+            return
+        }).catch(err => {
+            HandleErr(err, setErr)
+            return
+        })
+    }, [])
     if (loading) {
         return <div>{"Loading projects selector"}</div>
     }
-    const projectOptions = ()=>{
-       if (projects == undefined || projects.length == 0) {
-           return [""]
-       }
-        return ["", ...projects.filter(pToFilter=>{
-                return (inp.blacklist || []).indexOf(pToFilter) == -1
-            })]
+    const projectOptions = () => {
+        if (projects == undefined || projects.length == 0) {
+            return [""]
+        }
+        return ["", ...projects.filter(pToFilter => {
+            return (inp.blacklist || []).indexOf(pToFilter) == -1
+        })]
     }
     return <div>
         <ErrorDisplay err={err}/>
-        <SelectorResetsOnSelectFor options={projectOptions()} updateParent={(pr)=>{
-            console.log("selected "+pr)
+        <SelectorResetsOnSelectFor options={projectOptions()} updateParent={(pr) => {
+            console.log("selected " + pr)
             inp.onSelect(pr)
         }}/>
     </div>
 }
 
-export function ProjectListPageTable({data, onClick}: ListPageItems<ProjectData>) {
-    const cols: ListTableColumn<ProjectData>[] = [
-        NewColumn("Name", (v)=>v._id),
-        NewColumn("Completed", (v)=>{
-            return v.completed?NumberToDateStr(v.completed):""
+export function ProjectListPageTable({data, onClick, withLink}: ListPageItems<ProjectData>) {
+    let cols: ListTableColumn<ProjectData>[] = [
+        NewColumn("Name", (v) => v._id),
+        NewColumn("Completed", (v) => {
+            return v.completed ? NumberToDateStr(v.completed) : ""
         }),
-        NewColumn("Created", (v)=>{
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
         }),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: ProjectData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"project",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function ProjectSelectorTable({data, onClick}: ListPageItems<ProjectData>) {
+    return <ProjectListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function ProjectSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: ProjectData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: ProjectData[]):JSX.Element=>{
+        return <ProjectSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"project"} entryTypes={"projects"} doSelect={doSelect} asserter={AssertProject}
+                                   table={table}>
+        {allowCreate && <NewProjectForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

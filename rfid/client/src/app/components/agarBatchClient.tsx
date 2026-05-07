@@ -5,9 +5,9 @@ import {useQuery,} from '@tanstack/react-query'
 import NotesArea, {IsValidNote, Note, NotesAreaInline, NotesAreaOld} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
-import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
+import DateArea from "@/app/components/formSubcomponents/date";
 import {AgarBatchData, AgarColor} from "@/app/components/agarBatchServer";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     DisplayInput,
     HandleJsonResponse,
@@ -18,9 +18,15 @@ import {
     ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
-    OptionalKey,
+    OptionalKey, ViewInNewTabButton,
 } from "@/app/components/common";
-import {AgarRecipeArea, AgarRecipeSelector, dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {
+    AgarRecipeArea,
+    AgarRecipeSelector,
+    AgarRecipeSelectorTable, AssertAgarRecipe,
+    dataFor, ExistingDualSelector, ExistingRecentSelector,
+    InlineEntry, NewAgarRecipeForm
+} from "@/app/components/agarRecipeClient";
 import {OnViewCreatorsTriColArea, PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
@@ -34,7 +40,7 @@ import {NewPlateForm} from "@/app/components/plateClient";
 import {PlateData} from "@/app/components/plateServer";
 import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {NewSlantForm} from "@/app/components/slantClient";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
+import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 
 export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
@@ -253,15 +259,17 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     return <NewEntryFormWrapper entryType={"agarBatch"}>
         <div data-cy-id="Header">{"Creating a new agar batch"}</div>
         <ErrorDisplay data-cy-id="Error" err={err}/>
-        {pcRunInp === undefined ?
-            <RecentPCRunSelector data-cy-id="PcRun" doSelect={setPcRun} allowCreation={handlers.isTopLevel}
-                                 creatorInPage={handlers.isTopLevel}/* TODO: isTopLevel*//>
-            : <PcRunArea binaryId={pcRunInp?._id}/>
+        {pcRunInp ? <PcRunArea binaryId={pcRunInp?._id}/> :
+            <Subform >
+                <RecentPCRunSelector data-cy-id="PcRun" doSelect={setPcRun} allowCreation={handlers.isTopLevel}
+                                 creatorInPage={handlers.isTopLevel}/>
+            </Subform>
         }
-        {agarRecipeIn === undefined ?
-            <AgarRecipeSelector data-cy-id="Recipe" doSelect={setRecipe} showRecent={handlers.isTopLevel}
-                                allowCreate={handlers.isTopLevel}/* TODO: isTopLevel*//>
-            : <AgarRecipeArea agarRecipeBinId={agarRecipeIn?._id}/>
+        {agarRecipeIn ? <AgarRecipeArea agarRecipeBinId={agarRecipeIn?._id}/> :
+            <Subform >
+                <AgarRecipeSelector data-cy-id="Recipe" doSelect={setRecipe}
+                                allowCreate={handlers.isTopLevel}/>
+            </Subform>
         }
         <AgarColorArea data-cy-id={"Color"} current={color} onSelect={setColor}/>
         <NotesAreaOld data-cy-id="Notes" readonly={false} updateParent={v => { // TODO: notesFormArea?
@@ -362,8 +370,8 @@ export function NumberToDateStr(n: number): string {
     return (d.getMonth()+1)+"/"+d.getDate()+"/"+d.getFullYear()
 }
 
-export function AgarBatchListPageTable({data, onClick}: ListPageItems<AgarBatchData>) {
-    const cols: ListTableColumn<AgarBatchData>[] = [
+export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<AgarBatchData>) {
+    let cols: ListTableColumn<AgarBatchData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Color", (v)=>v.color),
         NewColumn("PC Run", (v)=>v.pcRun),
@@ -372,11 +380,18 @@ export function AgarBatchListPageTable({data, onClick}: ListPageItems<AgarBatchD
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: AgarBatchData)=>{
+            return <EntryLinkWrapper props={{linkId:v._id,entryType:"agarBatch",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for notes????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
-// export function AgarBatchListPageTable({data, onClick}: ListPageItems<AgarBatchData>) {
+// export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<AgarBatchData>) {
 //     return <table className={"listPageTable"}>
 //         <tr>
 //             <th>{"ID"}</th>
@@ -442,4 +457,41 @@ export function AgarColorArea(
         <label className={"newAreaLabel"}>{"Color: "}</label>
         {selectorArea()}
     </div>
+}
+
+// TODO: DO THIS ON ALL!
+export function AgarBatchSelectorTable({data, onClick, withLink}: ListPageItems<AgarBatchData>) {
+    let cols: ListTableColumn<AgarBatchData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Color", (v)=>v.color),
+        NewColumn("Last Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+    ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: AgarBatchData)=>{
+            return <EntryLinkWrapper props={{linkId:v._id,entryType:"agarBatch",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+}
+
+export function AgarBatchSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: AgarBatchData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: AgarBatchData[]):JSX.Element=>{
+        return <AgarBatchSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"agarBatch"} entryTypes={"agarBatches"} doSelect={doSelect} asserter={AssertAgarBatch}
+                                 table={table}>
+        {allowCreate && <NewAgarBatchForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

@@ -287,6 +287,7 @@ func main() {
 	http.Handle("/db/import/{endpt}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.ImportHandler()))))
 	// List handlers
 	http.Handle("/db/list/{variant}", ctxInternalAuthMiddleware(rfid.ListEntriesHandler()))
+	http.Handle("/subspeciesFor/{variant}", ctxInternalAuthMiddleware(rfid.ListSubspeciesHandler()))
 	http.Handle("/sessionUserProjects", ctxInternalAuthMiddleware(rfid.SessionUserProjectsHandler()))
 
 	println("Defining simple api endpoints")

@@ -1,0 +1,11 @@
+.projectPermsUsers {
+    display: grid;
+    grid-auto-rows: min-content;
+    grid-template-columns: min-content min-content min-content;
+    & > * {
+        margin-block: 0.25rem;
+        &:first-child {
+            margin-right: 1rem;
+        }
+    }
+}

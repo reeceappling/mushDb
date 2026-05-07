@@ -8,9 +8,9 @@ import {
     ContaminationForm,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NumberToDate} from "@/app/components/formSubcomponents/date";
-import {SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {ListResult, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import TextBox from "@/app/components/formSubcomponents/textbox";
@@ -19,10 +19,48 @@ import ReaderWriterSelector, {
     RfidSelectorWithReadButton
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {useRfidReaderContext} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
-import {validatorForAssertion} from "@/app/components/substrateRecipeClient";
+import {
+    AssertDualListResult,
+    AssertSubstrateRecipe,
+    validatorForAssertion
+} from "@/app/components/substrateRecipeClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import * as React from "react";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
+import {AssertAgarBatch} from "@/app/components/agarBatchClient";
+import {AgarBatchData} from "@/app/components/agarBatchServer";
+import {AssertBag} from "@/app/components/bagClient";
+import {BagData} from "@/app/components/bagServer";
+import {AssertFruit} from "@/app/components/fruitClient";
+import {FruitData} from "@/app/components/fruitServer";
+import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {AssertGrainBatch} from "@/app/components/grainBatchClient";
+import {AssertJar} from "@/app/components/jarClient";
+import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
+import {LcRecipeData} from "@/app/components/lcRecipeServer";
+import {AssertLcRecipe} from "@/app/components/lcRecipeClient";
+import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
+import {AssertLc} from "@/app/components/lcClient";
+import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
+import {AssertMss} from "@/app/components/mssClient";
+import {AssertPcRun} from "@/app/components/pcRunClient";
+import {AssertPlate} from "@/app/components/plateClient";
+import {AssertProject} from "@/app/components/projectClient";
+import {AssertSale} from "@/app/components/saleClient";
+import {AssertSlant} from "@/app/components/slantClient";
+import {AssertSpecies} from "@/app/components/speciesClient";
+import {AssertSporePrint} from "@/app/components/sporePrintClient";
+import {AssertSporeSwab} from "@/app/components/sporeSwabClient";
+import {AssertStasisTube} from "@/app/components/stasisTubeClient";
+import {AssertSubspecies} from "@/app/components/subspeciesClient";
+import {AssertSubstrateBatch} from "@/app/components/substrateBatchClient";
+import { AssertUser } from "./userClient";
+import {AssertWaterJar} from "@/app/components/waterJarClient";
+import {AssertTransfer} from "@/app/components/transferClient";
 
 export function SendMultipartRequest(url: string, cookies: string, formData: FormData) {
     return fetch(url, {
@@ -137,6 +175,88 @@ export function OptionalArrayOfType(key: string, input: any, validateChildren: (
 //     })
 // }
 
+export function ViewInNewTabButton({entryType,id}:{entryType:string,id:string}){
+    return <EntryLinkWrapper props={{linkId: encodeURI(encodeURI(id)), entryType: entryType, openInNewTab: true}}>
+        <button className={"basicButtonSmall"}>{"View"}</button>
+    </EntryLinkWrapper>
+}
+
+export function ListItemsRequest(entryType:string){
+    return fetch(BaseExternalUrl + "/db/list/"+entryType, {
+        method: 'Get',
+        credentials: 'include',
+        headers: {
+            credentials: 'include',
+            'Accept': 'application/json',
+        },
+    }).then((res) => {
+        if(!res.ok){
+            throw new Error('response not ok. Status='+res.status+', body='+res.text())
+        }
+        return res.json().then(result=>{
+            switch(entryType){
+                case "agarBatches":
+                    AssertArrayResult(result, AssertAgarBatch); break;
+                case "agarRecipes":
+                    AssertDualListResult<AgarRecipeData>(result, AssertAgarRecipe); break;
+                case "bags":
+                    AssertArrayResult(result, AssertBag); break;
+                case "fruits":
+                    AssertArrayResult(result, AssertFruit); break;
+                case "fruitingChambers":
+                    AssertArrayResult(result, AssertFruitingChamber); break;
+                case "grainBatches":
+                    AssertArrayResult(result, AssertGrainBatch); break;
+                case "jars":
+                    AssertArrayResult(result, AssertJar); break;
+                case "jarRecipes":
+                    AssertDualListResult<JarRecipeData>(result, AssertJarRecipe); break;
+                case "lcs":
+                    AssertArrayResult(result, AssertLc); break;
+                case "lcRecipes":
+                    AssertDualListResult<LcRecipeData>(result, AssertLcRecipe); break;
+                case "lcSyringes":
+                    AssertArrayResult(result, AssertLcSyringe); break;
+                case "mss": // TODO: ensure ok
+                    AssertArrayResult(result, AssertMss); break;
+                case "pcRuns":
+                    AssertArrayResult(result, AssertPcRun); break;
+                case "plates":
+                    AssertArrayResult(result, AssertPlate); break;
+                case "projects":
+                    AssertArrayResult(result, AssertProject); break;
+                case "sales":
+                    AssertArrayResult(result, AssertSale); break;
+                case "slants":
+                    AssertArrayResult(result, AssertSlant); break;
+                case "species":
+                    AssertArrayResult(result, AssertSpecies); break;
+                case "sporePrints":
+                    AssertArrayResult(result, AssertSporePrint); break;
+                case "sporeSwabs":
+                    AssertArrayResult(result, AssertSporeSwab); break;
+                case "stasisTubes":
+                    AssertArrayResult(result, AssertStasisTube); break;
+                case "subspecies":
+                    AssertArrayResult(result, AssertSubspecies); break;
+                case "substrateBatches":
+                    AssertArrayResult(result, AssertSubstrateBatch); break;
+                case "substrateRecipes":
+                    AssertArrayResult(result, AssertSubstrateRecipe); break;
+                case "transfers":
+                    AssertArrayResult(result, AssertTransfer); break;
+                case "users":
+                    AssertArrayResult(result, AssertUser); break;
+                case "waterJars":
+                    AssertArrayResult(result, AssertWaterJar); break;
+                default:
+                    throw new Error("invalid type but got response. Should never happen"); break;
+            }
+            return result
+        })
+    })
+}
+
 export function IsString(item: any): boolean {
     return typeof item === 'string'
 }
@@ -152,6 +272,7 @@ export function HeaderLevel(lvl?: number) {
 export interface ListPageItems<T> {
     data: T[],
     onClick?: (v: T) => void
+    withLink?: boolean,
 }
 
 export interface InlineProps<T> {
@@ -221,12 +342,13 @@ export function InlineExpansionButton(
         }}>{expanded ? "See less" : "See more"}</button>
     </div>
 }
-export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr, falseStr}: {
+export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr, falseStr,className}: {
     pre: string,
     updateParent?: (v?: boolean) => void,
     initial?: boolean,
     trueStr: string,
     falseStr: string
+    className?: string
 }) {
     if (initial !== undefined) {
         return <div>{pre + (initial ? trueStr : falseStr)}</div>
@@ -244,7 +366,7 @@ export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr
         updateParent && updateParent(val)
         setSelected(val)
     }
-    return <div>
+    return <div className={className}>
         <div>{pre}</div>
         <select className={"tailwindSelector"} value={strForBool(selected)} onChange={selectHandler}>
             <option value={"unknown"}>{"unknown"}</option>
@@ -284,12 +406,13 @@ export function ConfirmedCleanSelector(// TODO: validate works now via a test LC
     // </div>
 }
 
-export function YesNoSelector({pre, updateParent, initial}: {
+export function YesNoSelector({pre, updateParent, initial,className}: {
     pre: string,
     updateParent?: (v?: boolean) => void,
     initial?: boolean
+    className?:string
 }) {
-    return <TwoValuePlusUnknownSelector pre={pre} updateParent={updateParent} initial={initial} trueStr={"yes"} falseStr={"no"}/>
+    return <TwoValuePlusUnknownSelector pre={pre} updateParent={updateParent} initial={initial} trueStr={"yes"} falseStr={"no"} className={className}/>
 }
 
 export function ConfirmedCleanArea(

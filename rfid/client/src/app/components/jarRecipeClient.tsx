@@ -1,9 +1,9 @@
 'use client'
 
-import React, {JSX, useEffect, useState} from "react";
-import NotesAreaOld, {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import React, {JSX, useState} from "react";
+import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
-    AddCreatedQuadColFunction, AddCreatedTriColFunction,
+    AddCreatedTriColFunction,
     AllEntries,
     Data,
     OnViewCreatorQuadCol
@@ -29,14 +29,14 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea, ListPageItems,
+    InlineSubArea,
+    ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
-    RequiredArrayOfType,
-    TwoListProps
+    RequiredArrayOfType
 } from "@/app/components/common";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
     Additive,
     AdditiveEntriesGroup,
@@ -44,33 +44,28 @@ import AdditivesArea, {
     IsValidAdditive
 } from "@/app/components/formSubcomponents/additives";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
-import {ErrorDisplay, NameArea, OpenMainPage, StandardArea} from "@/app/components/formSubcomponents/commonClient";
+import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {SelectorProps} from "@/app/components/selector";
 import {Grain, GrainsSelector, IsValidGrain} from "@/app/components/formSubcomponents/grains";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AgarRecipeSelector, InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingDualSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import {NewSporePrintForm} from "@/app/components/sporePrintClient";
-import {SporePrintData} from "@/app/components/sporePrintServer";
 import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
-import {NewJarForm} from "@/app/components/jarClient";
-import {JarData} from "@/app/components/jarServer";
 import {NewGrainBatchForm} from "@/app/components/grainBatchClient";
 import {GrainBatchData} from "@/app/components/grainBatchServer";
-import { DepthProvider } from "./formSubcomponents/depthContext/depth";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {
     FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
+    FlexedSinglesGroup,
+    ListPageTable,
     ListTableColumn,
     NewColumn,
-    NotesFormArea, NumberToDateStr
+    NotesFormArea,
+    NumberToDateStr
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {LcRecipeData} from "@/app/components/lcRecipeServer";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -144,7 +139,7 @@ export default function JarRecipeDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: JarRecipeData)=>{
+        const updateInitial = (updated: JarRecipeData) => {
             setInitial(updated)
             setIsStandard(updated.standard)
             setNotes(InitialNotesState(updated.notes))
@@ -155,7 +150,6 @@ export default function JarRecipeDisplay(
                 method: "POST",
                 headers: {
                     credentials: 'include',
-                    // 'Cookie': cookies, // TODO: ok to leave out? do this elsewhere if it works
                     'Content-type': "application/json"
                 },
                 body: JSON.stringify({
@@ -200,17 +194,17 @@ export default function JarRecipeDisplay(
         return <DisplayFormWrapper entryType={"jarRecipe"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <TestAndValidate todos={["Put name at top????"]}>
-                <ID id={data._id} txt={"Grain Jar Recipe"} entryType={"jarRecipe"} />
+                <ID id={data._id} txt={"Grain Jar Recipe"} entryType={"jarRecipe"}/>
             </TestAndValidate>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
             <FlexedArea>
-                <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
+                <FlexedSinglesGroup>
                     <TestAndValidate todos={["allow to be changeable?", "sometimes deletes name when doing updates"]}>
                         <NameArea currentName={initial.name} readonly={readonly} headerLevel={headerLevel}/>
                     </TestAndValidate>
 
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
+                <FlexedSinglesGroup>
                     <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     <StandardArea isStandard={isStandard} readonly={readonly} setStandard={setIsStandard}
                                   headerLevel={headerLevel}/>
@@ -218,14 +212,17 @@ export default function JarRecipeDisplay(
             </FlexedArea>
             {jarGrainsArea()}
 
-            <NutrientsArea initialValues={dataFormatFor(initial.nutrients)} headerLevel={headerLevel} readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
-            <SugarsArea initialValues={dataFormatFor(initial.sugars)} headerLevel={headerLevel} readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
-            <AdditivesArea initialValues={dataFormatFor(initial.additives)} headerLevel={headerLevel} readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
+            <NutrientsArea initialValues={dataFormatFor(initial.nutrients)} headerLevel={headerLevel}
+                           readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
+            <SugarsArea initialValues={dataFormatFor(initial.sugars)} headerLevel={headerLevel}
+                        readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
+            <AdditivesArea initialValues={dataFormatFor(initial.additives)} headerLevel={headerLevel}
+                           readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>
-            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
@@ -236,7 +233,7 @@ export default function JarRecipeDisplay(
     }
 }
 
-export function NewJarRecipeForm({handlers}: {handlers: NewEntryInput<JarRecipeData>}) {
+export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipeData> }) {
     const [name, setName] = useState<string | undefined>()
     const [grains, setGrains] = useState<Grain[]>()
     const [isStandard, setIsStandard] = useState(false)
@@ -246,8 +243,7 @@ export function NewJarRecipeForm({handlers}: {handlers: NewEntryInput<JarRecipeD
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState<boolean>(false)
-    // TODO: handle isTopLevel
-    const loadTemplate = (template: JarRecipeData) =>{
+    const loadTemplate = (template: JarRecipeData) => {
         setGrains(template.grains)
         setNutrients(template.nutrients || [])
         setSugars(template.sugars || [])
@@ -301,13 +297,13 @@ export function NewJarRecipeForm({handlers}: {handlers: NewEntryInput<JarRecipeD
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {
-            return <JarRecipeSelector doSelect={(rec) => { // TODO: endpoint for getStandard
+            return <JarRecipeSelector doSelect={(rec) => { // TODO: endpoint for getStandard?
                 if (rec === undefined) {
                     return
                 }
                 loadTemplate(rec)
                 setTemplateSelectorOpen(false)
-            }} allowCreation={false}/>
+            }} allowCreate={false}/>
         } else {
             return <button className={"basicButton"} onClick={() => {
                 setTemplateSelectorOpen(true)
@@ -316,29 +312,24 @@ export function NewJarRecipeForm({handlers}: {handlers: NewEntryInput<JarRecipeD
     }
     return <NewEntryFormWrapper entryType={"jarRecipe"}>
         <ErrorDisplay err={err}/>
-        {/* TODO: created items div */}
         <TestAndValidate todos={["TEST THIS"]}>
             {templateRecipeSelector()}
         </TestAndValidate>
         <NameArea classNames={"inlineChildren"} readonly={false} setName={setName}/>
+
         <TestAndValidate todos={["ensure works like nutrientEntriesGroup"]}>
+            <div>{"Grains"}</div>
             {/* TODO: grain batches???? */}
-            <div>{"Grains"}</div>{/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
+            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
             <GrainsSelector current={grains || []} onChange={setGrains}/>
         </TestAndValidate>
         <StandardArea readonly={false} setStandard={setIsStandard}/>
-        <TestAndValidate todos={["should templates overwrite nutrients?"]}>
-            <div>{"Nutrients"}</div>{/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
-            <NutrientsEntriesGroupForNew currentEntries={nutrients} updateParent={setNutrients}/>
-        </TestAndValidate>
-        <TestAndValidate todos={["should templates overwrite nutrients?"]}>
-            <div>{"Sugars"}</div>{/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
-            <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
-        </TestAndValidate>
-        <TestAndValidate todos={["should templates overwrite nutrients?"]}>
-            <div>{"Additives"}</div>{/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
-            <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
-        </TestAndValidate>
+        <div>{"Nutrients"}</div>
+        <NutrientsEntriesGroupForNew currentEntries={nutrients} updateParent={setNutrients}/>
+        <div>{"Sugars"}</div>
+        <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
+        <div>{"Additives"}</div>
+        <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
         <NewEntryNotes setNotes={setNotes}/>
         <TestAndValidate todos={["make large"]}>
             <input type="submit" value="Create" onClick={newJarRecipeSubmit} onSubmit={(e) => {
@@ -348,12 +339,19 @@ export function NewJarRecipeForm({handlers}: {handlers: NewEntryInput<JarRecipeD
     </NewEntryFormWrapper>
 }
 
-export function JarRecipeInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<JarRecipeData>) { // TODO: DO THIS ENTIRELY!
+export function JarRecipeInline({
+                                    data,
+                                    expandByDefault,
+                                    onClick,
+                                    showMainPageButton,
+                                    idIsLink
+                                }: InlineProps<JarRecipeData>) { // TODO: DO THIS ENTIRELY!
     const [expanded, setExpanded] = useState(expandByDefault)
     const b58id = data._id
     return <InlineEntry onClick={onClick}>
         <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Grain Jar Recipe"} entryType={"grainJar"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+            <ID id={b58id} txt={"Grain Jar Recipe"} entryType={"grainJar"} allowOpenMainPage={showMainPageButton}
+                linkPage={idIsLink}/>
             <NameArea currentName={data.name} readonly={true}/>
             {/* TODO: ADD GRAINS */}
             <StandardArea isStandard={data.standard} readonly={true}/>
@@ -379,8 +377,7 @@ export function JarRecipeInline({data, expandByDefault, onClick, showMainPageBut
     </InlineEntry>
 }
 
-export const JarRecipeArea = ({recipeId, headerLevel}: { recipeId?: string, headerLevel?: number }) => { // TODO: USE THIS!
-    // TODO: depth provider or no?
+export const JarRecipeArea = ({recipeId}: { recipeId?: string, headerLevel?: number }) => { // TODO: USE THIS!
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (recipeId !== undefined) {
         const b58id = recipeId
@@ -396,51 +393,51 @@ export const JarRecipeArea = ({recipeId, headerLevel}: { recipeId?: string, head
     </div>
 }
 
-export function JarRecipeSelector(
-    {doSelect, allowCreation, headerLevel, creatorInPage}: SelectorProps<JarRecipeData> // TODO: ALL PROPS
-) {
-    // TODO; depth provider or no?
-    const [standard, setStandard] = useState<JarRecipeData[]>([])
-    const [recent, setRecent] = useState<JarRecipeData[]>([])
-    const [err, setErr] = useState<string | undefined>()
-    //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-    useEffect(() => {
-        fetch(BaseExternalUrl + "/db/list/jarRecipes", {
-            method: 'GET',
-            headers: {
-                credentials: 'include',
-                // 'Cookie': cookies, // TODO: ok to leave out? do this elsewhere if it works
-                'Content-type': "application/json"
-                //Authorization: tokenFetch,
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((resp) => {
-                let out = resp as { standard: JarRecipeData[], recent: JarRecipeData[] } // TODO: ASSERT?
-                setStandard(out.standard)
-                setRecent(out.recent)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
-    }, []) // TODO: OK????? [] or nothing?
-    return <div>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
-        <div>{/* Standard area*/}
-            <div>{"Standard Recipes"}</div>
-            {standard.map(item => {
-                return <JarRecipeInline data={item} headerLevel={headerLevel} onClick={doSelect}/>
-            })}
-        </div>
-        <div>{/* Recent Area*/}
-            <div>{"Recent Recipes"}</div>
-            {recent.map(item => {
-                return <JarRecipeInline data={item} headerLevel={headerLevel} onClick={doSelect}/>
-            })}
-        </div>
-        {/* TODO: CREATOR, IF ALLOWED, with increased depth */}
-    </div>
-}
+// export function JarRecipeSelector(
+//     {doSelect, allowCreation, headerLevel, creatorInPage}: SelectorProps<JarRecipeData> // TODO: ALL PROPS
+// ) {
+//     // TODO; depth provider or no?
+//     const [standard, setStandard] = useState<JarRecipeData[]>([])
+//     const [recent, setRecent] = useState<JarRecipeData[]>([])
+//     const [err, setErr] = useState<string | undefined>()
+//     //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+//     useEffect(() => {
+//         fetch(BaseExternalUrl + "/db/list/jarRecipes", {
+//             method: 'GET',
+//             headers: {
+//                 credentials: 'include',
+//                 // 'Cookie': cookies, // TODO: ok to leave out? do this elsewhere if it works
+//                 'Content-type': "application/json"
+//                 //Authorization: tokenFetch,
+//             },
+//         })
+//             .then(HandleJsonResponse)
+//             .then((resp) => {
+//                 let out = resp as { standard: JarRecipeData[], recent: JarRecipeData[] } // TODO: ASSERT?
+//                 setStandard(out.standard)
+//                 setRecent(out.recent)
+//             })
+//             .catch((err) => {
+//                 setErr(JSON.stringify(err))
+//             });
+//     }, []) // TODO: OK????? [] or nothing?
+//     return <div>
+//         <ErrorDisplay err={err} headerLevel={headerLevel}/>
+//         <div>{/* Standard area*/}
+//             <div>{"Standard Recipes"}</div>
+//             {standard.map(item => {
+//                 return <JarRecipeInline data={item} headerLevel={headerLevel} onClick={doSelect}/>
+//             })}
+//         </div>
+//         <div>{/* Recent Area*/}
+//             <div>{"Recent Recipes"}</div>
+//             {recent.map(item => {
+//                 return <JarRecipeInline data={item} headerLevel={headerLevel} onClick={doSelect}/>
+//             })}
+//         </div>
+//         {/* TODO: CREATOR, IF ALLOWED, with increased depth */}
+//     </div>
+// }
 
 // export function JarRecipeListDisplay({recent, standard, onClick}: TwoListProps<JarRecipeData>) {
 //     const recentArea = () => {
@@ -475,39 +472,88 @@ export function JarRecipeSelector(
 //     </div>
 // }
 
-export function JarRecipeListPageTable({data, onClick}: ListPageItems<JarRecipeData>) {
-    const cols: ListTableColumn<JarRecipeData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Name", (v)=>v.name), // TODO: shortname?
-        NewColumn("Grains", (v)=>{
+export function JarRecipeListPageTable({data, onClick, withLink}: ListPageItems<JarRecipeData>) {
+    let cols: ListTableColumn<JarRecipeData>[] = [
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("Grains", (v) => {
             return <div>
-                {v.grains.map((g,i)=>{
-                    return <div key={g.grain+i}>{g.grain}</div>
+                {v.grains.map((g, i) => {
+                    return <div key={g.grain + i}>{g.grain}</div>
                 })}
             </div>
         }),
-        NewColumn("Nutrients", (v)=>{
+        NewColumn("Nutrients", (v) => {
             return <div>
-                {v.nutrients && v.nutrients.map((v,i)=>{
-                    return <div key={v.nutrient+i}>{v.nutrient}</div> // TODO: any more??
+                {v.nutrients && v.nutrients.map((v, i) => {
+                    return <div key={v.nutrient + i}>{v.nutrient}</div> // TODO: any more??
                 })}
-            </div>}),
-        NewColumn("Sugars", (v)=>{
+            </div>
+        }),
+        NewColumn("Sugars", (v) => {
             return <div>
-                {v.sugars && v.sugars.map((v,i)=>{
-                    return <div key={v.type+i}>{v.type}</div> // TODO: any more??
+                {v.sugars && v.sugars.map((v, i) => {
+                    return <div key={v.type + i}>{v.type}</div> // TODO: any more??
                 })}
-            </div>}),
-        NewColumn("Additives", (v)=>{
+            </div>
+        }),
+        NewColumn("Additives", (v) => {
             return <div>
-                {v.additives && v.additives.map((v,i)=>{
-                    return <div key={v.additive+i}>{v.additive}</div> // TODO: any more??
+                {v.additives && v.additives.map((v, i) => {
+                    return <div key={v.additive + i}>{v.additive}</div> // TODO: any more??
                 })}
-            </div>}),
-        NewColumn("Last Updated", (v)=>{
+            </div>
+        }),
+        NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         })
         // TODO: bonus area for notes???
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: JarRecipeData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "jarRecipe", openInNewTab: true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+}
+
+export function JarRecipeSelectorTable({data, onClick}: ListPageItems<JarRecipeData>) {
+    let cols: ListTableColumn<JarRecipeData>[] = [
+        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Last Updated", (v) => {
+            return NumberToDateStr(v.lastUpdated)
+        }),
+        NewColumn("Link", (v: JarRecipeData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "jarRecipe", openInNewTab: true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })
+        // TODO: bonus area for notes???
+    ]
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+}
+
+export function JarRecipeSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate,
+        creatorInPage,
+    }: {
+        doSelect: (val: JarRecipeData | undefined) => void,
+        allowCreate?: boolean,
+        creatorInPage?: boolean
+    }) {
+    const table = (items: JarRecipeData[]): JSX.Element => {
+        return <JarRecipeSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingDualSelector entryType={"jarRecipe"} entryTypes={"jarRecipes"} doSelect={doSelect}
+                                 asserter={AssertJarRecipe}
+                                 table={table}>
+        {allowCreate && (creatorInPage ? <NewJarRecipeForm handlers={{onCreate: doSelect, isTopLevel: false}}/> :
+            <div>{"LINK TO CREATOR HERE FIXME"}</div>)}
+    </ExistingDualSelector>
 }

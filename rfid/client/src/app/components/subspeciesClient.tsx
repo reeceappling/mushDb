@@ -33,7 +33,7 @@ import {HandleErr} from "@/app/components/userClient";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import { InlineEntry } from "./agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
 import {
     FlexedArea,
     FlexedSinglesGroup, ListPageTable,
@@ -43,6 +43,10 @@ import {
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {StasisTubeData} from "@/app/components/stasisTubeServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {SlantData} from "@/app/components/slantServer";
+import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -274,39 +278,25 @@ export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
     const [subspeciesList, setSubspeciesList] = useState<SubspeciesData[]>([]);
     const [selected, setSelected] = useState<SubspeciesData | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    const subspeciesFor: (s: string) => SubspeciesData = (s: string) => { // TODO: DELETEME
-        return {
-            _id: s,
-            species: "SPECIES_NAME",
-            aliases: ["alias1", "alias2", "alias3"],
-            notes: [{time: 0, note: "NOTE 1"}, {time: 0, note: "NOTE 2"}],
-            lastUpdated: 0,
-            //perms: {userPerms: {ids:[],canWrite:[]}, projectPerms: {ids:[],canWrite:[]}, blanketPerms: 2} // TODO: OK?
-        }
-    }
     useEffect(() => {
-        //setSelected(undefined)
-        // setSubspeciesList([subspeciesFor('subs_A'), subspeciesFor('subs_B')]) // TODO: REMOVE
-        // setLoaded(true) // TODO: REMOVE
-        // setSelectable(species !== undefined) // TODO: REMOVE
-        // return // TODO: REMOVE
-        // if (species === undefined) {
-        //     setSelectable(false)
-        //     return
-        // }
-        fetch(BaseExternalUrl + "/db/list/subspeciesFor/" + species, { // TODO: ensure correct
+        if (!species){
+            return
+        }
+        setSelected(undefined)
+        setLoaded(false)
+        fetch(BaseExternalUrl + "/subspeciesFor/" + encodeURI(species), { // TODO: ensure correct
             method: "GET",
             headers: {
                 credentials: 'include', // TODO: check that user has creds for species
-                //'Cookie': cookies,
-                // TODO: THIS!
+                'Accept': 'application/json',
             },
         })
             .then(HandleJsonResponse)
             .then((data) => {
+                // TODO: assert subspeciesData?
                 setSubspeciesList(data as SubspeciesData[]) // TODO: ASSERT????
                 setLoaded(true)
-                // setSelectable(species !== undefined)
+                setSelectable(species !== undefined)
                 setErr(undefined)
             })
             .catch((error) => {
@@ -325,7 +315,7 @@ export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
         </div>
     }
     if (!selectable) {
-        return null;
+        return <TestAndValidate todos={["subspecies not selectable"]}><div>{"."}</div></TestAndValidate>
     }
     if (!selected && !selectorOpen) {
         return <div className={"centerHChildren gapTop gapBottom"}>
@@ -382,14 +372,41 @@ export function SubspeciesFormArea({subspecies}:{
     return <div>{"Subspecies: "+subspecies}</div>
 }
 
-export function SubspeciesListPageTable({data, onClick}: ListPageItems<SubspeciesData>) {
-    const cols: ListTableColumn<SubspeciesData>[] = [
+export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems<SubspeciesData>) {
+    let cols: ListTableColumn<SubspeciesData>[] = [
         NewColumn("Subspecies", (v)=>v._id),
         NewColumn("Species", (v)=>v.species),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: SubspeciesData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"subspecies",openInNewTab:true}}>{/* TODO: ensure ok*/}
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function SubspeciesSelectorTable({data, onClick}: ListPageItems<SubspeciesData>) {
+    return <SubspeciesListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function SubspeciesSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: SubspeciesData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: SubspeciesData[]):JSX.Element=>{
+        return <SubspeciesSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"subspecies"} entryTypes={"subspecies"} doSelect={doSelect} asserter={AssertSubspecies}
+                                   table={table}>
+        {/* TODO: ok? allowCreate && <NewSubspeciesForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
+    </ExistingRecentSelector>
 }

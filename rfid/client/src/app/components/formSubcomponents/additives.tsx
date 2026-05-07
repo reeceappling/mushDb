@@ -92,16 +92,16 @@ export function AdditiveEntriesGroupForNew({currentEntries, updateParent}: {
     return <div>
         {currentEntries.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
             {currentEntries.map((n, i) => {
-                return <>
-                    <AdditiveEntryForNew key={n.additive + 1} currentValue={n} updateParent={(updated: Additive) => {
+                return <div key={n.additive} className={"contentsOnly"}>
+                    <AdditiveEntryForNew currentValue={n} updateParent={(updated: Additive) => {
                         updateParent([...(currentEntries || [])].map((existing) => {
                             return existing.additive !== n.additive ? existing : updated
                         }))
                     }}/>
-                    <RemoveButton key={n.additive + 2} txt={"Remove"} click={() => {
+                    <RemoveButton txt={"Remove"} click={() => {
                         updateParent([...(currentEntries || [])].filter((existing) => existing.additive !== n.additive))
                     }}/>
-                </>
+                </div>
             })}
         </div>}
         <AdditiveTypeSelectorForNew onSelect={(val) => {

@@ -22,9 +22,15 @@ export function TestSaleOk() {
     return a
 }
 
+export interface ItemWithNumber {
+    _id: string // item id
+    n: number
+}
+
 export interface SaleData {
     _id: string // lot number
     creationDate: number
+    //itemsSold: ItemWithNumber[] // TODO: consider doing this!
     notes?: Note[]
     lastUpdated: number
     acl?: ACL

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import NotesAreaOld, {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -56,7 +56,7 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {SlantData} from "@/app/components/slantServer";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {OvcForXfers} from "@/app/components/bagClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {
@@ -69,6 +69,10 @@ import {
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {SporeSwabListPageTable} from "@/app/components/sporeSwabClient";
+import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
@@ -373,8 +377,8 @@ export function StasisTubeInline({data, expandByDefault, onClick, showMainPageBu
 //     </div>
 // }
 
-export function StasisTubeListPageTable({data, onClick}: ListPageItems<StasisTubeData>) {
-    const cols: ListTableColumn<StasisTubeData>[] = [
+export function StasisTubeListPageTable({data, onClick, withLink}: ListPageItems<StasisTubeData>) {
+    let cols: ListTableColumn<StasisTubeData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -385,6 +389,33 @@ export function StasisTubeListPageTable({data, onClick}: ListPageItems<StasisTub
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: StasisTubeData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"stasisTube",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function StasisTubeSelectorTable({data, onClick}: ListPageItems<StasisTubeData>) {
+    return <StasisTubeListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function StasisTubeSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: StasisTubeData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: StasisTubeData[]):JSX.Element=>{
+        return <StasisTubeSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"stasisTube"} entryTypes={"stasisTubes"} doSelect={doSelect} asserter={AssertStasisTube}
+                                   table={table}>
+        {allowCreate && <NewStasisTubeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useEffect, useState} from "react";
+import React, {JSX, useEffect, useState} from "react";
 import NotesAreaOld, {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedQuadColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -27,7 +27,7 @@ import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {NewMssForm, RecentSelectorV2} from "@/app/components/mssClient";
 import {MssData} from "@/app/components/mssServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
-import { InlineEntry } from "./agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
 import {
     FlexedArea,
     FlexedSinglesGroup, ListPageTable,
@@ -37,6 +37,11 @@ import {
 } from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
+import {SlantData} from "@/app/components/slantServer";
+import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -237,8 +242,8 @@ export function WaterJarRecentSelector({onSelect}: { onSelect: (selected?: Water
                                            }}/>
 }
 
-export function WaterJarListPageTable({data, onClick}: ListPageItems<WaterJarData>) {
-    const cols: ListTableColumn<WaterJarData>[] = [
+export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<WaterJarData>) {
+    let cols: ListTableColumn<WaterJarData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -251,6 +256,51 @@ export function WaterJarListPageTable({data, onClick}: ListPageItems<WaterJarDat
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: WaterJarData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"waterJar",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function WaterJarSelectorTable({data, onClick}: ListPageItems<WaterJarData>) {
+    let cols: ListTableColumn<WaterJarData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Created", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+        NewColumn("Disposed", (v)=>{
+            return v.disposed?NumberToDateStr(v.disposed):""
+        }),
+        NewColumn("Link", (v: WaterJarData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"waterJar",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })
+    ]
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function WaterJarSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: WaterJarData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: WaterJarData[]):JSX.Element=>{
+        return <WaterJarSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"waterJar"} entryTypes={"waterJars"} doSelect={doSelect} asserter={AssertWaterJar}
+                                   table={table}>
+        {allowCreate && <NewWaterJarForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

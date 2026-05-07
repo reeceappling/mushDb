@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import {
     DisplayInput, HandleJsonResponse, HandleTxtResponse,
     ImportDisplayInput, InlineExpansionArea, InlineExpansionButton,
@@ -30,7 +30,7 @@ import {FruitData} from "@/app/components/fruitServer";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import ID from "@/app/components/formSubcomponents/id";
 import {
     FlexedArea,
@@ -54,6 +54,10 @@ import {SaleArea} from "@/app/components/saleClient";
 import {OvcForXfers} from "@/app/components/bagClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {SlantData} from "@/app/components/slantServer";
+import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -325,8 +329,8 @@ export function SporeSwabInline(
     </InlineEntry>// TODO: VALIDATE WORKS AS EXPECTED
 }
 
-export function SporeSwabListPageTable({data, onClick}: ListPageItems<SporeSwab>) {
-    const cols: ListTableColumn<SporeSwab>[] = [
+export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<SporeSwab>) {
+    let cols: ListTableColumn<SporeSwab>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -337,6 +341,34 @@ export function SporeSwabListPageTable({data, onClick}: ListPageItems<SporeSwab>
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: SporeSwab)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"sporeSwab",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwab>) {
+    return <SporeSwabListPageTable data={data} onClick={onClick} withLink={true} />
+}
+
+export function SporeSwabSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: SporeSwab | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: SporeSwab[]):JSX.Element=>{
+        return <SporeSwabSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"sporeSwab"} entryTypes={"sporeSwabs"} doSelect={doSelect} asserter={AssertSporeSwab}
+                                   table={table}>
+        {/* TODO: ok?allowCreate && <NewSporeSwabForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
+    </ExistingRecentSelector>
 }

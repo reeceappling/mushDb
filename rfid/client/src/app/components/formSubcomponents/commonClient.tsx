@@ -62,10 +62,9 @@ export function RemoveButton({txt,click}:{click:()=>void,txt:string}){
 }
 
 
-export function LiquidEntryForNew({currentValue, updateParent, key}: {
+export function LiquidEntryForNew({currentValue, updateParent}: {
     currentValue: Liquid,
     updateParent: (l: Liquid) => void
-    key: string
 }) {
     const [err, setErr] = useState<string | undefined>()
     const handleFormChangePct = (val: number) => {
@@ -74,8 +73,8 @@ export function LiquidEntryForNew({currentValue, updateParent, key}: {
         updateParent(data)
     }
     return <>
-        <div key={key+"title"} className={"text-m"}>{currentValue.name}</div>
-        <NumericalAreaWithAbsolutes key={key+"inp"} label="Percentage by volume" mode="floating" min={0.0} max={1.0} readonly={false}
+        <div className={"text-m"}>{currentValue.name}</div>
+        <NumericalAreaWithAbsolutes label="Percentage by volume" mode="floating" min={0.0} max={1.0} readonly={false}
                                     errorMessage={err} value={currentValue.pct.toString()} onChange={(val?: string) => {
             try {
                 const n = Number(val) // TODO: allow only numbers here
@@ -92,10 +91,9 @@ export function LiquidEntryForNew({currentValue, updateParent, key}: {
     </>
 }
 
-export function NutrientEntryForNew({currentValue, updateParent, key}: {
+export function NutrientEntryForNew({currentValue, updateParent}: {
     currentValue: Nutrient,
     updateParent: (l: Nutrient) => void
-    key: string
 }) {
     const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
@@ -110,8 +108,8 @@ export function NutrientEntryForNew({currentValue, updateParent, key}: {
         updateParent(data)
     }
     return <>
-        <div key={key+"title"} className={"text-m"}>{currentValue.nutrient}</div>
-        <NumericalAreaWithAbsolutes key={key+"inp"} label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+        <div className={"text-m"}>{currentValue.nutrient}</div>
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
                                     errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
             try {
                 const n = Number(val) // TODO: allow only numbers here
@@ -135,10 +133,9 @@ export function NutrientEntryForNew({currentValue, updateParent, key}: {
     </>
 }
 
-export function SugarEntryForNew({currentValue, updateParent, key}: {
+export function SugarEntryForNew({currentValue, updateParent}: {
     currentValue: Sugar,
     updateParent: (l: Sugar) => void
-    key: string
 }) {
     const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
@@ -153,8 +150,8 @@ export function SugarEntryForNew({currentValue, updateParent, key}: {
         updateParent(data)
     }
     return <>
-        <div key={key+"title"} className={"text-m"}>{currentValue.type}</div>
-        <NumericalAreaWithAbsolutes key={key+"inp"} label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+        <div className={"text-m"}>{currentValue.type}</div>
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
                                     errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
             try {
                 const n = Number(val) // TODO: allow only numbers here
@@ -178,10 +175,9 @@ export function SugarEntryForNew({currentValue, updateParent, key}: {
     </>
 }
 
-export function AdditiveEntryForNew({currentValue, updateParent, key}: {
+export function AdditiveEntryForNew({currentValue, updateParent}: {
     currentValue: Additive,
     updateParent: (l: Additive) => void
-    key: string
 }) {
     const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
@@ -196,8 +192,8 @@ export function AdditiveEntryForNew({currentValue, updateParent, key}: {
         updateParent(data)
     }
     return <>
-        <div key={key+"title"} className={"text-m"}>{currentValue.additive}</div>
-        <NumericalAreaWithAbsolutes key={key+"inp"} label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+        <div className={"text-m"}>{currentValue.additive}</div>
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
                                     errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
             try {
                 const n = Number(val) // TODO: allow only numbers here

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import NotesAreaOld, {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -55,23 +55,27 @@ import {
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import {AgarBatchData, AgarBatchSelector} from "@/app/components/agarBatchServer";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {SaleArea} from "@/app/components/saleClient";
+import {SaleArea, SaleListPageTable} from "@/app/components/saleClient";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {useCookies} from "react-cookie";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {OnViewCreatorsQuadColArea, OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {OvcForXfers} from "@/app/components/bagClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {PlateData} from "@/app/components/plateServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {SaleData} from "@/app/components/saleServer";
+import {ProjectData} from "@/app/components/projectServer";
+import {AssertProject, NewProjectForm} from "@/app/components/projectClient";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -397,8 +401,8 @@ export function SlantInline({data, expandByDefault, onClick, showMainPageButton,
 //     </div>
 // }
 
-export function SlantListPageTable({data, onClick}: ListPageItems<SlantData>) {
-    const cols: ListTableColumn<SlantData>[] = [
+export function SlantListPageTable({data, onClick, withLink}: ListPageItems<SlantData>) {
+    let cols: ListTableColumn<SlantData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -409,6 +413,33 @@ export function SlantListPageTable({data, onClick}: ListPageItems<SlantData>) {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: SlantData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"slant",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function SlantSelectorTable({data, onClick}: ListPageItems<SlantData>) {
+    return <SlantListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function SlantSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: SlantData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: SlantData[]):JSX.Element=>{
+        return <SlantSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"slant"} entryTypes={"slants"} doSelect={doSelect} asserter={AssertSlant}
+                                   table={table}>
+        {allowCreate && <NewSlantForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

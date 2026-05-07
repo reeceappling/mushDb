@@ -2,7 +2,7 @@
 
 // TODO: THIS WHOLE FILE
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcData} from "@/app/components/lcServer";
@@ -41,11 +41,11 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {LcSyringe} from "@/app/components/lcSyringeServer";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {AddToTransfers, TransfersOutDisplay} from "@/app/components/transferClient";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {
@@ -57,7 +57,8 @@ import {
 } from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {AssertLc, LcSelectorTable, NewLcForm, SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringe {
     if (typeof input !== 'object') {
@@ -399,8 +400,8 @@ export function LcSyringeInline({
 //     </div>
 // }
 
-export function LcSyringeListPageTable({data, onClick}: ListPageItems<LcSyringe>) {
-    const cols: ListTableColumn<LcSyringe>[] = [
+export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<LcSyringe>) {
+    let cols: ListTableColumn<LcSyringe>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -412,6 +413,34 @@ export function LcSyringeListPageTable({data, onClick}: ListPageItems<LcSyringe>
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: LcSyringe)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"lcSyringe",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringe>) {
+    return <LcSyringeListPageTable data={data} onClick={onClick} withLink={true} />
+}
+
+export function LcSyringeSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: LcSyringe | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: LcSyringe[]):JSX.Element=>{
+        return <LcSyringeSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"lcSyringe"} entryTypes={"lcSyringes"} doSelect={doSelect} asserter={AssertLcSyringe}
+                                   table={table}>
+        {/* TODO: ok? allowCreate && <NewLcSyringeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
+    </ExistingRecentSelector>
 }

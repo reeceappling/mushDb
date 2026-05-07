@@ -35,10 +35,10 @@ export default async function Page({
                 }
                 console.log("got response")
                 res.json().then((data) => {
-                    console.log(data)
+                    console.log(data) // TODO: del
                     accept(data)
                 }).catch(err1 => {
-                    console.log(err1)
+                    console.log(err1) // TODO: del
                     reject(err1)
                 })
             }).catch(err1 => {

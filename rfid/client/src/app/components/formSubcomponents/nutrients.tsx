@@ -87,16 +87,16 @@ export function NutrientsEntriesGroupForNew({currentEntries, updateParent}: {cur
     return <div>
         {currentEntries.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
         {currentEntries.map((n,i)=>{
-            return <>
-                <NutrientEntryForNew key={n.nutrient+1} currentValue={n} updateParent={(updated: Nutrient) => {
+            return <div key={n.nutrient} className={"contentsOnly"}>
+                <NutrientEntryForNew currentValue={n} updateParent={(updated: Nutrient) => {
                     updateParent([...(currentEntries || [])].map((existing) => {
                         return existing.nutrient !== n.nutrient ? existing : updated
                     }))
                 }}/>
-                <RemoveButton key={n.nutrient+2} txt={"Remove"} click={()=>{
+                <RemoveButton txt={"Remove"} click={()=>{
                     updateParent([...(currentEntries || [])].filter((existing) => existing.nutrient !== n.nutrient))
                 }} />
-            </>
+            </div>
         })}
         </div>}
         <NutrientTypeSelectorForNew onSelect={(val)=>{val && handleSelectNutrient(val)}} blacklist={currentEntries.map((v)=>{return v.nutrient})} readonly={false} />

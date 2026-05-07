@@ -8,7 +8,7 @@ import NotesAreaOld, {
 } from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import React, {useEffect, useState} from "react";
+import React, {JSX, useEffect, useState} from "react";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {
@@ -41,8 +41,11 @@ import {
     NotesFormArea, NumberToDateStr
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {SlantData} from "@/app/components/slantServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {AssertSlant, NewSlantForm, SlantListPageTable} from "@/app/components/slantClient";
 // TODO: list page not working
 
 export function AssertSpecies(input: any): asserts input is SpeciesData {
@@ -221,7 +224,7 @@ export function NewSpeciesForm(
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"Name :"} setName={setName}/>
             <NameArea classNames={"inlineChildren"} currentName={sciName} headerTxt={"Scientific Name :"} setName={setSciName}/>
             <AliasesArea aliases={aliases} updateParent={setAliases} readonly={false}/> {/* TODO: OVERHAUL */}
-            {substrateIn === undefined && <SubstrateRecipeSelector txt={"Standard Substrate: "} doSelect={setSub} allowCreation={handlers.isTopLevel} creatorInPage={false/* TODO: isTopLevel and embedded creators*/}/>}
+            {substrateIn === undefined && <div>{"Std substrate"}<SubstrateRecipeSelector doSelect={setSub} allowCreate={handlers.isTopLevel} creatorInPage={false/* TODO: isTopLevel and embedded creators*/}/></div>}
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
             <CreateNewEntryButton onSubmit={submitNewSpecies}/>
@@ -348,8 +351,8 @@ export function ExistingSpeciesSelector(
         return <div>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <div>
-                {"Currently Selected species: "}{expandedAfterSelected?<div><SpeciesInline data={selected} headerLevel={headerLevel}/><button className={"basicButton"} onClick={()=>{setExpandedAfterSelected(false)}}>Show ID only</button></div>:<div>{selected._id}<button onClick={()=>{setExpandedAfterSelected(true)}}>Show More</button></div>}
-                <button onClick={() => {
+                {"Currently Selected species: "/* TODO: OVERHAUL*/}{expandedAfterSelected?<div><SpeciesInline data={selected} headerLevel={headerLevel}/><button className={"basicButtonSmall"} onClick={()=>{setExpandedAfterSelected(false)}}>Show ID only</button></div>:<div>{selected._id}<button className={"basicButtonSmall"} onClick={()=>{setExpandedAfterSelected(true)}}>Show More</button></div>}
+                <button className={"basicButtonSmall"} onClick={() => {
                     setSelectorOpen(true)
                     setExpandedAfterSelected(false)
                 }}>{"Choose a different species"}</button>
@@ -363,29 +366,61 @@ export function ExistingSpeciesSelector(
     return <div className={"gapBottom"}>
         <DepthProvider>{/* TODO: is this necessary here?*/}
         {closeButton}{/* TODO: THIS DOES NOT WORK */}
-        {speciesList.map((spec, i) => {
-            return <div key={i} className={"gapTop"}>
-                <SpeciesInline key={i} data={spec} headerLevel={headerLevel} onClick={sp => { // TODO: FIX THIS SO ITS ACTUALLY INLINE!
-                    console.log("selected: "+(sp?._id || "undefined")) // TODO: del
-                    doSelect(sp)
-                    setSelectorOpen(false)
-                    setSelected(sp)
-                }}/>
-            </div>
-        })}
+            <SpeciesSelector doSelect={s=>{
+                doSelect(s)
+                setSelected(s)
+                setSelectorOpen(false)
+            }}/>
+        {/*{speciesList.map((spec, i) => {*/}
+        {/*    return <div key={i} className={"gapTop"}>*/}
+        {/*        <SpeciesInline key={i} data={spec} headerLevel={headerLevel} onClick={sp => { // TODO: FIX THIS SO ITS ACTUALLY INLINE!*/}
+        {/*            console.log("selected: "+(sp?._id || "undefined")) // TODO: del*/}
+        {/*            doSelect(sp)*/}
+        {/*            setSelectorOpen(false)*/}
+        {/*            setSelected(sp)*/}
+        {/*        }}/>*/}
+        {/*    </div>*/}
+        {/*})}*/}
         {closeButton}
         </DepthProvider>
     </div>
 }
 
-export function SpeciesListPageTable({data, onClick}: ListPageItems<SpeciesData>) {
-    const cols: ListTableColumn<SpeciesData>[] = [
+export function SpeciesListPageTable({data, onClick, withLink}: ListPageItems<SpeciesData>) {
+    let cols: ListTableColumn<SpeciesData>[] = [
         NewColumn("Name", (v)=>v._id),
         NewColumn("Scientific", (v)=>v.scientificName),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: SpeciesData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"species",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function SpeciesSelectorTable({data, onClick}: ListPageItems<SpeciesData>) {
+    return <SpeciesListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function SpeciesSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: SpeciesData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: SpeciesData[]):JSX.Element=>{
+        return <SpeciesSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"species"} entryTypes={"species"} doSelect={doSelect} asserter={AssertSpecies}
+                                   table={table}>
+        {/* TODO: ok? allowCreate && <NewSlantForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
+    </ExistingRecentSelector>
 }

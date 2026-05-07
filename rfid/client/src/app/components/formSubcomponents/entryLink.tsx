@@ -45,12 +45,15 @@ export function EntryLinkWrapper(
         };
         children: ReactNode;
     }) {
+    const onClickStopPropagation = (e: React.MouseEvent) => {
+        e.stopPropagation();
+    }
     if (props.openInNewTab===true){
-        return <a href={BaseExternalUrl+"/view/"+props.entryType+"/"+props.linkId} target={"_blank"} rel={"noopener noreferrer"}>
+        return <a href={BaseExternalUrl+"/view/"+props.entryType+"/"+props.linkId} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}>
             {children}
         </a>
     }
-    return <a href={BaseExternalUrl+"/view/"+props.entryType+"/"+props.linkId}>
+    return <a href={BaseExternalUrl+"/view/"+props.entryType+"/"+props.linkId} onClick={onClickStopPropagation}>
         {children}
     </a>
 }

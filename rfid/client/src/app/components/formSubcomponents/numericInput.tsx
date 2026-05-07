@@ -32,6 +32,7 @@ export interface NumericInputProps extends Labelled, NumericInputOnlyProps {
 export interface NumericInputProps2 extends Labelled, NumericInputOnlyProps {
 }
 export type NumericInputOnlyProps = {
+    key?:string;
     /** Read only? **/
     readonly?: boolean
     /** Set controlled value */
@@ -157,6 +158,7 @@ export const DisplayNumerical2: FC<NumericInputProps> = ({
                                                              label = 'Numeric input with default label',
                                                              placeholder, // placeholder number
                                                              errorMessage = 'error!',
+    key
                                                          }) => {
     const id = useId();
     const handleChange = useCallback( // TODO: ????
@@ -167,11 +169,11 @@ export const DisplayNumerical2: FC<NumericInputProps> = ({
     );
     const pattern = patternMapping[mode];
     return (<>
-            <label
+            <label key={key+"lab"}
                 htmlFor={id}
                 className={labelClassAbsolute}
             >{label}</label>
-            <div className={"inputAndErrWrapper"}>
+            <div key={key+"div1"} className={"inputAndErrWrapper"}>
                 <input
                     inputMode="decimal"
                     autoComplete="off"
@@ -273,6 +275,7 @@ export const InputNumerical2: FC<NumericInputProps> = (
         label = 'Numeric input with default label',
         placeholder, // placeholder number
         errorMessage = 'error!',
+        key
     }) => {
     const id = useId();
     const handleKeyDown = useCallback(
@@ -301,7 +304,7 @@ export const InputNumerical2: FC<NumericInputProps> = (
     );
     const pattern = patternMapping[mode];
     return (
-        <div className={"relative"}>
+        <div key={key} className={"relative"}>
             <label
                 htmlFor={id}
                 className={labelClassAbsolute}

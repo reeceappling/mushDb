@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
@@ -70,7 +70,7 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {NewFruitForm} from "@/app/components/fruitClient";
+import {FruitListPageTable, NewFruitForm} from "@/app/components/fruitClient";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector, SubspeciesFormArea} from "@/app/components/subspeciesClient";
 import {FruitData} from "@/app/components/fruitServer";
@@ -83,17 +83,25 @@ import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea, QuadColLastCol} from "@/app/components/pcRunClient";
 import {TransferData} from "@/app/components/transferServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {InlineEntry} from "@/app/components/agarRecipeClient";
 import {
+    AssertAgarRecipe,
+    ExistingDualSelector,
+    ExistingRecentSelector,
+    InlineEntry
+} from "@/app/components/agarRecipeClient";
+import {
+    AgarBatchSelectorTable,
     FlexedArea,
     FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
+    ListTableColumn, NewAgarBatchForm,
     NewColumn,
     NotesFormArea, NumberToDateStr
 } from "@/app/components/agarBatchClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -458,8 +466,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             <ErrorDisplay err={err}/>
             <div>{"Creating Bag: "}</div>
             {substrateBatchIn !== undefined &&
-                <SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreation={handlers.isTopLevel}
-                                        creatorInPage={false}/>/*TODO: handle isTopLevel and creation in page*/}
+                <SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreate={handlers.isTopLevel} creatorInPage={false}/>/*TODO: handle isTopLevel and creation in page*/}
             <WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {
                 setWetness(value)
             }}/>
@@ -604,8 +611,8 @@ export function BagInline({data, expandByDefault, onClick, showMainPageButton, i
     </InlineEntry>
 }
 
-export function BagListPageTable({data, onClick}: ListPageItems<BagData>) {
-    const cols: ListTableColumn<BagData>[] = [
+export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagData>) {
+    let cols: ListTableColumn<BagData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -616,6 +623,35 @@ export function BagListPageTable({data, onClick}: ListPageItems<BagData>) {
         NewColumn("Species", (v)=>v.species || ""),
         NewColumn("Subspec.", (v)=>v.subspecies || ""),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: BagData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"bag",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function BagSelectorTable({data, onClick}: ListPageItems<BagData>) {
+    return <BagListPageTable data={data} onClick={onClick} withLink={true}/>
+}
+
+export function BagSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: BagData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: BagData[]):JSX.Element=>{
+        return <BagSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"bag"} entryTypes={"bags"} doSelect={doSelect} asserter={AssertBag}
+                                 table={table}>
+        {allowCreate && <NewBagForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

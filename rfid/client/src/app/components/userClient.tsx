@@ -161,6 +161,8 @@ function getAllOptions<T>(itemType: string, assertEntry: (input: any) => void) {
         })
 }
 
+// TODO: UserListPageTable
+
 // function getStandardRecentOptions<T>(itemType: string, assertEntry: (input:any)=>void){
 //     return fetch(BaseExternalUrl + "/db/list/"+itemType, {
 //         method: "GET",
@@ -199,47 +201,28 @@ export function UserSelector(inp: {
     const [users, setUsers] = useState<UserData[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
     useEffect(() => {
-        getAllOptions<UserData>("users", AssertUser).then((data) => {
-            setUsers(data as UserData[])
-            setLoading(false)
-            setErr(undefined)
-        }).catch((error) => {
-            HandleErr(error, setErr) // TODO: use this everywhere!
-        });
-        // fetch(BaseExternalUrl + "/db/list/users", {
-        //     method: "GET",
-        //     headers: {
-        //         credentials: 'include',
-        //         //'Cookie': cookies,
-        //         'Content-type': 'application/json',
-        //     },
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((data) => {
-        //         console.log("handling user selector response") // TODO: del
-        //         if (!Array.isArray(data)) {
-        //             console.log("db users response was not an array") // TODO: del
-        //             setErr("db users response was not an array")
-        //             throw "db users response was not an array"
-        //         }
-        //         if (!CheckArrayType(data, validatorForAssertion(AssertUser))) {
-        //             setErr("Error validating db users response")
-        //             throw "Error validating db users response"
-        //         }
-        //         setUsers(data as UserData[])
-        //         setLoading(false)
-        //         setErr(undefined)
-        //     })
-        //     .catch((error) => {
-        //         HandleErr(error, setErr) // TODO: use this everywhere!
-        //     });
+        const usrs:UserData[] = [
+            {_id: "userWithPerms", perms: {admin: false, projects: ["a","b","c"]}},
+            {_id: "emptyPerms", perms: {}},
+            {_id: "noPerms"},
+        ]
+        setUsers(usrs)
+        setLoading(false)
+        setErr(undefined)
+        // getAllOptions<UserData>("users", AssertUser).then((data) => { // TODO: REENABLE!!!
+        //     setUsers(data as UserData[])
+        //     setLoading(false)
+        //     setErr(undefined)
+        // }).catch((error) => {
+        //     HandleErr(error, setErr) // TODO: use this everywhere!
+        // });
     }, []);
     if (loading) {
         return <div>{"Loading users selector"}</div>
     }
     const opts = () => {
         return users.filter(pToFilter => {
-            return (inp.blacklist || []).indexOf(pToFilter._id) == -1 //&& pToFilter._id !== ""
+            return (inp.blacklist || []).indexOf(pToFilter._id) == -1 && pToFilter._id !== ""
         })
     }
     return <div>

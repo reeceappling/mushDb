@@ -69,7 +69,7 @@ export function SelectorResetsOnSelectForCustom<T>(
         updateParent: (val: T) => void,
         stringFor: (val: T) => string,
     }) {
-    if (inputs.options.length === 1) {
+    if (inputs.options.length === 0) {
         return null
     }
     console.log("length of options is now: "+inputs.options.length) // TODO: del
@@ -83,7 +83,6 @@ export function SelectorResetsOnSelectForCustom<T>(
         }
         const updated = optMap.get(e.target.value)
         if (updated){
-            console.error("updating parent for user option", e.target.value) // TODO: del!
             inputs.updateParent(updated)
         } else {
             console.error(e.target.value+" did not exist in the optMap!") // TODO: del!

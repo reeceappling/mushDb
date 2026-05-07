@@ -91,16 +91,16 @@ export function LiquidEntriesGroupForNew({currentEntries, updateParent}: {
     return <div>
         {currentEntries.length!==0 && <div className={"inputGrid inputGrid3 gap-8"}>
         {currentEntries.map((l, i) => {
-            return <>{/*<div className={"flex my-4 text-m"}><div className={"InputGrid InputGrid4"}><div className={"inlineChildren mb-1"}>*/}
-                <LiquidEntryForNew key={l.name+1} currentValue={l} updateParent={(l: Liquid) => {
+            return <div key={l.name} className={"contentsOnly"}>{/*<div className={"flex my-4 text-m"}><div className={"InputGrid InputGrid4"}><div className={"inlineChildren mb-1"}>*/}
+                <LiquidEntryForNew currentValue={l} updateParent={(l: Liquid) => {
                     updateParent([...(currentEntries || [])].map((existingLiquid) => {
                         return existingLiquid.name !== l.name ? existingLiquid : l
                     }))
                 }}/>
-                <RemoveButton txt={"Remove"} key={l.name+2} click={()=>{
+                <RemoveButton txt={"Remove"} click={()=>{
                     updateParent([...(currentEntries || [])].filter((existing) => existing.name !== l.name))
                 }} />
-            </>
+            </div>
         })}
         </div>}
         <LiquidsTypeSelectorForNew onSelect={(liq) => {

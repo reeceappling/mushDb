@@ -68,7 +68,7 @@ export function AntibioticEntriesGroupForNew(
     }
     return <div>{/* TODO: CLASS STYLINGS!!!! */}
         {currentEntries.map((input, index) => {
-            return <div className={"inlineChildren mb-1"}> {/* TODO: CLASS STYLINGS!!!! */}
+            return <div key={index} className={"inlineChildren mb-1"}> {/* TODO: CLASS STYLINGS!!!! */}
                 <div>{input}</div>
                 <button className={"removeButton ml-2"} onClick={()=>{
                     updateParent([...(currentEntries || [])].filter((existing) => existing !== input))

@@ -20,7 +20,7 @@ import {
     Note,
     NotesAreaInline
 } from "@/app/components/formSubcomponents/notes";
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
 import ID from "@/app/components/formSubcomponents/id";
 import {
@@ -68,11 +68,11 @@ import {JarSizeSelector} from "@/app/components/formSubcomponents/utils/volumeSe
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {GrainBatchSelector} from "@/app/components/grainBatchClient";
+import {GrainBatchListPageTable, GrainBatchSelector} from "@/app/components/grainBatchClient";
 import {GrainBatchData} from "@/app/components/grainBatchServer";
 import { DepthProvider } from "./formSubcomponents/depthContext/depth";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {
     FlexedArea,
     FlexedSinglesGroup, ListPageTable,
@@ -83,6 +83,9 @@ import {
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {BagData} from "@/app/components/bagServer";
+import {AssertBag, BagSelectorTable, NewBagForm} from "@/app/components/bagClient";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -219,7 +222,7 @@ export function JarImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
                 setErr("invalid size cups")
             }
         }}/>
-        <JarRecipeSelector doSelect={setRecipe} headerLevel={headerLevel} allowCreation={true} creatorInPage={false}/>
+        <JarRecipeSelector doSelect={setRecipe} allowCreate={true}/>
         <JarSizeSelector onChange={(s: string)=>{
             if(s==="pint"){
                 setSizeCups(2)
@@ -440,8 +443,8 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {handler
         <ErrorDisplay err={err}/>
         {/* TODO: REMOVE? */}<DateArea pre={"Creation date: "} when={Date.now()} readonly={false} updateParent={setCreationDate}/>
         {/* TODO: BATCH!!!!*/}
-        {hasGrainBatchOrRecipe && <GrainBatchSelector doSelect={setGrainBatch} allowCreation={handlers.isTopLevel} creatorInPage={false}/>} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
-        {hasGrainBatchOrRecipe && <JarRecipeSelector allowCreation={handlers.isTopLevel} creatorInPage={false} doSelect={(rec?: JarRecipeData)=>{setRecipe(rec?._id)}} />} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
+        {hasGrainBatchOrRecipe && <GrainBatchSelector doSelect={setGrainBatch} allowCreate={handlers.isTopLevel}/>} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
+        {hasGrainBatchOrRecipe && <JarRecipeSelector allowCreate={handlers.isTopLevel} doSelect={(rec?: JarRecipeData)=>{setRecipe(rec?._id)}} />} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
         <JarSizeSelector onChange={(unit: string)=>{
             setSizeCups(cupsPer(unit))
         }} />
@@ -489,8 +492,8 @@ export function JarInline({data, expandByDefault, onClick, showMainPageButton, i
 //     </div>
 // }
 
-export function JarListPageTable({data, onClick}: ListPageItems<JarData>) {
-    const cols: ListTableColumn<JarData>[] = [
+export function JarListPageTable({data, onClick, withLink}: ListPageItems<JarData>) {
+    let cols: ListTableColumn<JarData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -501,6 +504,34 @@ export function JarListPageTable({data, onClick}: ListPageItems<JarData>) {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: JarData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"jar",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function JarSelectorTable({data, onClick}: ListPageItems<JarData>) {
+    return <JarListPageTable data={data} onClick={onClick}/>
+}
+export function JarSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: JarData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: JarData[]):JSX.Element=>{
+        return <JarSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"jar"} entryTypes={"jars"} doSelect={doSelect} asserter={AssertJar}
+                                   table={table}>
+        {allowCreate && <NewJarForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

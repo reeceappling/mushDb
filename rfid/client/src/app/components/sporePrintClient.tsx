@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     InlineSubArea,
@@ -47,14 +47,14 @@ import {
     Data,
     OnViewCreatorQuadCol
 } from "@/app/components/formSubcomponents/shared";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {redirect} from "next/navigation";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewMssForm, RecentSelectorV2} from "@/app/components/mssClient";
 import {FruitData} from "@/app/components/fruitServer";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {ACL} from "@/app/components/accessControlServer";
@@ -73,6 +73,9 @@ import {
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {PlateData} from "@/app/components/plateServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {SlantData} from "@/app/components/slantServer";
+import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -457,8 +460,8 @@ export function SporePrintRecentSelector({onSelect}:{onSelect:(selected?: SporeP
     }} />
 }
 
-export function SporePrintListPageTable({data, onClick}: ListPageItems<SporePrintData>) {
-    const cols: ListTableColumn<SporePrintData>[] = [
+export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems<SporePrintData>) {
+    let cols: ListTableColumn<SporePrintData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -469,6 +472,33 @@ export function SporePrintListPageTable({data, onClick}: ListPageItems<SporePrin
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: SporePrintData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"sporePrint",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function SporePrintSelectorTable({data, onClick}: ListPageItems<SporePrintData>) {
+    return <SporePrintListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function SporePrintSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: SporePrintData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: SporePrintData[]):JSX.Element=>{
+        return <SporePrintSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"sporePrint"} entryTypes={"sporePrints"} doSelect={doSelect} asserter={AssertSporePrint}
+                                   table={table}>
+        {/* TODO: ok? allowCreate && <NewSporePrintForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
+    </ExistingRecentSelector>
 }

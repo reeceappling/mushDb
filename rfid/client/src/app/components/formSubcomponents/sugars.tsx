@@ -94,16 +94,16 @@ export function SugarEntriesGroupForNew({currentEntries, updateParent}: {current
     return <div>
         {currentEntries.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
             {currentEntries.map((n,i)=>{
-            return <>
-                <SugarEntryForNew key={n.type+1} currentValue={n} updateParent={(updated: Sugar) => {
+            return <div key={n.type} className={"contentsOnly"}>
+                <SugarEntryForNew currentValue={n} updateParent={(updated: Sugar) => {
                     updateParent([...(currentEntries || [])].map((existing) => {
                         return existing.type !== n.type ? existing : updated
                     }))
                 }}/>
-                <RemoveButton key={n.type+2} txt={"Remove"} click={()=>{
+                <RemoveButton txt={"Remove"} click={()=>{
                     updateParent([...(currentEntries || [])].filter((existing) => existing.type !== n.type))
                 }} />
-            </>
+            </div>
         })}
         </div>}
         <SugarTypeSelectorForNew onSelect={(val)=>{val && handleSelect(val)}} blacklist={currentEntries.map((v)=>{return v.type})} readonly={false} />

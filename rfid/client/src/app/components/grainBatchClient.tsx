@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useEffect, useState} from "react";
+import React, {JSX, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
@@ -42,7 +42,14 @@ import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {NewJarForm} from "@/app/components/jarClient";
 import {JarData} from "@/app/components/jarServer";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {InlineEntry} from "./agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {
+    AssertFruitingChamber,
+    FruitingChamberListPageTable,
+    FruitingChamberSelectorTable, NewFruitingChamberForm
+} from "@/app/components/fruitingChamberClient";
 
 // TODO: GRAIN BATCHES LIST IS NOT WORKING!
 // TODO: ENSURE DISPLAY IS LOOKING GOOD
@@ -260,7 +267,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
     return <NewEntryFormWrapper entryType={"grainBatch"}>
         <ErrorDisplay err={err}/>
         {recipe === undefined &&
-            <JarRecipeSelector doSelect={setJarRecipe} headerLevel={3} allowCreation={handlers.isTopLevel}
+            <JarRecipeSelector doSelect={setJarRecipe} allowCreate={handlers.isTopLevel}
                                creatorInPage={handlers.isTopLevel/* TODO: isTopLevel*/}/>}
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"bottomButton greenButton"} onClick={(e)=>{
@@ -311,44 +318,44 @@ export function GrainBatchInline({
 //     </div>
 // }
 
-export function GrainBatchSelector(
-    {
-        doSelect, allowCreation, headerLevel, creatorInPage
-    }: SelectorProps<GrainBatchData>) {
-    // TODO: do these need depth providers?
-    // TODO: HANDLE ALLOWCREATION AND CREATORINPAGE
-    const [recent, setRecent] = useState<GrainBatchData[]>([])
-    const [err, setErr] = useState<string | undefined>()
-    useEffect(() => {
-        fetch(BaseExternalUrl + "/db/list/grainBatches", {
-            method: 'GET',
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((resp) => {
-                AssertArrayResult<GrainBatchData>(resp, AssertGrainBatch)
-                setRecent(resp)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
-    }, []) // TODO: OK????? [] or nothing?
-    return <div>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
-        <div>{"Recent Recipes"}</div>
-        {recent.map(item => {
-            return <GrainBatchInline data={item} headerLevel={headerLevel} onClick={doSelect} key={item._id}/>
-        })}
-        {/* TODO: CREATOR, IF ALLOWED, with increased depth */
-        }
-    </div>
-}
+// export function GrainBatchSelector(
+//     {
+//         doSelect, allowCreation, headerLevel, creatorInPage
+//     }: SelectorProps<GrainBatchData>) {
+//     // TODO: do these need depth providers?
+//     // TODO: HANDLE ALLOWCREATION AND CREATORINPAGE
+//     const [recent, setRecent] = useState<GrainBatchData[]>([])
+//     const [err, setErr] = useState<string | undefined>()
+//     useEffect(() => {
+//         fetch(BaseExternalUrl + "/db/list/grainBatches", {
+//             method: 'GET',
+//             headers: {
+//                 credentials: 'include',
+//                 'Content-type': "application/json"
+//             },
+//         })
+//             .then(HandleJsonResponse)
+//             .then((resp) => {
+//                 AssertArrayResult<GrainBatchData>(resp, AssertGrainBatch)
+//                 setRecent(resp)
+//             })
+//             .catch((err) => {
+//                 setErr(JSON.stringify(err))
+//             });
+//     }, []) // TODO: OK????? [] or nothing?
+//     return <div>
+//         <ErrorDisplay err={err} headerLevel={headerLevel}/>
+//         <div>{"Recent Recipes"}</div>
+//         {recent.map(item => {
+//             return <GrainBatchInline data={item} headerLevel={headerLevel} onClick={doSelect} key={item._id}/>
+//         })}
+//         {/* TODO: CREATOR, IF ALLOWED, with increased depth */
+//         }
+//     </div>
+// }
 
-export function GrainBatchListPageTable({data, onClick}: ListPageItems<GrainBatchData>) {
-    const cols: ListTableColumn<GrainBatchData>[] = [
+export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems<GrainBatchData>) {
+    let cols: ListTableColumn<GrainBatchData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -357,6 +364,34 @@ export function GrainBatchListPageTable({data, onClick}: ListPageItems<GrainBatc
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: GrainBatchData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"grainBatch",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function GrainBatchSelectorTable({data, onClick}: ListPageItems<GrainBatchData>) {
+    return <GrainBatchListPageTable data={data} onClick={onClick} withLink={true}/>
+}
+export function GrainBatchSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: GrainBatchData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: GrainBatchData[]):JSX.Element=>{
+        return <GrainBatchSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"grainBatch"} entryTypes={"grainBatches"} doSelect={doSelect} asserter={AssertGrainBatch}
+                                   table={table}>
+        {allowCreate && <NewGrainBatchForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

@@ -308,7 +308,7 @@ type Nutrient string
 // TODO: add all of these to autogenned
 var nutrients = []Nutrient{LME, Potato}
 var (
-	LME    Nutrient = "light malt extract"
+	LME    Nutrient = "LME"
 	Potato Nutrient = "potato flakes"
 )
 

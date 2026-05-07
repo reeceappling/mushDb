@@ -6,7 +6,7 @@ import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/c
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData, TestSubstrateRecipeOk} from "@/app/components/substrateRecipeServer";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     DisplayInput,
     HandleJsonResponse,
@@ -34,7 +34,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {InlineEntry} from "./agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
 import {
     FlexedArea,
     FlexedSinglesGroup, ListPageTable,
@@ -44,6 +44,9 @@ import {
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {StasisTubeData} from "@/app/components/stasisTubeServer";
+import {SubspeciesData} from "@/app/components/subspeciesServer";
+import {SlantData} from "@/app/components/slantServer";
+import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
     if (typeof input !== 'object') {
@@ -234,9 +237,8 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
             <TestAndValidate todos={["ENSURE WORKS PROPERLY FOR BOTH EXISTING AND PICKING"]}>
                 {recipe === undefined ?
                     <SubstrateRecipeArea txt={"Substrate Recipe: "} readonly={true} id={selectedRecipe?._id}/> :
-                    <SubstrateRecipeSelector doSelect={setSelectedRecipe} txt={"Substrate Recipe"}
-                                             allowCreation={handlers.isTopLevel}
-                                             creatorInPage={handlers.isTopLevel/*TODO: ENSURE OK*/}/>}
+                    <SubstrateRecipeSelector doSelect={setSelectedRecipe}
+                                             allowCreate={handlers.isTopLevel}/>}
             </TestAndValidate>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
@@ -302,7 +304,7 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
                 </div>
                 <SubstrateBatchSelector doSelect={r => { // TODO: FIX
                     onSelect && onSelect(r)
-                }} headerLevel={headerLevel}/>
+                }}/>{/* TODO: allow create?*/}
             </div>
         }
     }
@@ -311,91 +313,91 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
     </div>
 }
 
-export function SubstrateBatchSelector( // TODO: ensure ok!!!
-    {
-        doSelect, allowCreation, headerLevel, creatorInPage, txt // TODO: USE TXT AS HEADER
-    }: SelectorProps<SubstrateBatchData>) {
-    const [loaded, setLoaded] = useState(false)
-    const [open, setOpen] = useState(false)
-    const [selected, setSelected] = useState<SubstrateBatchData | undefined>()
-    const [recentList, setRecentList] = useState<SubstrateBatchData[] | undefined>()
-    const [err, setErr] = useState<string | undefined>()
-    //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-    // TODO: RECIPE CREATOR SECTION!
-    useEffect(() => {
-        let data = [TestSubstrateRecipeOk(), TestSubstrateRecipeOk(), TestSubstrateRecipeOk()]
-        setSelected(undefined)
-        setRecentList([TestSubstrateBatchOkStd(false), TestSubstrateBatchOkStd(false), TestSubstrateBatchOkStd(false)]) // TODO: DEL
-        setLoaded(true) // TODO: DEL
-        setErr(undefined) // TODO: DEL
-        return  // TODO: DEL
-        fetch(BaseExternalUrl + "/list/substrateBatches", {
-            method: "GET",
-            headers: {
-                credentials: 'include',
-                // TODO: may need 'Cookie': cookies,
-                'Content-type': 'application/json',
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((data) => { // TODO: DATA AS TWO LISTS!
-                setRecentList(data.recent) // TODO: ASSERT????
-                setLoaded(true)
-                setErr(undefined)
-            })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
-    }, []);
-    const errArea = <ErrorDisplay err={err} headerLevel={headerLevel}/>
-    // TODO: MAKE SURE TO ADD RECIPE CREATOR BUTTON IF NEEDED
-    if (!loaded) {
-        return <div className={"centerHChildren medGapTop"}>{errArea}{"Loading Substrate Batch Selector..."}</div>
-    }
-    if (!open) {
-        return <div className={"centerHChildren medGapTop"}>
-            {errArea}
-            {selected && <div>{"Batch: " + selected._id}</div>}
-            <div>
-                <button className={"basicButton"} onClick={() => {
-                    setOpen(true)
-                }}>{selected ? "Select a different Substrate Batch" : "Select a Substrate Batch"}</button>
-            </div>
-        </div>
-    }
-    const closeButton = <Centered>
-        <button className={"basicButton"} onClick={() => {
-            setOpen(false)
-        }}>{"Close Selector"}</button>
-    </Centered>
-    return <div className={"medGapTop"}>
-        {errArea}
-        {closeButton}
-        <div>
-            <div>
-                <div className={"gapBottom gapTop centerH"}>{"Recent Recipes"}</div>
-                <div className={"padChildrenSides"}>
-                    <DepthProvider>{/* TODO: depth necessary? can replace one div up?*/}
-                        {(recentList || []).map((batch, i) => {
-                            let classes = (selected && batch._id === selected._id) ? "selectedItem" : ""
-                            if (i !== (recentList || []).length - 1) {
-                                classes = classes + " medGapBottom"
-                            }
-                            return <div key={i} className={classes}>
-                                <SubstrateBatchInline data={batch} headerLevel={headerLevel} onClick={() => {
-                                    doSelect(batch)
-                                    setSelected(batch)
-                                    setOpen(false)
-                                }}/>
-                            </div>
-                        })}
-                    </DepthProvider>
-                </div>
-            </div>
-        </div>
-        {closeButton}
-    </div>
-}
+// export function SubstrateBatchSelector( // TODO: ensure ok!!!
+//     {
+//         doSelect, allowCreation, headerLevel, creatorInPage, txt // TODO: USE TXT AS HEADER
+//     }: SelectorProps<SubstrateBatchData>) {
+//     const [loaded, setLoaded] = useState(false)
+//     const [open, setOpen] = useState(false)
+//     const [selected, setSelected] = useState<SubstrateBatchData | undefined>()
+//     const [recentList, setRecentList] = useState<SubstrateBatchData[] | undefined>()
+//     const [err, setErr] = useState<string | undefined>()
+//     //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+//     // TODO: RECIPE CREATOR SECTION!
+//     useEffect(() => {
+//         let data = [TestSubstrateRecipeOk(), TestSubstrateRecipeOk(), TestSubstrateRecipeOk()]
+//         setSelected(undefined)
+//         setRecentList([TestSubstrateBatchOkStd(false), TestSubstrateBatchOkStd(false), TestSubstrateBatchOkStd(false)]) // TODO: DEL
+//         setLoaded(true) // TODO: DEL
+//         setErr(undefined) // TODO: DEL
+//         return  // TODO: DEL
+//         fetch(BaseExternalUrl + "/list/substrateBatches", {
+//             method: "GET",
+//             headers: {
+//                 credentials: 'include',
+//                 // TODO: may need 'Cookie': cookies,
+//                 'Content-type': 'application/json',
+//             },
+//         })
+//             .then(HandleJsonResponse)
+//             .then((data) => { // TODO: DATA AS TWO LISTS!
+//                 setRecentList(data.recent) // TODO: ASSERT????
+//                 setLoaded(true)
+//                 setErr(undefined)
+//             })
+//             .catch((error) => {
+//                 setErr(JSON.stringify(error))
+//             });
+//     }, []);
+//     const errArea = <ErrorDisplay err={err} headerLevel={headerLevel}/>
+//     // TODO: MAKE SURE TO ADD RECIPE CREATOR BUTTON IF NEEDED
+//     if (!loaded) {
+//         return <div className={"centerHChildren medGapTop"}>{errArea}{"Loading Substrate Batch Selector..."}</div>
+//     }
+//     if (!open) {
+//         return <div className={"centerHChildren medGapTop"}>
+//             {errArea}
+//             {selected && <div>{"Batch: " + selected._id}</div>}
+//             <div>
+//                 <button className={"basicButton"} onClick={() => {
+//                     setOpen(true)
+//                 }}>{selected ? "Select a different Substrate Batch" : "Select a Substrate Batch"}</button>
+//             </div>
+//         </div>
+//     }
+//     const closeButton = <Centered>
+//         <button className={"basicButton"} onClick={() => {
+//             setOpen(false)
+//         }}>{"Close Selector"}</button>
+//     </Centered>
+//     return <div className={"medGapTop"}>
+//         {errArea}
+//         {closeButton}
+//         <div>
+//             <div>
+//                 <div className={"gapBottom gapTop centerH"}>{"Recent Recipes"}</div>
+//                 <div className={"padChildrenSides"}>
+//                     <DepthProvider>{/* TODO: depth necessary? can replace one div up?*/}
+//                         {(recentList || []).map((batch, i) => {
+//                             let classes = (selected && batch._id === selected._id) ? "selectedItem" : ""
+//                             if (i !== (recentList || []).length - 1) {
+//                                 classes = classes + " medGapBottom"
+//                             }
+//                             return <div key={i} className={classes}>
+//                                 <SubstrateBatchInline data={batch} headerLevel={headerLevel} onClick={() => {
+//                                     doSelect(batch)
+//                                     setSelected(batch)
+//                                     setOpen(false)
+//                                 }}/>
+//                             </div>
+//                         })}
+//                     </DepthProvider>
+//                 </div>
+//             </div>
+//         </div>
+//         {closeButton}
+//     </div>
+// }
 
 // export function SubstrateBatchListDisplay({data, onClick}: SingleListProps<SubstrateBatchData>) {
 //     return <div>
@@ -407,8 +409,8 @@ export function SubstrateBatchSelector( // TODO: ensure ok!!!
 //     </div>
 // }
 
-export function SubstrateBatchListPageTable({data, onClick}: ListPageItems<SubstrateBatchData>) {
-    const cols: ListTableColumn<SubstrateBatchData>[] = [
+export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageItems<SubstrateBatchData>) {
+    let cols: ListTableColumn<SubstrateBatchData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -418,6 +420,36 @@ export function SubstrateBatchListPageTable({data, onClick}: ListPageItems<Subst
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: SubstrateBatchData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"substrateBatch",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function SubstrateBatchSelectorTable({data, onClick}: ListPageItems<SubstrateBatchData>) {
+    return <SubstrateBatchListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function SubstrateBatchSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate,
+        creatorInPage,
+    }: {
+        doSelect: (val: SubstrateBatchData | undefined) => void,
+        allowCreate?: boolean
+        creatorInPage?: boolean, // TODO: ADD THIS EVERYWHERE ELSE!!!!!!
+    }) {
+    const table = (items: SubstrateBatchData[]):JSX.Element=>{
+        return <SubstrateBatchSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"substrateBatch"} entryTypes={"substrateBatches"} doSelect={doSelect} asserter={AssertSubstrateBatch}
+                                   table={table}>
+        {allowCreate && (creatorInPage?<NewSubstrateBatchForm handlers={{onCreate: doSelect,isTopLevel: false}}/>:
+            <div>{"LINK TO CREATOR HERE FIXME"}</div>)}
+    </ExistingRecentSelector>
 }

@@ -23,3 +23,24 @@ services:
       #NEXT_PUBLIC_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL:-http}://${MAIN_API_EXTERNAL_HOST:-localhost}"
     networks:
       - mushNet
+# TODO: https://github.com/offen/docker-volume-backup
+# TODO: config
+# TODO: automate restore
+#  pics-backup:
+#    image: offen/docker-volume-backup:v2
+#    environment:
+#      AWS_S3_BUCKET_NAME: backup-bucket
+#      AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+#      AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+#    volumes:
+#      - pictures:/images:ro
+#      - /var/run/docker.sock:/var/run/docker.sock:ro
+#  db-backup:
+#    image: offen/docker-volume-backup:v2
+#    environment:
+#      AWS_S3_BUCKET_NAME: backup-bucket
+#      AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+#      AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+#    volumes:
+#      - mongodb-data:/data/db:ro
+#      - /var/run/docker.sock:/var/run/docker.sock:ro

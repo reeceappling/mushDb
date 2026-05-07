@@ -46,84 +46,9 @@ export default async function Page({
 
 
     const getData: (a1: string, a2: string) => Promise<any> = async (itemTypeA: string, idEnc: string) => {
-        // return new Promise<React.JSX.Element>((accept, reject)=>{ // TODO: TESTING ONLY
-        //     switch(itemTypeA){
-        //         case "agarBatch":
-        //             accept(TestAgarBatchOk() as any)
-        //             return
-        //         case "agarRecipe":
-        //             accept(TestAgarRecipeOk() as any)
-        //             return
-        //         case "bag":
-        //             accept(TestBagOk() as any)
-        //             return
-        //         case "fruit":
-        //             accept(TestFruitOK() as any)
-        //             return
-        //         case "fruitingChamber":
-        //             accept(TestFruitingChamberOk() as any)
-        //             return
-        //         case "jar":
-        //             accept(TestJarOK() as any)
-        //             return
-        //         case "jarRecipe":
-        //             accept(TestJarRecipeOK() as any)
-        //             return
-        //         case "lc":
-        //             accept(TestLcOk() as any)
-        //             return
-        //         case "lcRecipe":
-        //             accept(TestLcRecipeOk() as any)
-        //             return
-        //         case "mss":
-        //             accept(TestMssOk() as any)
-        //             return
-        //         case "pcRun":
-        //             accept(TestPcRunOk() as any)
-        //             return
-        //         case "plate":
-        //             accept(TestPlateOk() as any)
-        //             return
-        //         case "project":
-        //             accept(TestProjectOk() as any)
-        //             return
-        //         case "sale":
-        //             accept(TestSaleOk() as any)
-        //             return
-        //         case "slant":
-        //             accept(TestSlantOk() as any)
-        //             return
-        //         case "species":
-        //             accept(TestSpeciesOk() as any)
-        //             return
-        //         case "sporePrint":
-        //             accept(TestSporePrintOk() as any)
-        //             return
-        //         case "stasisTube":
-        //             accept(TestStasisTubeOk as any)
-        //             return
-        //         case "subspecies":
-        //             accept(TestSubspeciesOk() as any)
-        //             return
-        //         case "substrateRecipe":
-        //             accept(TestSubstrateRecipeOk() as any)
-        //             return
-        //         case "substrateBatch":
-        //             accept(TestSubstrateBatchOk() as any)
-        //             return
-        //         case "transfer":
-        //             accept(TestTransferOk() as any)
-        //             return
-        //         case "user":
-        //             accept(TestUserOk() as any)
-        //             return
-        //         default:
-        //             reject("invalid itemType") // TODO: fix
-        //     }
-        // })
         return new Promise<React.JSX.Element>((accept, reject) => { // TODO: REIMPLEMENT!
-            console.log("going to " + BaseExternalUrl + "/db/get/" + itemTypeA + "/" + idEnc)
-            console.log("session cookie", session?.name, session?.value)
+            // console.log("going to " + BaseExternalUrl + "/db/get/" + itemTypeA + "/" + idEnc) // TODO: del
+            // console.log("session cookie", session?.name, session?.value)
             fetch(BaseExternalUrl + "/db/get/" + itemTypeA + "/" + idEnc, {
                 method: 'Get',
                 credentials: 'include',

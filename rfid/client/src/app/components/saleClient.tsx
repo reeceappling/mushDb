@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import NotesAreaOld, {
     IsValidNote,
     NewEntryNotes,
@@ -23,9 +23,9 @@ import {redirect} from "next/navigation";
 import {ErrorDisplay, OpenMainPage} from "@/app/components/formSubcomponents/commonClient";
 import {SaleData} from "@/app/components/saleServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {useCookies} from "react-cookie";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -39,6 +39,9 @@ import {
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {PlateData} from "@/app/components/plateServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {ProjectData} from "@/app/components/projectServer";
+import {AssertProject, NewProjectForm} from "@/app/components/projectClient";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -289,8 +292,8 @@ export function SalesArea(
         </div>
 }
 
-export function SaleListPageTable({data, onClick}: ListPageItems<SaleData>) {
-    const cols: ListTableColumn<SaleData>[] = [
+export function SaleListPageTable({data, onClick, withLink}: ListPageItems<SaleData>) {
+    let cols: ListTableColumn<SaleData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -299,6 +302,35 @@ export function SaleListPageTable({data, onClick}: ListPageItems<SaleData>) {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: SaleData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"sale",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function SaleSelectorTable({data, onClick}: ListPageItems<SaleData>) {
+    return <SaleListPageTable data={data} onClick={onClick} withLink={true} />
+}
+// TODO: likely get rid of
+export function SaleSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: SaleData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: SaleData[]):JSX.Element=>{
+        return <SaleSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"sale"} entryTypes={"sales"} doSelect={doSelect} asserter={AssertSale}
+                                   table={table}>
+        {/* TODO: ???allowCreate && <NewSaleForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
+    </ExistingRecentSelector>
 }

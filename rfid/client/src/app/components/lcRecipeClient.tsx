@@ -1,13 +1,8 @@
 'use client'
 
-import React, {JSX, useContext, useEffect, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
-import {
-    AddCreatedTriColFunction,
-    AllEntries,
-    Data,
-    OnViewCreatorQuadCol
-} from "@/app/components/formSubcomponents/shared";
+import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcRecipeData} from "@/app/components/lcRecipeServer";
@@ -35,13 +30,14 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea, ListPageItems,
+    InlineSubArea,
+    ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
     RequiredArrayOfType
 } from "@/app/components/common";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
     Additive,
     AdditiveEntriesGroup,
@@ -50,8 +46,7 @@ import AdditivesArea, {
 } from "@/app/components/formSubcomponents/additives";
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {SelectorProps} from "@/app/components/selector";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {dataFor, ExistingDualSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -62,13 +57,14 @@ import {LcData} from "@/app/components/lcServer";
 import {DepthContext, DepthProvider} from "./formSubcomponents/depthContext/depth";
 import {
     FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
+    FlexedSinglesGroup,
+    ListPageTable,
     ListTableColumn,
     NewColumn,
-    NotesFormArea, NumberToDateStr
+    NotesFormArea,
+    NumberToDateStr
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -135,7 +131,7 @@ export default function LcRecipeDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: LcRecipeData)=>{
+        const updateInitial = (updated: LcRecipeData) => {
             setInitial(updated)
             setRecName(updated.name)
             setIsStandard(updated.standard)
@@ -204,16 +200,20 @@ export default function LcRecipeDisplay(
                 </FlexedArea>
 
 
-                <LiquidsArea initialValues={dataFor(initial.liquids || [])} headerLevel={headerLevel} readonly={true}/>{/* TODO: viewOnlyArea*/}
-                <NutrientsArea initialValues={dataFor(initial.nutrients || [])} headerLevel={headerLevel} readonly={true}/>{/* TODO: viewOnlyArea*/}
-                <SugarsArea initialValues={dataFor(initial.sugars || [])} headerLevel={headerLevel} readonly={true}/>{/* TODO: viewOnlyArea*/}
-                <AdditivesArea initialValues={dataFor(initial.additives || [])} headerLevel={headerLevel} readonly={true}/>{/* TODO: viewOnlyArea*/}
+                <LiquidsArea initialValues={dataFor(initial.liquids || [])} headerLevel={headerLevel}
+                             readonly={true}/>{/* TODO: viewOnlyArea*/}
+                <NutrientsArea initialValues={dataFor(initial.nutrients || [])} headerLevel={headerLevel}
+                               readonly={true}/>{/* TODO: viewOnlyArea*/}
+                <SugarsArea initialValues={dataFor(initial.sugars || [])} headerLevel={headerLevel}
+                            readonly={true}/>{/* TODO: viewOnlyArea*/}
+                <AdditivesArea initialValues={dataFor(initial.additives || [])} headerLevel={headerLevel}
+                               readonly={true}/>{/* TODO: viewOnlyArea*/}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
 
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     lcRecipeSubmit()
                 }}>{"Update"}</button>}
@@ -280,7 +280,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
                 }
                 loadTemplate(rec)
                 setTemplateSelectorOpen(false)
-            }} allowCreation={false}/>
+            }} allowCreate={false}/>
         } else {
             return <button className={"basicButton"} onClick={() => {
                 setTemplateSelectorOpen(true)
@@ -293,29 +293,22 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
             <TestAndValidate todos={["TEST THIS"]}>
                 {templateRecipeSelector()}
             </TestAndValidate>
-                <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} headerTxt={"Recipe name: "} readonly={false}/>
+            <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} headerTxt={"Recipe name: "}
+                      readonly={false}/>
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} headerTxt={"Standard recipe? "}
                           readonly={false}/>
-            <TestAndValidate todos={["should templates overwrite nutrients?"]}>
-                <div>{"Liquids"}</div>
-                {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
-                <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>
-            </TestAndValidate>
-            <TestAndValidate todos={["should templates overwrite nutrients?"]}>
-                <div>{"Nutrients"}</div>
-                {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
-                <NutrientsEntriesGroupForNew currentEntries={nutrients} updateParent={setNutrients}/>
-            </TestAndValidate>
-            <TestAndValidate todos={["should templates overwrite nutrients?"]}>
-                <div>{"Sugars"}</div>
-                {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
-                <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
-            </TestAndValidate>
-            <TestAndValidate todos={["should templates overwrite nutrients?"]}>
-                <div>{"Additives"}</div>
-                {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
-                <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
-            </TestAndValidate>
+            <div>{"Liquids"}</div>
+            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
+            <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>
+            <div>{"Nutrients"}</div>
+            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
+            <NutrientsEntriesGroupForNew currentEntries={nutrients} updateParent={setNutrients}/>
+            <div>{"Sugars"}</div>
+            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
+            <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
+            <div>{"Additives"}</div>
+            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
+            <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
             {/* TODO: Make large? */}
@@ -329,11 +322,11 @@ function depthAndEntryClasses(depth: number, entryType?: string) {
 }
 
 // TODO: MOVE!
-export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string,className?:string }>) { // TODO: USE THIS EVERYWHERE!
+export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string, className?: string }>) { // TODO: USE THIS EVERYWHERE!
     const depth = useContext(DepthContext)
     return <DepthProvider>
         <div
-            className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType)+(props.className?" "+props.className:"")}>{/* TODO: likely not working as expected. +1?*/}
+            className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType) + (props.className ? " " + props.className : "")}>{/* TODO: likely not working as expected. +1?*/}
             {props.children}
         </div>
     </DepthProvider>
@@ -352,10 +345,11 @@ export function ImportEntryFormWrapper(props: React.PropsWithChildren<{ entryTyp
 
 
 // TODO: MOVE!
-export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: string,id?:string }>) { // TODO: USE THIS EVERYWHERE!
+export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: string, id?: string }>) { // TODO: USE THIS EVERYWHERE!
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div id={props.id} className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
+        <div id={props.id}
+             className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
             {props.children}
         </div>
     </DepthProvider>
@@ -430,91 +424,91 @@ export function LcRecipeArea({lcRecipeId, headerLevel, offset}: {
     </div>
 }
 
-export function LcRecipeSelector( // TODO: COLLAPSE! // TODO: likely overhaul to use the other List thingy!
-    {
-        doSelect, allowCreation, headerLevel, creatorInPage
-    }: SelectorProps<LcRecipeData>) {
-    // TODO: does this need incremented depth?
-    const [loaded, setLoaded] = useState(false)
-    const [open, setOpen] = useState(false)
-    const [selected, setSelected] = useState<LcRecipeData | undefined>()
-    const [standardList, setStandardList] = useState<LcRecipeData[] | undefined>()
-    const [recentList, setRecentList] = useState<LcRecipeData[] | undefined>()
-    const [err, setErr] = useState<string | undefined>()
-    //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-    // TODO: RECIPE CREATOR SECTION!
-    useEffect(() => { // TODO: ENSURE WORKS
-        setSelected(undefined)
-        fetch(BaseExternalUrl + "/db/list/lcRecipes", {
-            method: "GET",
-            headers: {
-                credentials: 'include',
-                // 'Cookie': cookies, // TODO: do we even need this?
-                // TODO: THIS!
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((data) => { // TODO: DATA AS TWO LISTS!
-                setStandardList(data.standard) // TODO: ASSERT????
-                setRecentList(data.recent) // TODO: ASSERT????
-                setLoaded(true)
-                setErr(undefined)
-            })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
-    }, []);
-    const errArea = <ErrorDisplay err={err} headerLevel={headerLevel}/>
-    if (!loaded) {
-        return <div>{errArea}{"Loading LC Recipe Selector..."}</div>
-    }
-    if (!open) {
-        return <div>
-            {errArea}
-            {selected && <div>{"Recipe: " + selected._id}</div>}
-            <div>
-                <button className={"basicButton"} onClick={() => {
-                    setOpen(true)
-                }}>{selected ? "Select a different LC Recipe" : "Select an LC Recipe"}</button>
-            </div>
-        </div>
-    }
-    return <div>
-        {errArea}
-        <button className={"basicButton"} onClick={() => {
-            setOpen(false)
-        }}>{"Close Selector"}</button>
-        <DepthProvider>
-            <div>
-                <div>{"Standard Recipes"}</div>
-                {(standardList || []).map((recipe, i) => {
-                    return <div key={i} className={(selected && recipe._id === selected._id) ? "selectedItem" : ""}>
-                        <LcRecipeInline data={recipe} headerLevel={headerLevel} onClick={() => {
-                            doSelect(recipe)
-                            setSelected(recipe)
-                            setOpen(false)
-                        }}/>
-                    </div>
-                })}
-            </div>
-            <div>
-                <div>{"Recent Recipes"}</div>
-                {(recentList || []).map((recipe, i) => {
-                    return <div className={(selected && recipe._id === selected._id) ? "selectedItem" : ""}>
-                        <LcRecipeInline data={recipe} headerLevel={headerLevel} onClick={() => {
-                            doSelect(recipe)
-                            setSelected(recipe)
-                            setOpen(false)
-                        }}/>
-                    </div>
-                })}
-            </div>
-        </DepthProvider>
-        <button className={"basicButton"} onClick={() => {
-            setOpen(false)
-        }}>{"Close Selector"}</button>
-    </div>
-}
+// export function LcRecipeSelector( // TODO: COLLAPSE! // TODO: likely overhaul to use the other List thingy!
+//     {
+//         doSelect, allowCreation, headerLevel, creatorInPage
+//     }: SelectorProps<LcRecipeData>) {
+//     // TODO: does this need incremented depth?
+//     const [loaded, setLoaded] = useState(false)
+//     const [open, setOpen] = useState(false)
+//     const [selected, setSelected] = useState<LcRecipeData | undefined>()
+//     const [standardList, setStandardList] = useState<LcRecipeData[] | undefined>()
+//     const [recentList, setRecentList] = useState<LcRecipeData[] | undefined>()
+//     const [err, setErr] = useState<string | undefined>()
+//     //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+//     // TODO: RECIPE CREATOR SECTION!
+//     useEffect(() => { // TODO: ENSURE WORKS
+//         setSelected(undefined)
+//         fetch(BaseExternalUrl + "/db/list/lcRecipes", {
+//             method: "GET",
+//             headers: {
+//                 credentials: 'include',
+//                 // 'Cookie': cookies, // TODO: do we even need this?
+//                 // TODO: THIS!
+//             },
+//         })
+//             .then(HandleJsonResponse)
+//             .then((data) => { // TODO: DATA AS TWO LISTS!
+//                 setStandardList(data.standard) // TODO: ASSERT????
+//                 setRecentList(data.recent) // TODO: ASSERT????
+//                 setLoaded(true)
+//                 setErr(undefined)
+//             })
+//             .catch((error) => {
+//                 setErr(JSON.stringify(error))
+//             });
+//     }, []);
+//     const errArea = <ErrorDisplay err={err} headerLevel={headerLevel}/>
+//     if (!loaded) {
+//         return <div>{errArea}{"Loading LC Recipe Selector..."}</div>
+//     }
+//     if (!open) {
+//         return <div>
+//             {errArea}
+//             {selected && <div>{"Recipe: " + selected._id}</div>}
+//             <div>
+//                 <button className={"basicButton"} onClick={() => {
+//                     setOpen(true)
+//                 }}>{selected ? "Select a different LC Recipe" : "Select an LC Recipe"}</button>
+//             </div>
+//         </div>
+//     }
+//     return <div>
+//         {errArea}
+//         <button className={"basicButton"} onClick={() => {
+//             setOpen(false)
+//         }}>{"Close Selector"}</button>
+//         <DepthProvider>
+//             <div>
+//                 <div>{"Standard Recipes"}</div>
+//                 {(standardList || []).map((recipe, i) => {
+//                     return <div key={i} className={(selected && recipe._id === selected._id) ? "selectedItem" : ""}>
+//                         <LcRecipeInline data={recipe} headerLevel={headerLevel} onClick={() => {
+//                             doSelect(recipe)
+//                             setSelected(recipe)
+//                             setOpen(false)
+//                         }}/>
+//                     </div>
+//                 })}
+//             </div>
+//             <div>
+//                 <div>{"Recent Recipes"}</div>
+//                 {(recentList || []).map((recipe, i) => {
+//                     return <div className={(selected && recipe._id === selected._id) ? "selectedItem" : ""}>
+//                         <LcRecipeInline data={recipe} headerLevel={headerLevel} onClick={() => {
+//                             doSelect(recipe)
+//                             setSelected(recipe)
+//                             setOpen(false)
+//                         }}/>
+//                     </div>
+//                 })}
+//             </div>
+//         </DepthProvider>
+//         <button className={"basicButton"} onClick={() => {
+//             setOpen(false)
+//         }}>{"Close Selector"}</button>
+//     </div>
+// }
 
 // export function LcRecipeListDisplay({recent, standard, onClick}: TwoListProps<LcRecipeData>) {
 //     const recentArea = ()=>{
@@ -545,39 +539,85 @@ export function LcRecipeSelector( // TODO: COLLAPSE! // TODO: likely overhaul to
 //     </div>
 // }
 
-export function LcRecipeListPageTable({data, onClick}: ListPageItems<LcRecipeData>) {
-    const cols: ListTableColumn<LcRecipeData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Name", (v)=>v.name), // TODO: shortname?
-        NewColumn("Liquids", (v)=>{
+export function LcRecipeListPageTable({data, onClick, withLink}: ListPageItems<LcRecipeData>) {
+    let cols: ListTableColumn<LcRecipeData>[] = [
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("Liquids", (v) => {
             return <div>
-                {v.liquids.map((l,i)=>{
-                    return <div key={l.name+i}>{l.name}</div>
+                {v.liquids.map((l, i) => {
+                    return <div key={l.name + i}>{l.name}</div>
                 })}
             </div>
         }),
-        NewColumn("Nutrients", (v)=>{
+        NewColumn("Nutrients", (v) => {
             return <div>
-                {v.nutrients && v.nutrients.map((v,i)=>{
-                    return <div key={v.nutrient+i}>{v.nutrient}</div> // TODO: any more??
+                {v.nutrients && v.nutrients.map((v, i) => {
+                    return <div key={v.nutrient + i}>{v.nutrient}</div> // TODO: any more??
                 })}
-            </div>}),
-        NewColumn("Sugars", (v)=>{
+            </div>
+        }),
+        NewColumn("Sugars", (v) => {
             return <div>
-                {v.sugars && v.sugars.map((v,i)=>{
-                    return <div key={v.type+i}>{v.type}</div> // TODO: any more??
+                {v.sugars && v.sugars.map((v, i) => {
+                    return <div key={v.type + i}>{v.type}</div> // TODO: any more??
                 })}
-            </div>}),
-        NewColumn("Additives", (v)=>{
+            </div>
+        }),
+        NewColumn("Additives", (v) => {
             return <div>
-                {v.additives && v.additives.map((v,i)=>{
-                    return <div key={v.additive+i}>{v.additive}</div> // TODO: any more??
+                {v.additives && v.additives.map((v, i) => {
+                    return <div key={v.additive + i}>{v.additive}</div> // TODO: any more??
                 })}
-            </div>}),
-        NewColumn("Last Updated", (v)=>{
+            </div>
+        }),
+        NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         })
         // TODO: bonus area for notes???
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: LcRecipeData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "lcRecipe", openInNewTab: true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+}
+
+export function LcRecipeSelectorTable({data, onClick}: ListPageItems<LcRecipeData>) {
+    let cols: ListTableColumn<LcRecipeData>[] = [
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("Last Updated", (v) => {
+            return NumberToDateStr(v.lastUpdated)
+        }),
+        NewColumn("Link", (v: LcRecipeData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "lcRecipe", openInNewTab: true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })
+        // TODO: bonus area for notes???
+    ]
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+}
+
+export function LcRecipeSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: LcRecipeData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: LcRecipeData[]): JSX.Element => {
+        return <LcRecipeSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingDualSelector entryType={"lcRecipe"} entryTypes={"lcRecipes"} doSelect={doSelect}
+                                 asserter={AssertLcRecipe}
+                                 table={table}>
+        {allowCreate && <NewLcRecipeForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
+    </ExistingDualSelector>
 }

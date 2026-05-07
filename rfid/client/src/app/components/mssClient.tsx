@@ -19,7 +19,7 @@ import {
     SpeciesArea,
     SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     IsValidNote, NewEntryNotes,
     Note,
@@ -42,7 +42,7 @@ import {WaterJarData} from "@/app/components/waterJarServer";
 import {SporePrintRecentSelector} from "@/app/components/sporePrintClient";
 import {WaterJarRecentSelector} from "@/app/components/waterJarClient";
 import {LatestListDisplay} from "@/app/components/clientGeneric";
-import {InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {
     FlexedArea,
@@ -54,8 +54,11 @@ import {
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import NotesArea from "@/app/components/formSubcomponents/notes";
-import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {AssertLc, LcSelectorTable, NewLcForm, SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {LcSyringe} from "@/app/components/lcSyringeServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {LcSyringeListPageTable} from "@/app/components/lcSyringeClient";
+import {LcData} from "@/app/components/lcServer";
 
 export function AssertMss(input: any): asserts input is MssData {
     if (typeof input !== 'object') {
@@ -398,8 +401,8 @@ export function MssRecentSelector({onSelect}:{onSelect:(selected?: MssData) => v
     }} />
 }
 
-export function MssListPageTable({data, onClick}: ListPageItems<MssData>) {
-    const cols: ListTableColumn<MssData>[] = [
+export function MssListPageTable({data, onClick, withLink}: ListPageItems<MssData>) {
+    let cols: ListTableColumn<MssData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -410,6 +413,34 @@ export function MssListPageTable({data, onClick}: ListPageItems<MssData>) {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: MssData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"mss",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function MssSelectorTable({data, onClick}: ListPageItems<MssData>) {
+    return <MssListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function MssSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: MssData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: MssData[]):JSX.Element=>{
+        return <MssSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"mss"} entryTypes={"mss"} doSelect={doSelect} asserter={AssertMss}
+                                   table={table}>
+        {allowCreate && <NewMssForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

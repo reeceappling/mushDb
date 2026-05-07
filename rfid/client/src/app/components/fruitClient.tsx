@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
@@ -49,7 +49,7 @@ import {
 import {FruitData} from "@/app/components/fruitServer";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {redirect} from "next/navigation";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
@@ -60,7 +60,7 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {OvcForXfers} from "@/app/components/bagClient";
+import {BagSelectorTable, NewBagForm, OvcForXfers} from "@/app/components/bagClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
@@ -68,7 +68,7 @@ import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {RecentSelectorV2} from "@/app/components/mssClient";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {InlineEntry} from "@/app/components/agarRecipeClient";
+import {AssertAgarRecipe, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {
     FlexedArea,
     FlexedSinglesGroup, ListPageTable,
@@ -577,15 +577,46 @@ export function FruitRecentSelector({onSelect}: { onSelect: (selected?: FruitDat
     }}/>
 }
 
-export function FruitListPageTable({data, onClick}: ListPageItems<FruitData>) {
-    const cols: ListTableColumn<FruitData>[] = [
+export function FruitListPageTable({data, onClick, withLink}: ListPageItems<FruitData>) {
+    let cols: ListTableColumn<FruitData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Harvest", (v)=>{
             return NumberToDateStr(v.creationDate)
         }),
         NewColumn("Species", v=>v.species ),
         NewColumn("Subspecies", (v)=>v.subspecies || ""),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: FruitData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"fruit",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function FruitSelectorTable({data, onClick}: ListPageItems<FruitData>) {
+    return <FruitListPageTable data={data} onClick={onClick} withLink={true}/>
+}
+
+export function FruitSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        // TODO: ok? allowCreate
+    }: {
+        doSelect: (val: FruitData | undefined) => void,
+        // TODO: ok? allowCreate?: boolean
+    }) {
+    const table = (items: FruitData[]):JSX.Element=>{
+        return <FruitSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"fruit"} entryTypes={"fruits"} doSelect={doSelect} asserter={AssertFruit}
+                                   table={table}>
+        {/* TODO: ok? allowCreate && <NewFruitForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
+    </ExistingRecentSelector>
 }

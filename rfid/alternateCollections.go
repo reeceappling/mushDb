@@ -35,7 +35,6 @@ type ListResponse[T any] struct {
 }
 
 func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated bool, maxResults int, doStandardToo bool, temp T) (bs []byte, err error) {
-	println("getting latest entries")
 	latestEntries, err := getLastNEntries(ctx, true, maxResults, doStandardToo, temp)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
@@ -48,14 +47,8 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 		if err != nil {
 			return nil, err
 		}
-		tempBs, errr := json.MarshalIndent(latestEntries, "", " ")
-		if errr != nil {
-			return nil, errr
-		}
-		println(string(tempBs)) // TODO: del
 	} else {
 		// TODO: do we want to also display repeats on standard entries?
-		println("getting standard entries")
 		stdEntries, err := getStandardEntries(ctx, temp)
 		if err != nil {
 			if !errors.Is(err, mongo.ErrNoDocuments) {
@@ -63,22 +56,12 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 			}
 			stdEntries = nil
 		}
-		tempBs, errr := json.MarshalIndent(stdEntries, "", " ")
-		if errr != nil {
-			return nil, errr
-		}
-		println("standard entries: ", string(tempBs)) // TODO: del
 		// Standard is filtered out from latest already
 		outObj := map[string][]T{"standard": stdEntries, "recent": latestEntries}
 		bs, err = json.Marshal(outObj)
 		if err != nil {
 			return nil, err
 		}
-		tempBs, errr = json.MarshalIndent(outObj, "", " ")
-		if errr != nil {
-			return nil, errr
-		}
-		println(string(tempBs)) // TODO: del
 	}
 	if err != nil {
 		return nil, err
@@ -186,6 +169,32 @@ func ListEntriesHandler() http.Handler {
 		}
 		_, err = w.Write(bs)
 		handleWriteErr(err, w)
+	}
+	return http.HandlerFunc(handler)
+}
+func ListSubspeciesHandler() http.Handler {
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		spec, err := UrlDecodeString(r.PathValue("variant"))
+		if err != nil {
+			http.Error(w, "got bad species name. "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		findBson := bsonFindFilter("species", spec)
+		sortField := "$natural" // TODO: FIX!
+		// TODO: pagination?
+		opts := options.Find().
+			SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
+		//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
+		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+			Database(dbName).
+			Collection(temp.CollectionName()).
+			Find(ctx, findBson, opts)
+		if err != nil {
+			return nil, err
+		}
+		// TODO: ensure that user can read each item!!!!!!!!!!
+		return getCollectionItemsFromCursor[T](ctx, cursor, &nresults)
+		http.Error(w, "not implemented", http.StatusNotImplemented) // TODO: do this!
 	}
 	return http.HandlerFunc(handler)
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {useState} from "react";
+import React, {JSX, useState} from "react";
 import NotesArea, {NotesAreaOld, IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -12,7 +12,7 @@ import {
     NewPicWithNotesForm,
     PicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {AddToTransfers, InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
+import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     DisplayInput,
     HandleJsonResponse,
@@ -72,8 +72,8 @@ import {SelectorFor} from "@/app/components/selector";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
-import {OvcForNewFruit} from "@/app/components/bagClient";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {AssertBag, BagSelectorTable, NewBagForm, OvcForNewFruit} from "@/app/components/bagClient";
+import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {
     FlexedArea,
@@ -84,6 +84,8 @@ import {
 } from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {BagData} from "@/app/components/bagServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
@@ -441,7 +443,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
         }
         return <SubstrateBatchSelector doSelect={(sb => {
             setSubBatch(sb)
-        })} allowCreation={false/* TODO: ok?*/} creatorInPage={false/*TODO:????*/}/>
+        })} allowCreate={false/* TODO: ok?*/} creatorInPage={false/*TODO:????*/}/>
     }
     const parentArea = () => {
         if (!parent) {
@@ -544,7 +546,7 @@ export function FruitingChamberImportDisplay({headerLevel, cookies}: ImportDispl
     return <ImportEntryFormWrapper entryType={"fruitingChamber"}>
         <ErrorDisplay headerLevel={headerLevel} err={err}/>
         {/* Required Fields */}
-        <SubstrateRecipeSelector doSelect={setRecipe} headerLevel={headerLevel}/>
+        <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={true}/>
         <DateArea pre={"Created on: "} readonly={false} when={Date.now()} updateParent={setCreationDate}/>
         <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
         {"Grain volume: "}<VolumeSelector initialVal={1} initialUnit={"quarts"} updateNumberOfCups={setGrainCups}/>
@@ -611,8 +613,8 @@ export function FruitingChamberInline({
 //     </div>
 // }
 
-export function FruitingChamberListPageTable({data, onClick}: ListPageItems<FruitingChamberData>) {
-    const cols: ListTableColumn<FruitingChamberData>[] = [
+export function FruitingChamberListPageTable({data, onClick, withLink}: ListPageItems<FruitingChamberData>) {
+    let cols: ListTableColumn<FruitingChamberData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -623,6 +625,34 @@ export function FruitingChamberListPageTable({data, onClick}: ListPageItems<Frui
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: FruitingChamberData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"fruitingChamber",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function FruitingChamberSelectorTable({data, onClick}: ListPageItems<FruitingChamberData>) {
+    return <FruitingChamberListPageTable data={data} onClick={onClick}/>
+}
+
+export function FruitingChamberSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: FruitingChamberData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: FruitingChamberData[]):JSX.Element=>{
+        return <FruitingChamberSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"fruitingChamber"} entryTypes={"fruitingChambers"} doSelect={doSelect} asserter={AssertFruitingChamber}
+                                   table={table}>
+        {allowCreate && <NewFruitingChamberForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

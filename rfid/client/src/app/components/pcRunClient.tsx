@@ -12,7 +12,7 @@ import {
     OnViewCreatorTriCol
 } from "@/app/components/formSubcomponents/shared";
 import {PcRunData} from "@/app/components/pcRunServer";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {
     DisplayInput,
@@ -50,8 +50,10 @@ import {WaterJarData} from "@/app/components/waterJarServer";
 import {JarData} from "@/app/components/jarServer";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
-import {dataFor, InlineEntry} from "@/app/components/agarRecipeClient";
+import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {MssData} from "@/app/components/mssServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {AssertMss, MssListPageTable, NewMssForm} from "@/app/components/mssClient";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -594,8 +596,8 @@ export function PcRunArea({binaryId, headerLevel, offset}: {
 //     </div>
 // }
 
-export function PcRunListPageTable({data, onClick}: ListPageItems<PcRunData>) {
-    const cols: ListTableColumn<PcRunData>[] = [
+export function PcRunListPageTable({data, onClick, withLink}: ListPageItems<PcRunData>) {
+    let cols: ListTableColumn<PcRunData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Date", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -605,6 +607,34 @@ export function PcRunListPageTable({data, onClick}: ListPageItems<PcRunData>) {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: PcRunData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"pcRun",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function PcRunSelectorTable({data, onClick}: ListPageItems<PcRunData>) {
+    return <PcRunListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function PcRunSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: PcRunData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: PcRunData[]):JSX.Element=>{
+        return <PcRunSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"pcRun"} entryTypes={"pcRuns"} doSelect={doSelect} asserter={AssertPcRun}
+                                   table={table}>
+        {allowCreate && <NewPcRunForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
 }

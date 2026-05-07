@@ -6,6 +6,7 @@ import {
     AddCreatedTriColFunction,
     AllEntries,
     Data,
+    ListResult,
     OnViewCreatorQuadCol
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -33,6 +34,7 @@ import SugarsArea, {
     SugarsList
 } from "@/app/components/formSubcomponents/sugars";
 import {
+    AssertArrayResult,
     CreateNewEntryButton,
     DisplayInput,
     HandleJsonResponse,
@@ -40,13 +42,16 @@ import {
     InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    IsString, ListPageItems,
+    IsString,
+    ListItemsRequest,
+    ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
-    RequiredArrayOfType
+    RequiredArrayOfType,
+    ViewInNewTabButton
 } from "@/app/components/common";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {ErrorDisplay, InlineTitle, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import AdditivesArea, {
@@ -67,23 +72,21 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
+import {AssertDualListResult, CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {
     FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
+    FlexedSinglesGroup,
+    ListPageTable,
     ListTableColumn,
-    NewAgarBatchForm, NewColumn,
-    NotesFormArea, NumberToDateStr
+    NewAgarBatchForm,
+    NewColumn,
+    NotesFormArea,
+    NumberToDateStr
 } from "@/app/components/agarBatchClient";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
+import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {
-    InputNumber,
-    InputNumerical,
-    InputText,
-    InputTextInlineTitle
-} from "@/app/components/formSubcomponents/numericInput";
+import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 
 export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     if (typeof input !== 'object') {
@@ -242,18 +245,21 @@ export default function AgarRecipeDisplay(
                 </FlexedArea>
 
 
-                <LiquidsArea initialValues={dataFor(initial.liquids)} readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
-                <NutrientsArea initialValues={dataFor(initial.nutrients)} readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
+                <LiquidsArea initialValues={dataFor(initial.liquids)}
+                             readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
+                <NutrientsArea initialValues={dataFor(initial.nutrients)}
+                               readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
                 <SugarsArea initialValues={dataFor(initial.sugars)} readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
-                <AdditivesArea readonly={true} initialValues={dataFor(initial.additives)}/>{/* TODO: FIX AND REFORMAT THIS*/}
+                <AdditivesArea readonly={true}
+                               initialValues={dataFor(initial.additives)}/>{/* TODO: FIX AND REFORMAT THIS*/}
                 <AntibioticsDisplay antibiotics={initial.antibiotics}/>{/* TODO: FIX AND REFORMAT THIS*/}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
                 {/* TODO: fix the ADD A PROJECT area*/}
                 {readonly ? null :
-                    <button className={"bottomButton greenButton"} onClick={(e)=>{
+                    <button className={"bottomButton greenButton"} onClick={(e) => {
                         e.stopPropagation();
                         agarRecipeSubmit()
                     }}>{"Update"}</button>}
@@ -278,7 +284,6 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
     const [err, setErr] = useState<string | undefined>()
     const [agarErr, setAgarErr] = useState<string | undefined>()
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState<boolean>(false)
-    // TODO: handle handlers.isTopLevel
     const newAgarRecipeSubmit = () => {
         if (name === "") {
             setErr("name must not be empty")
@@ -335,7 +340,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                 setAntibiotics(rec.antibiotics || [])
                 // TODO: notes?
                 setTemplateSelectorOpen(false)
-            }} allowCreate={false} showRecent={false}/>
+            }}/>
         } else {
             return <button className={"basicButton"} onClick={() => {
                 setTemplateSelectorOpen(true)
@@ -344,12 +349,12 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
     }
     return (
         <NewEntryFormWrapper entryType={"agarRecipe"}>
-            {/* TODO: ok?<div className={"sectionHolder"}>*/}
             <ErrorDisplay err={err}/>
             <div>
                 {templateRecipeSelector()}
             </div>
-            <NameArea classNames={"inlineChildren"} titleClasses={"mr-2"} currentName={name || ""} setName={setName} headerTxt={"Recipe Name: "} readonly={false}/>
+            <NameArea classNames={"inlineChildren"} titleClasses={"mr-2"} currentName={name || ""} setName={setName}
+                      headerTxt={"Recipe Name: "} readonly={false}/>
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}
                           headerTxt={"Standard Recipe? "}/>
             <div className={"inlineChildren my-4"}>
@@ -478,58 +483,128 @@ export const AgarRecipeArea = ({agarRecipeBinId}: { agarRecipeBinId?: string }) 
     </div>
 }
 
-export function AgarRecipeSelector( // TODO: ALLOW AGAR RECIPE CREATION?????
+// TODO: MOVE!
+export function ExistingDualSelector<T>(props: React.PropsWithChildren<{
+    doSelect: (val?: T) => void,
+    table: (items: T[],onSelect: (v?: T)=>void) => JSX.Element,
+    entryType:string,
+    entryTypes:string,
+    asserter: (val: any)=>void
+}>){
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const [loaded, setLoaded] = React.useState(false);
+    const [data, setData] = React.useState<ListResult<T> | undefined>(undefined);
+    useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
+        try {
+            AssertDualListResult<T>(result, props.asserter) // TODO: unnecessary?
+            setLoaded(true)
+            setData(result)
+        } catch (e) {
+            throw e
+        }
+    }).catch(e => {
+        setErr("error on listItems request: " + JSON.stringify(e))
+    })},[])
+    if (!loaded || data === undefined) {
+        return <div>
+            <ErrorDisplay err={err}/>
+            <div>{"Loading "+props.entryType+" Selector"}</div>
+        </div>
+    }
+    return <Subform>
+        <ErrorDisplay err={err}/>
+        <SelectorTableWithHeader header={"Recent"} data={data?.recent} onSelect={props.doSelect} table={props.table}/>
+        <SelectorTableWithHeader header={"Standard"} data={data?.standard} onSelect={props.doSelect} table={props.table}/>
+        <SelectorCreationArea>{props.children}</SelectorCreationArea>
+    </Subform>
+}
+// TODO: move!
+export function SelectorCreationArea(props:React.PropsWithChildren<{}>){
+    const [creatorOpen, setCreatorOpen] = React.useState(false);
+    if (!props.children){
+        return null
+    }
+    if (!creatorOpen){
+        return <button className={"buttonFullWidth basicButtonSmall"} onClick={e=>{
+            e.stopPropagation();
+            setCreatorOpen(true);
+        }}>{"Create one instead"}</button>
+    }
+    return <><button className={"basicButtonSmall"} onClick={e=>{
+        e.stopPropagation();
+        setCreatorOpen(false);
+    }}>{"Close creator"}</button>
+        {props.children}
+    </>
+}
+// TODO: MOVE!
+export function ExistingRecentSelector<T>(props: React.PropsWithChildren<{
+    doSelect: (val?: T) => void,
+    table: (items: T[],onSelect: (v?: T)=>void) => JSX.Element,
+    entryType:string,
+    entryTypes:string,
+    asserter: (val: any)=>void
+}>){
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const [loaded, setLoaded] = React.useState(false);
+    const [data, setData] = React.useState<T[] | undefined>(undefined);
+    useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
+        try {
+            AssertArrayResult<T>(result, props.asserter) // TODO: unnecessary?
+            setLoaded(true)
+            setData(result)
+        } catch (e) {
+            throw e
+        }
+    }).catch(e => {
+        setErr("error on listItems request: " + JSON.stringify(e))
+    })},[])
+    if (!loaded || data === undefined) {
+        return <div>
+            <ErrorDisplay err={err}/>
+            <div>{"Loading "+props.entryType+" Selector"}</div>
+        </div>
+    }
+    return <Subform>
+        <ErrorDisplay err={err}/>
+        <SelectorTableWithHeader header={"Recent"} data={data} onSelect={props.doSelect} table={props.table}/>
+        <SelectorCreationArea>{props.children}</SelectorCreationArea>
+    </Subform>
+}
+
+export function SelectorTableWithHeader<T>({header, data,table,onSelect}:{
+    header: string,
+    data?: T[],
+    onSelect: (val?: T) => void,
+    table:(items: T[], onSelect: (v?: T) => void)=>JSX.Element
+}){
+    if(!data || data.length===0){
+        return null
+    }
+    return <>
+        <div className={"text-xl"}>{header}</div>
+        {table(data,onSelect)}
+    </>
+}
+
+
+export function AgarRecipeSelector(
     {
-        doSelect, allowCreate, showRecent
+        doSelect,
+        allowCreate
     }: {
         doSelect: (val: AgarRecipeData | undefined) => void,
-        showRecent: boolean,
-        allowCreate: boolean
-    }) { // TODO: THIS WHOLE PART!!!
-    // TODO: do selectors need depth providers?
-    // TODO: fix //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-    // TODO: two sections. Standard, most recent, or create new.
-    return <div>
-        <StandardAgarRecipeSelector doSelect={doSelect}/>
-        {showRecent &&
-            <div>
-                <RecentAgarRecipeSelector doSelect={doSelect}/>
-            </div>}
-        {allowCreate && <NewAgarRecipeForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
+        allowCreate?: boolean
+    }) {
+    const table = (items: AgarRecipeData[]):JSX.Element=>{
+        return <AgarRecipeSelectorTable data={items} onClick={doSelect}
+                                          withLink={true/* TODO: recipe id???*/}/>
+    }
 
-    </div>
-    // const [speciesList, setSpeciesList] = useState<string[]>([]);
-    // const [selected, setSelected] = useState<string | undefined>(undefined)
-    // useEffect(() => {
-    //     fetch(BaseUrl+"/v1/jokes", { // TODO: ensure correct
-    //         method: "GET",
-    //         headers: {
-    //             // TODO: THIS!
-    //         },
-    //     })
-    //         .then(HandleJsonResponse)
-    //         .then((data) => {
-    //             setSpeciesList(data as string[])
-    //         })
-    //         .catch((error) => {
-    //             console.log(error)
-    //         }); // TODO: THIS
-    // }, []);
-    // const onSelect = (e: SyntheticEvent<HTMLSelectElement, Event>) => {
-    //     let val = e.currentTarget.value
-    //     let toSet = undefined
-    //     if(val!==""){
-    //         toSet = val
-    //     }
-    //     setSelected(toSet)
-    //     doSelect(toSet)
-    // }
-    // return <select value={selected} onChange={onSelect}>
-    //     {["", ...speciesList].map(function (species,i) {
-    //         return <option value={species} key={i}>{species}</option>
-    //     })}
-    // </select>
-    return null // TODO: FIXME
+    return <ExistingDualSelector entryType={"agarRecipe"} entryTypes={"agarRecipes"} doSelect={doSelect} asserter={AssertAgarRecipe}
+                                 table={table}>
+        {allowCreate && <NewAgarRecipeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingDualSelector>
 }
 
 export function StandardAgarRecipeSelector(
@@ -681,45 +756,75 @@ export function RecentAgarRecipeSelector(
 //     </div>
 // }
 
-export function AgarRecipeListPageTable({data, onClick}: ListPageItems<AgarRecipeData>) {
-    const cols: ListTableColumn<AgarRecipeData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Name", (v)=>v.name), // TODO: shortname?
-        NewColumn("Liquids", (v)=>{
+export function AgarRecipeListPageTable({data, onClick, withLink}: ListPageItems<AgarRecipeData>) {
+    let cols: ListTableColumn<AgarRecipeData>[] = [
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("Liquids", (v) => {
             return <div>
-                {v.liquids.map((l,i)=>{
-                    return <div key={l.name+i}>{l.name}</div>
+                {v.liquids.map((l, i) => {
+                    return <div key={l.name + i}>{l.name}</div>
                 })}
             </div>
         }),
-        NewColumn("Nutrients", (v)=>{
+        NewColumn("Nutrients", (v) => {
             return <div>
-            {v.nutrients && v.nutrients.map((v,i)=>{
-                return <div key={v.nutrient+i}>{v.nutrient}</div> // TODO: any more??
-            })}
-        </div>}),
-        NewColumn("Sugars", (v)=>{
-            return <div>
-                {v.sugars && v.sugars.map((v,i)=>{
-                    return <div key={v.type+i}>{v.type}</div> // TODO: any more??
+                {v.nutrients && v.nutrients.map((v, i) => {
+                    return <div key={v.nutrient + i}>{v.nutrient}</div> // TODO: any more??
                 })}
-            </div>}),
-        NewColumn("Additives", (v)=>{
+            </div>
+        }),
+        NewColumn("Sugars", (v) => {
             return <div>
-                {v.additives && v.additives.map((v,i)=>{
-                    return <div key={v.additive+i}>{v.additive}</div> // TODO: any more??
+                {v.sugars && v.sugars.map((v, i) => {
+                    return <div key={v.type + i}>{v.type}</div> // TODO: any more??
                 })}
-            </div>}),
-        NewColumn("Antibiotics", (v)=>{
+            </div>
+        }),
+        NewColumn("Additives", (v) => {
             return <div>
-                {v.antibiotics && v.antibiotics.map((v,i)=>{
+                {v.additives && v.additives.map((v, i) => {
+                    return <div key={v.additive + i}>{v.additive}</div> // TODO: any more??
+                })}
+            </div>
+        }),
+        NewColumn("Antibiotics", (v) => {
+            return <div>
+                {v.antibiotics && v.antibiotics.map((v, i) => {
                     return <div key={i}>{v}</div>
                 })}
-            </div>}),
-        NewColumn("Last Updated", (v)=>{
+            </div>
+        }),
+        NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         })
+
         // TODO: bonus area for notes???
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: AgarRecipeData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "agarRecipe", openInNewTab: true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+}
+
+export function AgarRecipeSelectorTable({data, onClick, withLink}: ListPageItems<AgarRecipeData>) {
+    let cols: ListTableColumn<AgarRecipeData>[] = [
+        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Last Updated", (v) => {
+            return NumberToDateStr(v.lastUpdated)
+        })
+
+        // TODO: bonus area for notes???
+    ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: AgarRecipeData) => {
+            return <ViewInNewTabButton entryType={"agarRecipe"} id={v._id}/>
+        })]
+    }
     return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
 }

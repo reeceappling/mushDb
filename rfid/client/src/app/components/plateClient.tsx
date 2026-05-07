@@ -1,6 +1,6 @@
 'use client'
 
-import React, {SyntheticEvent, useState} from "react";
+import React, {JSX, useState} from "react";
 import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -25,7 +25,8 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea, ListPageItems,
+    InlineSubArea,
+    ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
@@ -34,8 +35,9 @@ import {
     resolvePicsFormData,
     SendMultipartRequest,
     setFormData,
-    setFormImages, TwoValuePlusUnknownSelector,
-    viewUrlFor, YesNoSelector,
+    setFormImages,
+    viewUrlFor,
+    YesNoSelector,
 } from "@/app/components/common";
 import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
@@ -53,9 +55,12 @@ import {
 import {
     AgarBatchArea,
     FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn, NewColumn,
-    NotesFormArea, NumberToDateStr,
+    FlexedSinglesGroup,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NotesFormArea,
+    NumberToDateStr,
 } from "@/app/components/agarBatchClient";
 import {
     ContaminationForm,
@@ -75,12 +80,16 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
+import {AssertPcRun, NewPcRunForm, OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
-import {InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
-import {LcData} from "@/app/components/lcServer";
+import Box from "@mui/material/Box";
+import Slider from "@mui/material/Slider";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {PcRunData} from "@/app/components/pcRunServer";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
@@ -151,14 +160,7 @@ export function PourCoverageSelector({value, setPourCoverage}: {
     value?: number,
     setPourCoverage: (value?: number) => void,
 }) {
-    return <TestAndValidate todos={["DO THIS POUR COVERAGE AREA!"]}>
-        <div>{"Pour coverage (% of all):"}</div>
-        <div>
-            <TestAndValidate todos={["FIX!"]}>
-                {"FIX_ME"/* TODO: THIS!*/}
-            </TestAndValidate>
-        </div>
-    </TestAndValidate>
+    return <OptionalSliderSelector txt={"Pour Coverage"} label={"Pour Coverage (%)"} initial={value} min={0} def={100} max={100} updateParent={setPourCoverage}/>
 }
 
 export default function PlateDisplay(
@@ -296,7 +298,7 @@ export default function PlateDisplay(
             </TogglableAreaWithDepth>
 
             {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
-            {readonly || <button className={"bottomButton greenButton"} onClick={(e)=>{
+            {readonly || <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
@@ -336,6 +338,89 @@ function CondensationCoverageFieldDisplay({coverage, updateParent}: {
         updateParent && updateParent(temp) // TODO: ensure ok
         setVal(temp)
     }}/>{"%"}</div>
+}
+
+export function CondensationCoverageSlider({defaultValue, onChange}:
+                                           {
+                                               defaultValue: number,
+                                               onChange: (event: Event, value: number, activeThumb: number) => void,
+                                           }) {
+    return <NumberSlider defaultValue={defaultValue} min={0} max={100} label={"Condensation Coverage (%)"}
+                         onChange={onChange}/>
+}
+
+export function NumberSlider({min, max, label, defaultValue, onChange}:
+                             {
+                                 min: number,
+                                 max: number,
+                                 label: string,
+                                 defaultValue: number,
+                                 onChange: (event: Event, value: number, activeThumb: number) => void,
+                             }) {
+    return (
+        <Box sx={{width: 300}}> {/* TODO: fix box size*/}
+            <Slider
+                min={min} max={max} defaultValue={defaultValue} step={1}
+                size="medium" // small, medium, large
+                aria-label={label} // Label
+
+                valueLabelDisplay="on" /* Can be off, on, or auto */
+                marks={[{value: 0, label: "none"},
+                    {value: 50, label: "half"},
+                    {value: 100, label: "complete"},
+                ]}
+                getAriaValueText={(
+                    value: number,
+                    index: number,
+                ) => {
+                    return value.toString()
+                }}
+                onChange={onChange}
+            />
+        </Box>
+        // <div>
+        //     <div className={"inline"}>{"Wetness"}</div>
+        //     <div className={"inline"}>
+        //
+        //     </div>
+        // </div>
+    );
+}
+
+function CondensationCoverageSelector({coverage, updateParent}: {
+    coverage?: number,
+    updateParent?: (cov?: number) => void
+}) {
+    return <OptionalSliderSelector txt={"Condensation Coverage: "} label={"Condensation Coverage: "} min={0} max={100} def={50} initial={coverage} updateParent={updateParent}/>
+}
+
+function OptionalSliderSelector({txt,label,initial, min, max, updateParent,def}: {
+    txt: string,
+    label: string,
+    initial?: number,
+    min: number,
+    max: number,
+    updateParent?: (cov?: number) => void,
+    def: number,
+}) {
+    const [isDefined, setIsUndefined] = useState(initial !== undefined)
+    const [val, setVal] = useState(initial || 50)
+    return <div className={"inlineChildren"}>
+        <div>{txt}</div>
+        {/* TODO: slider stuff should have white text. Slider should disappear when box unchecked */}
+        {isDefined && <div className={"ccSelSlider"}>
+            <NumberSlider defaultValue={def} min={min} max={max} label={label}
+                          onChange={(e, v, a) => {
+                              e.stopPropagation();
+                              setVal(v)
+                              updateParent && updateParent(v)
+                          }}/>
+        </div>}
+        <input className={"ml-[1rem]"}type="checkbox" checked={isDefined} onChange={() => {
+            setIsUndefined(!isDefined)
+            updateParent && updateParent(undefined)
+        }}/>
+    </div>
 }
 
 export function PlateImportDisplay({cookies}: ImportDisplayInput) {
@@ -428,14 +513,13 @@ export function CreatedUpdatedDisposedArea( // TODO: MOVE
 export function NewPlateForm(
     {handlers}: { handlers: NewEntryInput<PlateData>, agarBatchIn?: AgarBatchData }
 ) {
-    // TODO: condensationCoverageAtSealTime?: number
-    // TODO: pourCoverage?: number
-    // TODO: wetAtCooledTime?: boolean
-    // TODO: agarOnOutsideAtPourTime?: boolean
     const [agarBatch, setAgarBatch] = useState<AgarBatchData | undefined>(undefined)
+    const [condensationCoverageAtSealTime, setCondensationCoverageAtSealTime] = useState<number | undefined>(undefined)
+    const [pourCoverage, setPourCoverage] = useState<number | undefined>(undefined)
+    const [wetAtCooledTime, setWetAtCooledTime] = useState<boolean | undefined>(undefined)
+    const [agarOnOutsideAtPourTime, setAgarOnOutsideAtPourTime] = useState<boolean | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    // TODO: handle isTopLevel
     const createPlate = (e: React.MouseEvent) => {
         e.preventDefault()
         if (agarBatch === undefined) {
@@ -471,6 +555,11 @@ export function NewPlateForm(
     return <NewEntryFormWrapper entryType={"plate"}>
         <ErrorDisplay err={err}/>
         <AgarBatchSelector doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/>
+        <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
+        <CondensationCoverageSelector coverage={condensationCoverageAtSealTime} updateParent={setCondensationCoverageAtSealTime}/>
+        <YesNoSelector pre={"Wet at cooled time: "} initial={undefined} updateParent={setWetAtCooledTime} className={"inlineChildren"}/>
+        <YesNoSelector pre={"Agar on outside at pour time: "} initial={undefined}
+                       updateParent={setAgarOnOutsideAtPourTime} className={"inlineChildren"}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={createPlate}>{"Create"}</button>
     </NewEntryFormWrapper>
@@ -534,18 +623,48 @@ export function PlateInline({data, expandByDefault, onClick, showMainPageButton,
 //     </div>
 // }
 
-export function PlateListPageTable({data, onClick}: ListPageItems<PlateData>) {
-    const cols: ListTableColumn<PlateData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Created", (v)=>{
+export function PlateListPageTable({data, onClick, withLink}: ListPageItems<PlateData>) {
+    let cols: ListTableColumn<PlateData>[] = [
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
         }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Spec", (v) => v.species || ""),
+        NewColumn("Subspec", v => v.subspecies || ""),
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: PlateData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"plate",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
+
+export function PlateSelectorTable({data, onClick}: ListPageItems<PlateData>) {
+    return <PlateListPageTable data={data} onClick={onClick} withLink={true} />
+}
+export function PlateSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: PlateData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: PlateData[]):JSX.Element=>{
+        return <PlateSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"plate"} entryTypes={"plates"} doSelect={doSelect} asserter={AssertPlate}
+                                   table={table}>
+        {allowCreate && <NewPlateForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    </ExistingRecentSelector>
+}
+
+// TODO: need to continue doing selectors after plate

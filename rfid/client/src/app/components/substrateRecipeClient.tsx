@@ -12,7 +12,7 @@ import {
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     CreateNewEntryButton,
     DisplayInput,
@@ -46,8 +46,11 @@ import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {InlineEntry} from "./agarRecipeClient";
+import {ExistingDualSelector, ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
 import {LcRecipeData} from "@/app/components/lcRecipeServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {SlantData} from "@/app/components/slantServer";
+import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -297,7 +300,7 @@ export const SubstrateRecipeArea = ({id, headerLevel, txt, readonly, onSelect}: 
                 </div>
                 <SubstrateRecipeSelector doSelect={r => { // TODO: FIX
                     onSelect && onSelect(r)
-                }} headerLevel={headerLevel}/>
+                }}/> {/* TODO: allow create? */}
             </div>
         }
     }
@@ -343,116 +346,116 @@ export function validatorForAssertion(asserter: ((input: any) => void)) {
     }
 }
 
-export function SubstrateRecipeSelector( // TODO: overhaul!
-    {
-        doSelect, allowCreation, headerLevel, creatorInPage, txt // TODO: USE TXT AS HEADER
-    }: SelectorProps<SubstrateRecipeData>) {
-    const [loaded, setLoaded] = useState(false)
-    const [open, setOpen] = useState(false)
-    const [selected, setSelected] = useState<SubstrateRecipeData | undefined>()
-    const [standardList, setStandardList] = useState<SubstrateRecipeData[] | undefined>()
-    const [recentList, setRecentList] = useState<SubstrateRecipeData[] | undefined>()
-    const [err, setErr] = useState<string | undefined>()
-    ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-    // TODO: RECIPE CREATOR SECTION!
-    useEffect(() => {
-        // let data = [TestSubstrateRecipeOk(), TestSubstrateRecipeOk(), TestSubstrateRecipeOk()]
-        // setSelected(undefined)
-        // setStandardList([TestSubstrateRecipeOkStd(true), TestSubstrateRecipeOkStd(true), TestSubstrateRecipeOkStd(true)]) // TODO: DEL
-        // setRecentList([TestSubstrateRecipeOkStd(false), TestSubstrateRecipeOkStd(false), TestSubstrateRecipeOkStd(false)]) // TODO: DEL
-        // setLoaded(true) // TODO: DEL
-        // setErr(undefined) // TODO: DEL
-        // return  // TODO: DEL
-        fetch(BaseExternalUrl + "/db/list/substrateRecipes", {
-            method: "GET",
-            headers: {
-                credentials: 'include',
-                //'Cookie': cookies,
-                'Content-type': 'application/json',
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((data) => {
-                AssertDualListResult<SubstrateRecipeData>(data, AssertSubstrateRecipe)
-                setStandardList(data.standard)
-                setRecentList(data.recent)
-                setLoaded(true)
-                setErr(undefined)
-            })
-            .catch((error) => {
-                if (error instanceof Error) { // TODO: do this everywhere
-                    setErr(error.message)
-                } else {
-                    setErr(JSON.stringify(error))
-                }
-            });
-    }, []);
-    const errArea = <ErrorDisplay err={err} headerLevel={headerLevel}/>
-    // TODO: MAKE SURE TO ADD RECIPE CREATOR BUTTON IF NEEDED
-    if (!loaded) {
-        return <div className={"centerHChildren medGapTop"}>{errArea}{"Loading Substrate Recipe Selector..."}</div>
-    }
-    if (!open) {
-        return <div className={"centerHChildren medGapTop"}>
-            {errArea}
-            {selected && <div>{"Recipe: " + selected.name}</div>}
-            <div>
-                <button className={"basicButton"} onClick={() => {
-                    setOpen(true)
-                }}>{selected ? "Select a different Substrate Recipe" : "Select a Substrate Recipe"}</button>
-            </div>
-        </div>
-    }
-    const closeButton = <Centered>
-        <button className={"basicButton"} onClick={() => {
-            setOpen(false)
-        }}>{"Close Selector"}</button>
-    </Centered>
-    return <div className={"medGapTop"}>
-        {errArea}
-        {closeButton}
-        <div>
-            <div>
-                <div className={"gapBottom gapTop centerH"}>{"Standard Recipes"}</div>
-                <div className={"padChildrenSides padBottom"}>
-                    <DepthProvider>{/* TODO: necessary?*/}
-                        {(standardList || []).map((recipe, i) => {
-                            return <div key={i}
-                                        className={"medGapBottom" + ((selected && recipe._id === selected._id) ? " selectedItem" : "")}>
-                                <SubstrateRecipeInline data={recipe} headerLevel={headerLevel} onClick={() => {
-                                    doSelect(recipe)
-                                    setSelected(recipe)
-                                    setOpen(false)
-                                }}/>
-                            </div>
-                        })}
-                    </DepthProvider>
-                </div>
-            </div>
-            <div>
-                <div className={"gapBottom gapTop centerH"}>{"Recent Recipes"}</div>
-                <div className={"padChildrenSides"}>
-                    <DepthProvider>{/* TODO: necessary?*/}
-                        {(recentList || []).map((recipe, i) => {
-                            let classes = (selected && recipe._id === selected._id) ? "selectedItem" : ""
-                            if (i !== (recentList || []).length - 1) {
-                                classes = classes + " medGapBottom"
-                            }
-                            return <div key={i} className={classes}>
-                                <SubstrateRecipeInline data={recipe} headerLevel={headerLevel} onClick={() => {
-                                    doSelect(recipe)
-                                    setSelected(recipe)
-                                    setOpen(false)
-                                }}/>
-                            </div>
-                        })}
-                    </DepthProvider>
-                </div>
-            </div>
-        </div>
-        {closeButton}
-    </div>
-}
+// export function SubstrateRecipeSelector( // TODO: overhaul!
+//     {
+//         doSelect, allowCreation, headerLevel, creatorInPage, txt // TODO: USE TXT AS HEADER
+//     }: SelectorProps<SubstrateRecipeData>) {
+//     const [loaded, setLoaded] = useState(false)
+//     const [open, setOpen] = useState(false)
+//     const [selected, setSelected] = useState<SubstrateRecipeData | undefined>()
+//     const [standardList, setStandardList] = useState<SubstrateRecipeData[] | undefined>()
+//     const [recentList, setRecentList] = useState<SubstrateRecipeData[] | undefined>()
+//     const [err, setErr] = useState<string | undefined>()
+//     ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+//     // TODO: RECIPE CREATOR SECTION!
+//     useEffect(() => {
+//         // let data = [TestSubstrateRecipeOk(), TestSubstrateRecipeOk(), TestSubstrateRecipeOk()]
+//         // setSelected(undefined)
+//         // setStandardList([TestSubstrateRecipeOkStd(true), TestSubstrateRecipeOkStd(true), TestSubstrateRecipeOkStd(true)]) // TODO: DEL
+//         // setRecentList([TestSubstrateRecipeOkStd(false), TestSubstrateRecipeOkStd(false), TestSubstrateRecipeOkStd(false)]) // TODO: DEL
+//         // setLoaded(true) // TODO: DEL
+//         // setErr(undefined) // TODO: DEL
+//         // return  // TODO: DEL
+//         fetch(BaseExternalUrl + "/db/list/substrateRecipes", {
+//             method: "GET",
+//             headers: {
+//                 credentials: 'include',
+//                 //'Cookie': cookies,
+//                 'Content-type': 'application/json',
+//             },
+//         })
+//             .then(HandleJsonResponse)
+//             .then((data) => {
+//                 AssertDualListResult<SubstrateRecipeData>(data, AssertSubstrateRecipe)
+//                 setStandardList(data.standard)
+//                 setRecentList(data.recent)
+//                 setLoaded(true)
+//                 setErr(undefined)
+//             })
+//             .catch((error) => {
+//                 if (error instanceof Error) { // TODO: do this everywhere
+//                     setErr(error.message)
+//                 } else {
+//                     setErr(JSON.stringify(error))
+//                 }
+//             });
+//     }, []);
+//     const errArea = <ErrorDisplay err={err} headerLevel={headerLevel}/>
+//     // TODO: MAKE SURE TO ADD RECIPE CREATOR BUTTON IF NEEDED
+//     if (!loaded) {
+//         return <div className={"centerHChildren medGapTop"}>{errArea}{"Loading Substrate Recipe Selector..."}</div>
+//     }
+//     if (!open) {
+//         return <div className={"centerHChildren medGapTop"}>
+//             {errArea}
+//             {selected && <div>{"Recipe: " + selected.name}</div>}
+//             <div>
+//                 <button className={"basicButton"} onClick={() => {
+//                     setOpen(true)
+//                 }}>{selected ? "Select a different Substrate Recipe" : "Select a Substrate Recipe"}</button>
+//             </div>
+//         </div>
+//     }
+//     const closeButton = <Centered>
+//         <button className={"basicButton"} onClick={() => {
+//             setOpen(false)
+//         }}>{"Close Selector"}</button>
+//     </Centered>
+//     return <div className={"medGapTop"}>
+//         {errArea}
+//         {closeButton}
+//         <div>
+//             <div>
+//                 <div className={"gapBottom gapTop centerH"}>{"Standard Recipes"}</div>
+//                 <div className={"padChildrenSides padBottom"}>
+//                     <DepthProvider>{/* TODO: necessary?*/}
+//                         {(standardList || []).map((recipe, i) => {
+//                             return <div key={i}
+//                                         className={"medGapBottom" + ((selected && recipe._id === selected._id) ? " selectedItem" : "")}>
+//                                 <SubstrateRecipeInline data={recipe} headerLevel={headerLevel} onClick={() => {
+//                                     doSelect(recipe)
+//                                     setSelected(recipe)
+//                                     setOpen(false)
+//                                 }}/>
+//                             </div>
+//                         })}
+//                     </DepthProvider>
+//                 </div>
+//             </div>
+//             <div>
+//                 <div className={"gapBottom gapTop centerH"}>{"Recent Recipes"}</div>
+//                 <div className={"padChildrenSides"}>
+//                     <DepthProvider>{/* TODO: necessary?*/}
+//                         {(recentList || []).map((recipe, i) => {
+//                             let classes = (selected && recipe._id === selected._id) ? "selectedItem" : ""
+//                             if (i !== (recentList || []).length - 1) {
+//                                 classes = classes + " medGapBottom"
+//                             }
+//                             return <div key={i} className={classes}>
+//                                 <SubstrateRecipeInline data={recipe} headerLevel={headerLevel} onClick={() => {
+//                                     doSelect(recipe)
+//                                     setSelected(recipe)
+//                                     setOpen(false)
+//                                 }}/>
+//                             </div>
+//                         })}
+//                     </DepthProvider>
+//                 </div>
+//             </div>
+//         </div>
+//         {closeButton}
+//     </div>
+// }
 
 // export function SubstrateRecipeCreatorComponent( // TODO: FIX THIS
 //     {}: {}){
@@ -490,8 +493,8 @@ export function SubstrateRecipeSelector( // TODO: overhaul!
 //     </div>
 // }
 
-export function SubstrateRecipeListPageTable({data, onClick}: ListPageItems<SubstrateRecipeData>) {
-    const cols: ListTableColumn<SubstrateRecipeData>[] = [
+export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPageItems<SubstrateRecipeData>) {
+    let cols: ListTableColumn<SubstrateRecipeData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Name", (v)=>v.name), // TODO: shortname?
         NewColumn("Last Updated", (v)=>{
@@ -499,5 +502,36 @@ export function SubstrateRecipeListPageTable({data, onClick}: ListPageItems<Subs
         })
         // TODO: bonus area for notes??? aliases?
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: SubstrateRecipeData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"substrateRecipe",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     return <ListPageTable className={"text-m"} cols={cols} data={data} onClick={onClick}/>
+}
+export function SubstrateRecipeSelectorTable({data, onClick}: ListPageItems<SubstrateRecipeData>) {
+    return <SubstrateRecipeListPageTable data={data} onClick={onClick} withLink={true} />
+}
+
+export function SubstrateRecipeSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate,
+        creatorInPage
+    }: {
+        doSelect: (val: SubstrateRecipeData | undefined) => void,
+        allowCreate?: boolean
+        creatorInPage?: boolean
+    }) {
+    const table = (items: SubstrateRecipeData[]):JSX.Element=>{
+        return <SubstrateRecipeSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingDualSelector entryType={"substrateRecipe"} entryTypes={"substrateRecipes"} doSelect={doSelect} asserter={AssertSubstrateRecipe}
+                                   table={table}>
+        {allowCreate && (creatorInPage?<NewSubstrateRecipeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>:
+            <div>{"LINK TO CREATOR HERE FIXME"}</div>)}
+    </ExistingDualSelector>
 }

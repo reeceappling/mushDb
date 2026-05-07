@@ -36,6 +36,10 @@ import {
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {SlantData} from "@/app/components/slantServer";
+import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
+import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -591,8 +595,8 @@ function convertObjectToStringMap(obj: { [key: string]: string }): Map<string, s
     return map;
 }
 
-export function TransferListPageTable({data, onClick}: ListPageItems<TransferData>) {
-    const cols: ListTableColumn<TransferData>[] = [
+export function TransferListPageTable({data, onClick, withLink}: ListPageItems<TransferData>) {
+    let cols: ListTableColumn<TransferData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Date", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -612,6 +616,58 @@ export function TransferListPageTable({data, onClick}: ListPageItems<TransferDat
         }),
         NewColumn("Reason", v=>v.reason),
     ]
+    if (withLink) {
+        cols = [...cols, NewColumn("Link", (v: TransferData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"transfer",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })]
+    }
     // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+
+export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<TransferData>) {
+    let cols: ListTableColumn<TransferData>[] = [
+        NewColumn("ID", (v)=>v._id),
+        NewColumn("Date", (v)=>{
+            return NumberToDateStr(v.creationDate)
+        }),
+        NewColumn("Src", (v)=>{
+            return <EntryLinkWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
+                <div>{v.from}</div>
+            </EntryLinkWrapper>
+        }),
+        NewColumn("Dst", (v)=>{
+            return <EntryLinkWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
+                <div>{v.to}</div>
+            </EntryLinkWrapper>
+        }),
+        NewColumn("Updated", (v)=>{
+            return NumberToDateStr(v.lastUpdated)
+        }),
+        NewColumn("Link", (v: TransferData)=>{
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"transfer",openInNewTab:true}}>
+                <button className={"basicButtonSmall"}>{"View"}</button>
+            </EntryLinkWrapper>
+        })
+    ]
+    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+}
+export function TransferSelector( // TODO: USE ELSEWHERE
+    {
+        doSelect,
+        allowCreate
+    }: {
+        doSelect: (val: TransferData | undefined) => void,
+        allowCreate?: boolean
+    }) {
+    const table = (items: TransferData[]):JSX.Element=>{
+        return <TransferSelectorTable data={items} onClick={doSelect}/>
+    }
+
+    return <ExistingRecentSelector entryType={"transfer"} entryTypes={"transfers"} doSelect={doSelect} asserter={AssertTransfer}
+                                   table={table}>
+        {/* TODO: ok? allowCreate && <NewTransferForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
+    </ExistingRecentSelector>
 }

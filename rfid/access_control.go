@@ -305,11 +305,12 @@ func (pp ProjectPerms) Equal(other ProjectPerms) bool {
 		return false
 	}
 	for email, permA := range pp {
-		permB, exists := other[email]
-		if !exists {
-			return false
+		if permB, exists := other[email]; exists {
+			if permA == permB {
+				continue
+			}
 		}
-		return permA == permB
+		return false
 	}
 	return true
 }

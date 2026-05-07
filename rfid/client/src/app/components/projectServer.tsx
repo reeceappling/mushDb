@@ -23,6 +23,25 @@ export function TestProjectOk(){
     }
     return a
 }
+export function TestProjectOk2(){
+    let perms = new Map<string, string>();
+    perms.set("USERNAME 1", "admin")
+    perms.set("USERNAME 2", "write")
+    perms.set("USERNAME 3", "read")
+    const a: ProjectData = {
+        _id: "(PROJECT NAME HERE)",
+        creationDate: 123,
+        notes: [{
+            time: 123,
+            note: "(NOTE 1)"
+        },{
+            time: 456,
+            note: "(NOTE 2)"
+        }],
+        lastUpdated: 789,
+    }
+    return a
+}
 
 export type ProjectData = {
     _id: string // project name

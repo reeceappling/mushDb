@@ -1,6 +1,6 @@
 import {useState} from "react";
 import {NumberStringOnlyFromText} from "@/app/components/formSubcomponents/date";
-import H from "@/app/components/formSubcomponents/utils/headers";
+import {InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
 
 export default function GenerationArea({
                                            initial,
@@ -16,7 +16,7 @@ export default function GenerationArea({
     headerLevel?: number
 }) {
     const [current, setCurrent] = useState<number | undefined>(initial)
-    const GenMarker = (labelName || "Generation")+": "
+    const GenMarker = (labelName || "Generation") + ": "
     if (readonly) {
         if (current == undefined) {
             return <div className={"areaHeader"}>{GenMarker + "unknown"}</div>
@@ -27,12 +27,17 @@ export default function GenerationArea({
         <div className={"gapBottom"}>
             <div className={"areaHeader"}>{GenMarker}</div>
             <div className={"centerH"}>
-                <input type="text" name="generationInput" value={current || ""} onChange={(e) => {
-                let str = NumberStringOnlyFromText(e.currentTarget.value)
-                let val = (str === "") ? undefined : Number(str)
-                updateParent(val)
-                setCurrent(val)
-            }}/>
+                {/* TODO: ensure ok*/}
+                <InputNumberWithSmallTitle label={"Generation"} min={0} max={1000} step={1} value={(current || 0).toString()}
+                                           readonly={false} mode={"integer"} placeholder={"gen"} onChange={(v) => {
+                    try {
+                        let val = Number(v)
+                        updateParent(val)
+                        setCurrent(val)
+                    } catch (e) {
+                        console.error(e)
+                    }
+                }}/>
             </div>
         </div>
     )

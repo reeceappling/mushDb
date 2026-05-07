@@ -34,6 +34,7 @@ export interface AgarBatchData {
     acl?: ACL // TODO: add everywhere necessary
 }
 
+// TODO: OVERHAUL ALL SELECTORS NOT IN LIST PAGES!!!!!
 export function AgarBatchSelector(sp: SelectorProps<AgarBatchData>) {
     // TODO: LOOK UP MOST RECENT AGAR BATCHES?
     // TODO: SELECT FROM THOSE BATCHES?
