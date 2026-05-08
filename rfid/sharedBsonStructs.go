@@ -564,17 +564,18 @@ func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 		// future is not empty, so set it
 		return upd.Set("aliases", future)
 	}
-	// TODO: validate no repeats in future or existing
 	if futureIsEmpty {
 		return upd.Unset("aliases") // unset aliases
 	}
 	if len(future) != len(existing) {
-		return upd.Set("aliases", future)
-	}
-	for i := 0; i < len(future); i++ {
-		if !slices.Contains(existing, future[i]) {
-			return upd.Set("aliases", future)
+		x := utils.Set[string]{}
+		x.Add(future...)
+		if len(x) != len(future) {
+			// TODO: validate no repeats in future
+			upd.err = errors.New("aliases cannot contain replica values")
+			return upd
 		}
+		return upd.Set("aliases", future)
 	}
 	return upd
 }
@@ -584,11 +585,49 @@ func (upd *Mods) updateDisposedIfNeeded(future, existing Disposable) *Mods {
 	if existingDisposal != nil { // Only update if previously was not disposed, and now is
 		return upd
 	}
-	return updatePointerIfNeeded(upd, "disposed", future.DisposalInfo(), existingDisposal) // TODO: ok if this can be rolled back????
+	return updatePointerIfNeeded(upd, "disposed", future.DisposalInfo(), existingDisposal)
+}
+
+func (upd *Mods) updatePcRunIfNeeded(next, current pcRunOptional) *Mods {
+	a, b := current.pcRunId(), next.pcRunId()
+	if a == nil && b != nil {
+		upd.Set("pcRun", b)
+	}
+	return upd
 }
 
 func (upd *Mods) updateKnownFruitableIfNeeded(future, existing hasKnownFruitableField) *Mods {
 	return updatePointerIfNeeded(upd, "knownFruitable", future.knownToBeFruitable(), existing.knownToBeFruitable())
+}
+func (upd *Mods) updateCondensationCoverageIfNeeded(future, existing hasCondensCov) *Mods {
+	return updatePointerIfNeeded(upd, "condensationCoverageAtSealTime", future.condensationCoverage(), existing.condensationCoverage())
+}
+func (upd *Mods) updatePourCoverageIfNeeded(future, existing hasPourCoverage) *Mods {
+	if existing.pourCoverage() != nil {
+		if future.pourCoverage() == nil || *future.pourCoverage() != *existing.pourCoverage() {
+			upd.err = errors.New("pourCoverage mismatch")
+			return upd
+		}
+	}
+	return updatePointerIfNeeded(upd, "pourCoverage", future.pourCoverage(), existing.pourCoverage())
+}
+func (upd *Mods) updateWetAtCooledTimeIfNeeded(future, existing hasWact) *Mods {
+	if existing.wetAtCool() != nil {
+		if future.wetAtCool() == nil || *future.wetAtCool() != *existing.wetAtCool() {
+			upd.err = errors.New("wetAtCooledTime mismatch")
+			return upd
+		}
+	}
+	return updatePointerIfNeeded(upd, "wetAtCooledTime", future.wetAtCool(), existing.wetAtCool())
+}
+func (upd *Mods) updateAgarOnOutsideAtPourTimeIfNeeded(future, existing hasAgarOutside) *Mods {
+	if existing.agarOutside() != nil {
+		if future.agarOutside() == nil || *future.agarOutside() != *existing.agarOutside() {
+			upd.err = errors.New("agarOutside mismatch")
+			return upd
+		}
+	}
+	return updatePointerIfNeeded(upd, "agarOnOutsideAtPourTime", future.agarOutside(), existing.agarOutside())
 }
 
 func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {

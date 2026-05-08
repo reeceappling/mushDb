@@ -2,6 +2,7 @@ import {ChangeEvent, useState} from "react";
 import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import * as React from "react";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
+import {InputText} from "@/app/components/formSubcomponents/numericInput";
 
 export default function TextBoxArea(props: AreaProps<string>){
     return FormListArea(StringEntriesGroup)(props)
@@ -12,6 +13,12 @@ function StringEntriesGroup({initialEntries, preexisting, readonly, updateParent
     const handleFormChangeText = (index: number, event: ChangeEvent<HTMLInputElement>) => {
         let data = [...inputFields];
         data[index].data = event.target.value
+        updateParent(data)
+        setInputFields(data);
+    }
+    const handleFormChangeText2 = (index: number, newVal: string) => {
+        let data = [...inputFields];
+        data[index].data = newVal
         updateParent(data)
         setInputFields(data);
     }
@@ -54,7 +61,7 @@ function StringEntriesGroup({initialEntries, preexisting, readonly, updateParent
         return out
     }
     const txtClasses = (note: Data<string>) => {
-        let out = "textBox"
+        let out = "inlineChildren textBox"
         if(note.disabled){
             out+=" disabled"
         } else {
@@ -68,9 +75,9 @@ function StringEntriesGroup({initialEntries, preexisting, readonly, updateParent
                 <div className={txtClasses(input)} key={index}> {/* TODO: CLASS STYLINGS!!!! */}
                     {input.disabled?"disabled":null /* TODO: remove? gray out instead? */}
                     {/* TODO: INPUT TAG */}
-                    <input name='txt' value={input.data} onChange={event => handleFormChangeText(index, event)} readOnly={readonly} /> {/* TODO: CHANGE INPUT NAME? */}
-                    {readonly ? null :
-                        <button className={input.disabled?"removeButton":"basicButton"} onClick={(e)=>{
+                    {readonly ? <div>{input.data}</div> :
+                        <InputText value={input.data} readonly={false} onChange={(s)=>{s && handleFormChangeText2(index, s)}} />}
+                    {readonly || <button className={input.disabled?"basicButtonSmall":"removeButtonSmall"} onClick={(e)=>{
                             e.stopPropagation();
                             preexisting?disableField(index)():removeFields(index)()
                         }}>{preexisting ? (input.disabled?"enable":"disable") : "remove"}</button>}

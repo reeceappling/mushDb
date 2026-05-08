@@ -11,12 +11,12 @@ import (
 	"net/http"
 )
 
-// TODO: required for:
-// TODO: MSS
-// TODO:
-// TODO: Stasis tube (if filled with water later, probably not)
+/* required for:
+MSS
+Stasis tube (if filled with water later, probably not)
+*/
 
-type WaterJar struct { // TODO: HANDLE THIS EVERYWHERE! DO ALL TYPESCRIPT FOR THIS!
+type WaterJar struct {
 	MainCollectionIdField `bson:"inline"`
 	CreationDateField     `bson:"inline"` // From PcRun
 	PcRunField            `bson:"inline"` // Creation date assumed to be the same as pc run date
@@ -155,7 +155,6 @@ func (req updateWaterJarRequest) modsFor(existing *WaterJar, aclField AclField) 
 }
 
 func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: make this a func that can be called from most mainCollItem updates ------
 	_, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
 		return
@@ -166,7 +165,6 @@ func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(WaterJarsCollectionName)
-	println("binary water jar id:"+string(id[:]), len(id[:])) // TODO: del
 	existing, err := GetMainCollectionItem(r.Context(), id, &WaterJar{})
 	if err != nil {
 		stat := http.StatusInternalServerError

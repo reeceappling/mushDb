@@ -127,6 +127,7 @@ func Initialize(ctx context.Context) error {
 		"subspecies":       initializeSubspecies,
 		// Initialize other alt collections
 		"agar batch":        initializeAgarBatches,
+		"grain batch":       initializeGrainBatches,
 		"pc run":            initializePCRun,
 		"sales":             initializeSales,
 		"transfer":          initializeTransfers,
@@ -269,34 +270,30 @@ func pushToArrayInline[T any](fieldName string, vals ...T) bson.D {
 	}
 }
 
-func pushToArrayNew[T any](fieldName string, vals ...T) bson.D { // TODO: rename
-	switch len(vals) {
-	case 1:
-		return bson.D{{Key: fieldName, Value: vals[0]}}
-	case 0:
-		return bson.D{}
-	default:
-		return bson.D{{Key: fieldName, Value: bson.D{{Key: "$each", Value: vals}}}}
-	}
-}
-
-//func addNotes(notes ...Note) bson.D {
-//	return pushToArray("notes", notes...)
+//func pushToArrayNew[T any](fieldName string, vals ...T) bson.D { // TODO: rename
+//	switch len(vals) {
+//	case 1:
+//		return bson.D{{Key: fieldName, Value: vals[0]}}
+//	case 0:
+//		return bson.D{}
+//	default:
+//		return bson.D{{Key: fieldName, Value: bson.D{{Key: "$each", Value: vals}}}}
+//	}
 //}
-
-func withUpdate(t *time.Time) bson.E {
-	return bson.E{Key: "lastUpdated", Value: unixTimeFor(utils.Default(t, time.Now()))}
-}
-
-func withItemsRemoved[T any](field string, items ...T) bson.D {
-	itemsEquality := make([]bson.E, len(items))
-	for i, item := range items {
-		itemsEquality[i] = bson.E{Key: "$eq", Value: item}
-	}
-
-	//{ "$pull": { <field1>: <value|condition>, <field2>: <value|condition>, ... } }
-	return bson.D{{Key: "$pull", Value: bson.D{{Key: field, Value: itemsEquality}}}}
-}
+//
+//func withUpdate(t *time.Time) bson.E {
+//	return bson.E{Key: "lastUpdated", Value: unixTimeFor(utils.Default(t, time.Now()))}
+//}
+//
+//func withItemsRemoved[T any](field string, items ...T) bson.D {
+//	itemsEquality := make([]bson.E, len(items))
+//	for i, item := range items {
+//		itemsEquality[i] = bson.E{Key: "$eq", Value: item}
+//	}
+//
+//	//{ "$pull": { <field1>: <value|condition>, <field2>: <value|condition>, ... } }
+//	return bson.D{{Key: "$pull", Value: bson.D{{Key: field, Value: itemsEquality}}}}
+//}
 
 func createIndexes(ctx context.Context, coll *mongo.Collection, toCreate []mongo.IndexModel) error {
 	if len(toCreate) == 0 {
@@ -447,11 +444,9 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 	for numItems == nil || len(results) < *numItems {
 		if cursor.TryNext(ctx) {
 			var result T
-
-			//result := reflect.New(reflect.TypeOf(entryType)). // TODO: elem ok here?
 			if err := cursor.Decode(&result); err != nil {
 				return nil, err
-			} // TODO: no pointer ok here?
+			}
 			permedItem, ok := interface{}(result).(Permissioned)
 			if ok {
 				if permedItem.Permissions().HighestPermFor(user) == nil {
@@ -459,18 +454,6 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 					continue
 				}
 			}
-			// TODO: ok to get rid of this?
-			//resultCollItem, ok := interface{}(result).(CollectionItem)
-			//if !ok {
-			//	err = fmt.Errorf(`invalid collection result at index %d. THIS SHOULD NEVER HAPPEN`, len(results))
-			//	bs, errr := json.MarshalIndent(result, "", " ")
-			//	if errr != nil {
-			//		err = errors.Join(err, errr)
-			//	} else {
-			//		println(string(bs))
-			//	}
-			//	return nil, fmt.Errorf(`invalid collection result at index %d. THIS SHOULD NEVER HAPPEN`, len(results))
-			//}
 
 			results = append(results, result)
 			continue
@@ -696,7 +679,7 @@ func handleFileDeleteErr(err error) {
 }
 
 var (
-	testEntryStringId    = "testEntry"
+	testEntryStringId    = "TestEntry"
 	exAltId              = altCollIdForint(0)
 	exFruitId            = mainCollIdForint(idTestFruit)
 	exampleTime          = unixTimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
@@ -759,7 +742,7 @@ var (
 		BlanketPerm: false,
 	}
 	exBool                     = utils.Pointer(true)
-	exPicLoc                   = "test.jpg" // TODO: make sure this exists\
+	exPicLoc                   = "test.jpg" // TODO: make sure this exists
 	exPicWithNotesLessLocation = PicWithNotesLessLocation{
 		RequiredTimeField: exReqTimeField,
 		NotesField:        NotesField{exampleNotes()},
@@ -785,15 +768,15 @@ var (
 func exampleNotes() []Note {
 	return []Note{{
 		RequiredTimeField: exReqTimeField,
-		Note:              "example note A",
+		Note:              "test/example entry note 1",
 	}, {
 		RequiredTimeField: exReqTimeField,
-		Note:              "example note B",
+		Note:              "test/example entry note 2",
 	}}
 }
 
 func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {
-	err = encoded.Decode(item) // TODO: was pointer
+	err = encoded.Decode(item)
 	if err != nil {
 		err = errors.Join(errors.New("failed to decode"), err)
 	}

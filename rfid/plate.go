@@ -22,14 +22,46 @@ import (
 type CondensationCoverageAtSealTimeField struct {
 	CondensationCoverageAtSealTime *int `bson:"condensationCoverageAtSealTime,omitempty" json:"condensationCoverageAtSealTime,omitempty"` // TODO: (0-100), HANDLE EVERYWHERE, NEW!
 }
+
+func (cc CondensationCoverageAtSealTimeField) condensationCoverage() *int {
+	return cc.CondensationCoverageAtSealTime
+}
+
+type hasCondensCov interface {
+	condensationCoverage() *int
+}
 type PourCoverageField struct {
-	PourCoverage *int `bson:"pourCoverage,omitempty" json:"pourCoverage,omitempty"` // PourCoverage TODO: (0-100) (or nil for imports), HANDLE EVERYWHERE, NEW!
+	PourCoverage *int `bson:"pourCoverage,omitempty" json:"pourCoverage,omitempty"` // PourCoverage (0-100) (or nil for imports)
+}
+
+func (f PourCoverageField) pourCoverage() *int {
+	return f.PourCoverage
+}
+
+type hasPourCoverage interface {
+	pourCoverage() *int
 }
 type WetAtCooledTimeField struct {
 	WetAtCooledTime *bool `bson:"wetAtCooledTime,omitempty" json:"wetAtCooledTime,omitempty"` // WetAtCooledTime TODO: (nil==unknown or imported, false==known and not wet, true=known and wet), HANDLE EVERYWHERE, NEW!
 }
+
+func (f WetAtCooledTimeField) wetAtCool() *bool {
+	return f.WetAtCooledTime
+}
+
+type hasWact interface {
+	wetAtCool() *bool
+}
 type AgarOnOutsideAtPourTimeField struct {
 	AgarOnOutsideAtPourTime *bool `bson:"agarOnOutsideAtPourTime,omitempty" json:"agarOnOutsideAtPourTime,omitempty"` // Only when mispours happen with plates above this one // TODO: HANDLE EVERYWHERE, NEW!
+}
+
+func (f AgarOnOutsideAtPourTimeField) agarOutside() *bool {
+	return f.AgarOnOutsideAtPourTime
+}
+
+type hasAgarOutside interface {
+	agarOutside() *bool
 }
 
 type Plate struct {
@@ -130,8 +162,8 @@ func initializePlates(ctx context.Context) error {
 		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 		//transfersOutIndexModel,
-		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+		//newSimpleIndex("parent", "parent", false, true, false),
+		//newSimpleIndex("parentType", "parentType", false, true, false),
 		//
 		////Pics (no index)
 		//// TODO: Contams
@@ -158,8 +190,8 @@ func initializePlates(ctx context.Context) error {
 	// If test plate does not exist, then create it
 	firstPlate := basicTestPlate()
 	testId := firstPlate.Id
-	platesMade[testId.AsBase58()] = "test plate with id 1" // TODO: reenable once we confirm that pictures are staying saved
-	testPlates = append(testPlates, &firstPlate)           // TODO: reenable once we confirm that pictures are staying saved
+	platesMade[testId.AsBase58()] = "test plate with id 1"
+	testPlates = append(testPlates, &firstPlate)
 	emptyPlate := emptyTestPlate()
 	emptyTestId := emptyPlate.Id
 	platesMade[emptyTestId.AsBase58()] = "test empty plate"
@@ -267,7 +299,7 @@ func testPlateFor(
 	lastUpdated UnixTime,
 	acl *ACL,
 ) Plate {
-	return Plate{ // TODO: reenable later. Just making sure pics stay populated between deploys.
+	return Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
 		AgarBatchField:                      AgarBatchField{agarBatchId},
 		CreationDateField:                   CreationDateField{creationDate},
@@ -336,10 +368,10 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		MainCollectionIdField:               MainCollectionIdField{id},
 		AgarBatchField:                      AgarBatchField{AgarBatch: &data.AgarBatch},
 		CreationDateField:                   CreationDateField{now},
-		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField, // TODO: handle on typescript side
-		PourCoverageField:                   data.PourCoverageField,                   // TODO: handle on typescript side
-		WetAtCooledTimeField:                data.WetAtCooledTimeField,                // TODO: handle on typescript side
-		AgarOnOutsideAtPourTimeField:        data.AgarOnOutsideAtPourTimeField,        // TODO: handle on typescript side
+		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField,
+		PourCoverageField:                   data.PourCoverageField,
+		WetAtCooledTimeField:                data.WetAtCooledTimeField,
+		AgarOnOutsideAtPourTimeField:        data.AgarOnOutsideAtPourTimeField,
 		LastUpdatedField:                    LastUpdatedField{now},
 		// No Perms here for basic plates
 		AclField: allCanWriteAcl(),
@@ -349,10 +381,14 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, &toInsert, w) // TODO: use in all main creates
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updatePlateRequest struct {
+	CondensationCoverageAtSealTimeField
+	PourCoverageField
+	WetAtCooledTimeField
+	AgarOnOutsideAtPourTimeField
 	KnownFruitableField
 	SaleField
 	DisposedField
@@ -365,19 +401,27 @@ type updatePlateRequest struct {
 
 func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 	return resolvedUpdatePlateRequest{
-		KnownFruitableField: upr.KnownFruitableField,
-		SaleField:           upr.SaleField,
-		DisposedField:       upr.DisposedField,
-		NotesUpdateField:    upr.NotesUpdateField,
-		Images:              imageUpdates(upr.Images),
-		Contams:             contamUpdates(upr.Contams),
-		WriteTagToField:     upr.WriteTagToField,
-		PermsOnRequest:      upr.PermsOnRequest,
+		CondensationCoverageAtSealTimeField: upr.CondensationCoverageAtSealTimeField,
+		PourCoverageField:                   upr.PourCoverageField,
+		WetAtCooledTimeField:                upr.WetAtCooledTimeField,
+		AgarOnOutsideAtPourTimeField:        upr.AgarOnOutsideAtPourTimeField,
+		KnownFruitableField:                 upr.KnownFruitableField,
+		SaleField:                           upr.SaleField,
+		DisposedField:                       upr.DisposedField,
+		NotesUpdateField:                    upr.NotesUpdateField,
+		Images:                              imageUpdates(upr.Images),
+		Contams:                             contamUpdates(upr.Contams),
+		WriteTagToField:                     upr.WriteTagToField,
+		PermsOnRequest:                      upr.PermsOnRequest,
 	}
 }
 
 func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField) (bson.D, error) {
 	return NewMods().
+		updateCondensationCoverageIfNeeded(req, existing).
+		updatePourCoverageIfNeeded(req, existing).
+		updateWetAtCooledTimeIfNeeded(req, existing).
+		updateAgarOnOutsideAtPourTimeIfNeeded(req, existing).
 		updateKnownFruitableIfNeeded(req, existing).
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
@@ -390,6 +434,10 @@ func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField
 }
 
 type resolvedUpdatePlateRequest struct {
+	CondensationCoverageAtSealTimeField
+	PourCoverageField
+	WetAtCooledTimeField
+	AgarOnOutsideAtPourTimeField
 	KnownFruitableField
 	SaleField
 	DisposedField
@@ -401,7 +449,6 @@ type resolvedUpdatePlateRequest struct {
 }
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
-	println("RECEIVED UPDATE PLATE REQUEST") // TODO: THIS
 	data := &updatePlateRequest{}
 	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
@@ -410,7 +457,6 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -427,7 +473,6 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	println("GETTING IMAGES") // TODO: THIS
 	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plate", &data, b58Id)
 	if err != nil {
 		// Already wrotw
@@ -436,7 +481,6 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
-	println("REFORMING") // TODO: THIS
 	for i, picNote := range data.Images.Existing[0].Data.Notes.asEntries() {
 		println("note", i, picNote.Note)
 	}
@@ -444,13 +488,11 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	for i, _ := range data.Images.New {
 		loc, exists := newPics[i]
 		if !exists {
-			println("FAILED TO GET LOCATION") // TODO: THIS
 			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
 			return
 		}
 		out.Images.New[i].Location = ImageLocation(loc)
 	}
-	println("PARSING CONTAMS") // TODO: THIS
 	for i, _ := range data.Contams.New {
 		if loc, exists := newContams[i]; exists {
 			finalLoc := ImageLocation(loc)
@@ -469,9 +511,6 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	for i, note := range out.Notes.asEntries() { // TODO: del
-		println("Note", i, note.Note)
-	}
 	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.PermsOnRequest)
 }
 
@@ -482,23 +521,18 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		return
 	}
 	if len(upd) == 0 {
-		println("no changes made") // TODO: del
 		dbErr(w, "no changes made", http.StatusBadRequest)
 		return
 	}
 	// write updates to db
-	println("updating") // TODO: del
 	bsonId := bsonFindFilter("_id", id)
 	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 	if err != nil {
-		println("failed to update") // TODO: del
 		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	println("finding") // TODO: del
 	err = coll.FindOne(ctx, bsonId).Decode(&existing)
 	if err != nil {
-		println("failed to find") // TODO: del
 		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -549,7 +583,6 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	//	http.Error(w, "email cannot write perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
-	println("writing tag if necessary")
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -566,7 +599,6 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	// Go to next part, if exists to get image
-	println("reading parts")
 	var importedPic *PicWithNotes = nil
 	p, err := reader.NextPart()
 	if err != nil {
@@ -645,6 +677,5 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:                    LastUpdatedField{unixTimeForNow()},
 		AclField:                            AclField{finalPerms},
 	}
-	println("inserting plate")
 	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
 }

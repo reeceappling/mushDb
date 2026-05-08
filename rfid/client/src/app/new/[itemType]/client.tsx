@@ -41,6 +41,8 @@ import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {TopPageHeaderLevel} from "@/app/components/Constants";
 import React, {JSX, useState} from "react";
 import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import { NewPlugsForm } from "@/app/components/plugsClient";
+import {PlugsJar} from "@/app/components/plugsServer";
 
 export function ClientNewPage({itemType, species}: { itemType: string, species?: SpeciesData }) {
     const [newEntries, setNewEntries] = useState<JSX.Element[]>([])
@@ -129,14 +131,17 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                         setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "plate")])
                     }
                 }}/>
-            // case "plugs": // TODO: this? From PcRun or own page
-            //     return <NewPlugsForm redirectOnCreate={true}/>
+            case "plugs": // TODO: validate
+                return <NewPlugsForm handlers={{
+                    isTopLevel: true, onCreate: (newEntry: PlugsJar) => {
+                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "plugs")])
+                    }
+                }}/>
             case "project": // from this page only
                 return <NewProjectForm handlers={{
                     isTopLevel: true, onCreate: (newEntry: ProjectData) => {
-                        // TODO: urlEncode?
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "project")])
-                    }
+                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, encodeURI(newEntry._id), "project")])
+                    },
                 }}/> //TODO: REENABLE??? onCreate={pd => doRedirect(pd._id)}
             // case "sale": // TODO: from other pages only!
             //     return <NewSaleForm headerLevel={TopPageHeaderLevel} onCreate={sd => doRedirect(sd._id)}/>

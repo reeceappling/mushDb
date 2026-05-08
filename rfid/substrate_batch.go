@@ -10,8 +10,7 @@ import (
 	"net/http"
 )
 
-// TODO: used in:
-// TODO: bag, FruitingChamber
+// used in: bag, FruitingChamber
 
 type SubstrateBatch struct {
 	AlternateCollectionIdField `bson:"inline"`
@@ -106,7 +105,7 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	acl := allCanReadAcl()
-	acl.ACL.Users[resolvedUserPerms.Email] = true // TODO: can this be simplified?
+	acl.ACL.Users[resolvedUserPerms.Email] = true
 	// Create entry to insert
 	toInsert := SubstrateBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},

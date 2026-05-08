@@ -44,7 +44,7 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, session?: string,
         // },(err)=>{
         //     reject(err)
         // })
-        // TODO: remove all below when reenabled
+        // TODO: remove all below when reenabled!!!!!!!!!!
         if (!selectedReader) {
             let toWrite = "no rfid reader selected"
             dispatch({
@@ -56,8 +56,10 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, session?: string,
         }
         let readerName = selectedReader
         let tagVal = Makeid(5)
-        if (readerName === "goodTestRfid"){
+        if (readerName === "goodTestRfid"){ // TODO: comment out
             tagVal = "4Wj8HxCMmcs" // TODO: Test empty plate id
+        } else if (readerName === "" || readerName === "none"){
+            return
         }
         dispatch({
             type: ActionTypes.SET_LAST_READ_TAG,

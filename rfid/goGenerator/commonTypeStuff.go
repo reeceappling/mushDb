@@ -211,6 +211,7 @@ var otherCollTypes map[string]otherCollInfo
 func createOtherCollTypes() map[string]otherCollInfo {
 	out := map[string]otherCollInfo{
 		"AgarBatch":       infoForO("batch", "AgarBatchCollectionName", "agarBatches", "AlternateCollectionId"),
+		"GrainBatch":      infoForO("batch", "GrainBatchCollectionName", "grainBatches", "AlternateCollectionId"),
 		"AgarRecipe":      infoForO("recipe", "AgarRecipesCollectionName", "agarRecipes", "AlternateCollectionId"), // TODO: or do we want string for name?
 		"LcRecipe":        infoForO("recipe", "LcRecipesCollectionName", "lcRecipes", "AlternateCollectionId"),
 		"PCRun":           infoForO("run", "PcRunCollectionName", "pcRuns", "AlternateCollectionId"),

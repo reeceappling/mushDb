@@ -7,6 +7,7 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {
+    AssertArrayResult,
     CreateNewEntryButton,
     DisplayInput,
     HandleJsonResponse,
@@ -22,6 +23,7 @@ import {AliasesArea, ErrorDisplay, NameArea, SpeciesArea} from "@/app/components
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {
+    AclDefaultAclDisplay,
     AclDisplay,
     DefaultAclDisplay,
     IsValidAcl,
@@ -47,8 +49,7 @@ import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {SlantData} from "@/app/components/slantServer";
 import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
-// TODO: list page not working
-// TODO: ensure display page doing what we want
+import {AssertSubRecipeListResult} from "@/app/components/substrateRecipeClient";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
@@ -143,22 +144,11 @@ export default function SubspeciesDisplay(
                 </FlexedArea>
                 <AliasesArea aliases={aliases} readonly={readonly} headerLevel={headerLevel} updateParent={setAliases}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                {/* TODO: ACL/DefaultACL buttons side-by-side*/}
-                <TestAndValidate todos={["make these side-by-side?"]}>
-                    <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
-                                   closeTxt={"minimize perms area"}>
-                        <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
-                    </TogglableAreaWithDepth>
-                    <TogglableAreaWithDepth startOpen={false} openTxt={"view default ACL"}
-                                   closeTxt={"minimize default ACL area"}>
-                        <DefaultAclDisplay readonly={readonly} ACL={defaultAcl} updateParent={setDefaultAcl}/>
-                    </TogglableAreaWithDepth>
-                </TestAndValidate>
+                <AclDefaultAclDisplay ACL={acl} defaultACL={defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl} readonly={readonly}/>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
                     update()
-                }}>{"Update"}</button>}
-                {/* TODO: unlikely: <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>*/}
+                }}>{"Update Subspecies"}</button>}
             </DisplayFormWrapper>
         )
     } catch (err) {
@@ -177,7 +167,6 @@ export function NewSubspeciesForm({handlers, species}: {
     const [aliases, setAliases] = useState<string[]>([])
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
-    // TODO: handle isTopLevel
     const submitNewSubspecies = () => {
         if (!name) {
             setErr("Name must note be blank")
@@ -187,11 +176,10 @@ export function NewSubspeciesForm({handlers, species}: {
             setErr("Species must be selected")
             return
         }
-        fetch(BaseExternalUrl + "/create/subspecies", { // TODO: ensure correct
+        fetch(BaseExternalUrl + "/create/subspecies", {
             method: "POST",
             headers: {
                 credentials: 'include',
-                // TODO: may need 'Cookie': cookies,
                 'Content-type': 'application/json'
             },
             body: JSON.stringify({
@@ -205,7 +193,6 @@ export function NewSubspeciesForm({handlers, species}: {
             .then((entry) => {
                 AssertSubspecies(entry)
                 onCreate && onCreate(entry)
-                // TODO: anything else?
             })
             .catch((error) => {
                 setErr(JSON.stringify(error))
@@ -242,12 +229,9 @@ export function SubspeciesInline(
             {showSpeciesName &&
                 <SpeciesArea readonly={true} initial={props.data.species} headerLevel={props.headerLevel}/>}
             {/* Aliases */}
-            <div className={"mleft"}>{/* TODO: CHANGE@! */}
+            <div className={"ml-[2em]"}>
                 {aliases.map((alias, i) => {
-                    // TODO: HIDE SOME ALIASES IF TOO MANY?
-                    return <div key={i}>
-                        <div>{alias}</div>
-                    </div>
+                    return <div key={i}>{alias}</div>
                 })}
             </div>
         </InlineSubArea>
@@ -262,7 +246,7 @@ export function SubspeciesInline(
     </InlineEntry>
 }
 
-export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
+export function ExistingSubSpeciesSelector(
     {
         species,
         doSelect,
@@ -284,17 +268,17 @@ export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
         }
         setSelected(undefined)
         setLoaded(false)
-        fetch(BaseExternalUrl + "/subspeciesFor/" + encodeURI(species), { // TODO: ensure correct
+        fetch(BaseExternalUrl + "/subspeciesFor/" + encodeURI(species), {
             method: "GET",
             headers: {
-                credentials: 'include', // TODO: check that user has creds for species
+                credentials: 'include',
                 'Accept': 'application/json',
             },
         })
             .then(HandleJsonResponse)
             .then((data) => {
-                // TODO: assert subspeciesData?
-                setSubspeciesList(data as SubspeciesData[]) // TODO: ASSERT????
+                AssertArrayResult(data, AssertSubspecies)
+                setSubspeciesList(data as SubspeciesData[])
                 setLoaded(true)
                 setSelectable(species !== undefined)
                 setErr(undefined)
@@ -303,7 +287,6 @@ export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
                 setErr(JSON.stringify(error))
             });
     }, [species]);
-    // TODO: CLEAR SELECTION
     let errArea = () => {
         return <ErrorDisplay err={err} headerLevel={headerLevel}/>
     }
@@ -332,8 +315,9 @@ export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
     if (subspeciesList.length == 0) {
         return <div className={"centerHChildren gapTop gapBottom"}>
             <ErrorDisplay err={"No Subspecies Found for species: " + (species && species)} headerLevel={headerLevel}/>
-            {/* TODO: CREATE SUBSPECIES BUTTON*/}
-            <div>{"CREATE SUBSPECIES LINK"}</div>
+            <TestAndValidate todos={["do this"]}>
+                <div>{"CREATE SUBSPECIES LINK"}</div>
+            </TestAndValidate>
         </div>
     }
     if (selected && !selectorOpen) {
@@ -360,8 +344,8 @@ export function ExistingSubSpeciesSelector( // TODO: ensure perms are followed
 
 export function SubspeciesFormArea({subspecies}:{
     subspecies: string,
-}){ // TODO: LINK!
-    return <div>{"Subspecies: "+subspecies}</div>
+}){ // TODO: validate link works
+    return <EntryLinkWrapper props={{entryType:"subspecies",linkId:encodeURI(subspecies)}}><div>{"Subspecies: "+subspecies}</div></EntryLinkWrapper>
 }
 
 export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems<SubspeciesData>) {
@@ -379,7 +363,6 @@ export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function SubspeciesSelectorTable({data, onClick}: ListPageItems<SubspeciesData>) {

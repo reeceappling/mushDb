@@ -4,38 +4,33 @@ import (
 	"context"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"net/http"
 	"slices"
 )
 
-// TODO: sometimes needed for transfers
+// sometimes needed for transfers
 
-// TODO: addPCRun (rename)
-
-// TODO: this whole thing whenever we need to
-
-// TODO: IMPORTS!
-// TODO: CREATES!
-// TODO: UPDATES!
-
-type PlugsJar struct { // TODO: do this whole file! This should be an alt, not a main, due to multi-sales
+type PlugsJar struct {
 	// TODO; any more?
-	MainCollectionIdField             `bson:"inline"` // TODO: was alt
-	ParentTypeField                   `bson:"inline"` // TODO: get rid of these?           // None, plugs, jars, lcSyringe, plate, slant, etc (both alt and main
+	MainCollectionIdField             `bson:"inline"`
+	ParentTypeField                   `bson:"inline"` // empty==bought
 	MainCollectionOptionalParentField `bson:"inline"` // TODO: empty=bought, from plugs, jar, LC, plate/slant
 	CreationDateField                 `bson:"inline"`
-	DowelTypes                        []Dowel `bson:"dowelTypes" json:"dowelTypes"`
+	DowelTypes                        []Dowel         `bson:"dowelTypes" json:"dowelTypes"`
+	GenerationsFields                 `bson:"inline"` // TODO: NEW! fix!
 	SpeciesOptionalField              `bson:"inline"`
+	TransfersOutField                 `bson:"inline"` // TODO: NEW!!!!!
 	SubspeciesOptionalField           `bson:"inline"`
 	InnocField                        `bson:"inline"`
-	PcRunField                        `bson:"inline"` // TODO: created before innoculation
-	SalesField                        `bson:"inline"`
+	KnownFruitableField               `bson:"inline"` // TODO: NEW! FIX!
+	PcRunOptionalField                `bson:"inline"` // TODO: used to be required, but not found for imports! created before innoculation
+	SalesField                        `bson:"inline"` // TODO: MULTIPLE!
 	DisposedField                     `bson:"inline"` // Also changed once all pegs are sold/used?
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"`
-
-	// TODO: this whole thing whenever we need to
 }
 
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
@@ -46,27 +41,53 @@ func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
 }
 
 func (pl PlugsJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
-	//TODO implement me
-	panic("implement me")
+	return GeneticParentInfo{
+		SpeciesOptionalField:    SpeciesOptionalField{pl.Species},
+		SubspeciesOptionalField: pl.SubspeciesOptionalField,
+		KnownFruitableField:     pl.KnownFruitableField,
+		GenerationsFields:       pl.GenerationsFields,
+	}, nil
 }
 
 func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
-	// TODO: MUST BE AGAR OR BAG
-	//TODO implement me
-	panic("implement me")
+	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
+	if err != nil {
+		return err
+	}
+	upd, err := xfer.PicsModsForChild().
+		withInnoc(xfer).
+		withParentType(&xfer.FromType).
+		withParent(utils.Pointer(from.DbId())).
+		withGens(genSpore, genFruitSpore).
+		withSpecies(parentInfo.Species).
+		withSubspecies(parentInfo.SubSpecies).
+		withPerms(from.Permissions()).
+		withLastUpdated(xfer.LastUpdated).
+		Finalized()
+	if err != nil {
+		return ErrFailedToFinalizeMods
+	}
+	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(PlugsCollectionName).UpdateByID(ctx, pl.Id, upd)
+	if err != nil {
+		return err
+	}
+	if res.ModifiedCount == 0 {
+		return ErrNoParentModifiedForTransfer
+	}
+	return nil
 }
 
 func (pl PlugsJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
-	//TODO implement me
-	panic("implement me")
+	return pl.GenSinceSpore, pl.GenSinceFruitOrSpore
 }
 
-type Dowel struct { // TODO: use?
-	Radius struct {
-		Size  float64
-		Units LengthUnit
-	}
-	Wood Wood
+type Dowel struct {
+	Radius `bson:"inline"`
+	Wood   Wood `bson:"wood" json:"wood"`
+}
+type Radius struct {
+	Size  float64    `bson:"size" json:"size"`
+	Units LengthUnit `bson:"units" json:"units"`
 }
 
 type Wood string
@@ -137,7 +158,7 @@ func initializePlugs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
+	// Create test plugs
 	testItem := &PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{exPlugId},
 		ParentTypeField: ParentTypeField{
@@ -145,16 +166,108 @@ func initializePlugs(ctx context.Context) error {
 		},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
 		CreationDateField:                 exampleTime.asCreationDate(),
-		DowelTypes:                        nil, // TODO; FIX
-		SpeciesOptionalField:              SpeciesOptionalField{&testEntryStringId},
-		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
-		InnocField:                        InnocField{&exAltId},
-		PcRunField:                        PcRunField{exAltId},
-		SalesField:                        SalesField{[]AlternateCollectionId{exAltId}},
-		DisposedField:                     DisposedField{&exampleTime},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          allCanReadAcl(),
+		DowelTypes: []Dowel{
+			{
+				Radius: Radius{
+					Size:  2,
+					Units: "cm",
+				},
+				Wood: "oak",
+			},
+		},
+		SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
+		SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
+		InnocField:              InnocField{&exAltId},
+		PcRunOptionalField:      PcRunOptionalField{&exAltId},
+		SalesField:              SalesField{[]AlternateCollectionId{exAltId}},
+		DisposedField:           DisposedField{&exampleTime},
+		NotesField:              NotesField{exampleNotes()},
+		LastUpdatedField:        LastUpdatedField{exampleTime},
+		AclField:                allCanReadAcl(),
 	}
 	return addTestMainEntries(ctx, testItem)
+}
+
+// TODO: create new plugs request????
+type createPlugsRequest struct { // TODO: USE THIS!
+	DowelTypes         []Dowel `bson:"dowelTypes" json:"dowelTypes"`
+	PcRunOptionalField         // TODO: OPTIONAL!
+	NotesField
+	WriteTagToField
+}
+
+func createPlugsHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: DO THIS WHOLE THING!
+}
+
+// TODO: import plugs request!
+type importPlugsRequest struct { // TODO: USE THIS!
+	DowelTypes []Dowel `bson:"dowelTypes" json:"dowelTypes"` // TODO: ok?
+	Generation
+	SpeciesOptionalField    `bson:"inline"` // TODO: ok?
+	SubspeciesOptionalField `bson:"inline"` // TODO: ok?
+	KnownFruitableField     `bson:"inline"` // TODO: ok?
+	NotesField              `bson:"inline"` // TODO: ok?
+	WriteTagToField
+}
+
+func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: DO THIS WHOLE THING!
+}
+
+// TODO: new sale?
+
+type updatePlugsRequest struct {
+	PcRunOptionalField // Can only be set once!
+	NotesUpdateField
+	PermsOnRequest
+	WriteTagToField
+	DisposedField
+}
+
+func (req updatePlugsRequest) modsFor(existing *PlugsJar, acl AclField) (bson.D, error) {
+	mods := NewMods()
+	return mods.
+		updatePcRunIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updateDisposedIfNeeded(req, existing).
+		updateLastUpdatedIfNeeded().
+		Finalized()
+}
+
+func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
+	req := &updatePlugsRequest{}
+	idStr, err := UrlDecodeString(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	id := *mainCollId
+	err = writeRfidTagIfNecessary(r.Context(), req.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	existing := &PlugsJar{}
+	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+	coll := client.Database(dbName).Collection(PlugsCollectionName)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	if err != nil {
+		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.PcRun != nil {
+		_, err = req.PcRunOptionalField.Get(ctx)
+		if err != nil {
+			http.Error(w, "invalid pc run: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	finishMainCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }

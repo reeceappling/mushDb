@@ -610,6 +610,7 @@ func HandleCreate() http.HandlerFunc {
 			"mss":             createMssHandler,
 			"pcRun":           createPcRunHandler,
 			"plate":           createPlateHandler,
+			"plugs":           createPlugsHandler,
 			"project":         createProjectHandler,
 			"sale":            createSaleHandler,
 			"slant":           createSlantHandler,
@@ -649,10 +650,10 @@ func ImportHandler() http.HandlerFunc {
 		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
-			"bag":       importBagHandler,
-			"lc":        importLiquidCultureHandler,
-			"lcSyringe": importLcSyringeHandler,
-			//"plugs": importPlugsHandler, // TODO: FIX!
+			"bag":             importBagHandler,
+			"lc":              importLiquidCultureHandler,
+			"lcSyringe":       importLcSyringeHandler,
+			"plugs":           importPlugsHandler,
 			"fruit":           importFruitHandler,
 			"fruitingChamber": importFruitingChamberHandler,
 			"jar":             importJarHandler,
@@ -692,6 +693,7 @@ func UpdateById() http.HandlerFunc {
 			"agarBatch":  updateAgarBatchHandler,
 			"agarRecipe": updateAgarRecipeHandler,
 			"bag":        updateBagHandler,
+			"grainBatch": updateGrainBatchHandler,
 			"lc":         updateLiquidCultureHandler,
 			"lcRecipe":   updateLcRecipeHandler,
 			"lcSyringe":  updateSyringeHandler,
@@ -703,6 +705,7 @@ func UpdateById() http.HandlerFunc {
 			"mss":             updateMssHandler,
 			"pcRun":           updatePcRunHandler,
 			"plate":           updatePlateHandler,
+			"plug":            updatePlugsHandler,
 			"project":         updateProjectHandler,
 			"sale":            updateSaleHandler,
 			"slant":           updateSlantHandler,

@@ -62,6 +62,9 @@ NOTES.txtOLD
 */keyfile
 etc/mongodb.key
 
+# backup configs
+config/backups/*
+
 # old charts
 fungi-tracker
 fungi-tracker/*

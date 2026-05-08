@@ -13,10 +13,11 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {SelectorFor} from "@/app/components/selector";
 import {ProjectsSelector, ReadWriteSelector} from "@/app/components/projectClient";
 import {UserSelector} from "@/app/components/userClient";
-import {useContext, useState} from "react";
+import {JSX, useContext, useEffect, useState} from "react";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
+import {Subform} from "@/app/components/lcRecipeClient";
 
 export function AssertACL(input: any): asserts input is ACL { // TODO: FIX THIS!!!! NEEDS TO DO MAP STUFF PROPERLY!
     if (typeof input !== 'object') {
@@ -324,14 +325,31 @@ export function AclBlanketDisplay(inp: {
     ACL?: ACL,
     updateParent: (a?: boolean) => void
 }) {
+    // TODO: UPDATE TO STORE ACL LOCALLY, THEN UPDATE PARENT
+    const [val, setVal] = useState(inp.ACL)
+    useEffect(() => {
+        setVal(inp.ACL)
+    }, [inp.ACL])
+    const updateBlanket = (b?:boolean)=>{
+        if (val!==undefined) {
+            let temp = structuredClone(val)
+            temp.blanketPerm = b
+            setVal(temp)
+        } else {
+            setVal({ // TODO: ensure works properly
+                users:new Map<string,boolean>(),
+                projects:new Map<string,boolean>(),
+                blanketPerm:b})
+        }
+        inp.updateParent && inp.updateParent(b)
+    }
     if (inp.readonly) {
-        return <div>{(inp.ACL === undefined || inp.ACL.blanketPerm === true) ? "Publicly Editable" : ((inp.ACL.blanketPerm === false) ? "Publicly Viewable" : "Private")}</div>
+        return <div>{(val === undefined || val.blanketPerm === true) ? "Publicly Editable" : ((val.blanketPerm === false) ? "Publicly Viewable" : "Private")}</div>
     }
     const permToStr = (a?: ACL) => {
         if (a === undefined || a.blanketPerm === true) {
             return "Publicly Editable"
-        }
-        if (a.blanketPerm === undefined) {
+        } else if (a.blanketPerm === undefined) {
             return "Private"
         }
         return "Publicly Viewable"
@@ -346,37 +364,11 @@ export function AclBlanketDisplay(inp: {
                 return undefined
         }
     }
-    return <div>
-        <TestAndValidate todos={["blanket","this should properly set value"]}>
-            <select className={"tailwindSelector"} value={permToStr(inp.ACL)} onSelect={(e) => {
-                e.preventDefault()
-                inp.updateParent(strToPerm(e.currentTarget.value))
-            }}>
-                <option value={"Publicly Viewable"}>{"Publicly Viewable"}</option>
-                <option value={"Publicly Editable"}>{"Publicly Editable"}</option>
-                <option value={"Private"}>{"Private"}</option>
-            </select>
-            {/*<SelectorFor initial={permToStr(ACL)} options={["Private", "Publicly Viewable", "Publicly Editable"]}*/}
-            {/*             updateParent={(s) => {*/}
-            {/*                 updateParent(strToPerm(s))*/}
-            {/*             }} disabled={false}/> TODO: ensure we dont want this*/}
-        </TestAndValidate>
-    </div>
+    return <SelectorFor initial={permToStr(inp.ACL)} options={["Private", "Publicly Viewable", "Publicly Editable"]}
+                        updateParent={(s) => {
+                            inp.updateParent(strToPerm(s))
+                        }} disabled={false}/>
 }
-
-// export function TogglableArea(props: React.PropsWithChildren<{startOpen:boolean,openTxt?:string,closeTxt?:string}>){
-//    const [open, setOpen] = useState(props.startOpen);
-//    const toggle = () => {
-//     setOpen(!open);
-//    }
-//     if (!open) {
-//         return <button className={"basicButton"} onClick={toggle}>{props.openTxt || "open"}</button>
-//     }
-//     return <div>
-//         {props.children}
-//         <button className={"basicButton"} onClick={toggle}>{props.closeTxt || "close"}</button>
-//     </div>
-// }
 
 export function TogglableAreaWithDepth(props: React.PropsWithChildren<{startOpen:boolean,openTxt?:string,closeTxt?:string}>){
     const [open, setOpen] = useState(props.startOpen);
@@ -409,6 +401,42 @@ export function CloneAcl(ACL?:ACL):ACL { // TODO: use?
 }
 
 
+export function AclDefaultAclDisplay(inp: {
+    readonly: boolean,
+    ACL?: ACL,
+    defaultACL?: ACL,
+    updateAcl: (acl?: ACL) => void
+    updateDefaultAcl: (acl?: ACL) => void
+}) {
+    const depth = useContext(DepthContext)
+    const [open, setOpen] = useState<string | undefined>(undefined)
+    const hideButton = <button className={"basicButtonSmall"}>{"Hide ACL"}</button>
+    const aclArea = ()=>{
+        if (!open){
+            return null
+        }
+        if (open==="ACL") {
+            return <><AclDisplay ACL={inp.ACL} updateParent={inp.updateAcl} readonly={inp.readonly}/>
+                {hideButton}
+            </>
+        }
+        return <><AclDisplay ACL={inp.defaultACL} updateParent={inp.updateDefaultAcl} readonly={inp.readonly}/>
+            {hideButton}
+        </>
+    }
+    const btnClicked = (v:string)=>{
+        setOpen((open && v===open)?undefined:v)
+    }
+    const aButton = <div className={"depth"+(open==="ACL"?(depth)+" closeable":(depth+1)+" activatable")} onClick={()=>{btnClicked("ACL")}}>{"ACL"}</div>
+    const bButton = <div className={"depth"+(open==="defaultACL"?(depth)+" closeable":(depth+1)+" activatable")} onClick={()=>{btnClicked("defaultACL")}}>{"Default ACL"}</div>
+    return <div className={"subForm depth"+depth}>
+            <div className={"aclDualButton"}>
+                {aButton}
+                {bButton}
+            </div>
+            {aclArea()}
+        </div>
+}
 export function AclDisplay(inp: {
     readonly: boolean,
     ACL?: ACL,

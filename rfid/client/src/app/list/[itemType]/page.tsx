@@ -48,6 +48,7 @@ export default async function Page({
     }
     try {
         const data = await getData(itemType)
+        console.log(data) // TODO: DEL!
         const readers = await GetReaderWriterNames() // TODO: DO THIS ON SERVER
         return <PageWrapper props={{pageType:"list",readers:readers}}>
             <div className={"fullPage"}>

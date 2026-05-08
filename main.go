@@ -85,13 +85,12 @@ var oauthConfig *oauth2.Config
 
 func main() {
 	// TODO: need to clear out the db for actually using it!
-	
+
 	picsPath := os.Getenv("PICS_PATH")
 	if picsPath == "" {
 		panic("env var missing for PICS_PATH")
 	}
 	ctx := pics.SetFilePath(context.Background(), picsPath)
-	// TODO: MAKE SURE TO STORE USERID ON COOKIES AS WELL?
 	var err error
 	authSvc := rfid.NewAuthService(utils.Pointer(2*time.Minute), utils.Pointer(1*time.Hour))
 	ctx = authSvc.OnContext(ctx)
@@ -149,7 +148,7 @@ func main() {
 	// Set up server
 	srv := &http.Server{
 		Addr:              ":" + strconv.Itoa(apiPort),
-		ReadHeaderTimeout: 10 * time.Second, // TODO: ensure ok, was 30?
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	sigterm := make(chan os.Signal, 1)
@@ -166,7 +165,7 @@ func main() {
 		}
 		println("Shutting Down Server")
 
-		srvCtx, cancel := context.WithTimeout(ctx, 30*time.Second) // default ecs shutdown is 30 seconds // TODO: change
+		srvCtx, cancel := context.WithTimeout(ctx, 30*time.Second) // default ecs shutdown is 30 seconds
 		defer cancel()
 
 		if err = srv.Shutdown(srvCtx); err != nil {
@@ -186,7 +185,7 @@ func main() {
 
 	http.HandleFunc("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello World!"))
-	})) // TODO: OUTPUT IS BASE 2! // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	}))
 
 	//providersMap := map[string]string{
 	//	"google": "google",
@@ -200,7 +199,7 @@ func main() {
 	println("Creating Middleware")
 	// TODO: NEXT.JS LOGS! WEBPACK IS GETTING TRAPPED BY MAIN SERVER! WEBSERVER ENV VARS!
 	// Setup middlewares
-	const loginPath = "/login" // TODO: REENABLE
+	const loginPath = "/login"
 	cleanupFreq := 2 * time.Minute
 	mgr := websocketSessions.NewSessionManager(&cleanupFreq, rfidRegistrySecret)
 	defer mgr.Cleanup()
@@ -218,14 +217,14 @@ func main() {
 	http.HandleFunc("/rfid/ws", ctxRfidMiddleware(http.HandlerFunc(websocketSessions.ServerHandler)))
 	// Can be internal to docker network
 	// TODO: are these internal or external?
-	http.HandleFunc("/rfid/read/{readerName}", ctxRfidMiddleware(rfidReadHandler))   // TODO: OUTPUT IS BASE 2! // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/write/{writerName}", ctxRfidMiddleware(rfidWriteHandler)) // TODO: INPUT IS BASE58. OUTPUT IS BASE 2! // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/read/{readerName}", ctxRfidMiddleware(rfidReadHandler))   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/write/{writerName}", ctxRfidMiddleware(rfidWriteHandler)) // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 	// internal
-	http.HandleFunc("/rfid/readers", ctxRfidMiddleware(getRfidReaderNamesHandler)) // TODO: DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/readers", ctxRfidMiddleware(getRfidReaderNamesHandler)) // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
 	webHostPort := 3000
-	webHostPortStr := os.Getenv("WEB_HOST_INTERNAL_PORT") // TODO: configure
+	webHostPortStr := os.Getenv("WEB_HOST_INTERNAL_PORT")
 	if webHostPortStr != "" {
 		webHostPort, err = strconv.Atoi(webHostPortStr)
 		if err != nil {
@@ -246,8 +245,8 @@ func main() {
 	webProxyHandler := newPassthroughHandler(passthroughConfig)
 	unAuthedProxied := ctxMiddleware(webProxyHandler)
 	authedProxied := ctxMiddleware(webAuthMiddleware(webProxyHandler))
-	// TODO: handle login????
 
+	// handle login
 	http.Handle("/login", CorsMiddleware(rateLimiter(ctxMiddleware(handleLogin(webProxyHandler, dbUser, dbPass)))))
 	http.Handle("/logout", CorsMiddleware(rateLimiter(ctxMiddleware(handleLogout))))
 	http.Handle("/guestLogin", rateLimiter(ctxMiddleware(handleGuestLogin())))
@@ -255,12 +254,12 @@ func main() {
 	http.Handle("/auth/{provider}/callback", CorsMiddleware(rateLimiter(ctxMiddleware(handleAuthCallback()))))
 
 	// Proxied to react
-	http.Handle("/_next", unAuthedProxied) // TODO: CHANGE ROOT?
-	http.Handle("/", unAuthedProxied)      // TODO: CHANGE ROOT?
+	http.Handle("/_next", unAuthedProxied)
+	http.Handle("/", unAuthedProxied)
 
-	http.Handle("/import/{variant}", authedProxied)         // TODO: GET import is here
-	http.Handle("/new/{variant}", authedProxied)            // TODO: GET new item is here
-	http.Handle("/view/{variant}/{entryId}", authedProxied) // TODO: GET view item is here
+	http.Handle("/import/{variant}", authedProxied)         // GET import is here
+	http.Handle("/new/{variant}", authedProxied)            // GET new item is here
+	http.Handle("/view/{variant}/{entryId}", authedProxied) // GET view item is here
 	http.Handle("/list/{variant}", authedProxied)
 	http.Handle("/error/{errTxt}", webProxyHandler) // TODO: rate limit???? ctx middleware? auth middleware?
 	http.Handle("/testpage", webProxyHandler)       // TODO: REMOVE
@@ -279,12 +278,12 @@ func main() {
 
 	println("Defining db interaction endpoints")
 	//http.Handle("/db/get/rfid/{id}", getRfidHandler())             // TODO: GET RID OF???             // TODO: ensure this works for base58s
-	http.Handle("/db/get/{variant}/{id}", rateLimiter(ctxInternalAuthMiddleware(getAnyCollectionHandler()))) // TODO: GET RID OF??? // TODO: make this work for base58 mains as well
+	http.Handle("/db/get/{variant}/{id}", rateLimiter(ctxInternalAuthMiddleware(getAnyCollectionHandler())))
 	http.Handle(fmt.Sprintf(`%s{%s...}`, imagesEndpoint, imageSubPathKey), ctxInternalAuthMiddleware(getImageHandler()))
 	// Creation handlers
 	http.Handle("/db/create/{variant}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.HandleCreate()))))
 	// update handlers
-	http.Handle("/db/update/{endpt}/{id}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.UpdateById())))) // TODO: THIS SHOULD BE PATCH REQUEST?
+	http.Handle("/db/update/{endpt}/{id}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.UpdateById()))))
 	// import handlers
 	http.Handle("/db/import/{endpt}", rateLimiter(ctxInternalAuthMiddleware(rfidMiddleware(rfid.ImportHandler()))))
 	// List handlers
@@ -294,11 +293,6 @@ func main() {
 
 	println("Defining simple api endpoints")
 	http.Handle("/options/{optionsType}", rfid.GetOptionsHandler) // TODO: any more options here?
-
-	// lastN handlers
-	//http.Handle("/db/list/latest/{variant}", rfid.ListNewestEntriesHandler()) // TODO: maybe unnecessary?
-	// listAllStandard handlers
-	//http.Handle("/db/list/standard/{variant}", rfid.ListStandardEntriesHandler()) // TODO: maybe unnecessary?
 
 	if err = srv.ListenAndServe(); err != nil {
 		panic("failed to listen and serve for http: " + err.Error())
@@ -898,10 +892,16 @@ func getImageHandler() http.Handler {
 				http.Error(w, "image not found", http.StatusNotFound)
 				return
 			}
-			println("failed to get image!") // TODO: fix
 			http.Error(w, "Error retrieving image. "+err.Error(), http.StatusInternalServerError)
-			return
 		}
+		//bytes, err := pics.GetFile(ctx, imgSubPath)
+		//if err != nil {
+		//	if errors.Is(err, pics.ErrNotFound) {
+		//		http.Error(w, "image not found", http.StatusNotFound)
+		//		return
+		//	}
+		//	http.Error(w, "Error retrieving image. "+err.Error(), http.StatusInternalServerError)
+		//}
 		_, err = w.Write(bytes)
 		if err != nil {
 			rfid.HandleHttpWriteError(err)
@@ -1112,12 +1112,12 @@ func getAnyCollectionHandler() http.Handler {
 				"lcSyringe":       &rfid.LcSyringe{},
 				"mss":             &rfid.MSS{},   // generally only goes to plate
 				"plate":           &rfid.Plate{}, // can go anywhere (in theory) except MSS
-				// TODO: "plugs": &rfid.PlugsJar{},
-				"slant":      &rfid.Slant{}, // generally only goes to plate
-				"sporePrint": &rfid.SporePrint{},
-				"sporeSwab":  &rfid.SporeSwab{},
-				"stasisTube": &rfid.StasisTube{}, // generally only goes to plate
-				"waterJar":   &rfid.WaterJar{},
+				"plugs":           &rfid.PlugsJar{},
+				"slant":           &rfid.Slant{}, // generally only goes to plate
+				"sporePrint":      &rfid.SporePrint{},
+				"sporeSwab":       &rfid.SporeSwab{},
+				"stasisTube":      &rfid.StasisTube{}, // generally only goes to plate
+				"waterJar":        &rfid.WaterJar{},
 			}[entryType]; exists {
 				println("MAINCOLLID EXISTS") // TODO: del
 				// ensure id is in correct format
@@ -1547,7 +1547,7 @@ func (s *guestSession) Authorize(provider goth.Provider, params goth.Params) (st
 	//p := provider.(*guestLoginProvider)
 	accessToken := rand.Text()
 	refreshToken := rand.Text()
-	//token, err := p.config.Exchange(goth.ContextForClient(p.Client()), params.Get("code"))
+	//token, err := p.config.Exchange(goth.ContextForClient(p.Client()), params.Get("code")) // TODO: reenable
 	//if err != nil {
 	//	return "", err
 	//}

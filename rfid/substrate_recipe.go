@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-// TODO: used in substrateBatch, species, (bag, fruiting chamber, get it either provided or from the substrateBatch)
+// used in substrateBatch, species, (bag, fruiting chamber, get it either provided or from the substrateBatch)
 
 var _ CollectionItem = &SubstrateRecipe{}
 
@@ -116,7 +116,7 @@ func (requestPerms PermsOnRequest) DefaultAcl() *ACL {
 	return &ACL{
 		Users:       requestPerms.UserPerms,
 		Projects:    requestPerms.ProjectPerms,
-		BlanketPerm: requestPerms.BlanketPerm != nil, // TODO: is this ok?
+		BlanketPerm: requestPerms.BlanketPerm != nil,
 	}
 }
 

@@ -5,8 +5,54 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/reeceappling/goUtils/v2/errorreference"
 	"os"
+	"path/filepath"
 )
+
+//	type Interactor interface {
+//		SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, error)
+//	}
+//
+//	type FileReadWriter interface {
+//		Read(fileSubPath string)([]byte, error)
+//		Save(bs []byte, path string) error
+//	}
+var ErrNotFound = errors.New("file not found")
+
+//type MultiWriterPriorityReader []FileReadWriter
+//func (rws MultiWriterPriorityReader) Read(path string)(out []byte, err error){
+//	for _, rw := range rws {
+//		out, err = rw.Read(path)
+//		if err != nil && errors.Is(err, ErrNotFound) {
+//			continue
+//		}
+//		return out, err
+//	}
+//	return nil, err
+//}
+//
+//func (rws MultiWriterPriorityReader) Save(bs []byte, subPath string) error{
+//	var err error = nil
+//	for _, rw := range rws {
+//		err = errors.Join(err, rw.Save(bs, subPath))
+//	}
+//	return err // TODO: ok?
+//}
+//
+//type LocalReadWriter struct {
+//	dir string
+//}
+//func (rw LocalReadWriter) Read(path string)([]byte, error){
+//	out, err := os.ReadFile(rw.dir+"/"+path)
+//	if err != nil && errors.Is(err, os.ErrNotExist) {
+//		return nil, ErrNotFound
+//	}
+//	return out, err
+//}
+//func (rw LocalReadWriter) Save(bs []byte, subPath string) error{
+//	return os.WriteFile(rw.dir+"/"+subPath, bs, 0666)
+//}
 
 const filePathCtxKey = "dbImageFilePath"
 
@@ -19,6 +65,7 @@ func GetFilePath(ctx context.Context) string {
 }
 
 func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, error) {
+	// TODO: save file to s3 if needed
 	filePath := GetFilePath(ctx)
 	if filePath == "" {
 		filePath = "/images" // TODO: FIXME!!!!
@@ -55,6 +102,27 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 		}
 	}
 	return "", errors.New("failed to find a new fileName")
+}
+
+func GetFile(ctx context.Context, imgSubPath string) (bytes []byte, err error) {
+	picsDir := GetFilePath(ctx)
+	bytes, err = os.ReadFile(filepath.Join(picsDir, imgSubPath))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err = errorreference.ErrorNotFound
+			//// TODO: READ FROM s3 if needed?
+			//bytes, err = s3.NewFileReader().Read(ctx, imgSubPath) // TODO: ensure ok
+			//if err != nil {
+			//	if errors.Is(err, errorreference.ErrorNotFound) {
+			//		println("file does not exist locally or in s3!") // TODO: fix
+			//		return nil, ErrNotFound
+			//
+			//	}
+			//	return nil, err
+			//}
+		}
+	}
+	return bytes, err
 }
 
 func DeleteFiles(ctx context.Context, filenamesWithPrefixPaths ...string) error {

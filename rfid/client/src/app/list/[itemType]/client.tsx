@@ -1,96 +1,83 @@
 'use client'
 
-import {AssertPcRun, PcRunInline, PcRunListPageTable} from "@/app/components/pcRunClient";
+import {AssertPcRun, PcRunListPageTable} from "@/app/components/pcRunClient";
 import {PcRunData} from "@/app/components/pcRunServer";
 import {BaseExternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import React from "react";
 import {AssertArrayResult} from "@/app/components/common";
-import {ListResult} from "@/app/components/formSubcomponents/shared";
 import {
     AssertDualListResult,
     AssertSubstrateRecipe,
-    SubstrateRecipeInline,
     SubstrateRecipeListPageTable
 } from "@/app/components/substrateRecipeClient";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
-import {AssertWaterJar, WaterJarInline, WaterJarListPageTable} from "@/app/components/waterJarClient";
+import {AssertWaterJar, WaterJarListPageTable} from "@/app/components/waterJarClient";
 import {WaterJarData} from "@/app/components/waterJarServer";
-import {
-    AssertSubstrateBatch,
-    SubstrateBatchInline,
-    SubstrateBatchListPageTable
-} from "@/app/components/substrateBatchClient";
+import {AssertSubstrateBatch, SubstrateBatchListPageTable} from "@/app/components/substrateBatchClient";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import SubspeciesDisplay, {
-    AssertSubspecies,
-    SubspeciesInline,
-    SubspeciesListPageTable
-} from "@/app/components/subspeciesClient";
+import {AssertSubspecies, SubspeciesListPageTable} from "@/app/components/subspeciesClient";
 import {StasisTubeData} from "@/app/components/stasisTubeServer";
-import {AssertStasisTube, StasisTubeInline, StasisTubeListPageTable} from "@/app/components/stasisTubeClient";
+import {AssertStasisTube, StasisTubeListPageTable} from "@/app/components/stasisTubeClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
-import {AssertSporeSwab, SporeSwabInline, SporeSwabListPageTable} from "@/app/components/sporeSwabClient";
+import {AssertSporeSwab, SporeSwabListPageTable} from "@/app/components/sporeSwabClient";
 import {SporePrintData} from "@/app/components/sporePrintServer";
-import {AssertSporePrint, SporePrintInline, SporePrintListPageTable} from "@/app/components/sporePrintClient";
-import {AssertSlant, SlantInline, SlantListPageTable} from "@/app/components/slantClient";
+import {AssertSporePrint, SporePrintListPageTable} from "@/app/components/sporePrintClient";
+import {AssertSlant, SlantListPageTable} from "@/app/components/slantClient";
 import {SlantData} from "@/app/components/slantServer";
 import {PlateData} from "@/app/components/plateServer";
-import {AssertPlate, PlateInline, PlateListPageTable} from "@/app/components/plateClient";
+import {AssertPlate, PlateListPageTable} from "@/app/components/plateClient";
 import {MssData} from "@/app/components/mssServer";
-import {AssertMss, MssInline, MssListPageTable} from "@/app/components/mssClient";
+import {AssertMss, MssListPageTable} from "@/app/components/mssClient";
 import {LcRecipeData} from "@/app/components/lcRecipeServer";
-import {AssertLcRecipe, LcRecipeInline, LcRecipeListPageTable} from "@/app/components/lcRecipeClient";
+import {AssertLcRecipe, LcRecipeListPageTable} from "@/app/components/lcRecipeClient";
 import {LcData} from "@/app/components/lcServer";
-import {AssertLc, LcInline, LcListPageTable} from "@/app/components/lcClient";
+import {AssertLc, LcListPageTable} from "@/app/components/lcClient";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
-import {AssertJarRecipe, JarRecipeInline, JarRecipeListPageTable} from "@/app/components/jarRecipeClient";
+import {AssertJarRecipe, JarRecipeListPageTable} from "@/app/components/jarRecipeClient";
 import {LcSyringe} from "@/app/components/lcSyringeServer";
-import {AssertLcSyringe, LcSyringeInline, LcSyringeListPageTable} from "@/app/components/lcSyringeClient";
+import {AssertLcSyringe, LcSyringeListPageTable} from "@/app/components/lcSyringeClient";
 import {JarData} from "@/app/components/jarServer";
-import {AssertJar, JarInline, JarListPageTable} from "@/app/components/jarClient";
+import {AssertJar, JarListPageTable} from "@/app/components/jarClient";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
-import {
-    AssertFruitingChamber,
-    FruitingChamberInline,
-    FruitingChamberListPageTable
-} from "@/app/components/fruitingChamberClient";
+import {AssertFruitingChamber, FruitingChamberListPageTable} from "@/app/components/fruitingChamberClient";
 import {FruitData} from "@/app/components/fruitServer";
-import {AssertFruit, FruitInline, FruitListPageTable} from "@/app/components/fruitClient";
+import {AssertFruit, FruitListPageTable} from "@/app/components/fruitClient";
 import {BagData} from "@/app/components/bagServer";
-import {AssertBag, BagInline, BagListPageTable} from "@/app/components/bagClient";
+import {AssertBag, BagListPageTable} from "@/app/components/bagClient";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
-import {AgarBatchInline, AgarBatchListPageTable, AssertAgarBatch} from "@/app/components/agarBatchClient";
+import {AgarBatchListPageTable, AssertAgarBatch} from "@/app/components/agarBatchClient";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
-import {AgarRecipeInline, AgarRecipeListPageTable, AssertAgarRecipe} from "@/app/components/agarRecipeClient";
+import {AgarRecipeListPageTable, AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {GrainBatchData} from "@/app/components/grainBatchServer";
-import {AssertGrainBatch, GrainBatchInline, GrainBatchListPageTable} from "@/app/components/grainBatchClient";
-import {LatestListDisplay, LatestMostRecentListDisplay} from "@/app/components/clientGeneric";
-import {AssertSpecies, SpeciesInline, SpeciesListPageTable} from "@/app/components/speciesClient";
+import {AssertGrainBatch, GrainBatchListPageTable} from "@/app/components/grainBatchClient";
+import {AssertSpecies, SpeciesListPageTable} from "@/app/components/speciesClient";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ProjectData} from "@/app/components/projectServer";
 import {AssertProject, ProjectListPageTable} from "@/app/components/projectClient";
 import {SaleData} from "@/app/components/saleServer";
-import {AssertSale, SaleInline, SaleListPageTable} from "@/app/components/saleClient";
+import {AssertSale, SaleListPageTable} from "@/app/components/saleClient";
 import {TransferData} from "@/app/components/transferServer";
 import {AssertTransfer, TransferListPageTable} from "@/app/components/transferClient";
-import {UserData} from "@/app/components/userServer";
-import {AssertUser} from "@/app/components/userClient";
+import {PlugsJar} from "@/app/components/plugsServer";
+import {AssertPlugs, PlugsListPageTable} from "@/app/components/plugsClient";
 
-export default function ListDisplay({itemType,inpData}:{itemType: string, inpData: any}){
+export default function ListDisplay({itemType, inpData}: { itemType: string, inpData: any }) {
     try {
         switch (itemType) {
             case "agarBatches":
                 AssertArrayResult<AgarBatchData>(inpData, AssertAgarBatch)
                 return <AgarBatchListPageTable data={inpData} onClick={(v) => {
-                        window.location.assign(BaseExternalUrl + "/view/agarBatch/" + encodeURI(v._id))}
-                    } />
+                    window.location.assign(BaseExternalUrl + "/view/agarBatch/" + encodeURI(v._id))
+                }
+                }/>
             case "agarRecipes":
                 // TODO: allow lookup or navigation by recipe name
                 AssertDualListResult<AgarRecipeData>(inpData, AssertAgarRecipe)
                 let arOc = (val: AgarRecipeData) => {
-                    window.location.assign(BaseExternalUrl + "/view/agarRecipe/" + encodeURI(val._id))}
+                    window.location.assign(BaseExternalUrl + "/view/agarRecipe/" + encodeURI(val._id))
+                }
                 return <>
                     <div className={"text-xl centerH"}>{"Recent"}</div>
                     <AgarRecipeListPageTable data={inpData.recent || []} onClick={arOc}/> {/* TODO: recipe id???*/}
@@ -100,28 +87,33 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
             case "bags":
                 AssertArrayResult<BagData>(inpData, AssertBag)
                 return <BagListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/bag/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/bag/" + encodeURI(v._id))
+                }
+                }/>
             case "fruits":
                 AssertArrayResult<FruitData>(inpData, AssertFruit)
                 return <FruitListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/fruit/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/fruit/" + encodeURI(v._id))
+                }
+                }/>
             case "fruitingChambers":
                 AssertArrayResult<FruitingChamberData>(inpData, AssertFruitingChamber)
                 return <FruitingChamberListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/fruitingChamber/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/fruitingChamber/" + encodeURI(v._id))
+                }
+                }/>
             case "jars":
                 AssertArrayResult<JarData>(inpData, AssertJar)
                 return <JarListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/jar/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/jar/" + encodeURI(v._id))
+                }
+                }/>
             case "jarRecipes":
                 // TODO: allow lookup or navigation by recipe name
                 AssertDualListResult<JarRecipeData>(inpData, AssertJarRecipe)
                 let jrOc = (val: JarRecipeData) => {
-                    window.location.assign(BaseExternalUrl + "/view/jarRecipe/" + encodeURI(val._id))}
+                    window.location.assign(BaseExternalUrl + "/view/jarRecipe/" + encodeURI(val._id))
+                }
                 return <>
                     <div className={"text-xl centerH"}>{"Recent"}</div>
                     <JarRecipeListPageTable data={inpData.recent || []} onClick={jrOc}/>
@@ -131,23 +123,27 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
             case "grainBatches": // TODO: validate works as expected
                 AssertArrayResult<GrainBatchData>(inpData, AssertGrainBatch)
                 return <GrainBatchListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/grainBatch/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/grainBatch/" + encodeURI(v._id))
+                }
+                }/>
             case "lcs":
                 AssertArrayResult<LcData>(inpData, AssertLc)
                 return <LcListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/lc/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/lc/" + encodeURI(v._id))
+                }
+                }/>
             case "lcSyringes":
                 AssertArrayResult<LcSyringe>(inpData, AssertLcSyringe)
                 return <LcSyringeListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/lcSyringe/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/lcSyringe/" + encodeURI(v._id))
+                }
+                }/>
             case "lcRecipes":
                 // TODO: allow lookup or navigation by recipe name
                 AssertDualListResult<LcRecipeData>(inpData, AssertLcRecipe)
                 let lcrOc = (val: LcRecipeData) => {
-                    window.location.assign(BaseExternalUrl + "/view/lcRecipe/" + encodeURI(val._id))}
+                    window.location.assign(BaseExternalUrl + "/view/lcRecipe/" + encodeURI(val._id))
+                }
                 return <>
                     <div className={"text-xl centerH"}>{"Recent"}</div>
                     <LcRecipeListPageTable data={inpData.recent || []} onClick={lcrOc}/> {/* TODO: recipe id???*/}
@@ -157,65 +153,82 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
             case "mss":
                 AssertArrayResult<MssData>(inpData, AssertMss)
                 return <MssListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/mss/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/mss/" + encodeURI(v._id))
+                }
+                }/>
             case "pcRuns":
                 AssertArrayResult<PcRunData>(inpData, AssertPcRun)
                 return <PcRunListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/pcRun/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/pcRun/" + encodeURI(v._id))
+                }
+                }/>
             case "plates":
                 AssertArrayResult<PlateData>(inpData, AssertPlate)
                 return <PlateListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/plate/" + encodeURI(v._id))}
-                } />
-            // // case "plugs": // TODO: THIS
-            // //     return <PlugsDisplay data={inpData} readonly={false} id={id} isTopLevel={true} headerLevel={TopPageHeaderLevel} cookies={allCookies}/>// TODO: FIX!
-            case "projects": // TODO: check
+                    window.location.assign(BaseExternalUrl + "/view/plate/" + encodeURI(v._id))
+                }}/>
+            case "plugs":
+                AssertArrayResult<PlugsJar>(inpData, AssertPlugs)
+                return <PlugsListPageTable data={inpData} onClick={(v) => {
+                    console.log("plug id: "+v._id);
+                    console.log("plug selected: "+JSON.stringify(v));
+                    console.log("going to: "+BaseExternalUrl + "/view/plugs/" + encodeURI(v._id));
+                    window.location.assign(BaseExternalUrl + "/view/plugs/" + encodeURI(v._id)) // TODO: not working as link as expected
+                }}/>
+            case "projects":
                 AssertArrayResult<ProjectData>(inpData, AssertProject)
                 return <ProjectListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/project/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/project/" + encodeURI(v._id))
+                }
+                }/>
             case "sales":
                 AssertArrayResult<SaleData>(inpData, AssertSale)
                 return <SaleListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/sale/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/sale/" + encodeURI(v._id))
+                }
+                }/>
             case "slants":
                 AssertArrayResult<SlantData>(inpData, AssertSlant)
                 return <SlantListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/slant/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/slant/" + encodeURI(v._id))
+                }
+                }/>
             case "species":
                 AssertArrayResult<SpeciesData>(inpData, AssertSpecies)
                 return <SpeciesListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/species/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/species/" + encodeURI(v._id))
+                }
+                }/>
             case "sporePrints":
                 AssertArrayResult<SporePrintData>(inpData, AssertSporePrint)
                 return <SporePrintListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/sporePrint/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/sporePrint/" + encodeURI(v._id))
+                }
+                }/>
             case "sporeSwabs":
                 AssertArrayResult<SporeSwab>(inpData, AssertSporeSwab)
                 return <SporeSwabListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/sporeSwab/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/sporeSwab/" + encodeURI(v._id))
+                }
+                }/>
             case "stasisTubes":
                 AssertArrayResult<StasisTubeData>(inpData, AssertStasisTube)
                 return <StasisTubeListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/stasisTube/" + encodeURI(v._id))}
-                } />
-            case "subspecies": // TODO: test functionality. Unsure if we even want to be able to list these
+                    window.location.assign(BaseExternalUrl + "/view/stasisTube/" + encodeURI(v._id))
+                }
+                }/>
+            case "subspecies":
                 AssertArrayResult<SubspeciesData>(inpData, AssertSubspecies)
                 return <SubspeciesListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/subspecies/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/subspecies/" + encodeURI(v._id))
+                }
+                }/>
             case "substrateRecipes":
                 // TODO: allow lookup or navigation by recipe name
                 AssertDualListResult<SubstrateRecipeData>(inpData, AssertSubstrateRecipe)
                 let subrOc = (val: SubstrateRecipeData) => {
-                    window.location.assign(BaseExternalUrl + "/view/substrateRecipe/" + encodeURI(val._id))}
+                    window.location.assign(BaseExternalUrl + "/view/substrateRecipe/" + encodeURI(val._id))
+                }
                 return <>
                     <div className={"text-xl centerH"}>{"Recent"}</div>
                     <SubstrateRecipeListPageTable data={inpData.recent || []} onClick={subrOc}/>
@@ -225,13 +238,15 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
             case "substrateBatches":
                 AssertArrayResult<SubstrateBatchData>(inpData, AssertSubstrateBatch)
                 return <SubstrateBatchListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/substrateBatch/" + encodeURI(v._id))}
-                } />
-            case "transfers": // TODO: check
+                    window.location.assign(BaseExternalUrl + "/view/substrateBatch/" + encodeURI(v._id))
+                }
+                }/>
+            case "transfers":
                 AssertArrayResult<TransferData>(inpData, AssertTransfer)
                 return <TransferListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/transfer/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/transfer/" + encodeURI(v._id))
+                }
+                }/>
             // case "users":
             //     AssertArrayResult<UserData>(inpData, AssertUser)
             // TODO: new page table format
@@ -245,8 +260,9 @@ export default function ListDisplay({itemType,inpData}:{itemType: string, inpDat
             case "waterJars":
                 AssertArrayResult<WaterJarData>(inpData, AssertWaterJar)
                 return <WaterJarListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/waterJar/" + encodeURI(v._id))}
-                } />
+                    window.location.assign(BaseExternalUrl + "/view/waterJar/" + encodeURI(v._id))
+                }
+                }/>
             default:
                 return <ErrorDisplay err={"Unhandled list item type: " + itemType} headerLevel={TopPageHeaderLevel}/>
         }

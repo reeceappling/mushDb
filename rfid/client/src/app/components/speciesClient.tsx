@@ -23,6 +23,7 @@ import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcompo
 import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {
+    AclDefaultAclDisplay,
     AclDisplay,
     DefaultAclDisplay,
     IsValidAcl,
@@ -155,23 +156,19 @@ export default function SpeciesDisplay(
                 </FlexedArea>
                 <AliasesArea aliases={aliases} readonly={readonly} updateParent={setAliases} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
-                </TogglableAreaWithDepth>
-                <TogglableAreaWithDepth startOpen={false} openTxt={"view default ACL"} closeTxt={"minimize default ACL area"}>
-                    <DefaultAclDisplay readonly={readonly} ACL={defaultAcl} updateParent={setDefaultAcl}/>
-                </TogglableAreaWithDepth>
-                {/* TODO: view subspecies???? */}
+                <AclDefaultAclDisplay ACL={acl} defaultACL={defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl} readonly={readonly}/>
+                <button className={"basicButtonSmall"} onClick={(e)=>{e.stopPropagation();}} >
+                    {"Load subspecies"}{/* TODO: view subspecies???? */}
+                </button>
 
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
                     update()
                 }}>{"Update"}</button>}
-                {/* TODO: ? <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>*/}
             </DisplayFormWrapper>
         )
     } catch (err){
-        return <div>{"ERROR: Species data format incorrect: "+err}</div> // TODO: CHANGE?????
+        return <div>{"ERROR: Species data format incorrect: "+err}</div>
     }
 }
 
@@ -184,9 +181,7 @@ export function NewSpeciesForm(
     const [aliases, setAliases] = useState<string[]>([])
     const [sub, setSub] = useState(substrateIn)
     const [notes, setNotes] = useState<Note[]>([])
-    const [err, setErr] = useState<string | undefined>()
-    //const [perms, setPerms] = useState<EntryPerms | undefined>()
-    ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+    const [err, setErr] = useState<string | undefined>();
     const submitNewSpecies = () => {
         console.log("submitting new species")
         if(name===""){
@@ -220,10 +215,10 @@ export function NewSpeciesForm(
                 setErr(JSON.stringify(err))
             });
     }
-    return (
-        <NewEntryFormWrapper entryType={"species"}>
+    return <NewEntryFormWrapper entryType={"species"}>
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"Name :"} setName={setName}/>
             <NameArea classNames={"inlineChildren"} currentName={sciName} headerTxt={"Scientific Name :"} setName={setSciName}/>
+            <ErrorDisplay err={err}/>
             <AliasesArea aliases={aliases} updateParent={setAliases} readonly={false}/> {/* TODO: OVERHAUL */}
             <SelectorWrapper current={sub} title={"Standard Substrate"} nameFunc={(v: SubstrateRecipeData) => v._id}>
                 <SubstrateRecipeSelector doSelect={setSub} allowCreate={handlers.isTopLevel} creatorInPage={false}/>
@@ -232,7 +227,6 @@ export function NewSpeciesForm(
             {/* SUBMIT AREA */}
             <CreateNewEntryButton onSubmit={submitNewSpecies}/>
         </NewEntryFormWrapper>
-    )
 }
 
 

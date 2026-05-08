@@ -82,8 +82,8 @@ export function MainCollectionInputOrRead({label, onIdSelected, copyText}: {
         {/*<TextBox label={label || "Main Collection Id Input: "} value={id} fieldName={"mainCollIdInput"}*/}
         {/*         updateTextHandler={updateId} readonly={false}/>*/}
         {/* BUTTON TO READ MAIN COLL ID */}
-        <ReaderWriterSelector txt={"select rfid reader"} onSelect={(wr)=>{
-            ReadTagFunc(dispatch, undefined, state.selected).then(updateId)
+        <ReaderWriterSelector txt={"select rfid reader"} onSelect={(wr)=>{ // TODO: wr ok here or state.selected?
+            ReadTagFunc(dispatch, undefined, wr).then(updateId)
         }} />
         {/*<RfidSelectorWithReadButton handleTagRead={updateId} readButtonTxt={"read from current tag reader"}*/}
         {/*                            readerWriterTxt={"select rfid reader"} onWriterSelect={(wr)=>{*/}

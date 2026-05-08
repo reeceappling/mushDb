@@ -16,6 +16,7 @@ import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getTypeFor} from "@/app/components/common";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {TailwindButton} from "@/app/components/tailwind/components";
+import {ReadRfidTag} from "@/app/testpage/serverActions";
 
 
 const buttonProps = {
@@ -82,7 +83,6 @@ export function TopBarCreateMenu() {
 export default function TopBar() {
     // TODO: RECENTS FOR ALL ENTRIES?????
     const {dispatch} = useRfidReaderContext()
-    // TODO: ENSURE THE NEXT FUNCTION IS USED IN MULTIPLE PLACES!
     const onReaderSelect = (s: string | undefined) => {
         let session = "" // TODO: fix session
         ReadTagFunc(dispatch, session, s).then(id=>{
@@ -93,7 +93,7 @@ export default function TopBar() {
     }
     return <div id={"topBar"}>
         <TopBarListMenu/>
-        <TopBarViewMenu/>
+        <TopBarViewMenu/> {/* TODO: ENSURE LINKS ARE CORRECT!!!*/}
         <TopBarImportMenu/>
         <TopBarCreateMenu/>
         <div id={"rfidTopArea"}>
@@ -166,7 +166,7 @@ function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
     const {state, dispatch} = useRfidReaderContext()
     const onClick = () => {
         if (state.selected != undefined) {
-            //ReadRfidTag(state.selected) // TODO: REENABLE
+            //const a = ReadRfidTag(state.selected) // TODO: REENABLE IF WE CAN
             const a = new Promise<string>((accept) => {// TODO: DELETE
                 accept(Makeid(5))
             })
@@ -252,7 +252,6 @@ export function TopBarViewMenu() {
                     <button onClick={handleViewById}> {"go to this id"}</button>
                 </div>
             </MenuItem>
-            {/* TODO: the rest*/}
             <MenuItem href={"/view/agarBatch"} onClick={handleClose}
                        component={"a"} sx={sublistItemProps}>{"Agar Batch"}</MenuItem>{/* TODO: FIX */}
             <MenuItem href={"/view/agarRecipe"} onClick={handleClose}
@@ -337,7 +336,7 @@ export function TopBarListMenu() {
     return <div>
         <Button
             id={"topBarListButton"}
-            sx={buttonProps}// TODO: COLORS
+            sx={buttonProps}
             aria-controls={open ? 'topBarListMenu' : undefined}
             aria-haspopup={true}
             aria-expanded={open ? 'true' : undefined}

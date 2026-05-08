@@ -30,12 +30,12 @@ export function SelectorFor(
     if(inputs.disabled){
         return <text>{inputs.initial}</text>
     }
-    return <select className={"tailwindSelector"} defaultValue={inputs.initial} disabled={inputs.disabled}
+    return <select key={inputs.initial} className={"tailwindSelector"} defaultValue={inputs.initial} disabled={inputs.disabled}
                    onChange={(e) => {
                        inputs.updateParent(e.currentTarget.value)
                    }}>
         {inputs.options.map((s, i: number) => {
-            return <option value={s} key={i}>{s}</option>
+            return <option value={s} key={s+i}>{s}</option>
         })}
     </select>
 }

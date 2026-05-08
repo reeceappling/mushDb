@@ -26,7 +26,7 @@ type Species struct {
 }
 
 const shiitakeName = "Shiitake"
-const shiitakeSciName = "Lentinula edodes"
+const shiitakeSciName = "Lentinula Edodes"
 
 var shiitakeNotes = NotesField{[]Note{
 	newNote(ogTime, "Colonization conditions: Hardwood sawdust with 15% bran, or pegs into a log. Indirect sun 8-12hrs. 80-90% humidity, 60-68degF, and regular FAE"),
@@ -53,7 +53,7 @@ func initializeSpecies(ctx context.Context) error {
 	basicEntries := []*Species{
 		// King Oyster
 		{
-			NameIdField:       NameIdField{"king oyster"},
+			NameIdField:       NameIdField{"King Oyster"},
 			ScientificName:    "Pleurotus Eryngii",
 			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
@@ -128,7 +128,7 @@ func initializeSpecies(ctx context.Context) error {
 			AclField: allCanWriteAcl(),
 		},
 	}
-	err = addBasicAltEntries(ctx, basicEntries...)
+	return addBasicAltEntries(ctx, basicEntries...)
 	if err != nil {
 		return err
 	}

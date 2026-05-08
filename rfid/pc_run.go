@@ -155,6 +155,13 @@ func (field PcRunField) asOptional() PcRunOptionalField {
 type PcRunOptionalField struct {
 	PcRun *AlternateCollectionId `bson:"pcRun,omitempty" json:"pcRun,omitempty"`
 }
+type pcRunOptional interface {
+	pcRunId() *AlternateCollectionId
+}
+
+func (field PcRunOptionalField) pcRunId() *AlternateCollectionId {
+	return field.PcRun
+}
 
 func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) {
 	if field.PcRun == nil {

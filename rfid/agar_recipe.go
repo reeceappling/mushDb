@@ -9,14 +9,14 @@ import (
 	"net/http"
 )
 
-// TODO: required for: agarBatch
+// required for: agarBatch
 
 type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
-	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
-	StandardField              `bson:"inline"` // If this is a standard recipe
+	Agar                       int `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField              `bson:"inline"`               // If this is a standard recipe
 	NutrientsField             `bson:"inline"`
 	SugarsField                `bson:"inline"`
 	AdditivesField             `bson:"inline"`
@@ -77,6 +77,12 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
 
+const LmeaName = "LMEA"
+const PdaName = "PDA"
+const WaterAgarName = "Water Agar"
+const GrainWaterAgarName = "Grainwater Agar"
+const AntibioticAgarName = "Antibiotic Agar"
+
 func initializeAgarRecipes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(AgarRecipesCollectionName)
@@ -97,46 +103,43 @@ func initializeAgarRecipes(ctx context.Context) error {
 		return err
 	}
 	// Add built-in entries
+	builtinTime := RequiredTimeField{Time: ogTime}
 	basicEntries := []*AgarRecipe{
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
-			NameField:                  NameField{"LMEA - Light Malt Extract Agar"},
+			NameField:                  NameField{LmeaName},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
-				{
-					Nutrient: LME,
-					Amount:   20,
-					Unit:     "g",
-				},
+				nutMmt(LME, 20, "g"),
 			}},
 			SugarsField:   SugarsField{},
 			StandardField: StandardField{true},
-			NotesField:    NotesField{},
-			AclField:      allCanReadAcl(),
+			NotesField: NotesField{Notes: []Note{
+				{Note: "Light Malt Extract Agar", RequiredTimeField: builtinTime},
+			}},
+			AclField: allCanReadAcl(),
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idPda)},
-			NameField:                  NameField{"PDA - Potato Dextrose Agar"},
+			NameField:                  NameField{PdaName},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
-			NutrientsField: NutrientsField{[]NutrientMeasurement{{
-				Nutrient: Potato,
-				Amount:   18,
-				Unit:     "g",
-			}}},
-			SugarsField: SugarsField{[]SugarMeasurement{{
-				Type:   Dextrose,
-				Amount: 1,
-				Unit:   "g",
-			}}},
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
+				nutMmt(Potato, 18, "g"),
+			}},
+			SugarsField: SugarsField{[]SugarMeasurement{
+				sugMmt(Dextrose, 1, "g"),
+			}},
 			StandardField: StandardField{true},
-			NotesField:    NotesField{},
-			AclField:      allCanReadAcl(),
+			NotesField: NotesField{Notes: []Note{
+				{Note: "Potato Dextrose Agar", RequiredTimeField: builtinTime},
+			}},
+			AclField: allCanReadAcl(),
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idWaterAgar)},
-			NameField:                  NameField{"Water Agar"},
+			NameField:                  NameField{WaterAgarName},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField:             NutrientsField{},
@@ -147,7 +150,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idGrainWaterAgar)},
-			NameField:                  NameField{"Grain Water Agar"},
+			NameField:                  NameField{GrainWaterAgarName},
 			LiquidsField: LiquidsField{[]Liquid{
 				GrainWater.AsLiquid().withPct(50.0),
 				DistilledWater.AsLiquid().withPct(50.0),
@@ -163,15 +166,11 @@ func initializeAgarRecipes(ctx context.Context) error {
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idAntibioticAgar)},
-			NameField:                  NameField{"Antibiotic Agar"},
+			NameField:                  NameField{AntibioticAgarName},
 			LiquidsField:               LiquidsField{[]Liquid{DistilledWater.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
-				{
-					Nutrient: LME,
-					Amount:   20,
-					Unit:     "g",
-				},
+				nutMmt(LME, 20, "g"),
 			}},
 			SugarsField:      SugarsField{},
 			AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline}},
@@ -187,62 +186,65 @@ func initializeAgarRecipes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Add test entries
-	testItem := &AgarRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		NameField:                  NameField{testEntryStringId},
-		LiquidsField: LiquidsField{[]Liquid{
-			Water.AsLiquid().withPct(40.0),
-			DistilledWater.AsLiquid().withPct(60.0),
-		}},
-		Agar:          20,
-		StandardField: StandardField{false},
-		NutrientsField: NutrientsField{[]NutrientMeasurement{
-			{
-				Nutrient: LME,
-				Amount:   19,
-				Unit:     "g",
-			},
-			{
-				Nutrient: Potato,
-				Amount:   2,
-				Unit:     "g",
-			},
-		}},
-		SugarsField: SugarsField{[]SugarMeasurement{{
-			Type:   Dextrose,
-			Amount: 1,
-			Unit:   "g",
-		}, {
-			Type:   Honey,
-			Amount: 2,
-			Unit:   "g",
-		}}},
-		AdditivesField: AdditivesField{[]AdditiveMeasurement{
-			{
-				Additive: Vermiculite,
-				Amount:   0.2,
-				Unit:     "lb",
-			},
-			{
-				Additive: Perlite,
-				Amount:   0.7,
-				Unit:     "tons",
-			},
-			{
-				Additive: Gypsum,
-				Amount:   1,
-				Unit:     "pinch",
-			},
-		}},
-		AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
-		NotesField:       NotesField{exampleNotes()},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         AclField{&testAcl},
-	}
+	//// Add test entries
+	//testItem := &AgarRecipe{
+	//	AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+	//	NameField:                  NameField{testEntryStringId},
+	//	LiquidsField: LiquidsField{[]Liquid{
+	//		Water.AsLiquid().withPct(40.0),
+	//		DistilledWater.AsLiquid().withPct(60.0),
+	//	}},
+	//	Agar:          20,
+	//	StandardField: StandardField{false},
+	//	NutrientsField: NutrientsField{[]NutrientMeasurement{
+	//		nutMmt(LME, 19, "g"),
+	//		nutMmt(Potato, 2, "g"),
+	//	}},
+	//	SugarsField: SugarsField{[]SugarMeasurement{
+	//		sugMmt(Dextrose, 1, "g"),
+	//		sugMmt(Honey, 2, "g"),
+	//	}},
+	//	AdditivesField: AdditivesField{[]AdditiveMeasurement{
+	//		{
+	//			Additive: Vermiculite,
+	//			Amount:   0.2,
+	//			Unit:     "lb",
+	//		},
+	//		{
+	//			Additive: Perlite,
+	//			Amount:   0.7,
+	//			Unit:     "tons",
+	//		},
+	//		{
+	//			Additive: Gypsum,
+	//			Amount:   1,
+	//			Unit:     "pinch",
+	//		},
+	//	}},
+	//	AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
+	//	NotesField:       NotesField{exampleNotes()},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	AclField:         AclField{&testAcl},
+	//}
+	//
+	//// Add test entries
+	//return addTestAltEntries(ctx, testItem)
+	return nil
+}
 
-	// Add test entries
-	return addTestAltEntries(ctx, testItem)
+func sugMmt(t Sugar, amt float64, unit string) SugarMeasurement {
+	return SugarMeasurement{
+		Type:   t,
+		Amount: amt,
+		Unit:   unit,
+	}
+}
+func nutMmt(t Nutrient, amt float64, unit string) NutrientMeasurement {
+	return NutrientMeasurement{
+		Nutrient: t,
+		Amount:   amt,
+		Unit:     unit,
+	}
 }
 
 type createAgarRecipeRequest struct {
@@ -253,7 +255,7 @@ type createAgarRecipeRequest struct {
 	NutrientsField
 	SugarsField
 	AdditivesField
-	AntibioticsField // TODO: make sure to put dosages in notes?
+	AntibioticsField // make sure to put dosages in notes
 	NotesField
 }
 
@@ -301,7 +303,7 @@ func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) {
 }
 
 type AgarRecipeField struct {
-	AgarRecipe AlternateCollectionId `bson:"agarRecipe" json:"agarRecipe"` // TODO: FIX, USED TO BE Recipe and recipe
+	AgarRecipe AlternateCollectionId `bson:"agarRecipe" json:"agarRecipe"`
 }
 
 func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error) {

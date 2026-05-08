@@ -813,7 +813,6 @@ export function AliasesArea(
     }
     return <div>
         <div>{"Aliases :"}</div>
-        {/* TODO: DONT USE TEXTBOXAREA */}
         <TextBoxArea readonly={false} initialValues={(aliases || []).map((((a: string) => {
             return {data: a, disabled: false}
         })))} updateParent={(v) => {

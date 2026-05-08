@@ -90,64 +90,67 @@ func ListEntriesHandler() http.Handler {
 		var bs []byte
 		var err error
 		switch strings.ToLower(requested) {
-		case "bag",
-			"bags":
-			bs, err = listEntriesHandlerInternal(r.Context(), true, maxResults, doStandardToo, &Bag{})
-		case "box", "fruitingchamber", "chamber", "fruiting chamber",
-			"boxes", "fruitingchambers", "chambers", "fruiting chambers":
-			bs, err = listEntriesHandlerInternal[*FruitingChamber](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{})
-		case "jar", "grainjar", "grain jar",
-			"jars", "grainjars", "grain jars":
-			bs, err = listEntriesHandlerInternal[*GrainJar](r.Context(), true, maxResults, doStandardToo, &GrainJar{})
-		case "lc", "liquidculture", "liquid culture",
-			"lcs", "liquidcultures", "liquid cultures":
-			bs, err = listEntriesHandlerInternal[*LiquidCulture](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{})
-		case "lcsyringe", "lcsyringes":
-			bs, err = listEntriesHandlerInternal[*LcSyringe](r.Context(), true, maxResults, doStandardToo, &LcSyringe{})
-		case "plugs", "plug", "peg", "pegs":
-			bs, err = listEntriesHandlerInternal[*PlugsJar](r.Context(), true, maxResults, doStandardToo, &PlugsJar{})
-		case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
-			"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
-			bs, err = listEntriesHandlerInternal[*MSS](r.Context(), true, maxResults, doStandardToo, &MSS{})
-		case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
-			"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
-			bs, err = listEntriesHandlerInternal[*Plate](r.Context(), true, maxResults, doStandardToo, &Plate{})
-		case "slant", "slants":
-			bs, err = listEntriesHandlerInternal[*Slant](r.Context(), true, maxResults, doStandardToo, &Slant{})
-		case "stasistube", "stasis tube", "stasis", "tube",
-			"stasistubes", "stasis tubes", "tubes":
-			bs, err = listEntriesHandlerInternal[*StasisTube](r.Context(), true, maxResults, doStandardToo, &StasisTube{})
 		case "agarbatch", "agar batch",
 			"agarbatches", "agar batches":
 			bs, err = listEntriesHandlerInternal[*AgarBatch](r.Context(), true, maxResults, doStandardToo, &AgarBatch{})
 		case "agarrecipe", "agar recipe",
 			"agarrecipes", "agar recipes":
 			bs, err = listEntriesHandlerInternal[*AgarRecipe](r.Context(), true, maxResults, doStandardToo, &AgarRecipe{})
+		case "bag",
+			"bags":
+			bs, err = listEntriesHandlerInternal(r.Context(), true, maxResults, doStandardToo, &Bag{})
 		case "fruit",
 			"fruits":
 			bs, err = listEntriesHandlerInternal[*Fruit](r.Context(), true, maxResults, doStandardToo, &Fruit{})
+		case "fruitingchamber", "box", "chamber", "fruiting chamber",
+			"boxes", "fruitingchambers", "chambers", "fruiting chambers":
+			bs, err = listEntriesHandlerInternal[*FruitingChamber](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{})
+		//case "grainbatch", "grainbatches": // TODO: THIS!
+		//	bs, err = listEntriesHandlerInternal[*Grain](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{})
+		//
+		case "jar", "grainjar", "grain jar",
+			"jars", "grainjars", "grain jars":
+			bs, err = listEntriesHandlerInternal[*GrainJar](r.Context(), true, maxResults, doStandardToo, &GrainJar{})
 		case "jarrecipe", "jar recipe",
 			"jarrecipes", "jar recipes":
 			bs, err = listEntriesHandlerInternal[*JarRecipe](r.Context(), true, maxResults, doStandardToo, &JarRecipe{})
+		case "lc", "liquidculture", "liquid culture",
+			"lcs", "liquidcultures", "liquid cultures":
+			bs, err = listEntriesHandlerInternal[*LiquidCulture](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{})
 		case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
 			"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
 			bs, err = listEntriesHandlerInternal[*LcRecipe](r.Context(), true, maxResults, doStandardToo, &LcRecipe{})
+		case "lcsyringe", "lcsyringes":
+			bs, err = listEntriesHandlerInternal[*LcSyringe](r.Context(), true, maxResults, doStandardToo, &LcSyringe{})
+		case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
+			"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
+			bs, err = listEntriesHandlerInternal[*MSS](r.Context(), true, maxResults, doStandardToo, &MSS{})
 		case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
 			"pcruns", "pc runs", "pcRuns", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
 			bs, err = listEntriesHandlerInternal[*PCRun](r.Context(), true, maxResults, doStandardToo, &PCRun{})
+		case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
+			"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
+			bs, err = listEntriesHandlerInternal[*Plate](r.Context(), true, maxResults, doStandardToo, &Plate{})
+		case "plugs", "plug", "peg", "pegs":
+			bs, err = listEntriesHandlerInternal[*PlugsJar](r.Context(), true, maxResults, doStandardToo, &PlugsJar{})
 		case "project", "projects":
 			bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{})
 		case "sale", "sales":
 			bs, err = listEntriesHandlerInternal[*Sale](r.Context(), true, maxResults, doStandardToo, &Sale{})
+		case "slant", "slants":
+			bs, err = listEntriesHandlerInternal[*Slant](r.Context(), true, maxResults, doStandardToo, &Slant{})
 		case "species":
 			bs, err = listEntriesHandlerInternal[*Species](r.Context(), true, maxResults, doStandardToo, &Species{})
-		case "subspecies":
-			bs, err = listEntriesHandlerInternal[*Subspecies](r.Context(), true, maxResults, doStandardToo, &Subspecies{})
 		case "sporeprint", "spore print", "print",
 			"sporeprints", "spore prints", "prints":
 			bs, err = listEntriesHandlerInternal[*SporePrint](r.Context(), true, maxResults, doStandardToo, &SporePrint{})
 		case "sporeswab", "sporeswabs", "swab", "swabs":
 			bs, err = listEntriesHandlerInternal[*SporeSwab](r.Context(), true, maxResults, doStandardToo, &SporeSwab{})
+		case "stasistube", "stasis tube", "stasis", "tube",
+			"stasistubes", "stasis tubes", "tubes":
+			bs, err = listEntriesHandlerInternal[*StasisTube](r.Context(), true, maxResults, doStandardToo, &StasisTube{})
+		case "subspecies":
+			bs, err = listEntriesHandlerInternal[*Subspecies](r.Context(), true, maxResults, doStandardToo, &Subspecies{})
 		case "substrate", "substraterecipe", "substrate recipe",
 			"substrates", "substraterecipes", "substrate recipes":
 			bs, err = listEntriesHandlerInternal[*SubstrateRecipe](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{})

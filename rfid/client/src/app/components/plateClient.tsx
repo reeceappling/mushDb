@@ -175,12 +175,8 @@ export default function PlateDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel, cookies
     }: DisplayInput) {
-    // TODO: condensationCoverageAtSealTime?: number
-    // TODO: pourCoverage?: number
-    // TODO: wetAtCooledTime?: boolean
-    // TODO: agarOnOutsideAtPourTime?: boolean
     const [initial, setInitial] = useState(data as PlateData)
-    // TODO: only use initial below this!
+
     const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
     const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(data.contamination))
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(data.knownFruitable)
@@ -461,6 +457,7 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
             knownFruitable: knownFruitable,
             generation: generation,
             pourCoverage: pourCoverage,
+
         }
         if (imageFile !== undefined) {
             formData.set("image", imageFile, "image")

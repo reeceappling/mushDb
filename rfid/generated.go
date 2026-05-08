@@ -43,6 +43,7 @@ const (
 	// Alternate entry constants
 	AgarBatchCollectionName        = "agarBatches"
 	AgarRecipesCollectionName      = "agarRecipes"
+	GrainBatchCollectionName       = "grainBatches"
 	LcRecipesCollectionName        = "lcRecipes"
 	PcRunCollectionName            = "pcRuns"
 	ProjectsCollectionName         = "Projects"
@@ -117,6 +118,7 @@ func initializeDb(ctx context.Context) error {
 		// Alt collections
 		AgarBatchCollectionName,
 		AgarRecipesCollectionName,
+		GrainBatchCollectionName,
 		LcRecipesCollectionName,
 		PcRunCollectionName,
 		ProjectsCollectionName,
@@ -507,6 +509,19 @@ func (recipe AgarRecipe) Decode(encoded *mongo.SingleResult) (CollectionItem, er
 
 func (recipe *AgarRecipe) SetPerms(field AclField) {
 	recipe.AclField = field
+}
+
+func (batch GrainBatch) CollectionName() string {
+	return GrainBatchCollectionName
+}
+func (batch GrainBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
+	out := &GrainBatch{}
+	err := decodeItem(out, encoded)
+	return out, err
+}
+
+func (batch *GrainBatch) SetPerms(field AclField) {
+	batch.AclField = field
 }
 
 func (recipe LcRecipe) CollectionName() string {
