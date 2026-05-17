@@ -19,7 +19,17 @@ export type SplitAllEntries<Existing, New> = {
     new: Data<New>[],
 }
 
+export type SplitEntriesV2<Existing, New> = {
+    existing: Data<Existing>[],
+    new: New[],
+}
+
 export type AllEntries<Type> = SplitAllEntries<Type, Type>
+
+export interface FirstLast<Type> {
+    first: Type,
+    last: Type
+}
 
 export function NewFromEntries<Type>(ae: AllEntries<Type>) {
     return ae.new.map(e=>{return e.data})

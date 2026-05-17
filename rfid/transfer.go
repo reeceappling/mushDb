@@ -35,17 +35,17 @@ var transferReasons = map[transferReason]string{
 	"age":          "plate is veryold",
 }
 
-var sporePrintColors = map[SporePrintColor]string{
-	SpColorBlack:    string(SpColorBlack),
-	SpColorTanLight: string(SpColorTanLight),
-	SpColorClear:    string(SpColorClear),
+var sporePrintColors = []SporePrintColor{
+	SpColorBlack,
+	SpColorTanLight,
+	SpColorClear,
 }
 
-var sporePrintDensities = map[SporePrintDensity]string{
-	SpDensityHeavy:       string(SpDensityHeavy),
-	SpDensityAvg:         string(SpDensityAvg),
-	SpDensitySparse:      string(SpDensitySparse),
-	spDensityNoneMinimal: string(spDensityNoneMinimal),
+var sporePrintDensities = []SporePrintDensity{
+	SpDensityHeavy,
+	SpDensityAvg,
+	SpDensitySparse,
+	spDensityNoneMinimal,
 }
 
 type Transfer struct { // TODO: does not include multi-jar transfers from jars to monotubs

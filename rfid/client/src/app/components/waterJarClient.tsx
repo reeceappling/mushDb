@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useEffect, useState} from "react";
-import NotesAreaOld, {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedQuadColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";

@@ -2,7 +2,13 @@
 
 import React, {JSX, useEffect, useState} from "react";
 import {useQuery,} from '@tanstack/react-query'
-import NotesArea, {IsValidNote, Note, NotesAreaInline, NotesAreaOld} from "@/app/components/formSubcomponents/notes";
+import NotesArea, {
+    IsValidNote,
+    Note,
+    NotesAreaInline, NotesAreaViewSubcomponent,
+    NotesAreaOld,
+    NotesGrid, SingleNoteV2
+} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -181,22 +187,21 @@ export default function AgarBatchDisplay(
     }
 }
 
-export function NotesFormArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SOME NOTES ARE DELETED, FIX!
+// TODO: USE THIS ONE LIKE EVERYWHERE FOR VIEWS! UNSURE ABOUT IMPORTS AND NEW!
+export function NotesFormArea({
                                   readonly,
                                   initial,
                                   updateParent,
+                                    removeHeader,
                               }: {
     readonly?: boolean,
-    initial?: Note[], // TODO: ensure everywhere is using this properly
+    initial?: Note[],
     updateParent?: (entries: AllEntries<Note>) => void,
+    removeHeader?: boolean,
 }) {
-    const [count, setCount] = useState(0)
-    useEffect(() => {
-        setCount(count + 1);
-    }, [initial]);
-    return <div key={count}>
-        <div className={"areaHeader"/* TODO: ok? */}>{"Notes"}</div>
-        <NotesArea data-cy-id={"Notes"} readonly={readonly} initial={initial} updateParent={updateParent}/>
+    return <div>
+        {removeHeader || <div className={"areaHeader"}>{"Notes"}</div>}
+        <NotesAreaViewSubcomponent initial={initial || []} readonly={readonly || false} updateParent={upd=>{updateParent && updateParent(upd)}} />
     </div>
 }
 
@@ -271,7 +276,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             </Subform>
         }
         <AgarColorArea data-cy-id={"Color"} current={color} onSelect={setColor}/>
-        <NotesAreaOld data-cy-id="Notes" readonly={false} updateParent={v => { // TODO: notesFormArea?
+        <NotesFormArea readonly={false} initial={[]} updateParent={v => { // TODO: validate workign
             setNotes(v.new.map(x => {
                 return x.data
             }))

@@ -73,7 +73,7 @@ import {
     AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
-    SplitAllEntries
+    SplitAllEntries, SplitEntriesV2
 } from "@/app/components/formSubcomponents/shared";
 import {OnViewCreatorsQuadColArea, PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
@@ -277,8 +277,8 @@ export default function LcDisplay(
 
         const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(data.confirmedClean)
         const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
-        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [images, setImages] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
         const [disposed, setDisposed] = useState(initial.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
@@ -396,9 +396,9 @@ export default function LcDisplay(
                                  transfersOut={initial.transfersOut}
                                  allowNewTransferCreation={!readonly}
                                  cookies={cookies}/>
-            <PicsDisplay pix={images} updateParent={setImages} readonly={readonly}
+            <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly}
                          headerLevel={headerLevel}/>{/* Pics */}
-            <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams}
+            <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>
 
 

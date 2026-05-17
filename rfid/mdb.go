@@ -544,6 +544,22 @@ func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[str
 //
 //}
 
+func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
+	findBson := bson.D{{}}
+	sortField := "$natural"
+	// TODO: pagination?
+	opts := options.Find().
+		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
+	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+		Database(dbName).
+		Collection(temp.CollectionName()).
+		Find(ctx, findBson, opts)
+	if err != nil {
+		return nil, err
+	}
+	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
+}
+
 func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T) ([]T, error) {
 	findBson := bson.D{{}}
 	if filterOutStandard {
@@ -565,7 +581,6 @@ func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresul
 	if err != nil {
 		return nil, err
 	}
-	// TODO: ensure that user can read each item!!!!!!!!!!
 	return getCollectionItemsFromCursor[T](ctx, cursor, &nresults)
 }
 
@@ -576,6 +591,76 @@ func FindItemTypeForId(ctx context.Context, id MainCollectionId) (MainCollection
 		return nil, err
 	}
 	return typeForEntryType(mapEntry.EntryType)
+}
+
+type InMemoryCache[T any] struct {
+	TTL   time.Duration
+	items []T
+}
+
+type InMemoryCacheItem[T any] struct {
+	expiry time.Time
+}
+
+// TODO: CHANGESTREAMS to track most recently used/updated items in each collection!
+// TODO: also want to track recipe ids and names in a cache, and invalidate the cache when additions happen
+
+//type idNamePairCache struct {
+//	*sync.RWMutex
+//	timeout time.Time
+//	IdNamePairArray
+//}
+//type IdNamePairArray struct {
+//	names []string
+//	ids   []string
+//}
+//func (arr IdNamePairArray) asMap() map[string]string{
+//	out := map[string]string{}
+//	for i, id := range arr.ids {
+//		out[id] = arr.names[i]
+//	}
+//	return out
+//}
+//
+//type RecipeCache struct {
+//	Agar      *idNamePairCache
+//	Jar       *idNamePairCache ``
+//	LC        *idNamePairCache ``
+//	Substrate *idNamePairCache ``
+//}
+//
+//func (cache RecipeCache) GetAgarRecipes(ctx context.Context) map[string]string {
+//	now := time.Now()
+//	subcache := cache.Agar
+//	if cache.Agar.timeout.Before(now) {
+//		// TODO: go get them from the db
+//		// TODO: update the cache
+//	} else {
+//		subcache.RLock()
+//		defer subcache.RUnlock()
+//		return cache.Agar.IdNamePairArray.asMap()
+//	}
+//}
+
+func GetPageForIdHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		id := r.PathValue("id")
+		if id == "" {
+			http.Error(w, "no id provided", http.StatusBadRequest)
+			return
+		}
+		out := &idMapEntry{}
+		err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+			Database(dbName).
+			Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(out)
+		if err != nil {
+			http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		_, err = w.Write([]byte(fmt.Sprintf(`%s/%s`, out.EntryType, out.Id.AsBase58())))
+		handleWriteErr(err, w)
+	})
 }
 
 func HandleCreate() http.HandlerFunc {
@@ -663,7 +748,8 @@ func ImportHandler() http.HandlerFunc {
 			"sporePrint":      importSporePrintHandler,
 			"sporeSwab":       importSporeSwabHandler,
 			"stasisTube":      importStasisTubeHandler,
-			// TODO: import water jar handler?
+			//"waterJar":      importWaterJarHandler, // TODO: import water jar handler?
+
 		}[endpt]
 		if !exists {
 			http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
@@ -681,23 +767,23 @@ func UpdateById() http.HandlerFunc {
 			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
 			return
 		}
-		bs, _ := json.Marshal(resolvedPerms)  // TODO; del
-		println("resolved perms", string(bs)) // TODO: del
-		//if resolvedPerms.isGuest() { // TODO: reenable
-		//	println("guest tried to edit")
-		//	http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
-		//	return
-		//}
+		//bs, _ := json.Marshal(resolvedPerms)  // TODO; del
+		//println("resolved perms", string(bs)) // TODO: del
+		if resolvedPerms.isGuest() { // TODO: reenable
+			println("guest tried to edit")
+			http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
+			return
+		}
 		endpt := r.PathValue("endpt")
 		handler, exists := map[string]http.HandlerFunc{
-			"agarBatch":  updateAgarBatchHandler,
-			"agarRecipe": updateAgarRecipeHandler,
-			"bag":        updateBagHandler,
-			"grainBatch": updateGrainBatchHandler,
-			"lc":         updateLiquidCultureHandler,
-			"lcRecipe":   updateLcRecipeHandler,
-			"lcSyringe":  updateSyringeHandler,
-			//"plugs": updatePlugsHandler, // TODO: FIX!
+			"agarBatch":       updateAgarBatchHandler,
+			"agarRecipe":      updateAgarRecipeHandler,
+			"bag":             updateBagHandler,
+			"grainBatch":      updateGrainBatchHandler,
+			"lc":              updateLiquidCultureHandler,
+			"lcRecipe":        updateLcRecipeHandler,
+			"lcSyringe":       updateSyringeHandler,
+			"plugs":           updatePlugsHandler,
 			"fruit":           updateFruitHandler,
 			"fruitingChamber": updateFruitingChamberHandler,
 			"jar":             updateJarHandler,
@@ -711,7 +797,6 @@ func UpdateById() http.HandlerFunc {
 			"slant":           updateSlantHandler,
 			"species":         updateSpeciesHandler,
 			"sporePrint":      updateSporePrintHandler,
-
 			"sporeSwab":       updateSporeSwabHandler,
 			"stasisTube":      updateStasisTubeHandler,
 			"subspecies":      updateSubspeciesHandler,

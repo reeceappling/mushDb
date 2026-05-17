@@ -35,7 +35,4 @@ db.createUser({
     { role: 'readWrite', db: '$MONGO_INITDB_DATABASE' }
   ]
 })
-// db.createCollection("users")
-// db.createCollection("fruits")
-// db.createCollection("transfers")
 EOF

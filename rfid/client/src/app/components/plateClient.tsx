@@ -2,7 +2,12 @@
 
 import React, {JSX, useState} from "react";
 import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
-import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {
+    AllEntries,
+    OnViewCreatorQuadCol,
+    SplitAllEntries,
+    SplitEntriesV2
+} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {PlateData} from "@/app/components/plateServer";
@@ -177,8 +182,8 @@ export default function PlateDisplay(
     }: DisplayInput) {
     const [initial, setInitial] = useState(data as PlateData)
 
-    const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
-    const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(data.contamination))
+    const [images, setImages] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
+    const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(data.contamination))
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(data.knownFruitable)
     const [pourCoveragePct, setPourCoveragePct] = useState(initial.pourCoverage)
     const [condensationCoveragePct, setCondensationCoveragePct] = useState(initial.condensationCoverageAtSealTime)
@@ -291,12 +296,11 @@ export default function PlateDisplay(
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
                                  transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly} cookies={cookies}/>
-            <PicsDisplay pix={images} readonly={readonly}
+            <PicsDisplay pix={initial.pics || []} readonly={readonly}
                          headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
-            <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams}
+            <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>
-            {/* TODO: REDO THE NOTESFORMAREA and NotesArea???*/}
-            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>{/* TODO: if this works use it everywhere*/}
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>

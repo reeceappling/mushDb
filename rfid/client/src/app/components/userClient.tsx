@@ -10,8 +10,6 @@ import {SelectorResetsOnSelectForCustom} from "@/app/components/selector";
 import {validatorForAssertion} from "@/app/components/substrateRecipeClient";
 import {DisplayFormWrapper} from "@/app/components/lcRecipeClient";
 import {FlexedArea, FlexedSinglesGroup} from "@/app/components/agarBatchClient";
-// TODO: list not working
-// TODO: ensure display is working and looks good
 
 export function AssertUser(input: any): asserts input is UserData {
     if (typeof input !== 'object') {
@@ -200,22 +198,22 @@ export function UserSelector(inp: {
     const [loading, setLoading] = useState(true)
     const [users, setUsers] = useState<UserData[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
-    useEffect(() => {
-        const usrs:UserData[] = [
-            {_id: "userWithPerms", perms: {admin: false, projects: ["a","b","c"]}},
-            {_id: "emptyPerms", perms: {}},
-            {_id: "noPerms"},
-        ]
-        setUsers(usrs)
-        setLoading(false)
-        setErr(undefined)
-        // getAllOptions<UserData>("users", AssertUser).then((data) => { // TODO: REENABLE!!!
-        //     setUsers(data as UserData[])
-        //     setLoading(false)
-        //     setErr(undefined)
-        // }).catch((error) => {
-        //     HandleErr(error, setErr) // TODO: use this everywhere!
-        // });
+    useEffect(() => { // TODO: FIX THIS SO IT GOES TO GET THE ACTUAL USERS THAT EXIST!!!! getUserIdsList endpoint!
+        getAllOptions<UserData>("users", AssertUser).then((usrs) => { // TODO: REENABLE!!!
+            setUsers(usrs)
+            setErr(undefined)
+            setLoading(false)
+        }).catch((error) => {
+            HandleErr(error, setErr) // TODO: use this everywhere!
+        });
+        // const usrs:UserData[] = [
+        //     {_id: "userWithPerms", perms: {admin: false, projects: ["a","b","c"]}},
+        //     {_id: "emptyPerms", perms: {}},
+        //     {_id: "noPerms"},
+        // ]
+        // setUsers(usrs)
+        // setLoading(false)
+        // setErr(undefined)
     }, []);
     if (loading) {
         return <div>{"Loading users selector"}</div>

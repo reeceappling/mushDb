@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"strings"
 	"time"
 )
 
@@ -67,7 +66,7 @@ var lastUpdatedIndexModel = mongo.IndexModel{
 var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
 var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, false, false) // TODO: ensure actually indexes the correct thing! // TODO: this is a wildcard index!!!!
 var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
-var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false)
+var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false) // TODO: do we even need to use this?
 var creationDateIndexModel = newSimpleIndex("creationDate", "createDate", true, false, false)
 var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false)
 
@@ -312,7 +311,7 @@ func createIndexes(ctx context.Context, coll *mongo.Collection, toCreate []mongo
 		return err
 	}
 	for idxCursor.Next(ctx) {
-		var existingIndex mongo.IndexModel // TODO: ensure ok
+		var existingIndex mongo.IndexModel
 		if err = idxCursor.Decode(&existingIndex); err != nil {
 			return errors.Join(errors.New("cursor decode error for existing index"), err)
 		}
@@ -348,84 +347,84 @@ func indicesSame(a, b mongo.IndexModel) bool { // TODO: use?
 
 var ErrInvalidEntryType = errors.New("invalid entry type")
 
-func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work for Projects?
-	switch strings.ToLower(inp) {
-	case "bag",
-		"bags":
-		return &Bag{}, nil
-	case "box", "fruitingchamber", "chamber", "fruiting chamber",
-		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
-		return &FruitingChamber{}, nil
-	case "jar", "grainjar", "grain jar",
-		"jars", "grainjars", "grain jars":
-		return &GrainJar{}, nil
-	case "lc", "liquidculture", "liquid culture",
-		"lcs", "liquidcultures", "liquid cultures":
-		return &LiquidCulture{}, nil
-	case "lcSyringe", "lcSyringes":
-		return &LcSyringe{}, nil
-	case "plugs", "plug", "peg", "pegs":
-		return &PlugsJar{}, nil
-	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
-		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
-		return &MSS{}, nil
-	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
-		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
-		return &Plate{}, nil
-	case "slant", "slants":
-		return &Slant{}, nil
-	case "stasistube", "stasis tube", "stasis", "tube",
-		"stasistubes", "stasis tubes", "tubes":
-		return &StasisTube{}, nil
-	case "agarbatch", "agar batch",
-		"agarbatches", "agar batches":
-		return &AgarBatch{}, nil
-	case "agarrecipe", "agar recipe",
-		"agarrecipes", "agar recipes":
-		return &AgarRecipe{}, nil
-	case "fruit",
-		"fruits":
-		return &Fruit{}, nil
-	case "jarrecipe", "jar recipe",
-		"jarrecipes", "jar recipes":
-		return &JarRecipe{}, nil
-	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
-		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
-		return &LcRecipe{}, nil
-	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
-		"pcruns", "pc runs", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
-		return &PCRun{}, nil
-	case "project", "Projects":
-		return &Project{}, nil
-	case "sale", "sales":
-		return &Sale{}, nil
-	case "species":
-		return &Species{}, nil
-	case "subspecies":
-		return &Subspecies{}, nil
-	case "sporeprint", "spore print", "print",
-		"sporeprints", "spore prints", "prints":
-		return &SporePrint{}, nil
-	case "substrate", "substraterecipe", "substrate recipe",
-		"substrates", "substraterecipes", "substrate recipes":
-		return &SubstrateRecipe{}, nil
-	case "transfer", "xfer",
-		"transfers", "xfers":
-		return &Transfer{}, nil
-	case "user", "users":
-		return &User{}, nil
-	case "waterJar", "waterJars":
-		return &WaterJar{}, nil
-	default:
-		return nil, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name"))
-	}
-}
+//func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work for Projects?
+//	switch strings.ToLower(inp) {
+//	case "agarbatch", "agar batch",
+//		"agarbatches", "agar batches":
+//		return &AgarBatch{}, nil
+//	case "agarrecipe", "agar recipe",
+//		"agarrecipes", "agar recipes":
+//		return &AgarRecipe{}, nil
+//	case "bag",
+//		"bags":
+//		return &Bag{}, nil
+//	case "fruit",
+//		"fruits":
+//		return &Fruit{}, nil
+//	case "fruitingchamber", "box", "chamber", "fruiting chamber",
+//		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
+//		return &FruitingChamber{}, nil
+//	case "jar", "grainjar", "grain jar",
+//		"jars", "grainjars", "grain jars":
+//		return &GrainJar{}, nil
+//	case "jarrecipe", "jar recipe",
+//		"jarrecipes", "jar recipes":
+//		return &JarRecipe{}, nil
+//	case "lc", "liquidculture", "liquid culture",
+//		"lcs", "liquidcultures", "liquid cultures":
+//		return &LiquidCulture{}, nil
+//	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
+//		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
+//		return &LcRecipe{}, nil
+//	case "lcSyringe", "lcSyringes":
+//		return &LcSyringe{}, nil
+//	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
+//		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
+//		return &MSS{}, nil
+//	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
+//		"pcruns", "pc runs", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
+//		return &PCRun{}, nil
+//	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
+//		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
+//		return &Plate{}, nil
+//	case "plugs", "plug", "peg", "pegs":
+//		return &PlugsJar{}, nil
+//	case "project", "Projects":
+//		return &Project{}, nil
+//	case "sale", "sales":
+//		return &Sale{}, nil
+//	case "slant", "slants":
+//		return &Slant{}, nil
+//	case "species":
+//		return &Species{}, nil
+//	case "sporeprint", "spore print", "print",
+//		"sporeprints", "spore prints", "prints":
+//		return &SporePrint{}, nil
+//	case "stasistube", "stasis tube", "stasis", "tube",
+//		"stasistubes", "stasis tubes", "tubes":
+//		return &StasisTube{}, nil
+//	case "subspecies":
+//		return &Subspecies{}, nil
+//	case "substrate", "substraterecipe", "substrate recipe",
+//		"substrates", "substraterecipes", "substrate recipes":
+//		return &SubstrateRecipe{}, nil
+//	case "transfer", "xfer",
+//		"transfers", "xfers":
+//		return &Transfer{}, nil
+//	case "user", "users":
+//		return &User{}, nil
+//	case "waterJar", "waterJars":
+//		return &WaterJar{}, nil
+//	default:
+//		return nil, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name"))
+//	}
+//}
 
 func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T, err error) {
 	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
 		Collection(temp.CollectionName()).
-		Find(ctx, bsonFindFilter("standard", true)) // TODO: NOT WORKING PROPERLY!!!!!
+		Find(ctx, bsonFindFilter("standard", true)) // TODO: NOT WORKING PROPERLY?!!!!! (check again)
 	if err != nil {
 		return nil, err
 	}
@@ -433,22 +432,30 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 }
 
 func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
-	results := []T{}
-	if numItems != nil {
-		results = make([]T, 0, *numItems)
-	}
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
+	results := []T{}
+	if numItems != nil {
+		results = make([]T, 0, *numItems)
+	} else {
+		if user.isAdmin() {
+			err = cursor.All(ctx, &results)
+			return results, err
+		}
+	}
+
 	for numItems == nil || len(results) < *numItems {
 		if cursor.TryNext(ctx) {
 			var result T
-			if err := cursor.Decode(&result); err != nil {
+			if err = cursor.Decode(&result); err != nil {
 				return nil, err
 			}
+			// If item is permissioned, ensure the user can read it
 			permedItem, ok := interface{}(result).(Permissioned)
 			if ok {
+				// If user cannot read or write, do not add
 				if permedItem.Permissions().HighestPermFor(user) == nil {
 					// Skip this entry
 					continue
@@ -460,9 +467,9 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 		}
 		cursorClosed := cursor.ID() == 0
 		if cursorClosed && len(results) == 0 {
-			return results, mongo.ErrNoDocuments // TODO: ok? or will this cause other problems?
+			return results, mongo.ErrNoDocuments
 		}
-		if err := cursor.Err(); err != nil {
+		if err = cursor.Err(); err != nil {
 			return nil, err
 		}
 		if cursorClosed {
@@ -536,15 +543,6 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 		return false
 	}
 	return notesWereModified(existing.Notes, updated.Notes)
-	//for i, updatedNote := range updated.Notes.Existing {
-	//	if updatedNote.Disabled {
-	//		return false
-	//	}
-	//	if updatedNote.Data.Note != existing.Notes[i].Note {
-	//		return false
-	//	}
-	//}
-	//return true
 }
 
 //func setUnsetUnequalPointers[T comparable](key string, update *T, current *T, modsIn bson.D) bson.D {

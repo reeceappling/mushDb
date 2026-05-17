@@ -1,4 +1,4 @@
-// TODO: THESE ARE ALL NON-CLIENT!
+// non-client
 
 import {AreaProps, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {useQuery} from "@tanstack/react-query";
@@ -7,8 +7,7 @@ import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
-import {LiquidEntryForNew, NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
-import {Liquid, LiquidsTypeSelectorForNew} from "@/app/components/formSubcomponents/liquids";
+import {NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
 
 interface NutrientsAreaProps {
@@ -56,7 +55,7 @@ export function NutrientTypeSelectorForNew( // TODO: USE THIS!!!!!
     if(readonly){
         return <div>{current || "FIXME"}</div> // TODO: div ok?
     }
-    const { isPending, error, data } = useQuery({ // TODO: SO SOMETHING SIMILAR FOR nutrients, sugars, liquid, grain, transferReason
+    const { isPending, error, data } = useQuery({
         queryKey: ['nutrientsOptions'],
         queryFn: () => getOptionsResponse("nutrients")
     })

@@ -558,14 +558,7 @@ export function TransferReasonSelector(
     const {isPending, error, data} = useQuery({
         queryKey: ['transferReasonOptions'],
         queryFn: () => {
-            // TODO: delete lines before fetch for the real server
-            const map = new Map<string, string>();
-            map.set("outgrew", "outgrew plate");
-            map.set("contaminated", "parent was contaminated");
-            map.set("sectoring", "transferring a specific sector");
-            return map;
-            // TODO: reenable
-            fetch(BaseExternalUrl + "/options/transferReasons").then(HandleJsonResponse).then((resJson) => {
+            return fetch(BaseExternalUrl + "/options/transferReasons").then(HandleJsonResponse).then((resJson) => {
                 return convertObjectToStringMap(resJson)
             }).catch((e) => {
                 throw e

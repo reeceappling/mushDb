@@ -38,9 +38,10 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 	latestEntries, err := getLastNEntries(ctx, true, maxResults, doStandardToo, temp)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
+			println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
 			return nil, err
 		}
-		latestEntries = nil
+		latestEntries, err = []T{}, nil
 	}
 	if !doStandardToo {
 		bs, err = json.Marshal(latestEntries)
@@ -48,32 +49,55 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 			return nil, err
 		}
 	} else {
+		outObj := map[string][]T{"recent": latestEntries}
 		// TODO: do we want to also display repeats on standard entries?
-		stdEntries, err := getStandardEntries(ctx, temp)
+		outObj["standard"], err = getStandardEntries(ctx, temp)
 		if err != nil {
 			if !errors.Is(err, mongo.ErrNoDocuments) {
+				println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
 				return nil, err
 			}
-			stdEntries = nil
+			outObj["standard"], err = []T{}, nil
 		}
 		// Standard is filtered out from latest already
-		outObj := map[string][]T{"standard": stdEntries, "recent": latestEntries}
+
 		bs, err = json.Marshal(outObj)
 		if err != nil {
 			return nil, err
 		}
+		tempBs, err := json.MarshalIndent(outObj, "", " ")
+		if err != nil {
+			return nil, err
+		}
+		println("list being returned: " + string(tempBs)) // TODO: del!
 	}
 	if err != nil {
 		return nil, err
 	}
 	return bs, nil
 }
+func ListUsernamesHandler(ctx context.Context) ([]byte, error) {
+	latestEntries, err := getAllEntries(ctx, &User{})
+	if err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			errTxt := "ERROR: listEntriesHandlerInternal found a non-ErrNoDocs: " + err.Error()
+			println(errTxt) // TODO: this
+			return nil, errors.New(errTxt)
+		}
+		latestEntries, err = []*User{}, nil
+	}
+	out := make([]string, len(latestEntries))
+	for i, entry := range latestEntries {
+		out[i] = entry.Email
+	}
+	return json.Marshal(out)
+}
 
 func ListEntriesHandler() http.Handler {
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		// TODO: DEPENDING ON VARIANT, EITHER DO LATEST OR LATEST AND STANDARD!!!!!
 
-		var maxResults int = 10
+		var maxResults int = 10 // TODO: extend where needed?
 		requested := r.PathValue("variant")
 		doStandardToo := strings.Contains(requested, "Recipe") // "agarRecipe", "jarRecipe", "lcRecipe", "substrateRecipe"
 
@@ -98,16 +122,15 @@ func ListEntriesHandler() http.Handler {
 			bs, err = listEntriesHandlerInternal[*AgarRecipe](r.Context(), true, maxResults, doStandardToo, &AgarRecipe{})
 		case "bag",
 			"bags":
-			bs, err = listEntriesHandlerInternal(r.Context(), true, maxResults, doStandardToo, &Bag{})
+			bs, err = listEntriesHandlerInternal[*Bag](r.Context(), true, maxResults, doStandardToo, &Bag{})
 		case "fruit",
 			"fruits":
 			bs, err = listEntriesHandlerInternal[*Fruit](r.Context(), true, maxResults, doStandardToo, &Fruit{})
 		case "fruitingchamber", "box", "chamber", "fruiting chamber",
 			"boxes", "fruitingchambers", "chambers", "fruiting chambers":
 			bs, err = listEntriesHandlerInternal[*FruitingChamber](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{})
-		//case "grainbatch", "grainbatches": // TODO: THIS!
-		//	bs, err = listEntriesHandlerInternal[*Grain](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{})
-		//
+		case "grainbatch", "grainbatches":
+			bs, err = listEntriesHandlerInternal[*GrainBatch](r.Context(), true, maxResults, doStandardToo, &GrainBatch{})
 		case "jar", "grainjar", "grain jar",
 			"jars", "grainjars", "grain jars":
 			bs, err = listEntriesHandlerInternal[*GrainJar](r.Context(), true, maxResults, doStandardToo, &GrainJar{})
@@ -160,6 +183,7 @@ func ListEntriesHandler() http.Handler {
 			"transfers", "xfers":
 			bs, err = listEntriesHandlerInternal[*Transfer](r.Context(), true, maxResults, doStandardToo, &Transfer{})
 		case "user", "users":
+			//bs, err = ListUsernamesHandler(r.Context()) // TODO: list usernames handler soemwhere else?
 			bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
 		case "waterjar", "waterjars", "water jar", "water jars", "sterilizedwater", "sterilizedwaterjar", "sterilewater", "sterilewaterjar":
 			bs, err = listEntriesHandlerInternal[*WaterJar](r.Context(), true, maxResults, doStandardToo, &WaterJar{})
@@ -202,7 +226,6 @@ func ListSubspeciesHandler() http.Handler {
 			http.Error(w, "failed to list subspecies. "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// TODO: ensure that user can read each item!!!!!!!!!! NOT DONE YET
 		subspecs, err := getCollectionItemsFromCursor[Subspecies](ctx, cursor, nil)
 		if err != nil {
 			if errors.Is(err, mongo.ErrNoDocuments) {

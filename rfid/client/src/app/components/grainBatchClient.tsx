@@ -57,7 +57,7 @@ export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
     let requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['recipe', 'string'],
-        ['creationDate', 'string'],
+        ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
     for (let [key, expType] of requiredSimpleKeys) {
@@ -182,32 +182,34 @@ export default function GrainBatchDisplay(
             }
         ]
         return <DisplayFormWrapper entryType={"grainBatch"}>
-            <TestAndValidate todos={["TEST THIS WHOLE THING!"]}><ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={id} txt={"Grain Batch"} entryType={"grainBatch"}/>
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
                 <FlexedArea>
-                    <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
+                    <FlexedSinglesGroup>
                         <JarRecipeArea recipeId={data.recipe}/>
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                         <div>
-                            {"Soak time (hrs): "}
-                            <NumericalArea value={soakTime ? soakTime.toString() : undefined}
-                                           onChange={handleFormChangeSoak} label="SoakTimeHrs" min={0} step={1}
-                                           errorMessage={'invalid amount'}
-                                           mode={"integer"} readonly={readonly}/>
+                            {"Soak time (hrs): "}{initial.soakTimeHrs?<NumericalArea value={soakTime ? soakTime.toString() : undefined}
+                                                                                     onChange={handleFormChangeSoak} label="SoakTimeHrs" min={0} step={1}
+                                                                                     errorMessage={'invalid amount'}
+                                                                                     mode={"integer"} readonly={readonly}/>:
+                            (""+initial.soakTimeHrs)}
+
                         </div>
                         <div>
-                            {"Boil time (mins): "}
-                            <NumericalArea value={boilTime ? boilTime.toString() : undefined}
+                            {"Boil time (mins): "}{initial.boilTimeMins? <NumericalArea value={boilTime ? boilTime.toString() : undefined}
                                            onChange={handleFormChangeBoil} label="BoilTimeMinutes" min={0} step={1}
                                            errorMessage={'invalid amount'}
-                                           mode={"integer"} readonly={readonly}/>
+                                           mode={"integer"} readonly={readonly}/>:
+                            (""+initial.boilTimeMins)}
                         </div>
                         <div>
-                            {"Dry time (hrs): "}
-                            <NumericalArea value={dryTime ? dryTime.toString() : undefined}
+                            {"Dry time (hrs): "}{initial.dryTimeHours? <NumericalArea value={dryTime ? dryTime.toString() : undefined}
                                            onChange={handleFormChangeDry} label="DryTimeHours" min={0} step={1}
                                            errorMessage={'invalid amount'}
-                                           mode={"integer"} readonly={readonly}/>
+                                           mode={"integer"} readonly={readonly}/>:
+                            (""+initial.dryTimeHours)}
                         </div>
                     </FlexedSinglesGroup>
                 </FlexedArea>
@@ -217,8 +219,6 @@ export default function GrainBatchDisplay(
                     e.stopPropagation();
                     submit()
                 }}>{"Update"}</button>}
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
-            </TestAndValidate>
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: Grain Batch data format incorrect: " + err}</div>

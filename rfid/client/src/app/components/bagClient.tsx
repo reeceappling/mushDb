@@ -6,7 +6,7 @@ import {
     AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
-    SplitAllEntries
+    SplitAllEntries, SplitEntriesV2
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -227,9 +227,9 @@ export default function BagDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
         const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
         // ItemsWithPics
-        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
-        const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
+        const [pics, setPics] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [flushes, setFlushes] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
         const [err, setErr] = useState<string | undefined>()
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         //const [newFruits, setNewFruits] = useState<FruitData[]>([]) // TODO: get rid of???
@@ -351,13 +351,13 @@ export default function BagDisplay(
                                      transfersOut={initial.transfersOut}
                                      allowNewTransferCreation={true}
                                      cookies={cookies}/>
-                <PicsDisplay pix={pics} readonly={readonly} updateParent={setPics}/>{/* Pics */}
+                <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
                 {/* Flushes */}
-                <PicsDisplay pix={flushes} readonly={readonly}
+                <PicsDisplay pix={initial.flushes || []} readonly={readonly}
                              updateParent={setFlushes} addButtonText={"Create New Flush"}
                              sectionHeader={"Flushes: "}/>
 
-                <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams}
+                <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                                 readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>

@@ -7,6 +7,8 @@ import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
+import {dataFor} from "@/app/components/agarRecipeClient";
+import {NotesFormArea} from "@/app/components/agarBatchClient";
 
 export type Note = {
     time: number
@@ -26,7 +28,7 @@ function useForceUpdate() {
     return () => setToggle(toggle => !toggle)
 }
 
-// TODO: modify everywhere. Inputs changed!!!!!
+// TODO: NotesFormArea/NotesAreaSubcomponent instead
 export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SOME NOTES ARE DELETED, FIX!
                                       readonly,
                                       initial,
@@ -38,7 +40,6 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
 }) {
     const [current, setCurrent] = useState<AllEntries<Note>>(InitialNotesState(initial));
     useEffect(() => {
-        console.log("FORCING UPDATE")
         setCurrent(InitialNotesState(structuredClone(initial)))
     }, [initial]);
     const updateCurrent = (updated: AllEntries<Note>) => {
@@ -103,7 +104,7 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
                     } else {
                         updateCurrent({existing: [], new: [createNewNote()]})
                     }
-                }}>{"Create Note"}</button>
+                }}>{"Create Note NotesArea"}</button>
             </div>
         </div>
     }
@@ -120,13 +121,122 @@ function RemoveNewNoteButton({click}:{click:()=>void}){
     return <RemoveNoteButton disabled={false} click={click}/>
 }
 
+
+export function NotesAreaViewSubcomponent({initial,updateParent,readonly}:{initial:Note[],readonly:boolean,updateParent:(entries:AllEntries<Note>) => void}){
+    const [existing, setExisting] = useState<Data<Note>[]>(dataFor(initial))
+    const [created, setCreated] = useState<Data<Note>[]>([])
+    const [reloadCount, setReloadCount] = useState(0)
+    const currentClone = ()=>{
+        return {
+            existing:structuredClone(existing),
+            new: structuredClone(created)
+        }
+    }
+    useEffect(()=>{
+        const newAll = InitialNotesState(initial)
+        setExisting(newAll.existing) // Must be first!
+        setCreated(newAll.new)
+        setReloadCount(reloadCount+1)
+        deliverUpdatesToParent(newAll)
+    },initial)
+
+    const deliverUpdatesToParent = (updated:AllEntries<Note>) => {
+        updateParent && updateParent(structuredClone(updated))
+    }
+    const updateExisting = (updated:Data<Note>[])=>{
+        setExisting(updated)
+        let out = currentClone()
+        out.existing = updated
+        deliverUpdatesToParent(out)
+    }
+    const updateCreated = (updated:Data<Note>[])=>{
+        setCreated(updated)
+        let out = currentClone()
+        out.new = updated
+        deliverUpdatesToParent(out)
+    }
+    const existingArea = () => {
+        if (initial.length <= 0) {
+            return null
+        }
+        return <>
+            {existing.map((n, i) => {
+                return <div key={i} className={"existingNote" + (n.disabled ? " disabled" : "")}>
+                    <SingleNoteV2 initial={initial[i]} readonly={readonly} updateParent={nd => {
+                        let updated = structuredClone(existing)
+                        updated[i] = structuredClone(nd)
+                        updateExisting(updated)
+                    }}/>
+                    {readonly || <RemoveNoteButton disabled={n.disabled} click={() => {// TODO: does this need to be in a div?
+                        let updated = structuredClone(existing)
+                        updated[i].disabled = !n.disabled
+                        updateExisting(updated)
+                    }}/>}
+                </div>
+            })}
+        </>
+    }
+    return <div className={"notesAreaV2"}>
+        {existingArea()}
+        <NewNotesSubArea count={reloadCount} readonly={readonly} updateParent={updateCreated}/>
+    </div>
+}
+export function NewNotesSubArea({count,readonly,updateParent}:{count:number,readonly:boolean,updateParent:(entries:Data<Note>[]) => void}){
+    if (readonly) {
+        return null
+    }
+    const [notes, setNotes] = useState<Data<Note>[]>([])
+    useEffect(() => {
+        setNotes([]);
+    }, [count]);
+    const propagateUpdate = (updated:Data<Note>[]) => {
+        setNotes(updated)
+        updateParent(structuredClone(updated).filter((item)=>{
+            return !item.disabled && item.data.note!==""
+        }))
+    }
+    const defaultNote = ()=>{
+        return {data:{time: new Date().getTime(), note: ""},disabled:false}
+    }
+    const createNewNote = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        //e.preventDefault()
+        e.stopPropagation();
+        // Do not update parent here. We don't want to propagate empty notes
+        setNotes([...structuredClone(notes), defaultNote()])
+    }
+    return <div>
+            {notes.map((n, i) => {
+                if (n.disabled) {
+                return null
+            }
+            return <div key={i}>
+                <SingleNoteV2 readonly={false} startEditing={true} updateParent={nd => {
+                    let updated = structuredClone(notes)
+                    updated[i].data = structuredClone(nd.data)
+                    propagateUpdate(updated)
+                }}/>
+                <RemoveNewNoteButton click={() => { // TODO: does this need to be in a div?
+                    let updated = structuredClone(notes)
+                    updated[i].disabled = true
+                    propagateUpdate(updated)
+                }}/>
+            </div>
+        })}
+        <div>
+            <button className={"basicButtonSmall"} onClick={createNewNote}>{"Create New Note"}</button>
+        </div>
+    </div>
+
+
+}
+// TODO: consider only using initial for notes, but parent stores current for updates!
 // TODO: this one is working, but should we use NotesArea instead????
+// TODO: NotesFormArea/NotesAreaSubcomponent instead
 export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SOME NOTES ARE DELETED, FIX!
                                  readonly,
                                  current,
                                  updateParent,
                              }: RevertableAreaProps<Note>) {
-    // TODO: control initial vs final so that updating initial reverts the whole thing to the new values
     const existingArea = () => {
         if (!current || current.existing.length === 0) {
             return null
@@ -159,7 +269,7 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
                 if (n.disabled) {
                     return null
                 }
-                return <div key={i}> {/* TODO: CANNOT RELY ON KEY FOR DELETION*/}
+                return <div key={i}>
                     <SingleNote startEditing={true} updateParent={nd => {
                         let out = {...(current || {existing: [], new: []})}
                         out.new[i] = nd
@@ -201,7 +311,7 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
 
 }
 
-// TODO: this one is working, but should we use NotesArea instead????
+// TODO: NotesFormArea/NotesAreaSubcomponent instead
 export function NotesGrid({
                                  readonly,
                                  current,
@@ -216,7 +326,7 @@ export function NotesGrid({
             {current.existing.map((n, i) => {
                 return <div key={i} className={"" + (n.disabled ? " disabled" : "")}>
                     <SingleNote value={n} readonly={readonly} updateParent={nd => {
-                        let out = {...current}
+                        let out = structuredClone(current)
                         out.existing = [...out.existing]
                         out.existing[i] = nd
                         updateParent && updateParent(out)
@@ -271,7 +381,7 @@ export function NotesGrid({
                     // let out = {...(current || {existing:[], new: []})}
                     // out.new = [...out.new, {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}}]
                     // updateParent && updateParent(out)
-                }}>{"Create Note"}</button>
+                }}>{"Create Note Old"}</button>
             </div>
         </div>
     }
@@ -296,7 +406,7 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
             {current.existing.map((n, i) => {
                 return <div key={i} className={"" + (n.disabled ? " disabled" : "")}>
                     <SingleNote value={n} readonly={readonly} updateParent={nd => {
-                        let out = {...current}
+                        let out = structuredClone(current)
                         out.existing = [...out.existing]
                         out.existing[i] = nd
                         updateParent && updateParent(out)
@@ -323,14 +433,14 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
                 }
                 return <div key={i}> {/* TODO: CANNOT RELY ON KEY FOR DELETION*/}
                     <SingleNote startEditing={true} updateParent={nd => {
-                        let out = {...(current || {existing: [], new: []})}
+                        let out = {...(structuredClone(current) || {existing: [], new: []})}
                         out.new[i] = nd
                         updateParent && updateParent(out)
                     }}/>
                     <RemoveNewNoteButton click={() => {
-                        let out = {...(current || {existing: [], new: []})}
+                        let out = {...(structuredClone(current) || {existing: [], new: []})}
                         out.new[i].disabled = true;
-                        let toParent = {...out}
+                        let toParent = structuredClone(out)
                         toParent.new = toParent.new.filter(item => !item.disabled)
                         updateParent && updateParent(toParent)
                     }}/>
@@ -341,7 +451,7 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
                     e.preventDefault()
                     if (!!current) {
                         let out = {...current}
-                        out.new = [...current.new, {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}}]
+                        out.new = [...structuredClone(current.new), {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}}]
                         updateParent && updateParent(out)
                     } else {
                         updateParent && updateParent({
@@ -442,7 +552,8 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
 //
 // }
 
-export function SingleNote(
+// TODO: DELETE ANYTHING USING THIS!
+export function SingleNote( // TODO: notes need a pretty major overhaul
     {
         readonly,
         value,
@@ -489,6 +600,66 @@ export function SingleNote(
                    setEditing(false)
                }}
         />)
+}
+
+export function SingleNoteV2(
+    {
+        initial,
+        readonly,
+        startEditing,
+        updateParent,
+    }: {
+        initial?: Note
+        readonly:boolean
+        startEditing?: boolean
+        updateParent?: (n: Data<Note>) => void
+    }) {
+    const defaultInitialNote = ()=>{
+        return {time: new Date().getTime(), note: ""}
+    }
+    const [val, setVal] = useState<Data<Note>>({data:initial||defaultInitialNote(),disabled:false})
+    const [started, setStarted] = useState(false)
+    const [editing, setEditing] = useState(startEditing ?? false)
+    useEffect(()=>{
+        setVal({data:initial||defaultInitialNote(),disabled:false})
+        if (!started){
+            setEditing(startEditing || false)
+            setStarted(true)
+        } else {
+            setEditing(false)
+        }
+    },[initial])
+    const handleChangeNote = (updated: Data<Note>) => {
+        setVal(updated)
+        updateParent && updateParent(updated)
+    }
+    return <div className={"note"}>
+        <DateArea readonly={readonly || !editing} when={val.data.time} updateParent={(newDate)=>{
+            let updated = structuredClone(val);
+            updated.data.time = newDate
+            handleChangeNote(updated)
+        }}/>
+        {(!readonly && editing) ? <input name='txt' type="text" disabled={false}
+                          autoComplete="off" value={val.data.note}
+                          placeholder={"new note"}
+                          className={"noteValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
+                          onBlur={() => {
+                              setEditing(false)
+                          }}
+                          onChange={(e)=>{
+                              e.stopPropagation();
+                              //e.preventDefault();
+                              console.log("new note value: "+e.target.value) // TODO: del
+                              let updated = structuredClone(val);
+                              updated.data.note = e.target.value
+                              handleChangeNote(updated)
+                          }}
+            /> : <>
+            <div>{val.data.note}</div><button className={"basicButtonSmall"} onClick={()=>{setEditing(!editing)}}>
+                {"Edit Note"}
+            </button>
+        </>}
+    </div>
 }
 
 export function NewEntryNotes({setNotes}: { setNotes?: (value: SetStateAction<Note[]>) => void }) {

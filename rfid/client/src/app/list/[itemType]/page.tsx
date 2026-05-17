@@ -2,7 +2,7 @@ import PageWrapper from "@/app/components/clientGeneric";
 import React from "react";
 import {GetReaderWriterNames} from "@/app/view/[itemType]/[idEncoded]/serverActions";
 import {cookies} from "next/headers";
-import {BaseExternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
+import {BaseExternalUrl, BaseInternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import ListDisplay from "@/app/list/[itemType]/client";
 
@@ -17,39 +17,35 @@ export default async function Page({
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 
     const getData:(a1:string)=>Promise<any>= async (itemTypeA: string)=>{
-        return new Promise<any>((accept, reject)=>{ // TODO: REIMPLEMENT!
+        return new Promise<any>((accept, reject)=> {
             fetch(BaseExternalUrl + "/db/list/" + itemTypeA, {
                 method: 'Get',
                 credentials: 'include',
                 headers: {
+                    //'credentials': 'include', // TODO: ok?
                     'Accept': 'application/json',
                     'Cookie': allCookies,
                 },
             }).then((res) => {
-                if(!res.ok){
-                    return res.text().then(txt=>{
-                        throw new Error("response not ok: "+txt);
-                    }).catch(err=>{
-                        throw new Error("response not ok and failed to decode: ")
+                if (!res.ok) {
+                    return res.text().then(txt => {
+                        reject("response not ok: " + txt)
+                    }).catch(err => {
+                        reject("response not ok and failed to decode: " + JSON.stringify(err))
                     })
                 }
-                console.log("got response")
-                res.json().then((data) => {
-                    console.log(data) // TODO: del
+                res.json().then(data => {
                     accept(data)
-                }).catch(err1 => {
-                    console.log(err1) // TODO: del
-                    reject(err1)
-                })
-            }).catch(err1 => {
-                reject(err1)
+                }).catch(err1 => {throw(err1)})
+            }).catch(err2 => {
+                reject(JSON.stringify(err2))
             })
         })
     }
     try {
-        const data = await getData(itemType)
-        console.log(data) // TODO: DEL!
         const readers = await GetReaderWriterNames() // TODO: DO THIS ON SERVER
+        const data = await getData(itemType)
+
         return <PageWrapper props={{pageType:"list",readers:readers}}>
             <div className={"fullPage"}>
                 <ListDisplay itemType={itemType} inpData={data}/>

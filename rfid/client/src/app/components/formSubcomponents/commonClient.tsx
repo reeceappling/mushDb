@@ -3,14 +3,14 @@
 import {JSX, useContext, useEffect, useState} from "react";
 import {Liquid} from "./liquids";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {AllEntries, Data, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, Data, SplitAllEntries, SplitEntriesV2} from "@/app/components/formSubcomponents/shared";
 import {
-    ImageLocationFor,
+    ImageLocationFor, InitialPicsEntries,
     NewPicWithNotesForm,
     PicWithNotesForm,
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {PixRowNew} from "@/app/components/formSubcomponents/commonClient2";
+import {PixRowsNew} from "@/app/components/formSubcomponents/commonClient2";
 import {
     InputText,
     InputTextInlineTitle,
@@ -19,7 +19,7 @@ import {
     NumericalAreaWithAbsolutes
 } from "./numericInput";
 import DateArea, {NumberToDate} from "./date";
-import NotesArea, {NotesAreaOld, Note, NotesAreaMostRecentImage, NotesGrid} from "./notes";
+import NotesArea, {NotesAreaOld, Note, NotesAreaMostRecentImage, NotesGrid, NotesAreaViewSubcomponent} from "./notes";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -38,6 +38,10 @@ import {Additive} from "@/app/components/formSubcomponents/additives";
 import {DepthContext, DepthProvider} from "./depthContext/depth";
 import {dataFor} from "@/app/components/agarRecipeClient";
 import TestAndValidate from "@/app/components/testing/untested";
+import {DowelType} from "@/app/components/plugsServer";
+import {NotesFormArea} from "@/app/components/agarBatchClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 
 // export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
 //     return <div className={"hoverClickable"} onClick={(e) => {
@@ -217,6 +221,48 @@ export function AdditiveEntryForNew({currentValue, updateParent}: {
     </>
 }
 
+export function DowelEntryForNew({currentValue, updateParent}: {
+    currentValue: DowelType,
+    updateParent: (l: DowelType) => void
+}) {
+    const [err, setErr] = useState<string | undefined>()
+    const [errTxt, setErrTxt] = useState<string | undefined>()
+    const handleFormChangeRadius = (val: number) => {
+        let data = structuredClone(currentValue);
+        data.size = val
+        updateParent(data)
+    }
+    const handleFormChangeUnit = (val: string) => {
+        let data = structuredClone(currentValue);
+        data.units = val
+        updateParent(data)
+    }
+    return <>
+        <div className={"text-m"}>{currentValue.wood}</div>
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+                                    errorMessage={err} value={currentValue.size.toString()} onChange={(val?: string) => {
+            try {
+                const n = Number(val) // TODO: allow only numbers here
+                if (Number.isNaN(n)) {
+                    setErr("NaN input")
+                } else {
+                    val && handleFormChangeRadius(n)
+                    setErr(undefined)
+                }
+            } catch (e) {
+                setErr(JSON.stringify(e))
+            }
+        }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.units.toString()} onChange={(val?: string) => {
+            try {
+                val && handleFormChangeUnit(val)
+            } catch (e) {
+                setErrTxt(JSON.stringify(e))
+            }
+        }}/>
+    </>
+}
+
 export function ParentDisplay(
     {parent, parentType, headerLevel}: {
         parent?: string,
@@ -329,8 +375,8 @@ export function GensFormDisplay(
 
 export const PicsDisplay = (
     props: {
-        pix?: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>,
-        updateParent: (v: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>) => void,
+        pix: PicWithNotesIncoming[],
+        updateParent: (v: SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>) => void,
         readonly?: boolean,
         sectionHeader?: string,
         addButtonText?: string,
@@ -338,95 +384,105 @@ export const PicsDisplay = (
         offset?: number,
     }
 ) => {
-    // TODO: fix
-    const addNewImageFields = () => { // TODO: formatting on addNewImageFields is incorrect
-        // TODO: unsure if needed: e.preventDefault() (e: MouseEvent)
-        let data = {...(props.pix || {existing: [], new: []})}
-        data.new = [...(props.pix ? props.pix.new : []), {
-            data: {time: Date.now(), img: undefined, notes: {existing: [], new: []}},
-            disabled: false
-        }]
-        props.updateParent(data)
+    const pwnfFor = (item: PicWithNotesIncoming):Data<PicWithNotesForm>=>{
+        return {data:{time: item.time, img: item.location, notes: InitialNotesState(item.notes)},disabled:false}
+    }
+    const pwnfs = (items: PicWithNotesIncoming[]):Data<PicWithNotesForm>[]=>{
+        return items.map(v=>{return pwnfFor(v)})
+    }
+    const [existing, setExisting] = useState<Data<PicWithNotesForm>[]>(pwnfs(props.pix))
+    const [created, setCreated] = useState<NewPicWithNotesForm[]>([])
+    useEffect(()=>{
+        setExisting(pwnfs(props.pix))
+        setCreated([])
+        //doUpdate() // TODO: do we need this?
+    },[props.pix])
+    const doUpdate = ()=>{
+        props.updateParent({
+            existing:existing,
+            new:created,
+        })
+    }
+    const updateExisting = (updated: Data<PicWithNotesForm>[])=>{
+        setExisting(updated)
+        doUpdate()
+    }
+    const updateNew = (updated: NewPicWithNotesForm[])=>{
+        setCreated(updated)
+        doUpdate()
     }
     const depth = useContext(DepthContext)
     // TODO: OVERHAUL WITH EITHER GRID OR FLEXBOX?
     return <div /*key={count}*/ className={"depthContainer depth"+depth}>
         <div className={"areaHeader"}>{props.sectionHeader || "Pictures"}</div>
-        {/* TODO: change?*/}
         <div className={"picsGroup picsRows"}>{/* TODO: change to grid???*/}
-            {props.pix?.existing.map((img, i) => {
-                return <PixRowExisting key={i} readonly={props.readonly} updateParent={a => {
-                    let upd = {...(props.pix || {existing: [], new: []})}
-                    upd.existing[i] = a
-                    props.updateParent(upd)
-                }
-                } current={img}/>
-            })}
-            { /* Confirmed working! TODO EXCEPT NOTES */}
-            {!props.readonly && props.pix?.new.map((img, i) => { // TODO: FIX IMAGE
-                if (img.disabled) {
-                    return null
-                }
-                return <PixRowNew key={i} current={img.data} updateParent={a => {
-                    let upd = {...(props.pix || {existing: [], new: []})}
-                    upd.new[i] = {data: a, disabled: false}
-                    props.updateParent(upd)
-                }} remv={() => {
-                    // TODO: ensure correct!
-                    let upd = {...(props.pix || {existing: [], new: []})}
-                    upd.new[i].disabled = true
-                    let toParent = {...upd}
-                    toParent.new = toParent.new.filter(v => !v.disabled)
-                    props.updateParent(toParent)
-                }}/>
+            {props.pix.map((img, i) => {
+                {/* TODO: REMOVE CURRENT FROM INPUTS! DO INITIAL INSTEAD!*/}
+                return <PixRowExisting key={i} initial={img} readonly={props.readonly} updateParent={a => {
+                    let upd = structuredClone(existing)
+                    upd[i] = a
+                    updateExisting(upd)
+                }} />
             })}
         </div>
-        <div className={"centerH"}>
-            <button className={"greenButton"} onClick={addNewImageFields}>{"Add new image"}</button>
-        </div>
+            {!props.readonly && <PixRowsNew initial={props.pix} updateParent={a => {
+                let upd = structuredClone(a)
+                updateNew(upd)
+            }}/>}
 
     </div>
 }
 
 export const PixRowExisting = (
-    {readonly, updateParent, current}: {
-        current: Data<PicWithNotesForm>,
+    {readonly, updateParent, initial}: {
+        initial: PicWithNotesIncoming,
         readonly?: boolean,
         updateParent?: (d: Data<PicWithNotesForm>) => void
     }
 ) => {
+    const pwnfFor = (item: PicWithNotesIncoming):Data<PicWithNotesForm> => {
+        return {data:{
+            time:item.time,
+                img:item.location,
+                notes:InitialNotesState(item.notes),
+            },disabled:false}
+    }
+    const [current, setCurrent] = useState<Data<PicWithNotesForm>>(pwnfFor(initial))
+    useEffect(()=>{
+        setCurrent(pwnfFor(initial))// reset when initial changes
+    },[initial])
+    const update = (updated: Data<PicWithNotesForm>)=>{
+        setCurrent(updated)
+        updateParent && updateParent(updated)
+    }
+    const disabledClass = ()=>{
+        return current.disabled ? " disabled" : ""
+    }
     const leftArea = () => {
-        return <div className={"picLeft" + (current.disabled ? " disabled" : "")}>
+        return <div className={"picLeft" + disabledClass()}>
             {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
-            <img className={"picDisplay"} src={ImageLocationFor(current.data.img)} alt={"existing image"}/>
-            {!readonly && <button className={current.disabled?"basicButtonSmall":"removeButtonSmall"} onClick={() => {
-                let upd = {...current}
+            <img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>
+            {!readonly && <button className={current.disabled?"basicButtonSmall":"removeButtonSmall"} onClick={(e) => {
+                e.stopPropagation();
+                let upd = structuredClone(current)
                 upd.disabled = !current.disabled
-                updateParent && updateParent(upd)
+                update(upd)
             }}>
-                {(current.disabled ? "ENABLE" : "DISABLE") + " THIS IMAGE"}
+                {(current.disabled ? "ENABLE" : "DISABLE") + " THIS IMAGE"}{/* TODO: THIS IS NOT WORKING!!!!!*/}
             </button>}
         </div>
     }
     const rightArea = () => {
-        return <div className={"picRight" + (current.disabled ? " disabled" : "")}>
-            <DateArea readonly={true} when={current.data.time}/> {/* TODO: INITIAL OR CURRENT?*/}
-            {/* TODO: try with NotesGrid instead? */}
-            <NotesGrid readonly={readonly} current={current.data.notes}
-                          updateParent={(nts: AllEntries<Note>) => {
-                           let out = {...current}
-                           out.data.notes = nts
-                           updateParent && updateParent(out)
-                       }}/>
-            {/*<NotesAreaOld readonly={readonly} current={current.data.notes}*/}
-            {/*              updateParent={(nts: AllEntries<Note>) => {*/}
-            {/*               let out = {...current}*/}
-            {/*               out.data.notes = nts*/}
-            {/*               updateParent && updateParent(out)*/}
-            {/*           }}/>*/}
+        return <div className={"picRight" + disabledClass()}>
+            <DateArea readonly={true} when={initial.time}/>
+            <NotesFormArea initial={initial.notes} readonly={readonly || false} updateParent={(nts: AllEntries<Note>) => {
+                let updated = structuredClone(current)
+                updated.data.notes = nts
+                update(updated)
+            }} removeHeader={true} />
         </div>
     }
-    return <div className={"contentsOnly picRow " + (current.disabled ? "disabled" : "") + ""}>
+    return <div className={"contentsOnly picRow" + disabledClass()}>
         {leftArea()}
         {rightArea()}
     </div>
@@ -590,34 +646,36 @@ export function SporePrintDensityArea(
     </NoSsr>
 }
 
-export function StringOptionsSelector({queryKey, selectorFor, current, onSelect}: {
+export function StringOptionsSelector({queryKey, variant, current, onSelect}: {
     queryKey: string,
-    selectorFor: string,
+    variant: string,
     current?: string,
     onSelect?: (value?: string) => void,
 }) {
     const {isPending, error, data} = useQuery({
         queryKey: [queryKey],
-        queryFn: () => {
-            // TODO: delete lines before fetch for the real server
-            const map = new Map<string, string>();
-            map.set("fixme1-" + queryKey, "outgrew plate");
-            map.set("fixme2-dens" + queryKey, "parent was contaminated");
-            map.set("fixme3-dens" + queryKey, "transferring a specific sector");
-            return map;
-            // TODO: reenable
-            fetch(BaseExternalUrl + "/options/" + queryKey).then(HandleJsonResponse).then((resJson) => {
-                return ConvertObjectToStringMap(resJson)
-            }).catch((e) => {
-                throw e
-            })
-        },
+        queryFn: ()=>{
+            return getOptionsResponse(variant)
+        }
+        // queryFn: () => { // TODO: FIX THIS!
+        //     // TODO: delete lines before fetch for the real server
+        //     const map = new Map<string, string>();
+        //     map.set("fixme1-" + queryKey, "outgrew plate");
+        //     map.set("fixme2-dens" + queryKey, "parent was contaminated");
+        //     map.set("fixme3-dens" + queryKey, "transferring a specific sector");
+        //     return map;
+        //     // TODO: reenable
+        //     fetch(BaseExternalUrl + "/options/" + queryKey).then(HandleJsonResponse).then((resJson) => {
+        //         return ConvertObjectToStringMap(resJson)
+        //     }).catch((e) => {
+        //         throw e
+        //     })
+        // },
     })
     if (isPending || error !== null) {
-        return <div>{isPending ? selectorFor + " SELECTOR LOADING" : selectorFor + " SELECTOR ERROR: " + error.message}</div>
+        return <div>{isPending ? variant + " SELECTOR LOADING" : variant + " SELECTOR ERROR: " + error.message}</div>
     }
-    // TODO: maybe do selector a little differently because this one is a map?
-    return <SelectorFor disabled={onSelect === undefined} options={["", ...data.keys()]} initial={current || ""}
+    return <SelectorFor disabled={onSelect === undefined} options={["", ...data]} initial={current || ""}
                         updateParent={(s) => {
                             if (s === "") {
                                 onSelect && onSelect()
@@ -627,22 +685,22 @@ export function StringOptionsSelector({queryKey, selectorFor, current, onSelect}
                         }/>
 }
 
-export function ConvertObjectToStringMap(obj: { [key: string]: string }): Map<string, string> {
-    const map = new Map<string, any>();
-    for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            map.set(key, obj[key]);
-        }
-    }
-    return map;
-}
+// export function ConvertObjectToStringMap(obj: { [key: string]: string }): Map<string, string> {
+//     const map = new Map<string, any>();
+//     for (const key in obj) {
+//         if (Object.prototype.hasOwnProperty.call(obj, key)) {
+//             map.set(key, obj[key]);
+//         }
+//     }
+//     return map;
+// }
 
 export function SporePrintDensitySelector(
     {current, onSelect}: {
         current?: string,
         onSelect?: (ab?: string) => void
     }) {
-    return <StringOptionsSelector queryKey={"sporePrintDensities"} selectorFor={"spore print densities"}
+    return <StringOptionsSelector queryKey={"spore print densities"} variant={"sporePrintDensities"}
                                   current={current} onSelect={onSelect}/>
 }
 
@@ -651,7 +709,7 @@ export function SporePrintColorSelector(
         current?: string,
         onSelect?: (ab?: string) => void
     }) {
-    return <StringOptionsSelector queryKey={"sporePrintColors"} selectorFor={"spore print colors"} current={current}
+    return <StringOptionsSelector queryKey={"spore print colors"} variant={"sporePrintColors"} current={current}
                                   onSelect={onSelect}/>
 }
 

@@ -60,7 +60,12 @@ import {
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import {SaleArea} from "@/app/components/saleClient";
-import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {
+    AllEntries,
+    OnViewCreatorQuadCol,
+    SplitAllEntries,
+    SplitEntriesV2
+} from "@/app/components/formSubcomponents/shared";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
@@ -281,8 +286,8 @@ export default function JarDisplay(
         const [sale, setSale] = useState(initial.sale)
         const [disposed, setDisposed] = useState(initial.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [pics, setPics] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
         // TODO: wetness (but can only be set once)
@@ -386,8 +391,8 @@ export default function JarDisplay(
 
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"jar"} transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly} cookies={cookies}/>
-            <PicsDisplay pix={pics} readonly={readonly} updateParent={setPics}/>
-            <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams}
+            <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>
+            <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>
 
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>

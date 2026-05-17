@@ -14,8 +14,8 @@ export default async function Page({
     const {nextUrl} = await params
     return <PageWrapper props={{pageType:"login",readers: []}}>{/* TODO: remove readers? */}
         <Suspense fallback={<p>{"Loading..."}</p>}>
-            <div>{"HOMEPAGE STUFF HERE: TODO: THIS"}</div>
-            <AuthArea successUrl={nextUrl} loggedIn={false}/>
+            <div>{"HOMEPAGE STUFF HERE: TODO: THIS"}</div> {/* TODO: remove! */}
+            <AuthArea successUrl={nextUrl} loggedIn={false}/>{/* TODO: setting the success url???*/}
         </Suspense>
     </PageWrapper>
 }

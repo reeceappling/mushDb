@@ -1,6 +1,6 @@
 'use client'
 
-import NotesAreaOld, {
+import {
     IsValidNote, NewEntryNotes,
     Note,
     NoteEntriesGroup,
@@ -165,6 +165,11 @@ export default function SpeciesDisplay(
                     e.stopPropagation();
                     update()
                 }}>{"Update"}</button>}
+                <button className={"basicButtonSmall"} onClick={(e)=>{
+                    e.stopPropagation();
+                }} >
+                    {"Create New Subspecies"}{/* TODO: create subspecies???? */}
+                </button>
             </DisplayFormWrapper>
         )
     } catch (err){

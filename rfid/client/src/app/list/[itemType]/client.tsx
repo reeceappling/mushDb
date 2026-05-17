@@ -74,15 +74,22 @@ export default function ListDisplay({itemType, inpData}: { itemType: string, inp
                 }/>
             case "agarRecipes":
                 // TODO: allow lookup or navigation by recipe name
+                console.log("trying to show recipes: " + JSON.stringify(inpData));
                 AssertDualListResult<AgarRecipeData>(inpData, AssertAgarRecipe)
                 let arOc = (val: AgarRecipeData) => {
                     window.location.assign(BaseExternalUrl + "/view/agarRecipe/" + encodeURI(val._id))
                 }
+                const recAR = (inpData.recent || [])
+                const stdAR = (inpData.standard || [])
                 return <>
-                    <div className={"text-xl centerH"}>{"Recent"}</div>
-                    <AgarRecipeListPageTable data={inpData.recent || []} onClick={arOc}/> {/* TODO: recipe id???*/}
-                    <div className={"text-xl centerH"}>{"Standard"}</div>
-                    <AgarRecipeListPageTable data={inpData.standard || []} onClick={arOc}/> {/* TODO: recipe id???*/}
+                    {recAR.length > 0 && <>
+                        <div className={"text-xl centerH"}>{"Recent"}</div>
+                        <AgarRecipeListPageTable data={recAR} onClick={arOc}/>
+                    </>}{/* TODO: recipe id???*/}
+                    {stdAR.length > 0 && <>
+                        <div className={"text-xl centerH"}>{"Standard"}</div>
+                        <AgarRecipeListPageTable data={stdAR} onClick={arOc}/>
+                    </>} {/* TODO: recipe id???*/}
                 </>
             case "bags":
                 AssertArrayResult<BagData>(inpData, AssertBag)
@@ -123,7 +130,7 @@ export default function ListDisplay({itemType, inpData}: { itemType: string, inp
             case "grainBatches": // TODO: validate works as expected
                 AssertArrayResult<GrainBatchData>(inpData, AssertGrainBatch)
                 return <GrainBatchListPageTable data={inpData} onClick={(v) => {
-                    window.location.assign(BaseExternalUrl + "/view/grainBatch/" + encodeURI(v._id))
+                    window.location.assign(BaseExternalUrl + "/view/grainBatch/" + v._id)
                 }
                 }/>
             case "lcs":
@@ -170,9 +177,9 @@ export default function ListDisplay({itemType, inpData}: { itemType: string, inp
             case "plugs":
                 AssertArrayResult<PlugsJar>(inpData, AssertPlugs)
                 return <PlugsListPageTable data={inpData} onClick={(v) => {
-                    console.log("plug id: "+v._id);
-                    console.log("plug selected: "+JSON.stringify(v));
-                    console.log("going to: "+BaseExternalUrl + "/view/plugs/" + encodeURI(v._id));
+                    console.log("plug id: " + v._id);
+                    console.log("plug selected: " + JSON.stringify(v));
+                    console.log("going to: " + BaseExternalUrl + "/view/plugs/" + encodeURI(v._id));
                     window.location.assign(BaseExternalUrl + "/view/plugs/" + encodeURI(v._id)) // TODO: not working as link as expected
                 }}/>
             case "projects":

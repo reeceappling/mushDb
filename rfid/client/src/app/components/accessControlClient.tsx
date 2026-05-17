@@ -232,11 +232,12 @@ export function AclProjectsDisplay({readonly, ACL, onClick, updateParent}: {
 }
 
 // TODO: USE THIS!
-export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent}: {
+export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent, blanket}: {
     readonly: boolean,
     perms: Map<string, boolean>,
     onClick?: (usr: string) => void
     updateParent?: (p: Map<string, boolean>) => void
+    blanket?: boolean
 }) {
     const userNameAreaFor = (val: [string, boolean]) => {
         return <text onClick={()=>{onClick && onClick(val[0])}}>{val[0]}</text>
@@ -255,12 +256,14 @@ export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent}
         updateParent && updateParent(perms)
     }
     const addNewUser = (uName: string) => {
-        if (perms.size===0){
-            const nm = new Map<string, boolean>().set(uName, false)
+        const defaultPerm = blanket || false
+        if (perms.size===0){/// TODO: ensure ok
+            const nm =(new Map<string, boolean>()).set(uName, defaultPerm)
             console.log("sending to update for previously empty: "+JSON.stringify(Object.fromEntries(nm)));  // TODO: DEL
             update(nm)
         } else {
-            const nm = new Map<string, boolean>([...perms.entries()]).set(uName, false)
+            const nm = (structuredClone(perms)).set(uName, defaultPerm)
+            //const nm = (new Map<string, boolean>([...perms.entries()])).set(uName, defaultPerm)
             console.log("sending to update for non-empty: "+JSON.stringify(Object.fromEntries(nm)));  // TODO: DEL
             update(nm)
         }
@@ -297,10 +300,16 @@ export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent}
                 }} />
             </div>
         })}
+                <TestAndValidate todos={["not working properly on the plate display page"]}>
+
+
         {"Add a user:"}
-        <UserSelector onSelect={u => addNewUser(u._id)} blacklist={(perms!==undefined&&perms.size>0)?[...perms.entries()].map(val => {
+        <UserSelector onSelect={(u) => {
+            addNewUser(u._id)
+        }} blacklist={(perms!==undefined&&perms.size>0)?[...perms.entries()].map(val => {
             return val[0]
         }):[]}/>
+        </TestAndValidate>
     </TestAndValidate>
     </div>
     </DepthProvider>
@@ -444,7 +453,7 @@ export function AclDisplay(inp: {
 }) {
     const depth = useContext(DepthContext)
     if (inp.readonly) {
-        return <div>
+        return <div>{/* TODO: TURN INTO A TABLE!!!!*/}
             <TestAndValidate todos={["preloaded values arent sticking around when updating.... troubleshoot"]}>
                 <AclBlanketDisplay readonly={true} ACL={inp.ACL} updateParent={(bp)=>{
                     let users = inp.ACL?
@@ -464,7 +473,7 @@ export function AclDisplay(inp: {
         <AclBlanketDisplay readonly={false} ACL={inp.ACL} updateParent={(b?:boolean)=>{
             inp.updateParent({...(inp.ACL), blanketPerm: b})
         }}/>
-        <AclUsersDisplayInternal readonly={false} perms={(inp.ACL!==undefined&&inp.ACL.users!==undefined)?inp.ACL.users:(new  Map<string, boolean>())} onClick={() => {}} updateParent={(us)=>{
+        <AclUsersDisplayInternal readonly={false} blanket={inp.ACL?.blanketPerm} perms={(inp.ACL!==undefined&&inp.ACL.users!==undefined)?inp.ACL.users:(new  Map<string, boolean>())} onClick={() => {}} updateParent={(us)=>{
             inp.updateParent({...structuredClone(inp.ACL), users: us})
         }}/>
         <AclProjectsDisplay readonly={false} ACL={inp.ACL} onClick={()=>{}} updateParent={(newAcl)=>{inp.updateParent(structuredClone(newAcl))}}/>

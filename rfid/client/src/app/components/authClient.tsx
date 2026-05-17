@@ -22,14 +22,14 @@ export default function AuthArea( // TODO: any depth?????
     const [err, setErr] = useState<string | undefined>()
     useEffect(() => {
         if (loggedIn) {
-            location.assign(successUrl)
+            location.assign(successUrl) // see redirectToBasePage
             return
         }
     }, [loggedIn])
     const setSessionCookie = (sessId: string) => {
         // TODO: IS PATH OK?
         //setCookie('SessionId', sessId, { path: '/', expires: new Date(Date.now() + (3600000*2)) }); // Expires in 1 hour
-        location.assign(successUrl)
+        location.assign(successUrl) // see redirectToBasePage
     }
     const handleGoogleLoginSuccess = (sessId: string) => {
         console.log("response creds:",sessId) // TODO: FIX
@@ -47,7 +47,7 @@ export default function AuthArea( // TODO: any depth?????
         //     maxAge: 3600, // Cookie expires in 1 hour (in seconds)
         //     // other options like 'secure', 'httpOnly', 'sameSite' can be added
         // })
-        // TODO: redirect to correct area
+        // TODO: redirect to correct area // see redirectToBasePage
     }
     return (
         <div className={"fullPage"}>

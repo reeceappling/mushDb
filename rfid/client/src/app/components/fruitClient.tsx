@@ -6,7 +6,7 @@ import {
     AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
-    SplitAllEntries
+    SplitAllEntries, SplitEntriesV2
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -155,7 +155,7 @@ export default function FruitDisplay(
         const [initial, setInitial] = useState(data)
         // TODO: change all other states when re-set
 
-        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [pics, setPics] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [disposed, setDisposed] = useState(initial.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         // Helper states
@@ -288,7 +288,7 @@ export default function FruitDisplay(
                 <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
                                      allowNewTransferCreation={false}
                                      cookies={cookies}/>
-                <PicsDisplay pix={pics} updateParent={setPics} readonly={readonly}/>{/* Pics */}
+                <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
@@ -371,14 +371,11 @@ export function NewFruitForm(
             {/* TODO: TITLE? */}
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <DateArea pre={"Harvest Date: "} readonly={false} updateParent={setHarvestDate}/>
-            <PicsDisplay updateParent={v => {
-                setPics(v.new.map(x => {
-                    return x.data
-                }))
+            <PicsDisplay pix={[]} updateParent={v => {
+                setPics(v.new)
             }} headerLevel={headerLevel} readonly={false}/>
             <NewEntryNotes setNotes={setNotes}/>
 
-            {/*<EntryPermsArea setEntryPerms={setPerms}/> /!* TODO: perms from parent? *!/*/}
             <input type="submit" value="Submit" onClick={newFruitSubmit} onSubmit={(e) => {
                 e.preventDefault();
             }}/>

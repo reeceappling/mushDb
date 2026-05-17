@@ -1,8 +1,14 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import NotesAreaOld, {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
-import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {
+    AllEntries,
+    Data,
+    OnViewCreatorQuadCol,
+    SplitAllEntries,
+    SplitEntriesV2
+} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
@@ -22,7 +28,7 @@ import {
     DisposedSaleContamArea,
     HandleJsonResponse,
     HandleTxtResponse,
-    ImportDisplayInput,
+    ImportDisplayInput, importUrlFor,
     InlineExpansionArea, InlineExpansionButton,
     InlineProps,
     InlineSubArea, ListPageItems,
@@ -32,7 +38,7 @@ import {
     RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData, SendMultipartRequest, setFormData,
-    setFormImages, SingleListProps,
+    setFormImages, SingleListProps, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
@@ -170,11 +176,11 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
         }
 
 
-        SendMultipartRequest(BaseExternalUrl+"/db/import/slant", cookies, formData)
-            .then(HandleTxtResponse)
-            .then((newId) => {
-                // TODO: maybe instead of redirecting, just give it a handler?
-                redirect(BaseExternalUrl+"/view/slant/"+newId)
+        SendMultipartRequest(importUrlFor("slant"), cookies, formData)
+            .then(HandleJsonResponse) // TODO: all of these for imports should be HandleJsonResponse, NOT HandleTxtResponse
+            .then((newItem) => {
+                AssertSlant(newItem)
+                redirect(viewUrlFor("slant",newItem._id))
             })
             .catch((err) => {
                 setErr(JSON.stringify(err))
@@ -201,8 +207,8 @@ export default function SlantDisplay(
     try {
         AssertSlant(data)
         const [initial, setInitial] = useState(data)
-        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [images, setImages] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
         const [sale, setSale] = useState(initial.sale)
         const [disposed, setDisposed] = useState(initial.disposed)
@@ -297,8 +303,8 @@ export default function SlantDisplay(
                 </FlexedArea>
 
                 <TransfersOutDisplay thisId={initial._id} thisEntryType={"slant"} transfersOut={transfersOut} allowNewTransferCreation={!readonly} cookies={cookies}/>
-                <PicsDisplay pix={images} updateParent={setImages} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
-                <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
+                <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
+                <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />

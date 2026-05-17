@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import NotesAreaOld, {
+import {
     IsValidNote,
     NewEntryNotes,
     Note,

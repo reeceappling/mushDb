@@ -8,12 +8,12 @@ import {
     useRfidReaderContext
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
 import * as React from "react";
-import {useState} from "react";
+import {JSX, useState} from "react";
 import Button from "@mui/material/Button"
 import Menu from "@mui/material/Menu"
 import MenuItem from "@mui/material/MenuItem"
 import TextBox from "@/app/components/formSubcomponents/textbox";
-import {getTypeFor} from "@/app/components/common";
+import {getPathFor, getTypeFor} from "@/app/components/common";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {TailwindButton} from "@/app/components/tailwind/components";
 import {ReadRfidTag} from "@/app/testpage/serverActions";
@@ -51,6 +51,9 @@ export function TopBarCreateMenu() {
     const handleClose = () => {
         setAnchorEl(null)
     }
+    const menuItem = (entryType:string, txt:string):JSX.Element => {
+        return <MenuItem href={"/new/"+entryType} onClick={handleClose} component={"a"} sx={sublistItemProps}>{txt}</MenuItem>
+    }
     return <div>
         <Button
             id={"topBarCreateButton"}
@@ -68,14 +71,15 @@ export function TopBarCreateMenu() {
               slotProps={{
                   list: {'aria-labelledby': 'topBarCreateButton'}
               }}>
-            <MenuItem href={"/new/agarRecipe"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Agar Recipe"}</MenuItem>
-            <MenuItem href={"/new/jarRecipe"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Grain Jar Recipe"}</MenuItem>
-            <MenuItem href={"/new/lcRecipe"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Liquid Culture Recipe"}</MenuItem>
-            <MenuItem href={"/new/project"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Project"}</MenuItem>{/* TODO: maybe just create this in each form? */}
-            {/* TODO: PC RUN??? */}
-            <MenuItem href={"/new/species"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Species"}</MenuItem>
-            <MenuItem href={"/new/substrateRecipe"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Substrate Recipe"}</MenuItem>
-            <MenuItem href={"/new/waterJar"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Water Jar"}</MenuItem> {/* TODO: ALSO ALLOW IT TO BE DONE FROM THE PC RUN PAGE*/}
+            {menuItem("agarRecipe", "Agar Recipe")}
+            {menuItem("jarRecipe", "Jar Recipe")}
+            {menuItem("lcRecipe", "LC Recipe")}
+            {menuItem("pcRun", "PC Run")}{/* TODO: PC RUN??? */}
+            {menuItem("project", "Project")}{/* TODO: maybe just create this in each form? */}
+            {menuItem("species", "Species")}
+            {menuItem("subspecies", "Subspecies")}
+            {menuItem("substrateRecipe", "Substrate Recipe")}
+            {menuItem("waterJar", "Water Jar")}{/* TODO: ALSO ALLOW IT TO BE DONE FROM THE PC RUN PAGE*/}
         </Menu>
     </div>
 }
@@ -86,7 +90,7 @@ export default function TopBar() {
     const onReaderSelect = (s: string | undefined) => {
         let session = "" // TODO: fix session
         ReadTagFunc(dispatch, session, s).then(id=>{
-        // todo: do nothing with id result
+            // todo: do nothing with id result
         },err=>{
             console.error(err) // TODO: ok?
         })
@@ -104,25 +108,25 @@ export default function TopBar() {
     </div>
 }
 
-function CopyLatestReadTagButton() {
-    const {state, dispatch} = useRfidReaderContext()
-    if (state.lastReadTag == undefined) {
-        return null
-    }
-    const onClick = () => {
-        if (state.lastReadTag != undefined) {
-            navigator.clipboard.writeText(state.lastReadTag).catch((err) => {
-                let toWrite = "failed to copy tag value to clipboard: " + err
-                console.error(toWrite)
-                dispatch({
-                    type: ActionTypes.SET_ERROR,
-                    payload: toWrite,
-                })
-            })
-        }
-    }
-    return <button className={"basicButtonSmall"} onClick={onClick}>{"Copy last read tag value"}</button>
-}
+// function CopyLatestReadTagButton() {
+//     const {state, dispatch} = useRfidReaderContext()
+//     if (state.lastReadTag == undefined) {
+//         return null
+//     }
+//     const onClick = () => {
+//         if (state.lastReadTag != undefined) {
+//             navigator.clipboard.writeText(state.lastReadTag).catch((err) => {
+//                 let toWrite = "failed to copy tag value to clipboard: " + err
+//                 console.error(toWrite)
+//                 dispatch({
+//                     type: ActionTypes.SET_ERROR,
+//                     payload: toWrite,
+//                 })
+//             })
+//         }
+//     }
+//     return <button className={"basicButtonSmall"} onClick={onClick}>{"Copy last read tag value"}</button>
+// }
 
 function LastReadTag() {
     const {state} = useRfidReaderContext()
@@ -158,7 +162,7 @@ function UseLatestReadTagButton({onClick}: { onClick: (id?: string) => void }) {
     const onButtonClick = () => {
         onClick(state.lastReadTag)
     }
-    return <button onClick={onButtonClick}>{"Use latest read tag id"}</button>
+    return <button className={"basicButtonSmall"} onClick={onButtonClick}>{"Use latest read tag"}</button>
 }
 
 
@@ -166,7 +170,7 @@ function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
     const {state, dispatch} = useRfidReaderContext()
     const onClick = () => {
         if (state.selected != undefined) {
-            //const a = ReadRfidTag(state.selected) // TODO: REENABLE IF WE CAN
+            //const a = ReadRfidTag(state.selected) // TODO: REENABLE IF/WHEN WE CAN!
             const a = new Promise<string>((accept) => {// TODO: DELETE
                 accept(Makeid(5))
             })
@@ -180,6 +184,7 @@ function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
                     type: ActionTypes.SET_LAST_READER,
                     payload: state.selected,
                 })
+
             }, (err) => {
                 let toWrite = "failed to read tag: " + err
                 console.error(toWrite)
@@ -215,12 +220,17 @@ export function TopBarViewMenu() {
         setAnchorEl(null)
     }
     const handleViewById = () => {
-        getTypeFor(id).then((entryType) => {
-            location.assign(BaseExternalUrl + "/view/" + entryType + "/" + id)
+        getPathFor(id).then((path) => {
+            location.assign(BaseExternalUrl + "/view/" + path)
         }).catch((err) => {
             // TODO: handle the error!
-            console.log(err)
+            console.log("failed to get path for id: "+JSON.stringify(err))
         })
+    }
+    const {state} = useRfidReaderContext()
+    const redirectForId = (redirectToId:string)=>{
+        setId(redirectToId)
+        handleViewById()
     }
     return <div>
         <Button
@@ -239,43 +249,47 @@ export function TopBarViewMenu() {
               slotProps={{
                   list: {'aria-labelledby': 'topBarViewButton'}
               }}>
-            <MenuItem onClick={() => {
+            <MenuItem onClick={(e) => {
+                e.preventDefault(); // TODO: ensure ok
+                e.stopPropagation();
             }}>
                 <div>
                     <div>{"Main Collection Item By ID"}</div>
                     <TextBox readonly={false} label={"ID"} value={id} fieldName={"viewByIdInput"}
                              updateTextHandler={setId}/>
-                    <ReadTagButton onResult={setId}/>
-                    <UseLatestReadTagButton onClick={(v) => {
+                    <ReadTagButton onResult={redirectForId}/>
+                    {state.lastReadTag && <UseLatestReadTagButton onClick={(v) => {
                         v && setId(v)
-                    }}/>
-                    <button onClick={handleViewById}> {"go to this id"}</button>
+                    }}/>}
+                    {id !== "" && <button className={"greenButton buttonSmall"} onClick={e=>{
+                        e.stopPropagation();
+                        handleViewById()
+                    }}> {"go to this id"}</button>}
                 </div>
-            </MenuItem>
-            <MenuItem href={"/view/agarBatch"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Agar Batch"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/agarRecipe"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Agar Recipe"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/jarRecipe"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Jar Recipe"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/lcRecipe"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Liquid Culture Recipe"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/pcRun"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"PC Run"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/project"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Project"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/sale"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Sale"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/species"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Species"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/subspecies"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Subspecies"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/substrateBatch"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Substrate Batch"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/substrateRecipe"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Substrate Recipe"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/transfer"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Transfer"}</MenuItem>{/* TODO: FIX */}
-            <MenuItem href={"/view/user"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"User"}</MenuItem>{/* TODO: FIX */}
-            {/* TODO: INPUT OR SCAN FOR ITEM!*/}
+            </MenuItem> {/* TODO: ENSURE EACH LINK WORKS*/}
+            <MenuItem href={"/view/agarBatch/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{"Agar Batch"}</MenuItem>
+            <MenuItem href={"/view/agarRecipe/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Agar Recipe"}</MenuItem>
+            <MenuItem href={"/view/jarRecipe/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Jar Recipe"}</MenuItem>
+            <MenuItem href={"/view/lcRecipe/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Liquid Culture Recipe"}</MenuItem>
+            <MenuItem href={"/view/pcRun/"+id} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"PC Run"}</MenuItem>
+            <MenuItem href={"/view/project/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Project"}</MenuItem>
+            <MenuItem href={"/view/sale/"+id} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Sale"}</MenuItem>
+            <MenuItem href={"/view/species/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Species"}</MenuItem>
+            <MenuItem href={"/view/subspecies/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Subspecies"}</MenuItem>
+            <MenuItem href={"/view/substrateBatch/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{"Substrate Batch"}</MenuItem>
+            <MenuItem href={"/view/substrateRecipe/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Substrate Recipe"}</MenuItem>
+            <MenuItem href={"/view/transfer/"+id} onClick={handleClose}
+                       component={"a"} sx={sublistItemProps}>{"Transfer"}</MenuItem>
+            <MenuItem href={"/view/user/"+id} onClick={handleClose} component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"User"}</MenuItem>
         </Menu>
     </div>
 }
@@ -288,6 +302,9 @@ export function TopBarImportMenu() {
     }
     const handleClose = () => {
         setAnchorEl(null)
+    }
+    const menuItem = (path: string, txt: string):JSX.Element => {
+        return <MenuItem onClick={handleClose} component={"a"} sx={sublistItemProps} href={path} >{txt}</MenuItem>
     }
     return <div>
         <Button
@@ -306,20 +323,19 @@ export function TopBarImportMenu() {
               slotProps={{
                   list: {'aria-labelledby': 'topBarImportButton'}
               }}>
-            <MenuItem href={"/import/bag"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Bag"}</MenuItem>
-            <MenuItem href={"/import/fruit"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Fruit"}</MenuItem>
-            <MenuItem href={"/import/fruitingChamber"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Fruiting Chamber"}</MenuItem>
-            <MenuItem href={"/import/jar"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Jar"}</MenuItem>
-            <MenuItem href={"/import/lc"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Liquid Culture"}</MenuItem>
-            <MenuItem href={"/import/lcSyringe"} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Liquid Culture Syringe"}</MenuItem>
-            <MenuItem href={"/import/mss"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Multi-Spore Syringe"}</MenuItem>
-            <MenuItem href={"/import/plate"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Plate"}</MenuItem>
-            <MenuItem href={"/import/plugs"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Plugs"}</MenuItem>
-            <MenuItem href={"/import/slant"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Slant"}</MenuItem>
-            <MenuItem href={"/import/sporePrint"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Spore Print"}</MenuItem>
-            <MenuItem href={"/import/stasisTube"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Stasis Tube"}</MenuItem>
+            {menuItem("/import/bag", "Bag")}
+            {menuItem("/import/fruit", "Fruit")}
+            {menuItem("/import/fruitingChamber", "Fruiting Chamber")}
+            {menuItem("/import/jar", "Jar")}
+            {menuItem("/import/lc", "Liquid Culture")}
+            {menuItem("/import/lcSyringe", "Liquid Culture Syringe")}
+            {menuItem("/import/mss", "Multi-Spore Syringe")}
+            {menuItem("/import/plate", "Plate")}
+            {menuItem("/import/plugs", "Plugs")}
+            {menuItem("/import/slant", "Slant")}
+            {menuItem("/import/sporePrint", "Spore Print")}
+            {menuItem("/import/stasisTube", "Stasis Tube")}
+            {/* TODO: ?menuItem("/import/waterJar", "Water Jar")*/}
         </Menu>
     </div>
 }
@@ -332,6 +348,9 @@ export function TopBarListMenu() {
     }
     const handleClose = () => {
         setAnchorEl(null)
+    }
+    const menuItem = (entryType: string, txt: string):JSX.Element => {
+        return <MenuItem href={"/list/"+entryType} onClick={handleClose} component={"a"} sx={sublistItemProps}>{txt}</MenuItem>
     }
     return <div>
         <Button
@@ -350,40 +369,34 @@ export function TopBarListMenu() {
               slotProps={{
                   list: {'aria-labelledby': 'topBarListButton'}
               }}>
-
-            <MenuItem href={"/list/agarBatches"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Agar Batches"}</MenuItem>
-            <MenuItem href={"/list/agarRecipes"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Agar Recipes"}</MenuItem>
-            <MenuItem href={"/list/bags"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Bags"}</MenuItem>
-            <MenuItem href={"/list/fruits"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Fruits"}</MenuItem>
-            <MenuItem href={"/list/fruitingChambers"} onClick={handleClose}
-                      component={"a"} sx={sublistItemProps}>{"FruitingChambers"}</MenuItem>
-            <MenuItem href={"/list/grainBatches"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Grain Batches"}</MenuItem>
-            <MenuItem href={"/list/jars"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Jars"}</MenuItem>
-            <MenuItem href={"/list/jarRecipes"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Jar Recipes"}</MenuItem>
-            <MenuItem href={"/list/lcs"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Liquid Cultures"}</MenuItem>
-            <MenuItem href={"/list/lcRecipes"} onClick={handleClose}
-                      component={"a"} sx={sublistItemProps}>{"Liquid Culture Recipes"}</MenuItem>
-            <MenuItem href={"/list/lcSyringes"} onClick={handleClose}
-                      component={"a"} sx={sublistItemProps}>{"Liquid Culture Syringes"}</MenuItem>
-            <MenuItem href={"/list/mss"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"MultiSpore Syringes"}</MenuItem>
-            <MenuItem href={"/list/pcRuns"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"PcRuns"}</MenuItem>
-            <MenuItem href={"/list/plates"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Plates"}</MenuItem>
-            <MenuItem href={"/list/plugs"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Plugs"}</MenuItem>
-            <MenuItem href={"/list/projects"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Projects"}</MenuItem>
-            <MenuItem href={"/list/sales"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Sales"}</MenuItem>
-            <MenuItem href={"/list/slants"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Slants"}</MenuItem>
-            <MenuItem href={"/list/species"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Species"}</MenuItem>
-            <MenuItem href={"/list/sporePrints"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Spore Prints"}</MenuItem>
-            <MenuItem href={"/list/sporeSwabs"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Spore Swabs"}</MenuItem>
-            <MenuItem href={"/list/stasisTubes"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Stasis Tubes"}</MenuItem>
-            <MenuItem href={"/list/subspecies"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Subspecies"}</MenuItem>
-            <MenuItem href={"/list/substrateBatches"} onClick={handleClose}
-                      component={"a"} sx={sublistItemProps}>{"Substrate Batches"}</MenuItem>
-            <MenuItem href={"/list/substrateRecipes"} onClick={handleClose}
-                      component={"a"} sx={sublistItemProps}>{"Substrate Recipes"}</MenuItem>
-            <MenuItem href={"/list/transfers"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Transfers"}</MenuItem>
-            <MenuItem href={"/list/users"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Users"}</MenuItem>
-            <MenuItem href={"/list/waterJars"} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Water Jars"}</MenuItem>
+            {menuItem("agarBatches", "Agar Batches")}
+            {menuItem("agarRecipes", "Agar Recipes")}
+            {menuItem("bags", "Bags")}
+            {menuItem("fruits", "Fruits")}
+            {menuItem("fruitingChambers", "Fruiting Chambers")}
+            {menuItem("grainBatches", "Grain Batches")}
+            {menuItem("jars", "Jars")}
+            {menuItem("jarRecipes", "Jar Recipes")}
+            {menuItem("lcs", "Liquid Cultures")}
+            {menuItem("lcRecipes", "Liquid Culture Recipes")}
+            {menuItem("lcSyringes", "Liquid Culture Syringes")}
+            {menuItem("mss", "MultiSpore Syringes")}
+            {menuItem("pcRuns", "PcRuns")}
+            {menuItem("plates", "Plates")}
+            {menuItem("plugs", "Plugs")}
+            {menuItem("projects", "Projects")}
+            {menuItem("sales", "Sales")}
+            {menuItem("slants", "Slants")}
+            {menuItem("species", "Species")}
+            {menuItem("sporePrints", "Spore Prints")}
+            {menuItem("sporeSwabs", "Spore Swabs")}
+            {menuItem("stasisTubes", "Stasis Tubes")}
+            {menuItem("subspecies", "Subspecies")}
+            {menuItem("substrateBatches", "Substrate Batches")}
+            {menuItem("substrateRecipes", "Substrate Recipes")}
+            {menuItem("transfers", "Transfers")}
+            {menuItem("users", "Users")}
+            {menuItem("waterJars", "Water Jars")}
         </Menu>
     </div>
 }

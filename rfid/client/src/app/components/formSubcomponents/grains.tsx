@@ -1,4 +1,4 @@
-// TODO: THESE ARE ALL NON-CLIENT!
+// non-client
 
 import {useQuery} from "@tanstack/react-query";
 import {SelectorFor} from "@/app/components/selector";

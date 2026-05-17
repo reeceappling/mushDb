@@ -36,9 +36,9 @@ export function SugarTypeSelectorForNew( // TODO: USE THIS!!!!!
         blacklist?: string[], // TODO: use?
     }){
     if(readonly){
-        return <div>{current || "FIXME"}</div> // TODO: div ok?
+        return <div>{current || "FIXME"}</div>
     }
-    const { isPending, error, data } = useQuery({ // TODO: SO SOMETHING SIMILAR FOR nutrients, sugars, liquid, grain, transferReason
+    const { isPending, error, data } = useQuery({
         queryKey: ['sugarsOptions'],
         queryFn: () => getOptionsResponse("sugars")
     })

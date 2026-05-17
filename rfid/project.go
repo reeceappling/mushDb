@@ -171,12 +171,15 @@ func (req updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
 }
 
 func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
-	urlEncodedProjectName := r.PathValue("id") // TODO: USE!
+	urlEncodedProjectName := r.PathValue("id") // TODO: NOT FINDING PROJECT!
+	println("project update url used: " + r.URL.String())
 	projNameStr, err := UrlDecodeString(urlEncodedProjectName)
 	if err != nil {
 		http.Error(w, "bad project name in url", http.StatusBadRequest)
 		return
 	}
+
+	println("decoded project name", projNameStr)
 	projName := projectName(projNameStr)
 	ctx := r.Context()
 	user, err := GetAuthInfo(ctx)
@@ -227,7 +230,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 			// validate new user exists
 			result := db.Collection(UserCollName).FindOne(ctx, bsonFindFilter("_id", u))
 			if err = result.Err(); err != nil {
-				dbErr(w, "user "+u+" not found", http.StatusNotFound)
+				dbErr(w, "user "+u+" does not exist. Invalid request", http.StatusBadRequest)
 				return
 			}
 		}

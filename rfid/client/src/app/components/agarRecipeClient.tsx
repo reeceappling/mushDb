@@ -102,6 +102,9 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     ])
     for (let [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
+            console.error('Agar Recipe assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
+            console.error(JSON.stringify(input));
+            console.error(JSON.stringify(input[key]));
             throw new Error('Agar Recipe assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
@@ -112,6 +115,9 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
+            console.error('AgarRecipe assertion failure: optional key ' + key + ' was not valid');
+            console.error(JSON.stringify(input));
+            console.error(JSON.stringify(input[key]));
             throw new Error('AgarRecipe assertion failure: optional key ' + key + ' was not valid');
         }
     }
@@ -122,7 +128,10 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     ])
     for (let [key, validator] of complexRequiredArrayKeys) {
         if (!RequiredArrayOfType(key, input, validator)) {
-            throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
+            console.error('AgarRecipe assertion failure: required array key ' + key + ' was not valid');
+            console.error(JSON.stringify(input));
+            console.error(JSON.stringify(input[key]));
+            throw new Error('AgarRecipe assertion failure: required array key ' + key + ' was not valid');
         }
     }
 
@@ -136,6 +145,9 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     ])
     for (let [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
+            console.error('AgarRecipe assertion failure: optional array key ' + key + ' was not valid');
+            console.error(JSON.stringify(input));
+            console.error(JSON.stringify(input[key]));
             throw new Error('AgarRecipe assertion failure: optional array key ' + key + ' was not valid');
         }
     }

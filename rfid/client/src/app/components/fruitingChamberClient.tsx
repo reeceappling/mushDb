@@ -1,8 +1,14 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, Note, NotesAreaInline, NotesAreaOld} from "@/app/components/formSubcomponents/notes";
-import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {
+    AllEntries,
+    Data,
+    OnViewCreatorQuadCol,
+    SplitAllEntries,
+    SplitEntriesV2
+} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumbersOnlyFromText} from "@/app/components/formSubcomponents/date";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
@@ -189,9 +195,9 @@ export default function FruitingChamberDisplay( // TODO: REDO WHOLE SECTION!
         const [writeTo, setWriteTo] = useState<string | undefined>()
 
         // Image-containing
-        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
-        const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
+        const [pics, setPics] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [flushes, setFlushes] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
 
         // Helper states
         const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
@@ -300,10 +306,10 @@ export default function FruitingChamberDisplay( // TODO: REDO WHOLE SECTION!
                                      transfersOut={initial.transfersOut} allowNewTransferCreation={false}
                                      cookies={cookies}/>
 
-                <PicsDisplay pix={pics} readonly={readonly} updateParent={setPics}/>{/* Pics */}
-                {/* Flushes */}<PicsDisplay pix={flushes} readonly={readonly}
+                <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
+                {/* Flushes */}<PicsDisplay pix={initial.flushes || []} readonly={readonly}
                                             updateParent={setFlushes} addButtonText={"Create New Flush"}/>
-                <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams}
+                <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                                 readonly={readonly} headerLevel={headerLevel}/>{/* Contamination */}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
@@ -487,12 +493,8 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
                 <div className={"text-lg"}>{"Volume casing: "}</div>
                 <VolumeSelector initialVal={0} initialUnit={"quarts"} updateNumberOfCups={setCasingCups}/>
             </div>
-            <NotesAreaOld readonly={false} current={{ // TODO: notesFormArea?
-                existing: [], new: notes.map(v => {
-                    return {data: v, disabled: false}
-                })
-            }} updateParent={(nots) => {
-                setNotes(nots.new.map((n) => {
+            <NotesFormArea readonly={false} initial={[]} updateParent={(nts) => { // TODO: validate working
+                setNotes(nts.new.map((n) => {
                     return n.data
                 }))
             }}/>

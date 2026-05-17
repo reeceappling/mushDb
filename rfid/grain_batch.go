@@ -47,7 +47,7 @@ func initializeGrainBatches(ctx context.Context) error {
 		BoilTimeMins:               utils.Pointer(30),
 		DryTimeHours:               utils.Pointer(4),
 		CreationDateField:          CreationDateField{},
-		JarRecipeRequiredField:     JarRecipeRequiredField{},
+		JarRecipeRequiredField:     JarRecipeRequiredField{Recipe: exAltId},
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
 	}
@@ -63,7 +63,7 @@ type createGrainBatchRequest struct {
 
 // TODO: separate endpoints for updating soak, boil, and dry times
 
-func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
+func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO THIS!
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -115,8 +115,7 @@ func (req updateGrainBatchRequest) modsFor(existing *GrainBatch, acl AclField) (
 	mods := NewMods()
 	mods = updatePointerIfNeeded(mods, "soakTimeHours", req.SoakTimeHours, existing.SoakTimeHours)
 	mods = updatePointerIfNeeded(mods, "boilTimeMins", req.BoilTimeMins, existing.BoilTimeMins)
-	mods = updatePointerIfNeeded(mods, "dryTimeHours", req.DryTimeHours, existing.DryTimeHours)
-	return mods.
+	return updatePointerIfNeeded(mods, "dryTimeHours", req.DryTimeHours, existing.DryTimeHours).
 		updateNotesIfNeeded(req, existing).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -136,6 +135,7 @@ func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	PrettyPrintJson("new notes!", req.Notes.New) // TODO: del
 	id, err := b58Id.toAltCollectionId()
 	if err != nil {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)

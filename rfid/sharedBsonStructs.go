@@ -440,6 +440,15 @@ var antibioticDosages = map[Antibiotic]string{ // TODO: USE THIS!
 
 type Generation int
 
+func (gen *Generation) validate() error {
+	if gen != nil {
+		if *gen < 1 {
+			return errors.New("invalid generation. Cannot be less than 1")
+		}
+	}
+	return nil
+}
+
 func (gen *Generation) Next() *Generation {
 	if gen == nil {
 		return nil
@@ -684,6 +693,7 @@ func (upd *Mods) updateNameIfNeeded(future, existing string) *Mods {
 
 func notesWereModified(existing []Note, updated AllEntries[Note]) (hasChanged bool) {
 	if len(updated.New) > 0 {
+		println("NOTES WERE ADDED") // TODO: del
 		return true
 	}
 	for i, finalExisting := range updated.Existing {
@@ -788,7 +798,8 @@ func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesFiel
 		finalNotes = append(finalNotes, final.Data)
 	}
 	// Set notes
-	return upd.Set("notes", finalNotes) // TODO: ensure ok
+	PrettyPrintJson("finalNotes", finalNotes) // TODO: delete later
+	return upd.Set("notes", finalNotes)       // TODO: ensure ok
 }
 
 func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
@@ -968,9 +979,18 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	opt := r.PathValue("optionsType")
 	var toWrite any
 	switch strings.ToLower(opt) {
+	case "additives", "additive":
+		toWrite = additives
+		break
+	case "antibiotics", "antibiotic":
+		toWrite = antibiotics
+		break
 	case "colors", "color",
 		"colorants", "colorant":
 		toWrite = colorants
+		break
+	case "grains", "grain":
+		toWrite = grains
 		break
 	case "liquids", "liquid",
 		"fluids", "fluid":
@@ -979,26 +999,20 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	case "nutrients", "nutrient":
 		toWrite = nutrients
 		break
+	case "sporePrintColors", "sporePrintColor":
+		toWrite = sporePrintColors // TODO: Make this just strings???
+		break
+	case "sporePrintDensities", "sporePrintDensity":
+		toWrite = sporePrintDensities // TODO: Make this just strings???
+		break
 	case "sugars", "sugar":
 		toWrite = sugars
-		break
-	case "grains", "grain":
-		toWrite = grains
-		break
-	case "additives", "additive":
-		toWrite = additives
-		break
-	case "antibiotics", "antibiotic":
-		toWrite = antibiotics
 		break
 	case "transferreasons", "transferreason":
 		toWrite = transferReasons
 		break
-	case "sporePrintColors", "sporePrintColor":
-		toWrite = sporePrintColors
-		break
-	case "sporePrintDensities", "sporePrintDensity":
-		toWrite = sporePrintDensities
+	case "woods", "wood":
+		toWrite = woods
 		break
 		// TODO: any other cases???
 	default:

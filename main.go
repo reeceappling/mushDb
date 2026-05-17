@@ -277,6 +277,7 @@ func main() {
 	// TODO: need to be able to create new users
 
 	println("Defining db interaction endpoints")
+	http.Handle("/db/pathFor/{id}", rateLimiter(ctxInternalAuthMiddleware(rfid.GetPageForIdHandler())))
 	//http.Handle("/db/get/rfid/{id}", getRfidHandler())             // TODO: GET RID OF???             // TODO: ensure this works for base58s
 	http.Handle("/db/get/{variant}/{id}", rateLimiter(ctxInternalAuthMiddleware(getAnyCollectionHandler())))
 	http.Handle(fmt.Sprintf(`%s{%s...}`, imagesEndpoint, imageSubPathKey), ctxInternalAuthMiddleware(getImageHandler()))
@@ -704,7 +705,7 @@ func handleAuthCallback() http.Handler {
 func redirectToBasePage(r *http.Request, w http.ResponseWriter) {
 	dst := r.URL.Query().Get("destination")
 	if dst == "" {
-		dst = "https://mush.appli.ng/view/plate/1" // TODO: CHANGE!
+		dst = "https://mush.appli.ng" //+"/view/plate/1"
 	}
 	http.Redirect(w, r, dst, http.StatusTemporaryRedirect)
 }
@@ -1056,7 +1057,7 @@ func getAnyCollectionHandler() http.Handler {
 				return
 			}
 		// Cases which are alt colls with base58->binary ids
-		case "agarBatch", "agarRecipe", "jarRecipe", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
+		case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
 			// TODO: maybe de-urlencode here to account for named recipes?
 			altId, err := rfid.StandardizeAltCollectionId(id)
 			if err != nil {
@@ -1075,8 +1076,9 @@ func getAnyCollectionHandler() http.Handler {
 			baseItem, exists := map[string]rfid.AltCollectionItem[rfid.AlternateCollectionId]{
 				"agarBatch":       &rfid.AgarBatch{},
 				"agarRecipe":      &rfid.AgarRecipe{}, // TODO: handle recipe name?
-				"jarRecipe":       &rfid.JarRecipe{},  // TODO: handle recipe name?
-				"lcRecipe":        &rfid.LcRecipe{},   // TODO: handle recipe name?
+				"grainBatch":      &rfid.GrainBatch{},
+				"jarRecipe":       &rfid.JarRecipe{}, // TODO: handle recipe name?
+				"lcRecipe":        &rfid.LcRecipe{},  // TODO: handle recipe name?
 				"pcRun":           &rfid.PCRun{},
 				"sale":            &rfid.Sale{},
 				"substrateBatch":  &rfid.SubstrateBatch{},
@@ -1090,7 +1092,7 @@ func getAnyCollectionHandler() http.Handler {
 			if err != nil {
 				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 				return
-			} // TODO: validate works
+			}
 			bytes, err = json.Marshal(out)
 			if err != nil {
 				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
@@ -1102,7 +1104,6 @@ func getAnyCollectionHandler() http.Handler {
 				return
 			}
 		default: // Main collection ids
-			println("USING MAINCOLLID") // TODO: del
 			if mainCollItem, exists := map[string]rfid.MainCollectionItem{
 				"bag":             &rfid.Bag{}, // can only go to fruits
 				"fruit":           &rfid.Fruit{},
@@ -1119,7 +1120,6 @@ func getAnyCollectionHandler() http.Handler {
 				"stasisTube":      &rfid.StasisTube{}, // generally only goes to plate
 				"waterJar":        &rfid.WaterJar{},
 			}[entryType]; exists {
-				println("MAINCOLLID EXISTS") // TODO: del
 				// ensure id is in correct format
 				mainCollId, err := rfid.StandardizeMainCollectionId(id)
 				if err != nil {
@@ -1127,7 +1127,6 @@ func getAnyCollectionHandler() http.Handler {
 					http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 					return
 				}
-				println("GETTING ITEM") // TODO: del
 				// TODO: DELETE CURSOR PARTs????
 				//dbName, _ := os.LookupEnv("MONGO_INITDB_DATABASE")
 				//coll := ctx.Value("mongoClient").(*mongo.Client).Database(dbName).Collection(mainCollItem.CollectionName()) // TODO: this is incorrect! EVERYTHING IS BEING STORED IN THE PLATES COLLECTION???

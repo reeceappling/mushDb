@@ -226,9 +226,7 @@ func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, re
 	return
 }
 
-// TODO: rename
-func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseWriter, reader *multipart.Reader, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) { // TODO USE THIS ALL OVER THE PLACE
-	// TODO: BATTLE TEST THIS WHOLE THING!
+func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseWriter, reader *multipart.Reader, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) {
 
 	// Get any images
 	newPics = map[int]string{}
@@ -248,39 +246,32 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 		p, err = reader.NextPart()
 		if err != nil {
 			if err != io.EOF {
-				println("non-eof err!" + err.Error()) // TODO: THIS
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				http.Error(w, "non-eof err!"+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			err = nil // Ensure error is nil so it does not get returned
 			break
 		}
-		println("CHECKING A PART:", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		fileName := p.FileName()
 		if fileName == "" {
 			err = errors.New("file name is empty for what should have been an image")
-			println(err.Error()) // TODO: THIS
 			http.Error(w, "file name is empty for what should have been an image", http.StatusBadRequest)
 			return
 		}
 		// Process file
-		println("PROCESSING FILE:", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		parts := strings.Split(fileName, "-")
 		if len(parts) != 2 {
 			err = errors.New("invalid image name: " + fileName)
-			println(err.Error()) // TODO: THIS
 			http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
 			return
 		}
-		println("getting num", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		num, errr := strconv.Atoi(parts[1])
 		if errr != nil {
 			err = errr
-			println(err.Error()) // TODO: THIS
 			http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
 			return
 		}
-		println("getting field bytes", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
+		//println("getting field bytes", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		fieldBytes, errr := multipartToImageBytes(p, w)
 		if errr != nil {
 			err = errr
@@ -294,32 +285,29 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
 			if errr != nil {
 				err = errr
-				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newPics[num] = newFileNameWithPrefixPath
 		case "newContam":
-			println("found a new contam!")
+			//println("found a new contam!") // TODO: del
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "contam")
 			if errr != nil {
-				println("failed to save a new contam", errr.Error())
+				//println("failed to save a new contam", errr.Error()) // TODO: this
 				err = errr
-				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newContams[num] = newFileNameWithPrefixPath
 		case "newFlush":
-			println("found a new flush!")
+			//println("found a new flush!") // TODO: del
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "flush")
 			if errr != nil {
 				println("failed to save a new flush picture", errr.Error())
 
 				err = errr
-				println(err.Error()) // TODO: THIS
 				http.Error(w, "failed to save new flush: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -327,12 +315,11 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFlushes[num] = newFileNameWithPrefixPath
 		default:
 			err = errors.New("invalid picture name. Should never occur")
-			println(err.Error()) // TODO: THIS
+			println(err.Error() + " " + fileName)
 			http.Error(w, "invalid picture name. Should never occur", http.StatusInternalServerError)
 			return
 		}
 	}
-	println("returning from getMultipartImages") // TODO: THIS
 
 	// TODO:?????
 	//// CHECK THAT ALL NEW PICS EXIST

@@ -9,6 +9,22 @@ import (
 	"net/http"
 )
 
+type entryTypeWithId struct {
+	EntryType string `json:"entryType"`
+	Id        string `json:"id"`
+}
+type entryTypeIdCount struct {
+	EntryType string `json:"entryType"`
+	Id        string `json:"id"`
+	Count     *int   `json:"count,omitempty"` // Nil is the same as 1
+}
+
+type createSaleRequestNew struct {
+	EntryTypes []string `json:"entryTypes"`
+	Ids        []string `json:"ids"`                  // TODO: plugs will have a -# to specify how many????
+	ClosePlugs []int    `json:"closePlugs,omitempty"` // If entryType is plugs, then it will not close out the entry unless specified
+}
+
 //var (
 //	_ Sellable = &Bag{}
 //	_ Sellable = &Fruit{}
@@ -43,7 +59,7 @@ func (field SalesField) AddSale() {
 type Sale struct {
 	AlternateCollectionIdField `bson:"inline"`
 	// TODO: price????? other info?????
-	//Lot               AlternateCollectionId `bson:"_id" json:"_id"` // Lot number // TODO: REMOVED
+	SoldItems         []entryTypeIdCount
 	CreationDateField `bson:"inline"` // This is sale date
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`

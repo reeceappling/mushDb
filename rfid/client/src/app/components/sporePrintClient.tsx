@@ -17,7 +17,7 @@ import {
     HandleTxtResponse,
     HandleJsonResponse,
     SendMultipartRequest,
-    setFormData, InlineExpansionButton, ListPageItems
+    setFormData, InlineExpansionButton, ListPageItems, importApiUrlFor, importUrlFor, viewUrlFor
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -172,10 +172,11 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
             body.set("img",image,"img")
         }
 
-        SendMultipartRequest( BaseExternalUrl + "db/import/sporePrint", cookies, body)
-            .then(HandleTxtResponse)
-            .then(id=>{
-                redirect(BaseExternalUrl+"/view/sporePrint/"+id)
+        SendMultipartRequest(importUrlFor("sporePrint"), cookies, body)
+            .then(HandleJsonResponse)
+            .then(newItem=>{
+                AssertSporePrint(newItem)
+                redirect(viewUrlFor("sporePrint",newItem._id))
             })
             .catch((er) => {
                 setErr(JSON.stringify(er))
@@ -319,7 +320,7 @@ export default function SporePrintDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
             {/* TODO: area where we can display all the child MSS of this print? */}
-            <PicsDisplay pix={pics} updateParent={setPics} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
+            <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
             <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
@@ -403,9 +404,8 @@ export function NewSporePrintForm(
     return <NewEntryFormWrapper entryType={"sporePrint"}>
         <ErrorDisplay err={err} headerLevel={headerLevel} offset={offset}/>
         {fruitIn === undefined && <FruitRecentSelector onSelect={setFruit}/>}{/* TODO: isTopLevel stuff???*/}
-        <PicsDisplay pix={{existing:[],new:dataFor(pics)}} readonly={false} updateParent={(ps)=>{setPics(ps.new.map((p)=>{return p.data}))}} headerLevel={headerLevel} offset={offset}/>
+        <PicsDisplay pix={[]} readonly={false} updateParent={(ps)=>{setPics(ps.new)}} headerLevel={headerLevel} offset={offset}/>
         <NewEntryNotes setNotes={setNotes} />
-        {/*<EntryPermsArea setEntryPerms={setPerms}/> /!* TODO: only use perms if we want to? *!/*/}
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
 }

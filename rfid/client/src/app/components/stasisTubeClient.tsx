@@ -1,8 +1,14 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import NotesAreaOld, {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
-import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {
+    AllEntries,
+    Data,
+    OnViewCreatorQuadCol,
+    SplitAllEntries,
+    SplitEntriesV2
+} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
@@ -200,8 +206,8 @@ export default function StasisTubeDisplay(
             return {data: n, disabled: false}
         })
 
-        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [images, setImages] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
         const [disposed, setDisposed] = useState(initial.disposed)
         const [sale, setSale] = useState(initial.sale)
@@ -290,8 +296,8 @@ export default function StasisTubeDisplay(
                     </FlexedSinglesGroup>
                 </FlexedArea>
                 <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut} validTypesTo={["plate","stasisTube","jar"/* TODO: ANYMORE????*/]} cookies={cookies} headerTxt={"Transfers"}/>
-                <PicsDisplay pix={images} updateParent={setImages} readonly={readonly} headerLevel={headerLevel} />{/* Pics */}
-                <ContamsDisplay initial={initial.contamination || []} current={contams} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
+                <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel} />{/* Pics */}
+                <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />

@@ -492,13 +492,17 @@ a {
         vertical-align: top;
     }
 }
-
+.existingNote {
+    &.disabled{
+        background-color: var(--clr-danger-2);
+    }
+}
 .picRow.disabled {
     background-color: var(--clr-danger-2);
 }
-.disabled {
+.disabled { /* TODO: which to use?*/
     &.picLeft, &.picRight, &.inline, &.contamOverviewTable{
-        background-color: var(--clr-danger-0);
+        background-color: var(--clr-danger-1);
     }
 
 }
@@ -684,7 +688,7 @@ a {
 
 .contamsRows {
     display: grid;
-    grid-template-columns: 25% auto auto;
+    grid-template-columns: 25% auto auto; /* TODO: 25% ok here? */
     grid-gap: 1em;
 }
 

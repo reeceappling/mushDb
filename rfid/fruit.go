@@ -106,7 +106,7 @@ func initializeFruits(ctx context.Context) error {
 			newSimpleIndex("creationDate", "creationDate", false, false, false), // TODO: this is harvest date
 			newSimpleIndex("species", "species", false, false, false),
 			newSimpleIndex("subspecies", "subspecies", false, true, false),
-			transfersOutIndexModel,
+			//transfersOutIndexModel,
 			newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
 			newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 			//TODO: newSimpleIndex("prints", "prints", false, true, false),

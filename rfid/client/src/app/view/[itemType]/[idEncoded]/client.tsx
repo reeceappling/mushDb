@@ -29,6 +29,8 @@ import UserDisplay from "@/app/components/userClient";
 import WaterJarDisplay from "@/app/components/waterJarClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import PlugsDisplay from "@/app/components/plugsClient";
+import GrainBatchDisplay from "@/app/components/grainBatchClient";
+import SporeSwabDisplay from "@/app/components/sporeSwabClient";
 
 export function MainViewArea({inpData, itemType, allCookies}: { inpData: any, itemType: string, allCookies: string }) {
     const id = decodeURI(inpData.idEncoded)
@@ -51,6 +53,9 @@ export function MainViewArea({inpData, itemType, allCookies}: { inpData: any, it
             case "fruitingChamber":
                 return <FruitingChamberDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
                                                headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+            case "grainBatch":
+                return <GrainBatchDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                                               headerLevel={TopPageHeaderLevel} cookies={allCookies}/> // TODO: validate working
             case "jar":
                 return <JarDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
                                    headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
@@ -59,8 +64,7 @@ export function MainViewArea({inpData, itemType, allCookies}: { inpData: any, it
                                          headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
             case "lc":
                 return <LcDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                  headerLevel={TopPageHeaderLevel}
-                                  cookies={allCookies}/>
+                                  headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
             case "lcRecipe":
                 return <LcRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
                                         headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
@@ -94,8 +98,9 @@ export function MainViewArea({inpData, itemType, allCookies}: { inpData: any, it
             case "sporePrint":
                 return <SporePrintDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
-            // case "sporeSwab": // TODO: validate working
-            //     return <SporeSwabDisplay data={inpData} readonly={false} id={id} isTopLevel={true} headerLevel={TopPageHeaderLevel}/>
+            case "sporeSwab": // TODO: validate working
+                return <SporeSwabDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                                         headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
             case "stasisTube":
                 return <StasisTubeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
@@ -120,8 +125,4 @@ export function MainViewArea({inpData, itemType, allCookies}: { inpData: any, it
             default:
                 return <ErrorDisplay err={"Invalid view item type: " + itemType} headerLevel={TopPageHeaderLevel}/>
         }
-        return <ErrorDisplay err={"Invalid view item type: " + itemType} headerLevel={TopPageHeaderLevel}/>
-    // } catch (e) {
-    //     return <div>{"ERROR IN MAINVIEWAREA: "}{JSON.stringify(e)}</div>
-    // }
 }

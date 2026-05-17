@@ -2,10 +2,13 @@ package rfid
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"io"
 	"net/http"
 	"slices"
 )
@@ -13,24 +16,25 @@ import (
 // sometimes needed for transfers
 
 type PlugsJar struct {
-	// TODO; any more?
 	MainCollectionIdField             `bson:"inline"`
 	ParentTypeField                   `bson:"inline"` // empty==bought
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: empty=bought, from plugs, jar, LC, plate/slant
+	MainCollectionOptionalParentField `bson:"inline"` // TODO: empty=bought. From plugs, jar, LC, plate/slant
 	CreationDateField                 `bson:"inline"`
-	DowelTypes                        []Dowel         `bson:"dowelTypes" json:"dowelTypes"`
-	GenerationsFields                 `bson:"inline"` // TODO: NEW! fix!
+	DowelTypes                        []Dowel `bson:"dowelTypes" json:"dowelTypes"`
+	GenerationsFields                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
-	TransfersOutField                 `bson:"inline"` // TODO: NEW!!!!!
+	TransfersOutField                 `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	InnocField                        `bson:"inline"`
-	KnownFruitableField               `bson:"inline"` // TODO: NEW! FIX!
-	PcRunOptionalField                `bson:"inline"` // TODO: used to be required, but not found for imports! created before innoculation
-	SalesField                        `bson:"inline"` // TODO: MULTIPLE!
-	DisposedField                     `bson:"inline"` // Also changed once all pegs are sold/used?
-	NotesField                        `bson:"inline"`
-	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"`
+	//PicsField                           `bson:"inline"` // TODO: pics?
+	//ContaminationsField                 `bson:"inline"` // TODO: contams?
+	KnownFruitableField `bson:"inline"`
+	PcRunOptionalField  `bson:"inline"` // TODO: used to be required, but not found for imports! created before innoculation
+	SalesField          `bson:"inline"` // TODO: MULTIPLE!
+	DisposedField       `bson:"inline"` // Also changed once all pegs are sold/used?
+	NotesField          `bson:"inline"`
+	LastUpdatedField    `bson:"inline"`
+	AclField            `bson:"inline"`
 }
 
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
@@ -85,6 +89,20 @@ type Dowel struct {
 	Radius `bson:"inline"`
 	Wood   Wood `bson:"wood" json:"wood"`
 }
+
+func (d Dowel) validate() error {
+	if !slices.Contains(woods, d.Wood) {
+		return errors.New("invalid wood type")
+	}
+	if d.Size <= 0.0 {
+		return errors.New("invalid dowel radius magnitude")
+	}
+	if !slices.Contains(dowelRadiusUnits, d.Units) {
+		return errors.New("invalid dowel radius units")
+	}
+	return nil
+}
+
 type Radius struct {
 	Size  float64    `bson:"size" json:"size"`
 	Units LengthUnit `bson:"units" json:"units"`
@@ -92,7 +110,7 @@ type Radius struct {
 
 type Wood string
 
-var woods = []Wood{oak, poplar, bamboo} // TODO: use?
+var woods = []Wood{oak, poplar, bamboo}
 
 const (
 	poplar Wood = "Poplar"
@@ -102,9 +120,9 @@ const (
 
 type LengthUnit string
 
-var filterSizeUnits = []LengthUnit{um}              // TODO: use?
-var dowelRadiusUnits = []LengthUnit{mm, cm, in}     // TODO: use?
-var dowelLengthUnits = []LengthUnit{mm, cm, in, ft} // TODO: use?
+var filterSizeUnits = []LengthUnit{um}          // TODO: use? can be 0.2 micron (not pc-able), 0.5 micron (pc-able), or 5 micron (pc-able)
+var dowelRadiusUnits = []LengthUnit{mm, cm, in} // TODO: use?
+// var dowelLengthUnits = []LengthUnit{mm, cm, in, ft} // TODO: use?
 // TODO: use?
 var lengthUnits = []LengthUnit{um, mm, cm, in, ft, meter} // TODO: use?
 const (
@@ -137,11 +155,10 @@ func initializePlugs(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlugsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		// TODO: which indices are needed?
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
 		creationDateIndexModel,
-		// TODO: DOWEL TYPES
+		// TODO: combo dowel types index?
 		//newSimpleIndex("dowelTypes", "dowelTypes.wood", false, false, false),
 		//newSimpleIndex("dowelSizes", "dowelTypes.radius", false, false, false),
 		newSimpleIndex("species", "species", false, true, false),
@@ -188,31 +205,158 @@ func initializePlugs(ctx context.Context) error {
 	return addTestMainEntries(ctx, testItem)
 }
 
-// TODO: create new plugs request????
-type createPlugsRequest struct { // TODO: USE THIS!
+type createPlugsRequest struct {
 	DowelTypes         []Dowel `bson:"dowelTypes" json:"dowelTypes"`
-	PcRunOptionalField         // TODO: OPTIONAL!
+	PcRunOptionalField         // OPTIONAL!
 	NotesField
 	WriteTagToField
 }
 
-func createPlugsHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: DO THIS WHOLE THING!
+func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully test!
+	ctx := r.Context()
+	data := createPlugsRequest{}
+	id := NextMainCollectionId()
+	defer r.Body.Close()
+	bs, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = json.Unmarshal(bs, &data)
+	if err != nil {
+		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	for i, d := range data.DowelTypes {
+		if err = d.validate(); err != nil {
+			errTxt := fmt.Sprintf("failed to validate dowel type for entry #%d", i)
+			http.Error(w, errTxt+": "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if _, err = data.PcRunOptionalField.Get(ctx); err != nil {
+		if !errors.Is(err, ErrMissingOptionalField) {
+			http.Error(w, "invalid pc run field: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	// TODO: validate dowels
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	now := unixTimeForNow()
+	toInsert := PlugsJar{
+		MainCollectionIdField: MainCollectionIdField{id},
+		CreationDateField:     CreationDateField{now},
+		DowelTypes:            data.DowelTypes,
+		PcRunOptionalField:    PcRunOptionalField{data.PcRun},
+		NotesField:            NotesField{data.Notes},
+		LastUpdatedField:      LastUpdatedField{now},
+		// No Perms here for basic plugs
+		AclField: allCanWriteAcl(),
+	}
+
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 // TODO: import plugs request!
 type importPlugsRequest struct { // TODO: USE THIS!
-	DowelTypes []Dowel `bson:"dowelTypes" json:"dowelTypes"` // TODO: ok?
-	Generation
+	DowelTypes              []Dowel         `bson:"dowelTypes" json:"dowelTypes"` // TODO: ok?
+	Generation              *Generation     `json:"generation"`                   // Nil so we can // TODO; ensure ok
 	SpeciesOptionalField    `bson:"inline"` // TODO: ok?
 	SubspeciesOptionalField `bson:"inline"` // TODO: ok?
 	KnownFruitableField     `bson:"inline"` // TODO: ok?
 	NotesField              `bson:"inline"` // TODO: ok?
-	WriteTagToField
+	WriteTagToField         `bson:"inline"`
 }
 
 func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: DO THIS WHOLE THING!
+	ctx := r.Context()
+	data := importPlugsRequest{}
+	id := NextMainCollectionId()
+	defer r.Body.Close()
+	bs, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = json.Unmarshal(bs, &data)
+	if err != nil {
+		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	now := unixTimeForNow()
+	toInsert := PlugsJar{
+		MainCollectionIdField: MainCollectionIdField{id},
+		//ParentTypeField:                   ParentTypeField{},
+		//MainCollectionOptionalParentField: MainCollectionOptionalParentField{},
+		CreationDateField: CreationDateField{now},
+		DowelTypes:        data.DowelTypes,
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{data.Generation},
+			GenSinceFruitOrSpore: data.Generation,
+		},
+		SpeciesOptionalField: SpeciesOptionalField{data.Species},
+		//TransfersOutField:       TransfersOutField{},
+		SubspeciesOptionalField: SubspeciesOptionalField{data.SubSpecies},
+		//InnocField:              InnocField{},
+		KnownFruitableField: data.KnownFruitableField,
+		//PcRunOptionalField:      PcRunOptionalField{nil},
+		//SalesField:              SalesField{},
+		//DisposedField:           DisposedField{},
+		NotesField:       NotesField{data.Notes},
+		LastUpdatedField: LastUpdatedField{now},
+		// No Perms here for basic plugs
+		AclField: allCanWriteAcl(),
+	}
+	for i, d := range data.DowelTypes {
+		if err = d.validate(); err != nil {
+			errTxt := fmt.Sprintf("failed to validate dowel type for entry #%d", i)
+			http.Error(w, errTxt+": "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	// validate sub/species
+	if data.Species == nil {
+		if data.SubSpecies != nil {
+			http.Error(w, "species must exist if subspecies does", http.StatusBadRequest)
+			return
+		}
+		if data.KnownFruitable != nil {
+			http.Error(w, "knownFruitable must be nil for non-innoculated imports", http.StatusBadRequest)
+			return
+		}
+		if data.Generation != nil {
+			http.Error(w, "generation must be nil for non-innoculated imports", http.StatusBadRequest)
+			return
+		}
+	} else {
+		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		if err != nil {
+			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if subsp != nil {
+			toInsert.ACL = subsp.DefaultAcl.Clone()
+		} else {
+			toInsert.ACL = sp.DefaultAcl.Clone()
+		}
+	}
+	if err = data.Generation.validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 // TODO: new sale?

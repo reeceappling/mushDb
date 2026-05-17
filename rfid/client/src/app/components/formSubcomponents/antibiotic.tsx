@@ -1,4 +1,4 @@
-// TODO: THESE ARE ALL NON-CLIENT!
+// non-client
 
 import {Data, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {SelectorResetsOnSelectFor} from "@/app/components/selector";

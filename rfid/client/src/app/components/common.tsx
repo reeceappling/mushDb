@@ -9,7 +9,7 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NumberToDate} from "@/app/components/formSubcomponents/date";
-import {SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {SplitAllEntries, SplitEntriesV2} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import ReaderWriterSelector, {
@@ -543,6 +543,19 @@ export async function getTypeFor(id: string) { // TODO: ensure this works????
             throw error
         });
 }
+export async function getPathFor(id: string) { // TODO: ensure this works????
+    let resp = await fetch(BaseExternalUrl + "/db/pathFor/"+id, {
+        method: "GET",
+        headers: {
+            credentials: 'include',
+            'Content-type': 'application/json'
+        },
+    })
+    if (!resp.ok){
+        throw "failed to get path for id"
+    }
+    return await resp.text()
+}
 
 function webUrl(subPath: string) {
     return BaseExternalUrl + subPath
@@ -587,19 +600,19 @@ export function CreateNewEntryButton(handler: { onSubmit: () => void }) {
     return <button className={"greenButton buttonFullWidth"} onClick={handler.onSubmit}>{"Create!"}</button>
 }
 
-export function resolvePicsFormData(picsIn: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>) {
+export function resolvePicsFormData(picsIn: SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>) {
     let newImages: File[] = new Array(picsIn.new.length)
     let dataOut = {existing: picsIn.existing, new: new Array(picsIn.new.length)}
     for (let i = 0; i < picsIn.new.length; i++) {
-        let toSend = picsIn.new[i].data
+        let toSend = picsIn.new[i]
         if (toSend.img === undefined) {
             throw new Error("new image " + i + " is undefined")
-            //setErr("new image " + i + " is undefined")
-            //return
+        } else {
+            newImages[i] = toSend.img
         }
-        newImages[i] = toSend.img
         dataOut.new[i] = {
-            time: toSend.time, notes: toSend.notes.new.map(n => {
+            time: toSend.time,
+            notes: toSend.notes.new.map(n => {
                 return n.data
             })
         }
@@ -610,19 +623,18 @@ export function resolvePicsFormData(picsIn: SplitAllEntries<PicWithNotesForm, Ne
     }
 }
 
-export function resolveContamsFormData(inp: SplitAllEntries<ContaminationForm, NewContaminationForm>) {
+export function resolveContamsFormData(inp: SplitEntriesV2<ContaminationForm, NewContaminationForm>) {
     let conts: (File | undefined)[] = new Array(inp.new.length)
     let dataOut = {existing: inp.existing, new: new Array(inp.new.length)}
     for (let i = 0; i < inp.new.length; i++) {
-        let toSend = inp.new[i].data
         dataOut.new[i] = {
-            time: toSend.time,
-            confirmed: toSend.confirmed,
-            bacteria: toSend.bacteria,
-            mold: toSend.mold,
-            notes: toSend.notes
+            time: inp.new[i].time,
+            confirmed: inp.new[i].confirmed,
+            bacteria: inp.new[i].bacteria,
+            mold: inp.new[i].mold,
+            notes: inp.new[i].notes
         }
-        conts[i] = toSend.file
+        conts[i] = inp.new[i].file
     }
     return {
         images: conts,

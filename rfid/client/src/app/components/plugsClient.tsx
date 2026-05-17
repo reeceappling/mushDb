@@ -1,8 +1,9 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, Note} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
 import {
+    createApiUrlFor,
     DisplayInput,
     HandleJsonResponse, HandleTxtResponse,
     ImportDisplayInput,
@@ -10,7 +11,7 @@ import {
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, RequiredArrayOfType,
+    OptionalSimpleKey, RequiredArrayOfType, updateApiUrlFor, viewUrlFor,
 } from "@/app/components/common";
 import {
     FlexedArea,
@@ -48,8 +49,11 @@ import { SpeciesData } from "./speciesServer";
 import { SubspeciesData } from "./subspeciesServer";
 import {redirect} from "next/navigation";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
-import { ExistingSpeciesSelector } from "./speciesClient";
+import {ExistingSpeciesSelector, SpeciesSelector} from "./speciesClient";
 import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
+import {AdditiveEntriesGroupForNew} from "@/app/components/formSubcomponents/additives";
+import {WoodEntriesGroupForNew} from "@/app/components/formSubcomponents/plugs";
+import {SalesArea} from "@/app/components/saleClient";
 
 export function AssertPlugs(input: any): asserts input is PlugsJar {
     if (typeof input !== 'object') {
@@ -186,9 +190,7 @@ export default function PlugsDisplay(
             acl: MarshalAcl(acl),
         }
 
-
-        // TODO: ensure url right
-        fetch(BaseExternalUrl + "/db/update/plugs/" + encodeURIComponent(data._id), { // TODO: question marks in id cause issues
+        fetch(updateApiUrlFor("plugs",data._id), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -207,7 +209,7 @@ export default function PlugsDisplay(
     return (
         <DisplayFormWrapper entryType={"plugs"}>{/* TODO: ensure ok*/}
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID txt={"Plugs"} id={initial._id} entryType={"plugs"} linkPage={false}/>
+            <ID txt={"Plugs Jar"} id={initial._id} entryType={"plugs"} linkPage={false}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -230,12 +232,15 @@ export default function PlugsDisplay(
                     {/* TODO: ANYTHING ELSE? */}
                 </FlexedSinglesGroup>
             </FlexedArea>
-            {/* TODO: DOWEL TYPES DISPLAY*/}
-            {/* TODO: SALES DISPLAY*/}
+            <div>
+                <div className={"text-lg"}>{"Dowel Types"}</div>
+                <DowelTypesTable data={initial.dowelTypes}/>
+            </div>
+            <SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales} />
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plugs"}
                                  transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly} cookies={cookies}/>
-            {/* TODO: REDO THE NOTESFORMAREA and NotesArea???*/}
+            {/* TODO: Consider replacing all NotesArea with NotesFormArea????*/}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
@@ -248,6 +253,21 @@ export default function PlugsDisplay(
             }}>{"Update"}</button>}
         </DisplayFormWrapper>
     )
+}
+
+export function DowelTypesTable({data}: {data:DowelType[]}){
+    return <table>
+        <tr>
+            <th className={"mr-[2em]"}>{"Wood"}</th>
+            <th className={"mr-[2em]"}>{"Radius"}</th>
+        </tr>
+        {data.map((item, i)=>{
+            return <tr key={item.wood+item.size+item.units+i}>
+                <td className={"mr-[2em]"}>{item.wood}</td>
+                <td className={"mr-[2em]"}>{item.size+" "+item.units}</td>
+            </tr>
+        })}
+    </table>
 }
 
 
@@ -282,9 +302,10 @@ const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
             },
             body: JSON.stringify(body)
         })
-            .then(HandleTxtResponse) // TODO: ensure ok! might be json!
-            .then((newId) => {
-                redirect(BaseExternalUrl + "/view/plugs/" + newId)
+            .then(HandleJsonResponse)
+            .then((newItem) => {
+                AssertPlugs(newItem)
+                redirect(viewUrlFor("plugs",newItem._id))
             })
             .catch((error) => {
                 setErr(JSON.stringify(error))
@@ -293,21 +314,23 @@ const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
     return <ImportEntryFormWrapper entryType={"plugs"}>
 
         {err != undefined && <div>{"Error: " + err}</div>}
-        {/* TODO: dowel types area */}
+        <div>
+            <div className={"text-lg"}>{"Dowels: "}</div>
+            <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
+        </div>
         <GenerationInput updateParent={setGen}/>
         <div className={"centerH"}>
             <ExistingSpeciesSelector initialSpecies={species?._id}
                                      doSelect={(spec?: SpeciesData) => {
                                          setSpecies(spec)
                                          setSubspecies(undefined)
-                                     }/*cookies={cookies}*/}/>
+                                     }}/>
         </div>
         {species !== undefined ? <div className={"centerH"}>
             <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
         </div> : null}
         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
-        {/* TODO: NOTES! */}
-
+        <NewEntryNotes setNotes={setNotes} />
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={ImportEntry}>{"Import Plugs"}</button>
     </ImportEntryFormWrapper>
@@ -329,13 +352,20 @@ export function NewPlugsForm(
             // TODO: validate dowel types
             return
         }
+        for (let i = 0; i<dowelTypes.length; i++){
+            if (!dowelTypes[i] || dowelTypes[i].size <= 0 || dowelTypes[i].units === "") {
+                setErr("Invalid dowels")
+                return
+            }
+        }
         let body: any = {
             dowelTypes: dowelTypes,
             pcRun: pcRun?._id,
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl + "/create/plugs", { // TODO: ensure correct
+
+        fetch(createApiUrlFor("plugs"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -354,9 +384,13 @@ export function NewPlugsForm(
     }
     return <NewEntryFormWrapper entryType={"plugs"}>
         <ErrorDisplay err={err}/>
-        {/* TODO: DOWEL CREATION AREA */}
-        <PcRunSelector doSelect={setPcRun} allowCreate={true}/> {/* TODO: IF PC RUN PROVIDED DO NOT SHOW SELECTOR*/}
-        {/* TODO: NOTES */}
+        <div>
+            <div className={"text-lg"}>{"Dowels: "}</div>
+            <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
+        </div>
+        {pcRunIn?<div>{"PC Run: "+pcRunIn/* TODO: link?*/}</div>:
+            <PcRunSelector doSelect={setPcRun} allowCreate={true}/>}
+        <NewEntryNotes setNotes={setNotes} />
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={createPlugs}>{"Create"}</button>
     </NewEntryFormWrapper>

@@ -51,7 +51,7 @@ services:
       - mushdb
     depends_on:
       - mushdb
-  mushdb: # fungi database container
+  mushdb: # fungi database container # TODO: different db container for dev vs prod...
     image: mongo:4.4
     restart: unless-stopped
     environment:

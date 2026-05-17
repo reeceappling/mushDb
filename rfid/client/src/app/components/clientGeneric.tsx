@@ -21,7 +21,14 @@ export default function PageWrapper(
         },
         children: ReactNode,
     }) {
-    const queryClient = new QueryClient() // TODO: USE THIS IN ALL
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: {
+                staleTime: 5 * 60 * 1000, // Fresh for 5 minutes (data won't refetch in background during this time)
+                gcTime: 10 * 60 * 1000,  // Stays in memory for 10 minutes after going inactive
+            },
+        },
+    })
     return <ReaderOptionsContextProvider initialState={{options: props.readers, selected: undefined}}>
         <CookiesProvider>
             <GoogleOAuthProvider clientId={GoogleApiClient}>
@@ -43,6 +50,7 @@ export default function PageWrapper(
 //     }
 // }
 
+// TODO: should this be completely removed? I highly doubt it
 export function LatestListDisplay<T>({text, data, isPartOfLatestMostRecent, constructor}: {
     text?: string,
     data: T[],
@@ -60,24 +68,24 @@ export function LatestListDisplay<T>({text, data, isPartOfLatestMostRecent, cons
     </DepthProvider>
 }
 
-export function LatestMostRecentListDisplay<T>({data, constructor}: {
-    data: ListResult<T>,
-    constructor: (data: T, key: number) => React.JSX.Element
-}) {
-    const standardArea = (inpData: ListResult<T>) => {
-        if (inpData.standard === undefined || inpData.standard.length === 0) {
-            return <div></div> // TODO: ok?
-        }
-        return <LatestListDisplay text={"Standard"} data={inpData.standard} constructor={constructor}/>
-    }
-    const recentArea = (inpData: ListResult<T>) => {
-        if (inpData.recent === undefined || inpData.recent.length === 0) {
-            return <div></div> // TODO: ok?
-        }
-        return <LatestListDisplay data={inpData.recent} constructor={constructor}/>
-    }
-    return <>{/* Each std/recent area has its own depth provider*/}
-        {standardArea(data)}
-        {recentArea(data)}
-    </>
-}
+// export function LatestMostRecentListDisplay<T>({data, constructor}: {
+//     data: ListResult<T>,
+//     constructor: (data: T, key: number) => React.JSX.Element
+// }) {
+//     const standardArea = (inpData: ListResult<T>) => {
+//         if (inpData.standard === undefined || inpData.standard.length === 0) {
+//             return <div></div> // TODO: ok?
+//         }
+//         return <LatestListDisplay text={"Standard"} data={inpData.standard} constructor={constructor}/>
+//     }
+//     const recentArea = (inpData: ListResult<T>) => {
+//         if (inpData.recent === undefined || inpData.recent.length === 0) {
+//             return <div></div> // TODO: ok?
+//         }
+//         return <LatestListDisplay data={inpData.recent} constructor={constructor}/>
+//     }
+//     return <>{/* Each std/recent area has its own depth provider*/}
+//         {standardArea(data)}
+//         {recentArea(data)}
+//     </>
+// }
