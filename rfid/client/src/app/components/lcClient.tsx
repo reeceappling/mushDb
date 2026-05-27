@@ -36,7 +36,9 @@ import {
     setFormData,
     setFormImages,
 } from "@/app/components/common";
-import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
@@ -73,10 +75,10 @@ import {
     AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
-    SplitAllEntries, SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import {OnViewCreatorsQuadColArea, PcRunArea} from "@/app/components/pcRunClient";
-import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
+import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
@@ -277,8 +279,8 @@ export default function LcDisplay(
 
         const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(data.confirmedClean)
         const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
-        const [images, setImages] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
         const [disposed, setDisposed] = useState(initial.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
@@ -345,11 +347,12 @@ export default function LcDisplay(
                         onCreate([{
                             typeText: "Liquid Culture Syringe",
                             node: <CreatedLinkFor linkId={lcs._id} typ={"lcSyringe"}/>,// TODO: ENSURE lcs or lcSyringe is correct here
-                        }])
+                        }], false)
                     }}/>
-                }
+                },
             },
             // TODO: can lc do anything else?
+            WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"lc"}>
             <ID txt={"Liquid Culture"} id={data._id} entryType={"lc"}/>
@@ -480,8 +483,8 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
         <ErrorDisplay err={err}/>
         {lcRecipeIn !== undefined && <LcRecipeSelector doSelect={setLcRecipe}
                                                        allowCreate={handlers.isTopLevel}/>} {/* TODO: isTopLevel? disallow ok? */}
-        {pcRunIn !== undefined && <RecentPCRunSelector doSelect={setPcRun} allowCreation={handlers.isTopLevel}
-                                                       creatorInPage={true}/>} {/* TODO: isTopLevel? disallow ok? */}
+        {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
+                                                          creatorInPage={true}/>} {/* TODO: isTopLevel? disallow ok? */}
         <DateArea pre={"Creation date: "} when={Date.now()} readonly={false} updateParent={setCreationDate}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

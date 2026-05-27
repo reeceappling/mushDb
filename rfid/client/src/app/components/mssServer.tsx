@@ -1,6 +1,10 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {AgarBatchSelector, NewAgarBatchForm} from "@/app/components/agarBatchClient";
+import {AgarBatchData, ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {MssSelector, NewMssForm} from "@/app/components/mssClient";
 
 
 export function TestMssOk(){
@@ -31,4 +35,32 @@ export interface MssData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function MssSelectorCloseable(sp: SelectorProps<MssData>) {
+    const doSel = (val?: MssData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<MssData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: change
+        closeTxt: "Close MSS List",
+        createTxt: "Create MSS",
+        lowercase: "mss",
+        creatorInPage: sp.creatorInPage,
+        createEndpt: "mss",
+        getId: (v: MssData) => v._id,
+        createSelector:(selHdl: (onSelect: MssData) => void)=>{
+            return <MssSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        createCreator:(selHdl: (onSelect: MssData) => void)=>{
+            return <NewMssForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
 }

@@ -7,7 +7,7 @@ import NotesArea, {
     Note,
     NotesAreaInline, NotesAreaViewSubcomponent,
     NotesAreaOld,
-    NotesGrid, SingleNoteV2
+    NotesGrid, SingleNoteV2, NewEntryNotes
 } from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -33,8 +33,8 @@ import {
     InlineEntry,
 } from "@/app/components/agarRecipeClient";
 import {OnViewCreatorsTriColArea, PcRunArea} from "@/app/components/pcRunClient";
-import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
+import {AgarRecipeData, AgarRecipeSelectorCloseable} from "@/app/components/agarRecipeServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SelectorFor} from "@/app/components/selector";
@@ -129,31 +129,33 @@ export default function AgarBatchDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
-                txt: "Create Plates", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Plates",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewPlateForm agarBatchIn={data} handlers={{
                         onCreate: (newItem: PlateData) => {
                             return onCreate([{
                                 typeText: "Plate",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"plate"}/>
-                            }])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
-                }
+                },
             },
             {
                 // TODO: CreateSlants. Both agar and slants will either be PC-d same time in seperate containers or agar PC'd while inside the slant...
-                txt: "Create Slants", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Slants",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewSlantForm agarBatchIn={data} handlers={{
                         onCreate: (newItem: PlateData) => {
                             return onCreate([{
                                 typeText: "Slant",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"slant"}/>
-                            }])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
-                }
+                },
             },
         ]
         return (
@@ -193,7 +195,7 @@ export function NotesFormArea({
                                   initial,
                                   updateParent,
                                     removeHeader,
-                              }: {
+                              }: { // TODO: add withDictaphone if possible? we only want the dictaphone in some edge cases
     readonly?: boolean,
     initial?: Note[],
     updateParent?: (entries: AllEntries<Note>) => void,
@@ -221,12 +223,12 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     agarRecipeIn?: AgarRecipeData,
     pcRunInp?: PcRunData
 }) {
+    const defaultColor: AgarColor = "Clear"
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunInp)
     const [recipe, setRecipe] = useState<AgarRecipeData | undefined>(agarRecipeIn)
-    const [color, setColor] = useState<AgarColor>("Clear")
+    const [color, setColor] = useState<AgarColor>(defaultColor)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    // TODO: handle isTopLevel
     const newAgarBatchSubmit = () => {
         // pcRun, recipe must exist
         if (!pcRun) {
@@ -265,68 +267,73 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
         <ErrorDisplay data-cy-id="Error" err={err}/>
         {pcRunInp ? <PcRunArea binaryId={pcRunInp?._id}/> :
             <Subform >
-                <RecentPCRunSelector data-cy-id="PcRun" doSelect={setPcRun} allowCreation={handlers.isTopLevel}
-                                 creatorInPage={handlers.isTopLevel}/>
+                <PcRunSelectorCloseable data-cy-id="PcRun" doSelect={setPcRun} allowCreation={handlers.isTopLevel}
+                                        creatorInPage={handlers.isTopLevel}/>
             </Subform>
         }
         {agarRecipeIn ? <AgarRecipeArea agarRecipeBinId={agarRecipeIn?._id}/> :
             <Subform >
-                <AgarRecipeSelector data-cy-id="Recipe" doSelect={setRecipe}
-                                allowCreate={handlers.isTopLevel}/>
+                <AgarRecipeSelectorCloseable
+                    doSelect={setRecipe}
+                    txt={"Agar Recipe TEMP TEXT"/* TODO: fix*/}
+                    allowCreation={false/* TODO: true?*/}
+                    creatorInPage={false}/* TODO: true?*//>
+                {/*<AgarRecipeSelector data-cy-id="Recipe" doSelect={setRecipe}*/}
+                {/*                allowCreate={handlers.isTopLevel}/>*/}
             </Subform>
         }
-        <AgarColorArea data-cy-id={"Color"} current={color} onSelect={setColor}/>
-        <NotesFormArea readonly={false} initial={[]} updateParent={v => { // TODO: validate workign
-            setNotes(v.new.map(x => {
-                return x.data
-            }))
-        }}/>
+        <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
+        <NewEntryNotes setNotes={setNotes}/>
+        {/*<NotesFormArea readonly={false} initial={[]} updateParent={v => { // TODO: validate workign*/}
+        {/*    setNotes(v.new.map(x => {*/}
+        {/*        return x.data*/}
+        {/*    }))*/}
+        {/*}}/>*/}
         <button className={"bottomButton greenButton"} onClick={newAgarBatchSubmit}>{"Submit"}</button>
     </NewEntryFormWrapper>
 }
 
-export function AgarBatchInline({
-                                    data,
-                                    expandByDefault,
-                                    onClick,
-                                    showMainPageButton,
-                                    idIsLink
-                                }: InlineProps<AgarBatchData>) {
-    // TODO: DO INLINES NEED DEPTH PROVIDERS??????
-    const notes = data.notes || []
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const areaProps = () => {
-        return {expanded: expanded, setExpanded: setExpanded}
-    }
-    const pcRunDisplayId = data.pcRun
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea data-cy-id="InlineTop" props={{}}> {/* TODO: do we need data-cy-id on this?*/}
-            <ID data-cy-id="Id" id={data._id} txt={"Agar Batch"} entryType={"agarBatch"}
-                allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-            <div data-cy-id="Recipe">
-                <EntryLink props={{displayedId: data.agarRecipe, linkId: data.agarRecipe, entryType: "agarRecipe"}}>
-                    <div>{data.agarRecipe}</div>
-                </EntryLink>
-            </div>
-            <div data-cy-id="Color">{data.color}</div>
-        </InlineSubArea>
-        <InlineExpansionArea data-cy-id="InlineBottom" props={areaProps()}> {/* TODO: do we need data-cy-id on this?*/}
-            <div data-cy-id="PcRun" className={"inline"}>
-                <EntryLink props={{displayedId: pcRunDisplayId, linkId: pcRunDisplayId, entryType: "pcRun"}}>
-                    <div>{pcRunDisplayId}</div>
-                </EntryLink>
-            </div>
-            <NotesAreaInline data-cy-id="Notes" notes={notes} offset={-1}/>
-            <DateArea data-cy-id="LastUpdated" pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-            <button className={"basicButton"} data-cy-id="CloseButton" onClick={(e) => {
-                e.stopPropagation();
-                setExpanded(false)
-            }}>{"See Less"}</button>
-        </InlineExpansionArea>
-        <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
+// export function AgarBatchInline({
+//                                     data,
+//                                     expandByDefault,
+//                                     onClick,
+//                                     showMainPageButton,
+//                                     idIsLink
+//                                 }: InlineProps<AgarBatchData>) {
+//     const notes = data.notes || []
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     const areaProps = () => {
+//         return {expanded: expanded, setExpanded: setExpanded}
+//     }
+//     const pcRunDisplayId = data.pcRun
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea data-cy-id="InlineTop" props={{}}> {/* TODO: do we need data-cy-id on this?*/}
+//             <ID data-cy-id="Id" id={data._id} txt={"Agar Batch"} entryType={"agarBatch"}
+//                 allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+//             <div data-cy-id="Recipe">
+//                 <EntryLink props={{displayedId: data.agarRecipe, linkId: data.agarRecipe, entryType: "agarRecipe"}}>
+//                     <div>{data.agarRecipe}</div>
+//                 </EntryLink>
+//             </div>
+//             <div data-cy-id="Color">{data.color}</div>
+//         </InlineSubArea>
+//         <InlineExpansionArea data-cy-id="InlineBottom" props={areaProps()}> {/* TODO: do we need data-cy-id on this?*/}
+//             <div data-cy-id="PcRun" className={"inline"}>
+//                 <EntryLink props={{displayedId: pcRunDisplayId, linkId: pcRunDisplayId, entryType: "pcRun"}}>
+//                     <div>{pcRunDisplayId}</div>
+//                 </EntryLink>
+//             </div>
+//             <NotesAreaInline data-cy-id="Notes" notes={notes} offset={-1}/>
+//             <DateArea data-cy-id="LastUpdated" pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//             <button className={"basicButton"} data-cy-id="CloseButton" onClick={(e) => {
+//                 e.stopPropagation();
+//                 setExpanded(false)
+//             }}>{"See Less"}</button>
+//         </InlineExpansionArea>
+//         <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                expanded={expanded}/>
+//     </InlineEntry>
+// }
 
 // TODO: MOVE!
 export function ListPageTableRow<T>(props: React.PropsWithChildren<{ data: T, onClick: (item: T) => void, className?: string }>) {
@@ -351,6 +358,7 @@ export function ListPageTable<T>({data, onClick, cols,className}: {
     onClick?: (v: T) => void,
     cols: ListTableColumn<T>[],
     className?: string,
+    // TODO: give this a reload button????
 }){
     return <table className={"listPageTable"}>
         <tr className={"listPageTableRow headerRow"}>
@@ -395,27 +403,6 @@ export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
-// export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<AgarBatchData>) {
-//     return <table className={"listPageTable"}>
-//         <tr>
-//             <th>{"ID"}</th>
-//             <th>{"Color"}</th>
-//             <th>{"PC Run"}</th>
-//             <th>{"Agar Recipe"}</th>
-//             <th>{"Last Updated"}</th>
-//         </tr>
-//         {data.map((item) => {
-//             return <ListPageTableRow data={item} onClick={(v)=>{onClick && onClick(v)}}>
-//                 <td>{item._id}</td>
-//                 <td>{item.color}</td>
-//                 <td>{item.pcRun}</td>
-//                 <td>{item.agarRecipe}</td>
-//                 <td>{item.lastUpdated}</td>
-//             </ListPageTableRow>
-//         })}
-//         </table>
-// }
-
 export function AgarBatchArea({agarBatchId, headerLevel, offset}: {
     agarBatchId?: string,
     headerLevel?: number,
@@ -436,11 +423,10 @@ export function AgarBatchArea({agarBatchId, headerLevel, offset}: {
 }
 
 export function AgarColorArea(
-    {current, onSelect}: {
-        current: AgarColor, // TODO: may need to be initial
+    {initial,onSelect}: {
+        initial: AgarColor,
         onSelect?: (s: AgarColor) => void
     }) {
-
     const {isPending, error, data} = useQuery({
         queryKey: ['colorOptions'],
         queryFn: () => getOptionsResponse("colors")
@@ -453,7 +439,7 @@ export function AgarColorArea(
             return <div>{"ERROR LOADING COLORS: " + error.message}</div>
         }
         return <SelectorFor disabled={onSelect === undefined} data-cy-id={"Color"} options={data || []}
-                            initial={current} updateParent={(colStr: string) => {
+                            initial={initial} updateParent={(colStr) => {
             onSelect && onSelect(colStr as AgarColor)
         }}/>
     }
@@ -463,7 +449,6 @@ export function AgarColorArea(
     </div>
 }
 
-// TODO: DO THIS ON ALL!
 export function AgarBatchSelectorTable({data, onClick, withLink}: ListPageItems<AgarBatchData>) {
     let cols: ListTableColumn<AgarBatchData>[] = [
         NewColumn("ID", (v)=>v._id),

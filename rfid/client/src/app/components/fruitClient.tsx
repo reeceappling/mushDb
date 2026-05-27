@@ -6,7 +6,7 @@ import {
     AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
-    SplitAllEntries, SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -54,7 +54,7 @@ import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {ReadRFIDButton} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -65,7 +65,6 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
 import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
-import {RecentSelectorV2} from "@/app/components/mssClient";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
@@ -155,7 +154,7 @@ export default function FruitDisplay(
         const [initial, setInitial] = useState(data)
         // TODO: change all other states when re-set
 
-        const [pics, setPics] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [disposed, setDisposed] = useState(initial.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         // Helper states
@@ -244,9 +243,9 @@ export default function FruitDisplay(
                         onCreate([{
                             typeText: "Spore Swab",
                             node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
-                        }])
+                        }], false)
                     }}/>
-                }
+                },
             },
             {
                 txt: "Create Spore Print",
@@ -257,11 +256,11 @@ export default function FruitDisplay(
                                                   onCreate([{
                                                       typeText: "Spore Print",
                                                       node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
-                                                  }])
+                                                  }], false)
                                               }}/>
-                }
-            }
-
+                },
+            },
+            WriteRfidOvcArea(initial._id),
         ]
         return (
             <DisplayFormWrapper entryType={"fruit"}>
@@ -563,12 +562,12 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
 //     </div>
 // }
 
-// TODO: HEAVILY TEST!!!!
-export function FruitRecentSelector({onSelect}: { onSelect: (selected?: FruitData) => void }) {
-    return <RecentSelectorV2<FruitData> listUrlType={"fruits"} assertion={AssertFruit} singleConstructor={(val, i) => {
-        return <FruitInline data={val} expandByDefault={false} onClick={onSelect}/>
-    }}/>
-}
+// // TODO: HEAVILY TEST!!!!
+// export function FruitRecentSelector({onSelect}: { onSelect: (selected?: FruitData) => void }) {
+//     return <RecentSelectorV2<FruitData> listUrlType={"fruits"} assertion={AssertFruit} singleConstructor={(val, i) => {
+//         return <FruitInline data={val} expandByDefault={false} onClick={onSelect}/>
+//     }}/>
+// }
 
 export function FruitListPageTable({data, onClick, withLink}: ListPageItems<FruitData>) {
     let cols: ListTableColumn<FruitData>[] = [

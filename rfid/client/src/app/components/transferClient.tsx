@@ -35,11 +35,8 @@ import {
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
-import {SlantData} from "@/app/components/slantServer";
 import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
-import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
+import {GetTransferReasons} from "@/app/components/formSubcomponents/server";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -292,9 +289,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
             {xferImgArea("Image to:", setPicTo, "image-to")}
         </div>
         <div className={"new-xfer-notes gapTop"}>
-            <TestAndValidate todos={["notes should properly be populated"]}>
-                <NewEntryNotes setNotes={setNotes}/>
-            </TestAndValidate>
+            <NewEntryNotes setNotes={setNotes}/>
         </div>
         <div className={"newTransferRow5"}>
             <div className={"submitNewXfer"}>
@@ -543,7 +538,7 @@ export function InnocDisplay(
     }
 ) {
     let out: JSX.Element | null = (innoc === undefined) ? null :
-        <IdPageLink id={innoc} entryType={"transfer"}/>
+        <IdPageLink id={innoc} entryType={"transfer"} openInNewTab={true}/>
     return <div className={"innocDisplay"}>
         <div>{"Innoculation ID: "}</div>
         <div>{out || "none"}</div>
@@ -557,13 +552,22 @@ export function TransferReasonSelector(
     }) {
     const {isPending, error, data} = useQuery({
         queryKey: ['transferReasonOptions'],
-        queryFn: () => {
-            return fetch(BaseExternalUrl + "/options/transferReasons").then(HandleJsonResponse).then((resJson) => {
+        queryFn: GetTransferReasons,
+        // async () => {
+        //     try {
+        //         const reasonsMap = await GetTransferReasons();
+        //         return reasonsMap;
+        //     } catch (e) {
+        //         throw e;
+        //     }
+        // },
+        /*
+        return fetch(BaseInternalUrl + "/options/transferReasons").then(HandleJsonResponse).then((resJson) => {
                 return convertObjectToStringMap(resJson)
             }).catch((e) => {
                 throw e
             })
-        },
+        */
     })
     if (isPending || error !== null) {
         return <div>{isPending ? "TRANSFER REASON SELECTOR LOADING" : "TRANSFER REASON SELECTOR ERROR: " + error.message}</div>
@@ -576,16 +580,6 @@ export function TransferReasonSelector(
                             onSelect && onSelect(s as string)
                         }
                         }/>
-}
-
-function convertObjectToStringMap(obj: { [key: string]: string }): Map<string, string> {
-    const map = new Map<string, any>();
-    for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-            map.set(key, obj[key]);
-        }
-    }
-    return map;
 }
 
 export function TransferListPageTable({data, onClick, withLink}: ListPageItems<TransferData>) {
@@ -647,6 +641,8 @@ export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<T
     ]
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
+
+// TODO: likely will not be used
 export function TransferSelector( // TODO: USE ELSEWHERE
     {
         doSelect,

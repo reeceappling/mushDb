@@ -1,5 +1,7 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {NewSubstrateBatchForm, SubstrateBatchSelector} from "@/app/components/substrateBatchClient";
 
 export function TestSubstrateBatchOkStd(std: boolean){
     let a: SubstrateBatchData = TestSubstrateBatchOk()
@@ -23,4 +25,27 @@ export interface SubstrateBatchData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+// TODO: VALIDATE WORKS!
+export function SubstrateBatchSelectorCloseable(sp: SelectorProps<SubstrateBatchData>){ // TODO: likely overhaul
+    return <CloseableSelector<SubstrateBatchData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: sp.doSelect, // For selecting normally
+        msgTxt: "", // TODO: del?
+        closeTxt: "Close Substrate Batch List",
+        createTxt: "Create Substrate Batch",
+        createEndpt: "substrateBatch",
+        lowercase: "substrate batch",
+        creatorInPage: sp.creatorInPage,
+        getId: (v: SubstrateBatchData)=>v._id,
+        createSelector:(selHdl: (onSelect: SubstrateBatchData) => void)=>{
+            return <SubstrateBatchSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        createCreator:(selHdl: (onSelect: SubstrateBatchData) => void)=>{
+            return <NewSubstrateBatchForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
 }

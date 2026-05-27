@@ -6,48 +6,7 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 import {NotesFormArea} from "@/app/components/agarBatchClient";
 
-export function PixRowNew(
-    {updateParent, remv}: {
-        updateParent?: (d: NewPicWithNotesForm) => void,
-        remv: () => void,
-    }) {
-    const [current, setCurrent] = useState<NewPicWithNotesForm>({
-        time: Date.now(),
-        img: undefined,
-        notes: {existing: [], new: []}
-    });
-    const updateRow = (updated: NewPicWithNotesForm) => {
-        setCurrent(updated)
-        updateParent && updateParent(updated)
-    }
-    const leftArea = () => {
-        return <div className={"picLeft"}>
-            {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
-            <ImageSelector updateParent={f => {
-                let upd = structuredClone(current)
-                upd.img = f
-                updateRow(upd)
-            }}/>
-            <button className={"removeButton"} onClick={remv}>{"REMOVE THIS Entry"}</button>
-        </div>
-    }
-    const rightArea = () => {
-        return <div className={"picRight"}>
-            <DateArea readonly={true} when={current.time}/>
-            <NotesFormArea readonly={false} initial={[]} updateParent={(nts: AllEntries<Note>) => {
-                let updated = structuredClone(current)
-                updated.notes = nts
-                updateRow(updated)
-            }} removeHeader={true}/>
-        </div>
-    }
-    return <div className={"contentsOnly picRow"}>
-        {leftArea()}
-        {rightArea()}
-    </div>
-}
-
-export function PixRowsNew(
+export function PixRows(
     {initial, updateParent}: {
         initial: PicWithNotesIncoming[],
         updateParent?: (d: NewPicWithNotesForm[]) => void,
@@ -92,5 +51,45 @@ export function PixRowsNew(
             }}>{"Add picture"}</button>
         </div>
     </>
+}
 
+export function PixRowNew(
+    {updateParent, remv}: {
+        updateParent?: (d: NewPicWithNotesForm) => void,
+        remv: () => void,
+    }) {
+    const [current, setCurrent] = useState<NewPicWithNotesForm>({
+        time: Date.now(),
+        img: undefined,
+        notes: {existing: [], new: []}
+    });
+    const updateRow = (updated: NewPicWithNotesForm) => {
+        setCurrent(updated)
+        updateParent && updateParent(updated)
+    }
+    const leftArea = () => {
+        return <div className={"picLeft"}>
+            {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
+            <ImageSelector updateParent={f => {
+                let upd = structuredClone(current)
+                upd.img = f
+                updateRow(upd)
+            }}/>
+            <button className={"removeButton"} onClick={remv}>{"REMOVE THIS Entry"}</button>
+        </div>
+    }
+    const rightArea = () => {
+        return <div className={"picRight"}>
+            <DateArea readonly={true} when={current.time}/>
+            <NotesFormArea readonly={false} initial={[]} updateParent={(nts: AllEntries<Note>) => {
+                let updated = structuredClone(current)
+                updated.notes = nts
+                updateRow(updated)
+            }} removeHeader={true}/>
+        </div>
+    }
+    return <div className={"contentsOnly picRow"}>
+        {leftArea()}
+        {rightArea()}
+    </div>
 }

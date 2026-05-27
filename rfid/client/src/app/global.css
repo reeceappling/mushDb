@@ -847,3 +847,11 @@ a {
 .padBottom {
     padding-bottom: 1em;
 }
+
+.fixCenterScreen {
+    position: fixed;
+    inset: 0;        /* Sets top, right, bottom, and left to 0 */
+    margin: auto;    /* Centers the element in the available space */
+    width: fit-content;
+    height: fit-content;
+}

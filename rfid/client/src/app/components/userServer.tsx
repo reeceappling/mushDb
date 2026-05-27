@@ -36,3 +36,5 @@ export function IsValidUserPerms(input: any): boolean {
         OptionalArrayOfType('projects', input, IsString)
     )
 }
+
+// Likely will never need a closeable single selector for this

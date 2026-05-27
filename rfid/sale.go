@@ -20,6 +20,7 @@ type entryTypeIdCount struct {
 }
 
 type createSaleRequestNew struct {
+	// TODO: notes?
 	EntryTypes []string `json:"entryTypes"`
 	Ids        []string `json:"ids"`                  // TODO: plugs will have a -# to specify how many????
 	ClosePlugs []int    `json:"closePlugs,omitempty"` // If entryType is plugs, then it will not close out the entry unless specified

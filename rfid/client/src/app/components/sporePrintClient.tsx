@@ -3,27 +3,23 @@
 import React, {JSX, useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
-    InlineSubArea,
-    InlineProps,
     OptionalArrayOfType,
     OptionalSimpleKey,
     RequiredKey,
     DisplayInput,
-    InlineExpansionArea,
     ImportDisplayInput,
     resolvePicsFormData,
     setFormImages,
     OptionalKey,
-    HandleTxtResponse,
     HandleJsonResponse,
     SendMultipartRequest,
-    setFormData, InlineExpansionButton, ListPageItems, importApiUrlFor, importUrlFor, viewUrlFor
+    setFormData, ListPageItems, importUrlFor, viewUrlFor
 } from "@/app/components/common";
 import {
     DisposedDisplay,
     ErrorDisplay,
     MostRecentImageDisplay,
-    PicsDisplay, SpeciesArea, SporePrintColorArea, SporePrintDensityArea, SubspeciesArea,
+    PicsDisplay, SporePrintColorArea, SporePrintDensityArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     InitialPicsEntries,
@@ -32,8 +28,7 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {
     IsValidNote, NewEntryNotes,
-    Note,
-    NotesAreaInline
+    Note
 } from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
@@ -52,14 +47,13 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {redirect} from "next/navigation";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {NewMssForm, RecentSelectorV2} from "@/app/components/mssClient";
-import {FruitData} from "@/app/components/fruitServer";
-import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
+import {NewMssForm} from "@/app/components/mssClient";
+import {FruitData, FruitSelectorCloseable} from "@/app/components/fruitServer";
+import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
-import {FruitRecentSelector} from "@/app/components/fruitClient";
 import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {MssData} from "@/app/components/mssServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
@@ -72,10 +66,7 @@ import {
 } from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
-import {PlateData} from "@/app/components/plateServer";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
-import {SlantData} from "@/app/components/slantServer";
-import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
+import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -272,9 +263,9 @@ export default function SporePrintDisplay(
                         onCreate([{
                             typeText: "Multispore Syringe",
                             node: <CreatedLinkFor linkId={item._id} typ={"mss"}/>,
-                        }])
+                        }], false)
                     }}/>
-                }
+                },
             },
             { // TODO: create MSS
                 txt: "Create MultiSpore Syringe",
@@ -285,11 +276,12 @@ export default function SporePrintDisplay(
                             onCreate([{
                                 typeText: "Multispore Syringe",
                                 node: <CreatedLinkFor linkId={item._id} typ={"mss"}/>,
-                            }])
+                            }], false)
                         }
                     }} />
-                }
+                },
             },
+            WriteRfidOvcArea(initial._id),
             // TODO: any transfers ok???
             // TODO: this????OvcForXfers(data._id, "sporePrint", ["bag","fruitingChamber","jar","plate","slant","stasisTube"], AddToTransfers(setTransfersOut, transfersOut)), // TODO: ensure list correct
         ]
@@ -398,67 +390,52 @@ export function NewSporePrintForm(
             });
     }
     if(fruitIn===undefined){
-        // TODO: FRUIT SELECTOR!
+        // TODO: FRUIT SELECTOR!?
     }
 
     return <NewEntryFormWrapper entryType={"sporePrint"}>
         <ErrorDisplay err={err} headerLevel={headerLevel} offset={offset}/>
-        {fruitIn === undefined && <FruitRecentSelector onSelect={setFruit}/>}{/* TODO: isTopLevel stuff???*/}
+        {fruitIn === undefined && <FruitSelectorCloseable onSelect={setFruit}/>}
         <PicsDisplay pix={[]} readonly={false} updateParent={(ps)=>{setPics(ps.new)}} headerLevel={headerLevel} offset={offset}/>
         <NewEntryNotes setNotes={setNotes} />
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
 
-export function SporePrintInline(
-    {
-        data, expandByDefault, headerLevel, onClick, showMainPageButton, idIsLink
-    }: InlineProps<SporePrintData>
-) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Spore Print"} entryType={"sporePrint"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-            <MostRecentImageDisplay data={data.mostRecentImage} headerLevel={headerLevel} />
-            <DateArea pre={"Print Date: "} readonly={true} when={data.creationDate} />
-            <SpeciesArea readonly={true} headerLevel={headerLevel} initial={data.species}/>
-            <SubspeciesArea readonly={true} headerLevel={headerLevel} currentSpecies={data.species} initialSub={data.subspecies}/>
-            <SaleArea readonly={true} canCreateSale={false} sale={data.sale} headerLevel={headerLevel}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <div>
-                <div>{"Parent" + (data.parent ? <EntryLink props={{displayedId:data.parent,linkId:data.parent,entryType:"fruit",openInNewTab:true}}>{data.parent}</EntryLink> : "unknown")}</div>{/* TODO: FIX for link! */}
-            </div>
-            {/* TODO: parent?: string // Only empty if purchased and not printed yourself*/}
-            {/*TODO: <ProjectsArea allowCreate={false} allowRemove={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1}/>*/}
-            <div>
-                <div>{"Color" + (data.color || "unknown")}</div>
-            </div>
-            <div>
-                <div>{"Density" + (data.density || "unknown")}</div>
-            </div>
-            <NotesAreaInline notes={data.notes} headerLevel={headerLevel} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
-
-// export function SporePrintListDisplay({data, onClick}: SingleListProps<SporePrintData>) {
-//     return <div>
-//         {data.map((b,i)=>{
-//             return <SporePrintInline data={b} onClick={()=>{onClick(b)}} key={i}/>
-//         })}
-//     </div>
+// export function SporePrintInline(
+//     {
+//         data, expandByDefault, headerLevel, onClick, showMainPageButton, idIsLink
+//     }: InlineProps<SporePrintData>
+// ) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     const b58id = data._id
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={b58id} txt={"Spore Print"} entryType={"sporePrint"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+//             <MostRecentImageDisplay data={data.mostRecentImage} headerLevel={headerLevel} />
+//             <DateArea pre={"Print Date: "} readonly={true} when={data.creationDate} />
+//             <SpeciesArea readonly={true} headerLevel={headerLevel} initial={data.species}/>
+//             <SubspeciesArea readonly={true} headerLevel={headerLevel} currentSpecies={data.species} initialSub={data.subspecies}/>
+//             <SaleArea readonly={true} canCreateSale={false} sale={data.sale} headerLevel={headerLevel}/>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             <div>
+//                 <div>{"Parent" + (data.parent ? <EntryLink props={{displayedId:data.parent,linkId:data.parent,entryType:"fruit",openInNewTab:true}}>{data.parent}</EntryLink> : "unknown")}</div>{/* TODO: FIX for link! */}
+//             </div>
+//             {/* TODO: parent?: string // Only empty if purchased and not printed yourself*/}
+//             {/*TODO: <ProjectsArea allowCreate={false} allowRemove={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1}/>*/}
+//             <div>
+//                 <div>{"Color" + (data.color || "unknown")}</div>
+//             </div>
+//             <div>
+//                 <div>{"Density" + (data.density || "unknown")}</div>
+//             </div>
+//             <NotesAreaInline notes={data.notes} headerLevel={headerLevel} offset={-1}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                expanded={expanded}/>
+//     </InlineEntry>
 // }
-
-// TODO: HEAVILY TEST!!!!
-export function SporePrintRecentSelector({onSelect}:{onSelect:(selected?: SporePrintData) => void}) {
-    return <RecentSelectorV2<SporePrintData> listUrlType={"sporePrints"} assertion={AssertSporePrint} singleConstructor={(val, i)=>{
-        return <SporePrintInline data={val} expandByDefault={false} onClick={onSelect}/>
-    }} />
-}
 
 export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems<SporePrintData>) {
     let cols: ListTableColumn<SporePrintData>[] = [

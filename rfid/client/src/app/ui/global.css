@@ -47,11 +47,11 @@ div {
             /* TODO: widths, margins, paddings, edges/rounding, etc?*/
             .depth3 {
                 /* TODO: depth3 stuff*/
-                background-color: #ff0000;
+                background-color: var(--color-surface-tonal-2);/*TODO: ok?*/
                 /* TODO: widths, margins, paddings, edges/rounding, etc?*/
                 .depth4 {
                     /* TODO: depth4 stuff*/
-                    background-color: #0000ff;/* TODO: ok?*/
+                    background-color: var(--color-surface-tonal-3);/*TODO: ok?*/
                     /* TODO: widths, margins, paddings, edges/rounding, etc?*/
                 }
             }

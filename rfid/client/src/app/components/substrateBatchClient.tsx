@@ -128,26 +128,28 @@ export default function SubstrateBatchDisplay(
         }
         const onViewCreators: OnViewCreatorTriCol[] = [
             {
-                txt: "Create Bag", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Bag",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewBagForm substrateBatchIn={data} handlers={{
                         isTopLevel: false, onCreate: (newItem: BagData) => {
                             return onCreate([{
                                 typeText: "Bag",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"bag"}/>
-                            }])
+                            }], false)
                         },
                     }}/>
                 },
                 // TODO: any others?
             },
             {
-                txt: "Create Fruiting Chamber", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Fruiting Chamber",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewFruitingChamberForm substrateBatchIn={data} handlers={{
                         isTopLevel: false, onCreate: (newItem: FruitingChamberData) => {
                             return onCreate([{
                                 typeText: "Fruiting Chamber",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"fruitingChamber"}/>
-                            }])
+                            }], false)
                         },
                     }}/>
                 },
@@ -250,31 +252,30 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     )
 }
 
-// // TODO: STYLE THIS WHOLE THING!
-export function SubstrateBatchInline({
-                                         data,
-                                         expandByDefault,
-                                         onClick,
-                                         showMainPageButton,
-                                         idIsLink
-                                     }: InlineProps<SubstrateBatchData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        {/* TODO: CHANGE ID TO BUTTON IN CERTAIN SITUATIONS!*/}
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Substrate Batch"} entryType={"substrateBatch"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Recipe: "}/>
-            <DateArea readonly={true} when={data.creationDate} pre={"Created: "}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                                                     expanded={expanded}/>
-    </InlineEntry>
-}
+// export function SubstrateBatchInline({
+//                                          data,
+//                                          expandByDefault,
+//                                          onClick,
+//                                          showMainPageButton,
+//                                          idIsLink
+//                                      }: InlineProps<SubstrateBatchData>) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     const b58id = data._id
+//     return <InlineEntry onClick={onClick}>
+//         {/* TODO: CHANGE ID TO BUTTON IN CERTAIN SITUATIONS!*/}
+//         <InlineSubArea props={{}}>
+//             <ID id={b58id} txt={"Substrate Batch"} entryType={"substrateBatch"} allowOpenMainPage={showMainPageButton}
+//                 linkPage={idIsLink}/>
+//             <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Recipe: "}/>
+//             <DateArea readonly={true} when={data.creationDate} pre={"Created: "}/>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                                      expanded={expanded}/>
+//     </InlineEntry>
+// }
 
 export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
     id?: string,
@@ -312,102 +313,6 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
         {txt ? txt : "Substrate Batch: "}{linkArea}
     </div>
 }
-
-// export function SubstrateBatchSelector( // TODO: ensure ok!!!
-//     {
-//         doSelect, allowCreation, headerLevel, creatorInPage, txt // TODO: USE TXT AS HEADER
-//     }: SelectorProps<SubstrateBatchData>) {
-//     const [loaded, setLoaded] = useState(false)
-//     const [open, setOpen] = useState(false)
-//     const [selected, setSelected] = useState<SubstrateBatchData | undefined>()
-//     const [recentList, setRecentList] = useState<SubstrateBatchData[] | undefined>()
-//     const [err, setErr] = useState<string | undefined>()
-//     //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-//     // TODO: RECIPE CREATOR SECTION!
-//     useEffect(() => {
-//         let data = [TestSubstrateRecipeOk(), TestSubstrateRecipeOk(), TestSubstrateRecipeOk()]
-//         setSelected(undefined)
-//         setRecentList([TestSubstrateBatchOkStd(false), TestSubstrateBatchOkStd(false), TestSubstrateBatchOkStd(false)]) // TODO: DEL
-//         setLoaded(true) // TODO: DEL
-//         setErr(undefined) // TODO: DEL
-//         return  // TODO: DEL
-//         fetch(BaseExternalUrl + "/list/substrateBatches", {
-//             method: "GET",
-//             headers: {
-//                 credentials: 'include',
-//                 // TODO: may need 'Cookie': cookies,
-//                 'Content-type': 'application/json',
-//             },
-//         })
-//             .then(HandleJsonResponse)
-//             .then((data) => { // TODO: DATA AS TWO LISTS!
-//                 setRecentList(data.recent) // TODO: ASSERT????
-//                 setLoaded(true)
-//                 setErr(undefined)
-//             })
-//             .catch((error) => {
-//                 setErr(JSON.stringify(error))
-//             });
-//     }, []);
-//     const errArea = <ErrorDisplay err={err} headerLevel={headerLevel}/>
-//     // TODO: MAKE SURE TO ADD RECIPE CREATOR BUTTON IF NEEDED
-//     if (!loaded) {
-//         return <div className={"centerHChildren medGapTop"}>{errArea}{"Loading Substrate Batch Selector..."}</div>
-//     }
-//     if (!open) {
-//         return <div className={"centerHChildren medGapTop"}>
-//             {errArea}
-//             {selected && <div>{"Batch: " + selected._id}</div>}
-//             <div>
-//                 <button className={"basicButton"} onClick={() => {
-//                     setOpen(true)
-//                 }}>{selected ? "Select a different Substrate Batch" : "Select a Substrate Batch"}</button>
-//             </div>
-//         </div>
-//     }
-//     const closeButton = <Centered>
-//         <button className={"basicButton"} onClick={() => {
-//             setOpen(false)
-//         }}>{"Close Selector"}</button>
-//     </Centered>
-//     return <div className={"medGapTop"}>
-//         {errArea}
-//         {closeButton}
-//         <div>
-//             <div>
-//                 <div className={"gapBottom gapTop centerH"}>{"Recent Recipes"}</div>
-//                 <div className={"padChildrenSides"}>
-//                     <DepthProvider>{/* TODO: depth necessary? can replace one div up?*/}
-//                         {(recentList || []).map((batch, i) => {
-//                             let classes = (selected && batch._id === selected._id) ? "selectedItem" : ""
-//                             if (i !== (recentList || []).length - 1) {
-//                                 classes = classes + " medGapBottom"
-//                             }
-//                             return <div key={i} className={classes}>
-//                                 <SubstrateBatchInline data={batch} headerLevel={headerLevel} onClick={() => {
-//                                     doSelect(batch)
-//                                     setSelected(batch)
-//                                     setOpen(false)
-//                                 }}/>
-//                             </div>
-//                         })}
-//                     </DepthProvider>
-//                 </div>
-//             </div>
-//         </div>
-//         {closeButton}
-//     </div>
-// }
-
-// export function SubstrateBatchListDisplay({data, onClick}: SingleListProps<SubstrateBatchData>) {
-//     return <div>
-//         {data.map((b, i) => {
-//             return <SubstrateBatchInline data={b} onClick={() => {
-//                 onClick(b)
-//             }} key={i}/>
-//         })}
-//     </div>
-// }
 
 export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageItems<SubstrateBatchData>) {
     let cols: ListTableColumn<SubstrateBatchData>[] = [

@@ -1,15 +1,30 @@
 "use server";
 
-import {BaseExternalUrl, BaseInternalUrl} from "@/app/components/Constants";
-import {AntibioticsList} from "@/app/components/formSubcomponents/antibiotic";
-import {AdditivesList} from "@/app/components/formSubcomponents/additives";
-import {GrainsList} from "@/app/components/formSubcomponents/grains";
-import {LiquidsList} from "@/app/components/formSubcomponents/liquids";
-import {NutrientsList} from "@/app/components/formSubcomponents/nutrients";
-import {SugarsList} from "@/app/components/formSubcomponents/sugars";
+import {BaseInternalUrl} from "@/app/components/Constants";
 
+export async function GetTransferReasons():Promise<Map<string,string>>{
+    const resp = await fetch(BaseInternalUrl + "/options/transferReasons") // TODO: validate internal works here. Do we need any headers?
+    if (!resp.ok){
+        throw new Error("response not ok: "+(await resp.text()))
+    }
+    return resp.json().then(resJson=>{
+        return convertObjectToStringMap(resJson)
+    })
+}
+
+function convertObjectToStringMap(obj: { [key: string]: string }): Map<string, string> {
+    const map = new Map<string, any>();
+    for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+            map.set(key, obj[key]);
+        }
+    }
+    return map;
+}
+
+// TODO: ensure this is a server action
 export async function getOptionsResponse(variant: string):Promise<string[]> {
-    const resp = await fetch(BaseExternalUrl+"/options/"+variant)
+    const resp = await fetch(BaseInternalUrl+"/options/"+variant) // TODO: validate works with internal. Do we need headers?
     if (!resp.ok){
         throw new Error("response for options not ok: "+resp.statusText);
     }

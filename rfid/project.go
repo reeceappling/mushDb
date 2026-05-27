@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -59,6 +60,28 @@ func initializeProjects(ctx context.Context) error {
 		}
 	}
 	return err
+}
+
+func GetAllProjects(ctx context.Context, complete *bool) ([]Project, error) {
+	projs, err := getAllEntries[*Project](ctx, &Project{})
+	if err != nil {
+		return nil, err
+	}
+	if complete != nil {
+		if *complete {
+			projs = sliceutils.FilterInPlace(projs, func(pr *Project) bool {
+				return pr.Completed != nil
+			})
+		} else {
+			projs = sliceutils.FilterInPlace(projs, func(pr *Project) bool {
+				return pr.Completed == nil
+			})
+		}
+	}
+
+	return sliceutils.Map(projs, func(pr *Project) Project {
+		return *pr
+	}), nil
 }
 
 var testProjects = []Project{

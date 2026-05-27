@@ -254,6 +254,7 @@ export function SpeciesInline({data, expandByDefault, onClick, showMainPageButto
     </InlineEntry>
 }
 
+// TODO: Distinguish from SpeciesSelector
 export function ExistingSpeciesSelector(
     {
         doSelect,
@@ -411,11 +412,9 @@ export function SpeciesSelectorTable({data, onClick}: ListPageItems<SpeciesData>
 }
 export function SpeciesSelector( // TODO: USE ELSEWHERE
     {
-        doSelect,
-        allowCreate
+        doSelect
     }: {
         doSelect: (val: SpeciesData | undefined) => void,
-        allowCreate?: boolean
     }) {
     const table = (items: SpeciesData[]):JSX.Element=>{
         return <SpeciesSelectorTable data={items} onClick={doSelect}/>
@@ -423,6 +422,5 @@ export function SpeciesSelector( // TODO: USE ELSEWHERE
 
     return <ExistingRecentSelector entryType={"species"} entryTypes={"species"} doSelect={doSelect} asserter={AssertSpecies}
                                    table={table}>
-        {/* TODO: ok? allowCreate && <NewSlantForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
     </ExistingRecentSelector>
 }

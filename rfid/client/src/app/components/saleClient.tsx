@@ -188,30 +188,29 @@ export function NewSaleForm(
     return <NewEntryFormWrapper entryType={"sale"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <NewEntryNotes setNotes={setNotes} />
-        {/*<EntryPermsArea setEntryPerms={setPerms}/> /!* TODO: perms from parent??? *!/*/}
         <button className={"greenButton"} onClick={createSale}>{"Create Sale"}</button>
     </NewEntryFormWrapper>
 
 }
 
-export function SaleInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SaleData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Sale"} entryType={"sale"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-            <DateArea pre={"Sold on: "} when={data.creationDate} readonly={true}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-            <button className={"basicButton"} onClick={() => {
-                setExpanded(!expanded)
-            }}>{expanded ? "See Less" : "See More"}</button>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded:expanded}}>
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                                                     expanded={expanded}/>
-    </InlineEntry>
-}
+// export function SaleInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SaleData>) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     const b58id = data._id
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={b58id} txt={"Sale"} entryType={"sale"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+//             <DateArea pre={"Sold on: "} when={data.creationDate} readonly={true}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//             <button className={"basicButton"} onClick={() => {
+//                 setExpanded(!expanded)
+//             }}>{expanded ? "See Less" : "See More"}</button>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded:expanded}}>
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                                      expanded={expanded}/>
+//     </InlineEntry>
+// }
 
 export function SaleArea(
     {readonly, headerLevel, sale, setSale, canCreateSale}:{

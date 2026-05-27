@@ -1,6 +1,11 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {SlantSelector} from "@/app/components/slantClient";
+import {SlantData} from "@/app/components/slantServer";
+import {SpeciesSelector} from "@/app/components/speciesClient";
 
 export function TestSpeciesOk() {
     const a: SpeciesData = {
@@ -30,4 +35,34 @@ export interface SpeciesData {
     lastUpdated: number
     acl?: ACL
     defaultAcl?: ACL
+}
+
+// TODO: there is an alternative to this, so we may not want this or to use it
+export function SpeciesSelectorCloseable(sp: SelectorProps<SpeciesData>) { // TODO: use
+    const doSel = (val?: SpeciesData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<SpeciesData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
+        closeTxt: "Close Species List",
+        //createTxt: "Create Species",// TODO: ???
+        lowercase: "species",
+        //creatorInPage: sp.creatorInPage,// TODO: ???
+        //createEndpt: "species",// TODO: ???
+        getId: (v: SpeciesData) => v._id,
+        createSelector:(selHdl: (onSelect: SpeciesData) => void)=>{
+            return <SpeciesSelector doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: ok?
+        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }

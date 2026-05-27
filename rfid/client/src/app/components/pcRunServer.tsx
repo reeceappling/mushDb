@@ -1,7 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {AssertPcRun, NewPcRunForm, PcRunInline} from "@/app/components/pcRunClient";
-import RecentSelector, {SelectorProps} from "@/app/components/selector";
-import {InlineProps} from "@/app/components/common";
+import {NewPcRunForm, PcRunSelector} from "@/app/components/pcRunClient";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ACL} from "@/app/components/accessControlServer";
 
 export function TestPcRunOk(){
@@ -30,38 +29,27 @@ export interface PcRunData {
     acl?: ACL
 }
 
-export function RecentPCRunSelector(sp: SelectorProps<PcRunData>){ // TODO: likely overhaul
-    return <RecentSelector props={{
+// TODO: VALIDATE WORKS!
+export function PcRunSelectorCloseable(sp: SelectorProps<PcRunData>){ // TODO: likely overhaul
+    return <CloseableSelector<PcRunData> props={{
         allowCreation: sp.allowCreation,
         doSelect: sp.doSelect, // For selecting normally
-        msgTxt: ChannelTextNewPcRun,
-        recentEndpt: "pcRuns",
-        assertType: AssertPcRun,
-        closeTxt: "Close Run List",
+        msgTxt: ChannelTextNewPcRun, // TODO: del?
+        closeTxt: "Close PcRun List",
         createTxt: "Create Pc Run",
         createEndpt: "pcRun",
         lowercase: "pc run",
         creatorInPage: sp.creatorInPage,
-        inline: (inn: InlineProps<PcRunData>)=>{
-            return <PcRunInline data={inn.data} headerLevel={inn.headerLevel} onClick={inn.onClick} expandByDefault={inn.expandByDefault}/>
+        getId: (v: PcRunData)=>v._id,
+        createSelector:(selHdl: (onSelect: PcRunData) => void)=>{
+            return <PcRunSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
         },
-        getId: (v: PcRunData)=>{
-            return v._id
-        }
-    }}>
-        <NewPcRunForm handlers={{onCreate:sp.doSelect, isTopLevel: false}} />
-    </RecentSelector>
-    // RecentSelector<PcRunData>({
-    //     msgTxt: ChannelTextNewPcRun,
-    //     recentEndpt: "pcRuns",
-    //     assertType: AssertPcRun,
-    //     closeTxt: "Close PC Runs List",
-    //     createTxt: "Create PC Run",
-    //     //newForm: NewPcRunForm, // TODO: REENABLE! NEED!
-    //     createEndpt: "pcRun",
-    //     lowercase: "pc run",
-    //     inline: (inlineIn: InlineProps<PcRunData>)=>{return PcRunInline(inlineIn)},
-    // })(sp)
+        createCreator:(selHdl: (onSelect: PcRunData) => void)=>{
+            return <NewPcRunForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
 }
 
 const ChannelTextNewPcRun = "newPcRun"

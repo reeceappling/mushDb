@@ -1,12 +1,11 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
     OnViewCreatorQuadCol,
-    SplitAllEntries,
-    SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -22,6 +21,7 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
+    Dictaphone,
     DisplayInput,
     DisposedSaleContamArea,
     HandleJsonResponse,
@@ -40,11 +40,13 @@ import {
     resolvePicsFormData,
     SendMultipartRequest,
     setFormData,
-    setFormImages,
+    setFormImages, ViewPageDictaphone,
     viewUrlFor,
     YesNoSelector,
 } from "@/app/components/common";
-import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {
     DisposedDisplay,
@@ -75,7 +77,7 @@ import {
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
-import {AgarBatchData, AgarBatchSelector} from "@/app/components/agarBatchServer";
+import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -182,8 +184,8 @@ export default function PlateDisplay(
     }: DisplayInput) {
     const [initial, setInitial] = useState(data as PlateData)
 
-    const [images, setImages] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
-    const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(data.contamination))
+    const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
+    const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(data.contamination))
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(data.knownFruitable)
     const [pourCoveragePct, setPourCoveragePct] = useState(initial.pourCoverage)
     const [condensationCoveragePct, setCondensationCoveragePct] = useState(initial.condensationCoverageAtSealTime)
@@ -255,7 +257,8 @@ export default function PlateDisplay(
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         // TODO: anything here?
-    ] // TODO: THIS!
+        WriteRfidOvcArea(initial._id),
+    ]
     return (
         <DisplayFormWrapper entryType={"plate"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -295,11 +298,12 @@ export default function PlateDisplay(
             </FlexedArea>
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
                                  transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly} cookies={cookies}/>
+                                 allowNewTransferCreation={!readonly} cookies={cookies}/>{/* TODO: have this rely on dictation as well to figure out if we want it open on the screen*/}
             <PicsDisplay pix={initial.pics || []} readonly={readonly}
                          headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>
+            {/* TODO: SOMEHOW SHOVE THE DICTAPHONE INTO THE NotesFormArea*/}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>{/* TODO: if this works use it everywhere*/}
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
@@ -310,6 +314,7 @@ export default function PlateDisplay(
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
+            <ViewPageDictaphone doUpdate={submit}/>{/* TODO: FIXME */}
         </DisplayFormWrapper>
     )
 }
@@ -530,6 +535,7 @@ export function NewPlateForm(
     const [wetAtCooledTime, setWetAtCooledTime] = useState<boolean | undefined>(undefined)
     const [agarOnOutsideAtPourTime, setAgarOnOutsideAtPourTime] = useState<boolean | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
     const createPlate = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -551,6 +557,7 @@ export function NewPlateForm(
             },
             body: JSON.stringify({
                 agarBatch: agarBatch,
+                notes: notes, // TODO: BRAND NEW! HANDLE ON GO SIDE!
                 writeTagTo: writeTagTo,
             })
         })
@@ -565,7 +572,7 @@ export function NewPlateForm(
     }
     return <NewEntryFormWrapper entryType={"plate"}>
         <ErrorDisplay err={err}/>
-        <AgarBatchSelector doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/>
+        <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/> {/* TODO: use new one instead?*/}
         <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
         <CondensationCoverageSelector coverage={condensationCoverageAtSealTime}
                                       updateParent={setCondensationCoverageAtSealTime}/>
@@ -573,6 +580,7 @@ export function NewPlateForm(
                        className={"inlineChildren"}/>
         <YesNoSelector pre={"Agar on outside at pour time: "} initial={undefined}
                        updateParent={setAgarOnOutsideAtPourTime} className={"inlineChildren"}/>
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={createPlate}>{"Create"}</button>
     </NewEntryFormWrapper>

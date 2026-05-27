@@ -288,7 +288,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 				Email: email,
 				Perms: UserPerms{
 					Admin:    utils.Pointer(true),
-					Projects: []projectName{},
+					Projects: []projectName{}, // TODO: ADD PROJECTS???
 				},
 			}
 		}

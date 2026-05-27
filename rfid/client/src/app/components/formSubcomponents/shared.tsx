@@ -4,6 +4,8 @@
 import {JSX, useState} from "react";
 import {CreatedLinkQuadCol, CreatedLinkTriCol} from "@/app/components/pcRunClient";
 
+// TODO: notes added to create for stasisTube, waterJar
+
 export type Data<Type> = {
     data: Type,
     disabled: boolean,
@@ -16,15 +18,13 @@ export type ListResult<Type> = {
 
 export type SplitAllEntries<Existing, New> = {
     existing: Data<Existing>[],
-    new: Data<New>[],
-}
-
-export type SplitEntriesV2<Existing, New> = {
-    existing: Data<Existing>[],
     new: New[],
 }
 
-export type AllEntries<Type> = SplitAllEntries<Type, Type>
+export type AllEntries<Type> = {
+    existing: Data<Type>[],
+    new: Data<Type>[],
+}
 
 export interface FirstLast<Type> {
     first: Type,
@@ -113,13 +113,13 @@ export type OnViewCreatorTriCol = {
     newCreationArea: OnViewCreatorTriColFunction,
 }
 export type OnViewCreatorTriColFunction = (onCreate: AddCreatedTriColFunction) => JSX.Element
-export type AddCreatedTriColFunction = (newLinks: CreatedLinkTriCol[]) => void
+export type AddCreatedTriColFunction = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => void
 
 export type OnViewCreatorQuadCol = {
     txt: string,
     newCreationArea: OnViewCreatorQuadColFunction,
 }
 export type OnViewCreatorQuadColFunction = (onCreate: AddCreatedQuadColFunction) => JSX.Element
-export type AddCreatedQuadColFunction = (newLinks: CreatedLinkQuadCol[]) => void
+export type AddCreatedQuadColFunction = (newLinks: CreatedLinkQuadCol[], closeAfter: boolean) => void
 
 

@@ -3,8 +3,7 @@
 import React, {JSX, useState} from "react";
 import {
     DisplayInput, HandleJsonResponse, HandleTxtResponse,
-    ImportDisplayInput, InlineExpansionArea, InlineExpansionButton,
-    InlineProps, InlineSubArea,
+    ImportDisplayInput,
     IsString, ListPageItems,
     OptionalArrayOfType,
     OptionalKey,
@@ -15,14 +14,12 @@ import {
     DisposedDisplay,
     ErrorDisplay,
     ParentDisplay,
-    SpeciesArea, SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     IsValidNote,
     NewEntryNotes,
     Note,
     NoteEntriesGroup,
-    NotesAreaInline
 } from "@/app/components/formSubcomponents/notes";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -30,7 +27,7 @@ import {FruitData} from "@/app/components/fruitServer";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
 import ID from "@/app/components/formSubcomponents/id";
 import {
     FlexedArea,
@@ -54,10 +51,8 @@ import {SaleArea} from "@/app/components/saleClient";
 import {OvcForXfers} from "@/app/components/bagClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {SlantData} from "@/app/components/slantServer";
-import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
+import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -215,6 +210,7 @@ export default function SporeSwabDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], cookies), // TODO: ensure list correct???
+            WriteRfidOvcArea(initial._id),
         ] // TODO: THIS!
         return <DisplayFormWrapper entryType={"sporeSwab"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -303,31 +299,31 @@ export function NewSporeSwabForm(
     </NewEntryFormWrapper>// TODO: VALIDATE WORKS AS EXPECTED
 }
 
-export function SporeSwabInline(
-    {
-        data, expandByDefault, headerLevel, onClick, showMainPageButton, idIsLink
-    }: InlineProps<SporeSwab>
-) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={data._id} txt={"Spore Swab"} entryType={"sporeSwab"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            <DateArea pre={"Creation Date: "} readonly={true} when={data.creationDate}/>
-            <SpeciesArea readonly={true} headerLevel={headerLevel} initial={data.species}/>
-            <SubspeciesArea readonly={true} headerLevel={headerLevel} currentSpecies={data.species}
-                            initialSub={data.subspecies}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <div>
-                <ParentDisplay parent={data.parent} parentType={data.parentType}/>
-            </div>
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded} expanded={expanded}/>
-
-    </InlineEntry>// TODO: VALIDATE WORKS AS EXPECTED
-}
+// export function SporeSwabInline(
+//     {
+//         data, expandByDefault, headerLevel, onClick, showMainPageButton, idIsLink
+//     }: InlineProps<SporeSwab>
+// ) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={data._id} txt={"Spore Swab"} entryType={"sporeSwab"} allowOpenMainPage={showMainPageButton}
+//                 linkPage={idIsLink}/>
+//             <DateArea pre={"Creation Date: "} readonly={true} when={data.creationDate}/>
+//             <SpeciesArea readonly={true} headerLevel={headerLevel} initial={data.species}/>
+//             <SubspeciesArea readonly={true} headerLevel={headerLevel} currentSpecies={data.species}
+//                             initialSub={data.subspecies}/>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             <div>
+//                 <ParentDisplay parent={data.parent} parentType={data.parentType}/>
+//             </div>
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded} expanded={expanded}/>
+//
+//     </InlineEntry>// TODO: VALIDATE WORKS AS EXPECTED
+// }
 
 export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<SporeSwab>) {
     let cols: ListTableColumn<SporeSwab>[] = [

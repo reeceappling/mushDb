@@ -1,13 +1,12 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
     Data,
     OnViewCreatorQuadCol,
-    SplitAllEntries,
-    SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -17,7 +16,7 @@ import {
     PicWithNotesForm
 } from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {AddToTransfers, InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
+import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
@@ -32,12 +31,13 @@ import {
     NewEntryInput,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
-    RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData, SendMultipartRequest, setFormData,
-    setFormImages, SingleListProps,
+    setFormImages,
 } from "@/app/components/common";
-import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
@@ -52,7 +52,7 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {StasisTubeData} from "@/app/components/stasisTubeServer";
 import {OnViewCreatorsQuadColArea, PcRunArea} from "@/app/components/pcRunClient";
-import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
+import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
@@ -61,9 +61,7 @@ import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {SlantData} from "@/app/components/slantServer";
-import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {OvcForXfers} from "@/app/components/bagClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {
     FlexedArea,
@@ -74,11 +72,7 @@ import {
 } from "@/app/components/agarBatchClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
-import {SporeSwab} from "@/app/components/sporeSwabServer";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {SporeSwabListPageTable} from "@/app/components/sporeSwabClient";
-import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
@@ -151,12 +145,10 @@ export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    //const [perms, setPerms] = useState<EntryPerms | undefined>()
     const importEntry = () => {
         let formData = new FormData()
         let dataObj: any = {
             created:created,
-            //perms: perms, // TODO: validate on insert
         }
         if(species===undefined){
             setErr("Species must be set!")
@@ -188,7 +180,6 @@ export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
-        {/*<EntryPermsArea setEntryPerms={setPerms}/>*/}
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />
         <button className={"greenButton"} onClick={importEntry}>{"Import Stasis Tube"}</button>
     </ImportEntryFormWrapper>
@@ -206,8 +197,8 @@ export default function StasisTubeDisplay(
             return {data: n, disabled: false}
         })
 
-        const [images, setImages] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
         const [disposed, setDisposed] = useState(initial.disposed)
         const [sale, setSale] = useState(initial.sale)
@@ -268,6 +259,7 @@ export default function StasisTubeDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: anything here?
+            WriteRfidOvcArea(initial._id),
         ]
         return (
             <DisplayFormWrapper entryType={"stasisTube"}>
@@ -315,6 +307,7 @@ export default function StasisTubeDisplay(
 
 export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<StasisTubeData>, pcRunIn?: PcRunData}){
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     // TODO: handle isTopLevel
@@ -324,8 +317,11 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
             setErr("pc run must be defined")
             return
         }
-        let body:any={pcRun: pcRun._id}
-        writeTagTo && (body.writeTagTo = writeTagTo)
+        let body:any={
+            pcRun: pcRun._id,
+            notes: notes,
+            writeTagTo:writeTagTo,
+        }
 
         fetch(BaseExternalUrl+"/create/stasisTube", {
             method: "POST",
@@ -346,41 +342,33 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
     }
     return <NewEntryFormWrapper entryType={"stasisTube"}>
         <ErrorDisplay err={err} />
-        {pcRunIn !== undefined && <RecentPCRunSelector doSelect={setPcRun} allowCreation={handlers.isTopLevel} creatorInPage={true}/>/* TODO: isTopLevel*/}
+        {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel} creatorInPage={true}/>/* TODO: isTopLevel*/}
+        <NewEntryNotes setNotes={setNotes}/> {/* TODO: HANDLE ON GO SIDE!*/}
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />{/*TODO: RFID SELECTOR*/}
         <button className={"greenButton"} onClick={createStasisTube}>{"Create"}</button>
     </NewEntryFormWrapper>
-
 }
 
-export function StasisTubeInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<StasisTubeData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Stasis Tube"} entryType={"stasisTube"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-            <SpeciesArea readonly={true} initial={data.species}/>
-            <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies} />
-            <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-            <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore}/>
-            <DisposedSaleContamArea sale={data.sale} disposed={data.disposed} contams={data.contamination}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded:expanded}}>
-            <PcRunArea binaryId={data.pcRun} offset={-1}/>
-            {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
-
-// export function StasisTubeListDisplay({data, onClick}: SingleListProps<StasisTubeData>) {
-//     return <div>
-//         {data.map((b,i)=>{
-//             return <StasisTubeInline data={b} onClick={()=>{onClick(b)}} key={i}/>
-//         })}
-//     </div>
+// export function StasisTubeInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<StasisTubeData>) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     const b58id = data._id
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={b58id} txt={"Stasis Tube"} entryType={"stasisTube"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+//             <SpeciesArea readonly={true} initial={data.species}/>
+//             <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies} />
+//             <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
+//             <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore}/>
+//             <DisposedSaleContamArea sale={data.sale} disposed={data.disposed} contams={data.contamination}/>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded:expanded}}>
+//             <PcRunArea binaryId={data.pcRun} offset={-1}/>
+//             {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                expanded={expanded}/>
+//     </InlineEntry>
 // }
 
 export function StasisTubeListPageTable({data, onClick, withLink}: ListPageItems<StasisTubeData>) {

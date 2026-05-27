@@ -3,8 +3,12 @@ import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNo
 import {Contamination} from "@/app/components/formSubcomponents/contaminations";
 import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {AgarBatchSelector, NewAgarBatchForm} from "@/app/components/agarBatchClient";
+import {AgarBatchData, ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {BagSelector, NewBagForm} from "@/app/components/bagClient";
 
-export function TestBagOk(){ // TODO: DELETEME // TODO: FIXME!
+export function TestBagOk(){ // TODO: DELETEME? // TODO: FIXME!
     const a: BagData = {
         _id: "(BAG ID HERE)",
         recipe: "(SUB RECIPE)",
@@ -39,12 +43,12 @@ export function TestBagOk(){ // TODO: DELETEME // TODO: FIXME!
 export interface BagData {
     _id: string
     recipe: string // Substrate recipe
-    substrateBatch?: string // TODO: do this on box. Add other new fields to boxes
+    substrateBatch?: string
     pcRun?: string
     filterSize: string
     creationDate: number
-    genSpore?: number // TODO: NEW
-    genFruitOrSpore?: number // TODO: NEW
+    genSpore?: number
+    genFruitOrSpore?: number
     sealDate?: number
     wetness?: number // TODO: handle everywhere
     knownFruitable?: boolean
@@ -54,16 +58,44 @@ export interface BagData {
     transfersOut?: string[]
     parentType?: string
     parent?: string
-    //projects?: string[] // TODO: NEW
     pics?: PicWithNotesIncoming[]
     contamination?: Contamination[]
-    mostRecentImage?: PicWithNotesIncoming // TODO: used to be string
+    mostRecentImage?: PicWithNotesIncoming
     flushes?: PicWithNotesIncoming[]
-    sale?: string // TODO: NEW
+    sale?: string
     disposed?: number
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function BagSelectorCloseable(sp: SelectorProps<BagData>) { // TODO: use
+    const doSel = (val?: BagData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<BagData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
+        closeTxt: "Close Bag List",
+        //createTxt: "Create Bag",// TODO: ???
+        lowercase: "bag",
+        //creatorInPage: sp.creatorInPage,// TODO: ???
+        //createEndpt: "bag",// TODO: ???
+        getId: (v: BagData) => v._id,
+        createSelector:(selHdl: (onSelect: BagData) => void)=>{
+            return <BagSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: ok?
+        // createCreator:(selHdl: (onSelect: BagData) => void)=>{
+        //     return <NewBagForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }
 
 // TODO: bag selector. RFID or text input selector

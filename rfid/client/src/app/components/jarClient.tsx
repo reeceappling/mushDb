@@ -41,8 +41,10 @@ import {JarRecipeArea, JarRecipeSelector} from "@/app/components/jarRecipeClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {OnViewCreatorsQuadColArea, PcRunArea} from "@/app/components/pcRunClient";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
-import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
-import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
@@ -63,8 +65,7 @@ import {SaleArea} from "@/app/components/saleClient";
 import {
     AllEntries,
     OnViewCreatorQuadCol,
-    SplitAllEntries,
-    SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -286,8 +287,8 @@ export default function JarDisplay(
         const [sale, setSale] = useState(initial.sale)
         const [disposed, setDisposed] = useState(initial.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [pics, setPics] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
         // TODO: wetness (but can only be set once)
@@ -355,7 +356,7 @@ export default function JarDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: can jar do anything else?
-
+            WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"jar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -479,8 +480,8 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
         <JarSizeSelector onChange={(unit: string) => {
             setSizeCups(cupsPer(unit))
         }}/>
-        {pcRunIn !== undefined && <RecentPCRunSelector doSelect={setPcRun} allowCreation={handlers.isTopLevel}
-                                                       creatorInPage={handlers.isTopLevel}/>} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
+        {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
+                                                          creatorInPage={handlers.isTopLevel}/>} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createJar}>{"Submit new Jar"}</button>

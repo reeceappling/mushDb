@@ -18,10 +18,10 @@ const corsOrigins =
         'http://web:3000',
         'https://web:3000',
         'api',
-        // 'api:3000',
+        // 'api:8080',
         'http://api',
-        // 'http://api:3000',
-        // 'https://api:3000',
+        // 'http://api:8080',
+        // 'https://api:8080',
     ]
     //: ['*'];
 export function middleware(req: NextRequest) {

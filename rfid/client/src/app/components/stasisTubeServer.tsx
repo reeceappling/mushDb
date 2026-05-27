@@ -7,6 +7,11 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
+import {SporeSwab} from "@/app/components/sporeSwabServer";
+import {StasisTubeSelector} from "@/app/components/stasisTubeClient";
 
 export function TestStasisTubeOk(){
     const a: StasisTubeData = {
@@ -56,4 +61,33 @@ export interface StasisTubeData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function StasisTubneSelectorCloseable(sp: SelectorProps<StasisTubeData>) { // TODO: use
+    const doSel = (val?: StasisTubeData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<StasisTubeData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
+        closeTxt: "Close Stasis Tube List",
+        //createTxt: "Create Bag",// TODO: ???
+        lowercase: "stasis tube",
+        //creatorInPage: sp.creatorInPage,// TODO: ???
+        //createEndpt: "bag",// TODO: ???
+        getId: (v: StasisTubeData) => v._id,
+        createSelector:(selHdl: (onSelect: StasisTubeData) => void)=>{
+            return <StasisTubeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: ok?
+        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }

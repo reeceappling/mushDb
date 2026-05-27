@@ -10,6 +10,7 @@ import {TestPcRunOk} from "@/app/components/pcRunServer";
 import {TestProjectOk} from "@/app/components/projectServer";
 import {TestSaleOk} from "@/app/components/saleServer";
 import {useCookies} from "react-cookie";
+import {createSelector} from "reselect";
 
 export interface SelectorProps<T> {
     doSelect: (val?: T) => void
@@ -99,91 +100,193 @@ export function SelectorResetsOnSelectForCustom<T>(
     </select>
 }
 
-// TODO: MAKE SURE SELECTOR DISPLAY VALUES PROPERLY DISPLAYS BASE58S WHEN NEEDED
-export default function RecentSelector<T>({props, children}: { // TODO: FIX FOR PERMISSIONED ONES?
+// // TODO: MAKE SURE SELECTOR DISPLAY VALUES PROPERLY DISPLAYS BASE58S WHEN NEEDED
+// export default function RecentSelector<T>({props, children}: { // TODO: FIX FOR PERMISSIONED ONES?
+//     props: {
+//         msgTxt: string,
+//         recentEndpt: string,
+//         assertType: (atIn: any) => void,
+//         closeTxt: string,
+//         createTxt?: string,
+//         createEndpt: string,
+//         lowercase: string,
+//         inline: (inlineIn: InlineProps<T>) => JSX.Element,
+//         getId: (v: T) => string, // TODO: CHANGE THIS ON ALL
+//         doSelect: (v: T) => void,
+//         allowCreation?: boolean,
+//         creatorInPage?: boolean,
+//     },
+//     children: React.ReactNode
+// }) {
+//     // TODO: do selectors need incremented depth?
+//     const [reload, setReload] = useState(false)
+//     const doReload = () => {
+//         setReload(!reload)
+//     }
+//
+//     const [loaded, setLoaded] = useState(false)
+//     const [open, setOpen] = useState(false)
+//     const [selectable, setSelectable] = useState<T[]>([])
+//     const [selected, setSelected] = useState<T | undefined>(undefined)
+//     const [err, setErr] = useState<string | undefined>(undefined)
+//     const [creatorOpen, setCreatorOpen] = useState(false)
+//     ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+//     useEffect(() => {
+//         switch (props.recentEndpt) { // TODO: GET RID OF! TESTS ONLY!
+//             case "agarBatches":
+//                 setSelectable([TestAgarBatchOk(), TestAgarBatchOk(), TestAgarBatchOk()] as T[])
+//                 break
+//             case "fruits":
+//                 setSelectable([TestFruitOK(), TestFruitOK(), TestFruitOK()] as T[])
+//                 break;
+//             case "jars":
+//                 setSelectable([TestJarOK(), TestJarOK(), TestJarOK()] as T[])
+//                 break;
+//             case "pcRuns":
+//                 setSelectable([TestPcRunOk(), TestPcRunOk(), TestPcRunOk()] as T[])
+//                 break;
+//             case "projects":
+//                 setSelectable([TestProjectOk(), TestProjectOk(), TestProjectOk()] as T[])
+//                 break;
+//             case "sales":
+//                 setSelectable([TestSaleOk(), TestSaleOk(), TestSaleOk()] as T[])
+//                 break;
+//             default:
+//                 setErr("bad recentEndpt: " + props.recentEndpt)
+//                 break;
+//         }
+//         setLoaded(true)
+//         return
+//         fetch(BaseExternalUrl + "/db/recent/" + props.recentEndpt, { // TODO: ensure correct
+//             method: "GET",
+//             headers: {
+//                 credentials: 'include',
+//                 //'Cookie': cookies,
+//                 // TODO: THIS!
+//             },
+//         }).then(HandleJsonResponse)
+//             .then((data) => {
+//                 Array.isArray(data) && data.every(props.assertType)
+//                 setSelectable(data as T[])
+//                 setLoaded(true)
+//             })
+//             .catch((error) => {
+//                 setErr(JSON.stringify(error))
+//             });
+//     }, [reload]);
+//     //const ch = CreateChannel()
+//     // ch.onmessage = (event) => {
+//     //     try {
+//     //         if (event.data as string === msgTxt) {
+//     //             doReload()
+//     //         }
+//     //     } catch {
+//     //         console.error("failed to decode event: " + event.data)
+//     //     }
+//     //
+//     // };
+//
+//     const toggleOpen = () => {
+//         setOpen(!open)
+//     }
+//     const closeButton = <button className={"basicButton"} onClick={() => {
+//         toggleOpen();
+//         setCreatorOpen(false)
+//     }}>{props.closeTxt}</button>
+//     const selectItem = (item: T) => {
+//         props.doSelect(item)
+//         setSelected(item)
+//         setOpen(false)
+//     }
+//     const createNewSubArea = () => {
+//         if (!creatorOpen) {
+//             if (props.createTxt) {
+//                 return <div className={"centerH gapTop"}>
+//                     <button className={"basicButton"} onClick={openCreateNew}>{props.createTxt}</button>
+//                 </div>
+//             }
+//             return null
+//         }
+//         return <div className={"centerH subFormCreator gapTop"}>
+//             <div className={"gapTop"}>{children}</div>
+//             <div>
+//                 <button className={"basicButton"} onClick={() => {
+//                     setCreatorOpen(false)
+//                 }}>{"Close This Creator"}</button>
+//             </div>
+//
+//         </div> // TODO: NEEDS SPECIAL STYLING TO ENSURE WE KNOW WHICH FORM IS WHICH INTERNALLY
+//
+//     }
+//     const openCreateNew = (e: React.MouseEvent) => {
+//         e.preventDefault()
+//         if (!props.creatorInPage) {
+//             console.log("CREATOR NOT IN PAGE")
+//             window.open(BaseExternalUrl + "/new/" + props.createEndpt, '_blank', 'noopener'); // TODO: ensure ok
+//             return
+//         }
+//         setOpen(false)
+//         setCreatorOpen(true)
+//     }
+//     if (err) {
+//         return <ErrorDisplay err={err}/>
+//     }
+//     let pre = createNewSubArea()
+//     if (!open) {
+//         return <div>
+//             <ErrorDisplay err={err}/>
+//             <div className={"centerH"}>
+//                 {selected && <div>{props.getId(selected)}</div>}
+//                 <button className={"basicButton"}
+//                     onClick={toggleOpen}>{"Select a " + (selected ? "different" : "recent") + " " + props.lowercase}</button>
+//             </div>
+//             {pre}
+//         </div>
+//     }
+//     if (!loaded) {
+//         return <div>
+//             <ErrorDisplay err={err}/>
+//             <div>{"Loading..."}</div>
+//         </div>
+//     }
+//     return <div> {/* TODO: can we do this in the modal????? Div might be weird here*/}
+//         <ErrorDisplay err={err}/>
+//         {/* TODO: listen for escape key????? */}
+//         {closeButton}
+//         {selectable.map((opt, i) => {
+//             // TODO: HIGHLIGHT CURRENTLY SELECTED!!!!!!!
+//             return <div key={i}>
+//                 {props.inline({
+//                     data: opt, onClick: () => {
+//                         selectItem(opt)
+//                     }
+//                 })}
+//             </div>
+//         })}
+//         {pre}
+//         {closeButton}
+//     </div>
+// }
+
+export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISSIONED ONES?
     props: {
-        msgTxt: string,
-        recentEndpt: string,
-        assertType: (atIn: any) => void,
+        msgTxt: string,// TODO: del?
+        createSelector: (selectHandler:(onSelect: T)=>void)=>JSX.Element,
+        createCreator?: (selectHandler:(onSelect: T)=>void)=>JSX.Element,
         closeTxt: string,
         createTxt?: string,
-        createEndpt: string,
+        createEndpt?: string,
         lowercase: string,
-        inline: (inlineIn: InlineProps<T>) => JSX.Element,
         getId: (v: T) => string, // TODO: CHANGE THIS ON ALL
         doSelect: (v: T) => void,
         allowCreation?: boolean,
         creatorInPage?: boolean,
     },
-    children: React.ReactNode
 }) {
-    // TODO: do selectors need incremented depth?
-    const [reload, setReload] = useState(false)
-    const doReload = () => {
-        setReload(!reload)
-    }
-
-    const [loaded, setLoaded] = useState(false)
     const [open, setOpen] = useState(false)
-    const [selectable, setSelectable] = useState<T[]>([])
     const [selected, setSelected] = useState<T | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const [creatorOpen, setCreatorOpen] = useState(false)
-    ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-    useEffect(() => {
-        switch (props.recentEndpt) { // TODO: GET RID OF! TESTS ONLY!
-            case "agarBatches":
-                setSelectable([TestAgarBatchOk(), TestAgarBatchOk(), TestAgarBatchOk()] as T[])
-                break
-            case "fruits":
-                setSelectable([TestFruitOK(), TestFruitOK(), TestFruitOK()] as T[])
-                break;
-            case "jars":
-                setSelectable([TestJarOK(), TestJarOK(), TestJarOK()] as T[])
-                break;
-            case "pcRuns":
-                setSelectable([TestPcRunOk(), TestPcRunOk(), TestPcRunOk()] as T[])
-                break;
-            case "projects":
-                setSelectable([TestProjectOk(), TestProjectOk(), TestProjectOk()] as T[])
-                break;
-            case "sales":
-                setSelectable([TestSaleOk(), TestSaleOk(), TestSaleOk()] as T[])
-                break;
-            default:
-                setErr("bad recentEndpt: " + props.recentEndpt)
-                break;
-        }
-        setLoaded(true)
-        return
-        fetch(BaseExternalUrl + "/db/recent/" + props.recentEndpt, { // TODO: ensure correct
-            method: "GET",
-            headers: {
-                credentials: 'include',
-                //'Cookie': cookies,
-                // TODO: THIS!
-            },
-        }).then(HandleJsonResponse)
-            .then((data) => {
-                Array.isArray(data) && data.every(props.assertType)
-                setSelectable(data as T[])
-                setLoaded(true)
-            })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
-    }, [reload]);
-    //const ch = CreateChannel()
-    // ch.onmessage = (event) => {
-    //     try {
-    //         if (event.data as string === msgTxt) {
-    //             doReload()
-    //         }
-    //     } catch {
-    //         console.error("failed to decode event: " + event.data)
-    //     }
-    //
-    // };
 
     const toggleOpen = () => {
         setOpen(!open)
@@ -197,6 +300,7 @@ export default function RecentSelector<T>({props, children}: { // TODO: FIX FOR 
         setSelected(item)
         setOpen(false)
     }
+    const creator = props.createCreator? props.createCreator(selectItem): null
     const createNewSubArea = () => {
         if (!creatorOpen) {
             if (props.createTxt) {
@@ -207,20 +311,20 @@ export default function RecentSelector<T>({props, children}: { // TODO: FIX FOR 
             return null
         }
         return <div className={"centerH subFormCreator gapTop"}>
-            <div className={"gapTop"}>{children}</div>
+            <div className={"gapTop"}>{creator}</div>
             <div>
                 <button className={"basicButton"} onClick={() => {
                     setCreatorOpen(false)
                 }}>{"Close This Creator"}</button>
+
             </div>
 
-        </div> // TODO: NEEDS SPECIAL STYLING TO ENSURE WE KNOW WHICH FORM IS WHICH INTERNALLY
+        </div>
 
     }
     const openCreateNew = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!props.creatorInPage) {
-            console.log("CREATOR NOT IN PAGE")
             window.open(BaseExternalUrl + "/new/" + props.createEndpt, '_blank', 'noopener'); // TODO: ensure ok
             return
         }
@@ -237,31 +341,15 @@ export default function RecentSelector<T>({props, children}: { // TODO: FIX FOR 
             <div className={"centerH"}>
                 {selected && <div>{props.getId(selected)}</div>}
                 <button className={"basicButton"}
-                    onClick={toggleOpen}>{"Select a " + (selected ? "different" : "recent") + " " + props.lowercase}</button>
+                        onClick={toggleOpen}>{"Select a " + (selected ? "different" : "") + " " + props.lowercase}</button>
             </div>
-            {pre}
         </div>
     }
-    if (!loaded) {
-        return <div>
-            <ErrorDisplay err={err}/>
-            <div>{"Loading..."}</div>
-        </div>
-    }
-    return <div> {/* TODO: can we do this in the modal????? Div might be weird here*/}
+    return <div>
         <ErrorDisplay err={err}/>
         {/* TODO: listen for escape key????? */}
         {closeButton}
-        {selectable.map((opt, i) => {
-            // TODO: HIGHLIGHT CURRENTLY SELECTED!!!!!!!
-            return <div key={i}>
-                {props.inline({
-                    data: opt, onClick: () => {
-                        selectItem(opt)
-                    }
-                })}
-            </div>
-        })}
+        {props.createSelector(selectItem)}
         {pre}
         {closeButton}
     </div>

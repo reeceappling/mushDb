@@ -3,7 +3,7 @@ import styles from "./page.module.css";
 import PageWrapper from "@/app/components/clientGeneric";
 import {MainViewArea} from "@/app/view/[itemType]/[idEncoded]/client";
 import React from "react";
-import {GetReaderWriterNames} from "@/app/view/[itemType]/[idEncoded]/serverActions";
+import {GetReaderWriterNames} from "@/app/components/serverActions";
 import {cookies} from "next/headers";
 import {BaseExternalUrl} from "@/app/components/Constants";
 

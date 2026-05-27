@@ -25,6 +25,7 @@ services:
       tags:
         - "mush-api:latest"
     environment:
+#      ENVIRONMENT: "prod"
       SESSION_SECRET: ${GOTHIC_SESSION_SECRET:?error}
       PICS_PATH: "/images"
       API_PORT: "8080"

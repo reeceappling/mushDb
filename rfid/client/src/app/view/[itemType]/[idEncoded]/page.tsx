@@ -1,9 +1,10 @@
 import {BaseExternalUrl} from "@/app/components/Constants";
 import React from "react";
-import {GetReaderWriterNames} from "@/app/view/[itemType]/[idEncoded]/serverActions";
+import {GetReaderWriterNames} from "@/app/components/serverActions";
 import PageWrapper from "@/app/components/clientGeneric";
 import {cookies} from 'next/headers'
 import {MainViewArea} from "@/app/view/[itemType]/[idEncoded]/client";
+import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
 
 export default async function Page({
                                        params,
@@ -53,9 +54,11 @@ export default async function Page({
     const data = await getData(itemType, idEncoded)
     const readers = await GetReaderWriterNames()
     return <PageWrapper props={{pageType: "view", readers: readers}}>
-        <div className={"fullPage"}>
-            <MainViewArea itemType={itemType} inpData={data} allCookies={allCookies}/>
-        </div>
+        <SessionProvider session={session?.value}> {/* TODO: validate working*/}
+            <div className={"fullPage"}>
+                <MainViewArea itemType={itemType} inpData={data} allCookies={allCookies}/>
+            </div>
+        </SessionProvider>
     </PageWrapper>
 }
 

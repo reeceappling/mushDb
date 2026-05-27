@@ -52,10 +52,11 @@ export default function AuthArea( // TODO: any depth?????
     return (
         <div className={"fullPage"}>
             {/* TODO: ERROR FOR FAILED LOGIN */}
-            <div className={"loginRow"}>
+            <div className={"fixCenterScreen"}></div>
+            <div className={"centerH"}>
                 <ErrorDisplay err={err} headerLevel={1}/>{/* TODO: headerLevel ok? */}
             </div>
-            <div className="loginRow">
+            <div className="centerH">
                 {/* GOOGLE SIGN IN/UP*/}
                 <SignInArea onLogin={handleGoogleLoginSuccess}/>
             </div>

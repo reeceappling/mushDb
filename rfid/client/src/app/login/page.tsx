@@ -1,7 +1,6 @@
 import React, {Suspense} from "react";
 import PageWrapper from "@/app/components/clientGeneric";
 import AuthArea from "@/app/components/authClient";
-// import {CookiesProvider} from "react-cookie";
 
 export default async function Page({
                                        params,
@@ -14,7 +13,7 @@ export default async function Page({
     const {nextUrl} = await params
     return <PageWrapper props={{pageType:"login",readers: []}}>{/* TODO: remove readers? */}
         <Suspense fallback={<p>{"Loading..."}</p>}>
-            <div>{"HOMEPAGE STUFF HERE: TODO: THIS"}</div> {/* TODO: remove! */}
+            {/*<div>{"HOMEPAGE STUFF HERE: TODO: THIS"}</div> /!* TODO: remove! *!/*/}
             <AuthArea successUrl={nextUrl} loggedIn={false}/>{/* TODO: setting the success url???*/}
         </Suspense>
     </PageWrapper>

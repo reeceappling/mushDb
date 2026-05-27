@@ -1,4 +1,9 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {GrainBatchSelector, NewGrainBatchForm} from "@/app/components/grainBatchClient";
 
 export function TestGrainBatchOkFull() {
     const a: GrainBatchData = {
@@ -23,4 +28,32 @@ export interface GrainBatchData {
     dryTimeHours?: number
     notes?: Note[]
     lastUpdated: number
+}
+
+export function GrainBatchSelectorCloseable(sp: SelectorProps<GrainBatchData>) { // TODO: use
+    const doSel = (val?: GrainBatchData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<GrainBatchData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch,
+        closeTxt: "Close Grain Batch List",
+        createTxt: "Create Grain Batch",
+        lowercase: "grain batch",
+        creatorInPage: sp.creatorInPage,
+        createEndpt: "grainBatch",
+        getId: (v: GrainBatchData) => v._id,
+        createSelector:(selHdl: (onSelect: GrainBatchData) => void)=>{
+            return <GrainBatchSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        createCreator:(selHdl: (onSelect: GrainBatchData) => void)=>{
+            return <NewGrainBatchForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
 }

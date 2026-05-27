@@ -267,6 +267,8 @@ export function TopBarViewMenu() {
                     }}> {"go to this id"}</button>}
                 </div>
             </MenuItem> {/* TODO: ENSURE EACH LINK WORKS*/}
+            <MenuItem href={"/testpage"} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{"TEST PAGE"}</MenuItem>{/*TODO: DELETE ME*/}
             <MenuItem href={"/view/agarBatch/"+id} onClick={handleClose}
                        component={"a"} sx={sublistItemProps}>{"Agar Batch"}</MenuItem>
             <MenuItem href={"/view/agarRecipe/"+id} onClick={handleClose}

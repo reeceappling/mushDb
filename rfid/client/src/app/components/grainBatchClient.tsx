@@ -168,17 +168,18 @@ export default function GrainBatchDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
-                txt: "Create Jars From Batch", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Jars From Batch",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewJarForm grainBatchIn={initial} recipeIn={initial.recipe} handlers={{
                         onCreate: (newItem: JarData) => {
                             return onCreate([{
                                 typeText: "Grain Jar",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"jar"}/>
-                            }])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
-                }
+                },
             }
         ]
         return <DisplayFormWrapper entryType={"grainBatch"}>

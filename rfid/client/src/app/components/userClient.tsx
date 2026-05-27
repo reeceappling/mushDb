@@ -118,14 +118,6 @@ export default function UserDisplay(
     }
 }
 
-// export function UserListDisplay({data, onClick}: SingleListProps<UserData>) {
-//     return <div>
-//         {data.map((b,i)=>{
-//             return <UserInline data={b} onClick={()=>{onClick(b)}} key={i}/>
-//         })}
-//     </div>
-// }
-
 // TODO: MOVE!
 export function HandleErr(error: any, setErr: Dispatch<SetStateAction<string | undefined>>) {
     if (error instanceof Error) {
@@ -161,33 +153,6 @@ function getAllOptions<T>(itemType: string, assertEntry: (input: any) => void) {
 
 // TODO: UserListPageTable
 
-// function getStandardRecentOptions<T>(itemType: string, assertEntry: (input:any)=>void){
-//     return fetch(BaseExternalUrl + "/db/list/"+itemType, {
-//         method: "GET",
-//         headers: {
-//             credentials: 'include',
-//             //'Cookie': cookies,
-//             'Content-type': 'application/json',
-//         },
-//     }).then(HandleJsonResponse)
-//         .then((data) => {
-//             AssertDualListResult<T>(data, assertEntry)
-//             //AssertSubRecipeListResult(data) // TODO: I THINK THIS IS WRONG!
-//             data.standard
-//             data.recent
-//             console.log("handling list response") // TODO: del
-//             if (!Array.isArray(data)) {
-//                 console.log("list response was not an array") // TODO: del
-//                 throw "db users response was not an array"
-//             }
-//             if (!CheckArrayType(data, validatorForAssertion(assertEntry))) {
-//                 throw "Error validating db users response"
-//             }
-//             return data as T[]
-//         })
-//
-// }
-// function getRecentOptions<T>(){}
 
 // TODO: ensure userSelector works as intended!
 export function UserSelector(inp: {

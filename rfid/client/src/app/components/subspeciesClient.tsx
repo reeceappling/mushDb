@@ -215,37 +215,38 @@ export function NewSubspeciesForm({handlers, species}: {
     )
 }
 
-export function SubspeciesInline(
-    {props, showSpeciesName}: {
-        props: InlineProps<SubspeciesData>,
-        showSpeciesName: boolean,
-    }) { // TODO: TEST FOR SHOWSPECIESNAME==true!
-    const aliases = props.data.aliases || []
-    const notes = props.data.notes || []
-    const [expanded, setExpanded] = useState(props.expandByDefault)
-    return <InlineEntry onClick={props.onClick}><TestAndValidate todos={["ensure working and looks good"]}>
-        <InlineSubArea props={{}}>
-            <ID id={props.data._id} txt={"Subspecies"} entryType={"subspecies"} allowOpenMainPage={props.showMainPageButton} linkPage={props.idIsLink}/>
-            {showSpeciesName &&
-                <SpeciesArea readonly={true} initial={props.data.species} headerLevel={props.headerLevel}/>}
-            {/* Aliases */}
-            <div className={"ml-[2em]"}>
-                {aliases.map((alias, i) => {
-                    return <div key={i}>{alias}</div>
-                })}
-            </div>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            {/* Notes */}
-            <NotesAreaInline notes={notes} header={"Notes"} offset={-1}/>
-            {/* Last Updated */}
-            <DateArea pre={"Last Updated: "} when={props.data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </TestAndValidate>
-    </InlineEntry>
-}
+// export function SubspeciesInline(
+//     {props, showSpeciesName}: {
+//         props: InlineProps<SubspeciesData>,
+//         showSpeciesName: boolean,
+//     }) { // TODO: TEST FOR SHOWSPECIESNAME==true!
+//     const aliases = props.data.aliases || []
+//     const notes = props.data.notes || []
+//     const [expanded, setExpanded] = useState(props.expandByDefault)
+//     return <InlineEntry onClick={props.onClick}><TestAndValidate todos={["ensure working and looks good"]}>
+//         <InlineSubArea props={{}}>
+//             <ID id={props.data._id} txt={"Subspecies"} entryType={"subspecies"} allowOpenMainPage={props.showMainPageButton} linkPage={props.idIsLink}/>
+//             {showSpeciesName &&
+//                 <SpeciesArea readonly={true} initial={props.data.species} headerLevel={props.headerLevel}/>}
+//             {/* Aliases */}
+//             <div className={"ml-[2em]"}>
+//                 {aliases.map((alias, i) => {
+//                     return <div key={i}>{alias}</div>
+//                 })}
+//             </div>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             {/* Notes */}
+//             <NotesAreaInline notes={notes} header={"Notes"} offset={-1}/>
+//             {/* Last Updated */}
+//             <DateArea pre={"Last Updated: "} when={props.data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                expanded={expanded}/>
+//     </TestAndValidate>
+//     </InlineEntry>
+// }
 
+// ExistingSubSpeciesSelector selects between subspecies of a SINGLE species!
 export function ExistingSubSpeciesSelector(
     {
         species,
@@ -368,6 +369,8 @@ export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems
 export function SubspeciesSelectorTable({data, onClick}: ListPageItems<SubspeciesData>) {
     return <SubspeciesListPageTable data={data} onClick={onClick} withLink={true} />
 }
+
+// SubspeciesSelector is a selector between ALL subspecies, not just those of a single species
 export function SubspeciesSelector( // TODO: USE ELSEWHERE
     {
         doSelect,

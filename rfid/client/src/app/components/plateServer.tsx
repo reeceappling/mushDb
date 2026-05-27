@@ -5,6 +5,11 @@ import {
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
+import {LcSyringe} from "@/app/components/lcSyringeServer";
+import {PlateSelector} from "@/app/components/plateClient";
 
 export function TestPlateOk(){
     const now = new Date().getTime()
@@ -64,4 +69,33 @@ export interface PlateData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function PlateSelectorCloseable(sp: SelectorProps<PlateData>) { // TODO: use
+    const doSel = (val?: PlateData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<PlateData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
+        closeTxt: "Close Plate List",
+        //createTxt: "Create Bag",// TODO: ???
+        lowercase: "plate",
+        //creatorInPage: sp.creatorInPage,// TODO: ???
+        //createEndpt: "bag",// TODO: ???
+        getId: (v: PlateData) => v._id,
+        createSelector:(selHdl: (onSelect: PlateData) => void)=>{
+            return <PlateSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: ok?
+        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }

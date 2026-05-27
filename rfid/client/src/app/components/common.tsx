@@ -1,7 +1,8 @@
 'use client'
 
 import {defaultHeaderLevel} from "@/app/components/formSubcomponents/utils/headers";
-import {JSX, ReactNode, SetStateAction, SyntheticEvent, useState} from "react";
+import * as React from "react";
+import {JSX, ReactNode, SetStateAction, SyntheticEvent, useEffect, useRef, useState} from "react";
 import {
     Contamination,
     ContaminationForm,
@@ -9,7 +10,7 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NumberToDate} from "@/app/components/formSubcomponents/date";
-import {SplitAllEntries, SplitEntriesV2} from "@/app/components/formSubcomponents/shared";
+import {SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import ReaderWriterSelector, {
@@ -22,7 +23,6 @@ import {
     validatorForAssertion
 } from "@/app/components/substrateRecipeClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import * as React from "react";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertAgarBatch} from "@/app/components/agarBatchClient";
@@ -47,9 +47,12 @@ import {AssertSporeSwab} from "@/app/components/sporeSwabClient";
 import {AssertStasisTube} from "@/app/components/stasisTubeClient";
 import {AssertSubspecies} from "@/app/components/subspeciesClient";
 import {AssertSubstrateBatch} from "@/app/components/substrateBatchClient";
-import { AssertUser } from "./userClient";
+import {AssertUser} from "./userClient";
 import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
+import SpeechRecognition, {useSpeechRecognition} from "react-speech-recognition";
+import {ActionTypes, useDictationContext} from "@/app/components/formSubcomponents/dictationContext/dictationContext";
+
 
 export function SendMultipartRequest(url: string, cookies: string, formData: FormData) {
     return fetch(url, {
@@ -62,6 +65,402 @@ export function SendMultipartRequest(url: string, cookies: string, formData: For
             'Access-Control-Allow-Origin': '*',
         },
     })
+}
+
+export function SayString(toDictate: string) {
+    DictateString(toDictate)
+}
+
+export function DictateString(toDictate: string) { // TODO: USE!
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(toDictate))
+    } else {
+        throw "client speech synthesis not currently available"
+    }
+}
+
+// TODO: DICTAPHONES SHOULD BE USED IN:
+// TODO: creates: anything that needs a sterile environment (LIST)
+// TODO: views: all of them!
+// TODO: consider embedding dictaphones in notes areas for views and creates, and controlling the notes with a context of some sort?
+export function Dictaphone({createNoteHandler}: { createNoteHandler?: (note: string) => void }) {
+    // const cmds = ["simon says", "new note"]
+    const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+    const [activeCommand, setActiveCommand] = useState<string | undefined>(undefined)
+    const [startedBody, setStartedBody] = useState(false)
+    const listenArgs = {
+        continuous: true, // TODO: ok? was false
+        interimResults: true, // TODO: ok? was false
+        language: "en-US",
+    }
+
+    // const startBodyListener = ()=>{
+    //
+    // }
+    // const startCommandListener = ()=>{
+    //
+    // }
+    //
+    // //const fullCmdRegex = new RegExp("(?<=^command )simon says [a-zA-Z0-9 ]+(?= end dictation)")
+    // //const startDictationString = "command"
+    // const resetString = "clear dictation"
+    // const resetDictationRegex = new RegExp(resetString, "g")
+    // const endBodyString = "end dictation"
+    // const endDictationRegex = new RegExp("^[a-zA-Z0-9 ]+ "+endBodyString+"$)", "g")
+    // const bodyCommand = "* "+endBodyString
+    // const simonSaysRegex = regexForCmd("simon says")
+    // const cmdRegex = [simonSaysRegex]
+    // const removePrefix = (str: string, pre: string):string => {
+    //     str.slice(pre.length);
+    // }
+    // const bodyCallback = (command: string, resetTranscript:()=>void):void=>{
+    //     const body = command.substring(0,command.length-(2+endBodyString.length)) // TODO: ensure length right
+    //     switch(activeCommand){
+    //         case undefined:
+    //             // TODO: ERROR
+    //     }
+    // }
+    // const cmdCallback = (command: string, resetTranscript:()=>void):void => {
+    //     const commandAndBody = removePrefix(lessEnd, prefixes[0])
+    //     switch(command){
+    //         case cmds[0]: //simon says
+    //             setActiveCommand(cmds[0])
+    //             break;
+    //         default:
+    //     }
+    //     if (lessEnd.startsWith(prefixes[0])){
+    //         let body = removePrefix(lessEnd, prefixes[0])
+    //
+    //     }
+    //     resetTranscript()
+    // }
+    const commands = [
+        {
+            command: ["reset dictation", "clear transcript", "reset transcript"],
+            callback: () => {
+                resetTranscript()
+                setActiveCommand(undefined)
+            },
+            matchInterim: true,
+        },
+        {
+            command: ["repeat after me", "simon says"],
+            callback: () => {
+                resetTranscript()
+                setActiveCommand("repeat after me")
+            },
+            matchInterim: true,
+        },
+        {
+            command: [
+                "new note",
+                "create note",
+                "create new note",
+                "create a note",
+                "create a new note",
+                "make note",
+                "make a note",
+                "make new note",
+                "make a new note",
+
+            ],
+            callback: () => {
+                resetTranscript()
+                setActiveCommand("create note")
+            },
+            matchInterim: true,
+        },
+    ]
+    const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
+        commands: commands,
+    });
+    // 3-Second Timeout Logic
+    useEffect(() => {
+        // Clear existing timeout each time a new transcript word is detected
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+
+        // Set a new 3-second timer
+        const currentText = transcript
+        // TODO: handle 0-length transcripts?
+        const onTimeout = () => {
+            switch (activeCommand) {
+                case "repeat after me":
+                    console.log("repeat after me: " + currentText)
+                    SayString(currentText)
+                    break;
+                // TODO: CREATE PLATE? Bag, Slant, Transfer?
+                case "create note":
+                    // TODO: repeat and ask to save??????
+                    console.log("created note: " + currentText)
+                    createNoteHandler && createNoteHandler(currentText)
+                    break;
+                default:
+                    return
+                // TODO: this!
+            }
+            setActiveCommand(undefined)
+            resetTranscript()
+        }
+        timeoutRef.current = setTimeout(onTimeout, 3000);
+
+        return () => clearTimeout(timeoutRef.current);
+    }, [transcript, activeCommand]);
+
+    if (!browserSupportsSpeechRecognition) {
+        return <span>{"Browser doesn't support speech recognition."}</span>;
+    }
+
+    return (
+        <div>
+            <p>{"Microphone: " + (listening ? 'on' : 'off')}</p>
+            <button onClick={e => {
+                e.stopPropagation();
+                SpeechRecognition.startListening(listenArgs)
+            }}>{"Start"}</button>
+            <button onClick={e => {
+                e.stopPropagation();
+                SpeechRecognition.stopListening()
+            }}>{"Stop"}</button>
+            <button onClick={e => {
+                e.stopPropagation();
+                resetTranscript()
+            }}>Reset
+            </button>
+            <p>{transcript}</p>
+        </div>
+    );
+};
+
+// TODO: USE ON TFID VIEW PAGES!
+// TODO: SHOULD ADD WHERE NEEDED
+// TODO: LIKELY NEEDS MAJOR OVERHAUL
+export function ViewPageDictaphone({doUpdate}: {
+    doUpdate: () => void
+}) {
+    const rfidRdr = useRfidReaderContext()
+    const dict = useDictationContext()
+    // TODO: let readerWriter = state.selected // TODO: or lastReaderUsed???
+    const listenArgs = {
+        continuous: true,
+        interimResults: true,
+        language: "en-US",
+    }
+    const handleViewById = (idToSearch: string) => {
+        getPathFor(idToSearch).then((path) => {
+            location.assign(BaseExternalUrl + "/view/" + path)
+        }).catch((err) => {
+            console.log("failed to get path for id: " + JSON.stringify(err))
+            SpeechRecognition.startListening(listenArgs)
+        })
+    }
+    const commands = [
+        {
+            command: ["create transfer", "new transfer"],
+            callback: () => {
+                resetTranscript()
+                SpeechRecognition.stopListening()
+                dict.dispatch({type: ActionTypes.SET_CURRENT,payload:"create transfer"})
+            },
+            matchInterim: true,
+        },
+        {
+            command: ["view tag"], // TODO: ok?
+            callback: () => {
+                SpeechRecognition.stopListening()
+                resetTranscript()
+                ReadTagFunc(rfidRdr.dispatch, undefined, rfidRdr.state.selected)
+                    .then(handleViewById)// redir to the new page
+                    .catch(e => {
+                        console.error("failed to read linking tag: " + JSON.stringify(e))
+                        SpeechRecognition.startListening(listenArgs)
+                    })
+            },
+            matchInterim: true,
+        },
+        {
+            command: ["submit updates"], // TODO: ok?
+            callback: () => {
+                SpeechRecognition.stopListening()
+                resetTranscript()
+                doUpdate()
+                SpeechRecognition.startListening(listenArgs)
+            },
+            matchInterim: true,
+        },
+        {
+            command: [
+                "new note",
+                "create note",
+                "create new note",
+                "create a note",
+                "create a new note",
+                "make note",
+                "make a note",
+                "make new note",
+                "make a new note",
+                "add a new note",
+                "add new note",
+                "add a note",
+                "add note",
+            ],
+            callback: () => {
+                SpeechRecognition.stopListening()
+                resetTranscript()
+                dict.dispatch({type: ActionTypes.SET_CURRENT,payload:"create note"})
+            },
+            matchInterim: true,
+        },
+    ]
+    const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
+        commands: commands,
+    });
+
+    if (!browserSupportsSpeechRecognition) {
+        return <span>{"Browser doesn't support speech recognition."}</span>;
+    }
+    useEffect(() => { // TODO: validate works right
+        if (dict.state.current === "main") {
+            SpeechRecognition.startListening(listenArgs)
+        }
+    }, [dict.state.current])
+
+    return (
+        <div>
+            <button onClick={e => {
+                e.stopPropagation();
+                SpeechRecognition.startListening(listenArgs)
+            }}>{"Enable Dictation"}</button>{/* TODO: dictation enablement in cookies? We want to be able to traverse pages without touching the screen*/}
+            <button onClick={e => {
+                e.stopPropagation();
+                SpeechRecognition.stopListening()
+            }}>{"Disable Dictation"}</button>
+        </div>
+    );
+};
+
+export function AddNoteDictaphone({parent,createNote}:{parent?:string,createNote:(s:string)=>void}){
+    // Always created in a state that is not listening by default
+    try {
+        const {state, dispatch} = useDictationContext()
+        const listenArgs = {
+            continuous: false,
+            interimResults: false, // TODO: UNSURE IF WE WANT THIS OR NOT
+            language: "en-US",
+        }
+        const commands = [
+            {
+                command: ["* complete note"],
+                callback: (note: string) => {
+                    SpeechRecognition.stopListening()
+                    createNote(note)
+                    resetTranscript()
+                    dispatch({type: ActionTypes.SET_CURRENT,payload:parent||"main"}) // Because if this is not right below the main parent, then it should revert to the closest parent
+                },
+                matchInterim: true,
+            },
+        ]
+        const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
+            commands: commands,
+        });
+        const parentPrefix = ((parent && parent !== "main")?parent+".":"")
+        useEffect(() => { // TODO: validate works right
+            if (state.current === parentPrefix+"create note") {
+                SpeechRecognition.startListening(listenArgs)
+            }
+        }, [state.current])
+    } catch (e){
+        console.error("failed to create note dictation component: " + JSON.stringify(e))
+        return null
+    }
+}
+
+// TODO: USE THIS!
+export function CreateTransferDictaphone({submit,deleteLastNote,setDstId,setTransferReason}:{
+    submit:()=>void,
+    deleteLastNote:()=>void,
+    setDstId:(id:string)=>void,
+    setTransferReason:(id:string)=>void,
+}){
+    // Always created in a state that is not listening by default
+    try {
+        const rfidCtx = useRfidReaderContext()
+        const {state, dispatch} = useDictationContext()
+        const listenArgs = {
+            continuous: false,
+            interimResults: false, // TODO: UNSURE IF WE WANT THIS OR NOT
+            language: "en-US",
+        }
+        const commands = [
+            {
+                command: ["scan destination"],
+                callback: () => {
+                    SpeechRecognition.stopListening()
+                    resetTranscript()
+                    ReadTagFunc(rfidCtx.dispatch, undefined, rfidCtx.state.selected)
+                        .then((idRead)=>{
+                            setDstId(idRead) // TODO: validate working
+                            SpeechRecognition.startListening(listenArgs)
+                        })
+                        .catch(e => {
+                            console.error("failed to read linking tag: " + JSON.stringify(e))
+                            SpeechRecognition.startListening(listenArgs)
+                        })
+                },
+                matchInterim: true,
+            },
+            {
+                command: ["* is the transfer reason"], // TODO: EW!
+                callback: (arg:string) => {
+                    SpeechRecognition.stopListening()
+                    resetTranscript()
+                    setTransferReason(arg) // TODO: validate working
+                    SpeechRecognition.startListening(listenArgs)
+                },
+                matchInterim: true,
+            },
+            {
+                command: ["list transfer reason options"], // TODO: EW!
+                callback: () => {
+                    // TODO: THIS!
+                },
+                matchInterim: true,
+            },
+            // TODO: add notes (change to "create transfer.create note" in dictation context)
+            {
+                command: ["delete last note"],
+                callback: () => {
+                    SpeechRecognition.stopListening()
+                    resetTranscript()
+                    deleteLastNote()// TODO: THIS!
+                    SpeechRecognition.startListening(listenArgs)
+                },
+                matchInterim: true,
+            },
+            { // TODO: "with note * submit transfer" ?
+                command: ["submit current transfer"],
+                callback: () => {
+                    SpeechRecognition.stopListening()
+                    resetTranscript()
+                    submit()
+                    dispatch({type: ActionTypes.SET_CURRENT, payload:"main"}) // main is parent of transfer
+                },
+                matchInterim: true,
+            },
+        ]
+        const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
+            commands: commands,
+        });
+        useEffect(() => { // TODO: validate works right
+            if (state.current === "create transfer") {
+                SpeechRecognition.startListening(listenArgs)
+            }
+        }, [state.current])
+    } catch (e){
+        console.error("failed to create transfer dictation component: " + JSON.stringify(e))
+        return null
+    }
 }
 
 // TODO: USE THIS!
@@ -78,13 +477,14 @@ export function MainCollectionInputOrRead({label, onIdSelected, copyText}: {
     }
     return <div>
         {/* INPUT FOR MAINCOLLECTIONID */}
-        <InputTextInlineTitle label={"ID TO:"} value={id} readonly={false} errorMessage={undefined/* TODO: ???*/} placeholder={"Destination"} onChange={(s)=>updateId(s || "")}/>
+        <InputTextInlineTitle label={"ID TO:"} value={id} readonly={false} errorMessage={undefined/* TODO: ???*/}
+                              placeholder={"Destination"} onChange={(s) => updateId(s || "")}/>
         {/*<TextBox label={label || "Main Collection Id Input: "} value={id} fieldName={"mainCollIdInput"}*/}
         {/*         updateTextHandler={updateId} readonly={false}/>*/}
         {/* BUTTON TO READ MAIN COLL ID */}
-        <ReaderWriterSelector txt={"select rfid reader"} onSelect={(wr)=>{ // TODO: wr ok here or state.selected?
+        <ReaderWriterSelector txt={"select rfid reader"} onSelect={(wr) => { // TODO: wr ok here or state.selected?
             ReadTagFunc(dispatch, undefined, wr).then(updateId)
-        }} />
+        }}/>
         {/*<RfidSelectorWithReadButton handleTagRead={updateId} readButtonTxt={"read from current tag reader"}*/}
         {/*                            readerWriterTxt={"select rfid reader"} onWriterSelect={(wr)=>{*/}
         {/*    ReadTagFunc(dispatch, undefined, state.selected).then(updateId)*/}
@@ -164,14 +564,14 @@ export function OptionalArrayOfType(key: string, input: any, validateChildren: (
 //     })
 // }
 
-export function ViewInNewTabButton({entryType,id}:{entryType:string,id:string}){
+export function ViewInNewTabButton({entryType, id}: { entryType: string, id: string }) {
     return <EntryLinkWrapper props={{linkId: encodeURI(encodeURI(id)), entryType: entryType, openInNewTab: true}}>
         <button className={"basicButtonSmall"}>{"View"}</button>
     </EntryLinkWrapper>
 }
 
-export function ListItemsRequest(entryType:string){
-    return fetch(BaseExternalUrl + "/db/list/"+entryType, {
+export function ListItemsRequest(entryType: string) {
+    return fetch(BaseExternalUrl + "/db/list/" + entryType, {
         method: 'Get',
         credentials: 'include',
         headers: {
@@ -179,50 +579,107 @@ export function ListItemsRequest(entryType:string){
             'Accept': 'application/json',
         },
     }).then((res) => {
-        if(!res.ok){
-            throw new Error('response not ok. Status='+res.status+', body='+res.text())
+        if (!res.ok) {
+            throw new Error('response not ok. Status=' + res.status + ', body=' + res.text())
         }
-        return res.json().then(result=>{
-            let asserter:(x:any)=>void = ()=>false
-            switch(entryType){
-                case "agarBatches": asserter = AssertAgarBatch; break;
-                case "agarRecipes":asserter = AssertAgarRecipe; break;
-                case "bags": asserter = AssertBag; break;
-                case "fruits": asserter = AssertFruit; break;
-                case "fruitingChambers": asserter = AssertFruitingChamber; break;
-                case "grainBatches": asserter = AssertGrainBatch; break;
-                case "jars": asserter = AssertJar; break;
-                case "jarRecipes": asserter = AssertJarRecipe; break;
-                case "lcs": asserter = AssertLc; break;
-                case "lcRecipes": asserter = AssertLcRecipe; break;
-                case "lcSyringes": asserter = AssertLcSyringe; break;
-                case "mss": asserter = AssertMss; break;
-                case "pcRuns": asserter = AssertPcRun; break;
-                case "plates": asserter = AssertPlate; break;
-                case "projects": asserter = AssertProject; break;
-                case "sales": asserter = AssertSale; break;
-                case "slants": asserter = AssertSlant; break;
-                case "species": asserter = AssertSpecies; break;
-                case "sporePrints": asserter = AssertSporePrint; break;
-                case "sporeSwabs": asserter = AssertSporeSwab; break;
-                case "stasisTubes": asserter = AssertStasisTube; break;
-                case "subspecies": asserter = AssertSubspecies; break;
-                case "substrateBatches": asserter = AssertSubstrateBatch; break;
-                case "substrateRecipes": asserter = AssertSubstrateRecipe; break;
-                case "transfers": asserter = AssertTransfer; break;
-                case "users": asserter = AssertUser; break;
-                case "waterJars": asserter = AssertWaterJar; break;
+        return res.json().then(result => {
+            let asserter: (x: any) => void = () => false
+            switch (entryType) {
+                case "agarBatches":
+                    asserter = AssertAgarBatch;
+                    break;
+                case "agarRecipes":
+                    asserter = AssertAgarRecipe;
+                    break;
+                case "bags":
+                    asserter = AssertBag;
+                    break;
+                case "fruits":
+                    asserter = AssertFruit;
+                    break;
+                case "fruitingChambers":
+                    asserter = AssertFruitingChamber;
+                    break;
+                case "grainBatches":
+                    asserter = AssertGrainBatch;
+                    break;
+                case "jars":
+                    asserter = AssertJar;
+                    break;
+                case "jarRecipes":
+                    asserter = AssertJarRecipe;
+                    break;
+                case "lcs":
+                    asserter = AssertLc;
+                    break;
+                case "lcRecipes":
+                    asserter = AssertLcRecipe;
+                    break;
+                case "lcSyringes":
+                    asserter = AssertLcSyringe;
+                    break;
+                case "mss":
+                    asserter = AssertMss;
+                    break;
+                case "pcRuns":
+                    asserter = AssertPcRun;
+                    break;
+                case "plates":
+                    asserter = AssertPlate;
+                    break;
+                case "projects":
+                    asserter = AssertProject;
+                    break;
+                case "sales":
+                    asserter = AssertSale;
+                    break;
+                case "slants":
+                    asserter = AssertSlant;
+                    break;
+                case "species":
+                    asserter = AssertSpecies;
+                    break;
+                case "sporePrints":
+                    asserter = AssertSporePrint;
+                    break;
+                case "sporeSwabs":
+                    asserter = AssertSporeSwab;
+                    break;
+                case "stasisTubes":
+                    asserter = AssertStasisTube;
+                    break;
+                case "subspecies":
+                    asserter = AssertSubspecies;
+                    break;
+                case "substrateBatches":
+                    asserter = AssertSubstrateBatch;
+                    break;
+                case "substrateRecipes":
+                    asserter = AssertSubstrateRecipe;
+                    break;
+                case "transfers":
+                    asserter = AssertTransfer;
+                    break;
+                case "users":
+                    asserter = AssertUser;
+                    break;
+                case "waterJars":
+                    asserter = AssertWaterJar;
+                    break;
                 default:
-                    throw new Error("invalid type but got response. Should never happen"); break;
+                    throw new Error("invalid type but got response. Should never happen");
+                    break;
             }
-            switch(entryType){
+            switch (entryType) {
                 case "agarRecipes":
                 case "jarRecipes":
                 case "lcRecipes":
                 case "substrateRecipes":
-                    AssertDualListResult(result, asserter); break;
+                    AssertDualListResult(result, asserter);
+                    break;
                 default:
-                    AssertArrayResult(result, asserter); break;
+                    AssertArrayResult(result, asserter);
+                    break;
             }
             return result
         })
@@ -252,8 +709,8 @@ export interface InlineProps<T> {
     expandByDefault?: boolean,
     onClick?: (v?: T) => void
     headerLevel?: number
-    idIsLink?:boolean
-    showMainPageButton?:boolean
+    idIsLink?: boolean
+    showMainPageButton?: boolean
 }
 
 export interface SingleListProps<T> {
@@ -314,7 +771,8 @@ export function InlineExpansionButton(
         }}>{expanded ? "See less" : "See more"}</button>
     </div>
 }
-export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr, falseStr,className}: {
+
+export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr, falseStr, className}: {
     pre: string,
     updateParent?: (v?: boolean) => void,
     initial?: boolean,
@@ -351,9 +809,10 @@ export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr
 export function ConfirmedCleanSelector(// TODO: validate works now via a test LC
     {updateParent, initial}:
     {
-        updateParent:(b?:boolean)=>void, initial?: boolean
+        updateParent: (b?: boolean) => void, initial?: boolean
     }) {
-    return <TwoValuePlusUnknownSelector pre={"Confirmed Clean: "} updateParent={updateParent} initial={initial} trueStr={"clean"} falseStr={"contaminated"}/>
+    return <TwoValuePlusUnknownSelector pre={"Confirmed Clean: "} updateParent={updateParent} initial={initial}
+                                        trueStr={"clean"} falseStr={"contaminated"}/>
 
     // const strForBool = (s?: boolean) => {
     //     return ((s === undefined) ? "unknown" : (s ? "clean" : "contaminated"))
@@ -378,13 +837,14 @@ export function ConfirmedCleanSelector(// TODO: validate works now via a test LC
     // </div>
 }
 
-export function YesNoSelector({pre, updateParent, initial,className}: {
+export function YesNoSelector({pre, updateParent, initial, className}: {
     pre: string,
     updateParent?: (v?: boolean) => void,
     initial?: boolean
-    className?:string
+    className?: string
 }) {
-    return <TwoValuePlusUnknownSelector pre={pre} updateParent={updateParent} initial={initial} trueStr={"yes"} falseStr={"no"} className={className}/>
+    return <TwoValuePlusUnknownSelector pre={pre} updateParent={updateParent} initial={initial} trueStr={"yes"}
+                                        falseStr={"no"} className={className}/>
 }
 
 export function ConfirmedCleanArea(
@@ -543,15 +1003,16 @@ export async function getTypeFor(id: string) { // TODO: ensure this works????
             throw error
         });
 }
+
 export async function getPathFor(id: string) { // TODO: ensure this works????
-    let resp = await fetch(BaseExternalUrl + "/db/pathFor/"+id, {
+    let resp = await fetch(BaseExternalUrl + "/db/pathFor/" + id, {
         method: "GET",
         headers: {
             credentials: 'include',
             'Content-type': 'application/json'
         },
     })
-    if (!resp.ok){
+    if (!resp.ok) {
         throw "failed to get path for id"
     }
     return await resp.text()
@@ -600,7 +1061,7 @@ export function CreateNewEntryButton(handler: { onSubmit: () => void }) {
     return <button className={"greenButton buttonFullWidth"} onClick={handler.onSubmit}>{"Create!"}</button>
 }
 
-export function resolvePicsFormData(picsIn: SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>) {
+export function resolvePicsFormData(picsIn: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>) {
     let newImages: File[] = new Array(picsIn.new.length)
     let dataOut = {existing: picsIn.existing, new: new Array(picsIn.new.length)}
     for (let i = 0; i < picsIn.new.length; i++) {
@@ -623,7 +1084,7 @@ export function resolvePicsFormData(picsIn: SplitEntriesV2<PicWithNotesForm, New
     }
 }
 
-export function resolveContamsFormData(inp: SplitEntriesV2<ContaminationForm, NewContaminationForm>) {
+export function resolveContamsFormData(inp: SplitAllEntries<ContaminationForm, NewContaminationForm>) {
     let conts: (File | undefined)[] = new Array(inp.new.length)
     let dataOut = {existing: inp.existing, new: new Array(inp.new.length)}
     for (let i = 0; i < inp.new.length; i++) {

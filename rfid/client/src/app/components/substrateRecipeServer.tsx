@@ -1,5 +1,7 @@
 import {ACL} from "@/app/components/accessControlServer";
 import {Note} from "@/app/components/formSubcomponents/notes";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {NewSubstrateRecipeForm, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
 
 export function TestSubstrateRecipeOkStd(std: boolean){
     let a: SubstrateRecipeData = TestSubstrateRecipeOk()
@@ -26,4 +28,27 @@ export interface SubstrateRecipeData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+// TODO: VALIDATE WORKS!
+export function SubstrateRecipeSelectorCloseable(sp: SelectorProps<SubstrateRecipeData>){ // TODO: likely overhaul
+    return <CloseableSelector<SubstrateRecipeData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: sp.doSelect, // For selecting normally
+        msgTxt: "", // TODO: del?
+        closeTxt: "Close Substrate Recipe List",
+        createTxt: "Create Substrate Recipe",
+        createEndpt: "substrateRecipe",
+        lowercase: "substrate recipe",
+        creatorInPage: sp.creatorInPage,
+        getId: (v: SubstrateRecipeData)=>v._id,
+        createSelector:(selHdl: (onSelect: SubstrateRecipeData) => void)=>{
+            return <SubstrateRecipeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        createCreator:(selHdl: (onSelect: SubstrateRecipeData) => void)=>{
+            return <NewSubstrateRecipeForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
 }

@@ -9,6 +9,9 @@ import {
     ExamplePicsWithNotesIncoming
 } from "@/app/components/formSubcomponents/contaminations";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
 
 export function TestFruitingChamberOk(){
     const a: FruitingChamberData = {
@@ -66,6 +69,35 @@ export interface FruitingChamberData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function BagSelectorCloseable(sp: SelectorProps<FruitingChamberData>) { // TODO: use
+    const doSel = (val?: FruitingChamberData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<FruitingChamberData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
+        closeTxt: "Close Fruiting Chamber List",
+        //createTxt: "Create Bag",// TODO: ???
+        lowercase: "fruiting chamber",
+        //creatorInPage: sp.creatorInPage,// TODO: ???
+        //createEndpt: "bag",// TODO: ???
+        getId: (v: FruitingChamberData) => v._id,
+        createSelector:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+            return <FruitingChamberSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: ok?
+        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }
 
 // TODO: fruitingChamber selector?. RFID or text input selector

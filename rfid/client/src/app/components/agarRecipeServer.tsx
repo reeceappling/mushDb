@@ -5,6 +5,8 @@ import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Antibiotic} from "@/app/components/formSubcomponents/antibiotic";
 import {Additive} from "@/app/components/formSubcomponents/additives";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {AgarRecipeSelector, NewAgarRecipeForm} from "@/app/components/agarRecipeClient";
 
 export function TestAgarRecipeOk(){
     const a: AgarRecipeData = {
@@ -36,4 +38,29 @@ export interface AgarRecipeData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function AgarRecipeSelectorCloseable(sp: SelectorProps<AgarRecipeData>) {
+    const doSel = (val?: AgarRecipeData): void => {
+        val && sp.doSelect(val)
+    }
+    return <CloseableSelector<AgarRecipeData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: "ChannelTextNewAgarRecipe",
+        closeTxt: "Close Recipe List",
+        createTxt: "Create Agar Recipe",
+        lowercase: "agar recipe",
+        creatorInPage: sp.creatorInPage,
+        createEndpt: "agarRecipe",
+        getId: (v: AgarRecipeData) => v._id,
+        createSelector: (selHdl: (onSelect: AgarRecipeData) => void) => {
+            return <AgarRecipeSelector allowCreate={sp.allowCreation} doSelect={(v) => {
+                v && selHdl(v)
+            }}/>
+        },
+        createCreator: (selHdl: (onSelect: AgarRecipeData) => void) => {
+            return <NewAgarRecipeForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
 }

@@ -1,5 +1,10 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {PlateSelector} from "@/app/components/plateClient";
+import {PlateData} from "@/app/components/plateServer";
+import {PlugsSelector} from "@/app/components/plugsClient";
 
 export function TestPlugsOk(){
     const testNote = ()=>{
@@ -52,4 +57,33 @@ export interface PlugsJar {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function PlugsSelectorCloseable(sp: SelectorProps<PlugsJar>) { // TODO: use
+    const doSel = (val?: PlugsJar):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<PlugsJar> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
+        closeTxt: "Close Plugs List",
+        //createTxt: "Create Bag",// TODO: ???
+        lowercase: "plugs",
+        //creatorInPage: sp.creatorInPage,// TODO: ???
+        //createEndpt: "bag",// TODO: ???
+        getId: (v: PlugsJar) => v._id,
+        createSelector:(selHdl: (onSelect: PlugsJar) => void)=>{
+            return <PlugsSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: ok?
+        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }

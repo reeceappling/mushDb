@@ -83,14 +83,17 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 
 var oauthConfig *oauth2.Config
 
+const defaultHttpPort = 8080
+
 func main() {
 	// TODO: need to clear out the db for actually using it!
-
+	//env := os.Getenv("ENVIRONMENT") // TODO: set this!
 	picsPath := os.Getenv("PICS_PATH")
 	if picsPath == "" {
 		panic("env var missing for PICS_PATH")
 	}
 	ctx := pics.SetFilePath(context.Background(), picsPath)
+	//ctx = rfid.SetEnv(ctx, env == "prod")
 	var err error
 	authSvc := rfid.NewAuthService(utils.Pointer(2*time.Minute), utils.Pointer(1*time.Hour))
 	ctx = authSvc.OnContext(ctx)
@@ -116,18 +119,18 @@ func main() {
 	// TODO: MAIN_API_EXTERNAL_HOST := os.Getenv("MAIN_API_EXTERNAL_HOST")
 	apiPort, err := strconv.Atoi(os.Getenv("API_PORT"))
 	if err != nil {
-		println("No api port configured, defaulting to port 80")
-		apiPort = 8080
+		println("No api port configured, defaulting to port 8080")
+		apiPort = defaultHttpPort
 	}
 	// TODO: tempPortStr := "" // TODO: ensure ok
-	if (apiProtocol == "https" && apiPort != 443) || (apiProtocol == "http" && apiPort != 80) {
+	if (apiProtocol == "https" && apiPort != 443) || (apiProtocol == "http" && (apiPort != 80 && apiPort != defaultHttpPort)) {
 		// TODO: tempPortStr = fmt.Sprintf(`:%d`, apiPort)
 	}
 	oauthConfig = &oauth2.Config{
 		ClientID:     googId,
 		ClientSecret: googSecret,
 		//RedirectURL:  "http://" + MAIN_API_EXTERNAL_HOST + tempPortStr + "/auth/google/callback",
-		RedirectURL: "http://mush.appli.ng/auth/google/callback",
+		RedirectURL: "http://mush.appli.ng/auth/google/callback", // TODO: ensure fixed
 		Scopes:      []string{"email", "profile", "openid"},
 		Endpoint:    google.Endpoint,
 	}
@@ -201,10 +204,12 @@ func main() {
 	// Setup middlewares
 	const loginPath = "/login"
 	cleanupFreq := 2 * time.Minute
+	// TODO: rfid sessions mock readers?
 	mgr := websocketSessions.NewSessionManager(&cleanupFreq, rfidRegistrySecret)
 	defer mgr.Cleanup()
 	// Start generating mainCollectionIds
 	rfid.StartGeneratingMCIDs(ctx, 12)
+	internalOnlyMiddleware := internalOnlyMiddlewareCreator("api", apiPort)
 	ctx, rateLimiter, rfidMiddleware, webAuthMiddleware, _ /*internalAuthMiddleware*/, ctxInternalAuthMiddleware, ctxMiddleware, ctxRfidMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, dbUser, dbPass)
 	if err != nil {
 		panic("Error setting up middleware: " + err.Error())
@@ -217,10 +222,10 @@ func main() {
 	http.HandleFunc("/rfid/ws", ctxRfidMiddleware(http.HandlerFunc(websocketSessions.ServerHandler)))
 	// Can be internal to docker network
 	// TODO: are these internal or external?
-	http.HandleFunc("/rfid/read/{readerName}", ctxRfidMiddleware(rfidReadHandler))   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/write/{writerName}", ctxRfidMiddleware(rfidWriteHandler)) // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/read/{readerName}", ctxRfidMiddleware(internalOnlyMiddleware(rfidReadHandler)))   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/write/{writerName}", ctxRfidMiddleware(internalOnlyMiddleware(rfidWriteHandler))) // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 	// internal
-	http.HandleFunc("/rfid/readers", ctxRfidMiddleware(getRfidReaderNamesHandler)) // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/readers", ctxRfidMiddleware(internalOnlyMiddleware(getRfidReaderNamesHandler))) // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
 	webHostPort := 3000
@@ -293,7 +298,7 @@ func main() {
 	http.Handle("/sessionUserProjects", ctxInternalAuthMiddleware(rfid.SessionUserProjectsHandler()))
 
 	println("Defining simple api endpoints")
-	http.Handle("/options/{optionsType}", rfid.GetOptionsHandler) // TODO: any more options here?
+	http.Handle("/options/{optionsType}", internalOnlyMiddleware(rfid.GetOptionsHandler)) // TODO: any more options here?
 
 	if err = srv.ListenAndServe(); err != nil {
 		panic("failed to listen and serve for http: " + err.Error())
@@ -326,6 +331,27 @@ func (c customSessionStore) Save(r *http.Request, w http.ResponseWriter, s *sess
 	//TODO implement me
 	panic("implement me") // TODO: fix?
 	return errors.New("implement me")
+}
+
+func internalOnlyMiddlewareCreator(validDomain string, expectedPort int) func(handler http.Handler) http.Handler {
+	expDomain := fmt.Sprintf("%s:%d", validDomain, expectedPort)
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			reqHost := r.Host
+			if len(strings.Split(r.Host, ":")) == 1 {
+				if r.TLS != nil {
+					reqHost = r.Host + ":443"
+				} else {
+					reqHost = fmt.Sprintf(`%s:%d`, r.Host, defaultHttpPort)
+				}
+			}
+			if reqHost != expDomain {
+				http.Error(w, "Internal requests only expected at this endpoint. Invalid host or port", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func ReqTrackingMiddleWare(handler http.Handler) http.Handler {
@@ -692,7 +718,7 @@ func handleAuthCallback() http.Handler {
 		}
 		_, err = r.Cookie("_gothic_session")
 		if err != nil {
-			println("no cookie after auth", err.Error())
+			println("no cookie after auth", err.Error()) // TODO: ensure ok
 			//http.Error(w, "no cookie after auth", http.StatusInternalServerError)
 			//return
 		}
@@ -787,9 +813,10 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 			http.Error(w, "Failed to create req: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		for key, vals := range r.Header {
-			req.Header.Set(key, vals[0])
-		}
+		req.Header = r.Header
+		//for key, vals := range r.Header {
+		//	req.Header.Set(key, vals[0])
+		//}
 		// Set session header if exists
 
 		//perms, err := rfid.GetAuthInfo(ctx)
@@ -1198,8 +1225,6 @@ func getAnyCollectionHandler() http.Handler {
 					return
 				}
 			}
-			// If not a main collection itemType, try for alt
-
 		}
 		println("wrote bytes", string(tempBs)) // TODO: this!
 		_, err = w.Write(bytes)
@@ -1237,7 +1262,8 @@ var getRfidReaderNamesHandler http.HandlerFunc = func(w http.ResponseWriter, r *
 		return
 	}
 	rfidReaderSessions := mgr.Sessions()
-	totalSessions := withGoodBadTestWriters(rfidReaderSessions)
+	totalSessions := rfidReaderSessions
+	totalSessions = withGoodBadTestWriters(totalSessions) // TODO: remove after testing
 	out, err := json.Marshal(totalSessions)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1318,6 +1344,7 @@ type writeTagRequest struct {
 // TODO: consider moving to reader/internal side?
 var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	println("Received rfid write request for: ", r.URL.String()) // TODO: del
 	if r.Header.Get("Accept") != "text/html" {
 		http.Error(w, invalidAcceptHeader, http.StatusBadRequest)
 		return
@@ -1359,6 +1386,7 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
 		return
 	}
+	// TODO: what if this is something like id==1????
 	if len(req.Data) != 8 { // TODO: this is a base58 string, shouldnt it always be that?
 		// could be base58str
 		req.Data, err = rfid.Base58Str(req.Data).Base2Bytes()

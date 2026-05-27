@@ -180,6 +180,7 @@ func initializeSlants(ctx context.Context) error {
 type createSlantRequest struct {
 	AgarBatch AlternateCollectionId `json:"agarBatch"`
 	StickType *string               `json:"stickType,omitempty"`
+	NotesField
 	WriteTagToField
 }
 
@@ -210,6 +211,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 		AgarBatchField:        AgarBatchField{&data.AgarBatch},
 		StickType:             data.StickType,
 		CreationDateField:     CreationDateField{now},
+		NotesField:            data.NotesField,
 		LastUpdatedField:      LastUpdatedField{now},
 		AclField:              allCanWriteAcl(),
 	}
@@ -218,7 +220,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, toInsert, w) // TODO: use in all main creates
+	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
 // TODO: MOVE

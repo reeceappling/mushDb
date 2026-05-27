@@ -1,13 +1,11 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
-    Data,
     OnViewCreatorQuadCol,
-    SplitAllEntries,
-    SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -20,34 +18,30 @@ import {
     PicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {AddToTransfers, InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
+import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayInput,
-    DisposedSaleContamArea,
     HandleJsonResponse,
-    HandleTxtResponse,
     ImportDisplayInput, importUrlFor,
-    InlineExpansionArea, InlineExpansionButton,
-    InlineProps,
-    InlineSubArea, ListPageItems,
+    ListPageItems,
     NewEntryInput,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
-    RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData, SendMultipartRequest, setFormData,
-    setFormImages, SingleListProps, viewUrlFor,
+    setFormImages, viewUrlFor,
 } from "@/app/components/common";
-import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {
-    DisposedDisplay, ErrorDisplay,
-    GensInlineDisplay, GensFormDisplay, MostRecentImageDisplay, OpenMainPage,
+    ErrorDisplay,
+    GensFormDisplay, MostRecentImageDisplay,
     ParentDisplay,
-    PicsDisplay,
-    SpeciesArea, SubspeciesArea
+    PicsDisplay
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     AgarBatchArea,
@@ -60,28 +54,21 @@ import {
     ContaminationForm, ContamsDisplay, InitialContamState, InitialNotesState, IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
-import {AgarBatchData, AgarBatchSelector} from "@/app/components/agarBatchServer";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {SaleArea, SaleListPageTable} from "@/app/components/saleClient";
+import {SaleArea} from "@/app/components/saleClient";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {useCookies} from "react-cookie";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {OnViewCreatorsQuadColArea, OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import {OvcForXfers} from "@/app/components/bagClient";
+import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
+import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
 import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
-import {PlateData} from "@/app/components/plateServer";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
-import {SaleData} from "@/app/components/saleServer";
-import {ProjectData} from "@/app/components/projectServer";
-import {AssertProject, NewProjectForm} from "@/app/components/projectClient";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -207,8 +194,8 @@ export default function SlantDisplay(
     try {
         AssertSlant(data)
         const [initial, setInitial] = useState(data)
-        const [images, setImages] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
         const [sale, setSale] = useState(initial.sale)
         const [disposed, setDisposed] = useState(initial.disposed)
@@ -269,7 +256,8 @@ export default function SlantDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: anything here?
-        ] // TODO: THIS!
+            WriteRfidOvcArea(initial._id),
+        ]
         return (
             <DisplayFormWrapper entryType={"slant"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -325,6 +313,7 @@ export default function SlantDisplay(
 export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<SlantData>, agarBatchIn?:AgarBatchData}){
     const [agarBatch, setAgarBatch] = useState(agarBatchIn)
     const [stickType, setStickType] = useState<string | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     // TODO: handle handlers.isTopLevel
@@ -337,6 +326,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
         let body: any = {
             agarBatch: agarBatch,
             stickType: stickType,
+            notes: notes,
             writeTagTo: writeTagTo,
         }
         fetch(BaseExternalUrl+"/create/slant", {
@@ -360,12 +350,14 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
     return <NewEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err}/>
         <SlantStickSelector setStickType={setStickType}/>
-        <AgarBatchSelector doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/>
+        <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/> {/* TODO: use new one instead?*/}
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createSlant} onSubmit={(e)=>{e.preventDefault();}}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
 
+// TODO: validate works properly
 export function SlantStickSelector(x: { setStickType: (s?: string) => void }){
     return <div>
         {"Slant stick: "}<select className={"tailwindSelector"} defaultValue={"none"} disabled={false} onChange={(e) => {x.setStickType((e.currentTarget.value==="none")?undefined:e.currentTarget.value)}}>
@@ -376,35 +368,27 @@ export function SlantStickSelector(x: { setStickType: (s?: string) => void }){
     </div>
 }
 
-export function SlantInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SlantData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Slant"} entryType={"slant"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-            <SpeciesArea readonly={true} initial={data.species}  />
-            <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies} />
-            <KnownFruitableArea initial={data.knownFruitable} readonly={true} />
-            <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} />
-            <DisposedSaleContamArea sale={data.sale} disposed={data.disposed} contams={data.contamination} />
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded:expanded}}>
-            <AgarBatchArea agarBatchId={data.agarBatch} offset={-1}/>
-            {/* TODO: SLANT STICK */}
-            {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
-
-// export function SlantListDisplay({data, onClick}: SingleListProps<SlantData>) {
-//     return <div>
-//         {data.map((b,i)=>{
-//             return <SlantInline data={b} onClick={()=>{onClick(b)}} key={i}/>
-//         })}
-//     </div>
+// export function SlantInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SlantData>) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     const b58id = data._id
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={b58id} txt={"Slant"} entryType={"slant"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+//             <SpeciesArea readonly={true} initial={data.species}  />
+//             <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies} />
+//             <KnownFruitableArea initial={data.knownFruitable} readonly={true} />
+//             <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} />
+//             <DisposedSaleContamArea sale={data.sale} disposed={data.disposed} contams={data.contamination} />
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded:expanded}}>
+//             <AgarBatchArea agarBatchId={data.agarBatch} offset={-1}/>
+//             {/* TODO: SLANT STICK */}
+//             {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                expanded={expanded}/>
+//     </InlineEntry>
 // }
 
 export function SlantListPageTable({data, onClick, withLink}: ListPageItems<SlantData>) {

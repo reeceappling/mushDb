@@ -72,6 +72,18 @@ var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, fal
 
 var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false)
 
+// TODO: USE!
+func SetEnv(ctx context.Context, isProd bool) context.Context {
+	return context.WithValue(ctx, "isProd", isProd)
+}
+func GetEnv(ctx context.Context) bool {
+	isProd, ok := ctx.Value("isProd").(bool)
+	if !ok {
+		panic("Env not found")
+	}
+	return isProd
+}
+
 //// TODO: searching in a specific index
 //func latestNUpdatedB(ctx context.Context) error { // TODO: fixMe
 //	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)

@@ -6,9 +6,9 @@ import TopBar from "@/app/components/TopBar";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {CookiesProvider} from "react-cookie";
 import {GoogleOAuthProvider} from "@react-oauth/google";
-import {ListResult} from "@/app/components/formSubcomponents/shared";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {PageTypeContext, PageTypeProvider} from "@/app/components/formSubcomponents/pageTypeContext/pageType";
+import {DictationContextProvider} from "@/app/components/formSubcomponents/dictationContext/dictationContext";
 
 
 export default function PageWrapper(
@@ -34,8 +34,10 @@ export default function PageWrapper(
             <GoogleOAuthProvider clientId={GoogleApiClient}>
                 <QueryClientProvider client={queryClient}>
                     <PageTypeProvider pageType={props.pageType}>
-                        <TopBar/>
-                        {children}
+                        <DictationContextProvider>{/* TODO: ENSURE WORKING FINE!*/}
+                            <TopBar/>
+                            {children}
+                        </DictationContextProvider>
                     </PageTypeProvider>
                 </QueryClientProvider>
             </GoogleOAuthProvider>

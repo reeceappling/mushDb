@@ -21,7 +21,9 @@ import {
     OptionalKey,
     OptionalSimpleKey,
 } from "@/app/components/common";
-import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {
     DisposedDisplay,
@@ -233,7 +235,7 @@ export default function LcSyringeDisplay(
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         // TODO: can lcSyr do anything else?
-
+        WriteRfidOvcArea(initial._id),
     ]
     return <DisplayFormWrapper entryType={"lcSyringe"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -357,45 +359,36 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
     </NewEntryFormWrapper>
 }
 
-export function LcSyringeInline({
-                                    data,
-                                    expandByDefault,
-                                    onClick,
-                                    showMainPageButton,
-                                    idIsLink
-                                }: InlineProps<LcSyringe>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Liquid Culture Syringe"} entryType={"lcSyringe"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            {/* TODO: parent? */}
-            <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
-            <SpeciesArea readonly={true} initial={data.species}/>
-            <SubspeciesArea readonly={true} initialSub={data.species} currentSpecies={data.species}/>
-            <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-            <ConfirmedCleanArea initial={data.confirmedClean} readonly={true}/>
-            <DisposedDisplay readonly={true} disposed={data.disposed}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded,}}>
-            <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} offset={-1}/>
-            {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            {/* TODO: SALE? */}
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                                                     expanded={expanded}/>
-    </InlineEntry>
-}
-
-// TODO: fix???
-// export function LcSyringeListDisplay({data, onClick}: SingleListProps<LcSyringe>) {
-//     return <div>
-//         {data.map((b,i)=>{
-//             return <LcSyringeInline data={b} onClick={()=>{onClick(b)}} key={i}/>
-//         })}
-//     </div>
+// export function LcSyringeInline({
+//                                     data,
+//                                     expandByDefault,
+//                                     onClick,
+//                                     showMainPageButton,
+//                                     idIsLink
+//                                 }: InlineProps<LcSyringe>) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     const b58id = data._id
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={b58id} txt={"Liquid Culture Syringe"} entryType={"lcSyringe"} allowOpenMainPage={showMainPageButton}
+//                 linkPage={idIsLink}/>
+//             {/* TODO: parent? */}
+//             <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
+//             <SpeciesArea readonly={true} initial={data.species}/>
+//             <SubspeciesArea readonly={true} initialSub={data.species} currentSpecies={data.species}/>
+//             <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
+//             <ConfirmedCleanArea initial={data.confirmedClean} readonly={true}/>
+//             <DisposedDisplay readonly={true} disposed={data.disposed}/>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded,}}>
+//             <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} offset={-1}/>
+//             {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//             {/* TODO: SALE? */}
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                                      expanded={expanded}/>
+//     </InlineEntry>
 // }
 
 export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<LcSyringe>) {

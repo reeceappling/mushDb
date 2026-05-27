@@ -163,17 +163,18 @@ export default function LcRecipeDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
-                txt: "New LC from LcRecipe", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "New LC from LcRecipe",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewLcForm lcRecipeIn={initial} handlers={{
                         onCreate: (newItem: LcData) => {
                             return onCreate([{
                                 typeText: "Liquid Culture Jar", // TODO: validate ok
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"lc"}/>
-                            }])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
-                }
+                },
             }
             // TODO: any others?
         ]

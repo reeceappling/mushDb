@@ -43,9 +43,22 @@ func initializeUsers(ctx context.Context) error {
 		},
 	}
 	_, err := coll.ReplaceOne(ctx, bsonFindFilter("_id", testUser.Email), testUser, options.Replace().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+	// TODO: DELETE THIS AFTER TESTING!!!!
+	testUserSelf := User{
+		Email: testUserEmailSelf,
+		Perms: UserPerms{
+			Admin:    utils.Pointer(false),
+			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
+		},
+	}
+	_, err = coll.ReplaceOne(ctx, bsonFindFilter("_id", testUserSelf.Email), testUserSelf, options.Replace().SetUpsert(true))
 	return err
 }
 
+const testUserEmailSelf = "reeceappling@gmail.com" // TODO: or dot?
 const testUserEmail = "nessapatch2408@gmail.com"
 
 func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
@@ -98,6 +111,6 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	if err = cursor.Err(); err != nil {
 		return out, errors.Join(errors.New("mongo cursor error after UserPerms project iteration"), err)
 	}
-	out.projects = userProjPerms
+	out.projects = userProjPerms // TODO: ensure checking public projects as well???
 	return out, nil
 }

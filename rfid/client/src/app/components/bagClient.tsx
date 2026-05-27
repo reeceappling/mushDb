@@ -1,12 +1,12 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
-    SplitAllEntries, SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -20,14 +20,9 @@ import {
 import {InnocDisplay, NewTransferArea, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     DisplayInput,
-    DisposedSaleContamArea,
     HandleJsonResponse,
     HandleTxtResponse,
     ImportDisplayInput,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
     ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
@@ -44,13 +39,9 @@ import {
     DisposedDisplay,
     ErrorDisplay,
     GensFormDisplay,
-    GensInlineDisplay,
     MostRecentImageDisplay,
-    NameArea,
     ParentDisplay,
-    PicsDisplay,
-    SpeciesArea,
-    SubspeciesArea
+    PicsDisplay
 } from "@/app/components/formSubcomponents/commonClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {CreatedLinkFor, SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
@@ -64,13 +55,15 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {TopLevelImageSelector} from "@/app/components/formSubcomponents/imageSelector";
-import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
-import {PcRunData, RecentPCRunSelector} from "@/app/components/pcRunServer";
+import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {NewFruitForm} from "@/app/components/fruitClient";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
@@ -85,7 +78,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea, QuadColLastCol} from "@/app/components/pcRunClient";
 import {TransferData} from "@/app/components/transferServer";
 import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
+import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
 import {
     FlexedArea,
     FlexedSinglesGroup,
@@ -190,7 +183,7 @@ export function OvcForXfers(parentId: string, parentType: string, validTypesTo: 
                                             typeText: "Transfer",
                                             node: <CreatedLinkFor linkId={xfer._id} typ={"transfer"}/>,
                                             lastNode: <QuadColLastCol dstType={xfer.toType} id={xfer.to}/>
-                                        }])
+                                        }], false)
                                     }}/>
         }
     }
@@ -206,9 +199,9 @@ export function OvcForNewFruit(parentId: string, parentType: string, cookies: st
                                      onCreate([{
                                          typeText: "Fruit",
                                          node: <CreatedLinkFor linkId={fr._id} typ={"fruit"}/>,
-                                     }])
+                                     }], false)
                                  }}/>
-        }
+        },
     }
 }
 
@@ -227,9 +220,9 @@ export default function BagDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
         const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
         // ItemsWithPics
-        const [pics, setPics] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
-        const [flushes, setFlushes] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
+        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
         const [err, setErr] = useState<string | undefined>()
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         //const [newFruits, setNewFruits] = useState<FruitData[]>([]) // TODO: get rid of???
@@ -285,15 +278,6 @@ export default function BagDisplay(
             }
 
             SendMultipartRequest(BaseExternalUrl + "/db/update/bag/" + initial._id, cookies, body)
-                // fetch(BaseExternalUrl + "/db/update/bag/" + data._id, {
-                //     method: 'Post',
-                //     body: body,
-                //     headers: {
-                //         'Content-type': "multipart/form-data",
-                //         credentials: 'include',
-                //         //'Cookie': cookies,
-                //     },
-                // })
                 .then(HandleJsonResponse)
                 .then((newEntry) => {
                     AssertBag(newEntry)
@@ -305,15 +289,15 @@ export default function BagDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForNewFruit(initial._id, "bag", cookies), // TODO: test heavily
+            WriteRfidOvcArea(initial._id),
         ]
         return (
             <DisplayFormWrapper entryType={"bag"}>
-                {/* TODO: ok?<div className={"sectionHolder"}>*/}
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={data._id} txt={"Bag"} entryType={"bag"}/>
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
-                <FlexedArea>{/* TODO: validate that this is working as intended*/}
+                <FlexedArea>
                     <FlexedSinglesGroup>
                         <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Substrate recipe: "}/>
                         <SubstrateBatchArea id={data.substrateBatch} txt={"Substrate batch: "} readonly={true}/>
@@ -411,7 +395,6 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
-    // TODO: handle handlers.isTOpLevel
     const newBagSubmit = () => {
         if (pcRun === undefined) {
             setErr("PC Run cannot be undefined!");
@@ -428,7 +411,6 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
         let body: any = {
             pcRun: pcRun._id,
             filterSize: filterSize,
-            //creationDate: creationDate, // TODO: REMOVED CREATION DATE!
             wetness: wetness,
             substrateBatch: substrateBatch._id,
             writeTagTo: writeTagTo,
@@ -458,17 +440,16 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     }
     return (
         <NewEntryFormWrapper entryType={"bag"}>
-            {/* TODO: ok?<div className={"sectionHolder"}>*/}
             <ErrorDisplay err={err}/>
             <div>{"Creating Bag: "}</div>
             {substrateBatchIn !== undefined &&
                 <SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreate={handlers.isTopLevel}
-                                        creatorInPage={false}/>/*TODO: handle isTopLevel and creation in page*/}
+                                        creatorInPage={false}/>/* TODO: Closeable?*/}
             <WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {
                 setWetness(value)
             }}/>
             {pcRunIn === undefined ||
-                <RecentPCRunSelector doSelect={setPcRun} creatorInPage={true} allowCreation={true}/>}
+                <PcRunSelectorCloseable doSelect={setPcRun} creatorInPage={true} allowCreation={true}/>}
             {filterSizeSelector(setFilterSize, filterSize)}
             <NewEntryNotes setNotes={setNotes}/>
             {/* Write tag area */}
@@ -494,8 +475,6 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    //const [perms, setPerms] = useState<EntryPerms | undefined>(undefined) // TODO: use these in request
-    ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
     const submitImportBag = () => {
         const reqd = new Map<string, any>([
             ['recipe', recipe],
@@ -537,9 +516,7 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
             body: formData,
             headers: {
                 credentials: 'include',
-                //'Cookie': cookies,
-                'Content-type': "multipart/form-data" // TODO: auth?
-                //Authorization: tokenFetch,
+                'Content-type': "multipart/form-data"
             },
         })
             .then(HandleTxtResponse) // TODO: make sure imports do it this way
@@ -550,7 +527,7 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
                 setErr(JSON.stringify(err))
             });
     }
-    return <ImportEntryFormWrapper entryType={"bag"}>{/* TODO: ok?<div className={"sectionHolder"}>*/}
+    return <ImportEntryFormWrapper entryType={"bag"}>
         {/* Required Fields */}
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <DateArea pre={"Seal Date: "} when={Date.now()} updateParent={setSealDate}/>
@@ -562,7 +539,7 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
 
         {/* Optional fields*/}
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
-        <GenerationInput updateParent={setGeneration} />
+        <GenerationInput updateParent={setGeneration}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
 
         <TopLevelImageSelector updateParent={setImageFile} buttonText={"Upload image"}/>
@@ -571,42 +548,42 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
     </ImportEntryFormWrapper>
 }
 
-export function BagInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<BagData>) { // TODO: DO THIS ENTIRELY!
-    // TODO: do inlines need depth providers?
-    const [expanded, setExpanded] = useState(expandByDefault)
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={data._id} txt={"Bag"} entryType={"bag"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-            <MostRecentImageDisplay data={data.mostRecentImage}/>
-            <SpeciesArea readonly={true} initial={data.species}/>
-            <SubspeciesArea readonly={true} initialSub={data.species} currentSpecies={data.species}
-            />
-            <SubstrateRecipeArea id={data.recipe} readonly={true}/>
-            <SubstrateBatchArea id={data.substrateBatch} readonly={true}/>
-            <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore}/>
-            <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
-            {data.sealDate ?
-                <DateArea pre={"Sealed: "} when={data.sealDate} readonly={true}/>
-                : <div></div>
-            }
-            <WetnessDisplay value={data.wetness}/>
-            <NameArea headerTxt={"Filter Size: "} readonly={true} currentName={data.filterSize}/>
-            <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-            <DisposedSaleContamArea sale={data.sale} contams={data.contamination} disposed={data.disposed}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            {/*TODO: <ProjectsArea projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel}*/}
-            {/*              allowCreate={false} allowRemove={false}/>/!* TODO: ok? *!/*/}
-            <div>
-                <div>{"Flushes: " + (data.flushes ? data.flushes.length : 0)}</div>
-            </div>
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea>
-        <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
+// export function BagInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<BagData>) { // TODO: DO THIS ENTIRELY!
+//     // TODO: do inlines need depth providers?
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={data._id} txt={"Bag"} entryType={"bag"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+//             <MostRecentImageDisplay data={data.mostRecentImage}/>
+//             <SpeciesArea readonly={true} initial={data.species}/>
+//             <SubspeciesArea readonly={true} initialSub={data.species} currentSpecies={data.species}
+//             />
+//             <SubstrateRecipeArea id={data.recipe} readonly={true}/>
+//             <SubstrateBatchArea id={data.substrateBatch} readonly={true}/>
+//             <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore}/>
+//             <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
+//             {data.sealDate ?
+//                 <DateArea pre={"Sealed: "} when={data.sealDate} readonly={true}/>
+//                 : <div></div>
+//             }
+//             <WetnessDisplay value={data.wetness}/>
+//             <NameArea headerTxt={"Filter Size: "} readonly={true} currentName={data.filterSize}/>
+//             <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
+//             <DisposedSaleContamArea sale={data.sale} contams={data.contamination} disposed={data.disposed}/>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             {/*TODO: <ProjectsArea projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel}*/}
+//             {/*              allowCreate={false} allowRemove={false}/>/!* TODO: ok? *!/*/}
+//             <div>
+//                 <div>{"Flushes: " + (data.flushes ? data.flushes.length : 0)}</div>
+//             </div>
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea>
+//         <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                expanded={expanded}/>
+//     </InlineEntry>
+// }
 
 export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagData>) {
     let cols: ListTableColumn<BagData>[] = [

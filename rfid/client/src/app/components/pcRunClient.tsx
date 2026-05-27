@@ -5,9 +5,9 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import React, {JSX, useState} from "react";
 import {
+    AddCreatedQuadColFunction,
     AddCreatedTriColFunction,
     AllEntries,
-    Data,
     OnViewCreatorQuadCol,
     OnViewCreatorTriCol
 } from "@/app/components/formSubcomponents/shared";
@@ -20,7 +20,8 @@ import {
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
-    InlineSubArea, ListPageItems,
+    InlineSubArea,
+    ListPageItems,
     NewEntryInput,
     OptionalArrayOfType,
     OptionalKey
@@ -31,10 +32,13 @@ import {ACL} from "@/app/components/accessControlServer";
 import {NewWaterJarForm} from "@/app/components/waterJarClient";
 import {
     FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
+    FlexedSinglesGroup,
+    ListPageTable,
     ListTableColumn,
-    NewAgarBatchForm, NewColumn,
-    NotesFormArea, NumberToDateStr
+    NewAgarBatchForm,
+    NewColumn,
+    NotesFormArea,
+    NumberToDateStr
 } from "@/app/components/agarBatchClient";
 import {NewBagForm} from "@/app/components/bagClient";
 import {NewJarForm} from "@/app/components/jarClient";
@@ -49,11 +53,8 @@ import {SlantData} from "@/app/components/slantServer";
 import {WaterJarData} from "@/app/components/waterJarServer";
 import {JarData} from "@/app/components/jarServer";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
+import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "./lcRecipeClient";
 import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {MssData} from "@/app/components/mssServer";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
-import {AssertMss, MssListPageTable, NewMssForm} from "@/app/components/mssClient";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -212,24 +213,30 @@ function OvcCreatorBodyWrapper(props: React.PropsWithChildren<{}>) {
 
 // TODO: MOVE
 function OvcArea(props: React.PropsWithChildren<{}>) {
-    return <DepthProvider>
-        <div className={"ovcArea"}>{/* TODO: style ovcArea*/}
+    return <Subform>
+        <div className={"ovcArea depth"}>{/* TODO: style ovcArea*/}
             {props.children}
         </div>
-    </DepthProvider>
+    </Subform>
 }
 
 // TODO: MOVE!
 /* View lc/2Aui6ejTFsd for testing */
-export function OnViewCreatorsQuadColArea({OnViewCreators,readonly}: { OnViewCreators: OnViewCreatorQuadCol[], readonly: boolean}) {
+export function OnViewCreatorsQuadColArea({OnViewCreators, readonly}: {
+    OnViewCreators: OnViewCreatorQuadCol[],
+    readonly: boolean
+}) {
     if (readonly || !OnViewCreators) {
         return null
     }
     const [activeTab, setActiveTab] = useState<string | undefined>();
     const [created, setCreated] = useState<CreatedLinkQuadCol[]>([]);
     const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
-    const addCreated = (newLinks: CreatedLinkQuadCol[]) => {
+    const addCreated: AddCreatedQuadColFunction = (newLinks: CreatedLinkQuadCol[], closeAfter:boolean) => {
         setCreated(created.concat(newLinks))
+        if (closeAfter) {
+            setActiveTab(undefined)
+        }
     }
     const toggleHidden = () => {
         setCreatedTableHidden(!createdTableHidden)
@@ -266,15 +273,21 @@ export function OnViewCreatorsQuadColArea({OnViewCreators,readonly}: { OnViewCre
 }
 
 // TODO: MOVE!
-export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: { OnViewCreators: OnViewCreatorTriCol[], readonly: boolean }) {
+export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
+    OnViewCreators: OnViewCreatorTriCol[],
+    readonly: boolean
+}) {
     if (readonly || !OnViewCreators) {
         return null
     }
     const [activeTab, setActiveTab] = useState<string | undefined>();
     const [created, setCreated] = useState<CreatedLinkTriCol[]>([]);
     const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
-    const addCreated = (newLinks: CreatedLinkTriCol[]) => {
+    const addCreated = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => {
         setCreated(created.concat(newLinks))
+        if (closeAfter) {
+            setActiveTab(undefined)
+        }
     }
     const toggleHidden = () => {
         setCreatedTableHidden(!createdTableHidden)
@@ -299,14 +312,14 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: { OnViewCre
             {closeButton}
         </OvcCreatorBodyWrapper>
     }
-    return <TestAndValidate todos={["TEST THIS WHOLE THING!"]}><OvcArea>
-
-        <OvcTopBar setActiveTab={setActiveTab} OnViewCreators={OnViewCreators} hasExtraCol={false}
-                   activeTab={activeTab}/>
-        <OvcLinksTableTri created={created} tableHidden={createdTableHidden} toggleHidden={toggleHidden}/>
-        {creatorBody()}
-
-    </OvcArea></TestAndValidate>
+    return <TestAndValidate todos={["TEST THIS WHOLE THING!"]}>
+        <OvcArea>
+            <OvcTopBar setActiveTab={setActiveTab} OnViewCreators={OnViewCreators} hasExtraCol={false}
+                       activeTab={activeTab}/>
+            <OvcLinksTableTri created={created} tableHidden={createdTableHidden} toggleHidden={toggleHidden}/>
+            {creatorBody()}
+        </OvcArea>
+    </TestAndValidate>
 }
 
 // TODO: MOVE
@@ -350,12 +363,12 @@ export default function PcRunDisplay(
         AssertPcRun(data)
         const [initial, setInitial] = useState(data)
 
-        const [notes, setNotes] = useState<AllEntries<Note>>({existing:dataFor(data.notes || []),new:[]})
+        const [notes, setNotes] = useState<AllEntries<Note>>({existing: dataFor(data.notes || []), new: []})
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
-        const updateInitial= (updated: PcRunData)=>{
+        const updateInitial = (updated: PcRunData) => {
             setInitial(updated)
-            setNotes({existing:dataFor(updated.notes || []),new:[]})
+            setNotes({existing: dataFor(updated.notes || []), new: []})
             setAcl(updated.acl)
         }
         const pcRunUpdate = () => {
@@ -388,51 +401,56 @@ export default function PcRunDisplay(
         }
         const onViewCreators: OnViewCreatorTriCol[] = [
             {
-                txt: "Create Agar Batch", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Agar Batch",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewAgarBatchForm pcRunInp={data} handlers={{
                         onCreate: (newBatch: AgarBatchData) => {
                             return onCreate([{
                                 typeText: "Agar Batch",
                                 node: createdLinkFor(newBatch._id, newBatch._id, "agarBatch")
-                            }])
-                        },
-                        isTopLevel: false,
-                    }}/>
-                }
-            },
-            {
-                txt: "Create Bag", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewBagForm pcRunIn={data} handlers={{
-                        onCreate: (newItem: BagData) => {
-                            return onCreate([{typeText: "Bag", node: createdLinkFor(newItem._id, newItem._id, "bag")}])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
                 },
             },
             {
-                txt: "Create Grain Jar", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Bag",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                    return <NewBagForm pcRunIn={data} handlers={{
+                        onCreate: (newItem: BagData) => {
+                            return onCreate([{typeText: "Bag", node: createdLinkFor(newItem._id, newItem._id, "bag")}], false)
+                        },
+                        isTopLevel: false,
+                    }}/>
+                },
+            },
+            {
+                txt: "Create Grain Jar",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewJarForm pcRunIn={data} handlers={{
                         onCreate: (newEntry: JarData) => {
-                            onCreate([{typeText: "Grain Jar", node: createdLinkFor(newEntry._id, newEntry._id, "jar")}])
+                            onCreate([{typeText: "Grain Jar", node: createdLinkFor(newEntry._id, newEntry._id, "jar")}],
+                                false)
                         },
                         isTopLevel: false,
                     }}
                     />
-                }
+                },
             },
             {
-                txt: "Create Liquid Culture", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Liquid Culture",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewLcForm pcRunIn={data} handlers={{
                         onCreate: (newEntry: LcData) => {
                             onCreate([{
                                 typeText: "Liquid Culture",
                                 node: createdLinkFor(newEntry._id, newEntry._id, "lc")
-                            }])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
-                }
+                },
             },
             // TODO: {txt: "Create Plugs Jar", newCreationArea: (onCreate: AddCreatedFunction) => {
             //         return <NewPlugsForm pcRunInput={data._id} redirectOnCreate={false} onCreate={(newEntry: LcData)=>{
@@ -440,40 +458,43 @@ export default function PcRunDisplay(
             //         }}/>
             //     }},
             {
-                txt: "Create Slant", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Slant",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewSlantForm handlers={{
                         onCreate: (newEntry: SlantData) => {
-                            onCreate([{typeText: "Slant", node: createdLinkFor(newEntry._id, newEntry._id, "slant")}])
+                            onCreate([{typeText: "Slant", node: createdLinkFor(newEntry._id, newEntry._id, "slant")}], false)
                         },
                         isTopLevel: false
                     }}/>
-                }
+                },
             },
             {
-                txt: "Create Stasis Tube", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Stasis Tube",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewStasisTubeForm pcRunIn={data} handlers={{
                         onCreate: (newEntry: SlantData) => { // TODO: allow pcRun input?
                             onCreate([{
                                 typeText: "Stasis Tube",
                                 node: createdLinkFor(newEntry._id, newEntry._id, "stasisTube")
-                            }])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
-                }
+                },
             },
             {
-                txt: "Create Water Jar", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Water Jar",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewWaterJarForm pcRunIn={data} handlers={{
                         onCreate: (newEntry: WaterJarData) => { // TODO: allow pcRun input?
                             onCreate([{
                                 typeText: "Water Jar",
                                 node: createdLinkFor(newEntry._id, newEntry._id, "waterJar")
-                            }])
+                            }], false)
                         },
                         isTopLevel: false
                     }}/>
-                }
+                },
             },
         ]
         return (
@@ -490,9 +511,9 @@ export default function PcRunDisplay(
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     pcRunUpdate()
                 }}>{"Update"}</button>}
@@ -552,21 +573,22 @@ export function NewPcRunForm(
     )
 }
 
-export function PcRunInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<PcRunData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={data._id} txt={"PC Run"} entryType={"pcRun"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-            <DateArea pre={"Date: "} when={data.creationDate} readonly={true}/>
-            <NameArea headerTxt={"Runtime: "} currentName={data.runtimeMinutes.toString()} readonly={true}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                                                     expanded={expanded}/>
-    </InlineEntry>
-}
+// export function PcRunInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<PcRunData>) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={data._id} txt={"PC Run"} entryType={"pcRun"} allowOpenMainPage={showMainPageButton}
+//                 linkPage={idIsLink}/>
+//             <DateArea pre={"Date: "} when={data.creationDate} readonly={true}/>
+//             <NameArea headerTxt={"Runtime: "} currentName={data.runtimeMinutes.toString()} readonly={true}/>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                                      expanded={expanded}/>
+//     </InlineEntry>
+// }
 
 export function PcRunArea({binaryId, headerLevel, offset}: {
     binaryId?: string,
@@ -574,8 +596,8 @@ export function PcRunArea({binaryId, headerLevel, offset}: {
     offset?: number
 }) {
     // TODO: does this need depth?
-    let linkArea: JSX.Element = <div>{(binaryId !== undefined)?
-        <EntryLink props={{displayedId: binaryId, linkId: binaryId, entryType: "pcRun"}}>{binaryId}</EntryLink>:
+    let linkArea: JSX.Element = <div>{(binaryId !== undefined) ?
+        <EntryLink props={{displayedId: binaryId, linkId: binaryId, entryType: "pcRun"}}>{binaryId}</EntryLink> :
         "unknown"}
     </div>
     return <div className={"pcRunArea"}>
@@ -584,32 +606,20 @@ export function PcRunArea({binaryId, headerLevel, offset}: {
     </div>
 }
 
-// TODO: PC run selector????
-
-// export function PcRunListDisplay(ps: SingleListProps<PcRunData>) {
-//     return <div>
-//         {ps.data.map((b, i) => {
-//             return <PcRunInline data={b} onClick={() => {
-//                 ps.onClick(b)
-//             }} key={i}/>
-//         })}
-//     </div>
-// }
-
 export function PcRunListPageTable({data, onClick, withLink}: ListPageItems<PcRunData>) {
     let cols: ListTableColumn<PcRunData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Date", (v)=>{
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Date", (v) => {
             return NumberToDateStr(v.creationDate)
         }),
-        NewColumn("Runtime Mins", (v)=>v.runtimeMinutes),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Runtime Mins", (v) => v.runtimeMinutes),
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: PcRunData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"pcRun",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: PcRunData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "pcRun", openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -619,9 +629,10 @@ export function PcRunListPageTable({data, onClick, withLink}: ListPageItems<PcRu
 }
 
 export function PcRunSelectorTable({data, onClick}: ListPageItems<PcRunData>) {
-    return <PcRunListPageTable data={data} onClick={onClick} withLink={true} />
+    return <PcRunListPageTable data={data} onClick={onClick} withLink={true}/>
 }
-export function PcRunSelector( // TODO: USE ELSEWHERE
+
+export function PcRunSelector(
     {
         doSelect,
         allowCreate
@@ -629,12 +640,12 @@ export function PcRunSelector( // TODO: USE ELSEWHERE
         doSelect: (val: PcRunData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: PcRunData[]):JSX.Element=>{
+    const table = (items: PcRunData[]): JSX.Element => {
         return <PcRunSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"pcRun"} entryTypes={"pcRuns"} doSelect={doSelect} asserter={AssertPcRun}
                                    table={table}>
-        {allowCreate && <NewPcRunForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+        {allowCreate && <NewPcRunForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

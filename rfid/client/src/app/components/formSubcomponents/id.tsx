@@ -22,14 +22,21 @@ export default function ID({txt, id, entryType, linkPage, allowOpenMainPage}: {
 }
 
 export function IdPageLink({
-                                       id, entryType
+                                       id, entryType, openInNewTab
                                    }: {
                                        id: string;
-                                       entryType: string
+                                       entryType: string;
+                                       openInNewTab?: boolean // TODO: use this everywhere needed 5/21/26
                                    }
 ) {
-    return <a onClick={(e)=>{
+    const url = BaseExternalUrl + "/view/" + entryType + "/" + id
+    const onClickStopPropagation = (e: React.MouseEvent)=>{
         e.preventDefault(); // TODO: ok?
-        e.stopPropagation(); // TODO: ok?
-    }} href={BaseExternalUrl + "/view/" + entryType + "/" + id}>{id}</a>
+        e.stopPropagation();
+    }
+    // TODO: validate both work!
+    if (openInNewTab){
+        return <a href={url} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}>{id}</a>
+    }
+    return <a href={url} onClick={onClickStopPropagation}>{id}</a>
 }

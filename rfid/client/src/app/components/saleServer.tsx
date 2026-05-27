@@ -1,8 +1,4 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {AssertSale, NewSaleForm, SaleInline} from "@/app/components/saleClient";
-import RecentSelector, {SelectorProps} from "@/app/components/selector";
-import {InlineProps} from "@/app/components/common";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
 
 export function TestSaleOk() {

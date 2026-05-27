@@ -1,13 +1,12 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
     Data,
     OnViewCreatorQuadCol,
-    SplitAllEntries,
-    SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumbersOnlyFromText} from "@/app/components/formSubcomponents/date";
@@ -63,7 +62,9 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import ReaderWriterSelector from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -195,9 +196,9 @@ export default function FruitingChamberDisplay( // TODO: REDO WHOLE SECTION!
         const [writeTo, setWriteTo] = useState<string | undefined>()
 
         // Image-containing
-        const [pics, setPics] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitEntriesV2<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
-        const [flushes, setFlushes] = useState<SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
+        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+        const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
 
         // Helper states
         const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
@@ -261,6 +262,7 @@ export default function FruitingChamberDisplay( // TODO: REDO WHOLE SECTION!
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForNewFruit(data._id, "fruitingChamber", cookies),
+            WriteRfidOvcArea(initial._id),
             // TODO: xfers? OvcForXfers(data._id, "fruit", ["plate","slant","jar","stasisTube"], "Clone/Transfer Fruit"), // TODO: ensure list correct// TODO: OVC for clone to plate (transfer)
             // TODO: spore swab directly from box? (should also create a fruit in the interim)
             // TODO: spore print directly from box? (should also create a fruit in the interim)
@@ -493,11 +495,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
                 <div className={"text-lg"}>{"Volume casing: "}</div>
                 <VolumeSelector initialVal={0} initialUnit={"quarts"} updateNumberOfCups={setCasingCups}/>
             </div>
-            <NotesFormArea readonly={false} initial={[]} updateParent={(nts) => { // TODO: validate working
-                setNotes(nts.new.map((n) => {
-                    return n.data
-                }))
-            }}/>
+            <NewEntryNotes setNotes={setNotes}/>
             <ReaderWriterSelector onSelect={setWriteTagTo}/>
             {/* SUBMIT AREA */}
             <input type="submit" value="Submit" onClick={newFruitingChamberSubmit} onSubmit={(e) => {

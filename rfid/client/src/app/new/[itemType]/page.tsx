@@ -1,4 +1,4 @@
-import {GetReaderWriterNames} from "@/app/view/[itemType]/[idEncoded]/serverActions";
+import {GetReaderWriterNames} from "@/app/components/serverActions";
 import {AssertSpecies} from "@/app/components/speciesClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import React from "react";
@@ -6,6 +6,7 @@ import PageWrapper from "@/app/components/clientGeneric";
 import {cookies} from "next/headers";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ClientNewPage} from "@/app/new/[itemType]/client";
+import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
 
 export default async function Page({
                                        params,
@@ -18,6 +19,7 @@ export default async function Page({
     const {itemType, species} = await params
     const readers = await GetReaderWriterNames()
     const cookieStore = await cookies()
+    const session = cookieStore.get('_gothic_session')
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
     let speciesData: SpeciesData | undefined = undefined
     if (species !== undefined){
@@ -44,6 +46,7 @@ export default async function Page({
         })
     }
     return <PageWrapper props={{pageType:"new",readers: readers}}>
-        <ClientNewPage itemType={itemType} species={speciesData}/>{/*fullPage class contained within*/}
-    </PageWrapper>
+        <SessionProvider session={session?.value}>
+            <ClientNewPage itemType={itemType} species={speciesData}/>{/*fullPage class contained within*/}
+        </SessionProvider></PageWrapper>
 }

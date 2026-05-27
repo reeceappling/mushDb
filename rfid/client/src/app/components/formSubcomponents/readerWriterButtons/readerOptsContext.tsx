@@ -1,7 +1,6 @@
 'use client'
 
-import {createContext, ReactNode, useContext, useReducer, useState} from 'react';
-import {ReadRfidTag} from "@/app/view/[itemType]/[idEncoded]/serverActions";
+import {createContext, ReactNode, useContext, useReducer} from 'react';
 
 export type ModalInfo = {
     modalType: string
@@ -14,8 +13,6 @@ interface readerSelectorContext {
     lastReadTag?: string
     lastReaderUsed?: string
     lastError?: string
-    // modalInfo?: ModalInfo
-    // modalHistory?: ModalInfo  // TODO: MODAL HISTORY? MAKE NON-OPTIONAL!
 }
 
 // Define the type for our context data
@@ -83,8 +80,6 @@ const reducer = (state: readerSelectorContext, action: Actions) => {
             return {...state, selected: action.payload};
         case ActionTypes.SET_LAST_READ_TAG:
             return {...state, lastReadTag: action.payload}
-        // case ActionTypes.SET_MODAL_INFO:
-        //     return {...state, modalInfo: action.payload}
         case ActionTypes.SET_ERROR:
             return {...state, lastError: action.payload}
         case ActionTypes.SET_LAST_READER:
@@ -116,7 +111,7 @@ export function useRfidReaderContext() {
 
     if (!context) {
         throw new Error(
-            'The App Context must be used within an AppContextProvider'
+            'The ReaderOptionsContext must be used within an ReaderOptionsContextProvider'
         );
     }
 

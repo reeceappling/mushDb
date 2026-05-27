@@ -140,7 +140,7 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
         ['nutrients', IsValidNutrient],
         ['sugars', IsValidSugar],
         ['additives', IsValidAdditive],
-        ['antibiotics', IsString], // TODO: IsValidAntibiotic
+        ['antibiotics', IsString],
         ['notes', IsValidNote],
     ])
     for (let [key, validator] of complexOptionalArrayKeys) {
@@ -220,17 +220,18 @@ export default function AgarRecipeDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
-                txt: "Create Batch From Recipe", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "Create Batch From Recipe",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewAgarBatchForm agarRecipeIn={data} handlers={{
                         onCreate: (newItem: AgarBatchData) => {
                             return onCreate([{
                                 typeText: "Agar Batch",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"agarBatch"}/>
-                            }])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
-                }
+                },
             }
         ]
         return (
@@ -350,7 +351,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                 setSugars(rec.sugars || [])
                 setAdditives(rec.additives || [])
                 setAntibiotics(rec.antibiotics || [])
-                // TODO: notes?
+                // notes?
                 setTemplateSelectorOpen(false)
             }}/>
         } else {
@@ -420,6 +421,7 @@ export function agarPer400mL(agar: number) {
     return <div>{"(" + (agar * 2.0 / 5.0) + " g/400mL)"}</div>
 }
 
+// TODO: may disappear
 export function InlineEntry(props: React.PropsWithChildren<{ onClick?: () => void }>) { // TODO: ADD THIS TO ALL INLINES!!!!!
     return <div className={"inlineEntry"} onClick={(e) => {
         e.stopPropagation()
@@ -427,57 +429,56 @@ export function InlineEntry(props: React.PropsWithChildren<{ onClick?: () => voi
     }}>
         {props.children}
     </div>
-    // TODO: add depth to each of these?
 }
 
-export function AgarRecipeInline({
-                                     data,
-                                     expandByDefault,
-                                     onClick,
-                                     showMainPageButton,
-                                     idIsLink
-                                 }: InlineProps<AgarRecipeData>) {
-    // TODO: do inlines need depth providers?
-    const [expanded, setExpanded] = useState(expandByDefault)
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={data._id} txt={"Agar Recipe"} entryType={"agarRecipe"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            <NameArea currentName={data.name} readonly={true} headerTxt={"Recipe Name: "}/>
-            <StandardArea isStandard={data.standard} readonly={true}/>
-            <div>
-                <div>{"Agar: " + data.agar + " g/L (" + agarPer400mL(data.agar) + " g/400mL)"}</div>
-            </div>
-            <LiquidEntriesGroup preexisting={true} readonly={true} initialEntries={data.liquids.map((l) => {
-                return {data: l, disabled: false}
-            })} updateParent={() => {
-            }}/>{/* TODO: Liquids (with more on expand)*/}
-            <NutrientEntriesGroup preexisting={true} readonly={true} initialEntries={data.nutrients?.map((l) => {
-                return {data: l, disabled: false}
-            })} updateParent={() => {
-            }}/>{/* TODO: NUTRIENTS (with more on expand)*/}
-            <SugarEntriesGroup preexisting={true} readonly={true} initialEntries={data.sugars?.map((l) => {
-                return {data: l, disabled: false}
-            })} updateParent={() => {
-            }}/>{/* TODO: SUGARS (with more on expand) */}
-            <AdditiveEntriesGroup preexisting={true} readonly={true} initialEntries={data.additives?.map((l) => {
-                return {data: l, disabled: false}
-            })} updateParent={() => {
-            }}/>{/* TODO: ADDITIVES (with more on expand) */}
-            <AntibioticEntriesGroup preexisting={true} readonly={true} initialEntries={data.antibiotics?.map((l) => {
-                return {data: l, disabled: false}
-            })} updateParent={() => {
-            }}/>{/* TODO: ANTIBIOTICS (with more on expand) */}
-
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <NotesAreaInline notes={data.notes} offset={-1} header={"Notes: "}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea>
-        <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
+// export function AgarRecipeInline({
+//                                      data,
+//                                      expandByDefault,
+//                                      onClick,
+//                                      showMainPageButton,
+//                                      idIsLink
+//                                  }: InlineProps<AgarRecipeData>) {
+//     // TODO: do inlines need depth providers?
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={data._id} txt={"Agar Recipe"} entryType={"agarRecipe"} allowOpenMainPage={showMainPageButton}
+//                 linkPage={idIsLink}/>
+//             <NameArea currentName={data.name} readonly={true} headerTxt={"Recipe Name: "}/>
+//             <StandardArea isStandard={data.standard} readonly={true}/>
+//             <div>
+//                 <div>{"Agar: " + data.agar + " g/L (" + agarPer400mL(data.agar) + " g/400mL)"}</div>
+//             </div>
+//             <LiquidEntriesGroup preexisting={true} readonly={true} initialEntries={data.liquids.map((l) => {
+//                 return {data: l, disabled: false}
+//             })} updateParent={() => {
+//             }}/>{/* TODO: Liquids (with more on expand)*/}
+//             <NutrientEntriesGroup preexisting={true} readonly={true} initialEntries={data.nutrients?.map((l) => {
+//                 return {data: l, disabled: false}
+//             })} updateParent={() => {
+//             }}/>{/* TODO: NUTRIENTS (with more on expand)*/}
+//             <SugarEntriesGroup preexisting={true} readonly={true} initialEntries={data.sugars?.map((l) => {
+//                 return {data: l, disabled: false}
+//             })} updateParent={() => {
+//             }}/>{/* TODO: SUGARS (with more on expand) */}
+//             <AdditiveEntriesGroup preexisting={true} readonly={true} initialEntries={data.additives?.map((l) => {
+//                 return {data: l, disabled: false}
+//             })} updateParent={() => {
+//             }}/>{/* TODO: ADDITIVES (with more on expand) */}
+//             <AntibioticEntriesGroup preexisting={true} readonly={true} initialEntries={data.antibiotics?.map((l) => {
+//                 return {data: l, disabled: false}
+//             })} updateParent={() => {
+//             }}/>{/* TODO: ANTIBIOTICS (with more on expand) */}
+//
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             <NotesAreaInline notes={data.notes} offset={-1} header={"Notes: "}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea>
+//         <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                expanded={expanded}/>
+//     </InlineEntry>
+// }
 
 export const AgarRecipeArea = ({agarRecipeBinId}: { agarRecipeBinId?: string }) => {
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
@@ -622,121 +623,121 @@ export function AgarRecipeSelector(
     </ExistingDualSelector>
 }
 
-export function StandardAgarRecipeSelector(
-    {
-        doSelect
-    }: {
-        doSelect: (val: AgarRecipeData) => void
-    }) { // TODO: THIS WHOLE PART!!!
-    const [options, setOptions] = useState<AgarRecipeData[]>([])
-    // TODO: do selectors need depth providers?
-    // TODO: FIX //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+// export function StandardAgarRecipeSelector(
+//     {
+//         doSelect
+//     }: {
+//         doSelect: (val: AgarRecipeData) => void
+//     }) { // TODO: THIS WHOLE PART!!!
+//     const [options, setOptions] = useState<AgarRecipeData[]>([])
+//     // TODO: do selectors need depth providers?
+//     // TODO: FIX //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+//
+//     // TODO: REMOVE testRecipes for real later!
+//     const testRecipes: AgarRecipeData[] = [{
+//         _id: "(agarRecipeId1)",
+//         name: "(agarRecipeName1)",
+//         liquids: [{name: LiquidsList[0], pct: 90}, {name: LiquidsList[1], pct: 9}, {name: LiquidsList[2], pct: 1}],
+//         agar: 20,
+//         standard: true,
+//         nutrients: [{nutrient: NutrientsList[0], amount: 2, unit: "pinches"}, {
+//             nutrient: NutrientsList[1],
+//             amount: 17,
+//             unit: "ug"
+//         }, {nutrient: NutrientsList[2], amount: 3728, unit: "atoms"}],
+//         sugars: [{type: SugarsList[0], amount: 2, unit: "pinches"}, {
+//             type: SugarsList[1],
+//             amount: 17,
+//             unit: "ug"
+//         }, {type: SugarsList[2], amount: 3728, unit: "atoms"}],
+//         additives: [{additive: AdditivesList[0], amount: 2, unit: "pinches"}, {
+//             additive: AdditivesList[1],
+//             amount: 17,
+//             unit: "ug"
+//         }, {additive: AdditivesList[2], amount: 3728, unit: "atoms"}],
+//         antibiotics: [AntibioticsList[0], AntibioticsList[1]],
+//         notes: [{note: "test note 1", time: Date.now()}, {note: "test note 2", time: Date.now()}],
+//         lastUpdated: Date.now()
+//     }, {
+//         _id: "(agarRecipeId2)",
+//         name: "(agarRecipeName2)",
+//         liquids: [{name: "water", pct: 100}],
+//         agar: 20,
+//         standard: true,
+//         lastUpdated: Date.now()
+//     }]
+//     useEffect(() => {
+//         setOptions(testRecipes)
+//         // TODO: REENABLE
+//         // fetch(BaseExternalUrl+"/get/standardAgarRecipes", { // TODO: ensure correct // TODO: ensure correct (not currently)
+//         //     method: "GET",
+//         //     headers: {
+//         //         credentials: 'include',
+//         //         // TODO: FIX 'Cookie': cookies,
+//         //     },
+//         // })
+//         //     .then(HandleJsonResponse)
+//         //     .then((data) => {
+//         //         setOptions(data as AgarRecipeData[])
+//         //     })
+//         //     .catch((error) => {
+//         //         console.log(error)
+//         //     }); // TODO: THIS
+//     }, []); // TODO: what to rerender on?
+//     // TODO: two sections. Standard, most recent, or create new.
+//     if (options.length == 0) return <div>
+//         <div>{"Standard Recipes:"}</div>
+//         <div>{"Loading Options..."}</div>
+//     </div>
+//     return <div>
+//         <div>{"Standard Recipes:"}</div>
+//         {options.map((opt, i) => {
+//             return <AgarRecipeInline data={opt} onClick={() => {
+//                 doSelect(opt)
+//             }} key={i}/>
+//         })}
+//     </div>
+// }
 
-    // TODO: REMOVE testRecipes for real later!
-    const testRecipes: AgarRecipeData[] = [{
-        _id: "(agarRecipeId1)",
-        name: "(agarRecipeName1)",
-        liquids: [{name: LiquidsList[0], pct: 90}, {name: LiquidsList[1], pct: 9}, {name: LiquidsList[2], pct: 1}],
-        agar: 20,
-        standard: true,
-        nutrients: [{nutrient: NutrientsList[0], amount: 2, unit: "pinches"}, {
-            nutrient: NutrientsList[1],
-            amount: 17,
-            unit: "ug"
-        }, {nutrient: NutrientsList[2], amount: 3728, unit: "atoms"}],
-        sugars: [{type: SugarsList[0], amount: 2, unit: "pinches"}, {
-            type: SugarsList[1],
-            amount: 17,
-            unit: "ug"
-        }, {type: SugarsList[2], amount: 3728, unit: "atoms"}],
-        additives: [{additive: AdditivesList[0], amount: 2, unit: "pinches"}, {
-            additive: AdditivesList[1],
-            amount: 17,
-            unit: "ug"
-        }, {additive: AdditivesList[2], amount: 3728, unit: "atoms"}],
-        antibiotics: [AntibioticsList[0], AntibioticsList[1]],
-        notes: [{note: "test note 1", time: Date.now()}, {note: "test note 2", time: Date.now()}],
-        lastUpdated: Date.now()
-    }, {
-        _id: "(agarRecipeId2)",
-        name: "(agarRecipeName2)",
-        liquids: [{name: "water", pct: 100}],
-        agar: 20,
-        standard: true,
-        lastUpdated: Date.now()
-    }]
-    useEffect(() => {
-        setOptions(testRecipes)
-        // TODO: REENABLE
-        // fetch(BaseExternalUrl+"/get/standardAgarRecipes", { // TODO: ensure correct // TODO: ensure correct (not currently)
-        //     method: "GET",
-        //     headers: {
-        //         credentials: 'include',
-        //         // TODO: FIX 'Cookie': cookies,
-        //     },
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((data) => {
-        //         setOptions(data as AgarRecipeData[])
-        //     })
-        //     .catch((error) => {
-        //         console.log(error)
-        //     }); // TODO: THIS
-    }, []); // TODO: what to rerender on?
-    // TODO: two sections. Standard, most recent, or create new.
-    if (options.length == 0) return <div>
-        <div>{"Standard Recipes:"}</div>
-        <div>{"Loading Options..."}</div>
-    </div>
-    return <div>
-        <div>{"Standard Recipes:"}</div>
-        {options.map((opt, i) => {
-            return <AgarRecipeInline data={opt} onClick={() => {
-                doSelect(opt)
-            }} key={i}/>
-        })}
-    </div>
-}
-
-export function RecentAgarRecipeSelector(
-    {
-        doSelect
-    }: {
-        doSelect: (val: AgarRecipeData) => void
-    }) {
-    // TODO: do slectors need depth providers?
-    const [options, setOptions] = useState<AgarRecipeData[]>([])
-    // TODO: FIX //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-
-    useEffect(() => {
-        fetch(BaseExternalUrl + "/get/recentAgarRecipes", { // TODO: ensure correct (not currently)
-            method: "GET",
-            headers: {
-                credentials: 'include',
-                // TODO: FIX 'Cookie': cookies,
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((data) => {
-                setOptions(data as AgarRecipeData[])
-            })
-            .catch((error) => {
-                console.log(error)
-            }); // TODO: THIS
-    }, [options]);
-    if (options.length == 0) return <div>
-        <div>{"Recent Recipes:"}</div>
-        <div>{"Loading Options..."}</div>
-    </div>
-    return <div>
-        <div>{"Recent Recipes:"}</div>
-        {options.map((opt, i) => {
-            return <AgarRecipeInline data={opt} onClick={() => {
-                doSelect(opt)
-            }} key={i}/>
-        })}
-    </div>
-}
+// export function RecentAgarRecipeSelector(
+//     {
+//         doSelect
+//     }: {
+//         doSelect: (val: AgarRecipeData) => void
+//     }) {
+//     // TODO: do slectors need depth providers?
+//     const [options, setOptions] = useState<AgarRecipeData[]>([])
+//     // TODO: FIX //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+//
+//     useEffect(() => {
+//         fetch(BaseExternalUrl + "/get/recentAgarRecipes", { // TODO: ensure correct (not currently)
+//             method: "GET",
+//             headers: {
+//                 credentials: 'include',
+//                 // TODO: FIX 'Cookie': cookies,
+//             },
+//         })
+//             .then(HandleJsonResponse)
+//             .then((data) => {
+//                 setOptions(data as AgarRecipeData[])
+//             })
+//             .catch((error) => {
+//                 console.log(error)
+//             }); // TODO: THIS
+//     }, [options]);
+//     if (options.length == 0) return <div>
+//         <div>{"Recent Recipes:"}</div>
+//         <div>{"Loading Options..."}</div>
+//     </div>
+//     return <div>
+//         <div>{"Recent Recipes:"}</div>
+//         {options.map((opt, i) => {
+//             return <AgarRecipeInline data={opt} onClick={() => {
+//                 doSelect(opt)
+//             }} key={i}/>
+//         })}
+//     </div>
+// }
 
 // export function AgarRecipeListDisplay({recent, standard, onClick}: TwoListProps<AgarRecipeData>) {
 //     const recentArea = () => {

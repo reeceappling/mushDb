@@ -8,9 +8,13 @@ import {
     ExampleContaminations,
     ExamplePicsWithNotesIncoming
 } from "@/app/components/formSubcomponents/contaminations";
-import {SelectorProps} from "@/app/components/selector";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {JarSelector} from "@/app/components/jarClient";
 
 export function TestJarOK(){
     const a: JarData = {
@@ -70,17 +74,31 @@ export interface JarData {
     acl?: ACL
 }
 
-export function JarSelector({handlers,jar}:{handlers: SelectorProps<JarData>,jar?:JarData}){ // TODO: USE?
-    // TODO: REDO! NEEDED?
-    // return RecentSelector<JarData>({
-    //     msgTxt: ChannelTextNewJar,
-    //     recentEndpt: "jars",
-    //     assertType: AssertJar,
-    //     closeTxt: "Close Grain Jar List",
-    //     //createTxt: "Create Fruit", // Jars only created from transfer
-    //     //newForm: NewFruit, // Jars only created from transfer
-    //     createEndpt: "jar",
-    //     lowercase: "grain jar",
-    //     inline: (inlineIn: InlineProps<JarData>)=>{return JarInline(inlineIn)},
-    // })(sp)
+export function JarSelectorCloseable(sp: SelectorProps<JarData>) { // TODO: use
+    const doSel = (val?: JarData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<JarData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
+        closeTxt: "Close Jar List",
+        //createTxt: "Create Bag",// TODO: ???
+        lowercase: "jar",
+        //creatorInPage: sp.creatorInPage,// TODO: ???
+        //createEndpt: "bag",// TODO: ???
+        getId: (v: JarData) => v._id,
+        createSelector:(selHdl: (onSelect: JarData) => void)=>{
+            return <JarSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: ok?
+        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }

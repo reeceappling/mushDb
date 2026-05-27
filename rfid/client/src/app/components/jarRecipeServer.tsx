@@ -4,6 +4,11 @@ import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Additive} from "@/app/components/formSubcomponents/additives";
 import {Grain} from "@/app/components/formSubcomponents/grains";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {JarRecipeSelector, NewJarRecipeForm} from "@/app/components/jarRecipeClient";
 
 export function TestJarRecipeOK() {
     const a: JarRecipeData = {
@@ -40,6 +45,34 @@ export interface JarRecipeData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function JarRecipeSelectorCloseable(sp: SelectorProps<JarRecipeData>) { // TODO: use
+    const doSel = (val?: JarRecipeData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<JarRecipeData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewJarRecipe,
+        closeTxt: "Close Jar Recipe List",
+        createTxt: "Create Jar Recipe",
+        lowercase: "jar recipe",
+        creatorInPage: sp.creatorInPage,
+        createEndpt: "jarRecipe",
+        getId: (v: JarRecipeData) => v._id,
+        createSelector:(selHdl: (onSelect: JarRecipeData) => void)=>{
+            return <JarRecipeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        createCreator:(selHdl: (onSelect: JarRecipeData) => void)=>{
+            return <NewJarRecipeForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
 }
 
 export const ChannelTextNewJarRecipe = "newJarRecipe" // TODO: USE THIS

@@ -71,6 +71,9 @@ fungi-tracker/*
 k8s
 letsencrypt
 
+# noCommit
+noCommit/*
+
 
 
 

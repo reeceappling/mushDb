@@ -7,6 +7,9 @@ import {
     useRfidReaderContext
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
 import {Makeid} from "@/app/components/TopBar";
+import {OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
+import {WriteRfidTag} from "@/app/components/serverActions";
+import {Subform} from "@/app/components/lcRecipeClient";
 
 
 interface rfidSelectorProps {
@@ -36,7 +39,48 @@ export default function ReaderWriterSelector(props:rfidSelectorProps) {
     </select></div>
 }
 
-export function ReadTagFunc(dispatch: React.Dispatch<Actions>, session?: string, selectedReader?: string): Promise<string> {
+export function WriteTagFunc(dispatch: React.Dispatch<Actions>, id: string, selectedReader?: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        if (!selectedReader) {
+            let toWrite = "no rfid reader selected"
+            dispatch({
+                type: ActionTypes.SET_ERROR,
+                payload: toWrite,
+            })
+            reject(toWrite)
+            return
+        }
+        let readerName = selectedReader
+        if (readerName === "goodTestRfid"){ // TODO: comment out
+            return resolve(id)
+        } else if (readerName === "" || readerName === "none" || readerName === "badTestRfid"){
+            return reject("invalid reader name")
+        } else {
+            WriteRfidTag(id, selectedReader).then(()=>{
+                dispatch({
+                    type: ActionTypes.SET_LAST_READ_TAG,
+                    payload: id,
+                })
+                dispatch({
+                    type: ActionTypes.CLEAR_ERROR,
+                })
+                resolve(id)
+            }).catch(e=>{
+                let errTxt = "failed to write tag: "+JSON.stringify(e)
+                console.error(errTxt);
+                dispatch({
+                    type: ActionTypes.SET_ERROR,
+                    payload: errTxt,
+                })
+                reject(errTxt)
+            })
+        }
+
+        resolve(id)
+    })
+}
+
+export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, selectedReader?: string): Promise<string> {
     return new Promise((resolve, reject) => {
         // TODO: fix sess
         // ReadRfidTag(session, dispatch, selectedReader).then((id)=>{
@@ -114,6 +158,48 @@ export function ReadRFIDButton(
     return <button className={"basicButtonSmall"} onClick={()=>{
         ReadTagFunc(dispatch, session, state.selected).then(handleTagRead)
     }}>{txt || "Read ID from RFID Reader"}</button>
+}
+
+// TODO: TEST HEAVILY!
+export function WriteRfidOvcArea(id:string):OnViewCreatorQuadCol{
+    return {
+        txt: "Write tag (dangerous)",
+        newCreationArea: onCreate => <WriteRFIDArea id={id}
+            handleTagWritten={(idWritten:string)=>{
+                onCreate([{typeText: "Wrote Tag", node: <text>{idWritten}</text>}], true)
+            }}/>,
+    }
+}
+
+export function WriteRFIDArea( // TODO: use this on each page that has writeable ids!
+    {
+        handleTagWritten, id,
+    }:{
+        id:string,
+        handleTagWritten:(id: string)=>void
+    }) {
+    const [locked, setLocked] = React.useState(true)
+    const {state, dispatch} = useRfidReaderContext()
+    const [writer, setWriter] = React.useState(state.selected)
+    const writeTag = (e: React.MouseEvent)=>{
+        console.log("attempting to write tag "+id+" to writer "+(writer || "none selected")) // TODO: DEL!
+        e.preventDefault();
+        e.stopPropagation();
+        WriteTagFunc(dispatch, id, state.selected)
+            .then(handleTagWritten)
+            .catch(e=>console.error("got BAD tag write result: "+JSON.stringify(e))) // TODO: DEL!
+    }
+    return <Subform>
+        <div>{"Setup Tag Writing"}</div>
+        <div className={"inlineChildren"}>
+            <text className={"mr-2"}>{"Unlocked"}</text>
+            <input type="checkbox" checked={!locked} onChange={()=>{setLocked(!locked)}}/>
+        </div>
+        <ReaderWriterSelector txt={"Write to:"} onSelect={setWriter}/>
+        {(writer && !locked) && <button className={"basicButtonSmall"} disabled={locked || !state.selected} onClick={writeTag}>
+            {"Write "+id+" to writer: "+(writer || "none selected")}
+        </button>}
+    </Subform>
 }
 
 export function RfidSelectorWithReadButton( // TODO: use????

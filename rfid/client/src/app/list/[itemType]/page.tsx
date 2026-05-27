@@ -1,10 +1,11 @@
 import PageWrapper from "@/app/components/clientGeneric";
 import React from "react";
-import {GetReaderWriterNames} from "@/app/view/[itemType]/[idEncoded]/serverActions";
+import {GetReaderWriterNames} from "@/app/components/serverActions";
 import {cookies} from "next/headers";
-import {BaseExternalUrl, BaseInternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
+import {BaseExternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import ListDisplay from "@/app/list/[itemType]/client";
+import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
 
 export default async function Page({
                                        params,
@@ -47,9 +48,11 @@ export default async function Page({
         const data = await getData(itemType)
 
         return <PageWrapper props={{pageType:"list",readers:readers}}>
+            <SessionProvider session={session?.value}>
             <div className={"fullPage"}>
                 <ListDisplay itemType={itemType} inpData={data}/>
             </div>
+            </SessionProvider>
         </PageWrapper>
     } catch (e) {
         return <div className={"fullPage"}>

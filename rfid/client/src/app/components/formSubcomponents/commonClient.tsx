@@ -3,14 +3,14 @@
 import {JSX, useContext, useEffect, useState} from "react";
 import {Liquid} from "./liquids";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {AllEntries, Data, SplitAllEntries, SplitEntriesV2} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, Data, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {
-    ImageLocationFor, InitialPicsEntries,
+    ImageLocationFor,
     NewPicWithNotesForm,
     PicWithNotesForm,
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {PixRowsNew} from "@/app/components/formSubcomponents/commonClient2";
+import {PixRows} from "@/app/components/formSubcomponents/commonClient2";
 import {
     InputText,
     InputTextInlineTitle,
@@ -376,7 +376,7 @@ export function GensFormDisplay(
 export const PicsDisplay = (
     props: {
         pix: PicWithNotesIncoming[],
-        updateParent: (v: SplitEntriesV2<PicWithNotesForm, NewPicWithNotesForm>) => void,
+        updateParent: (v: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>) => void,
         readonly?: boolean,
         sectionHeader?: string,
         addButtonText?: string,
@@ -425,7 +425,7 @@ export const PicsDisplay = (
                 }} />
             })}
         </div>
-            {!props.readonly && <PixRowsNew initial={props.pix} updateParent={a => {
+            {!props.readonly && <PixRows initial={props.pix} updateParent={a => {
                 let upd = structuredClone(a)
                 updateNew(upd)
             }}/>}
@@ -665,7 +665,7 @@ export function StringOptionsSelector({queryKey, variant, current, onSelect}: {
         //     map.set("fixme3-dens" + queryKey, "transferring a specific sector");
         //     return map;
         //     // TODO: reenable
-        //     fetch(BaseExternalUrl + "/options/" + queryKey).then(HandleJsonResponse).then((resJson) => {
+        //     fetch(BaseInternalUrl + "/options/" + queryKey).then(HandleJsonResponse).then((resJson) => {
         //         return ConvertObjectToStringMap(resJson)
         //     }).catch((e) => {
         //         throw e

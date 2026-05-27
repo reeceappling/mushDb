@@ -339,6 +339,7 @@ type createPlateRequest struct {
 	PourCoverageField
 	WetAtCooledTimeField
 	AgarOnOutsideAtPourTimeField
+	NotesField
 	WriteTagToField
 }
 
@@ -364,22 +365,24 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 
 	now := unixTimeForNow()
 	ctx := r.Context()
+	agarBatchField := AgarBatchField{AgarBatch: &data.AgarBatch}
+	_, err = agarBatchField.Get(ctx)
+	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
+		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	toInsert := Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
-		AgarBatchField:                      AgarBatchField{AgarBatch: &data.AgarBatch},
+		AgarBatchField:                      agarBatchField,
 		CreationDateField:                   CreationDateField{now},
 		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField,
 		PourCoverageField:                   data.PourCoverageField,
 		WetAtCooledTimeField:                data.WetAtCooledTimeField,
 		AgarOnOutsideAtPourTimeField:        data.AgarOnOutsideAtPourTimeField,
+		NotesField:                          data.NotesField,
 		LastUpdatedField:                    LastUpdatedField{now},
 		// No Perms here for basic plates
 		AclField: allCanWriteAcl(),
-	}
-	_, err = toInsert.AgarBatchField.Get(ctx)
-	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusBadRequest)
-		return
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
@@ -481,9 +484,10 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
-	for i, picNote := range data.Images.Existing[0].Data.Notes.asEntries() {
-		println("note", i, picNote.Note)
-	}
+	//// TODO: PANICKING WHEN SENDING EMPTY THINGS!!!!
+	//for i, picNote := range data.Images.Existing[0].Data.Notes.asEntries() {
+	//	println("note", i, picNote.Note)
+	//}
 	out := data.reform()
 	for i, _ := range data.Images.New {
 		loc, exists := newPics[i]

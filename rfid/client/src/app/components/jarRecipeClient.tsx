@@ -177,17 +177,18 @@ export default function JarRecipeDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
-                txt: "New Batch From Recipe", newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                txt: "New Batch From Recipe",
+                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewGrainBatchForm recipe={initial} handlers={{
                         onCreate: (newItem: GrainBatchData) => {
                             return onCreate([{
                                 typeText: "Grain Batch",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"grainBatch"}/>
-                            }])
+                            }], false)
                         },
                         isTopLevel: false,
                     }}/>
-                }
+                },
             }
             // TODO: any others?
         ]
@@ -388,85 +389,6 @@ export const JarRecipeArea = ({recipeId}: { recipeId?: string, headerLevel?: num
         {linkArea}
     </div>
 }
-
-// export function JarRecipeSelector(
-//     {doSelect, allowCreation, headerLevel, creatorInPage}: SelectorProps<JarRecipeData> // TODO: ALL PROPS
-// ) {
-//     // TODO; depth provider or no?
-//     const [standard, setStandard] = useState<JarRecipeData[]>([])
-//     const [recent, setRecent] = useState<JarRecipeData[]>([])
-//     const [err, setErr] = useState<string | undefined>()
-//     //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-//     useEffect(() => {
-//         fetch(BaseExternalUrl + "/db/list/jarRecipes", {
-//             method: 'GET',
-//             headers: {
-//                 credentials: 'include',
-//                 // 'Cookie': cookies, // TODO: ok to leave out? do this elsewhere if it works
-//                 'Content-type': "application/json"
-//                 //Authorization: tokenFetch,
-//             },
-//         })
-//             .then(HandleJsonResponse)
-//             .then((resp) => {
-//                 let out = resp as { standard: JarRecipeData[], recent: JarRecipeData[] } // TODO: ASSERT?
-//                 setStandard(out.standard)
-//                 setRecent(out.recent)
-//             })
-//             .catch((err) => {
-//                 setErr(JSON.stringify(err))
-//             });
-//     }, []) // TODO: OK????? [] or nothing?
-//     return <div>
-//         <ErrorDisplay err={err} headerLevel={headerLevel}/>
-//         <div>{/* Standard area*/}
-//             <div>{"Standard Recipes"}</div>
-//             {standard.map(item => {
-//                 return <JarRecipeInline data={item} headerLevel={headerLevel} onClick={doSelect}/>
-//             })}
-//         </div>
-//         <div>{/* Recent Area*/}
-//             <div>{"Recent Recipes"}</div>
-//             {recent.map(item => {
-//                 return <JarRecipeInline data={item} headerLevel={headerLevel} onClick={doSelect}/>
-//             })}
-//         </div>
-//         {/* TODO: CREATOR, IF ALLOWED, with increased depth */}
-//     </div>
-// }
-
-// export function JarRecipeListDisplay({recent, standard, onClick}: TwoListProps<JarRecipeData>) {
-//     const recentArea = () => {
-//         if (recent.length === 0) {
-//             return null
-//         }
-//         return <div>
-//             {standard.length > 0 && <div>{"Recent Recipes:"}</div>}
-//             {recent.map((b, i) => {
-//                 return <JarRecipeInline data={b} onClick={() => {
-//                     onClick(b)
-//                 }} key={b._id}/>
-//             })}
-//         </div>
-//     }
-//     const standardArea = () => {
-//         if (standard.length === 0) {
-//             return null
-//         }
-//         return <div>
-//             {recent.length > 0 && <div>{"Standard Recipes:"}</div>}
-//             {recent.map((b, i) => {
-//                 return <JarRecipeInline data={b} onClick={() => {
-//                     onClick(b)
-//                 }} key={b._id}/>
-//             })}
-//         </div>
-//     }
-//     return <div>
-//         {recentArea()}
-//         {standardArea()}
-//     </div>
-// }
 
 export function JarRecipeListPageTable({data, onClick, withLink}: ListPageItems<JarRecipeData>) {
     let cols: ListTableColumn<JarRecipeData>[] = [

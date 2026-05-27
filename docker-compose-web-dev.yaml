@@ -17,7 +17,7 @@ services:
     environment:
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID?error}
       # TODO: ENSURE NEXT 2 ARE OK AND USE
-      NEXT_PRIVATE_BASE_API_URL: "http://api:3000"
+      NEXT_PRIVATE_BASE_API_URL: "http://api:8080"
       NEXT_PUBLIC_BASE_API_URL: https://mush.appli.ng
       #Was http
       #NEXT_PUBLIC_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL:-http}://${MAIN_API_EXTERNAL_HOST:-localhost}"

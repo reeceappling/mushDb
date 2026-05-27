@@ -163,8 +163,9 @@ func initializeStasisTubes(ctx context.Context) error {
 }
 
 type createStasisTubeRequest struct {
-	//WaterJarOptionalField // TODO: ALLOW THIS! // TODO: ALLOW THIS ONLY IF ADDING AFTER PC RUN
+	//WaterJarOptionalField // TODO: Probably don't do this... sts should always be pc'd with water in... // TODO: ALLOW THIS ONLY IF ADDING AFTER PC RUN
 	PcRunField
+	NotesField
 	WriteTagToField
 }
 
@@ -193,6 +194,7 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		MainCollectionIdField: MainCollectionIdField{id},
 		PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
 		CreationDateField:     CreationDateField{now},
+		NotesField:            data.NotesField,
 		LastUpdatedField:      LastUpdatedField{now},
 		AclField:              allCanWriteAcl(),
 	}

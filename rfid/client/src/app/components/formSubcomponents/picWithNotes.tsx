@@ -1,14 +1,9 @@
 import {
     AllEntries,
-    AreaProps,
     Data,
-    FormListArea,
-    GroupProps,
-    SplitAllEntries, SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
-import NotesArea, {NotesAreaOld, IsValidNote, Note, NotesGrid} from "@/app/components/formSubcomponents/notes";
-import {ChangeEvent} from "react";
-import DateArea from "@/app/components/formSubcomponents/date";
+import {IsValidNote, Note} from "@/app/components/formSubcomponents/notes";
 import {CheckArrayType} from "@/app/components/common";
 import {ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/contaminations";
 
@@ -30,16 +25,18 @@ export interface NewPicWithNotesForm {
     notes: AllEntries<Note>,
 }
 
-export function InitialPicsEntries(initialPics?: PicWithNotesIncoming[]): SplitEntriesV2<PicWithNotesForm,NewPicWithNotesForm>{
+export function InitialPicsEntries(initialPics?: PicWithNotesIncoming[]): SplitAllEntries<PicWithNotesForm,NewPicWithNotesForm>{
     let initialEntries: Data<PicWithNotesForm>[] = initialPics===undefined?[]:initialPics.map((p)=>{
-        let ns: Note[] = p.notes || []
         return {
             data:{
                 time:p.time,
                 img:p.location,
-                notes:{existing:ns.map((n)=>{
+                notes:{
+                    existing:(p.notes || []).map((n)=>{
                         return {data: n,disabled: false}
-                    }),new:[]},
+                    }),
+                    new:[],
+                },
             },
             disabled: false,
         }

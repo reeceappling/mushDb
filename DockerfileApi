@@ -12,6 +12,4 @@ WORKDIR /root/s
 COPY --from=builder /app/server .
 RUN chmod 777 server
 EXPOSE 443
-# TODO: remove 80?
-#EXPOSE 80
 CMD ["./server"]

@@ -3,10 +3,8 @@ import {Liquid} from "@/app/components/formSubcomponents/liquids";
 import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
 import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Additive} from "@/app/components/formSubcomponents/additives";
-import {SelectorProps} from "@/app/components/selector";
-import {BaseExternalUrl, BaseInternalUrl} from "@/app/components/Constants";
-import {LcRecipeInline} from "@/app/components/lcRecipeClient";
-import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {LcRecipeSelector, NewLcRecipeForm} from "@/app/components/lcRecipeClient";
 import {ACL} from "@/app/components/accessControlServer";
 
 export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
@@ -35,4 +33,32 @@ export interface LcRecipeData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) { // TODO: use
+    const doSel = (val?: LcRecipeData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<LcRecipeData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: "", // TODO: ???
+        closeTxt: "Close LC Recipe List",
+        createTxt: "Create LC Recipe",
+        lowercase: "lc recipe",
+        creatorInPage: sp.creatorInPage,
+        createEndpt: "lcRecipe",
+        getId: (v: LcRecipeData) => v._id,
+        createSelector:(selHdl: (onSelect: LcRecipeData) => void)=>{
+            return <LcRecipeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        createCreator:(selHdl: (onSelect: LcRecipeData) => void)=>{
+            return <NewLcRecipeForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
 }

@@ -8,6 +8,11 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {JarSelector} from "@/app/components/jarClient";
+import {JarData} from "@/app/components/jarServer";
+import {LcSelector} from "@/app/components/lcClient";
 
 export function TestLcOk(){
     let ExampleNotes;
@@ -57,4 +62,33 @@ export interface LcData {
     notes?: Note[]
     lastUpdated: number
     acl?: ACL
+}
+
+export function LcSelectorCloseable(sp: SelectorProps<LcData>) { // TODO: use
+    const doSel = (val?: LcData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<LcData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
+        closeTxt: "Close LC List",
+        //createTxt: "Create Bag",// TODO: ???
+        lowercase: "liquid culture",
+        //creatorInPage: sp.creatorInPage,// TODO: ???
+        //createEndpt: "bag",// TODO: ???
+        getId: (v: LcData) => v._id,
+        createSelector:(selHdl: (onSelect: LcData) => void)=>{
+            return <LcSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: ok?
+        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }

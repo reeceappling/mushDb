@@ -28,9 +28,7 @@ export type AgarColor = "clear" | "black" | "blue" | "green" | "red";
 //             return <AgarBatchInline data={inn.data} headerLevel={inn.headerLevel} onClick={inn.onClick}
 //                                     expandByDefault={inn.expandByDefault}/>
 //         },
-//         getId: (v: AgarBatchData) => {
-//             return v._id
-//         }
+//         getId: (v: AgarBatchData) => v._id,
 //     }}>
 //         <NewAgarBatchForm redirectOnCreate={false} onCreate={sp.doSelect}/>
 //     </RecentSelector>

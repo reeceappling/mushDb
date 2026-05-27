@@ -35,3 +35,5 @@ export interface TransferData {
     lastUpdated: number
     acl?: ACL
 }
+
+// Likely will never need a closeable single selector for this

@@ -1,10 +1,10 @@
-// non-client
+// non-client even though it uses state?
 
 import {
     AllEntries,
     Data,
     InitialToAllEntries,
-    SplitEntriesV2
+    SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import {IsValidNote, Note} from "@/app/components/formSubcomponents/notes";
 import {ImageLocationFor, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
@@ -16,7 +16,7 @@ import {useContext, useEffect, useState} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {NotesFormArea} from "@/app/components/agarBatchClient"; // TODO: MOVE!
+import {NotesFormArea} from "@/app/components/agarBatchClient";
 
 export const ExampleImageLocation: string = "test.jpg"
 
@@ -31,21 +31,21 @@ export interface Contamination {
 }
 
 export interface ContaminationForm {
-    time: number // TODO: NEW! HANDLE EVERYWHERE!
+    time: number
     confirmed: boolean,
     bacteria: boolean,
     mold: boolean,
     location: string,
-    notes: AllEntries<Note> // TODO: NEW! HANDLE EVERYWHERE!
+    notes: AllEntries<Note>
 }
 
 export interface NewContaminationForm {
-    time: number, // TODO: NEW! HANDLE EVERYWHERE!
+    time: number,
     confirmed: boolean,
     bacteria: boolean,
     mold: boolean,
-    file?: File,  // TODO: NEW! HANDLE EVERYWHERE!
-    notes: Note[] // TODO: NEW! HANDLE EVERYWHERE!
+    file?: File,
+    notes: Note[]
 }
 
 export function IsValidContamination(input: any): boolean {
@@ -62,7 +62,7 @@ export function InitialNotesState(existingNotes?: Note[]): AllEntries<Note> {
     return {existing: dataFor(existingNotes), new: []}
 }
 
-export function InitialContamState(contamination?: Contamination[]): SplitEntriesV2<ContaminationForm, NewContaminationForm> {
+export function InitialContamState(contamination?: Contamination[]): SplitAllEntries<ContaminationForm, NewContaminationForm> {
     return {
         existing:
             contamination === undefined ? [] : contamination.map((ctn) => {
@@ -89,7 +89,7 @@ export function ContamsDisplay( // TODO: SET THIS UP SIMILARLY TO HOW PicsDispla
     }: {
         readonly: boolean,
         initial: Contamination[],
-        updateParent: (c: SplitEntriesV2<ContaminationForm, NewContaminationForm>) => void,
+        updateParent: (c: SplitAllEntries<ContaminationForm, NewContaminationForm>) => void,
         headerLevel?: number,
     }
 ) {

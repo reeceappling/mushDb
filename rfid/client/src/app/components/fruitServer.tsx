@@ -3,10 +3,14 @@ import {
     ExamplePicWithNotesIncoming,
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {SelectorProps} from "@/app/components/selector";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {EntryPerms} from "@/app/components/perms";
 import {ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/contaminations";
 import {ACL} from "@/app/components/accessControlServer";
+import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
+import {MssSelector, NewMssForm} from "@/app/components/mssClient";
+import {MssData} from "@/app/components/mssServer";
+import {FruitSelector} from "@/app/components/fruitClient";
 
 export function TestFruitOK(){
     const a: FruitData = {
@@ -47,21 +51,31 @@ export interface FruitData {
     acl?: ACL
 }
 
-// TODO: DO WE EVEN NEED THIS?????
-export function FruitSelector(sp: SelectorProps<FruitData>){
-    return <div>{"Fruit selector not implemented right now"}</div>
-    // TODO: ??????????????????????
-    // return RecentSelector<FruitData>({
-    //     msgTxt: ChannelTextNewFruit,
-    //     recentEndpt: "fruits",
-    //     assertType: AssertFruit,
-    //     closeTxt: "Close Fruit List",
-    //     //createTxt: "Create Fruit",
-    //     //newForm: NewFruit, // TODO: new fruits only from fruiting chamber creation???
-    //     createEndpt: "fruit", // TODO: keep????
-    //     lowercase: "fruit",
-    //     inline: (inlineIn: InlineProps<FruitData>)=>{return FruitInline(inlineIn)},
-    // })(sp)
+export function FruitSelectorCloseable({onSelect}:{onSelect: (val?: FruitData)=>void}) {
+    const doSel = (val?: FruitData):void=>{
+        if (!val){
+            return
+        }
+        onSelect(val)
+    }
+    return <CloseableSelector<FruitData> props={{
+        allowCreation: false, // TODO: ok?
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch,
+        closeTxt: "Close Fruit List",
+        //createTxt: "Create Fruit", // TODO: ok?
+        lowercase: "fruit",
+        //creatorInPage: sp.creatorInPage, // TODO: ok?
+        //createEndpt: "fruit", // TODO: ok?
+        getId: (v: FruitData) => v._id,
+        createSelector:(selHdl: (onSelect: FruitData) => void)=>{
+            return <FruitSelector doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        // TODO: do we want a creator anywhere for this?
+        // createCreator:(selHdl: (onSelect: FruitData) => void)=>{
+        //     return <FruitSelector handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        // },
+    }}/>
 }
-
-export const ChannelTextNewFruit = "newFruit"

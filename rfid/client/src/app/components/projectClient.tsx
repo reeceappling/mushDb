@@ -622,17 +622,22 @@ export async function GetMyProjects() {
     })
 }
 
-export async function GetSessionUserProjects(sessionId: string): Promise<ProjectWithPerm[]> {
-    return fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: ensure works like we want! We JUST want the user's perms on each project
+// TODO: used to return Promise<ProjectWithPerm[]>
+export async function GetSessionUserProjects(complete?:boolean): Promise<string[]> {
+    let params = ""
+    if (complete !== undefined) {
+        params = "?complete="+(complete?"true":"false")
+    }
+    return fetch(BaseExternalUrl + "/sessionUserProjects"+params, { // TODO: ensure works like we want! We JUST want the user's perms on each project
         method: "GET",
         headers: {
             credentials: 'include',
-            SessionId: sessionId,
+            //'SessionId': sessionId || "", // TODO: ok?
             'Content-type': "application/json"
         }
     }).then(HandleJsonResponse).then((projs) => {
         try {
-            return projs as ProjectWithPerm[]
+            return projs as string[]
         } catch (err) {
             throw err
         }
@@ -642,34 +647,42 @@ export async function GetSessionUserProjects(sessionId: string): Promise<Project
 export function ProjectsSelector(inp: {
     onSelect: (projName: string) => void
     blacklist?: string[]
+    complete?: boolean // TODO: use?
 }) {
     const [loading, setLoading] = useState(true)
     const [projects, setProjects] = useState<string[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
-    // TODO: does this need incremented depth?
     useEffect(() => {
-        fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: do we also want to pull the user's perms for each project?
-            method: "GET",
-            headers: {
-                credentials: 'include',
-                // TODO: SessionId: sessionId,
-                'Content-type': "application/json"
-            }
-        }).then(HandleJsonResponse).then((projs) => {
-            try {
-                return projs as string[] // TODO: FIXME!
-            } catch (err) {
-                throw err
-            }
-        }).then(projs => {
-            setProjects(projs)
-            setLoading(false)
+        GetSessionUserProjects(inp.complete).then(projNames=>{
+            setProjects(projNames)
             setErr(undefined)
-            return
-        }).catch(err => {
-            HandleErr(err, setErr)
-            return
+            setLoading(false)
+        }).catch(e=>{
+            HandleErr(e, setErr)
         })
+        // fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: ensure user has projects attached
+        //     // TODO: do we also want to pull the user's perms for each project?
+        //     method: "GET",
+        //     headers: {
+        //         credentials: 'include',
+        //         // TODO: SessionId: sessionId,
+        //         'Content-type': "application/json"
+        //     }
+        // }).then(HandleJsonResponse).then((projs) => {
+        //     try {
+        //         return projs as string[] // TODO: FIXME!
+        //     } catch (err) {
+        //         throw err
+        //     }
+        // }).then(projs => {
+        //     setProjects(projs)
+        //     setLoading(false)
+        //     setErr(undefined)
+        //     return
+        // }).catch(err => {
+        //     HandleErr(err, setErr)
+        //     return
+        // })
     }, [])
     if (loading) {
         return <div>{"Loading projects selector"}</div>
@@ -685,7 +698,6 @@ export function ProjectsSelector(inp: {
     return <div>
         <ErrorDisplay err={err}/>
         <SelectorResetsOnSelectFor options={projectOptions()} updateParent={(pr) => {
-            console.log("selected " + pr)
             inp.onSelect(pr)
         }}/>
     </div>
@@ -718,10 +730,12 @@ export function ProjectListPageTable({data, onClick, withLink}: ListPageItems<Pr
 export function ProjectSelectorTable({data, onClick}: ListPageItems<ProjectData>) {
     return <ProjectListPageTable data={data} onClick={onClick} withLink={true} />
 }
+
+// TODO: distinguish from ProjectsSelector
 export function ProjectSelector( // TODO: USE ELSEWHERE
     {
         doSelect,
-        allowCreate
+        allowCreate,
     }: {
         doSelect: (val: ProjectData | undefined) => void,
         allowCreate?: boolean
@@ -729,9 +743,14 @@ export function ProjectSelector( // TODO: USE ELSEWHERE
     const table = (items: ProjectData[]):JSX.Element=>{
         return <ProjectSelectorTable data={items} onClick={doSelect}/>
     }
+    const creationArea = ()=>{
+        if(!allowCreate){
+            return null
+        }
+        return <NewProjectForm handlers={{onCreate: doSelect,isTopLevel: false}}/>
+    }
 
-    return <ExistingRecentSelector entryType={"project"} entryTypes={"projects"} doSelect={doSelect} asserter={AssertProject}
-                                   table={table}>
-        {allowCreate && <NewProjectForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+    return <ExistingRecentSelector entryType={"project"} entryTypes={"projects"} doSelect={doSelect} asserter={AssertProject} table={table}>
+        {creationArea()}
     </ExistingRecentSelector>
 }

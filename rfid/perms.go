@@ -2,30 +2,55 @@ package rfid
 
 import (
 	"encoding/json"
+	"github.com/reeceappling/goUtils/v2/utils"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"golang.org/x/exp/maps"
 	"net/http"
 )
 
-// var (
-//
-//	_ Permissioned = &Perms{}
-//	_ Permissioned = &Bag{}
-//	_ Permissioned = &Fruit{}
-//	_ Permissioned = &FruitingChamber{}
-//	_ Permissioned = &GrainJar{}
-//	_ Permissioned = &LiquidCulture{}
-//	_ Permissioned = &MSS{}
-//	_ Permissioned = &Plate{}
-//	_ Permissioned = &Slant{}
-//	_ Permissioned = &StasisTube{}
-//	_ Permissioned = &SporePrint{} // TODO: sporeSwab?
-//	_ Permissioned = &Species{}    // TODO: sporeSwab? // TODO: plugs?
-//	_ Permissioned = &Subspecies{} // TODO: sporeSwab?
-//	_ Permissioned = &Transfer{}   // TODO: HANDLE
-//
-// )
 type Permissioned interface {
 	Permissions() *ACL
+}
+
+func SessionUserProjectsHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		queryParams := r.URL.Query()
+		complete := queryParams.Get("complete")
+		var getAllProjectsCompleteArg *bool = nil
+		if complete != "" {
+			if complete == "true" {
+				getAllProjectsCompleteArg = utils.Pointer(true)
+			} else if complete == "false" {
+				getAllProjectsCompleteArg = utils.Pointer(false)
+			}
+		}
+
+		user, err := GetAuthInfo(r.Context())
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		projectsToReturn := maps.Keys(user.projects)
+		if user.isAdmin() {
+			allProjects, err := GetAllProjects(r.Context(), getAllProjectsCompleteArg) // TODO: validate works as expected
+			if err != nil {
+				http.Error(w, "failed to get all incomplete projects: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			projectsToReturn = sliceutils.Map(allProjects, func(proj Project) projectName {
+				return proj.Name
+			})
+		}
+		bs, err := json.Marshal(projectsToReturn)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		println("sending projects list: ", string(bs))
+		_, err = w.Write(bs)
+		if err != nil {
+			handleWriteErr(err, w)
+		}
+	}
 }
 
 // // TODO: HOLD ON TO USER AND GROUP PERMS IN A CACHE FOR A LITTLE BIT?
@@ -431,25 +456,7 @@ type Permissioned interface {
 //		ProjectName projectName `json:"projectName"`
 //		CanWrite    *bool       `json:"canWrite,omitempty"` // nil is perms.None, false is perms.Read, true is perms.Write
 //	}
-func SessionUserProjectsHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		user, err := GetAuthInfo(r.Context())
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		bs, err := json.Marshal(maps.Keys(user.projects))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		println("sending projects list: ", string(bs))
-		_, err = w.Write(bs)
-		if err != nil {
-			handleWriteErr(err, w)
-		}
-	}
-}
 
-//func (p *Perms) Valid() bool {
+//func (p *Perms) Valid() bool { // TODO: use?
 //	return p == nil || p.Blanket == perms.Write || p.Projects.Len()+p.Users.Len() > 0
 //}
