@@ -36,14 +36,14 @@ import (
 	"time"
 )
 
+var baseApiUrl = "https://mush.appli.ng" // Overwritten main() early // TODO: likely set a different default
+
 func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, err error) {
 	dbHostName := os.Getenv("DB_HOST_NAME")
 	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
 	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
 	dbSetupUser := os.Getenv("MONGO_INITDB_SETUP_USERNAME")
 	dbSetupPass := os.Getenv("MONGO_INITDB_SETUP_PASSWORD")
-	println(dbSetupUser, dbSetupPass)
-	println(dbUser, dbPass)
 	dbHostPortStr := os.Getenv("DB_HOST_PORT")
 	dbHostPort, err := strconv.Atoi(dbHostPortStr)
 	if err != nil {
@@ -116,28 +116,30 @@ func main() {
 	}
 	googId, googSecret := os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET")
 	apiProtocol := strings.ToLower(os.Getenv("MAIN_API_EXTERNAL_PROTOCOL"))
-	// TODO: MAIN_API_EXTERNAL_HOST := os.Getenv("MAIN_API_EXTERNAL_HOST")
+	MAIN_API_EXTERNAL_HOST := os.Getenv("MAIN_API_EXTERNAL_HOST")
 	apiPort, err := strconv.Atoi(os.Getenv("API_PORT"))
 	if err != nil {
-		println("No api port configured, defaulting to port 8080")
+		fmt.Printf(`No api port configured, defaulting to port %d`, defaultHttpPort)
 		apiPort = defaultHttpPort
 	}
-	// TODO: tempPortStr := "" // TODO: ensure ok
-	if (apiProtocol == "https" && apiPort != 443) || (apiProtocol == "http" && (apiPort != 80 && apiPort != defaultHttpPort)) {
-		// TODO: tempPortStr = fmt.Sprintf(`:%d`, apiPort)
+	tempPortStr := ""
+	if (apiProtocol == "https" && apiPort != 443) || (apiProtocol == "http" && (apiPort != 80 && apiPort != defaultHttpPort)) { // TODO: 80 AND 8080 ok here?
+		tempPortStr = fmt.Sprintf(`:%d`, apiPort)
 	}
+	apiHostPort := MAIN_API_EXTERNAL_HOST + tempPortStr
+	baseApiUrl = fmt.Sprintf("%s://%s", apiProtocol, apiHostPort)
 	oauthConfig = &oauth2.Config{
 		ClientID:     googId,
 		ClientSecret: googSecret,
-		//RedirectURL:  "http://" + MAIN_API_EXTERNAL_HOST + tempPortStr + "/auth/google/callback",
-		RedirectURL: "http://mush.appli.ng/auth/google/callback", // TODO: ensure fixed
-		Scopes:      []string{"email", "profile", "openid"},
-		Endpoint:    google.Endpoint,
+		RedirectURL:  baseApiUrl + "/auth/google/callback",
+		// TODO: works but want to use other... RedirectURL: "http://mush.appli.ng/auth/google/callback", // TODO: ensure fixed
+		Scopes:   []string{"email", "profile", "openid"},
+		Endpoint: google.Endpoint,
 	}
 
 	ctx, client, err := setupDb(ctx)
 	if err != nil {
-		panic("Error setting up db: " + err.Error()) // TODO: ok?
+		panic("Error setting up db: " + err.Error())
 	}
 	defer func() {
 		err = client.Disconnect(ctx)
@@ -181,7 +183,7 @@ func main() {
 		}
 		os.Exit(42) // weird code so we can tell at a glance that we shut it down
 	}()
-	googleAuthProvider := google2.New(googId, googSecret, "https://mush.appli.ng/auth/google/callback", "email", "profile", "openid") // TODO: ensure callback is ok
+	googleAuthProvider := google2.New(googId, googSecret, baseApiUrl+"/auth/google/callback", "email", "profile", "openid") // TODO: ensure callback is ok
 
 	goth.UseProviders(googleAuthProvider)
 	//gothic.Store = customSessionStore{} // TODO: REENABLE????
@@ -199,7 +201,7 @@ func main() {
 	//}
 	////sort.Strings(keys)
 	////providerIndex := &ProviderIndex{Providers: keys, ProvidersMap: providersMap}
-	println("Creating Middleware")
+	println("Creating Middlewares")
 	// TODO: NEXT.JS LOGS! WEBPACK IS GETTING TRAPPED BY MAIN SERVER! WEBSERVER ENV VARS!
 	// Setup middlewares
 	const loginPath = "/login"
@@ -220,12 +222,10 @@ func main() {
 	println("Defining RFID endpoints")
 	// Must be publicly available. (external)
 	http.HandleFunc("/rfid/ws", ctxRfidMiddleware(http.HandlerFunc(websocketSessions.ServerHandler)))
-	// Can be internal to docker network
-	// TODO: are these internal or external?
+	// Must be internal to docker network
 	http.HandleFunc("/rfid/read/{readerName}", ctxRfidMiddleware(internalOnlyMiddleware(rfidReadHandler)))   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 	http.HandleFunc("/rfid/write/{writerName}", ctxRfidMiddleware(internalOnlyMiddleware(rfidWriteHandler))) // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	// internal
-	http.HandleFunc("/rfid/readers", ctxRfidMiddleware(internalOnlyMiddleware(getRfidReaderNamesHandler))) // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/readers", ctxRfidMiddleware(internalOnlyMiddleware(getRfidReaderNamesHandler)))   // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
 	webHostPort := 3000
@@ -246,7 +246,6 @@ func main() {
 		withPort(webHostPort)
 
 	println("Defining webserver passthrough endpoints (external)")
-	// TODO: maybe create a more readable middleware setup???
 	webProxyHandler := newPassthroughHandler(passthroughConfig)
 	unAuthedProxied := ctxMiddleware(webProxyHandler)
 	authedProxied := ctxMiddleware(webAuthMiddleware(webProxyHandler))
@@ -254,7 +253,7 @@ func main() {
 	// handle login
 	http.Handle("/login", CorsMiddleware(rateLimiter(ctxMiddleware(handleLogin(webProxyHandler, dbUser, dbPass)))))
 	http.Handle("/logout", CorsMiddleware(rateLimiter(ctxMiddleware(handleLogout))))
-	http.Handle("/guestLogin", rateLimiter(ctxMiddleware(handleGuestLogin())))
+	http.Handle("/guestLogin", rateLimiter(ctxMiddleware(handleGuestLogin(baseApiUrl))))
 	http.Handle("/auth/{provider}", CorsMiddleware(rateLimiter(ctxMiddleware(handleAuthProvider()))))
 	http.Handle("/auth/{provider}/callback", CorsMiddleware(rateLimiter(ctxMiddleware(handleAuthCallback()))))
 
@@ -262,12 +261,12 @@ func main() {
 	http.Handle("/_next", unAuthedProxied)
 	http.Handle("/", unAuthedProxied)
 
-	http.Handle("/import/{variant}", authedProxied)         // GET import is here
-	http.Handle("/new/{variant}", authedProxied)            // GET new item is here
-	http.Handle("/view/{variant}/{entryId}", authedProxied) // GET view item is here
-	http.Handle("/list/{variant}", authedProxied)
-	http.Handle("/error/{errTxt}", webProxyHandler) // TODO: rate limit???? ctx middleware? auth middleware?
-	http.Handle("/testpage", webProxyHandler)       // TODO: REMOVE
+	http.Handle("/import/{variant}", authedProxied)         // GET import is here (import item page)
+	http.Handle("/new/{variant}", authedProxied)            // GET new item is here (new item page)
+	http.Handle("/view/{variant}/{entryId}", authedProxied) // GET view item is here (view item page)
+	http.Handle("/list/{variant}", authedProxied)           // GET list is here (list items page)
+	http.Handle("/error/{errTxt}", webProxyHandler)         // TODO: rate limit???? ctx middleware? auth middleware?
+	http.Handle("/testpage", webProxyHandler)               // GET testpage is here (test page)       // TODO: REMOVE
 
 	println("Defining sensor data endpoints")
 	// TODO: this
@@ -298,7 +297,7 @@ func main() {
 	http.Handle("/sessionUserProjects", ctxInternalAuthMiddleware(rfid.SessionUserProjectsHandler()))
 
 	println("Defining simple api endpoints")
-	http.Handle("/options/{optionsType}", internalOnlyMiddleware(rfid.GetOptionsHandler)) // TODO: any more options here?
+	http.Handle("/options/{optionsType}", internalOnlyMiddleware(rfid.GetOptionsHandler))
 
 	if err = srv.ListenAndServe(); err != nil {
 		panic("failed to listen and serve for http: " + err.Error())
@@ -308,7 +307,7 @@ func main() {
 	}
 }
 
-type customSessionStore struct {
+type customSessionStore struct { // TODO: use or delete
 	svc *rfid.AuthService
 }
 
@@ -316,6 +315,7 @@ func (c customSessionStore) Get(r *http.Request, name string) (*sessions.Session
 	for _, cookie := range r.Cookies() {
 		println(cookie.Name)
 		if cookie.Name == name {
+			// TODO: FIX THIS IF NEEDED
 		}
 	}
 	return nil, errors.New("implement me") // TODO: fix?
@@ -354,7 +354,7 @@ func internalOnlyMiddlewareCreator(validDomain string, expectedPort int) func(ha
 	}
 }
 
-func ReqTrackingMiddleWare(handler http.Handler) http.Handler {
+func ReqTrackingMiddleWare(handler http.Handler) http.Handler { // TODO: USE OR DELETE
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		log := logging.GetLogger(ctx)
@@ -489,7 +489,7 @@ func envVarOrDefault(varName, defaultResult string) string {
 	return result
 }
 
-func handleGuestLogin() http.Handler {
+func handleGuestLogin(defaultUrl string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		println("creating new session id for guest")
@@ -520,12 +520,6 @@ func handleGuestLogin() http.Handler {
 			return
 		}
 		redirectToBasePage(r, w)
-		dst := r.URL.Query().Get("destination")
-		if dst == "" {
-			dst = "https://mush.appli.ng/view/plate/1" // TODO: CHANGE!?
-		}
-		http.Redirect(w, r, dst, http.StatusTemporaryRedirect)
-
 	})
 }
 
@@ -723,7 +717,7 @@ func handleAuthCallback() http.Handler {
 			//return
 		}
 		//http.SetCookie(w, c) // TODO: if this works do it everywhere
-		// TODO: redirect to original page
+		// redirect to original page
 		redirectToBasePage(r, w)
 	})
 }
@@ -731,12 +725,12 @@ func handleAuthCallback() http.Handler {
 func redirectToBasePage(r *http.Request, w http.ResponseWriter) {
 	dst := r.URL.Query().Get("destination")
 	if dst == "" {
-		dst = "https://mush.appli.ng" //+"/view/plate/1"
+		dst = baseApiUrl
 	}
 	http.Redirect(w, r, dst, http.StatusTemporaryRedirect)
 }
 
-var handleLogout http.HandlerFunc = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var handleLogout = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	authSvc := rfid.GetAuthService(r.Context())
 	err := gothic.Logout(w, r)
 	if err != nil {
@@ -879,19 +873,19 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 	}
 }
 
-func placeholderMiddleware(next http.Handler) http.Handler { // TODO: DELETEME!!!!!!!
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
-		// TODO: reenable
-		//next.ServeHTTP(w, r.WithContext(rfid.SetAuthInfo(r.Context(), rfid.AuthInfo{
-		//	Email: rfid.AlternateCollectionId(primitive.ObjectID{}),
-		//	Opts: &rfid.UserPermsResolved{
-		//		Admin:    utils.Pointer(true),
-		//		Projects: nil,
-		//	},
-		//})))
-	})
-}
+//func placeholderMiddleware(next http.Handler) http.Handler { // TODO: DELETEME!!!!!!!
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		next.ServeHTTP(w, r)
+//		// TODO: reenable
+//		//next.ServeHTTP(w, r.WithContext(rfid.SetAuthInfo(r.Context(), rfid.AuthInfo{
+//		//	Email: rfid.AlternateCollectionId(primitive.ObjectID{}),
+//		//	Opts: &rfid.UserPermsResolved{
+//		//		Admin:    utils.Pointer(true),
+//		//		Projects: nil,
+//		//	},
+//		//})))
+//	})
+//}
 
 func setupFilePathMiddleware(filePath string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -1019,11 +1013,6 @@ func getAnyCollectionHandler() http.Handler {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		println("GETTING ITEM") // TODO: del
 		ctx := r.Context()
-		//authinfo, err := rfid.GetAuthInfo(ctx)
-		//if err != nil {
-		//	http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
 		// TODO: ?????? id := strings.ReplaceAll(r.PathValue("id"), "_", " ") // TODO: replace all underscores with spaces, for things like "chicken of the woods"
 		//id := strings.ReplaceAll(r.PathValue("id"), "_", " ") // TODO: replace all underscores with spaces, for things like "chicken of the woods"
 		id, err := rfid.UrlDecodeString(r.PathValue("id"))
@@ -1036,31 +1025,38 @@ func getAnyCollectionHandler() http.Handler {
 
 		entryType := r.PathValue("variant")
 		var bytes []byte
-		var tempBs []byte
 		switch entryType {
 		case "project", "species", "subspecies": // Items with possible spaces in names
 			// TODO: ensure to convert id from url format to server format
 			println("getting " + entryType + " " + id) // TODO: DEL
 			out, err := rfid.GetAltCollectionItem[rfid.AltCollectionItem[string]](ctx, id, map[string]rfid.AltCollectionItem[string]{
-				"project": &rfid.Project{}, "species": &rfid.Species{}, "subspecies": &rfid.Subspecies{},
+				"project":    &rfid.Project{},
+				"species":    &rfid.Species{},
+				"subspecies": &rfid.Subspecies{},
 			}[strings.ToLower(entryType)]) // TODO: validate works
 			if err != nil {
 				println("err getting altCollType " + err.Error()) // TODO: DEL
 				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
+			// TODO: ENSURE USER HAS CORRECT PERMS
+			//authinfo, err := rfid.GetAuthInfo(ctx)
+			//if err != nil {
+			//	http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
+			//	return
+			//}
 			println("marshalling bytes")
 			bytes, err = json.Marshal(out)
 			if err != nil {
 				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 				return
 			}
-			println("marshalling indented bytes")
-			tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
-			if err != nil {
-				http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
+			//println("marshalling indented bytes")
+			//tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
+			//if err != nil {
+			//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+			//	return
+			//}
 		case "user": // User (can have @)
 			// TODO: ensure to convert id from url format to server format!!!!!
 			decodedId, err := rfid.UrlDecodeString(id)
@@ -1078,11 +1074,11 @@ func getAnyCollectionHandler() http.Handler {
 				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 				return
 			}
-			tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
-			if err != nil {
-				http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
+			//tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
+			//if err != nil {
+			//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+			//	return
+			//}
 		// Cases which are alt colls with base58->binary ids
 		case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
 			// TODO: maybe de-urlencode here to account for named recipes?
@@ -1100,7 +1096,7 @@ func getAnyCollectionHandler() http.Handler {
 			//	temp := []byte(id)
 			//	altId = [12]byte(temp)
 			//}
-			baseItem, exists := map[string]rfid.AltCollectionItem[rfid.AlternateCollectionId]{
+			baseItem, exists := map[string]rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]{
 				"agarBatch":       &rfid.AgarBatch{},
 				"agarRecipe":      &rfid.AgarRecipe{}, // TODO: handle recipe name?
 				"grainBatch":      &rfid.GrainBatch{},
@@ -1115,9 +1111,20 @@ func getAnyCollectionHandler() http.Handler {
 			if !exists {
 				http.Error(w, "invalid entry type in getAnyCollHandler: "+entryType, http.StatusBadRequest)
 			}
+
 			out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId(altId[:]), baseItem)
 			if err != nil {
 				http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			authinfo, err := rfid.GetAuthInfo(ctx)
+			if err != nil {
+				http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if out.Permissions().HighestPermFor(authinfo) == nil {
+				println("user does not have permission", err.Error()) // TODO; del
+				http.Error(w, "item requested cannot be read by this user: "+err.Error(), http.StatusForbidden)
 				return
 			}
 			bytes, err = json.Marshal(out)
@@ -1125,11 +1132,11 @@ func getAnyCollectionHandler() http.Handler {
 				http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 				return
 			}
-			tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
-			if err != nil {
-				http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
+			//tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
+			//if err != nil {
+			//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+			//	return
+			//}
 		default: // Main collection ids
 			if mainCollItem, exists := map[string]rfid.MainCollectionItem{
 				"bag":             &rfid.Bag{}, // can only go to fruits
@@ -1154,58 +1161,19 @@ func getAnyCollectionHandler() http.Handler {
 					http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 					return
 				}
-				// TODO: DELETE CURSOR PARTs????
-				//dbName, _ := os.LookupEnv("MONGO_INITDB_DATABASE")
-				//coll := ctx.Value("mongoClient").(*mongo.Client).Database(dbName).Collection(mainCollItem.CollectionName()) // TODO: this is incorrect! EVERYTHING IS BEING STORED IN THE PLATES COLLECTION???
-				//cursor, err := coll.Find(ctx, bson.D{})
-				//if err != nil {
-				//	println("cursor err", err.Error())
-				//	http.Error(w, "fcursor err: "+err.Error(), http.StatusInternalServerError)
-				//	return
-				//}
-				//println("checking cursor")
-				//for cursor.Next(ctx) {
-				//	temp := rfid.Plate{}
-				//
-				//	err = cursor.Decode(&temp)
-				//	if err != nil {
-				//		println("failed to get item from cursor ", err.Error()) // TODO: del
-				//		println(cursor.Current.String())
-				//		http.Error(w, "failed to get main collection itemType: "+err.Error(), http.StatusInternalServerError)
-				//		return
-				//	}
-				//	println(cursor.Current.String())
-				//	println("id for obj:", string(temp.Id[:]), string(temp.Id.ToBinaryCollectionId().ToBase58Bytes()))
-				//}
-				//println("done checking cursor")
-				//docs, err := coll.CountDocuments(ctx, bson.D{})
-				//if err != nil {
-				//	println("error counting docs ", err.Error()) // TODO: del
-				//	http.Error(w, "failed to get main collection itemType: "+err.Error(), http.StatusInternalServerError)
-				//	return
-				//}
-				//println("docs counted", docs)
 				out, err := rfid.GetMainCollectionItem(ctx, *mainCollId, mainCollItem)
 				if err != nil {
 					println("failed to get mainCollItem for "+string(mainCollId.ToBinaryCollectionId().ToBase58Bytes()), err.Error()) // TODO: del
 					http.Error(w, "failed to get main collection itemType: "+err.Error(), http.StatusInternalServerError)
 					return
 				}
-				println("GOT ITEM") // TODO: del
-				// TODO: reenable
 				user, err := rfid.GetAuthInfo(r.Context())
 				if err != nil {
-					println("failed to get auth info", err.Error()) // TODO; del
 					http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 					return
 				}
-				ps := out.Permissions()
-				if ps == nil {
-					println("permissions acl was nil!") // TODO: del
-				}
-				userPermOnEntry := ps.HighestPermFor(user)
+				userPermOnEntry := out.Permissions().HighestPermFor(user)
 				if userPermOnEntry == nil {
-					println("user does not have permission", err.Error()) // TODO; del
 					http.Error(w, "item requested cannot be read by this user: "+err.Error(), http.StatusForbidden)
 					return
 				}
@@ -1219,14 +1187,13 @@ func getAnyCollectionHandler() http.Handler {
 					http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 					return
 				}
-				tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
-				if err != nil {
-					http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-					return
-				}
+				//tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
+				//if err != nil {
+				//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+				//	return
+				//}
 			}
 		}
-		println("wrote bytes", string(tempBs)) // TODO: this!
 		_, err = w.Write(bytes)
 		if err != nil {
 			rfid.HandleHttpWriteError(err)
@@ -1242,6 +1209,8 @@ func getAnyCollectionHandler() http.Handler {
 //		//return r.Header.Get("Origin") == "<http://yourdomain.com>" // TODO: this to protect against Cross-Site websocket hijacking (CSWSH)
 //	},
 //}
+
+// TODO: below this is rfid stuff! CONSIDER MOVING!
 
 const goodTestRfid = "goodTestRfid"
 const badTestRfid = "badTestRfid"
@@ -1329,7 +1298,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html") // TODO: content type ok?
+	w.Header().Set("Content-Type", "text/html")
 	_, err = w.Write(binaryUID[:])
 	if err != nil {
 		println("failed to write reader result", err)
@@ -1338,7 +1307,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 
 type writeTagRequest struct {
 	Secret string
-	Data   []byte // TODO: make sure we're ok with this being []byte
+	Data   []byte // TODO: make sure we're ok with this being []byte? In-transit should be base58, but immediately become base2 in memory?
 }
 
 // TODO: consider moving to reader/internal side?
@@ -1407,76 +1376,14 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html") // TODO: ensure caught on other side
-	_, err = w.Write(req.Data)                  // TODO: is this still ok if incoming was base58?
+	w.Header().Set("Content-Type", "text/html")
+	_, err = w.Write(req.Data) // TODO: is this still ok if incoming was base58? Probably want to unmarshal into a binary one instead
 	if err != nil {
 		println("failed to write internal result", err)
 	}
 }
 
-//func googleAuthHandleCallbackCode(r *http.Request) (email string, err error) {
-//	ctx := r.Context()
-//	code := r.URL.Query().Get("code") // TODO: CHANGE? NOT IN QUERY
-//	println("code", code)
-//	println("cfg token url", oauthConfig.Endpoint.TokenURL)
-//	println("redir url", oauthConfig.RedirectURL)
-//	t, err := oauthConfig.Exchange(ctx, code)
-//	if err != nil {
-//		switch err.(type) {
-//		case *oauth2.RetrieveError:
-//			temp := err.(*oauth2.RetrieveError)
-//			println("was a retrieve err!!!!")
-//			println("errBody", string(temp.Body))
-//			println("temp URI", string(temp.ErrorURI))
-//			//bodyBytes, errr := io.ReadAll(temp.Response.Body)
-//			//if errr != nil {
-//			//	println("err body read failed", err.Error()) // TODO: del
-//			//	return "", err
-//			//}
-//			//println(string(bodyBytes))
-//			println("-------------------") // TODO: delete
-//			println("headers")
-//			for key, vals := range temp.Response.Header {
-//				println(key, strings.Join(vals, ","))
-//			}
-//			println("-------------------") // TODO: delete
-//			println("cookies")
-//			for _, c := range temp.Response.Cookies() {
-//				println(c.Name, c.Path, c.Domain, c.Value)
-//			}
-//			return
-//		default:
-//			println("exchange failed", err.Error()) // TODO: del
-//			return "", err
-//		}
-//
-//	}
-//	println("token", t) // TODO: del
-//	resp, err := oauthConfig.Client(ctx, t).Get("https://www.googleapis.com/oauth2/v2/userinfo")
-//	if err != nil {
-//		println("exchange failed", err.Error()) // TODO: del
-//		return "", err
-//	}
-//	defer resp.Body.Close()
-//
-//	var v map[string]any // TODO: USE
-//
-//	// Reading the JSON body using JSON decoder
-//	err = json.NewDecoder(resp.Body).Decode(&v)
-//	if err != nil {
-//		println("decoder failed", err.Error()) // TODO: del
-//		return "", err
-//	}
-//	for k, val := range v { // TODO: del
-//		println(k, val)
-//	}
-//	return "", errors.New("FIXME!")
-//	//urlToRedir, _ := url.QueryUnescape(r.URL.Query().Get("state"))
-//	//// TODO: fix
-//	////println("redirecting to " + r.Host + urlToRedir)
-//	////http.Redirect(w, r, r.Host+urlToRedir, http.StatusTemporaryRedirect) // TODO: fix
-//	//println("redirecting to " + urlToRedir)
-//}
+// TODO: everything below this is for guest sessions, consider moving to its own file
 
 var _ goth.Provider = &guestLoginProvider{}
 var _ goth.Session = &guestSession{}
