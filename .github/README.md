@@ -79,6 +79,7 @@ TODO: THIS
 - [Acknowledgements](ACKNOWLEDGEMENTS.md) Still a template
 - [Authors](AUTHORS.md)
 - [Changelog](CHANGELOG.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md) Still a template
 - [CODEOWNERS](CODEOWNERS)
 - [Contributing](CONTRIBUTING.md)
 - [Contributors](CONTRIBUTORS.md)
@@ -87,3 +88,5 @@ TODO: THIS
 - [LICENSE](../LICENSE) Still a template
 - [Pull Request Template](pull_request_template.md) Still a template
 - [Security](SECURITY.md) Still a template
+- [Support](SUPPORT.md) Still a template
+- [TODO](TODO.md)
