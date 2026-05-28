@@ -85,7 +85,7 @@ TODO: THIS
 - [Contributors](CONTRIBUTORS.md)
 - [Funding](FUNDING.md) Still a template
 - [Issue Template](ISSUE_TEMPLATE.md) Still a template
-- [LICENSE](../LICENSE) Still a template
+- [LICENSE](LICENSE) Still a template
 - [Pull Request Template](pull_request_template.md) Still a template
 - [Security](SECURITY.md) Still a template
 - [Support](SUPPORT.md) Still a template
