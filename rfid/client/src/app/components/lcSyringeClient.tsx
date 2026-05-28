@@ -1,22 +1,17 @@
 'use client'
 
-// TODO: THIS WHOLE FILE
-
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcData} from "@/app/components/lcServer";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     ConfirmedCleanArea,
-    ConfirmedCleanSelector,
-    DisplayInput,
-    HandleJsonResponse,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea, ListPageItems,
+    ConfirmedCleanSelector, DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    HandleJsonResponse, ImportEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -26,41 +21,26 @@ import ReaderWriterSelector, {
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {
-    DisposedDisplay,
     ErrorDisplay,
     GensFormDisplay,
-    GensInlineDisplay,
     ParentDisplay,
-    SpeciesArea,
-    SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import ID from "@/app/components/formSubcomponents/id";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {LcSyringe} from "@/app/components/lcSyringeServer";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
-import {AddToTransfers, TransfersOutDisplay} from "@/app/components/transferClient";
+import {TransfersOutDisplay} from "@/app/components/transferClient";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
-import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {AssertLc, LcSelectorTable, NewLcForm, SpeciesSubspeciesArea} from "@/app/components/lcClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
+import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringe {
     if (typeof input !== 'object') {
@@ -144,12 +124,10 @@ export function LcSyringeImportDisplay({cookies}: {cookies: string }) {
             writeTagTo: writeTagTo,
         }
 
-        // TODO: change all fetches into "SendStandardPOst()"???
         fetch(BaseExternalUrl + "/db/import/lcSyringe", {
             method: 'Post',
             body: JSON.stringify(dataObj),
             headers: {
-                // 'Cookie': cookies, // TODO: ensure this is everywhere
                 credentials: 'include',
                 'Content-type': "application/json"
             },
@@ -193,7 +171,7 @@ export default function LcSyringeDisplay(
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [acl, setAcl] = useState<ACL | undefined>(data.acl)
     const [err, setErr] = useState<string | undefined>()
-    // TODO: THIS WHOLE FUNC
+    // TODO: THIS WHOLE FUNC???
     const [initial, setInitial] = useState(data)
     const updateInitial = (updated: LcSyringe) => {
         setInitial(updated)
@@ -234,13 +212,12 @@ export default function LcSyringeDisplay(
             });
     }
     const ovcs: OnViewCreatorQuadCol[] = [
-        // TODO: can lcSyr do anything else?
         WriteRfidOvcArea(initial._id),
     ]
     return <DisplayFormWrapper entryType={"lcSyringe"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <ID id={data._id} txt={"Liquid Culture Syringe"} entryType={"lcSyringe"}/>
-        <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+        <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
         <FlexedArea>
             <FlexedSinglesGroup>
                 <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -248,7 +225,6 @@ export default function LcSyringeDisplay(
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
                 <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                 <ParentDisplay parent={initial.parent} parentType={"lc"} headerLevel={headerLevel}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
@@ -284,7 +260,7 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
     cookies: string
     txt: string
 }) {
-    // TODO: THIS WHOLE FUNC
+    // TODO: THIS WHOLE FUNC?
     const [itemsCreated, setItemsCreated] = useState<string[]>([])
     const [parent, setParent] = useState<LcData | undefined>(parentLc) // TODO: this ok to not call set??
     const [notes, setNotes] = useState<Note[]>([])
@@ -295,7 +271,6 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
         if (itemsCreated.length === 0) {
             return null
         }
-        // TODO: STYLING SO NEW IS GREEN, newest is greener????
         return <div>
             <div>
                 <div>{"Lc syringes Created:"}</div>
@@ -319,11 +294,10 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
             parent: parent,
             notes: notes,
         }
-        fetch(BaseExternalUrl + "/create/lcSyringe", { // TODO: ensure correct
+        fetch(BaseExternalUrl + "/db/create/lcSyringe", {
             method: "POST",
             headers: {
                 credentials: 'include',
-                'Cookie': cookies, // TODO: likely dont need? ensure authed?
                 'Content-type': 'application/json'
             },
             body: JSON.stringify(body)
@@ -335,7 +309,7 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
                     onCreate && onCreate(newEntry)
                     setItemsCreated([...itemsCreated, newEntry._id]) // TODO: ok?
                 } catch (e) {
-                    // TODO: ?????
+                    setErr(JSON.stringify(e))
                 }
             })
             .catch((error) => {
@@ -346,7 +320,6 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
     return <NewEntryFormWrapper entryType={"lcSyringe"}>
         <TestAndValidate todos={["fix and test this area"]}>
             <div>{txt}</div>
-            {/* TODO: ensure ok */}
             {createdItemsDiv()}
             <ErrorDisplay err={err}/>
             {!parent && <TestAndValidate todos={["SELECT LC RECIPE"]}>
@@ -358,38 +331,6 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
         </TestAndValidate>
     </NewEntryFormWrapper>
 }
-
-// export function LcSyringeInline({
-//                                     data,
-//                                     expandByDefault,
-//                                     onClick,
-//                                     showMainPageButton,
-//                                     idIsLink
-//                                 }: InlineProps<LcSyringe>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={b58id} txt={"Liquid Culture Syringe"} entryType={"lcSyringe"} allowOpenMainPage={showMainPageButton}
-//                 linkPage={idIsLink}/>
-//             {/* TODO: parent? */}
-//             <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
-//             <SpeciesArea readonly={true} initial={data.species}/>
-//             <SubspeciesArea readonly={true} initialSub={data.species} currentSpecies={data.species}/>
-//             <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-//             <ConfirmedCleanArea initial={data.confirmedClean} readonly={true}/>
-//             <DisposedDisplay readonly={true} disposed={data.disposed}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded,}}>
-//             <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} offset={-1}/>
-//             {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             {/* TODO: SALE? */}
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                                      expanded={expanded}/>
-//     </InlineEntry>
-// }
 
 export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<LcSyringe>) {
     let cols: ListTableColumn<LcSyringe>[] = [
@@ -411,20 +352,19 @@ export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringe>) {
     return <LcSyringeListPageTable data={data} onClick={onClick} withLink={true} />
 }
 
-export function LcSyringeSelector( // TODO: USE ELSEWHERE
+export function LcSyringeSelector(
     {
         doSelect,
-        allowCreate
+        // TODO: allowCreate
     }: {
         doSelect: (val: LcSyringe | undefined) => void,
-        allowCreate?: boolean
+        // TODO: allowCreate?: boolean
     }) {
     const table = (items: LcSyringe[]):JSX.Element=>{
         return <LcSyringeSelectorTable data={items} onClick={doSelect}/>

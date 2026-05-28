@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
     AllEntries,
@@ -13,25 +13,21 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import NutrientsArea, {
     IsValidNutrient,
     Nutrient,
-    NutrientEntriesGroup,
     NutrientsEntriesGroupForNew
 } from "@/app/components/formSubcomponents/nutrients";
 import SugarsArea, {
     IsValidSugar,
     Sugar,
-    SugarEntriesGroup,
     SugarEntriesGroupForNew
 } from "@/app/components/formSubcomponents/sugars";
 import {
-    DisplayInput,
+    CreatedLinkFor, DisplayFormWrapper,
+    DisplayInput, ExistingDualSelector, FlexedArea,
+    FlexedSinglesGroup,
     HandleJsonResponse,
     HandleTxtResponse,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
-    ListPageItems,
-    NewEntryInput,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     RequiredArrayOfType
@@ -39,7 +35,6 @@ import {
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
     Additive,
-    AdditiveEntriesGroup,
     AdditiveEntriesGroupForNew,
     IsValidAdditive
 } from "@/app/components/formSubcomponents/additives";
@@ -50,22 +45,10 @@ import {Grain, GrainsSelector, IsValidGrain} from "@/app/components/formSubcompo
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {ExistingDualSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {NewGrainBatchForm} from "@/app/components/grainBatchClient";
 import {GrainBatchData} from "@/app/components/grainBatchServer";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup,
-    ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea,
-    NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -146,7 +129,7 @@ export default function JarRecipeDisplay(
             setAcl(updated.acl)
         }
         const submit = () => {
-            fetch(BaseExternalUrl + "/db/update/jarRecipe/" + data._id, { // TODO: ensure all using this dont start with /
+            fetch(BaseExternalUrl + "/db/update/jarRecipe/" + data._id, {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -158,7 +141,7 @@ export default function JarRecipeDisplay(
                     acl: MarshalAcl(acl),
                 })
             })
-                .then(HandleTxtResponse)
+                .then(HandleJsonResponse)
                 .then((newEntry) => {
                     AssertJarRecipe(newEntry)
                     updateInitial(newEntry)
@@ -190,14 +173,13 @@ export default function JarRecipeDisplay(
                     }}/>
                 },
             }
-            // TODO: any others?
         ]
         return <DisplayFormWrapper entryType={"jarRecipe"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <TestAndValidate todos={["Put name at top????"]}>
                 <ID id={data._id} txt={"Grain Jar Recipe"} entryType={"jarRecipe"}/>
             </TestAndValidate>
-            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <TestAndValidate todos={["allow to be changeable?", "sometimes deletes name when doing updates"]}>
@@ -298,6 +280,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {
+            // TODO: closeable selector???
             return <JarRecipeSelector doSelect={(rec) => { // TODO: endpoint for getStandard?
                 if (rec === undefined) {
                     return
@@ -321,7 +304,6 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
         <TestAndValidate todos={["ensure works like nutrientEntriesGroup"]}>
             <div>{"Grains"}</div>
             {/* TODO: grain batches???? */}
-            {/* TODO: TITLE AREA AND MAKE THIS A COLUMN*/}
             <GrainsSelector current={grains || []} onChange={setGrains}/>
         </TestAndValidate>
         <StandardArea readonly={false} setStandard={setIsStandard}/>
@@ -336,45 +318,45 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
     </NewEntryFormWrapper>
 }
 
-export function JarRecipeInline({
-                                    data,
-                                    expandByDefault,
-                                    onClick,
-                                    showMainPageButton,
-                                    idIsLink
-                                }: InlineProps<JarRecipeData>) { // TODO: DO THIS ENTIRELY!
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Grain Jar Recipe"} entryType={"grainJar"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            <NameArea currentName={data.name} readonly={true}/>
-            {/* TODO: ADD GRAINS */}
-            <StandardArea isStandard={data.standard} readonly={true}/>
-            <NutrientEntriesGroup preexisting={true} readonly={true} initialEntries={data.nutrients?.map((l) => {
-                return {data: l, disabled: false}
-            })} updateParent={() => {
-            }}/>{/* TODO: NUTRIENTS (with more on expand)*/}
-            <SugarEntriesGroup preexisting={true} readonly={true} initialEntries={data.sugars?.map((l) => {
-                return {data: l, disabled: false}
-            })} updateParent={() => {
-            }}/>{/* TODO: Liquids (with more on expand)*/}
-            <AdditiveEntriesGroup preexisting={true} readonly={true} initialEntries={data.additives?.map((l) => {
-                return {data: l, disabled: false}
-            })} updateParent={() => {
-            }}/>{/* TODO: Additives (with more on expand) */}
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <NotesAreaInline notes={data.notes}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea>
-        <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
+// export function JarRecipeInline({
+//                                     data,
+//                                     expandByDefault,
+//                                     onClick,
+//                                     showMainPageButton,
+//                                     idIsLink
+//                                 }: InlineProps<JarRecipeData>) { // TODO: DO THIS ENTIRELY!
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     const b58id = data._id
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <ID id={b58id} txt={"Grain Jar Recipe"} entryType={"grainJar"} allowOpenMainPage={showMainPageButton}
+//                 linkPage={idIsLink}/>
+//             <NameArea currentName={data.name} readonly={true}/>
+//             {/* TODO: ADD GRAINS */}
+//             <StandardArea isStandard={data.standard} readonly={true}/>
+//             <NutrientEntriesGroup preexisting={true} readonly={true} initialEntries={data.nutrients?.map((l) => {
+//                 return {data: l, disabled: false}
+//             })} updateParent={() => {
+//             }}/>{/* TODO: NUTRIENTS (with more on expand)*/}
+//             <SugarEntriesGroup preexisting={true} readonly={true} initialEntries={data.sugars?.map((l) => {
+//                 return {data: l, disabled: false}
+//             })} updateParent={() => {
+//             }}/>{/* TODO: Liquids (with more on expand)*/}
+//             <AdditiveEntriesGroup preexisting={true} readonly={true} initialEntries={data.additives?.map((l) => {
+//                 return {data: l, disabled: false}
+//             })} updateParent={() => {
+//             }}/>{/* TODO: Additives (with more on expand) */}
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             <NotesAreaInline notes={data.notes}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea>
+//         <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                expanded={expanded}/>
+//     </InlineEntry>
+// }
 
-export const JarRecipeArea = ({recipeId}: { recipeId?: string, headerLevel?: number }) => { // TODO: USE THIS!
+export const JarRecipeArea = ({recipeId}: { recipeId?: string, headerLevel?: number }) => {
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (recipeId !== undefined) {
         const b58id = recipeId
@@ -404,28 +386,27 @@ export function JarRecipeListPageTable({data, onClick, withLink}: ListPageItems<
         NewColumn("Nutrients", (v) => {
             return <div>
                 {v.nutrients && v.nutrients.map((v, i) => {
-                    return <div key={v.nutrient + i}>{v.nutrient}</div> // TODO: any more??
+                    return <div key={v.nutrient + i}>{v.nutrient}</div>
                 })}
             </div>
         }),
         NewColumn("Sugars", (v) => {
             return <div>
                 {v.sugars && v.sugars.map((v, i) => {
-                    return <div key={v.type + i}>{v.type}</div> // TODO: any more??
+                    return <div key={v.type + i}>{v.type}</div>
                 })}
             </div>
         }),
         NewColumn("Additives", (v) => {
             return <div>
                 {v.additives && v.additives.map((v, i) => {
-                    return <div key={v.additive + i}>{v.additive}</div> // TODO: any more??
+                    return <div key={v.additive + i}>{v.additive}</div>
                 })}
             </div>
         }),
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         })
-        // TODO: bonus area for notes???
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: JarRecipeData) => {
@@ -454,7 +435,7 @@ export function JarRecipeSelectorTable({data, onClick}: ListPageItems<JarRecipeD
     return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
 }
 
-export function JarRecipeSelector( // TODO: USE ELSEWHERE
+export function JarRecipeSelector(
     {
         doSelect,
         allowCreate,
@@ -472,6 +453,6 @@ export function JarRecipeSelector( // TODO: USE ELSEWHERE
                                  asserter={AssertJarRecipe}
                                  table={table}>
         {allowCreate && (creatorInPage ? <NewJarRecipeForm handlers={{onCreate: doSelect, isTopLevel: false}}/> :
-            <div>{"LINK TO CREATOR HERE FIXME"}</div>)}
+            <TestAndValidate todos={["fix creator"]}><div>{"LINK TO CREATOR HERE FIXME"}</div></TestAndValidate>)}
     </ExistingDualSelector>
 }

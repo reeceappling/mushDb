@@ -13,7 +13,20 @@ import {
     OptionalKey,
     HandleJsonResponse,
     SendMultipartRequest,
-    setFormData, ListPageItems, importUrlFor, viewUrlFor
+    setFormData,
+    ListPageItems,
+    importUrlFor,
+    viewUrlFor,
+    ImportEntryFormWrapper,
+    DisplayFormWrapper,
+    FlexedArea,
+    FlexedSinglesGroup,
+    NewEntryFormWrapper,
+    ListTableColumn,
+    NewColumn,
+    NumberToDateStr,
+    ListPageTable,
+    ExistingRecentSelector, CreatedLinkFor
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -28,7 +41,7 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {
     IsValidNote, NewEntryNotes,
-    Note
+    Note, NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
@@ -45,28 +58,17 @@ import {
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {redirect} from "next/navigation";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewMssForm} from "@/app/components/mssClient";
 import {FruitData, FruitSelectorCloseable} from "@/app/components/fruitServer";
-import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
-import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {MssData} from "@/app/components/mssServer";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -120,7 +122,7 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
     // complex optional array keys
     let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['pics', IsValidPicWithNotesIncoming], // TODO: ensure ok
-        ['notes', IsValidNote], // TODO: ensure ok
+        ['notes', IsValidNote],
     ])
     for (let [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
@@ -153,12 +155,9 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
             printDate:printDate,
             species:species._id,
             notes:notes,
-            //perms: perms, // TODO: validate on insert
         }
         subspecies && (dataObj.subspecies = subspecies._id) // TODO: validate on in
         setFormData(body, dataObj)
-        //body.set("data",JSON.stringify(dataObj))
-        // Img
         if(image!==undefined){
             body.set("img",image,"img")
         }
@@ -183,7 +182,6 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
             <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
             <ImageSelector updateParent={setImage}/>
             <NewEntryNotes setNotes={setNotes} />
-            {/*<EntryPermsArea setEntryPerms={setPerms}/>*/}
             <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
         </ImportEntryFormWrapper>
 
@@ -196,7 +194,6 @@ export default function SporePrintDisplay(
     try {
         AssertSporePrint(data)
         const [initial, setInitial] = useState(data)
-        // TODO: DO UPDATEINITIAL!!!
         const initNotes: Data<Note>[] = (data.notes || []).map((n)=>{
             return {data: n,disabled:false}
         })
@@ -236,7 +233,6 @@ export default function SporePrintDisplay(
                 dataObj.images = picsInfo.obj
                 // Set data on form
                 setFormData(body, dataObj)
-                //body.set("data",JSON.stringify(dataObj)) // TODO: REDO THINGS ON GO SIDE (ENSURE OTHER PICTURE ONES DO THE SAME!
                 setFormImages(body, "newPic", newImages)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
@@ -256,18 +252,18 @@ export default function SporePrintDisplay(
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: test heavily for all
             // TODO: Chain spore print (do not allow after too long) ---------------------------- TODO!!!!
-            { // TODO: create SporeSwab
+            {
                 txt: "Create Spore Swab",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                     return <NewSporeSwabForm printIn={data} onCreate={(item: MssData)=>{ // TODO: switch to handlers{{}} format
                         onCreate([{
-                            typeText: "Multispore Syringe",
-                            node: <CreatedLinkFor linkId={item._id} typ={"mss"}/>,
+                            typeText: "Spore Swab",
+                            node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
                         }], false)
                     }}/>
                 },
             },
-            { // TODO: create MSS
+            {
                 txt: "Create MultiSpore Syringe",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                     return <NewMssForm sporePrintIn={data} handlers={{
@@ -282,8 +278,7 @@ export default function SporePrintDisplay(
                 },
             },
             WriteRfidOvcArea(initial._id),
-            // TODO: any transfers ok???
-            // TODO: this????OvcForXfers(data._id, "sporePrint", ["bag","fruitingChamber","jar","plate","slant","stasisTube"], AddToTransfers(setTransfersOut, transfersOut)), // TODO: ensure list correct
+            // TODO: TRANSFERS SKIPPING SWABS/SYRINGES!
         ]
         return <DisplayFormWrapper entryType={"sporePrint"}>
             <ErrorDisplay err={err} headerLevel={headerLevel} />
@@ -328,8 +323,8 @@ export default function SporePrintDisplay(
 }
 
 // Should only be accessible from a fruit's page
-export function NewSporePrintForm(
-    {fruitIn, headerLevel, offset, onCreate, cookies}: { // TODO: isTopLevel or whatever
+export function NewSporePrintForm( // TODO: currently do not like this one...
+    {fruitIn, headerLevel, offset, onCreate, cookies}: {
         fruitIn?: FruitData
         headerLevel?: number
         offset?: number
@@ -348,7 +343,7 @@ export function NewSporePrintForm(
             setErr("Fruit must be selected")
             return
         }
-        // TODO: if both pics and notes are empty, do nothing
+        // if both pics and notes are empty, do nothing
         if(pics.length===0){
             setErr("Must at least contain one picture")
             return
@@ -364,11 +359,7 @@ export function NewSporePrintForm(
                 return n.data
             })}})
         // Perms
-        // if(perms!==undefined){
-        //     dataObj.perms = perms
-        // }
         setFormData(body, dataObj)
-        //body.set("data", JSON.stringify(dataObj))
         for (let i = 0; i < pics.length; i++) {
             let toSend = pics[i]
             if (toSend.img === undefined) {
@@ -379,10 +370,10 @@ export function NewSporePrintForm(
             body.set(fileName, toSend.img, fileName)
         }
 
-        SendMultipartRequest(BaseExternalUrl+"/create/sporePrint", cookies, body)
+        SendMultipartRequest(BaseExternalUrl+"/db/create/sporePrint", cookies, body)
             .then(HandleJsonResponse)
             .then((resJson)=>{
-                AssertSporePrint(resJson) // TODO: make sure comes back as print obj
+                AssertSporePrint(resJson)
                 onCreate(resJson)
             })
             .catch((er) => {
@@ -401,41 +392,6 @@ export function NewSporePrintForm(
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
-
-// export function SporePrintInline(
-//     {
-//         data, expandByDefault, headerLevel, onClick, showMainPageButton, idIsLink
-//     }: InlineProps<SporePrintData>
-// ) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={b58id} txt={"Spore Print"} entryType={"sporePrint"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-//             <MostRecentImageDisplay data={data.mostRecentImage} headerLevel={headerLevel} />
-//             <DateArea pre={"Print Date: "} readonly={true} when={data.creationDate} />
-//             <SpeciesArea readonly={true} headerLevel={headerLevel} initial={data.species}/>
-//             <SubspeciesArea readonly={true} headerLevel={headerLevel} currentSpecies={data.species} initialSub={data.subspecies}/>
-//             <SaleArea readonly={true} canCreateSale={false} sale={data.sale} headerLevel={headerLevel}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             <div>
-//                 <div>{"Parent" + (data.parent ? <EntryLink props={{displayedId:data.parent,linkId:data.parent,entryType:"fruit",openInNewTab:true}}>{data.parent}</EntryLink> : "unknown")}</div>{/* TODO: FIX for link! */}
-//             </div>
-//             {/* TODO: parent?: string // Only empty if purchased and not printed yourself*/}
-//             {/*TODO: <ProjectsArea allowCreate={false} allowRemove={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1}/>*/}
-//             <div>
-//                 <div>{"Color" + (data.color || "unknown")}</div>
-//             </div>
-//             <div>
-//                 <div>{"Density" + (data.density || "unknown")}</div>
-//             </div>
-//             <NotesAreaInline notes={data.notes} headerLevel={headerLevel} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                expanded={expanded}/>
-//     </InlineEntry>
-// }
 
 export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems<SporePrintData>) {
     let cols: ListTableColumn<SporePrintData>[] = [
@@ -456,16 +412,15 @@ export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function SporePrintSelectorTable({data, onClick}: ListPageItems<SporePrintData>) {
     return <SporePrintListPageTable data={data} onClick={onClick} withLink={true} />
 }
-export function SporePrintSelector( // TODO: USE ELSEWHERE
+export function SporePrintSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate // TODO: del?
     }: {
         doSelect: (val: SporePrintData | undefined) => void,
         allowCreate?: boolean

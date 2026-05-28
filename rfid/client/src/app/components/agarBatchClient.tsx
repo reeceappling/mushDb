@@ -7,7 +7,7 @@ import NotesArea, {
     Note,
     NotesAreaInline, NotesAreaViewSubcomponent,
     NotesAreaOld,
-    NotesGrid, SingleNoteV2, NewEntryNotes
+    NotesGrid, SingleNoteV2, NewEntryNotes, NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -15,24 +15,25 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import {AgarBatchData, AgarColor} from "@/app/components/agarBatchServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
+    CreatedLinkFor,
+    dataFor, DisplayFormWrapper,
     DisplayInput,
+    ExistingRecentSelector,
+    FlexedArea,
     HandleJsonResponse,
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    ListPageItems,
-    NewEntryInput,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
+    OptionalKey, Subform,
 } from "@/app/components/common";
 import {
     AgarRecipeArea,
-    AgarRecipeSelector,
-    dataFor, ExistingRecentSelector,
-    InlineEntry,
 } from "@/app/components/agarRecipeClient";
-import {OnViewCreatorsTriColArea, PcRunArea} from "@/app/components/pcRunClient";
+import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {AgarRecipeData, AgarRecipeSelectorCloseable} from "@/app/components/agarRecipeServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -43,10 +44,9 @@ import {AclDisplay, IsValidAcl, TogglableAreaWithDepth,} from "@/app/components/
 import {ACL} from "@/app/components/accessControlServer";
 import {NewPlateForm} from "@/app/components/plateClient";
 import {PlateData} from "@/app/components/plateServer";
-import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {NewSlantForm} from "@/app/components/slantClient";
-import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     if (typeof input !== 'object') {
@@ -143,7 +143,8 @@ export default function AgarBatchDisplay(
                 },
             },
             {
-                // TODO: CreateSlants. Both agar and slants will either be PC-d same time in seperate containers or agar PC'd while inside the slant...
+                // TODO: Slants are poured BEFORE PCing! The Agar batch will already have the PC Run on it though, so we shouldnt worry about it.
+                // TODO: also sticks should be boiled BEFORE going in the PC!
                 txt: "Create Slants",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewSlantForm agarBatchIn={data} handlers={{
@@ -163,6 +164,7 @@ export default function AgarBatchDisplay(
                 <ID txt={"Agar Batch"} id={data._id} entryType={"agarBatch"} linkPage={false} allowOpenMainPage={false}
                     data-cy-id={"Id"}/>
                 <ErrorDisplay data-cy-id={"Error"} err={err} headerLevel={headerLevel}/>
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <DateArea data-cy-id={"LastUpdated"} pre={"Last Updated: "} when={initial.lastUpdated}
                               readonly={true}/>{/* TODO: ensure this is now inline*/}
@@ -179,42 +181,11 @@ export default function AgarBatchDisplay(
                     e.stopPropagation();
                     agarBatchSubmit()
                 }}>{"Update"}</button>}
-                {/* TODO: styling for onViewCreators!!!!*/}
-                {/* TODO: REFORMAT ALL LIST PAGES!!!!*/}
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
             </DisplayFormWrapper>
         )
     } catch (err) {
         return <div>{"ERROR: AgarBatch data format incorrect: " + err}</div>
     }
-}
-
-// TODO: USE THIS ONE LIKE EVERYWHERE FOR VIEWS! UNSURE ABOUT IMPORTS AND NEW!
-export function NotesFormArea({
-                                  readonly,
-                                  initial,
-                                  updateParent,
-                                    removeHeader,
-                              }: { // TODO: add withDictaphone if possible? we only want the dictaphone in some edge cases
-    readonly?: boolean,
-    initial?: Note[],
-    updateParent?: (entries: AllEntries<Note>) => void,
-    removeHeader?: boolean,
-}) {
-    return <div>
-        {removeHeader || <div className={"areaHeader"}>{"Notes"}</div>}
-        <NotesAreaViewSubcomponent initial={initial || []} readonly={readonly || false} updateParent={upd=>{updateParent && updateParent(upd)}} />
-    </div>
-}
-
-// TODO: MOVE
-export function FlexedArea(props: React.PropsWithChildren<{}>) {
-    return <div className={"flexedArea"}>{props.children}</div>
-}
-
-// TODO: MOVE
-export function FlexedSinglesGroup(props: React.PropsWithChildren<{}>) {
-    return <div className={"flexedSinglesGroup"}>{props.children}</div>
 }
 
 // TODO: NOT WORKING IN SELECTOR!
@@ -245,7 +216,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             recipe: recipe._id,
             notes: notes,
         }
-        fetch(BaseExternalUrl + "/create/agarBatch", {
+        fetch(BaseExternalUrl + "/db/create/agarBatch", {
             method: 'Post',
             body: JSON.stringify(body),
             headers: {
@@ -273,113 +244,17 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
         }
         {agarRecipeIn ? <AgarRecipeArea agarRecipeBinId={agarRecipeIn?._id}/> :
             <Subform >
-                <AgarRecipeSelectorCloseable
+                <AgarRecipeSelectorCloseable /* TODO: consider using subform on other closeables?*/
                     doSelect={setRecipe}
-                    txt={"Agar Recipe TEMP TEXT"/* TODO: fix*/}
-                    allowCreation={false/* TODO: true?*/}
-                    creatorInPage={false}/* TODO: true?*//>
-                {/*<AgarRecipeSelector data-cy-id="Recipe" doSelect={setRecipe}*/}
-                {/*                allowCreate={handlers.isTopLevel}/>*/}
+                    txt={"Agar Recipe: "}
+                    allowCreation={true}
+                    creatorInPage={false}/>
             </Subform>
         }
         <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
         <NewEntryNotes setNotes={setNotes}/>
-        {/*<NotesFormArea readonly={false} initial={[]} updateParent={v => { // TODO: validate workign*/}
-        {/*    setNotes(v.new.map(x => {*/}
-        {/*        return x.data*/}
-        {/*    }))*/}
-        {/*}}/>*/}
         <button className={"bottomButton greenButton"} onClick={newAgarBatchSubmit}>{"Submit"}</button>
     </NewEntryFormWrapper>
-}
-
-// export function AgarBatchInline({
-//                                     data,
-//                                     expandByDefault,
-//                                     onClick,
-//                                     showMainPageButton,
-//                                     idIsLink
-//                                 }: InlineProps<AgarBatchData>) {
-//     const notes = data.notes || []
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const areaProps = () => {
-//         return {expanded: expanded, setExpanded: setExpanded}
-//     }
-//     const pcRunDisplayId = data.pcRun
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea data-cy-id="InlineTop" props={{}}> {/* TODO: do we need data-cy-id on this?*/}
-//             <ID data-cy-id="Id" id={data._id} txt={"Agar Batch"} entryType={"agarBatch"}
-//                 allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-//             <div data-cy-id="Recipe">
-//                 <EntryLink props={{displayedId: data.agarRecipe, linkId: data.agarRecipe, entryType: "agarRecipe"}}>
-//                     <div>{data.agarRecipe}</div>
-//                 </EntryLink>
-//             </div>
-//             <div data-cy-id="Color">{data.color}</div>
-//         </InlineSubArea>
-//         <InlineExpansionArea data-cy-id="InlineBottom" props={areaProps()}> {/* TODO: do we need data-cy-id on this?*/}
-//             <div data-cy-id="PcRun" className={"inline"}>
-//                 <EntryLink props={{displayedId: pcRunDisplayId, linkId: pcRunDisplayId, entryType: "pcRun"}}>
-//                     <div>{pcRunDisplayId}</div>
-//                 </EntryLink>
-//             </div>
-//             <NotesAreaInline data-cy-id="Notes" notes={notes} offset={-1}/>
-//             <DateArea data-cy-id="LastUpdated" pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//             <button className={"basicButton"} data-cy-id="CloseButton" onClick={(e) => {
-//                 e.stopPropagation();
-//                 setExpanded(false)
-//             }}>{"See Less"}</button>
-//         </InlineExpansionArea>
-//         <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                expanded={expanded}/>
-//     </InlineEntry>
-// }
-
-// TODO: MOVE!
-export function ListPageTableRow<T>(props: React.PropsWithChildren<{ data: T, onClick: (item: T) => void, className?: string }>) {
-    return <tr className={"listPageTableRow nonHeaderRow"+(props.className?" "+props.className : "")} onClick={() => {
-        props.onClick && props.onClick(props.data)
-    }}>{props.children}</tr>
-}
-
-// TODO: MOVE!
-export interface ListTableColumn<T> {
-    key: string
-    f: (v:T)=>string
-}
-// TODO: MOVE!
-export function NewColumn<T>(key:string,f:(v:T)=>any):ListTableColumn<T> {
-    return {key:key,f:f}
-}
-
-// TODO: MOVE!
-export function ListPageTable<T>({data, onClick, cols,className}: {
-    data: T[],
-    onClick?: (v: T) => void,
-    cols: ListTableColumn<T>[],
-    className?: string,
-    // TODO: give this a reload button????
-}){
-    return <table className={"listPageTable"}>
-        <tr className={"listPageTableRow headerRow"}>
-            {cols.map((col,i)=>{
-                return <th className="text-left" key={i} >{col.key}</th>
-            })}
-        </tr>
-        {data.map((item,i) => {
-            return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
-                {cols.map((col,i)=>{
-                    return <td className="text-left" key={i}>{col.f(item)}</td>
-                })}
-            </ListPageTableRow>
-        })}
-    </table>
-}
-
-// TODO: MOVE!
-export function NumberToDateStr(n: number): string {
-    const d = new Date(n)
-    return (d.getMonth()+1)+"/"+d.getDate()+"/"+d.getFullYear()
 }
 
 export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<AgarBatchData>) {
@@ -399,7 +274,6 @@ export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for notes????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
@@ -467,7 +341,7 @@ export function AgarBatchSelectorTable({data, onClick, withLink}: ListPageItems<
     return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
 }
 
-export function AgarBatchSelector( // TODO: USE ELSEWHERE
+export function AgarBatchSelector(
     {
         doSelect,
         allowCreate

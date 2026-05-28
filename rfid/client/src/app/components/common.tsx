@@ -2,15 +2,15 @@
 
 import {defaultHeaderLevel} from "@/app/components/formSubcomponents/utils/headers";
 import * as React from "react";
-import {JSX, ReactNode, SetStateAction, SyntheticEvent, useEffect, useRef, useState} from "react";
+import {JSX, ReactNode, SetStateAction, SyntheticEvent, useContext, useEffect, useRef, useState} from "react";
 import {
     Contamination,
     ContaminationForm,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {NumberToDate} from "@/app/components/formSubcomponents/date";
-import {SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {NumbersOnlyFromText, NumberToDate} from "@/app/components/formSubcomponents/date";
+import {Data, ListResult, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import ReaderWriterSelector, {
@@ -18,12 +18,10 @@ import ReaderWriterSelector, {
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {useRfidReaderContext} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
 import {
-    AssertDualListResult,
     AssertSubstrateRecipe,
-    validatorForAssertion
 } from "@/app/components/substrateRecipeClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
+import {InputNumber, InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertAgarBatch} from "@/app/components/agarBatchClient";
 import {AssertBag} from "@/app/components/bagClient";
@@ -52,6 +50,9 @@ import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
 import SpeechRecognition, {useSpeechRecognition} from "react-speech-recognition";
 import {ActionTypes, useDictationContext} from "@/app/components/formSubcomponents/dictationContext/dictationContext";
+import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
+import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
+import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 
 
 export function SendMultipartRequest(url: string, cookies: string, formData: FormData) {
@@ -1134,4 +1135,316 @@ function checkResponseStatus(res: Response) {
         throw "[(response status " + res.status + " " + res.statusText + ")]"
     }
     return
+}
+
+export function FlexedArea(props: React.PropsWithChildren<{}>) {
+    return <div className={"flexedArea"}>{props.children}</div>
+}
+
+export function FlexedSinglesGroup(props: React.PropsWithChildren<{}>) {
+    return <div className={"flexedSinglesGroup"}>{props.children}</div>
+}
+
+export function ListPageTableRow<T>(props: React.PropsWithChildren<{ data: T, onClick: (item: T) => void, className?: string }>) {
+    return <tr className={"listPageTableRow nonHeaderRow"+(props.className?" "+props.className : "")} onClick={() => {
+        props.onClick && props.onClick(props.data)
+    }}>{props.children}</tr>
+}
+
+export interface ListTableColumn<T> {
+    key: string
+    f: (v:T)=>string
+}
+
+export function NewColumn<T>(key:string,f:(v:T)=>any):ListTableColumn<T> {
+    return {key:key,f:f}
+}
+
+export function ListPageTable<T>({data, onClick, cols,className}: {
+    data: T[],
+    onClick?: (v: T) => void,
+    cols: ListTableColumn<T>[],
+    className?: string,
+    // TODO: give this a reload button????
+}){
+    return <table className={"listPageTable"}>
+        <tr className={"listPageTableRow headerRow"}>
+            {cols.map((col,i)=>{
+                return <th className="text-left" key={i} >{col.key}</th>
+            })}
+        </tr>
+        {data.map((item,i) => {
+            return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
+                {cols.map((col,i)=>{
+                    return <td className="text-left" key={i}>{col.f(item)}</td>
+                })}
+            </ListPageTableRow>
+        })}
+    </table>
+}
+
+export function NumberToDateStr(n: number): string {
+    const d = new Date(n)
+    return (d.getMonth()+1)+"/"+d.getDate()+"/"+d.getFullYear()
+}
+
+export function ExistingDualSelector<T>(props: React.PropsWithChildren<{
+    doSelect: (val?: T) => void,
+    table: (items: T[],onSelect: (v?: T)=>void) => JSX.Element,
+    entryType:string,
+    entryTypes:string,
+    asserter: (val: any)=>void
+}>){
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const [loaded, setLoaded] = React.useState(false);
+    const [data, setData] = React.useState<ListResult<T> | undefined>(undefined);
+    useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
+        try {
+            AssertDualListResult<T>(result, props.asserter) // TODO: unnecessary?
+            setData(result)
+            setLoaded(true)
+            return
+        } catch (e) {
+            console.error(e)
+            throw e
+        }
+    }).catch(e => {
+        console.error(e)
+        setErr("error on listItems request: " + JSON.stringify(e))
+    })},[])
+    if (!loaded || data === undefined) {
+        return <div>
+            <ErrorDisplay err={err}/>
+            <div>{"Loading "+props.entryType+" Selector"}</div>
+        </div>
+    }
+    return <Subform>
+        <ErrorDisplay err={err}/>
+        <SelectorTableWithHeader header={"Recent"} data={data?.recent} onSelect={props.doSelect} table={props.table}/>
+        <SelectorTableWithHeader header={"Standard"} data={data?.standard} onSelect={props.doSelect} table={props.table}/>
+        <SelectorCreationArea>{props.children}</SelectorCreationArea>
+    </Subform>
+}
+
+export function SelectorCreationArea(props:React.PropsWithChildren<{}>){
+    const [creatorOpen, setCreatorOpen] = React.useState(false);
+    if (!props.children){
+        return null
+    }
+    if (!creatorOpen){
+        return <button className={"buttonFullWidth basicButtonSmall"} onClick={e=>{
+            e.stopPropagation();
+            setCreatorOpen(true);
+        }}>{"Create one instead"}</button>
+    }
+    return <><button className={"basicButtonSmall"} onClick={e=>{
+        e.stopPropagation();
+        setCreatorOpen(false);
+    }}>{"Close creator"}</button>
+        {props.children}
+    </>
+}
+
+export function ExistingRecentSelector<T>(props: React.PropsWithChildren<{
+    doSelect: (val?: T) => void,
+    table: (items: T[],onSelect: (v?: T)=>void) => JSX.Element,
+    entryType:string,
+    entryTypes:string,
+    asserter: (val: any)=>void
+}>){
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const [loaded, setLoaded] = React.useState(false);
+    const [data, setData] = React.useState<T[] | undefined>(undefined);
+    useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
+        try {
+            AssertArrayResult<T>(result, props.asserter) // TODO: unnecessary?
+            setLoaded(true)
+            setData(result)
+        } catch (e) {
+            throw e
+        }
+    }).catch(e => {
+        setErr("error on listItems request: " + JSON.stringify(e))
+    })},[])
+    if (!loaded || data === undefined) {
+        return <div>
+            <ErrorDisplay err={err}/>
+            <div>{"Loading "+props.entryType+" Selector"}</div>
+        </div>
+    }
+    return <Subform>
+        <ErrorDisplay err={err}/>
+        <SelectorTableWithHeader header={"Recent"} data={data} onSelect={props.doSelect} table={props.table}/>
+        <SelectorCreationArea>{props.children}</SelectorCreationArea>
+    </Subform>
+}
+
+export function SelectorTableWithHeader<T>({header, data,table,onSelect}:{
+    header: string,
+    data?: T[],
+    onSelect: (val?: T) => void,
+    table:(items: T[], onSelect: (v?: T) => void)=>JSX.Element
+}){
+    if(!data || data.length===0){
+        return null
+    }
+    return <>
+        <div className={"text-xl"}>{header}</div>
+        {table(data,onSelect)}
+    </>
+}
+
+// TODO: may disappear
+export function InlineEntry(props: React.PropsWithChildren<{ onClick?: () => void }>) { // TODO: ADD THIS TO ALL INLINES!!!!!
+    return <div className={"inlineEntry"} onClick={(e) => {
+        e.stopPropagation()
+        props.onClick && props.onClick()
+    }}>
+        {props.children}
+    </div>
+}
+
+export function dataFor<Type>(vals?: Type[]): Data<Type>[] {
+    return (vals || []).map((l) => {
+        return {data: l, disabled: false}
+    })
+}
+
+export function FloatInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
+    const [val, setVal] = useState<number>(initial || 0)
+    const updateNumber = (s: string) => {
+        let n = NumbersOnlyFromText(s)
+        setVal(n)
+        onChange(n)
+    }
+    return <div>
+        <TestAndValidate todos={["validate working properly"]}>
+            <InputNumber min={0} max={10000} onChange={s => {
+                s && updateNumber(s)
+            }} step={1} mode={"floating"} value={val.toString()} readonly={false}/>
+        </TestAndValidate>
+    </div>
+}
+
+export function SelectorWrapper<T>(props: React.PropsWithChildren<{
+    title: string,
+    current?: T,
+    nameFunc: (item: T) => string
+}>) {
+    const [isOpen, setIsOpen] = useState(!props.current);
+    useEffect(() => {
+        setIsOpen(false)
+    }, [props.current])
+    if (isOpen) {
+        return <div>
+            <div>{props.title}</div>
+            <button className={"basicButtonSmall"} onClick={e => {
+                e.stopPropagation();
+                setIsOpen(false);
+            }}>{"close selector"}</button>
+            {props.children}
+        </div>
+    }
+    if (props.current === undefined) {
+        return <div className={"inlineChildren"}>
+            <div>{props.title + ": "}</div>
+            <button className={"basicButtonSmall"} onClick={e => {
+                e.stopPropagation();
+                setIsOpen(true);
+            }}>{"select"}</button>
+        </div>
+    } else {
+        return <div className={"inlineChildren"}>
+            <div>{props.title + ": " + props.nameFunc(props.current)}</div>
+            <button className={"basicButtonSmall"} onClick={e => {
+                e.stopPropagation();
+                setIsOpen(true);
+            }}>{"select another"}</button>
+        </div>
+    }
+}
+
+function depthAndEntryClasses(depth: number, entryType?: string) {
+    return " depth" + depth + (entryType ? " " + entryType : "")
+}
+
+export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string, className?: string }>) { // TODO: USE THIS EVERYWHERE!
+    const depth = useContext(DepthContext)
+    return <DepthProvider>
+        <div
+            className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType) + (props.className ? " " + props.className : "")}>{/* TODO: likely not working as expected. +1?*/}
+            {props.children}
+        </div>
+    </DepthProvider>
+}
+
+export function ImportEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string }>) { // TODO: USE THIS EVERYWHERE!
+    const depth = useContext(DepthContext)
+    return <DepthProvider>
+        <div
+            className={"subForm importEntryForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
+            {props.children}
+        </div>
+    </DepthProvider>
+}
+
+export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: string, id?: string }>) { // TODO: USE THIS EVERYWHERE!
+    const depth = useContext(DepthContext)
+    return <DepthProvider>
+        <div id={props.id}
+             className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
+            {props.children}
+        </div>
+    </DepthProvider>
+}
+
+export function Subform(props: React.PropsWithChildren<{}>) {
+    const depth = useContext(DepthContext)
+    return <DepthProvider>
+        <div className={"subForm depth" + depth}>{/* TODO: likely not working as expected. +1?*/}
+            {props.children}
+        </div>
+    </DepthProvider>
+}
+
+export function CreatedLinkFor({linkId, typ, linkText}: { linkId: string, typ: string, linkText?: string }) {
+    return <EntryLink props={{displayedId: linkText || linkId, linkId: linkId, entryType: typ}}>
+        <div>{linkText}</div>
+    </EntryLink>
+}
+
+export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) => void): asserts input is ListResult<T> {
+    if (typeof input !== 'object') {
+        console.error('Input is not an object! Input is ' + typeof input)
+        throw new Error('Input is not an object! Input is ' + typeof input);
+    }
+
+    // complex optional array keys
+    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+        ['recent', validatorForAssertion(validateEntry)], // TODO: ensure ok
+        ['standard', validatorForAssertion(validateEntry)],
+    ])
+    for (let [key, validator] of complexOptionalArrayKeys) {
+        if (!OptionalArrayOfType(key, input, validator)) {
+            console.error('optional array key ' + key + ' was not valid')
+            throw new Error('optional array key ' + key + ' was not valid');
+        }
+    }
+    return
+}
+
+export function AssertSubRecipeListResult(input: any): asserts input is ListResult<SubstrateRecipeData> {
+    AssertDualListResult<SubstrateRecipeData>(input, AssertSubstrateRecipe)
+}
+
+export function validatorForAssertion(asserter: ((input: any) => void)) {
+    return (inp: any) => {
+        try {
+            asserter(inp)
+            return true
+        } catch (e) {
+            console.error("error in validatorForAssertion: ", e)
+            return false
+        }
+    }
 }

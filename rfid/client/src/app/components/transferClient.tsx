@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useContext, useEffect, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID, {IdPageLink} from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
@@ -10,9 +10,10 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {ImageLocationFor} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {
-    DisplayInput,
-    HandleJsonResponse, ListPageItems,
-    MainCollectionInputOrRead,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    HandleJsonResponse, ListPageItems, ListPageTable, ListTableColumn,
+    MainCollectionInputOrRead, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -25,17 +26,8 @@ import {SelectorFor} from "@/app/components/selector";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
 import {GetTransferReasons} from "@/app/components/formSubcomponents/server";
 // TODO: list not working
 // TODO: ensure display is working and looks good
@@ -187,7 +179,6 @@ export default function TransferDisplay(
                     transferSubmit()
                 }}>{"Update"}</button>
             </div>}
-            {/* TODO: unlikely to need: <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/> TODO: where to put?*/}
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: Transfer data format incorrect: " + err}</div>
@@ -259,7 +250,6 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
                     e.stopPropagation();
                     toggleOpen();
                 }}>{"Close Transfer Creator"}</button>
-                {/* TODO: THIS THING??? */}
             </div>
         </div>
     }
@@ -272,7 +262,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
         </div>
     }
 
-    return <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling */}
+    return <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling? */}
         {newTransferNotifArea()}
         <ErrorDisplay err={err}/>
         <div className={"newTransferRow3"}>
@@ -366,7 +356,6 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated, c
         return <div>
             <div>
                 <button className={"basicButton"}>{"Close Transfer Creator"}</button>
-                {/* TODO: THIS THING??? */}
             </div>
         </div>
     }
@@ -382,7 +371,7 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated, c
     return <>
         {newTransferNotifArea()}
         <></>
-        <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling */}
+        <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling? */}
             <ErrorDisplay err={err}/>
 
             <div className={"newTransferRow3"}>
@@ -424,7 +413,7 @@ export function AddToTransfers(set: (s: string[]) => void, current: string[]) {
     }
 }
 
-export function TransfersOutDisplay(
+export function TransfersOutDisplay( // TODO: likely overhaul
     {
         thisId,
         thisEntryType,
@@ -442,6 +431,7 @@ export function TransfersOutDisplay(
         validTypesTo?: string[],
         cookies: string,
     }) {
+    const openInNewTab = false
     if (!allowNewTransferCreation) {
         return <TransfersOutViewOnlyDisplay transfersOut={transfersOut} headerTxt={headerTxt}/>
     }
@@ -475,19 +465,19 @@ export function TransfersOutDisplay(
                 <div>{/* Placeholder for header*/}</div>
                 <div>
                     <div>{"Existing:"}</div>
-                    {!resultsHidden && <div>{/* TODO: classes?*/}
-                        {xfers.map((xfer, i) => { // TODO: FLEXBOX?
+                    {!resultsHidden && <div>
+                        {xfers.map((xfer, i) => {
                             return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
                                 linkId: xfer,
                                 entryType: "transfer",
-                                openInNewTab: false, // TODO: ok?
+                                openInNewTab: openInNewTab,
                             }}>{xfer}</EntryLinkWrapper></div>
                         })}
-                        {newXfers.map((xfer, i) => { // TODO: FLEXBOX?
+                        {newXfers.map((xfer, i) => {
                             return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
                                 linkId: xfer,
                                 entryType: "transfer",
-                                openInNewTab: false, // TODO: ok?
+                                openInNewTab: openInNewTab,
                             }}>{xfer}</EntryLinkWrapper></div>
                         })}
                     </div>}
@@ -514,17 +504,18 @@ export function TransfersOutViewOnlyDisplay(
         headerTxt?: string,
     }) {
     const depth = useContext(DepthContext)
+    const openInNewTab = false
     if (!transfersOut){
         return null
     }
     return <DepthProvider>
         {headerTxt && <div className={"transferHeader"}><div className={"text-xl"}>{headerTxt}</div></div>}
         <div className={"transfersOutViewOnlyForm depth" + depth}>
-            {transfersOut.map((xfer, i) => { // TODO: FLEXBOX for inline?
+            {transfersOut.map((xfer, i) => {
                 return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
                     linkId: xfer,
                     entryType: "transfer",
-                    openInNewTab: false, // TODO: ok?
+                    openInNewTab: false,
                 }}>{xfer}</EntryLinkWrapper></div>
             })}
         </div>
@@ -553,21 +544,6 @@ export function TransferReasonSelector(
     const {isPending, error, data} = useQuery({
         queryKey: ['transferReasonOptions'],
         queryFn: GetTransferReasons,
-        // async () => {
-        //     try {
-        //         const reasonsMap = await GetTransferReasons();
-        //         return reasonsMap;
-        //     } catch (e) {
-        //         throw e;
-        //     }
-        // },
-        /*
-        return fetch(BaseInternalUrl + "/options/transferReasons").then(HandleJsonResponse).then((resJson) => {
-                return convertObjectToStringMap(resJson)
-            }).catch((e) => {
-                throw e
-            })
-        */
     })
     if (isPending || error !== null) {
         return <div>{isPending ? "TRANSFER REASON SELECTOR LOADING" : "TRANSFER REASON SELECTOR ERROR: " + error.message}</div>
@@ -610,7 +586,6 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
@@ -642,8 +617,8 @@ export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<T
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
-// TODO: likely will not be used
-export function TransferSelector( // TODO: USE ELSEWHERE
+// TODO: likely will not be used. Consider delete
+export function TransferSelector(
     {
         doSelect,
         allowCreate
@@ -657,6 +632,5 @@ export function TransferSelector( // TODO: USE ELSEWHERE
 
     return <ExistingRecentSelector entryType={"transfer"} entryTypes={"transfers"} doSelect={doSelect} asserter={AssertTransfer}
                                    table={table}>
-        {/* TODO: ok? allowCreate && <NewTransferForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
     </ExistingRecentSelector>
 }

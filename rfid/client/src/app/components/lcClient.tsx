@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useEffect, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcData} from "@/app/components/lcServer";
 import {
@@ -15,18 +15,13 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     ConfirmedCleanArea,
-    ConfirmedCleanSelector,
-    DisplayInput,
-    DisposedContamArea,
+    ConfirmedCleanSelector, CreatedLinkFor, DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     HandleTxtResponse,
-    ImportDisplayInput,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
-    ListPageItems,
-    NewEntryInput,
+    ImportDisplayInput, ImportEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -43,12 +38,9 @@ import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
     GensFormDisplay,
-    GensInlineDisplay,
     MostRecentImageDisplay,
     ParentDisplay,
-    PicsDisplay,
-    SpeciesArea,
-    SubspeciesArea,
+    PicsDisplay
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     ContaminationForm,
@@ -59,14 +51,7 @@ import {
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {
-    DisplayFormWrapper,
-    ImportEntryFormWrapper,
-    LcRecipeArea,
-    LcRecipeSelector,
-    NewEntryFormWrapper
-} from "@/app/components/lcRecipeClient";
-import {LcRecipeData} from "@/app/components/lcRecipeServer";
+import {LcRecipeData, LcRecipeSelectorCloseable} from "@/app/components/lcRecipeServer";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import ID from "@/app/components/formSubcomponents/id";
@@ -77,27 +62,18 @@ import {
     OnViewCreatorQuadCol,
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
-import {OnViewCreatorsQuadColArea, PcRunArea} from "@/app/components/pcRunClient";
+import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {LcSyringe} from "@/app/components/lcSyringeServer";
-import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup,
-    ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea,
-    NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
+import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {LcRecipeArea} from "@/app/components/lcRecipeClient";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -164,45 +140,6 @@ export function AssertLc(input: any): asserts input is LcData {
     return
 }
 
-// TODO: MOVE!
-export function SelectorWrapper<T>(props: React.PropsWithChildren<{
-    title: string,
-    current?: T,
-    nameFunc: (item: T) => string
-}>) {
-    const [isOpen, setIsOpen] = useState(!props.current);
-    useEffect(() => {
-        setIsOpen(false)
-    }, [props.current])
-    if (isOpen) {
-        return <div>
-            <div>{props.title}</div>
-            <button className={"basicButtonSmall"} onClick={e => {
-                e.stopPropagation();
-                setIsOpen(false);
-            }}>{"close selector"}</button>
-            {props.children}
-        </div>
-    }
-    if (props.current === undefined) {
-        return <div className={"inlineChildren"}>
-            <div>{props.title + ": "}</div>
-            <button className={"basicButtonSmall"} onClick={e => {
-                e.stopPropagation();
-                setIsOpen(true);
-            }}>{"select"}</button>
-        </div>
-    } else {
-        return <div className={"inlineChildren"}>
-            <div>{props.title + ": " + props.nameFunc(props.current)}</div>
-            <button className={"basicButtonSmall"} onClick={e => {
-                e.stopPropagation();
-                setIsOpen(true);
-            }}>{"select another"}</button>
-        </div>
-    }
-}
-
 export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
     const [recipe, setRecipe] = useState<LcRecipeData | undefined>(undefined)
     const [created, setCreated] = useState<number>(Date.now())
@@ -229,7 +166,7 @@ export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
             species: species._id,
             recipe: recipe._id,
             // Optionals
-            subspecies: subspecies?._id, // TODO: ok? // TODO: ensure correct capitalization
+            subspecies: subspecies?._id,
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             generation: generation,
@@ -242,7 +179,7 @@ export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         }
 
         SendMultipartRequest(BaseExternalUrl + "/db/import/lc", cookies, formData)
-            .then(HandleTxtResponse)
+            .then(HandleTxtResponse)  // TODO: change to json for reasons
             .then((newLcId) => {
                 redirect(BaseExternalUrl + "/view/lc/" + newLcId)
             })
@@ -253,9 +190,10 @@ export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
     return <ImportEntryFormWrapper entryType={"lc"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: LcRecipeData) => v._id}>
-            <LcRecipeSelector doSelect={setRecipe} allowCreate={true}/>{/* TODO: OPEN/CLOSE!*/}
-        </SelectorWrapper>
+        <LcRecipeSelectorCloseable doSelect={setRecipe} txt={"Recipe"} creatorInPage={false/* TODO: ok?*/} allowCreation={true} />
+        {/*<SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: LcRecipeData) => v._id}>*/}
+        {/*    <LcRecipeSelector doSelect={setRecipe} allowCreate={true}/>/!* TODO: OPEN/CLOSE!*!/*/}
+        {/*</SelectorWrapper>*/}
         <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}
                                                                     headerLevel={headerLevel}/>
@@ -338,7 +276,6 @@ export default function LcDisplay(
                 });
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            // TODO: TEST HEAVILY
             {
                 txt: "New Liquid Culture Syringe",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
@@ -351,7 +288,7 @@ export default function LcDisplay(
                     }}/>
                 },
             },
-            // TODO: can lc do anything else?
+            // TODO: sale?
             WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"lc"}>
@@ -422,20 +359,6 @@ export default function LcDisplay(
     }
 }
 
-export function SpeciesSubspeciesArea({species, subspecies}: {
-    subspecies?: string,
-    species?: string,
-}) {
-    return <>
-        <div>
-            {"Species: " + (species || "")}{/* TODO: LINK!?*/}
-        </div>
-        <div>
-            {"Subspecies: " + (subspecies || "")}{/* TODO: LINK!*/}
-        </div>
-    </>
-}
-
 export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
     handlers: NewEntryInput<LcData>,
     lcRecipeIn?: LcRecipeData,
@@ -460,11 +383,10 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
         let body: any = {creationDate: creationDate, recipe: lcRecipe, pcRun: pcRun}
         notes && (body.notes = notes)
         writeTagTo && (body.writeTagTo = writeTagTo)
-        fetch(BaseExternalUrl + "/create/lc", { // TODO: ensure correct
+        fetch(BaseExternalUrl + "/db/create/lc", {
             method: "POST",
             headers: {
                 credentials: 'include',
-                // 'Cookie': cookies, // TODO: do we even need this here?
                 'Content-type': 'application/json'
             },
             body: JSON.stringify(body)
@@ -481,8 +403,8 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
 
     return <NewEntryFormWrapper entryType={"lc"}>
         <ErrorDisplay err={err}/>
-        {lcRecipeIn !== undefined && <LcRecipeSelector doSelect={setLcRecipe}
-                                                       allowCreate={handlers.isTopLevel}/>} {/* TODO: isTopLevel? disallow ok? */}
+        {lcRecipeIn !== undefined && <LcRecipeSelectorCloseable doSelect={setLcRecipe}
+                                                       allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>} {/* TODO: isTopLevel? disallow ok? */}{/* TODO: closeable or no? */}
         {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={true}/>} {/* TODO: isTopLevel? disallow ok? */}
         <DateArea pre={"Creation date: "} when={Date.now()} readonly={false} updateParent={setCreationDate}/>
@@ -491,80 +413,6 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
-
-export function LcInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<LcData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} entryType={"lc"} txt={"Liquid Culture Jar"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            <InnocDisplay innoc={data.innoc} openInNewTab={true}/>
-            <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
-            <SpeciesArea readonly={true} initial={data.species}/>
-            <SubspeciesArea readonly={true} initialSub={data.species} currentSpecies={data.species}
-            />
-            <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-            <ConfirmedCleanArea initial={data.confirmedClean} readonly={true}/>
-            <DisposedContamArea contams={data.contamination} disposed={data.disposed}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <LcRecipeArea lcRecipeId={data.recipe}/>
-            <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} offset={-1}/>
-            {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea>
-        <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
-
-// export function LcInline2({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<LcData>) { // TODO: REDO THIS!
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubGroup >
-//         <ID id={b58id} entryType={"lc"} txt={"Liquid Culture Jar"} allowOpenMainPage={showMainPageButton}
-//             linkPage={idIsLink}/>
-//         <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                expanded={expanded}/>
-//         </InlineSubGroup>
-//         <InlineSubGroup >
-//         <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
-//         <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         <DisposedContamArea contams={data.contamination} disposed={data.disposed}/>
-//         <SpeciesArea readonly={true} initial={data.species}/>
-//         <SubspeciesArea readonly={true} initialSub={data.species} currentSpecies={data.species}/>
-//         <InnocDisplay innoc={data.innoc} openInNewTab={true}/>
-//         <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-//         <ConfirmedCleanArea initial={data.confirmedClean} readonly={true}/>
-//         <LcRecipeArea lcRecipeId={data.recipe}/>
-//         <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} offset={-1}/>
-//         <NotesAreaInline notes={data.notes} offset={-1}/>
-//         <InlineSubArea props={{}}>
-//
-//
-//
-//
-//
-//
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//
-//
-//         </InlineExpansionArea>
-//
-//     </InlineEntry>
-// }
-
-// export function LcListDisplay({data, onClick}: SingleListProps<LcData>) {
-//     return <div>
-//         {data.map((b,i)=>{
-//             return <LcInline data={b} onClick={()=>{onClick(b)}} key={i}/>
-//         })}
-//     </div>
-// }
 
 export function LcListPageTable({data, onClick, withLink}: ListPageItems<LcData>) {
     let cols: ListTableColumn<LcData>[] = [
@@ -586,7 +434,6 @@ export function LcListPageTable({data, onClick, withLink}: ListPageItems<LcData>
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
@@ -608,11 +455,10 @@ export function LcSelectorTable({data, onClick}: ListPageItems<LcData>) {
             </EntryLinkWrapper>
         })
     ]
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
-export function LcSelector( // TODO: USE ELSEWHERE
+export function LcSelector(
     {
         doSelect,
         allowCreate

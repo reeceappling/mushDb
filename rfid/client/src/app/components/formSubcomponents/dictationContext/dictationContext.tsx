@@ -1,17 +1,5 @@
 'use client'
-import {createContext, ReactNode, useContext, useReducer, useState} from "react";
-import {
-    ClearErrorAction,
-    ReaderOptionsContext,
-    SetErrorAction,
-    SetLastReaderAction,
-    SetLastReadTagAction,
-    SetModalInfoAction,
-    SetReaderAction
-} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
-import {Note} from "@/app/components/formSubcomponents/notes";
-import {Data} from "@/app/components/formSubcomponents/shared";
-import {dataFor} from "@/app/components/agarRecipeClient";
+import {createContext, ReactNode, useContext, useReducer} from "react";
 
 // Define the type for our context data
 type DictationContextType = {

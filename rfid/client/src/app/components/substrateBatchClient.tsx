@@ -1,52 +1,38 @@
 'use client'
 
 import React, {JSX, useEffect, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {SubstrateRecipeData, TestSubstrateRecipeOk} from "@/app/components/substrateRecipeServer";
+import {
+    SubstrateRecipeData,
+    SubstrateRecipeSelectorCloseable
+} from "@/app/components/substrateRecipeServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
-    DisplayInput,
+    CreatedLinkFor,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea, ListPageItems,
-    NewEntryInput,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {SelectorProps} from "@/app/components/selector";
-import Centered from "@/app/components/commonServer";
-import {SubstrateBatchData, TestSubstrateBatchOkStd} from "@/app/components/substrateBatchServer";
-import {CreatedLinkFor, SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
+import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
+import {SubstrateRecipeArea} from "@/app/components/substrateRecipeClient";
 import {NewBagForm} from "@/app/components/bagClient";
 import {BagData} from "@/app/components/bagServer";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {NewFruitingChamberForm} from "@/app/components/fruitingChamberClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {StasisTubeData} from "@/app/components/stasisTubeServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {SlantData} from "@/app/components/slantServer";
-import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
     if (typeof input !== 'object') {
@@ -109,7 +95,6 @@ export default function SubstrateBatchDisplay(
                 method: "POST",
                 headers: {
                     credentials: 'include',
-                    // TODO: may need 'Cookie': cookies,
                     'Content-type': "application/json"
                 },
                 body: JSON.stringify({
@@ -139,7 +124,6 @@ export default function SubstrateBatchDisplay(
                         },
                     }}/>
                 },
-                // TODO: any others?
             },
             {
                 txt: "Create Fruiting Chamber",
@@ -159,9 +143,9 @@ export default function SubstrateBatchDisplay(
             <DisplayFormWrapper entryType={"substrateBatch"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={data._id} txt={"Substrate Batch"} entryType={"substrateBatch"}/>
-                <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>{/* TODO: MOVE?*/}
+                <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>
                 <FlexedArea>
-                    <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
+                    <FlexedSinglesGroup>
                         <DateArea pre={"Creation Date: "} when={initial.creationDate} readonly={true}/>
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
@@ -194,13 +178,12 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     const [selectedRecipe, setSelectedRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    // TODO: isTopLevel handlers
     const submit = () => {
         if (selectedRecipe === undefined) {
             setErr("a recipe must be selected")
             return
         } else {
-            fetch(BaseExternalUrl + "/create/substrateBatch", {
+            fetch(BaseExternalUrl + "/db/create/substrateBatch", {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -239,8 +222,8 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
             <TestAndValidate todos={["ENSURE WORKS PROPERLY FOR BOTH EXISTING AND PICKING"]}>
                 {recipe === undefined ?
                     <SubstrateRecipeArea txt={"Substrate Recipe: "} readonly={true} id={selectedRecipe?._id}/> :
-                    <SubstrateRecipeSelector doSelect={setSelectedRecipe}
-                                             allowCreate={handlers.isTopLevel}/>}
+                    <SubstrateRecipeSelectorCloseable doSelect={setSelectedRecipe}
+                                             allowCreation={handlers.isTopLevel} creatorInPage={false/* TODO: false ok?*/}/>}{/* TODO: closeable vs not?*/}
             </TestAndValidate>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
@@ -252,30 +235,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     )
 }
 
-// export function SubstrateBatchInline({
-//                                          data,
-//                                          expandByDefault,
-//                                          onClick,
-//                                          showMainPageButton,
-//                                          idIsLink
-//                                      }: InlineProps<SubstrateBatchData>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         {/* TODO: CHANGE ID TO BUTTON IN CERTAIN SITUATIONS!*/}
-//         <InlineSubArea props={{}}>
-//             <ID id={b58id} txt={"Substrate Batch"} entryType={"substrateBatch"} allowOpenMainPage={showMainPageButton}
-//                 linkPage={idIsLink}/>
-//             <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Recipe: "}/>
-//             <DateArea readonly={true} when={data.creationDate} pre={"Created: "}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                                      expanded={expanded}/>
-//     </InlineEntry>
-// }
+
 
 export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
     id?: string,
@@ -284,33 +244,36 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
     readonly: boolean,
     onSelect?: (d?: SubstrateBatchData) => void
 }) => {
-    // TODO: does sub batch area need depth incremented?
+    // TODO: FIX THIS WHOLE THING! Update id on prop id update! Store id internally!
     const [open, setOpen] = useState(false)
-    let linkArea: JSX.Element | null = <div>{"unknown"}</div>
-    if (id !== undefined) {
-        const b58id = id
-        linkArea =
-            <EntryLink props={{displayedId: b58id, linkId: b58id, entryType: "substrateBatch"}}>{b58id}</EntryLink>
-        {
-            (!readonly && !open) && <button className={"basicButton"} onClick={() => {
-                setOpen(true)
-            }}>{"Select a new substrate batch"}</button>
+    const [val, setVal] = useState(id)
+    useEffect(()=>{
+        setVal(id)
+    },[id])
+    const updateId = (batch?: SubstrateBatchData) => {
+        setVal(batch?._id) // TODO: ensure ok
+        onSelect && onSelect(batch)
+    }
+    let linkArea = ()=>{
+        if (!val) {
+            return <div>{"unknown"}</div>
         }
-        {
-            (!readonly && open) && <div>
-                <div>
-                    <button className={"basicButton"} onClick={() => {
-                        setOpen(true)
-                    }}>{"Close Selector"}</button>
-                </div>
-                <SubstrateBatchSelector doSelect={r => { // TODO: FIX
-                    onSelect && onSelect(r)
-                }}/>{/* TODO: allow create?*/}
-            </div>
+        const tempLink = <EntryLink props={{displayedId: val, linkId: val, entryType: "substrateBatch"}}>{val}</EntryLink>
+        if (readonly) {
+            return tempLink
         }
+        return <>
+            {tempLink}
+            <button className={"basicButton"} onClick={() => {
+                setOpen(!open)
+            }}>{(open?"Close Selector":"Select a new substrate batch")}</button>
+        </>
     }
     return <div>
-        {txt ? txt : "Substrate Batch: "}{linkArea}
+        <div>
+            {txt ? txt : "Substrate Batch: "}{linkArea()}
+        </div>
+        {open && <SubstrateBatchSelector doSelect={updateId}/>}{/* TODO: allow create?*/}
     </div>
 }
 
@@ -332,13 +295,12 @@ export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageI
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function SubstrateBatchSelectorTable({data, onClick}: ListPageItems<SubstrateBatchData>) {
     return <SubstrateBatchListPageTable data={data} onClick={onClick} withLink={true} />
 }
-export function SubstrateBatchSelector( // TODO: USE ELSEWHERE
+export function SubstrateBatchSelector(
     {
         doSelect,
         allowCreate,
@@ -346,7 +308,7 @@ export function SubstrateBatchSelector( // TODO: USE ELSEWHERE
     }: {
         doSelect: (val: SubstrateBatchData | undefined) => void,
         allowCreate?: boolean
-        creatorInPage?: boolean, // TODO: ADD THIS EVERYWHERE ELSE!!!!!!
+        creatorInPage?: boolean,
     }) {
     const table = (items: SubstrateBatchData[]):JSX.Element=>{
         return <SubstrateBatchSelectorTable data={items} onClick={doSelect}/>

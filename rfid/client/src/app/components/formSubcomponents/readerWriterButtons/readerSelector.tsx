@@ -9,7 +9,7 @@ import {
 import {Makeid} from "@/app/components/TopBar";
 import {OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {WriteRfidTag} from "@/app/components/serverActions";
-import {Subform} from "@/app/components/lcRecipeClient";
+import {Subform} from "@/app/components/common";
 
 
 interface rfidSelectorProps {

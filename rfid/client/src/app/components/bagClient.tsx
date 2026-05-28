@@ -1,9 +1,8 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
-    AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
     SplitAllEntries
@@ -17,20 +16,21 @@ import {
     NewPicWithNotesForm,
     PicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {InnocDisplay, NewTransferArea, TransfersOutDisplay} from "@/app/components/transferClient";
+import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
-    DisplayInput,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     HandleTxtResponse,
-    ImportDisplayInput,
-    ListPageItems,
-    NewEntryInput,
+    ImportDisplayInput, ImportEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData,
+    resolvePicsFormData, SelectorWrapper,
     SendMultipartRequest,
     setFormData,
     setFormImages
@@ -44,7 +44,7 @@ import {
     PicsDisplay
 } from "@/app/components/formSubcomponents/commonClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
-import {CreatedLinkFor, SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
+import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
 import {
     ContaminationForm,
     ContamsDisplay,
@@ -65,31 +65,16 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {NewFruitForm} from "@/app/components/fruitClient";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {FruitData} from "@/app/components/fruitServer";
-import {SubstrateBatchArea, SubstrateBatchSelector} from "@/app/components/substrateBatchClient";
+import {SubstrateBatchArea} from "@/app/components/substrateBatchClient";
 import WetnessSlider from "@/app/components/formSubcomponents/utils/slider";
-import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
+import {SubstrateBatchData, SubstrateBatchSelectorCloseable} from "@/app/components/substrateBatchServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {OnViewCreatorsQuadColArea, QuadColLastCol} from "@/app/components/pcRunClient";
-import {TransferData} from "@/app/components/transferServer";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup,
-    ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea,
-    NumberToDateStr
-} from "@/app/components/agarBatchClient";
-import {SelectorWrapper, SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -168,41 +153,6 @@ export function AssertBag(input: any): asserts input is BagData {
         }
     }
     return
-}
-
-// TODO: MOVE!
-export function OvcForXfers(parentId: string, parentType: string, validTypesTo: string[], cookies: string, addTransferOut?: (xfer: TransferData) => void, altTxt?: string): OnViewCreatorQuadCol {
-    return {
-        txt: altTxt || "New Transfer",
-        newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-            return <NewTransferArea cookies={cookies} idFrom={parentId} typeFrom={parentType}
-                                    validTypesTo={validTypesTo}
-                                    onCreated={(xfer: TransferData) => {
-                                        addTransferOut && addTransferOut(xfer)
-                                        onCreate([{
-                                            typeText: "Transfer",
-                                            node: <CreatedLinkFor linkId={xfer._id} typ={"transfer"}/>,
-                                            lastNode: <QuadColLastCol dstType={xfer.toType} id={xfer.to}/>
-                                        }], false)
-                                    }}/>
-        }
-    }
-}
-
-// TODO: MOVE!
-export function OvcForNewFruit(parentId: string, parentType: string, cookies: string): OnViewCreatorQuadCol {
-    return {
-        txt: "Record New Fruit",
-        newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-            return <NewFruitForm parentId={parentId} parentType={parentType} readonly={false} cookies={cookies}
-                                 onCreate={(fr: FruitData) => {
-                                     onCreate([{
-                                         typeText: "Fruit",
-                                         node: <CreatedLinkFor linkId={fr._id} typ={"fruit"}/>,
-                                     }], false)
-                                 }}/>
-        },
-    }
 }
 
 export default function BagDisplay(
@@ -416,7 +366,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             writeTagTo: writeTagTo,
             notes: notes,
         }
-        fetch(BaseExternalUrl + "/create/bag", {
+        fetch(BaseExternalUrl + "/db/create/bag", {
             method: 'Post',
             body: JSON.stringify(body),
             headers: {
@@ -443,8 +393,9 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             <ErrorDisplay err={err}/>
             <div>{"Creating Bag: "}</div>
             {substrateBatchIn !== undefined &&
-                <SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreate={handlers.isTopLevel}
-                                        creatorInPage={false}/>/* TODO: Closeable?*/}
+                <SubstrateBatchSelectorCloseable txt={"Substrate Batch (FIXME)"} doSelect={setSubstrateBatch} allowCreation={handlers.isTopLevel} creatorInPage={false} />}
+                {/*<SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreate={handlers.isTopLevel}
+                                         creatorInPage={false}/> TODO: Closeable?*/}
             <WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {
                 setWetness(value)
             }}/>
@@ -493,7 +444,6 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
             recipe: recipe?._id, // MUST EXIST TODO: validate on insert
             filterSize: filterSize,
             species: species?._id, // MUST EXIST TODO: validate on insert
-            //perms: perms, // TODO: validate on insert
         }
 
         if (subspecies !== undefined) {
@@ -511,7 +461,7 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
         setFormData(formData, dataObj)
         //formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
-        fetch(BaseExternalUrl + "/import/bag", {
+        fetch(BaseExternalUrl + "/db/import/bag", {
             method: 'Post',
             body: formData,
             headers: {
@@ -519,7 +469,7 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
                 'Content-type': "multipart/form-data"
             },
         })
-            .then(HandleTxtResponse) // TODO: make sure imports do it this way
+            .then(HandleTxtResponse) // TODO: change to json for reasons
             .then((newBagId) => {
                 redirect(BaseExternalUrl + "/view/bag/" + newBagId)
             })
@@ -547,43 +497,6 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
         <button onClick={submitImportBag} className={"greenButton bottomButton"}>{"Submit"}</button>
     </ImportEntryFormWrapper>
 }
-
-// export function BagInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<BagData>) { // TODO: DO THIS ENTIRELY!
-//     // TODO: do inlines need depth providers?
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={data._id} txt={"Bag"} entryType={"bag"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-//             <MostRecentImageDisplay data={data.mostRecentImage}/>
-//             <SpeciesArea readonly={true} initial={data.species}/>
-//             <SubspeciesArea readonly={true} initialSub={data.species} currentSpecies={data.species}
-//             />
-//             <SubstrateRecipeArea id={data.recipe} readonly={true}/>
-//             <SubstrateBatchArea id={data.substrateBatch} readonly={true}/>
-//             <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore}/>
-//             <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
-//             {data.sealDate ?
-//                 <DateArea pre={"Sealed: "} when={data.sealDate} readonly={true}/>
-//                 : <div></div>
-//             }
-//             <WetnessDisplay value={data.wetness}/>
-//             <NameArea headerTxt={"Filter Size: "} readonly={true} currentName={data.filterSize}/>
-//             <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-//             <DisposedSaleContamArea sale={data.sale} contams={data.contamination} disposed={data.disposed}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             {/*TODO: <ProjectsArea projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel}*/}
-//             {/*              allowCreate={false} allowRemove={false}/>/!* TODO: ok? *!/*/}
-//             <div>
-//                 <div>{"Flushes: " + (data.flushes ? data.flushes.length : 0)}</div>
-//             </div>
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea>
-//         <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                expanded={expanded}/>
-//     </InlineEntry>
-// }
 
 export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagData>) {
     let cols: ListTableColumn<BagData>[] = [

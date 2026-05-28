@@ -2,7 +2,7 @@
 // TODO: maybe get rid of use client
 
 import {JSX, useState} from "react";
-import {CreatedLinkQuadCol, CreatedLinkTriCol} from "@/app/components/pcRunClient";
+import {CreatedLinkQuadCol, CreatedLinkTriCol} from "@/app/components/formSubcomponents/ovc";
 
 // TODO: notes added to create for stasisTube, waterJar
 

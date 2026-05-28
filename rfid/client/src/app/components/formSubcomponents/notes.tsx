@@ -7,8 +7,26 @@ import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
-import {dataFor} from "@/app/components/agarRecipeClient";
-import {NotesFormArea} from "@/app/components/agarBatchClient";
+import {dataFor} from "@/app/components/common";
+
+// TODO: USE THIS ONE LIKE EVERYWHERE FOR VIEWS!
+// TODO: Imports and New should use NewNotesForm
+export function NotesFormArea({
+                                  readonly,
+                                  initial,
+                                  updateParent,
+                                  removeHeader,
+                              }: { // TODO: add withDictaphone if possible? we only want the dictaphone in some edge cases
+    readonly?: boolean,
+    initial?: Note[],
+    updateParent?: (entries: AllEntries<Note>) => void,
+    removeHeader?: boolean,
+}) {
+    return <div>
+        {removeHeader || <div className={"areaHeader"}>{"Notes"}</div>}
+        <NotesAreaViewSubcomponent initial={initial || []} readonly={readonly || false} updateParent={upd=>{updateParent && updateParent(upd)}} />
+    </div>
+}
 
 export type Note = {
     time: number

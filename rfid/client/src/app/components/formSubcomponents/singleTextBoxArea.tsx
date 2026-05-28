@@ -1,7 +1,6 @@
 import {ChangeEvent, useState} from "react";
 import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import * as React from "react";
-import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 import {InputText} from "@/app/components/formSubcomponents/numericInput";
 
 export default function TextBoxArea(props: AreaProps<string>){

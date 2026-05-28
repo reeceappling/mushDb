@@ -5,7 +5,6 @@ export function KnownFruitableArea(
         initial,
         readonly,
         doSelect,
-        headerLevel,
     }: {
         initial?: boolean
         readonly?: boolean

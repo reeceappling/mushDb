@@ -2,9 +2,10 @@
 
 import React, {JSX, useState} from "react";
 import {
-    DisplayInput, HandleJsonResponse, HandleTxtResponse,
-    ImportDisplayInput,
-    IsString, ListPageItems,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, HandleJsonResponse, HandleTxtResponse,
+    ImportDisplayInput, ImportEntryFormWrapper,
+    IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -19,23 +20,14 @@ import {
     IsValidNote,
     NewEntryNotes,
     Note,
-    NoteEntriesGroup,
+    NoteEntriesGroup, NotesFormArea,
 } from "@/app/components/formSubcomponents/notes";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {FruitData} from "@/app/components/fruitServer";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
 import ID from "@/app/components/formSubcomponents/id";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesData} from "@/app/components/speciesServer";
@@ -44,15 +36,13 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {redirect} from "next/navigation";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SaleArea} from "@/app/components/saleClient";
-import {OvcForXfers} from "@/app/components/bagClient";
-import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import {OnViewCreatorsTriColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -134,12 +124,12 @@ export function SporeSwabImportDisplay({headerLevel, cookies}: ImportDisplayInpu
         body.set("data", JSON.stringify(dataObj))
         // Img
         if (image) {
-            body.set("img", image, "img") // TODO: ensure works
+            body.set("img", image, "img")
         }
 
         SendMultipartRequest(BaseExternalUrl + "/db/import/sporePrint", cookies, body)
-            .then(HandleTxtResponse)
-            .then(id => { // TODO: ensure txt response is ok here
+            .then(HandleTxtResponse) // TODO: change to json for reasons
+            .then(id => {
                 redirect(BaseExternalUrl + "/view/sporePrint/" + id)
             })
             .catch((er) => {
@@ -209,9 +199,10 @@ export default function SporeSwabDisplay(
                 });
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], cookies), // TODO: ensure list correct???
+            // TODO: use the next one in other places...
+            OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], cookies),
             WriteRfidOvcArea(initial._id),
-        ] // TODO: THIS!
+        ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID id={id} entryType={"sporeSwab"} txt={"Spore Swab"}/>
@@ -225,7 +216,6 @@ export default function SporeSwabDisplay(
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                         <DisposedDisplay readonly={false} disposed={disposed} setDisposedOnParent={setDisposed}/>
                         <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                        {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                        </TestAndValidate>
                 </FlexedSinglesGroup>
             </FlexedArea>
@@ -243,7 +233,7 @@ export default function SporeSwabDisplay(
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: Spore swab data format incorrect: " + err}</div>
-    }// TODO: VALIDATE WORKS AS EXPECTED
+    }
 }
 
 // Should only be accessible from a fruit's page
@@ -283,7 +273,7 @@ export function NewSporeSwabForm(
         })
             .then(HandleJsonResponse)
             .then((resJson) => {
-                AssertSporeSwab(resJson) // TODO: make sure comes back as swab obj?
+                AssertSporeSwab(resJson)
                 onCreate(resJson)
             })
             .catch((er) => {
@@ -296,34 +286,8 @@ export function NewSporeSwabForm(
         {/* TODO: PARENT SELECTOR */}
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
-    </NewEntryFormWrapper>// TODO: VALIDATE WORKS AS EXPECTED
+    </NewEntryFormWrapper>
 }
-
-// export function SporeSwabInline(
-//     {
-//         data, expandByDefault, headerLevel, onClick, showMainPageButton, idIsLink
-//     }: InlineProps<SporeSwab>
-// ) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={data._id} txt={"Spore Swab"} entryType={"sporeSwab"} allowOpenMainPage={showMainPageButton}
-//                 linkPage={idIsLink}/>
-//             <DateArea pre={"Creation Date: "} readonly={true} when={data.creationDate}/>
-//             <SpeciesArea readonly={true} headerLevel={headerLevel} initial={data.species}/>
-//             <SubspeciesArea readonly={true} headerLevel={headerLevel} currentSpecies={data.species}
-//                             initialSub={data.subspecies}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             <div>
-//                 <ParentDisplay parent={data.parent} parentType={data.parentType}/>
-//             </div>
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded} expanded={expanded}/>
-//
-//     </InlineEntry>// TODO: VALIDATE WORKS AS EXPECTED
-// }
 
 export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<SporeSwab>) {
     let cols: ListTableColumn<SporeSwab>[] = [
@@ -344,17 +308,16 @@ export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwab>) {
     return <SporeSwabListPageTable data={data} onClick={onClick} withLink={true} />
 }
 
-export function SporeSwabSelector( // TODO: USE ELSEWHERE
+export function SporeSwabSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate // TODO: del?
     }: {
         doSelect: (val: SporeSwab | undefined) => void,
         allowCreate?: boolean

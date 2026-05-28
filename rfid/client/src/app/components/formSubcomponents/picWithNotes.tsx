@@ -7,12 +7,6 @@ import {IsValidNote, Note} from "@/app/components/formSubcomponents/notes";
 import {CheckArrayType} from "@/app/components/common";
 import {ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/contaminations";
 
-// export interface PicWithNotesNew {
-//     time: number
-//     location: string,
-//     notes?: Note[],
-// }
-
 export interface PicWithNotesForm {
     time: number
     img: string,

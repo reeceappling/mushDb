@@ -2,44 +2,37 @@
 
 import {JarData} from "@/app/components/jarServer";
 import {
-    DisplayInput,
-    DisposedSaleContamArea,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse,
-    ImportDisplayInput,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
-    ListPageItems,
-    NewEntryInput,
+    HandleTxtResponse, importApiUrlFor,
+    ImportDisplayInput, ImportEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData,
+    resolvePicsFormData, SelectorWrapper,
     SendMultipartRequest,
     setFormData,
-    setFormImages
+    setFormImages, viewUrlFor
 } from "@/app/components/common";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import React, {JSX, useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
 import ID from "@/app/components/formSubcomponents/id";
 import {
     ErrorDisplay,
     GensFormDisplay,
-    GensInlineDisplay,
     MostRecentImageDisplay,
     ParentDisplay,
-    PicsDisplay,
-    SpeciesArea,
-    SubspeciesArea
+    PicsDisplay
 } from "@/app/components/formSubcomponents/commonClient";
 import {JarRecipeArea, JarRecipeSelector} from "@/app/components/jarRecipeClient";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
-import {OnViewCreatorsQuadColArea, PcRunArea} from "@/app/components/pcRunClient";
+import {PcRunArea} from "@/app/components/pcRunClient";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import ReaderWriterSelector, {
@@ -72,27 +65,15 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {redirect} from "next/navigation";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {JarSizeSelector} from "@/app/components/formSubcomponents/utils/volumeSelector";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {GrainBatchSelector} from "@/app/components/grainBatchClient";
-import {GrainBatchData} from "@/app/components/grainBatchServer";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup,
-    ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea,
-    NumberToDateStr
-} from "@/app/components/agarBatchClient";
-import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
-import {SelectorWrapper, SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {GrainBatchData, GrainBatchSelectorCloseable} from "@/app/components/grainBatchServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -208,10 +189,12 @@ export function JarImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         }
         writeTagTo && (dataObj.writeTagTo = writeTagTo)
 
-        SendMultipartRequest(BaseExternalUrl + "/import/jar", cookies, formData)
-            .then(HandleTxtResponse)
-            .then((newId) => {
-                redirect(BaseExternalUrl + "/view/jar/" + newId)
+
+        SendMultipartRequest(importApiUrlFor("jar"), cookies, formData)
+            .then(HandleJsonResponse)
+            .then((newItem) => {
+                AssertJar(newItem)
+                redirect(viewUrlFor("jar",newItem._id))
             })
             .catch((err) => {
                 setErr(JSON.stringify(err))
@@ -355,7 +338,6 @@ export default function JarDisplay(
             </div>
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            // TODO: can jar do anything else?
             WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"jar"}>
@@ -363,7 +345,7 @@ export default function JarDisplay(
             <ID id={data._id} txt={"Grain Jar"} entryType={"jar"}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
             <FlexedArea>
-                <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
+                <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
                                                 disposed={disposed} setDisposedOnParent={setDisposed}
                                                 readonly={readonly}/>
@@ -371,7 +353,6 @@ export default function JarDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies} />*/}
                     <JarRecipeArea headerLevel={headerLevel} recipeId={initial.recipe}/>
                     <PcRunArea binaryId={initial.pcRun} headerLevel={headerLevel}/>
 
@@ -440,7 +421,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
             setErr("must select a valid jar volume")
             return
         }
-        fetch(BaseExternalUrl + "/create/jar", {
+        fetch(BaseExternalUrl + "/db/create/jar", {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -456,7 +437,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
                 writeTagTo: writeTagTo,
             })
         })
-            .then(HandleJsonResponse) // TODO: HANDLE JSON RESPONSE
+            .then(HandleJsonResponse)
             .then((newEntry) => {
                 AssertJar(newEntry)
                 handlers.onCreate && handlers.onCreate(newEntry)
@@ -471,60 +452,25 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
         {/* TODO: REMOVE? */}<DateArea pre={"Creation date: "} when={Date.now()} readonly={false}
                                        updateParent={setCreationDate}/>
         {/* TODO: BATCH!!!!*/}
-        {hasGrainBatchOrRecipe && <GrainBatchSelector doSelect={setGrainBatch}
-                                                      allowCreate={handlers.isTopLevel}/>} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
-        {hasGrainBatchOrRecipe &&
+        {/* TODO: PICK BETWEEN NEXT 2! */}
+        {hasGrainBatchOrRecipe && <GrainBatchSelectorCloseable doSelect={setGrainBatch}
+                                                               allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}
+        {/*{hasGrainBatchOrRecipe && <GrainBatchSelector doSelect={setGrainBatch}*/}
+        {/*                                              allowCreate={handlers.isTopLevel}/>}*/}
+        {hasGrainBatchOrRecipe && // TODO: validate ok
             <JarRecipeSelector allowCreate={handlers.isTopLevel} doSelect={(rec?: JarRecipeData) => {
                 setRecipe(rec?._id)
-            }}/>} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
+            }}/>} {/* TODO: CreatorInPage reference from non-isTopLevel. CLOSEABLE???*/}
         <JarSizeSelector onChange={(unit: string) => {
             setSizeCups(cupsPer(unit))
         }}/>
         {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
-                                                          creatorInPage={handlers.isTopLevel}/>} {/* TODO: CreatorInPage reference from non-isTopLevel*/}
+                                                          creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createJar}>{"Submit new Jar"}</button>
     </NewEntryFormWrapper>
 }
-
-export function JarInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<JarData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={data._id} entryType={"jar"} txt={"Grain Jar"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            {/* Size area */}
-            <div>
-                {"Size: " + sizeFromNum(data.sizeCups)}
-            </div>
-            <DateArea pre={"Created on: "} when={data.creationDate} readonly={true}/>
-            <MostRecentImageDisplay data={data.mostRecentImage}/>
-            <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-            <SpeciesArea readonly={true} initial={data.species}/>
-            <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies}/>
-            <JarRecipeArea recipeId={data.recipe}/>
-            <DisposedSaleContamArea disposed={data.disposed} sale={data.sale} contams={data.contamination}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} offset={-1}/>
-            <PcRunArea binaryId={data.pcRun} offset={-1}/>
-            {/*TODO: <ProjectsArea projects={data.perms?.projectPerms.ids} allowCreate={false} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last updated: "} readonly={true} when={data.lastUpdated}/>
-        </InlineExpansionArea>
-        <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
-
-// export function JarListDisplay({data, onClick}: SingleListProps<JarData>) {
-//     return <div>
-//         {data.map((b,i)=>{
-//             return <JarInline data={b} onClick={()=>{onClick(b)}} key={i}/>
-//         })}
-//     </div>
-// }
 
 export function JarListPageTable({data, onClick, withLink}: ListPageItems<JarData>) {
     let cols: ListTableColumn<JarData>[] = [
@@ -545,7 +491,6 @@ export function JarListPageTable({data, onClick, withLink}: ListPageItems<JarDat
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
@@ -553,7 +498,7 @@ export function JarSelectorTable({data, onClick}: ListPageItems<JarData>) {
     return <JarListPageTable data={data} onClick={onClick}/>
 }
 
-export function JarSelector( // TODO: USE ELSEWHERE
+export function JarSelector(
     {
         doSelect,
         allowCreate

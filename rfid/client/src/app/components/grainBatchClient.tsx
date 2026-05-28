@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
     AllEntries,
@@ -10,13 +10,12 @@ import {
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
-    DisplayInput,
+    CreatedLinkFor,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea, ListPageItems,
-    NewEntryInput,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalSimpleKey
 } from "@/app/components/common";
@@ -25,23 +24,12 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {GrainBatchData} from "./grainBatchServer";
 import {JarRecipeArea, JarRecipeSelector} from "@/app/components/jarRecipeClient";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
-import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
-import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
-import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {NewJarForm} from "@/app/components/jarClient";
 import {JarData} from "@/app/components/jarServer";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 
 // TODO: GRAIN BATCHES LIST IS NOT WORKING!
 // TODO: ENSURE DISPLAY IS LOOKING GOOD
@@ -233,13 +221,12 @@ export function NewGrainBatchForm({handlers, recipe}: {
     const [jarRecipe, setJarRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    // TODO: handle isTopLevel
     const newGrainBatchSubmit = () => {
         if (jarRecipe === undefined) {
             setErr("jarRecipe must exist")
             return
         }
-        fetch(BaseExternalUrl + "/create/grainBatch", {
+        fetch(BaseExternalUrl + "/db/create/grainBatch", {
             method: 'Post',
             body: JSON.stringify({
                 recipe: jarRecipe?._id,
@@ -263,7 +250,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
         <ErrorDisplay err={err}/>
         {recipe === undefined &&
             <JarRecipeSelector doSelect={setJarRecipe} allowCreate={handlers.isTopLevel}
-                               creatorInPage={handlers.isTopLevel/* TODO: isTopLevel*/}/>}
+                               creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"bottomButton greenButton"} onClick={(e)=>{
             e.stopPropagation();
@@ -271,83 +258,6 @@ export function NewGrainBatchForm({handlers, recipe}: {
         }}>{"Update"}</button>
     </NewEntryFormWrapper>
 }
-
-export function GrainBatchInline({
-                                     data,
-                                     expandByDefault,
-                                     onClick,
-                                     showMainPageButton,
-                                     idIsLink
-                                 }: InlineProps<GrainBatchData>) { // TODO: DO THIS ENTIRELY!
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Grain Batch"} entryType={"grainBatch"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            <div>{"ADD CREATION DATE"}</div>
-            {/* TODO: creation date! */}
-            <div>{"ADD TIMINGS"}</div>
-            {/* TODO: timings! */}
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <NotesAreaInline notes={data.notes}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea>
-        <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded} expanded={expanded}/>
-    </InlineEntry>
-}
-
-// export const GrainBatchArea = ({batchId, headerLevel}: { batchId?: string, headerLevel?: number }) => { // TODO: USE THIS!
-//     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
-//     if (batchId !== undefined) {
-//         const b58id = batchId
-//         linkArea = <EntryLink props={{displayedId: b58id, linkId: b58id, entryType: "grainBatch"}}>
-//             <div>{b58id}</div>
-//             ]
-//         </EntryLink>
-//     }
-//     return <div>
-//         <div>{"Grain Batch ID: "}</div>
-//         {linkArea}
-//     </div>
-// }
-
-// export function GrainBatchSelector(
-//     {
-//         doSelect, allowCreation, headerLevel, creatorInPage
-//     }: SelectorProps<GrainBatchData>) {
-//     // TODO: do these need depth providers?
-//     // TODO: HANDLE ALLOWCREATION AND CREATORINPAGE
-//     const [recent, setRecent] = useState<GrainBatchData[]>([])
-//     const [err, setErr] = useState<string | undefined>()
-//     useEffect(() => {
-//         fetch(BaseExternalUrl + "/db/list/grainBatches", {
-//             method: 'GET',
-//             headers: {
-//                 credentials: 'include',
-//                 'Content-type': "application/json"
-//             },
-//         })
-//             .then(HandleJsonResponse)
-//             .then((resp) => {
-//                 AssertArrayResult<GrainBatchData>(resp, AssertGrainBatch)
-//                 setRecent(resp)
-//             })
-//             .catch((err) => {
-//                 setErr(JSON.stringify(err))
-//             });
-//     }, []) // TODO: OK????? [] or nothing?
-//     return <div>
-//         <ErrorDisplay err={err} headerLevel={headerLevel}/>
-//         <div>{"Recent Recipes"}</div>
-//         {recent.map(item => {
-//             return <GrainBatchInline data={item} headerLevel={headerLevel} onClick={doSelect} key={item._id}/>
-//         })}
-//         {/* TODO: CREATOR, IF ALLOWED, with increased depth */
-//         }
-//     </div>
-// }
 
 export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems<GrainBatchData>) {
     let cols: ListTableColumn<GrainBatchData>[] = [
@@ -366,14 +276,13 @@ export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
 export function GrainBatchSelectorTable({data, onClick}: ListPageItems<GrainBatchData>) {
     return <GrainBatchListPageTable data={data} onClick={onClick} withLink={true}/>
 }
-export function GrainBatchSelector( // TODO: USE ELSEWHERE
+export function GrainBatchSelector(
     {
         doSelect,
         allowCreate

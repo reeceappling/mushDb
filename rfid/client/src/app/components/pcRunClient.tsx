@@ -1,6 +1,6 @@
 'use client'
 
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import React, {JSX, useState} from "react";
@@ -15,31 +15,18 @@ import {PcRunData} from "@/app/components/pcRunServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {
-    DisplayInput,
+    dataFor, DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
-    ListPageItems,
-    NewEntryInput,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey
 } from "@/app/components/common";
-import {ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
+import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {NewWaterJarForm} from "@/app/components/waterJarClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup,
-    ListPageTable,
-    ListTableColumn,
-    NewAgarBatchForm,
-    NewColumn,
-    NotesFormArea,
-    NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {NewBagForm} from "@/app/components/bagClient";
 import {NewJarForm} from "@/app/components/jarClient";
 import {NewLcForm} from "@/app/components/lcClient";
@@ -53,8 +40,8 @@ import {SlantData} from "@/app/components/slantServer";
 import {WaterJarData} from "@/app/components/waterJarServer";
 import {JarData} from "@/app/components/jarServer";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "./lcRecipeClient";
-import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
+import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -93,268 +80,6 @@ export function AssertPcRun(input: any): asserts input is PcRunData {
     return
 }
 
-// TODO: MOVE
-export type CreatedLinkTriCol = {
-    typeText: string,
-    node: JSX.Element,
-}
-// TODO: MOVE
-type CreatedLinkExtraCol = {
-    lastNode?: JSX.Element,
-}
-// TODO: MOVE
-export type CreatedLinkQuadCol = CreatedLinkTriCol & CreatedLinkExtraCol
-
-// TODO: MOVE
-export function QuadColLastCol({dstType, id}: { dstType: string, id: string }) {
-    return <div>{"To " + dstType + " "}<a href={BaseExternalUrl + "/view/" + dstType + "/" + id}>{id}</a></div>
-}
-
-// TODO: MOVE
-function OvcQuadRow({item, key}: { item: CreatedLinkQuadCol, key: number }) {
-    const emptyCell = "-" // TODO: ensure ok
-    return <OvcTriRow item={item} key={key}>
-        <td>{item.lastNode || emptyCell}</td>
-    </OvcTriRow>
-}
-
-// TODO: MOVE
-function OvcTriRow(props: React.PropsWithChildren<{ item: CreatedLinkTriCol, key: number }>) {
-    return <tr key={props.key}>
-        {/* TODO: styling for table data (non-first rows)*/}
-        <td>{props.item.typeText}</td>
-        <td>{props.item.node}</td>
-        {props.children}
-    </tr>
-}
-
-// TODO: MOVE
-function OvcTableHidden({empty, unhide}: { empty: boolean, unhide: () => void }) {
-    return <div className={empty ? "hidden" : ""/*hide button if no entries*/} onClick={unhide}>
-        {"Show Created Entries Table"}
-    </div> // TODO: ensure hidden works
-}
-
-// TODO: MOVE
-function OvcLinksTableWrapper(props: React.PropsWithChildren<{
-    created: CreatedLinkTriCol[],
-    hidden: boolean,
-    toggleHidden: () => void
-}>) {
-    if (props.hidden || props.created.length === 0) {
-        return <OvcTableHidden empty={props.created.length === 0} unhide={props.toggleHidden}/>
-    }
-    return <div>
-        <div className={"areaHeader"}>{"Entries Created:"}</div>
-        {/* TODO: ok?*/}
-        <table className={"ovcLinksTable"}>
-            {props.children}
-        </table>
-        {/* TODO: styling for outputs table*/}
-    </div>
-}
-
-// TODO: MOVE
-const OvcHideTableText = "Hide Table"
-
-// TODO: MOVE
-function OvcTableHeaders({headersTxt, setTableHidden}: { headersTxt: string[], setTableHidden: () => void }) {
-    return <tr>
-        {/* TODO: styling for table headers*/}
-        {headersTxt.map((txt, i) => {
-            if (txt === OvcHideTableText) { //TODO: hide button styling and hover styling
-                return <th key={i} onClick={setTableHidden}>{OvcHideTableText}</th>
-            }
-            return <th key={i}>{txt}</th>
-        })}
-    </tr>
-}
-
-// TODO: MOVE
-function OvcLinksTableQuad(
-    {created, tableHidden, toggleHidden}: {
-        created: CreatedLinkQuadCol[],
-        tableHidden: boolean,
-        toggleHidden: () => void
-    }) {
-    return <OvcLinksTableWrapper created={created} hidden={tableHidden} toggleHidden={toggleHidden}>
-        <OvcTableHeaders headersTxt={["Created", "Link", OvcHideTableText]} setTableHidden={toggleHidden}/>
-        <tbody>
-        {created.map((createdEntry, i) => {
-            return <OvcQuadRow item={createdEntry} key={i}/>
-        })}
-        </tbody>
-    </OvcLinksTableWrapper>
-}
-
-// TODO: MOVE
-function OvcLinksTableTri(
-    {created, tableHidden, toggleHidden}: {
-        created: CreatedLinkTriCol[],
-        tableHidden: boolean,
-        toggleHidden: () => void
-    }) {
-    return <OvcLinksTableWrapper created={created} hidden={tableHidden} toggleHidden={toggleHidden}>
-        <OvcTableHeaders headersTxt={["Created", OvcHideTableText]} setTableHidden={toggleHidden}/>
-        <tbody>
-        {created.map((createdEntry, i) => {
-            return <OvcTriRow item={createdEntry} key={i}/>
-        })}
-        </tbody>
-    </OvcLinksTableWrapper>
-}
-
-// TODO: MOVE
-function OvcCreatorBodyWrapper(props: React.PropsWithChildren<{}>) {
-    return <div className={"ovcCreatorBodyWrapper"}>{/* TODO: style ovcCreatorBodyWrapper*/}
-        {props.children}
-    </div>
-}
-
-// TODO: MOVE
-function OvcArea(props: React.PropsWithChildren<{}>) {
-    return <Subform>
-        <div className={"ovcArea depth"}>{/* TODO: style ovcArea*/}
-            {props.children}
-        </div>
-    </Subform>
-}
-
-// TODO: MOVE!
-/* View lc/2Aui6ejTFsd for testing */
-export function OnViewCreatorsQuadColArea({OnViewCreators, readonly}: {
-    OnViewCreators: OnViewCreatorQuadCol[],
-    readonly: boolean
-}) {
-    if (readonly || !OnViewCreators) {
-        return null
-    }
-    const [activeTab, setActiveTab] = useState<string | undefined>();
-    const [created, setCreated] = useState<CreatedLinkQuadCol[]>([]);
-    const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
-    const addCreated: AddCreatedQuadColFunction = (newLinks: CreatedLinkQuadCol[], closeAfter:boolean) => {
-        setCreated(created.concat(newLinks))
-        if (closeAfter) {
-            setActiveTab(undefined)
-        }
-    }
-    const toggleHidden = () => {
-        setCreatedTableHidden(!createdTableHidden)
-    }
-    const closeButton = <OnViewCreatorCloseButton handleClose={() => {
-        setActiveTab(undefined)
-    }} activeTab={activeTab}/>
-
-    const creatorBody = () => {
-        if (activeTab === undefined) {
-            return <HiddenDiv/>
-        }
-        const creator = OnViewCreators.find(ovc => activeTab === ovc.txt)
-        if (creator === undefined) {
-            console.error("could not find ovc for " + activeTab + " in tab options")
-            return <HiddenDiv/>
-        }
-
-        return <OvcCreatorBodyWrapper>
-            {closeButton}
-            {creator.newCreationArea(addCreated)}
-            {closeButton}
-        </OvcCreatorBodyWrapper>
-    }
-    return <TestAndValidate todos={["TEST THIS WHOLE THING!"]}>
-        <DepthProvider><OvcArea>
-            <OvcTopBar setActiveTab={setActiveTab} OnViewCreators={OnViewCreators} hasExtraCol={true}
-                       activeTab={activeTab}/>
-            <OvcLinksTableQuad created={created} tableHidden={createdTableHidden} toggleHidden={toggleHidden}/>
-            {creatorBody()}
-        </OvcArea>
-        </DepthProvider>
-    </TestAndValidate>
-}
-
-// TODO: MOVE!
-export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
-    OnViewCreators: OnViewCreatorTriCol[],
-    readonly: boolean
-}) {
-    if (readonly || !OnViewCreators) {
-        return null
-    }
-    const [activeTab, setActiveTab] = useState<string | undefined>();
-    const [created, setCreated] = useState<CreatedLinkTriCol[]>([]);
-    const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
-    const addCreated = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => {
-        setCreated(created.concat(newLinks))
-        if (closeAfter) {
-            setActiveTab(undefined)
-        }
-    }
-    const toggleHidden = () => {
-        setCreatedTableHidden(!createdTableHidden)
-    }
-    // TODO: Top level hidden instead of dynamic DOM to reduce client strain?
-
-    const creatorBody = () => {
-        if (activeTab === undefined) {
-            return <HiddenDiv/> // Can be null because it is the last subcomponent
-        }
-        const creator = OnViewCreators.find(ovc => activeTab === ovc.txt)
-        if (creator === undefined) {
-            console.error("could not find ovc for " + activeTab + " in tab options")
-            return <HiddenDiv/>
-        }
-        const closeButton = <OnViewCreatorCloseButton handleClose={() => {
-            setActiveTab(undefined)
-        }} activeTab={activeTab}/>
-        return <OvcCreatorBodyWrapper>
-            {closeButton}
-            {creator.newCreationArea(addCreated)}
-            {closeButton}
-        </OvcCreatorBodyWrapper>
-    }
-    return <TestAndValidate todos={["TEST THIS WHOLE THING!"]}>
-        <OvcArea>
-            <OvcTopBar setActiveTab={setActiveTab} OnViewCreators={OnViewCreators} hasExtraCol={false}
-                       activeTab={activeTab}/>
-            <OvcLinksTableTri created={created} tableHidden={createdTableHidden} toggleHidden={toggleHidden}/>
-            {creatorBody()}
-        </OvcArea>
-    </TestAndValidate>
-}
-
-// TODO: MOVE
-function OnViewCreatorCloseButton({handleClose, activeTab}: { handleClose: () => void, activeTab?: string }) {
-    return <button className={"basicButton"} onClick={handleClose}>
-        {'Close ' + (activeTab !== undefined ? ('"' + activeTab + '" ') : "") + " Area"}
-    </button>
-}
-
-// TODO: MOVE
-export function HiddenDiv() {
-    return <div className={"hidden"}></div>
-}
-
-// TODO: MOVE
-function OvcTopBar({activeTab, setActiveTab, OnViewCreators, hasExtraCol}: {
-    activeTab?: string,
-    setActiveTab: (nat?: string) => void,
-    OnViewCreators: OnViewCreatorTriCol[],
-    hasExtraCol: boolean
-}) {
-    return <div className={"ovcBar " + (hasExtraCol ? "ovcBarQuad" : "ovcBarTri")}>
-        {/* TODO: styling? OnHover, onClick*/}
-        {OnViewCreators.map((ovc, i) => {
-            const isActiveTab = (ovc.txt === activeTab)
-            const classes = "ovcBarItem " + (isActiveTab ? "currentlyActive" : "selectable") // TODO: ovcBarItem, currentlyActive, selectable
-            const onClick = isActiveTab ? () => {
-            } : () => {
-                setActiveTab(ovc.txt)
-            }
-            return <div key={ovc.txt} className={classes} onClick={onClick}>{ovc.txt}</div>
-        })}
-    </div>
-}
-
 export default function PcRunDisplay(
     {
         id, readonly, data, headerLevel
@@ -372,16 +97,14 @@ export default function PcRunDisplay(
             setAcl(updated.acl)
         }
         const pcRunUpdate = () => {
-            // TODO: COMPARE NEW NOTES?
             fetch(BaseExternalUrl + "/db/update/pcRun/" + data._id, {
                 method: 'Post',
-                body: JSON.stringify({ // TODO: used to just be notes! Fix in go side if needed
+                body: JSON.stringify({
                     notes: notes,
                     acl: MarshalAcl(acl),
                 }),
                 headers: {
                     credentials: 'include',
-                    // TODO: may need 'Cookie': cookies,
                     'Content-type': "application/json"
                 },
             })
@@ -472,7 +195,7 @@ export default function PcRunDisplay(
                 txt: "Create Stasis Tube",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewStasisTubeForm pcRunIn={data} handlers={{
-                        onCreate: (newEntry: SlantData) => { // TODO: allow pcRun input?
+                        onCreate: (newEntry: SlantData) => {
                             onCreate([{
                                 typeText: "Stasis Tube",
                                 node: createdLinkFor(newEntry._id, newEntry._id, "stasisTube")
@@ -486,7 +209,7 @@ export default function PcRunDisplay(
                 txt: "Create Water Jar",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewWaterJarForm pcRunIn={data} handlers={{
-                        onCreate: (newEntry: WaterJarData) => { // TODO: allow pcRun input?
+                        onCreate: (newEntry: WaterJarData) => {
                             onCreate([{
                                 typeText: "Water Jar",
                                 node: createdLinkFor(newEntry._id, newEntry._id, "waterJar")
@@ -531,12 +254,11 @@ export function NewPcRunForm(
     const [runTime, setRunTime] = useState("")
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    // TODO: handle isTopLevel
     const newPcRunSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
         let body = {creationDate: date, runTime: runTime, notes: notes}
-        fetch(BaseExternalUrl + "/create/pcRun", {
+        fetch(BaseExternalUrl + "/db/create/pcRun", {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -573,29 +295,11 @@ export function NewPcRunForm(
     )
 }
 
-// export function PcRunInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<PcRunData>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={data._id} txt={"PC Run"} entryType={"pcRun"} allowOpenMainPage={showMainPageButton}
-//                 linkPage={idIsLink}/>
-//             <DateArea pre={"Date: "} when={data.creationDate} readonly={true}/>
-//             <NameArea headerTxt={"Runtime: "} currentName={data.runtimeMinutes.toString()} readonly={true}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                                      expanded={expanded}/>
-//     </InlineEntry>
-// }
-
 export function PcRunArea({binaryId, headerLevel, offset}: {
     binaryId?: string,
     headerLevel?: number
     offset?: number
 }) {
-    // TODO: does this need depth?
     let linkArea: JSX.Element = <div>{(binaryId !== undefined) ?
         <EntryLink props={{displayedId: binaryId, linkId: binaryId, entryType: "pcRun"}}>{binaryId}</EntryLink> :
         "unknown"}
@@ -624,7 +328,6 @@ export function PcRunListPageTable({data, onClick, withLink}: ListPageItems<PcRu
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 

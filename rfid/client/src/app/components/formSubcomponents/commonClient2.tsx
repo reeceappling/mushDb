@@ -2,9 +2,8 @@ import {NewPicWithNotesForm, PicWithNotesIncoming} from "@/app/components/formSu
 import {useEffect, useState} from "react";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {Note} from "@/app/components/formSubcomponents/notes";
+import {Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
-import {NotesFormArea} from "@/app/components/agarBatchClient";
 
 export function PixRows(
     {initial, updateParent}: {

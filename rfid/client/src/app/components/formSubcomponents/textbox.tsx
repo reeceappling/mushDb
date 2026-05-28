@@ -1,5 +1,3 @@
-import {useState} from "react";
-
 interface TextBoxProps {
     readonly: boolean,
     label: string,
@@ -13,7 +11,6 @@ interface TextBoxProps {
 
 
 export default function TextBox(props: TextBoxProps) {
-    // const [val, setVal] = useState(props.value) // TODO: del
     const doNumsOnly = props.numbersOnly || false
     const internalUpdateHandler = (s: string)=>{
         let current = s
@@ -29,13 +26,3 @@ export default function TextBox(props: TextBoxProps) {
         </div>
     )
 }
-
-
-
-// interface InlineTextProps {
-//     val: string
-// }
-//
-// export function InlineText({val}: InlineTextProps){ // TODO: UNSURE IF USED
-//     return <h2>{val}</h2>
-// }

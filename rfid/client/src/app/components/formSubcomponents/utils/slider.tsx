@@ -1,7 +1,6 @@
 'use client'
 import Box from '@mui/material/Box';
 import Slider from '@mui/material/Slider';
-import {useState} from "react";
 
 export function WetnessSliderInternal({defaultValue,onChange}:{
     defaultValue:number,

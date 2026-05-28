@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
     AllEntries,
@@ -13,15 +13,12 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
-    CreateNewEntryButton,
-    DisplayInput,
+    CreatedLinkFor,
+    CreateNewEntryButton, DisplayFormWrapper,
+    DisplayInput, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
-    IsString, ListPageItems,
-    NewEntryInput,
+    IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey
 } from "@/app/components/common";
@@ -31,21 +28,9 @@ import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
-import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {
-    DisplayFormWrapper,
-    NewEntryFormWrapper
-} from "@/app/components/lcRecipeClient";
-import {ExistingDualSelector, InlineEntry} from "./agarRecipeClient";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -90,13 +75,6 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
     return
 
 
-}
-
-// TODO: MOVE!
-export function CreatedLinkFor({linkId, typ, linkText}: { linkId: string, typ: string, linkText?: string }) {
-    return <EntryLink props={{displayedId: linkText || linkId, linkId: linkId, entryType: typ}}>
-        <div>{linkText}</div>
-    </EntryLink>
 }
 
 export default function SubstrateRecipeDisplay(
@@ -160,7 +138,6 @@ export default function SubstrateRecipeDisplay(
                         isTopLevel: false,
                     }}/>
                 },
-                // TODO: any others?
             },
         ]
         return (
@@ -169,7 +146,7 @@ export default function SubstrateRecipeDisplay(
                 <TestAndValidate todos={["Put name at top????"]}>
                     <ID id={data._id} txt={"Substrate Recipe"} entryType={"substrateRecipe"}/>
                 </TestAndValidate>
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/*TODO: CONSIDER MOVING THIS!*/}
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <NameArea currentName={name} setName={setName} readonly={readonly} headerLevel={headerLevel}/>
@@ -182,7 +159,7 @@ export default function SubstrateRecipeDisplay(
                     </FlexedSinglesGroup>
                 </FlexedArea>
 
-                <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases} headerLevel={headerLevel}/>{/* TODO: if empty do not display*/}
+                <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
                                         closeTxt={"minimize perms area"}>
@@ -206,9 +183,8 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     // TODO: TEMPLATE!!!!
-    // TODO: handle isTopLevel
     const submit = () => {
-        fetch(BaseExternalUrl + "/create/substrateRecipe", {
+        fetch(BaseExternalUrl + "/db/create/substrateRecipe", {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -246,33 +222,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     )
 }
 
-// export function SubstrateRecipeInline({
-//                                           data,
-//                                           expandByDefault,
-//                                           onClick,
-//                                           showMainPageButton,
-//                                           idIsLink
-//                                       }: InlineProps<SubstrateRecipeData>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         {/* TODO: CHANGE ID TO BUTTON IN CERTAIN SITUATIONS!*/}
-//         <InlineSubArea props={{}}>
-//             <ID id={b58id} txt={"Substrate Recipe"} entryType={"substrateRecipe"} allowOpenMainPage={showMainPageButton}
-//                 linkPage={idIsLink}/>
-//             <NameArea currentName={data.name} readonly={true} headerTxt={"Recipe Name: "}/>
-//             <AliasesArea readonly={true} aliases={data.aliases}/>
-//             <StandardArea isStandard={data.standard} readonly={true}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                                      expanded={expanded}/>
-//     </InlineEntry>
-// }
-
-export const SubstrateRecipeArea = ({id, headerLevel, txt, readonly, onSelect}: {
+export const SubstrateRecipeArea = ({id, headerLevel, txt, readonly, onSelect}: { // TODO: OVERHAUL!!!!
     id?: string,
     headerLevel?: number,
     txt?: string,
@@ -297,7 +247,7 @@ export const SubstrateRecipeArea = ({id, headerLevel, txt, readonly, onSelect}: 
                         setOpen(true)
                     }}>{"Close Selector"}</button>
                 </div>
-                <SubstrateRecipeSelector doSelect={r => { // TODO: FIX
+                <SubstrateRecipeSelector doSelect={r => { // TODO: FIX! CLOSEABLE?
                     onSelect && onSelect(r)
                 }}/> {/* TODO: allow create? */}
             </div>
@@ -308,43 +258,6 @@ export const SubstrateRecipeArea = ({id, headerLevel, txt, readonly, onSelect}: 
     </div>
 }
 
-export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) => void): asserts input is ListResult<T> {
-    if (typeof input !== 'object') {
-        console.error('Input is not an object! Input is ' + typeof input)
-        throw new Error('Input is not an object! Input is ' + typeof input);
-    }
-
-    // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
-        ['recent', validatorForAssertion(validateEntry)], // TODO: ensure ok
-        ['standard', validatorForAssertion(validateEntry)],
-    ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
-        if (!OptionalArrayOfType(key, input, validator)) {
-            console.error('optional array key ' + key + ' was not valid')
-            throw new Error('optional array key ' + key + ' was not valid');
-        }
-    }
-    return
-}
-
-// TODO: move
-export function AssertSubRecipeListResult(input: any): asserts input is ListResult<SubstrateRecipeData> {
-    AssertDualListResult<SubstrateRecipeData>(input, AssertSubstrateRecipe)
-}
-
-export function validatorForAssertion(asserter: ((input: any) => void)) {
-    return (inp: any) => {
-        try {
-            asserter(inp)
-            return true
-        } catch (e) {
-            console.error("error in validatorForAssertion: ", e)
-            return false
-        }
-    }
-}
-
 export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPageItems<SubstrateRecipeData>) {
     let cols: ListTableColumn<SubstrateRecipeData>[] = [
         NewColumn("ID", (v)=>v._id),
@@ -352,7 +265,6 @@ export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPage
         NewColumn("Last Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         })
-        // TODO: bonus area for notes??? aliases?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubstrateRecipeData)=>{
@@ -367,7 +279,7 @@ export function SubstrateRecipeSelectorTable({data, onClick}: ListPageItems<Subs
     return <SubstrateRecipeListPageTable data={data} onClick={onClick} withLink={true} />
 }
 
-export function SubstrateRecipeSelector( // TODO: USE ELSEWHERE
+export function SubstrateRecipeSelector(
     {
         doSelect,
         allowCreate,

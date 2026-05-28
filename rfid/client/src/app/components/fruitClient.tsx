@@ -1,7 +1,13 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {
+    IsValidNote,
+    NewEntryNotes,
+    Note,
+    NotesAreaInline,
+    NotesFormArea
+} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
     AllEntries,
@@ -18,14 +24,18 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {AddToTransfers, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
+    CreatedLinkFor, DisplayFormWrapper,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
     HandleJsonResponse,
     HandleTxtResponse,
-    ImportDisplayInput,
+    ImportDisplayInput, ImportEntryFormWrapper,
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    IsString, ListPageItems,
+    IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -49,35 +59,23 @@ import {
 import {FruitData} from "@/app/components/fruitServer";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {redirect} from "next/navigation";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {OvcForXfers} from "@/app/components/bagClient";
-import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
-import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {SporePrintData} from "@/app/components/sporePrintServer";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
-import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
+import {OnViewCreatorsQuadColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
+import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -152,7 +150,6 @@ export default function FruitDisplay(
     try {
         AssertFruit(data)
         const [initial, setInitial] = useState(data)
-        // TODO: change all other states when re-set
 
         const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [disposed, setDisposed] = useState(initial.disposed)
@@ -172,24 +169,25 @@ export default function FruitDisplay(
             setSporePrints(updated.prints || [])
             setAcl(updated.acl)
         }
-        const sporePrintsArea = () => {
-            return <div>
-                <div>{"Spore Prints: "}</div>
-                {(sporePrints.length === 0) &&
-                    <div>{"None"}</div>}
-                {sporePrints.map(spid => {
-                    const b58id = spid
-                    return <div key={b58id}>
-                        <EntryLink props={{
-                            displayedId: b58id,
-                            linkId: b58id,
-                            entryType: "sporePrint",
-                            openInNewTab: openSporesInNewTab
-                        }}>{spid}</EntryLink>
-                    </div>
-                })}
-            </div>
-        }
+        // TODO: fix?
+        // const sporePrintsArea = () => {
+        //     return <div>
+        //         <div>{"Spore Prints: "}</div>
+        //         {(sporePrints.length === 0) &&
+        //             <div>{"None"}</div>}
+        //         {sporePrints.map(spid => {
+        //             const b58id = spid
+        //             return <div key={b58id}>
+        //                 <EntryLink props={{
+        //                     displayedId: b58id,
+        //                     linkId: b58id,
+        //                     entryType: "sporePrint",
+        //                     openInNewTab: openSporesInNewTab
+        //                 }}>{spid}</EntryLink>
+        //             </div>
+        //         })}
+        //     </div>
+        // }
         const fruitSubmit = () => {
             // disposed, notes, existing pics
             let body = new FormData()
@@ -213,16 +211,6 @@ export default function FruitDisplay(
             }
 
             SendMultipartRequest(BaseExternalUrl + "/db/update/fruit/" + initial._id, cookies, body)
-                // fetch(BaseExternalUrl + "/db/update/fruit/" + data._id, {
-                //     method: 'Post',
-                //     body: body,
-                //     headers: {
-                //         credentials: 'include',
-                //         'Cookie': cookies,
-                //         // 'Content-type': "multipart/form-data"
-                //         //Authorization: tokenFetch, // TODO: auth?
-                //     },
-                // })
                 .then(HandleJsonResponse)
                 .then((newEntry) => {
                     AssertFruit(newEntry)
@@ -319,7 +307,7 @@ export function NewFruitForm(
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    //const [perms, setPerms] = useState<EntryPerms | undefined>() // TODO: inherit from parents????
+    //const [perms, setPerms] = useState<EntryPerms | undefined>() // inherit from parents
     const newFruitSubmit = () => {
         let body = new FormData()
         let dataObj: any = {
@@ -350,8 +338,7 @@ export function NewFruitForm(
             }
         }
         setFormData(body, dataObj)
-        //body.set("data", dataObj)
-        SendMultipartRequest(BaseExternalUrl + "/create/fruit", cookies, body)
+        SendMultipartRequest(BaseExternalUrl + "/db/create/fruit", cookies, body)
             .then(HandleJsonResponse).then((newEntry) => {
             try {
                 AssertFruit(newEntry)
@@ -367,7 +354,6 @@ export function NewFruitForm(
     }
     return (
         <NewEntryFormWrapper entryType={"fruit"}>
-            {/* TODO: TITLE? */}
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <DateArea pre={"Harvest Date: "} readonly={false} updateParent={setHarvestDate}/>
             <PicsDisplay pix={[]} updateParent={v => {
@@ -394,6 +380,7 @@ export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
             setErr("source area must be set!")
             return
         }
+        // TODO: FIX!
         if (parentType !== "store" && parentType !== "outside") { // TODO: ENSURE OK ELSEWHERE
             setErr("parentType must be store or outside!")
             return
@@ -407,22 +394,21 @@ export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
             parentType: parentType,
             species: species._id,
             notes: notes,
-            //perms: perms, // TODO: validate on insert?
         }
         subspecies && (dataObj.subspecies = subspecies?._id)
         imageFile && formData.set("img", imageFile, "img")
 
-        fetch(BaseExternalUrl + "/import/fruit", {
+        // TODO: CHANGE TO MULTIPART!!!!!!
+        fetch(BaseExternalUrl + "/db/import/fruit", {
             method: 'Post',
             body: formData,
             headers: {
                 credentials: 'include',
                 'Cookie': cookies,
                 // 'Content-type': "multipart/form-data" // TODO: auth?
-                //Authorization: tokenFetch,
             },
         })
-            .then(HandleTxtResponse) // TODO: make sure imports do it this way
+            .then(HandleTxtResponse)  // TODO: change to json for reasons
             .then((newid) => {
                 redirect(BaseExternalUrl + "/view/fruit/" + newid)
             })
@@ -445,33 +431,6 @@ export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
     </ImportEntryFormWrapper>
 }
 
-export function FruitInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<FruitData>) {
-    // TODO: do these need depth providers? probably not
-    const [expanded, setExpanded] = useState(expandByDefault)
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={data._id} txt={"Fruit"} entryType={"fruit"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            <MostRecentImageDisplay data={data.mostRecentImage}/>
-            <SpeciesArea readonly={true} initial={data.species}/>
-            <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies}/>
-            <DisposedDisplay readonly={true} disposed={data.disposed}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <ParentDisplay parent={data.parent} parentType={data.parentType}/>
-            <GensInlineDisplay gensSinceSpore={data.genSpore} dontDisplayGensFruitOrSpore={true}
-            />
-            <div>{"SPORE PRINTS AREA"}</div>
-            {/* TODO: Prints? */}{/* TODO: ?????? */}
-            {/* TODO: PROJECTS? ON OTHERS TOO */}
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last updated: "} readonly={true} when={data.lastUpdated}/>
-        </InlineExpansionArea>
-        <InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                               expanded={expanded}/>
-    </InlineEntry>
-}
-
 export function CreateCloneArea( // TODO: this vs NewFruitForm
     {
         fruitId, headerLevel, onCloneCreated, readonly, cookies,
@@ -490,8 +449,7 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const handleCreate = () => {
-        // TODO: inherit perms?
-        fetch(BaseExternalUrl + "/create/clone", { // TODO: ensure ok
+        fetch(BaseExternalUrl + "/db/create/clone", { // TODO: ensure ok!
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -552,23 +510,6 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
     </div>
 }
 
-// export function FruitListDisplay({data, onClick}: SingleListProps<FruitData>) {
-//     return <div>
-//         {data.map((b, i) => {
-//             return <FruitInline data={b} onClick={() => {
-//                 onClick(b)
-//             }} key={i}/>
-//         })}
-//     </div>
-// }
-
-// // TODO: HEAVILY TEST!!!!
-// export function FruitRecentSelector({onSelect}: { onSelect: (selected?: FruitData) => void }) {
-//     return <RecentSelectorV2<FruitData> listUrlType={"fruits"} assertion={AssertFruit} singleConstructor={(val, i) => {
-//         return <FruitInline data={val} expandByDefault={false} onClick={onSelect}/>
-//     }}/>
-// }
-
 export function FruitListPageTable({data, onClick, withLink}: ListPageItems<FruitData>) {
     let cols: ListTableColumn<FruitData>[] = [
         NewColumn("ID", (v)=>v._id),
@@ -588,14 +529,13 @@ export function FruitListPageTable({data, onClick, withLink}: ListPageItems<Frui
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function FruitSelectorTable({data, onClick}: ListPageItems<FruitData>) {
     return <FruitListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
-export function FruitSelector( // TODO: USE ELSEWHERE
+export function FruitSelector(
     {
         doSelect,
         // TODO: ok? allowCreate
@@ -609,6 +549,5 @@ export function FruitSelector( // TODO: USE ELSEWHERE
 
     return <ExistingRecentSelector entryType={"fruit"} entryTypes={"fruits"} doSelect={doSelect} asserter={AssertFruit}
                                    table={table}>
-        {/* TODO: ok? allowCreate && <NewFruitForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
     </ExistingRecentSelector>
 }

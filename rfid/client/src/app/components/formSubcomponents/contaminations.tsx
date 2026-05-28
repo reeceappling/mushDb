@@ -6,17 +6,15 @@ import {
     InitialToAllEntries,
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
-import {IsValidNote, Note} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {ImageLocationFor, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";
+import {dataFor, OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {dataFor} from "@/app/components/agarRecipeClient";
 import {useContext, useEffect, useState} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {NotesFormArea} from "@/app/components/agarBatchClient";
 
 export const ExampleImageLocation: string = "test.jpg"
 

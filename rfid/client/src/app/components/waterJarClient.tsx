@@ -1,16 +1,17 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedQuadColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import {
-    DisplayInput,
+    CreatedLinkFor, DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    ListPageItems,
-    NewEntryInput,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey,
+    OptionalSimpleKey, SelectorWrapper,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -20,23 +21,11 @@ import {InitialNotesState,} from "@/app/components/formSubcomponents/contaminati
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {WaterJarData} from "@/app/components/waterJarServer";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
-import {OnViewCreatorsTriColArea} from "@/app/components/pcRunClient";
-import {CreatedLinkFor} from "@/app/components/substrateRecipeClient";
 import {NewMssForm} from "@/app/components/mssClient";
 import {MssData} from "@/app/components/mssServer";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
-import {ExistingRecentSelector} from "./agarRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
-import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {SelectorWrapper} from "@/app/components/lcClient";
-import {NewStasisTubeForm} from "@/app/components/stasisTubeClient";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -80,7 +69,6 @@ export default function WaterJarDisplay(
         id, readonly, data, headerLevel, isTopLevel, cookies
     }: DisplayInput) {
     const [initial, setInitial] = useState(data as WaterJarData)
-    // TODO: updateInitial!!!!!
     const [disposed, setDisposed] = useState<number | undefined>(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
     // Helper states
@@ -119,7 +107,7 @@ export default function WaterJarDisplay(
             });
     }
     const ovcs: OnViewCreatorQuadCol[] = [
-        { // TODO: TEST HEAVILY
+        {
             txt: "New MultiSpore Syringe",
             newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                 return <NewMssForm waterJarIn={initial} handlers={{
@@ -163,7 +151,6 @@ export function NewWaterJarForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    // TODO: handle isTopLevel
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
         if (pcRun === undefined) {
@@ -175,7 +162,7 @@ export function NewWaterJarForm(
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl + "/create/waterJar", { // TODO: ensure correct
+        fetch(BaseExternalUrl + "/db/create/waterJar", {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -196,31 +183,14 @@ export function NewWaterJarForm(
         <ErrorDisplay err={err}/>
         <SelectorWrapper title={"PC Run"} nameFunc={(v:PcRunData):string=>{
             return v._id
-        }} current={pcRun}>{/* TODO: validate working */}
-            <PcRunSelectorCloseable doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>
+        }} current={pcRun}>
+            <PcRunSelectorCloseable doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>{/*TODO: handlers.isTopLevel vs just true*/}
         </SelectorWrapper>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton buttonFullWidth"} onClick={createJar}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
-
-// export function WaterJarInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<WaterJarData>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={b58id} txt={"Water Jar"} entryType={"waterJar"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-//             <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             {/* TODO: FIX ME! <PcRunArea binaryId={data.pcRun} readonly={true} headerLevel={1}/>*/}
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                                      expanded={expanded}/>
-//     </InlineEntry>
-// }
 
 export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<WaterJarData>) {
     let cols: ListTableColumn<WaterJarData>[] = [
@@ -243,7 +213,6 @@ export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<W
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function WaterJarSelectorTable({data, onClick}: ListPageItems<WaterJarData>) {
@@ -267,7 +236,7 @@ export function WaterJarSelectorTable({data, onClick}: ListPageItems<WaterJarDat
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
-export function WaterJarSelector( // TODO: USE ELSEWHERE
+export function WaterJarSelector(
     {
         doSelect,
         allowCreate

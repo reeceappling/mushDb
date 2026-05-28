@@ -19,7 +19,14 @@ import {
     NumericalAreaWithAbsolutes
 } from "./numericInput";
 import DateArea, {NumberToDate} from "./date";
-import NotesArea, {NotesAreaOld, Note, NotesAreaMostRecentImage, NotesGrid, NotesAreaViewSubcomponent} from "./notes";
+import NotesArea, {
+    NotesAreaOld,
+    Note,
+    NotesAreaMostRecentImage,
+    NotesGrid,
+    NotesAreaViewSubcomponent,
+    NotesFormArea
+} from "./notes";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -27,19 +34,15 @@ import {ExistingSubSpeciesSelector, SubspeciesFormArea} from "@/app/components/s
 import {NoSsr} from "@mui/material";
 import {useQuery} from "@tanstack/react-query";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {HandleJsonResponse} from "@/app/components/common";
+import {dataFor, HandleJsonResponse} from "@/app/components/common";
 import {SelectorFor} from "@/app/components/selector";
 import {redirect} from "next/navigation";
 import TextBoxArea from "@/app/components/formSubcomponents/singleTextBoxArea";
 import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
-import TextBox from "@/app/components/formSubcomponents/textbox";
 import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Additive} from "@/app/components/formSubcomponents/additives";
 import {DepthContext, DepthProvider} from "./depthContext/depth";
-import {dataFor} from "@/app/components/agarRecipeClient";
-import TestAndValidate from "@/app/components/testing/untested";
 import {DowelType} from "@/app/components/plugsServer";
-import {NotesFormArea} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 
@@ -848,7 +851,7 @@ export function OpenMainPage(
     </div>
 }
 
-export function AliasesArea(
+export function AliasesArea( // TODO: OVERHAUL
     {
         aliases, readonly, headerLevel, offset, updateParent
     }: {
@@ -858,6 +861,12 @@ export function AliasesArea(
         offset?: number
         updateParent?: (s: string[]) => void
     }) {
+    const [vals, setVals] = useState<string[]>(aliases || [])
+
+    useEffect(()=>{
+        setVals(aliases || [])
+    },[aliases])
+    // TODO: keep aliases internally, and only return active ones to parent
     if (readonly) {
         if (!aliases) {
             return null

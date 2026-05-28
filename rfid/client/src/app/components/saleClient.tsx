@@ -4,44 +4,28 @@ import React, {JSX, useState} from "react";
 import {
     IsValidNote,
     NewEntryNotes,
-    Note,
-    NoteEntriesGroup,
-    NotesAreaInline
+    Note, NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
-import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
+import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
-import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
+import DateArea from "@/app/components/formSubcomponents/date";
 import {
-    DisplayInput, HandleJsonResponse,
-    HeaderLevel, InlineExpansionArea, InlineExpansionButton,
-    InlineProps,
-    InlineSubArea, ListPageItems,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, HandleJsonResponse,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey
 } from "@/app/components/common";
 import {redirect} from "next/navigation";
-import {ErrorDisplay, OpenMainPage} from "@/app/components/formSubcomponents/commonClient";
+import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SaleData} from "@/app/components/saleServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {useCookies} from "react-cookie";
-import {dataFor, ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {PlateData} from "@/app/components/plateServer";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
-import {ProjectData} from "@/app/components/projectServer";
-import {AssertProject, NewProjectForm} from "@/app/components/projectClient";
+
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -167,7 +151,7 @@ export function NewSaleForm(
             notes: notes,
             //perms: perms, // TODO: KEEP PERMS FROM PARENT?
         }
-        fetch(BaseExternalUrl+"/create/sale", {
+        fetch(BaseExternalUrl+"/db/create/sale", {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -192,25 +176,6 @@ export function NewSaleForm(
     </NewEntryFormWrapper>
 
 }
-
-// export function SaleInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SaleData>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={b58id} txt={"Sale"} entryType={"sale"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-//             <DateArea pre={"Sold on: "} when={data.creationDate} readonly={true}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//             <button className={"basicButton"} onClick={() => {
-//                 setExpanded(!expanded)
-//             }}>{expanded ? "See Less" : "See More"}</button>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded:expanded}}>
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                                      expanded={expanded}/>
-//     </InlineEntry>
-// }
 
 export function SaleArea(
     {readonly, headerLevel, sale, setSale, canCreateSale}:{
@@ -308,7 +273,6 @@ export function SaleListPageTable({data, onClick, withLink}: ListPageItems<SaleD
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
@@ -316,7 +280,7 @@ export function SaleSelectorTable({data, onClick}: ListPageItems<SaleData>) {
     return <SaleListPageTable data={data} onClick={onClick} withLink={true} />
 }
 // TODO: likely get rid of
-export function SaleSelector( // TODO: USE ELSEWHERE
+export function SaleSelector(
     {
         doSelect,
         allowCreate

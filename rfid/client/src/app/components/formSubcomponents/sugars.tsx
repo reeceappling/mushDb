@@ -6,8 +6,7 @@ import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
-import {NutrientEntryForNew, RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
-import {Nutrient, NutrientTypeSelectorForNew} from "@/app/components/formSubcomponents/nutrients";
+import {RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
 
 export interface Sugar {

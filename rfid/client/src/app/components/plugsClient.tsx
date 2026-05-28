@@ -1,59 +1,45 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
-    createApiUrlFor,
-    DisplayInput,
-    HandleJsonResponse, HandleTxtResponse,
-    ImportDisplayInput,
-    ListPageItems,
-    NewEntryInput,
+    createApiUrlFor, DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    HandleJsonResponse,
+    ImportDisplayInput, ImportEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, RequiredArrayOfType, updateApiUrlFor, viewUrlFor,
+    OptionalSimpleKey,
+    RequiredArrayOfType,
+    updateApiUrlFor,
+    viewUrlFor,
 } from "@/app/components/common";
-import {
-    FlexedArea,
-    FlexedSinglesGroup,
-    ListPageTable,
-    ListTableColumn,
-    NewColumn, NotesFormArea,
-    NumberToDateStr,
-} from "@/app/components/agarBatchClient";
-import {
-    AclDisplay,
-    IsValidAcl,
-    MarshalAcl,
-    TogglableAreaWithDepth,
-} from "@/app/components/accessControlClient";
+import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {DowelType, PlugsJar} from "@/app/components/plugsServer";
 import {PcRunData} from "@/app/components/pcRunServer";
-import { KnownFruitableArea } from "./formSubcomponents/knownFruitableArea";
-import { ExistingSubSpeciesSelector } from "./subspeciesClient";
+import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
+import {ExistingSubSpeciesSelector} from "./subspeciesClient";
 import ReaderWriterSelector from "./formSubcomponents/readerWriterButtons/readerSelector";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper } from "./lcRecipeClient";
-import { AllEntries } from "./formSubcomponents/shared";
-import { InitialNotesState } from "./formSubcomponents/contaminations";
-import { ACL } from "./accessControlServer";
-import { BaseExternalUrl } from "./Constants";
-import { HandleErr } from "./userClient";
-import { ErrorDisplay, GensFormDisplay, ParentDisplay } from "./formSubcomponents/commonClient";
+import {AllEntries} from "./formSubcomponents/shared";
+import {InitialNotesState} from "./formSubcomponents/contaminations";
+import {ACL} from "./accessControlServer";
+import {BaseExternalUrl} from "./Constants";
+import {HandleErr} from "./userClient";
+import {ErrorDisplay, GensFormDisplay, ParentDisplay} from "./formSubcomponents/commonClient";
 import ID from "./formSubcomponents/id";
-import { CreatedUpdatedDisposedArea } from "./plateClient";
-import { SpeciesSubspeciesArea } from "./lcClient";
 import {PcRunArea, PcRunSelector} from "./pcRunClient";
-import { InnocDisplay, TransfersOutDisplay } from "./transferClient";
-import { SpeciesData } from "./speciesServer";
-import { SubspeciesData } from "./subspeciesServer";
+import {InnocDisplay, TransfersOutDisplay} from "./transferClient";
+import {SpeciesData} from "./speciesServer";
+import {SubspeciesData} from "./subspeciesServer";
 import {redirect} from "next/navigation";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
-import {ExistingSpeciesSelector, SpeciesSelector} from "./speciesClient";
-import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
-import {AdditiveEntriesGroupForNew} from "@/app/components/formSubcomponents/additives";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
 import {WoodEntriesGroupForNew} from "@/app/components/formSubcomponents/plugs";
 import {SalesArea} from "@/app/components/saleClient";
+import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 
 export function AssertPlugs(input: any): asserts input is PlugsJar {
     if (typeof input !== 'object') {
@@ -190,7 +176,7 @@ export default function PlugsDisplay(
             acl: MarshalAcl(acl),
         }
 
-        fetch(updateApiUrlFor("plugs",data._id), {
+        fetch(updateApiUrlFor("plugs", data._id), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -207,7 +193,7 @@ export default function PlugsDisplay(
             });
     }
     return (
-        <DisplayFormWrapper entryType={"plugs"}>{/* TODO: ensure ok*/}
+        <DisplayFormWrapper entryType={"plugs"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID txt={"Plugs Jar"} id={initial._id} entryType={"plugs"} linkPage={false}/>
             <FlexedArea>
@@ -218,7 +204,7 @@ export default function PlugsDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
-                    <PcRunArea binaryId={pcRun} /> {/* TODO: ENSURE OK AND ALLOWS USER TO INPUT*/}
+                    <PcRunArea binaryId={pcRun}/> {/* TODO: ENSURE OK AND ALLOWS USER TO INPUT*/}
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <InnocDisplay innoc={initial.innoc}/>
@@ -228,19 +214,15 @@ export default function PlugsDisplay(
                 <FlexedSinglesGroup>
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
-                    {/* TODO: ANYTHING ELSE? */}
-                </FlexedSinglesGroup>
             </FlexedArea>
             <div>
                 <div className={"text-lg"}>{"Dowel Types"}</div>
                 <DowelTypesTable data={initial.dowelTypes}/>
             </div>
-            <SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales} />
+            <SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales}/>
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plugs"}
                                  transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly} cookies={cookies}/>
-            {/* TODO: Consider replacing all NotesArea with NotesFormArea????*/}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
@@ -255,16 +237,16 @@ export default function PlugsDisplay(
     )
 }
 
-export function DowelTypesTable({data}: {data:DowelType[]}){
+export function DowelTypesTable({data}: { data: DowelType[] }) {
     return <table>
         <tr>
             <th className={"mr-[2em]"}>{"Wood"}</th>
             <th className={"mr-[2em]"}>{"Radius"}</th>
         </tr>
-        {data.map((item, i)=>{
-            return <tr key={item.wood+item.size+item.units+i}>
+        {data.map((item, i) => {
+            return <tr key={item.wood + item.size + item.units + i}>
                 <td className={"mr-[2em]"}>{item.wood}</td>
-                <td className={"mr-[2em]"}>{item.size+" "+item.units}</td>
+                <td className={"mr-[2em]"}>{item.size + " " + item.units}</td>
             </tr>
         })}
     </table>
@@ -272,7 +254,7 @@ export function DowelTypesTable({data}: {data:DowelType[]}){
 
 
 export function PlugsImportDisplay({cookies}: ImportDisplayInput) {
-const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
+    const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
     const [gen, setGen] = useState<number | undefined>(undefined)
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
@@ -305,7 +287,7 @@ const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
             .then(HandleJsonResponse)
             .then((newItem) => {
                 AssertPlugs(newItem)
-                redirect(viewUrlFor("plugs",newItem._id))
+                redirect(viewUrlFor("plugs", newItem._id))
             })
             .catch((error) => {
                 setErr(JSON.stringify(error))
@@ -330,20 +312,20 @@ const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
             <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
         </div> : null}
         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
-        <NewEntryNotes setNotes={setNotes} />
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={ImportEntry}>{"Import Plugs"}</button>
     </ImportEntryFormWrapper>
 }
 
 export function NewPlugsForm(
-    {handlers,pcRunIn}: { handlers: NewEntryInput<PlugsJar>, pcRunIn?: PcRunData }
+    {handlers, pcRunIn}: { handlers: NewEntryInput<PlugsJar>, pcRunIn?: PcRunData }
 ) {
     /* TODO: DOWEL TYPES AND AN OPTIONAL PC RUN FIELD! */
     const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
-     const [notes, setNotes] = useState<Note[]>([])
-     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const createPlugs = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -352,7 +334,7 @@ export function NewPlugsForm(
             // TODO: validate dowel types
             return
         }
-        for (let i = 0; i<dowelTypes.length; i++){
+        for (let i = 0; i < dowelTypes.length; i++) {
             if (!dowelTypes[i] || dowelTypes[i].size <= 0 || dowelTypes[i].units === "") {
                 setErr("Invalid dowels")
                 return
@@ -388,57 +370,20 @@ export function NewPlugsForm(
             <div className={"text-lg"}>{"Dowels: "}</div>
             <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
         </div>
-        {pcRunIn?<div>{"PC Run: "+pcRunIn/* TODO: link?*/}</div>:
-            <PcRunSelector doSelect={setPcRun} allowCreate={true}/>}
-        <NewEntryNotes setNotes={setNotes} />
+
+
+        {pcRunIn ? <div>{"PC Run: "}
+                <EntryLinkWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
+                    {pcRunIn._id}
+                </EntryLinkWrapper>
+            </div>
+            : <PcRunSelector doSelect={setPcRun} allowCreate={true}/>
+        }
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={createPlugs}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
-
-// export function PlugsInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<PlugsJar>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={b58id} txt={"Plugs"} entryType={"plugs"} allowOpenMainPage={showMainPageButton}
-//                 linkPage={idIsLink}/>
-//             <SpeciesArea readonly={true} initial={data.species}/>
-//             <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies}/>
-//             <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-//             <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore}/>
-//             <DisposedSaleContamArea sale={data.sale} disposed={data.disposed} contams={data.contamination}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             <AgarBatchArea agarBatchId={data.agarBatch} offset={-1}/>
-//             {data.condensationCoverageAtSealTime !== undefined ? <div>
-//                 {"Initial condensation coverage: " + data.condensationCoverageAtSealTime + "%"}
-//             </div> : <div>
-//                 {"Initial condensation coverage: none or unknown"}
-//             </div>}
-//             {data.pourCoverage !== undefined ? <div>
-//                 {"Pour coverage: " + data.pourCoverage + "%"}
-//             </div> : <div>
-//                 {"Pour coverage: none or unknown"}
-//             </div>}
-//             {data.wetAtCooledTime !== undefined ? <div>
-//                 {"Initial wetness: " + (data.wetAtCooledTime ? "wet" : "perfect")}
-//             </div> : <div>
-//                 {"Initial wetness: unknown"}
-//             </div>}
-//             {data.agarOnOutsideAtPourTime !== undefined ? <div>
-//                 {"Agar on outside when poured: " + (data.agarOnOutsideAtPourTime ? "yes" : "no")}
-//             </div> : <div>
-//                 {"Agar on outside when poured: not likely, unknown"}
-//             </div>}
-//             {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel}*/}
-//             {/*              offset={-1} allowRemove={false}/>*/}
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                                      expanded={expanded}/>
-//     </InlineEntry>
-// }
 
 export function PlugsListPageTable({data, onClick, withLink}: ListPageItems<PlugsJar>) {
     let cols: ListTableColumn<PlugsJar>[] = [
@@ -466,7 +411,7 @@ export function PlugsSelectorTable({data, onClick}: ListPageItems<PlugsJar>) {
     return <PlugsListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
-export function PlugsSelector( // TODO: USE ELSEWHERE
+export function PlugsSelector(
     {
         doSelect,
         allowCreate

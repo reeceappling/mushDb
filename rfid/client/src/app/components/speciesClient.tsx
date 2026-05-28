@@ -3,51 +3,50 @@
 import {
     IsValidNote, NewEntryNotes,
     Note,
-    NoteEntriesGroup,
-    NotesAreaInline
+    NotesAreaInline, NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import React, {JSX, useEffect, useState} from "react";
-import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
+import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {
     CreateNewEntryButton,
-    DisplayInput, HandleJsonResponse,
-    InlineExpansionArea, InlineExpansionButton,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    HandleJsonResponse,
+    InlineEntry,
+    InlineExpansionArea,
+    InlineExpansionButton,
     InlineProps,
-    InlineSubArea, IsString, ListPageItems, NewEntryInput,
-    OptionalArrayOfType, OptionalKey, SingleListProps
+    InlineSubArea,
+    IsString,
+    ListPageItems, ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
+    OptionalArrayOfType,
+    OptionalKey,
+    SelectorWrapper,
+    Subform
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {
     AclDefaultAclDisplay,
-    AclDisplay,
-    DefaultAclDisplay,
-    IsValidAcl,
-    TogglableAreaWithDepth
+    IsValidAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
-import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "./lcRecipeClient";
-import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {SlantData} from "@/app/components/slantServer";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {AssertSlant, NewSlantForm, SlantListPageTable} from "@/app/components/slantClient";
-import {SelectorWrapper} from "@/app/components/lcClient";
+
 // TODO: list page not working
 
 export function AssertSpecies(input: any): asserts input is SpeciesData {
@@ -119,7 +118,6 @@ export default function SpeciesDisplay(
                 method: "POST",
                 headers: {
                     credentials: 'include',
-                    //'Cookie': cookies,
                     'Content-type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -139,7 +137,7 @@ export default function SpeciesDisplay(
                     setErr(JSON.stringify(error))
                 });
         }
-        return ( // TODO: FIX THIS WHOLE FUNC!
+        return (
             <DisplayFormWrapper entryType={"species"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel} />
                 <ID id={data._id} txt={"Species"} entryType={"species"}/>
@@ -168,7 +166,7 @@ export default function SpeciesDisplay(
                 <button className={"basicButtonSmall"} onClick={(e)=>{
                     e.stopPropagation();
                 }} >
-                    {"Create New Subspecies"}{/* TODO: create subspecies???? */}
+                    {"Create New Subspecies"}{/* TODO: create subspecies???? IN OVC AREA! */}
                 </button>
             </DisplayFormWrapper>
         )
@@ -235,6 +233,7 @@ export function NewSpeciesForm(
 }
 
 
+// TODO: get rid of?
 export function SpeciesInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SpeciesData>) {
     const [expanded, setExpanded] = useState(expandByDefault)
     return <InlineEntry  onClick={onClick}>
@@ -252,6 +251,20 @@ export function SpeciesInline({data, expandByDefault, onClick, showMainPageButto
         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
                                expanded={expanded}/>
     </InlineEntry>
+}
+
+export function SpeciesSubspeciesArea({species, subspecies}: {
+    subspecies?: string,
+    species?: string,
+}) {
+    return <>
+        <div>
+            {"Species: " + (species || "")}{/* TODO: LINK!?*/}
+        </div>
+        <div>
+            {"Subspecies: " + (subspecies || "")}{/* TODO: LINK!*/}
+        </div>
+    </>
 }
 
 // TODO: Distinguish from SpeciesSelector
@@ -295,7 +308,6 @@ export function ExistingSpeciesSelector(
             method: "GET",
             headers: {
                 credentials: 'include',
-                //'Cookie': cookies,
                 // TODO: THIS!
             },
         })
@@ -374,16 +386,6 @@ export function ExistingSpeciesSelector(
                 setSelected(s)
                 setSelectorOpen(false)
             }}/>
-        {/*{speciesList.map((spec, i) => {*/}
-        {/*    return <div key={i} className={"gapTop"}>*/}
-        {/*        <SpeciesInline key={i} data={spec} headerLevel={headerLevel} onClick={sp => { // TODO: FIX THIS SO ITS ACTUALLY INLINE!*/}
-        {/*            console.log("selected: "+(sp?._id || "undefined")) // TODO: del*/}
-        {/*            doSelect(sp)*/}
-        {/*            setSelectorOpen(false)*/}
-        {/*            setSelected(sp)*/}
-        {/*        }}/>*/}
-        {/*    </div>*/}
-        {/*})}*/}
         {closeButton}
         </Subform>
     </div>
@@ -404,13 +406,12 @@ export function SpeciesListPageTable({data, onClick, withLink}: ListPageItems<Sp
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function SpeciesSelectorTable({data, onClick}: ListPageItems<SpeciesData>) {
     return <SpeciesListPageTable data={data} onClick={onClick} withLink={true} />
 }
-export function SpeciesSelector( // TODO: USE ELSEWHERE
+export function SpeciesSelector(
     {
         doSelect
     }: {

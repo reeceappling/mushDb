@@ -1,12 +1,9 @@
 'use client'
 
 import {useState} from "react";
-import {HeaderLevel} from "@/app/components/common";
-import H from "@/app/components/formSubcomponents/utils/headers";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {NoSsr} from "@mui/material";
-import {InputNumber, InputNumber2, InputNumber4} from "@/app/components/formSubcomponents/numericInput";
-import { InputMask, unformat } from '@react-input/mask';
+import {InputNumber2, InputNumber4} from "@/app/components/formSubcomponents/numericInput";
 interface DateProps {
     pre?: string,
     when?: number,

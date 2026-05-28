@@ -1,55 +1,34 @@
 'use client'
 
 import React, {JSX, useEffect, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
-import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
+import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {
     AssertArrayResult,
-    CreateNewEntryButton,
-    DisplayInput,
+    CreateNewEntryButton, DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    InlineExpansionArea, InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
-    IsString, ListPageItems,
-    NewEntryInput,
+    IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
+    OptionalKey, Subform,
 } from "@/app/components/common";
-import {AliasesArea, ErrorDisplay, NameArea, SpeciesArea} from "@/app/components/formSubcomponents/commonClient";
+import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {
     AclDefaultAclDisplay,
-    AclDisplay,
-    DefaultAclDisplay,
-    IsValidAcl,
-    TogglableAreaWithDepth
+    IsValidAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {HandleErr} from "@/app/components/userClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {DisplayFormWrapper, NewEntryFormWrapper, Subform} from "@/app/components/lcRecipeClient";
-import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {ExistingRecentSelector, InlineEntry} from "./agarRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea, NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {StasisTubeData} from "@/app/components/stasisTubeServer";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {SlantData} from "@/app/components/slantServer";
-import {AssertSlant, NewSlantForm} from "@/app/components/slantClient";
-import {AssertSubRecipeListResult} from "@/app/components/substrateRecipeClient";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
@@ -91,10 +70,10 @@ export function AssertSubspecies(input: any): asserts input is SubspeciesData {
 
 export default function SubspeciesDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel
     }: DisplayInput) {
     try {
-        AssertSubspecies(data) // TODO: ENSURE ACL IS BEING PARSED CORRECTLY
+        AssertSubspecies(data)
         const [initial, setInitial] = useState(data)
 
         const [aliases, setAliases] = useState(data.aliases || [])
@@ -103,6 +82,7 @@ export default function SubspeciesDisplay(
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         const [defaultAcl, setDefaultAcl] = useState<ACL | undefined>(initial.defaultAcl)
         const updateInitial = (updated: SubspeciesData) => {
+            setInitial(updated)
             setAliases(updated.aliases || [])
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
@@ -176,7 +156,7 @@ export function NewSubspeciesForm({handlers, species}: {
             setErr("Species must be selected")
             return
         }
-        fetch(BaseExternalUrl + "/create/subspecies", {
+        fetch(BaseExternalUrl + "/db/create/subspecies", {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -215,37 +195,6 @@ export function NewSubspeciesForm({handlers, species}: {
     )
 }
 
-// export function SubspeciesInline(
-//     {props, showSpeciesName}: {
-//         props: InlineProps<SubspeciesData>,
-//         showSpeciesName: boolean,
-//     }) { // TODO: TEST FOR SHOWSPECIESNAME==true!
-//     const aliases = props.data.aliases || []
-//     const notes = props.data.notes || []
-//     const [expanded, setExpanded] = useState(props.expandByDefault)
-//     return <InlineEntry onClick={props.onClick}><TestAndValidate todos={["ensure working and looks good"]}>
-//         <InlineSubArea props={{}}>
-//             <ID id={props.data._id} txt={"Subspecies"} entryType={"subspecies"} allowOpenMainPage={props.showMainPageButton} linkPage={props.idIsLink}/>
-//             {showSpeciesName &&
-//                 <SpeciesArea readonly={true} initial={props.data.species} headerLevel={props.headerLevel}/>}
-//             {/* Aliases */}
-//             <div className={"ml-[2em]"}>
-//                 {aliases.map((alias, i) => {
-//                     return <div key={i}>{alias}</div>
-//                 })}
-//             </div>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             {/* Notes */}
-//             <NotesAreaInline notes={notes} header={"Notes"} offset={-1}/>
-//             {/* Last Updated */}
-//             <DateArea pre={"Last Updated: "} when={props.data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                expanded={expanded}/>
-//     </TestAndValidate>
-//     </InlineEntry>
-// }
-
 // ExistingSubSpeciesSelector selects between subspecies of a SINGLE species!
 export function ExistingSubSpeciesSelector(
     {
@@ -269,7 +218,7 @@ export function ExistingSubSpeciesSelector(
         }
         setSelected(undefined)
         setLoaded(false)
-        fetch(BaseExternalUrl + "/subspeciesFor/" + encodeURI(species), {
+        fetch(BaseExternalUrl + "/subspeciesFor/" + encodeURI(species), { // TODO: ensure endpoint ok
             method: "GET",
             headers: {
                 credentials: 'include',
@@ -345,7 +294,7 @@ export function ExistingSubSpeciesSelector(
 
 export function SubspeciesFormArea({subspecies}:{
     subspecies: string,
-}){ // TODO: validate link works
+}){
     return <EntryLinkWrapper props={{entryType:"subspecies",linkId:encodeURI(subspecies)}}><div>{"Subspecies: "+subspecies}</div></EntryLinkWrapper>
 }
 
@@ -359,7 +308,7 @@ export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubspeciesData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"subspecies",openInNewTab:true}}>{/* TODO: ensure ok*/}
+            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"subspecies",openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -371,7 +320,7 @@ export function SubspeciesSelectorTable({data, onClick}: ListPageItems<Subspecie
 }
 
 // SubspeciesSelector is a selector between ALL subspecies, not just those of a single species
-export function SubspeciesSelector( // TODO: USE ELSEWHERE
+export function SubspeciesSelector(
     {
         doSelect,
         allowCreate
@@ -385,6 +334,5 @@ export function SubspeciesSelector( // TODO: USE ELSEWHERE
 
     return <ExistingRecentSelector entryType={"subspecies"} entryTypes={"subspecies"} doSelect={doSelect} asserter={AssertSubspecies}
                                    table={table}>
-        {/* TODO: ok? allowCreate && <NewSubspeciesForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
     </ExistingRecentSelector>
 }

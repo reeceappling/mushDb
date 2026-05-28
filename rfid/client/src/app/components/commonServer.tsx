@@ -8,6 +8,25 @@
 
 
 // TODO: gross, get rid of it likely
+import DateArea from "@/app/components/formSubcomponents/date";
+import {DisposedDisplay} from "@/app/components/formSubcomponents/commonClient";
+
 export default function Centered({children}:{children:React.ReactNode}){
     return <div className={"centerH"}>{children}</div>
+}
+
+export function CreatedUpdatedDisposedArea(
+    {created, updated, disposed, readonly, setDisposedOnParent}: {
+        created: number,
+        updated: number,
+        disposed?: number,
+        readonly: boolean,
+        setDisposedOnParent?: (n?: number) => void,
+    }
+) {
+    return <>
+        <DateArea pre={"Created: "} when={created} readonly={true}/>
+        <DateArea pre={"Updated: "} when={updated} readonly={true}/>
+        <DisposedDisplay readonly={readonly} disposed={disposed} setDisposedOnParent={setDisposedOnParent}/>
+    </>
 }

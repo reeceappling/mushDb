@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
     OnViewCreatorQuadCol,
@@ -22,11 +22,12 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
-    DisplayInput,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    ImportDisplayInput, importUrlFor,
-    ListPageItems,
-    NewEntryInput,
+    ImportDisplayInput, ImportEntryFormWrapper, importUrlFor,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
     resolveContamsFormData,
@@ -45,10 +46,6 @@ import {
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     AgarBatchArea,
-    FlexedArea,
-    FlexedSinglesGroup, ListPageTable,
-    ListTableColumn, NewColumn,
-    NotesFormArea, NumberToDateStr
 } from "@/app/components/agarBatchClient";
 import {
     ContaminationForm, ContamsDisplay, InitialContamState, InitialNotesState, IsValidContamination,
@@ -60,15 +57,12 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
-import {CreatedUpdatedDisposedArea} from "@/app/components/plateClient";
+import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
+import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -156,7 +150,6 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
             knownFruitable: knownFruitable,
             generation: generation,
             writeTagTo: writeTagTo,
-            //perms: perms, // TODO: validate on insert
         }))
         if(imageFile!==undefined){
             formData.set("image", imageFile, "imgFile")
@@ -255,14 +248,13 @@ export default function SlantDisplay(
                 });
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            // TODO: anything here?
             WriteRfidOvcArea(initial._id),
         ]
         return (
             <DisplayFormWrapper entryType={"slant"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={data._id} txt={"Slant"} entryType={"slant"} />
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
@@ -316,7 +308,6 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    // TODO: handle handlers.isTopLevel
     const createSlant = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(agarBatch===undefined){
@@ -329,11 +320,10 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl+"/create/slant", {
+        fetch(BaseExternalUrl+"/db/create/slant", {
             method: "POST",
             headers: {
                 credentials: 'include',
-                // TODO: may need 'Cookie': cookies,
                 'Content-type': "application/json"
             },
             body: JSON.stringify(body)
@@ -368,29 +358,6 @@ export function SlantStickSelector(x: { setStickType: (s?: string) => void }){
     </div>
 }
 
-// export function SlantInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<SlantData>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     const b58id = data._id
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <ID id={b58id} txt={"Slant"} entryType={"slant"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-//             <SpeciesArea readonly={true} initial={data.species}  />
-//             <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies} />
-//             <KnownFruitableArea initial={data.knownFruitable} readonly={true} />
-//             <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore} />
-//             <DisposedSaleContamArea sale={data.sale} disposed={data.disposed} contams={data.contamination} />
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded:expanded}}>
-//             <AgarBatchArea agarBatchId={data.agarBatch} offset={-1}/>
-//             {/* TODO: SLANT STICK */}
-//             {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel} offset={-1} allowRemove={false}/>*/}
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                expanded={expanded}/>
-//     </InlineEntry>
-// }
-
 export function SlantListPageTable({data, onClick, withLink}: ListPageItems<SlantData>) {
     let cols: ListTableColumn<SlantData>[] = [
         NewColumn("ID", (v)=>v._id),
@@ -410,13 +377,12 @@ export function SlantListPageTable({data, onClick, withLink}: ListPageItems<Slan
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 export function SlantSelectorTable({data, onClick}: ListPageItems<SlantData>) {
     return <SlantListPageTable data={data} onClick={onClick} withLink={true} />
 }
-export function SlantSelector( // TODO: USE ELSEWHERE
+export function SlantSelector(
     {
         doSelect,
         allowCreate

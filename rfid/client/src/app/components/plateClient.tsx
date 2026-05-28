@@ -1,7 +1,7 @@
 'use client'
 
 import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesAreaInline} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
     OnViewCreatorQuadCol,
@@ -21,18 +21,13 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
-    Dictaphone,
-    DisplayInput,
-    DisposedSaleContamArea,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     HandleTxtResponse,
-    ImportDisplayInput,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
-    ListPageItems,
-    NewEntryInput,
+    ImportDisplayInput, ImportEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -40,8 +35,7 @@ import {
     resolvePicsFormData,
     SendMultipartRequest,
     setFormData,
-    setFormImages, ViewPageDictaphone,
-    viewUrlFor,
+    setFormImages,
     YesNoSelector,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
@@ -52,22 +46,12 @@ import {
     DisposedDisplay,
     ErrorDisplay,
     GensFormDisplay,
-    GensInlineDisplay,
     MostRecentImageDisplay,
     ParentDisplay,
-    PicsDisplay,
-    SpeciesArea,
-    SubspeciesArea
+    PicsDisplay
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     AgarBatchArea,
-    FlexedArea,
-    FlexedSinglesGroup,
-    ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea,
-    NumberToDateStr,
 } from "@/app/components/agarBatchClient";
 import {
     ContaminationForm,
@@ -82,18 +66,16 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {OnViewCreatorsQuadColArea} from "@/app/components/pcRunClient";
-import {DisplayFormWrapper, ImportEntryFormWrapper, NewEntryFormWrapper} from "./lcRecipeClient";
-import {ExistingRecentSelector, InlineEntry} from "@/app/components/agarRecipeClient";
-import {SpeciesSubspeciesArea} from "@/app/components/lcClient";
 import {InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
 import Box from "@mui/material/Box";
 import Slider from "@mui/material/Slider";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
+import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
@@ -200,7 +182,7 @@ export default function PlateDisplay(
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const updateInitial = (updated: PlateData) => {
-        setInitial(updated) // TODO: ensure verywhere does this
+        setInitial(updated)
         setImages(InitialPicsEntries(updated.pics))
         setContams(InitialContamState(updated.contamination))
         setKnownFruitable(updated.knownFruitable)
@@ -208,7 +190,7 @@ export default function PlateDisplay(
         setDisposed(updated.disposed)
         setNotes(InitialNotesState(updated.notes))
         setTransfersOut(updated.transfersOut || [])
-        setAcl(updated.acl) // TODO: ensure verywhere does this
+        setAcl(updated.acl)
     }
     const submit = () => {
         console.log("submitting update request")
@@ -246,24 +228,22 @@ export default function PlateDisplay(
         }
         SendMultipartRequest(BaseExternalUrl + "/db/update/plate/" + initial._id, cookies, body)
             .then(HandleJsonResponse)
-            .then((entry) => { // TODO: ensure plate update comes back valid!
+            .then((entry) => {
                 AssertPlate(entry)
-                console.log("Attempting to update initial")
-                updateInitial(entry) // TODO: validate working properly
+                updateInitial(entry)
             }).catch((er) => {
             console.log("error in getting response: " + JSON.stringify(er))
             setErr(JSON.stringify(er))
         });
     }
     const ovcs: OnViewCreatorQuadCol[] = [
-        // TODO: anything here?
         WriteRfidOvcArea(initial._id),
     ]
     return (
         <DisplayFormWrapper entryType={"plate"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID txt={"Plate"} id={initial._id} entryType={"plate"} linkPage={false}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} showHeader={false}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -304,7 +284,7 @@ export default function PlateDisplay(
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>
             {/* TODO: SOMEHOW SHOVE THE DICTAPHONE INTO THE NotesFormArea*/}
-            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>{/* TODO: if this works use it everywhere*/}
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>
@@ -314,7 +294,7 @@ export default function PlateDisplay(
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
-            <ViewPageDictaphone doUpdate={submit}/>{/* TODO: FIXME */}
+            {/*<ViewPageDictaphone doUpdate={submit}/>/!* TODO: FIXME *!/*/}
         </DisplayFormWrapper>
     )
 }
@@ -348,11 +328,12 @@ function CondensationCoverageFieldDisplay({coverage, updateParent}: {
     return <div>{header}<InputNumberWithSmallTitle value={"" + val} readonly={false} min={0} max={100} step={1}
                                                    mode={"integer"} onChange={(s) => {
         const temp = Number(s)
-        updateParent && updateParent(temp) // TODO: ensure ok
+        updateParent && updateParent(temp)
         setVal(temp)
     }}/>{"%"}</div>
 }
 
+// TODO: USE?
 export function CondensationCoverageSlider({defaultValue, onChange}:
                                            {
                                                defaultValue: number,
@@ -474,7 +455,7 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
         writeTagTo && (dataObj.writeTagTo = writeTagTo)
         setFormData(formData, dataObj)
         SendMultipartRequest(BaseExternalUrl + "/db/import/plate", cookies, formData)
-            .then(HandleTxtResponse)
+            .then(HandleTxtResponse) // TODO: change to json for reasons
             .then((newId) => {
                 redirect(BaseExternalUrl + "/view/plate/" + newId)
             })
@@ -508,24 +489,6 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
     </ImportEntryFormWrapper>
 }
 
-export function CreatedUpdatedDisposedArea( // TODO: MOVE
-    {created, updated, disposed, readonly, setDisposedOnParent}: {
-        created: number,
-        updated: number,
-        disposed?: number,
-        readonly: boolean,
-        setDisposedOnParent?: (n?: number) => void,
-    }
-) {
-    return <>
-        {/*<div className={"createdUpdatedDisposedArea"}>*/}
-        <DateArea pre={"Created: "} when={created} readonly={true}/>
-        <DateArea pre={"Updated: "} when={updated} readonly={true}/>
-        <DisposedDisplay readonly={readonly} disposed={disposed} setDisposedOnParent={setDisposedOnParent}/>
-        {/*</div>*/}
-    </>
-}
-
 export function NewPlateForm(
     {handlers}: { handlers: NewEntryInput<PlateData>, agarBatchIn?: AgarBatchData }
 ) {
@@ -543,21 +506,20 @@ export function NewPlateForm(
             setErr("An agar batch must be selected")
             return
         }
-        window.location.assign(viewUrlFor("plate", "testPlate")) // TODO: DELETE!
-        return // TODO: DELETE!
-        let body: any = {agarBatch: agarBatch}
-        writeTagTo && (body.writeTagTo = writeTagTo)
-        fetch(BaseExternalUrl + "/create/plate", { // TODO: ensure correct
+        // TODO: FIC THIS WHOLE FUNC BELOW THIS POINT
+        let body: any = {
+            agarBatch: agarBatch,
+            writeTagTo: writeTagTo,
+        }
+        fetch(BaseExternalUrl + "/db/create/plate", {
             method: "POST",
             headers: {
                 credentials: 'include',
-                // TODO: may need 'Cookie': cookies,
                 'Content-type': 'application/json'
-                // TODO: THIS!
             },
             body: JSON.stringify({
                 agarBatch: agarBatch,
-                notes: notes, // TODO: BRAND NEW! HANDLE ON GO SIDE!
+                notes: notes,
                 writeTagTo: writeTagTo,
             })
         })
@@ -572,7 +534,7 @@ export function NewPlateForm(
     }
     return <NewEntryFormWrapper entryType={"plate"}>
         <ErrorDisplay err={err}/>
-        <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/> {/* TODO: use new one instead?*/}
+        <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/>{/* TODO: is true ok for both?*/}
         <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
         <CondensationCoverageSelector coverage={condensationCoverageAtSealTime}
                                       updateParent={setCondensationCoverageAtSealTime}/>
@@ -585,64 +547,6 @@ export function NewPlateForm(
         <button className={"bottomButton"} onClick={createPlate}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
-
-export function PlateInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<PlateData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    const b58id = data._id
-    // TODO: condensationCoverageAtSealTime?: number
-    // TODO: pourCoverage?: number
-    // TODO: wetAtCooledTime?: boolean
-    // TODO: agarOnOutsideAtPourTime?: boolean
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <ID id={b58id} txt={"Plate"} entryType={"plate"} allowOpenMainPage={showMainPageButton}
-                linkPage={idIsLink}/>
-            <SpeciesArea readonly={true} initial={data.species}/>
-            <SubspeciesArea readonly={true} currentSpecies={data.species} initialSub={data.subspecies}/>
-            <KnownFruitableArea initial={data.knownFruitable} readonly={true}/>
-            <GensInlineDisplay gensSinceSpore={data.genSpore} gensSinceFruitOrSpore={data.genFruitOrSpore}/>
-            <DisposedSaleContamArea sale={data.sale} disposed={data.disposed} contams={data.contamination}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <AgarBatchArea agarBatchId={data.agarBatch} offset={-1}/>
-            {data.condensationCoverageAtSealTime !== undefined ? <div>
-                {"Initial condensation coverage: " + data.condensationCoverageAtSealTime + "%"}
-            </div> : <div>
-                {"Initial condensation coverage: none or unknown"}
-            </div>}
-            {data.pourCoverage !== undefined ? <div>
-                {"Pour coverage: " + data.pourCoverage + "%"}
-            </div> : <div>
-                {"Pour coverage: none or unknown"}
-            </div>}
-            {data.wetAtCooledTime !== undefined ? <div>
-                {"Initial wetness: " + (data.wetAtCooledTime ? "wet" : "perfect")}
-            </div> : <div>
-                {"Initial wetness: unknown"}
-            </div>}
-            {data.agarOnOutsideAtPourTime !== undefined ? <div>
-                {"Agar on outside when poured: " + (data.agarOnOutsideAtPourTime ? "yes" : "no")}
-            </div> : <div>
-                {"Agar on outside when poured: not likely, unknown"}
-            </div>}
-            {/*TODO: <ProjectsArea allowCreate={false} projects={data.perms?.projectPerms.ids} readonly={true} headerLevel={headerLevel}*/}
-            {/*              offset={-1} allowRemove={false}/>*/}
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                                                     expanded={expanded}/>
-    </InlineEntry>
-}
-
-// export function PlateListDisplay({data, onClick}: SingleListProps<PlateData>) {
-//     return <div>
-//         {data.map((b, i) => {
-//             return <PlateInline data={b} onClick={() => {
-//                 onClick(b)
-//             }} key={i}/>
-//         })}
-//     </div>
-// }
 
 export function PlateListPageTable({data, onClick, withLink}: ListPageItems<PlateData>) {
     let cols: ListTableColumn<PlateData>[] = [
@@ -663,7 +567,6 @@ export function PlateListPageTable({data, onClick, withLink}: ListPageItems<Plat
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
@@ -671,7 +574,7 @@ export function PlateSelectorTable({data, onClick}: ListPageItems<PlateData>) {
     return <PlateListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
-export function PlateSelector( // TODO: USE ELSEWHERE
+export function PlateSelector(
     {
         doSelect,
         allowCreate
@@ -688,5 +591,3 @@ export function PlateSelector( // TODO: USE ELSEWHERE
         {allowCreate && <NewPlateForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }
-
-// TODO: need to continue doing selectors after plate

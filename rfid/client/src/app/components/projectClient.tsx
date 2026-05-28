@@ -1,15 +1,16 @@
 'use client'
 
 import React, {ChangeEvent, JSX, useContext, useEffect, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {
-    DisplayInput,
+    DisplayFormWrapper,
+    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    ListPageItems,
-    NewEntryInput,
+    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey
@@ -22,24 +23,9 @@ import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector"
 import {IsStringMapToString} from "@/app/components/accessControlClient";
 import {HandleErr, UserSelector} from "@/app/components/userClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {DisplayFormWrapper, NewEntryFormWrapper} from "@/app/components/lcRecipeClient";
-import {
-    FlexedArea,
-    FlexedSinglesGroup,
-    ListPageTable,
-    ListTableColumn,
-    NewColumn,
-    NotesFormArea,
-    NumberToDateStr
-} from "@/app/components/agarBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
-import {TailwindButton} from "@/app/components/tailwind/components";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {PlateData} from "@/app/components/plateServer";
-import {AssertPlate, NewPlateForm, PlateListPageTable, PlateSelectorTable} from "@/app/components/plateClient";
-import {ExistingRecentSelector} from "@/app/components/agarRecipeClient";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -246,100 +232,6 @@ export function NewProjectForm(
     </NewEntryFormWrapper>
 
 }
-
-// export function ProjectInline({data, expandByDefault, onClick, showMainPageButton, idIsLink}: InlineProps<ProjectData>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     return <div>
-//         <InlineSubArea props={{}}>
-//             <ID id={data._id} txt={"Project"} entryType={"project"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
-//             <DateArea pre={"Created: "} when={data.creationDate} readonly={true}/>
-//             {data.completed ? <div>
-//                 <div>{"Completed: " + NumberToDate(new Date(data.completed))}</div>
-//             </div> : <div>
-//                 <div>{"In-Progress"}</div>
-//             </div>}
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             <NotesAreaInline notes={data.notes} headerLevel={headerLevel} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                expanded={expanded}/>
-//     </div>
-// }
-
-// export function ProjectsArea( // TODO: is this even needed anymore?
-//     {projects, allowCreate, allowRemove, headerLevel, readonly, offset, setProjects}: {
-//         projects?: string[],
-//         allowCreate: boolean
-//         allowRemove: boolean
-//         headerLevel?: number,
-//         readonly?: boolean
-//         setProjects?: (ps: string[]) => void
-//         offset?: number
-//     }) {
-//     const [current, setCurrent] = useState<Data<string>[]>((projects || []).map(p => {
-//         return {data: p, disabled: false}
-//     }))
-//     const [creatorOpen, setCreatorOpen] = useState(false)
-//     const updateEntries = (newProjs: Data<string>[]) => {
-//         let upd = newProjs.filter(s => !s.disabled).map(v => {
-//             return v.data
-//         })
-//         setProjects && setProjects(upd)
-//         setCurrent(newProjs)
-//     }
-//     const creationArea = () => {
-//         return <div>
-//             <div className={"centerH"}>
-//                 <button className={"gapTop"} onClick={() => {
-//                     setCreatorOpen(!creatorOpen)
-//                 }}>{creatorOpen ? "Close Project Selector" : "Add a project"}</button>
-//             </div>
-//             {creatorOpen && <ProjectSelector doSelect={proj => {
-//                 if (proj === undefined) {
-//                     return
-//                 }
-//                 // TODO: if project already exists on list, dont add!
-//                 let newProj = {data: proj._id, disabled: false}
-//                 let out = [...current]
-//                 out = [...out, newProj]
-//                 proj && updateEntries(out)
-//                 setCreatorOpen(false)
-//             }} headerLevel={headerLevel} creatorInPage={false} allowCreation={true}/>}
-//         </div>
-//     }
-//     const ap: React.ReactNode = <div className={"centerH"}>{"Associated Projects: "}</div> // TODO: OK?
-//     const ps = () => {
-//         if (current.length === 0) {
-//             return <div>{"None"}</div>
-//         }
-//         return <div className={"projectsFlex"}>{current.map((proj, i) => {
-//             if (proj.disabled) {
-//                 return null
-//             }
-//             const projLinkName = "WITH UNDERSCORES" // TODO: THIS
-//             return <div key={i} className={"gridCol"}>
-//                 <EntryLink
-//                     props={{displayedId: proj.data, linkId: projLinkName, entryType: "project", openInNewTab: true}}>
-//                     <div>{proj.data}</div>
-//                     {/* TODO: TEXT SIZE*/}
-//                 </EntryLink>
-//                 {(allowRemove && !readonly) && <button onClick={() => {
-//                     let out = [...current]
-//                     out[i].disabled = true
-//
-//                     updateEntries(out)
-//                 }}>{"Remove"}</button>}
-//             </div>
-//         })}</div>
-//     }
-//
-//     return <div>
-//         {ap}
-//         {ps()}
-//         {(!readonly && allowCreate) && creationArea()}
-//     </div>
-// }
 
 export function NumberToPerm(n?: number) {
     if (n === undefined || n === 0) {
@@ -723,7 +615,6 @@ export function ProjectListPageTable({data, onClick, withLink}: ListPageItems<Pr
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
 
@@ -732,7 +623,7 @@ export function ProjectSelectorTable({data, onClick}: ListPageItems<ProjectData>
 }
 
 // TODO: distinguish from ProjectsSelector
-export function ProjectSelector( // TODO: USE ELSEWHERE
+export function ProjectSelector(
     {
         doSelect,
         allowCreate,
