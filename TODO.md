@@ -1,1 +1,14 @@
 - [ ] dependency upgrades (dependabot?)
+- [ ] add/fix git-level files
+  - [ ] README 
+  - [ ] LICENSE 
+  - [ ] SUPPORT 
+  - [ ] SECURITY 
+  - [ ] CODE_OF_CONDUCT
+  - [ ] CONTRIBUTORS 
+  - [ ] ACKNOWLEDGMENTS 
+  - [ ] ISSUE_TEMPLATE 
+  - [ ] PULL_REQUEST_TEMPLATE 
+  - [ ] .github/FUNDING.yml 
+  - [ ] .github/dependabot.yml
+  - [ ] .github/workflows
