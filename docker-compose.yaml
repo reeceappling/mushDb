@@ -1,7 +1,8 @@
 version: '3.8'
 include:
   - docker-compose-web-prod.yaml
-  # TODO: - docker-compose-web-dev.yaml
+  # TODO: Use the next line instead to run the dev version
+  # - docker-compose-web-dev.yaml
 services:
   # Service to maintain cloudflare tunnel (because homelab is behind CGNAT)
   cloudflared:
@@ -25,7 +26,7 @@ services:
       tags:
         - "mush-api:latest"
     environment:
-#      ENVIRONMENT: "prod"
+      # TODO: ENVIRONMENT: "prod"
       SESSION_SECRET: ${GOTHIC_SESSION_SECRET:?error}
       PICS_PATH: "/images"
       API_PORT: "8080"
@@ -36,7 +37,7 @@ services:
       MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
       MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
-      ADMIN_GMAIL: ${ADMIN_GMAIL} #TODO: :?error
+      ADMIN_GMAIL: ${ADMIN_GMAIL:?error}
       RFID_SECRET: ${RFID_SECRET:?error}
       DB_HOST_PORT: "27017"
       DB_HOST_NAME: "mushdb"
@@ -65,15 +66,11 @@ services:
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
 
     command: ["mongod", "--replSet", "rs0", "--keyFile", "/etc/mongodb.key", "--bind_ip_all"]
-    # TODO: WORKS command: [--auth]
     healthcheck:
       # Automatically initiates the replica set if it isn't already active
       test: >
         mongo --username ${MONGO_INITDB_ROOT_USERNAME:?error} --password ${MONGO_INITDB_ROOT_PASSWORD:?error} --authenticationDatabase admin --quiet 
         --eval "rs.status().ok || rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mushdb:27017' }] })"
-#      test: >
-#        mongo --username ${MONGO_INITDB_USERNAME:?error} --password ${MONGO_INITDB_PASSWORD:?error} --authenticationDatabase ${MONGO_INITDB_DATABASE:?error} --quiet
-#        --eval "rs.status().ok || rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mushdb:27017' }] })"
       interval: 10s
       timeout: 5s
       retries: 5

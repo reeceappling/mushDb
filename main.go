@@ -127,12 +127,11 @@ func main() {
 		tempPortStr = fmt.Sprintf(`:%d`, apiPort)
 	}
 	apiHostPort := MAIN_API_EXTERNAL_HOST + tempPortStr
-	apiProtoHostPort := fmt.Sprintf("%s://%s", apiProtocol, apiHostPort)
-	baseApiUrl = apiProtoHostPort
+	baseApiUrl = fmt.Sprintf("%s://%s", apiProtocol, apiHostPort)
 	oauthConfig = &oauth2.Config{
 		ClientID:     googId,
 		ClientSecret: googSecret,
-		RedirectURL:  apiProtoHostPort + "/auth/google/callback",
+		RedirectURL:  baseApiUrl + "/auth/google/callback",
 		// TODO: works but want to use other... RedirectURL: "http://mush.appli.ng/auth/google/callback", // TODO: ensure fixed
 		Scopes:   []string{"email", "profile", "openid"},
 		Endpoint: google.Endpoint,
@@ -184,7 +183,7 @@ func main() {
 		}
 		os.Exit(42) // weird code so we can tell at a glance that we shut it down
 	}()
-	googleAuthProvider := google2.New(googId, googSecret, apiProtoHostPort+"/auth/google/callback", "email", "profile", "openid") // TODO: ensure callback is ok
+	googleAuthProvider := google2.New(googId, googSecret, baseApiUrl+"/auth/google/callback", "email", "profile", "openid") // TODO: ensure callback is ok
 
 	goth.UseProviders(googleAuthProvider)
 	//gothic.Store = customSessionStore{} // TODO: REENABLE????
@@ -254,7 +253,7 @@ func main() {
 	// handle login
 	http.Handle("/login", CorsMiddleware(rateLimiter(ctxMiddleware(handleLogin(webProxyHandler, dbUser, dbPass)))))
 	http.Handle("/logout", CorsMiddleware(rateLimiter(ctxMiddleware(handleLogout))))
-	http.Handle("/guestLogin", rateLimiter(ctxMiddleware(handleGuestLogin(apiProtoHostPort))))
+	http.Handle("/guestLogin", rateLimiter(ctxMiddleware(handleGuestLogin(baseApiUrl))))
 	http.Handle("/auth/{provider}", CorsMiddleware(rateLimiter(ctxMiddleware(handleAuthProvider()))))
 	http.Handle("/auth/{provider}/callback", CorsMiddleware(rateLimiter(ctxMiddleware(handleAuthCallback()))))
 
@@ -731,7 +730,7 @@ func redirectToBasePage(r *http.Request, w http.ResponseWriter) {
 	http.Redirect(w, r, dst, http.StatusTemporaryRedirect)
 }
 
-var handleLogout http.HandlerFunc = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var handleLogout = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	authSvc := rfid.GetAuthService(r.Context())
 	err := gothic.Logout(w, r)
 	if err != nil {
@@ -874,19 +873,19 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 	}
 }
 
-func placeholderMiddleware(next http.Handler) http.Handler { // TODO: DELETEME!!!!!!!
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
-		// TODO: reenable
-		//next.ServeHTTP(w, r.WithContext(rfid.SetAuthInfo(r.Context(), rfid.AuthInfo{
-		//	Email: rfid.AlternateCollectionId(primitive.ObjectID{}),
-		//	Opts: &rfid.UserPermsResolved{
-		//		Admin:    utils.Pointer(true),
-		//		Projects: nil,
-		//	},
-		//})))
-	})
-}
+//func placeholderMiddleware(next http.Handler) http.Handler { // TODO: DELETEME!!!!!!!
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		next.ServeHTTP(w, r)
+//		// TODO: reenable
+//		//next.ServeHTTP(w, r.WithContext(rfid.SetAuthInfo(r.Context(), rfid.AuthInfo{
+//		//	Email: rfid.AlternateCollectionId(primitive.ObjectID{}),
+//		//	Opts: &rfid.UserPermsResolved{
+//		//		Admin:    utils.Pointer(true),
+//		//		Projects: nil,
+//		//	},
+//		//})))
+//	})
+//}
 
 func setupFilePathMiddleware(filePath string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -1211,6 +1210,8 @@ func getAnyCollectionHandler() http.Handler {
 //	},
 //}
 
+// TODO: below this is rfid stuff! CONSIDER MOVING!
+
 const goodTestRfid = "goodTestRfid"
 const badTestRfid = "badTestRfid"
 
@@ -1382,7 +1383,7 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// TODO: everything below this is for gues sessions, consider moving to its own file
+// TODO: everything below this is for guest sessions, consider moving to its own file
 
 var _ goth.Provider = &guestLoginProvider{}
 var _ goth.Session = &guestSession{}
