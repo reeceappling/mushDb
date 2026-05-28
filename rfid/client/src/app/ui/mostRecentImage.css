@@ -1,0 +1,50 @@
+div {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+*, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+
+.mriParent {
+    display: grid;
+    max-width: 100%;
+    box-sizing: border-box;
+    & > div {
+        width: 50%;
+        &:first-child {
+            display: flex;
+            align-items: center; /* Centers vertically */
+            justify-content: center; /* Centers horizontally (optional) */
+            height: 100%;
+            & > img {
+                object-fit: contain;
+                /*&.landscape {*/
+                /*    width: 100%;*/
+                /*}*/
+                /*&.portrait {*/
+                /*    height: 100%;*/
+                /*}*/
+            }
+        }
+    }
+}
+.mriParent > div:first-child {
+    display: flex;
+    align-items: center; /* Centers vertically */
+    justify-content: center; /* Centers horizontally (optional) */
+    max-height: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    & > img {
+        /*object-fit: contain;*/
+        &.landscape {
+            max-width: 100%;
+        }
+        &.portrait {
+            max-height: 100%;
+        }
+    }
+
+}

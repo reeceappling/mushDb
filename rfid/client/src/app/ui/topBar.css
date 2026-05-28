@@ -1,0 +1,34 @@
+#topBar {
+    width: 100%;
+    background-color: var(--topBarColor);
+    margin-bottom: 0.5em;
+    height: fit-content;
+    display: flex;
+    flex-wrap: nowrap;
+    & * {
+        margin: auto; /* TODO: hacky*/
+    }
+    & .MuiButton-text {
+        /*color: var(--topBarTextColor);*/
+        /*&:hover {*/
+        /*    background-color: var(--topBarHoverColor);*/
+        /*}*/
+        /*&:active {*/
+        /*    background-color: var(--topBarClickColor);*/
+        /*}*/
+    }
+}
+.MuiPaper-root {
+    background-color: var(--topBarSubmenuColor)!important; /* TODO: ew */
+}
+/*.MuiMenu-paper { !* TopBar submenus*!*/
+/*    background-color: var(--topBarSubmenuColor);*/
+/*    & a { !* Submenu buttons *!*/
+/*        &:hover {*/
+/*            background-color: var(--topBarSubmenuHoverColor)*/
+/*        }*/
+/*        &:active {*/
+/*            background-color: var(--topBarSubmenuClickColor)*/
+/*        }*/
+/*    }*/
+/*}*/

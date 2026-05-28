@@ -1,0 +1,163 @@
+version: '3.8'
+include:
+  - docker-compose-web-prod.yaml
+  # TODO: - docker-compose-web-dev.yaml
+services:
+  # Service to maintain cloudflare tunnel (because homelab is behind CGNAT)
+  cloudflared:
+    image: cloudflare/cloudflared
+    container_name: cloudflared
+    environment:
+      - TZ=America/New_York
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN}
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    networks:
+      - mushNet
+  # Main go api
+  api:
+    image: mush-api:latest
+    command: ./server
+    restart: unless-stopped
+    build:
+      context: ./
+      dockerfile: ./DockerfileApi
+      tags:
+        - "mush-api:latest"
+    environment:
+#      ENVIRONMENT: "prod"
+      SESSION_SECRET: ${GOTHIC_SESSION_SECRET:?error}
+      PICS_PATH: "/images"
+      API_PORT: "8080"
+      MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-http}
+      MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
+      MONGO_INITDB_SETUP_USERNAME: ${MONGO_INITDB_SETUP_USERNAME:?error}
+      MONGO_INITDB_SETUP_PASSWORD: ${MONGO_INITDB_SETUP_PASSWORD:?error}
+      MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
+      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
+      ADMIN_GMAIL: ${ADMIN_GMAIL} #TODO: :?error
+      RFID_SECRET: ${RFID_SECRET:?error}
+      DB_HOST_PORT: "27017"
+      DB_HOST_NAME: "mushdb"
+      WEB_HOST_INTERNAL: "web"
+      WEB_HOST_INTERNAL_PORT: "3000"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?error}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?error}
+    volumes:
+      - pictures:/images
+    networks:
+      - mushNet
+    links:
+      - mushdb
+    depends_on:
+      - mushdb
+  mushdb: # fungi database container # TODO: different db container for dev vs prod...
+    image: mongo:4.4
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?error}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?error}
+      MONGO_INITDB_SETUP_USERNAME: ${MONGO_INITDB_SETUP_USERNAME:?error}
+      MONGO_INITDB_SETUP_PASSWORD: ${MONGO_INITDB_SETUP_PASSWORD:?error}
+      MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
+      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
+
+    command: ["mongod", "--replSet", "rs0", "--keyFile", "/etc/mongodb.key", "--bind_ip_all"]
+    # TODO: WORKS command: [--auth]
+    healthcheck:
+      # Automatically initiates the replica set if it isn't already active
+      test: >
+        mongo --username ${MONGO_INITDB_ROOT_USERNAME:?error} --password ${MONGO_INITDB_ROOT_PASSWORD:?error} --authenticationDatabase admin --quiet 
+        --eval "rs.status().ok || rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mushdb:27017' }] })"
+#      test: >
+#        mongo --username ${MONGO_INITDB_USERNAME:?error} --password ${MONGO_INITDB_PASSWORD:?error} --authenticationDatabase ${MONGO_INITDB_DATABASE:?error} --quiet
+#        --eval "rs.status().ok || rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mushdb:27017' }] })"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      # TODO: ensure key exists next to docker-compose file. If not:
+      # openssl rand -base64 741 > mongodb.key
+      # chmod 666 mongodb.key
+      # chown mongodb:mongodb mongodb.key
+      - mongodb-data:/data/db
+      - ./initDB:/docker-entrypoint-initdb.d
+#      - ./etc:/etc:ro
+      - ./etc/mongodb.key:/etc/mongodb.key:ro
+    networks:
+      - mushNet
+
+  # grafana service
+#  grafana:
+#    image: grafana/grafana:latest
+#    restart: unless-stopped
+#    volumes:
+#      - grafana-data:/var/lib/grafana:rw
+#    #ports:
+#    #  - 3000:3000 # TODO: FIX
+#    environment:
+#      - GF_SERVER_ROOT_URL=http://localhost:3000 # TODO: Adjust if accessing from a different domain/IP
+#      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?error} # TODO: do
+#      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?error} # TODO: run with password
+#      - GF_LOG_LEVEL=debug # TODO: debug vs info
+#      #- GF_LOG_MODE="console"
+#      - GF_PLUGINS_PREINSTALL=grafana-mongodb-datasource,grafana-worldmap-panel,grafana-clock-panel,grafana-piechart-panel
+#      - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
+#    networks:
+#      - mushNet
+networks:
+  mushNet:
+    name: mushNet
+volumes:
+#  mongo_repl_config:
+  pictures:
+    labels:
+      com.example.description: "Persistent volume for images"
+      # TODO: Figure out how to properly mount this from the fileSystem
+#    driver: local
+#    driver_opts:
+#      type: none
+#      device: ${LOCAL_IMAGES_DIR:?error}
+#      o: bind
+
+  mongodb-data:
+#    driver: local
+#    driver_opts:
+#      type: none
+#      device: ${LOCAL_DB_DIR:?error}
+#      o: bind
+#  grafana-data: # TODO: REENABLE
+#    driver: local
+#    driver_opts:
+#      type: none
+#      device: ${LOCAL_GRAFANA_DIR:?error} # TODO: ADD
+#      o: bind
+# configs:
+#  config.json: # TODO: generate via template?
+#    content: |
+#      {
+#        "cloudflare": [
+#          {
+#            "authentication": {
+#              "api_token": "${CLOUDFLARE_API_TOKEN:?error}",
+#            },
+#            "zone_id": "${CLOUDFLARE_ZONE_ID:?error}",
+#            "subdomains": [
+#              {
+#                "name": "",
+#                "proxied": false
+#              },
+#              {
+#                "name": "home",
+#                "proxied": false
+#              }
+#            ]
+#          }
+#        ],
+#        "a": false,
+#        "aaaa": true,
+#        "purgeUnknownRecords": true,
+#        "ttl": 120
+#      }

@@ -1,0 +1,892 @@
+'use client'
+
+import {JSX, useContext, useEffect, useState} from "react";
+import {Liquid} from "./liquids";
+import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {AllEntries, Data, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {
+    ImageLocationFor,
+    NewPicWithNotesForm,
+    PicWithNotesForm,
+    PicWithNotesIncoming
+} from "@/app/components/formSubcomponents/picWithNotes";
+import {PixRows} from "@/app/components/formSubcomponents/commonClient2";
+import {
+    InputText,
+    InputTextInlineTitle,
+    InputTextWithSmallTitle,
+    NumericalArea,
+    NumericalAreaWithAbsolutes
+} from "./numericInput";
+import DateArea, {NumberToDate} from "./date";
+import NotesArea, {
+    NotesAreaOld,
+    Note,
+    NotesAreaMostRecentImage,
+    NotesGrid,
+    NotesAreaViewSubcomponent,
+    NotesFormArea
+} from "./notes";
+import {SpeciesData} from "@/app/components/speciesServer";
+import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {SubspeciesData} from "@/app/components/subspeciesServer";
+import {ExistingSubSpeciesSelector, SubspeciesFormArea} from "@/app/components/subspeciesClient";
+import {NoSsr} from "@mui/material";
+import {useQuery} from "@tanstack/react-query";
+import {BaseExternalUrl} from "@/app/components/Constants";
+import {dataFor, HandleJsonResponse} from "@/app/components/common";
+import {SelectorFor} from "@/app/components/selector";
+import {redirect} from "next/navigation";
+import TextBoxArea from "@/app/components/formSubcomponents/singleTextBoxArea";
+import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
+import {Sugar} from "@/app/components/formSubcomponents/sugars";
+import {Additive} from "@/app/components/formSubcomponents/additives";
+import {DepthContext, DepthProvider} from "./depthContext/depth";
+import {DowelType} from "@/app/components/plugsServer";
+import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
+
+// export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
+//     return <div className={"hoverClickable"} onClick={(e) => {
+//         e.stopPropagation() // TODO: ok?
+//         e.preventDefault() // TODO: ok?
+//         props.handleClick && props.handleClick()
+//     }}>{props.children}</div>
+// }
+
+export function RemoveToggle({disabled,click,keptClass,removedClass,keptTxt,removedTxt}:{disabled:boolean,click:()=>void,keptClass:string,removedClass?:string,keptTxt:string,removedTxt?:string}){
+    return <button className={disabled ? removedClass:keptClass}
+                   onClick={(e)=>{
+                       e.stopPropagation();
+                       click();
+                   }}>{disabled ? removedTxt : keptTxt}</button>
+}
+export function RemoveButton({txt,click}:{click:()=>void,txt:string}){
+    return <button className={"removeButtonSmall"} onClick={(e)=>{
+        e.stopPropagation();
+        click();
+    }}>{txt}</button>
+}
+
+
+export function LiquidEntryForNew({currentValue, updateParent}: {
+    currentValue: Liquid,
+    updateParent: (l: Liquid) => void
+}) {
+    const [err, setErr] = useState<string | undefined>()
+    const handleFormChangePct = (val: number) => {
+        let data = {...currentValue};
+        data.pct = val
+        updateParent(data)
+    }
+    return <>
+        <div className={"text-m"}>{currentValue.name}</div>
+        <NumericalAreaWithAbsolutes label="Percentage by volume" mode="floating" min={0.0} max={1.0} readonly={false}
+                                    errorMessage={err} value={currentValue.pct.toString()} onChange={(val?: string) => {
+            try {
+                const n = Number(val) // TODO: allow only numbers here
+                if (Number.isNaN(n)) {
+                    setErr("NaN input")
+                } else {
+                    val && handleFormChangePct(n)
+                    setErr(undefined)
+                }
+            } catch (e) {
+                setErr(JSON.stringify(e))
+            }
+        }}/>
+    </>
+}
+
+export function NutrientEntryForNew({currentValue, updateParent}: {
+    currentValue: Nutrient,
+    updateParent: (l: Nutrient) => void
+}) {
+    const [err, setErr] = useState<string | undefined>()
+    const [errTxt, setErrTxt] = useState<string | undefined>()
+    const handleFormChangeAmt = (val: number) => {
+        let data = {...currentValue};
+        data.amount = val
+        updateParent(data)
+    }
+    const handleFormChangeUnit = (val: string) => {
+        let data = {...currentValue};
+        data.unit = val
+        updateParent(data)
+    }
+    return <>
+        <div className={"text-m"}>{currentValue.nutrient}</div>
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+                                    errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
+            try {
+                const n = Number(val) // TODO: allow only numbers here
+                if (Number.isNaN(n)) {
+                    setErr("NaN input")
+                } else {
+                    val && handleFormChangeAmt(n)
+                    setErr(undefined)
+                }
+            } catch (e) {
+                setErr(JSON.stringify(e))
+            }
+        }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.amount.toString()} onChange={(val?: string) => {
+            try {
+                val && handleFormChangeUnit(val)
+            } catch (e) {
+                setErrTxt(JSON.stringify(e))
+            }
+        }}/>
+    </>
+}
+
+export function SugarEntryForNew({currentValue, updateParent}: {
+    currentValue: Sugar,
+    updateParent: (l: Sugar) => void
+}) {
+    const [err, setErr] = useState<string | undefined>()
+    const [errTxt, setErrTxt] = useState<string | undefined>()
+    const handleFormChangeAmt = (val: number) => {
+        let data = {...currentValue};
+        data.amount = val
+        updateParent(data)
+    }
+    const handleFormChangeUnit = (val: string) => {
+        let data = {...currentValue};
+        data.unit = val
+        updateParent(data)
+    }
+    return <>
+        <div className={"text-m"}>{currentValue.type}</div>
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+                                    errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
+            try {
+                const n = Number(val) // TODO: allow only numbers here
+                if (Number.isNaN(n)) {
+                    setErr("NaN input")
+                } else {
+                    val && handleFormChangeAmt(n)
+                    setErr(undefined)
+                }
+            } catch (e) {
+                setErr(JSON.stringify(e))
+            }
+        }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.amount.toString()} onChange={(val?: string) => {
+            try {
+                val && handleFormChangeUnit(val)
+            } catch (e) {
+                setErrTxt(JSON.stringify(e))
+            }
+        }}/>
+    </>
+}
+
+export function AdditiveEntryForNew({currentValue, updateParent}: {
+    currentValue: Additive,
+    updateParent: (l: Additive) => void
+}) {
+    const [err, setErr] = useState<string | undefined>()
+    const [errTxt, setErrTxt] = useState<string | undefined>()
+    const handleFormChangeAmt = (val: number) => {
+        let data = {...currentValue};
+        data.amount = val
+        updateParent(data)
+    }
+    const handleFormChangeUnit = (val: string) => {
+        let data = {...currentValue};
+        data.unit = val
+        updateParent(data)
+    }
+    return <>
+        <div className={"text-m"}>{currentValue.additive}</div>
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+                                    errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
+            try {
+                const n = Number(val) // TODO: allow only numbers here
+                if (Number.isNaN(n)) {
+                    setErr("NaN input")
+                } else {
+                    val && handleFormChangeAmt(n)
+                    setErr(undefined)
+                }
+            } catch (e) {
+                setErr(JSON.stringify(e))
+            }
+        }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.amount.toString()} onChange={(val?: string) => {
+            try {
+                val && handleFormChangeUnit(val)
+            } catch (e) {
+                setErrTxt(JSON.stringify(e))
+            }
+        }}/>
+    </>
+}
+
+export function DowelEntryForNew({currentValue, updateParent}: {
+    currentValue: DowelType,
+    updateParent: (l: DowelType) => void
+}) {
+    const [err, setErr] = useState<string | undefined>()
+    const [errTxt, setErrTxt] = useState<string | undefined>()
+    const handleFormChangeRadius = (val: number) => {
+        let data = structuredClone(currentValue);
+        data.size = val
+        updateParent(data)
+    }
+    const handleFormChangeUnit = (val: string) => {
+        let data = structuredClone(currentValue);
+        data.units = val
+        updateParent(data)
+    }
+    return <>
+        <div className={"text-m"}>{currentValue.wood}</div>
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+                                    errorMessage={err} value={currentValue.size.toString()} onChange={(val?: string) => {
+            try {
+                const n = Number(val) // TODO: allow only numbers here
+                if (Number.isNaN(n)) {
+                    setErr("NaN input")
+                } else {
+                    val && handleFormChangeRadius(n)
+                    setErr(undefined)
+                }
+            } catch (e) {
+                setErr(JSON.stringify(e))
+            }
+        }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.units.toString()} onChange={(val?: string) => {
+            try {
+                val && handleFormChangeUnit(val)
+            } catch (e) {
+                setErrTxt(JSON.stringify(e))
+            }
+        }}/>
+    </>
+}
+
+export function ParentDisplay(
+    {parent, parentType, headerLevel}: {
+        parent?: string,
+        parentType?: string,
+        headerLevel?: number,
+    }
+) {
+    if (parent == undefined) {
+        return null
+    }
+    if (parentType === undefined) {
+        return <div>{"Error: PARENT TYPE UNDEFINED"}</div>
+    }
+    const txtFor = (typ:string,id:string)=>{
+        return typ+" "+id
+    }
+    const LinkFor = (typ:string,entryTyp:string,linkId:string, displayId:string)=>{
+        return <div>
+            {"Parent: "}<EntryLinkWrapper props={{linkId:linkId,entryType:entryTyp}}>{txtFor(typ, displayId)}</EntryLinkWrapper>
+        </div>
+    }
+    switch (parentType) {
+        case 'fruit':
+            return LinkFor("Fruit",parentType,parent,parent)
+        case 'mss':
+            return LinkFor("Spore Syringe",parentType,parent,parent)
+        case 'plate':
+            return LinkFor("Plate",parentType,parent,parent)
+        case 'slant':
+            return LinkFor("Slant",parentType,parent,parent)
+        case 'stasisTube':
+            return LinkFor("Stasis Tube",parentType,parent,parent)
+        case 'jar':
+            return LinkFor("Grain Jar",parentType,parent,parent)
+        case 'lc':
+            return LinkFor("Liquid Culture",parentType,parent,parent)
+        case 'lcSyringe':
+            return LinkFor("Liquid Culture Syringe",parentType,parent,parent)
+        case 'bag':
+            return LinkFor("Bag",parentType,parent,parent)
+        case 'fruitingChamber':
+            return LinkFor("Fruiting Chamber",parentType,parent,parent)
+        case 'sporePrint':
+            return LinkFor("Spore Print",parentType,parent,parent)
+        case 'sporeSwab':
+            return LinkFor("Spore Swab",parentType,parent,parent)
+        default:
+            return <div>{"Unknown parentType: " + parentType + " with ID "+parent}</div>
+    }
+}
+
+// export function ProjectsArea({ // TODO: MOVE????????
+//                                  projects, headerLevel, readonly, setProjects
+//                              }: {
+//                                  projects: string[],
+//                                  setProjects?: (p?: string[]) => void
+//                                  headerLevel?: number,
+//                                  readonly?: boolean,
+//                              }
+// ) {
+//     let ProjectsLabel = <div>{"Projects: "}</div>
+//     // TODO: ADD TO A PROJECT????
+//     // TODO: CREATE A PROJECT????
+//     return <div>
+//         {ProjectsLabel}
+//         {projects.map((proj, i) => {
+//             return <div key={i}>{proj}</div> // TODO: ENSURE OK
+//         })}
+//         {/* TODO: ADD A NEW PROJECT AREA */}
+//         {/* TODO: Create a project link? */}
+//     </div>
+// }
+
+export function GensInlineDisplay(
+    {gensSinceSpore, gensSinceFruitOrSpore, dontDisplayGensFruitOrSpore, headerLevel, offset}: {
+        gensSinceSpore?: number,
+        gensSinceFruitOrSpore?: number,
+        headerLevel?: number,
+        dontDisplayGensFruitOrSpore?: boolean,
+        offset?: number,
+    }
+) {
+    return <div>
+        <div>{"Generations since:"}</div>
+        <div>
+            <div>{"Spore: "}</div>
+            <div >{gensSinceSpore || "unknown"}</div>
+        </div>
+        {(!dontDisplayGensFruitOrSpore) && <div>
+            <div>{"Fruit or Spore: "}</div>
+            <div>{gensSinceFruitOrSpore || "unknown"}</div>
+        </div>}
+    </div>
+}
+export function GensFormDisplay(
+    {gensSinceSpore, gensSinceFruitOrSpore, dontDisplayGensFruitOrSpore, headerLevel, offset}: {
+        gensSinceSpore?: number,
+        gensSinceFruitOrSpore?: number,
+        headerLevel?: number,
+        dontDisplayGensFruitOrSpore?: boolean,
+        offset?: number,
+    }
+) {
+    return <>
+        <div>{"Generations since:"}</div>
+        <div>{"Spore: "+(gensSinceSpore || "unknown")}</div>
+        {(!dontDisplayGensFruitOrSpore) && <div>{"Fruit or Spore: "+(gensSinceFruitOrSpore || "unknown")}</div>}
+    </>
+}
+
+export const PicsDisplay = (
+    props: {
+        pix: PicWithNotesIncoming[],
+        updateParent: (v: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>) => void,
+        readonly?: boolean,
+        sectionHeader?: string,
+        addButtonText?: string,
+        headerLevel?: number,
+        offset?: number,
+    }
+) => {
+    const pwnfFor = (item: PicWithNotesIncoming):Data<PicWithNotesForm>=>{
+        return {data:{time: item.time, img: item.location, notes: InitialNotesState(item.notes)},disabled:false}
+    }
+    const pwnfs = (items: PicWithNotesIncoming[]):Data<PicWithNotesForm>[]=>{
+        return items.map(v=>{return pwnfFor(v)})
+    }
+    const [existing, setExisting] = useState<Data<PicWithNotesForm>[]>(pwnfs(props.pix))
+    const [created, setCreated] = useState<NewPicWithNotesForm[]>([])
+    useEffect(()=>{
+        setExisting(pwnfs(props.pix))
+        setCreated([])
+        //doUpdate() // TODO: do we need this?
+    },[props.pix])
+    const doUpdate = ()=>{
+        props.updateParent({
+            existing:existing,
+            new:created,
+        })
+    }
+    const updateExisting = (updated: Data<PicWithNotesForm>[])=>{
+        setExisting(updated)
+        doUpdate()
+    }
+    const updateNew = (updated: NewPicWithNotesForm[])=>{
+        setCreated(updated)
+        doUpdate()
+    }
+    const depth = useContext(DepthContext)
+    // TODO: OVERHAUL WITH EITHER GRID OR FLEXBOX?
+    return <div /*key={count}*/ className={"depthContainer depth"+depth}>
+        <div className={"areaHeader"}>{props.sectionHeader || "Pictures"}</div>
+        <div className={"picsGroup picsRows"}>{/* TODO: change to grid???*/}
+            {props.pix.map((img, i) => {
+                {/* TODO: REMOVE CURRENT FROM INPUTS! DO INITIAL INSTEAD!*/}
+                return <PixRowExisting key={i} initial={img} readonly={props.readonly} updateParent={a => {
+                    let upd = structuredClone(existing)
+                    upd[i] = a
+                    updateExisting(upd)
+                }} />
+            })}
+        </div>
+            {!props.readonly && <PixRows initial={props.pix} updateParent={a => {
+                let upd = structuredClone(a)
+                updateNew(upd)
+            }}/>}
+
+    </div>
+}
+
+export const PixRowExisting = (
+    {readonly, updateParent, initial}: {
+        initial: PicWithNotesIncoming,
+        readonly?: boolean,
+        updateParent?: (d: Data<PicWithNotesForm>) => void
+    }
+) => {
+    const pwnfFor = (item: PicWithNotesIncoming):Data<PicWithNotesForm> => {
+        return {data:{
+            time:item.time,
+                img:item.location,
+                notes:InitialNotesState(item.notes),
+            },disabled:false}
+    }
+    const [current, setCurrent] = useState<Data<PicWithNotesForm>>(pwnfFor(initial))
+    useEffect(()=>{
+        setCurrent(pwnfFor(initial))// reset when initial changes
+    },[initial])
+    const update = (updated: Data<PicWithNotesForm>)=>{
+        setCurrent(updated)
+        updateParent && updateParent(updated)
+    }
+    const disabledClass = ()=>{
+        return current.disabled ? " disabled" : ""
+    }
+    const leftArea = () => {
+        return <div className={"picLeft" + disabledClass()}>
+            {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
+            <img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>
+            {!readonly && <button className={current.disabled?"basicButtonSmall":"removeButtonSmall"} onClick={(e) => {
+                e.stopPropagation();
+                let upd = structuredClone(current)
+                upd.disabled = !current.disabled
+                update(upd)
+            }}>
+                {(current.disabled ? "ENABLE" : "DISABLE") + " THIS IMAGE"}{/* TODO: THIS IS NOT WORKING!!!!!*/}
+            </button>}
+        </div>
+    }
+    const rightArea = () => {
+        return <div className={"picRight" + disabledClass()}>
+            <DateArea readonly={true} when={initial.time}/>
+            <NotesFormArea initial={initial.notes} readonly={readonly || false} updateParent={(nts: AllEntries<Note>) => {
+                let updated = structuredClone(current)
+                updated.data.notes = nts
+                update(updated)
+            }} removeHeader={true} />
+        </div>
+    }
+    return <div className={"contentsOnly picRow" + disabledClass()}>
+        {leftArea()}
+        {rightArea()}
+    </div>
+}
+
+// TODO: NEEDS MAJOR FIX!!!
+
+export function MostRecentImageDisplay(
+    {data, headerLevel, headerTxt, showHeader}: {
+        data?: PicWithNotesIncoming, // TODO: change to File or string?????
+        headerTxt?: string,
+        headerLevel?: number,
+        showHeader?: boolean,
+    }) {
+    if (data === undefined) {
+        return null
+    }
+    const mostRecentImageHeader = headerTxt || "Image Upload Date: "
+    const depth = useContext(DepthContext)
+    return <DepthProvider>
+        <div className={"mriParent depthContainer depth"+depth}>
+            <div>
+                <img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>
+            </div>
+            <div className={"mriInfoHolder"}>
+                <DateArea pre={(showHeader ? mostRecentImageHeader : undefined)} when={data.time} readonly={true}/>
+                <NotesAreaMostRecentImage readonly={true} current={{existing: dataFor(data.notes), new: []}}/>
+            </div>
+        </div>
+    </DepthProvider>
+}
+
+export const SpeciesArea = (
+    {
+        readonly, setSpecies, initial, headerLevel
+    }: {
+        readonly: boolean,
+        setSpecies?: (sp: SpeciesData | undefined) => void,
+        initial?: string,
+        headerLevel?: number,
+    }
+) => {
+    let spArea: JSX.Element | null = null
+    if (readonly) {
+        spArea = <div>{"unknown"}</div>
+        if (initial !== undefined) {
+            spArea = <EntryLink props={{
+                displayedId: initial,
+                linkId: initial.split(" ").join("_"),
+                entryType: "species"
+            }}>{initial}</EntryLink>
+        }
+    } else {
+        // TODO: CSS
+        spArea = <ExistingSpeciesSelector doSelect={(s) => {
+            setSpecies && setSpecies(s)
+        }}/>
+    }
+    return <div className={"areaWrapper"}>
+        <div className={"areaHeader"}>{"Species:"}</div>
+        <div>{spArea}</div>
+    </div>
+}
+
+// export function SpeciesFormArea({species}:{
+//     species?: string,
+// }){
+//     return <div>
+//         {"Species: "+(species?species:"undefined")}{/* TODO: LINK!?*/}
+//     </div>
+// }
+// export function SpeciesSubspeciesFormArea({species,subspecies}:{
+//     species?: string,
+//     subspecies?: string,
+// }){
+//     return <>
+//         <SpeciesFormArea species={species}/>
+//         {subspecies && <SubspeciesFormArea subspecies={subspecies}/>}
+//     </>
+// }
+
+export const SubspeciesArea = (
+    {
+        readonly, currentSpecies, initialSub, setSubspecies, headerLevel
+    }: {
+        readonly: boolean,
+        setSubspecies?: (sp: SubspeciesData | undefined) => void,
+        currentSpecies?: string,
+        initialSub?: string,
+        headerLevel?: number
+    }
+) => {
+    if (currentSpecies === undefined) {
+        return null
+    }
+    let spArea: JSX.Element | null = null
+    if (readonly) {
+        if (initialSub !== undefined) {
+            spArea = <EntryLink props={{
+                displayedId: initialSub,
+                linkId: initialSub.split(" ").join("_"),
+                entryType: "subspecies"
+            }}>{initialSub}</EntryLink> // TODO: ensure subspecies is correct entryType
+        }
+    } else {
+        spArea = <ExistingSubSpeciesSelector species={currentSpecies} doSelect={(s) => {
+            setSubspecies && setSubspecies(s)
+        }}/>
+    }
+    return <div className={"areaWrapper"}>
+        <div className={"areaHeader"}>{"Subspecies: "}</div>
+        <div>{spArea}</div>
+    </div>
+}
+
+// export const SalesArea = ( // TODO: MOVE???? // TODO: onClick??????
+//     readonly: boolean,
+//     initialSales: string[],
+//     newSale?: () => void,
+//     headerLevel?: number,
+// ) => {
+//     return <div>
+//         <div>Sales</div>
+//         {initialSales.map((sale) => {
+//             const b58id = BinaryToBase58(sale)
+//             return <div>
+//                 <div>{"Sales"}</div> {/* TODO: MAKE THIS A LINK!!!!!*/}
+//             </div>
+//         })}
+//         {!readonly && <button onClick={newSale}>{"New Sale"}</button>}
+//     </div>
+// }
+
+export function SporePrintColorArea(
+    {readonly, color, setColor}: {
+        readonly: boolean,
+        color?: string,
+        setColor?: (s?: string) => void,
+    }
+) {
+    return <NoSsr>
+        <div className={"sporePrintColorArea"}>
+            <div className={"areaHeader"}>{"Color: "}</div>
+            {readonly ? <div>{color}</div> : <SporePrintColorSelector current={color} onSelect={setColor}/>}
+        </div>
+    </NoSsr>
+}
+
+export function SporePrintDensityArea(
+    {readonly, density, setDensity}: {
+        readonly: boolean,
+        density?: string,
+        setDensity?: (s?: string) => void,
+    }
+) {
+    return <NoSsr>
+        <div className={"sporePrintDensityArea"}>
+            <div className={"areaHeader"}>{"Density: "}</div>
+            {readonly ? <div>{density}</div> : <SporePrintDensitySelector current={density} onSelect={setDensity}/>}
+        </div>
+    </NoSsr>
+}
+
+export function StringOptionsSelector({queryKey, variant, current, onSelect}: {
+    queryKey: string,
+    variant: string,
+    current?: string,
+    onSelect?: (value?: string) => void,
+}) {
+    const {isPending, error, data} = useQuery({
+        queryKey: [queryKey],
+        queryFn: ()=>{
+            return getOptionsResponse(variant)
+        }
+        // queryFn: () => { // TODO: FIX THIS!
+        //     // TODO: delete lines before fetch for the real server
+        //     const map = new Map<string, string>();
+        //     map.set("fixme1-" + queryKey, "outgrew plate");
+        //     map.set("fixme2-dens" + queryKey, "parent was contaminated");
+        //     map.set("fixme3-dens" + queryKey, "transferring a specific sector");
+        //     return map;
+        //     // TODO: reenable
+        //     fetch(BaseInternalUrl + "/options/" + queryKey).then(HandleJsonResponse).then((resJson) => {
+        //         return ConvertObjectToStringMap(resJson)
+        //     }).catch((e) => {
+        //         throw e
+        //     })
+        // },
+    })
+    if (isPending || error !== null) {
+        return <div>{isPending ? variant + " SELECTOR LOADING" : variant + " SELECTOR ERROR: " + error.message}</div>
+    }
+    return <SelectorFor disabled={onSelect === undefined} options={["", ...data]} initial={current || ""}
+                        updateParent={(s) => {
+                            if (s === "") {
+                                onSelect && onSelect()
+                            }
+                            onSelect && onSelect(s as string)
+                        }
+                        }/>
+}
+
+// export function ConvertObjectToStringMap(obj: { [key: string]: string }): Map<string, string> {
+//     const map = new Map<string, any>();
+//     for (const key in obj) {
+//         if (Object.prototype.hasOwnProperty.call(obj, key)) {
+//             map.set(key, obj[key]);
+//         }
+//     }
+//     return map;
+// }
+
+export function SporePrintDensitySelector(
+    {current, onSelect}: {
+        current?: string,
+        onSelect?: (ab?: string) => void
+    }) {
+    return <StringOptionsSelector queryKey={"spore print densities"} variant={"sporePrintDensities"}
+                                  current={current} onSelect={onSelect}/>
+}
+
+export function SporePrintColorSelector(
+    {current, onSelect}: {
+        current?: string,
+        onSelect?: (ab?: string) => void
+    }) {
+    return <StringOptionsSelector queryKey={"spore print colors"} variant={"sporePrintColors"} current={current}
+                                  onSelect={onSelect}/>
+}
+
+export function DisposedDisplay(
+    {readonly, disposed, setDisposedOnParent}: {
+        readonly: boolean,
+        disposed?: number,
+        setDisposedOnParent?: (n?: number) => void,
+    }
+) {
+    if (readonly || (disposed !== undefined)) {
+        return <NoSsr>
+            <div className={"disposedArea"}>
+                <div>{disposed ? "Disposed: " : "Not Yet Disposed"}</div>
+                {disposed && <div>{NumberToDate(new Date(disposed))}</div>}
+            </div>
+        </NoSsr>
+    }
+    const dispose = () => {
+        let DisposalTime = Date.now()
+        setDisposedOnParent && setDisposedOnParent(DisposalTime)
+    }
+    return <NoSsr>
+        <div className={"disposedArea"}>
+            <div className={"areaHeader"}>{"Not Yet Disposed: "}</div>
+            <button className={"removeButton"} onClick={dispose}>{"Dispose"}</button>
+        </div>
+    </NoSsr>
+}
+
+export const ErrorDisplay = ({ // TODO: USE
+                                 err, headerLevel, offset,classNames
+                             }: {
+    err?: string
+    headerLevel?: number // TODO: REMOVE
+    offset?: number // TODO: REMOVE?
+    classNames?: string
+}) => {
+    if (err === undefined) {
+        return null
+    }
+    return <div className={"Error centerH"+(classNames?" "+classNames:"")}>
+        <p>{err}</p>
+    </div>
+}
+
+export function StandardArea(
+    {
+        isStandard, setStandard, headerTxt, readonly, headerLevel
+    }: {
+        isStandard?: boolean,
+        setStandard?: (is: boolean) => void
+        headerTxt?: string
+        readonly?: boolean,
+        headerLevel?: number,
+    }) {
+    const stdTxt = headerTxt || "Standard: "
+    const toggle = () => {
+        setStandard && setStandard(!isStandard)
+    }
+    if (readonly) {
+        return <div>{stdTxt + (isStandard ? "true" : "false")}</div>
+    }
+    return <div className={"inlineChildren mt-2"}>
+        <div className={"mr-2"}>{stdTxt}</div>
+        <input type="checkbox" checked={isStandard} onChange={toggle}/>
+    </div>
+}
+
+export function NameArea(
+    {
+        currentName, setName, headerTxt, headerLevel, readonly, classNames, titleClasses
+    }: {
+        currentName?: string,
+        setName?: (n: string) => void
+        headerTxt?: string
+        readonly?: boolean,
+        headerLevel?: number,
+        classNames?: string
+        titleClasses?: string
+
+    }) {
+    if (readonly) {
+        return <div>{headerTxt || "Name: "}{currentName || ""}</div>
+    }
+    return <div className={"my-5"+(classNames?" "+classNames:"")}>
+        <InlineTitle title={headerTxt || "Name: "} titleClasses={titleClasses}>
+            <InputText value={currentName} readonly={false} errorMessage={"invalid name"} placeholder={"name"} onChange={(s)=>{setName && setName(s||"")}}  />
+        </InlineTitle>
+    </div>
+}
+
+export function InlineTitle(props:React.PropsWithChildren<{title:string,titleClasses?:string}>){
+    return <>
+    <div className={props.titleClasses||""}>{props.title}</div>
+        {props.children}
+    </>
+}
+
+export function InputTextWithInlineTitle({currentContent, setContent, headerTxt, placeholder}:{
+    currentContent?: string,
+    setContent?: (n: string) => void
+    headerTxt: string
+    placeholder?: string
+}){
+    return <div className={"my-5"}>
+        <InputTextInlineTitle label={headerTxt} readonly={false} errorMessage={""} value={currentContent || ""} placeholder={placeholder} onChange={(v)=>{setContent && setContent(v || "")}}/>
+    </div>
+}
+
+export function OpenMainPage(
+    {
+        type, txt, linkId // TODO: MAKE SURE USING B58IDs (or underlined) HERE EVERYWHERE
+    }: {
+        type: string
+        redirect?: boolean
+        linkId: string
+        txt?: string
+    }) {
+    const isTopLevel = useContext(DepthContext) === 0
+    const handleClick = (e: React.MouseEvent) => {
+        e.preventDefault()
+        const url = BaseExternalUrl + "/view/" + type + "/" + linkId
+        if (redirect) {
+            redirect(url)
+        } else {
+            window.open(url, '_blank', 'noopener,noreferrer'); // TODO: ensure ok
+        }
+
+    }
+    return isTopLevel ? null : <div className={"openMainPageButton"}>
+        <button className={"basicButton"} onClick={(e) => {
+            e.preventDefault() // Ensure other (parent) click handlers don't do anything
+            handleClick(e)
+        }}>{txt || "View Page"}</button>
+    </div>
+}
+
+export function AliasesArea( // TODO: OVERHAUL
+    {
+        aliases, readonly, headerLevel, offset, updateParent
+    }: {
+        aliases?: string[]
+        readonly?: boolean
+        headerLevel?: number
+        offset?: number
+        updateParent?: (s: string[]) => void
+    }) {
+    const [vals, setVals] = useState<string[]>(aliases || [])
+
+    useEffect(()=>{
+        setVals(aliases || [])
+    },[aliases])
+    // TODO: keep aliases internally, and only return active ones to parent
+    if (readonly) {
+        if (!aliases) {
+            return null
+        }
+        return <div>
+            <div>{"Aliases :"}</div>
+            {(aliases || []).map((a, i) => {
+                return <div key={i}>{a}</div>
+            })}
+        </div>
+    }
+    return <div>
+        <div>{"Aliases :"}</div>
+        <TextBoxArea readonly={false} initialValues={(aliases || []).map((((a: string) => {
+            return {data: a, disabled: false}
+        })))} updateParent={(v) => {
+            let newVals = v.new.map((n) => {
+                return n.data
+            })
+            updateParent && updateParent(newVals)
+        }}/>
+    </div>
+}

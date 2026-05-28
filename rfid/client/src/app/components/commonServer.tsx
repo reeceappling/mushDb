@@ -1,0 +1,32 @@
+// import {SelectorProps} from "@/app/components/selector";
+// import {JSX, ReactElement, useState} from "react";
+// import {InlineProps} from "@/app/components/common";
+// import H from "@/app/components/formSubcomponents/utils/headers";
+// import EntryLink from "@/app/components/formSubcomponents/entryLink";
+// import {redirect} from "next/navigation";
+// import {BaseUrl} from "@/app/components/Constants";
+
+
+// TODO: gross, get rid of it likely
+import DateArea from "@/app/components/formSubcomponents/date";
+import {DisposedDisplay} from "@/app/components/formSubcomponents/commonClient";
+
+export default function Centered({children}:{children:React.ReactNode}){
+    return <div className={"centerH"}>{children}</div>
+}
+
+export function CreatedUpdatedDisposedArea(
+    {created, updated, disposed, readonly, setDisposedOnParent}: {
+        created: number,
+        updated: number,
+        disposed?: number,
+        readonly: boolean,
+        setDisposedOnParent?: (n?: number) => void,
+    }
+) {
+    return <>
+        <DateArea pre={"Created: "} when={created} readonly={true}/>
+        <DateArea pre={"Updated: "} when={updated} readonly={true}/>
+        <DisposedDisplay readonly={readonly} disposed={disposed} setDisposedOnParent={setDisposedOnParent}/>
+    </>
+}

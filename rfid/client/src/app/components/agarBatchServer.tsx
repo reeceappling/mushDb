@@ -1,0 +1,61 @@
+import {Note} from "@/app/components/formSubcomponents/notes";
+import {
+    AgarBatchSelector,
+    NewAgarBatchForm
+} from "@/app/components/agarBatchClient";
+import CloseableSelector, {SelectorProps} from "@/app/components/selector";
+import {ACL} from "@/app/components/accessControlServer";
+
+// TODO: CHANGE AGAR COLORS TO USE THEM FROM THE SERVER
+export type AgarColor = "Clear" | "Black" | "Blue" | "Green" | "Yellow"| "Orange" | "Red";
+export function TestAgarBatchOk() {
+    const a: AgarBatchData = {
+        _id: "(Batch ID HERE)",
+        color: "clear",
+        pcRun: "(Run ID HERE)",
+        agarRecipe: "(Recipe ID HERE)",
+        notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
+        lastUpdated: 789,
+    }
+    return a
+}
+
+export interface AgarBatchData {
+    _id: string
+    color: string
+    pcRun: string
+    agarRecipe: string
+    notes?: Note[]
+    lastUpdated: number
+    acl?: ACL
+}
+
+export function AgarBatchSelectorCloseable(sp: SelectorProps<AgarBatchData>) {
+    const doSel = (val?: AgarBatchData):void=>{
+        if (!val){
+            return
+        }
+        sp.doSelect(val)
+    }
+    return <CloseableSelector<AgarBatchData> props={{
+        allowCreation: sp.allowCreation,
+        doSelect: doSel, // For selecting normally
+        msgTxt: ChannelTextNewAgarBatch,
+        closeTxt: "Close Batch List",
+        createTxt: "Create Agar Batch",
+        lowercase: "agar batch",
+        creatorInPage: sp.creatorInPage,
+        createEndpt: "agarBatch",
+        getId: (v: AgarBatchData) => v._id,
+        createSelector:(selHdl: (onSelect: AgarBatchData) => void)=>{
+            return <AgarBatchSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+                v && selHdl(v)
+            }}/>
+        },
+        createCreator:(selHdl: (onSelect: AgarBatchData) => void)=>{
+            return <NewAgarBatchForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+        },
+    }}/>
+}
+
+export const ChannelTextNewAgarBatch = "newAgarBatch"

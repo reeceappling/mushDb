@@ -1,0 +1,97 @@
+div {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+*, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+
+#transferDisplay {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+    & .fromToImage {
+        box-sizing: border-box;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        & > img {
+            object-fit: contain;
+            max-height: 50vh;
+            max-width: 100%;
+        }
+
+    }
+    & .fromToLink {
+        & .xferEntryLink:hover {
+            color: var(--clr-success-0); /* TODO: ensure ok */
+        }
+        box-sizing: border-box;
+        font-size: 1.2rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    & .fromToArea {
+        box-sizing: border-box;
+        display: grid;
+        width: 100%;
+        row-gap: 0.5em;
+        column-gap: 1em;
+        grid-template-rows: [header-start] 2em [header-end images-start] 1fr [images-end];
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+    "header header"
+    "images images";
+            justify-content: center;
+            align-items: center;
+        & > div {
+            box-sizing: border-box;
+
+            &.fromToLinkArea {
+            }
+            &.fromToImageArea {
+            }
+        }
+    }
+}
+
+.transfersGrid {
+    display: grid;
+    grid-auto-rows: min-content;
+    grid-template-columns: min-content 1fr;
+    gap: 1em;
+    & > div { /* Ensure existing transfer links never wrap */
+        &:first-child {
+            min-width: 3em;
+            width: fit-content;
+            & a {
+                white-space: nowrap;        /* Text never wraps */
+                display: inline-block;      /* Keeps it together */
+            }
+        }
+    }
+}
+.existingTransferItem {
+    width: fit-content;
+    white-space: nowrap;        /* Text never wraps */
+    display: inline-block;      /* Keeps it together */
+}
+.transferHeader {
+    width: 100%;
+    position: absolute;
+    left: 50%;
+    & > div {
+        width: fit-content;
+        transform: translateX(-50%);
+    }
+}
+#transferCreator {
+    display: grid;
+    grid-template-rows: 1fr; /* Content takes space, element at bottom */
+    & > .pushToBottom {
+        align-self: end;
+        margin-bottom: 0;
+        margin-top: auto;
+    }
+}

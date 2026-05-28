@@ -1,0 +1,55 @@
+div {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+*, *::before, *::after {
+    box-sizing: border-box;
+    max-width: 100%; /* TODO: ensure ok*/
+}
+
+.subForm {
+    /*display: block;*/
+    box-sizing: border-box;
+    max-width: 100%;
+    /* TODO: ALL INTERNALS HERE! */
+    &.displayForm {
+        &.depth0 {
+            box-sizing: border-box;
+            max-width: 100%;
+            &.lc .flexedArea > .flexedMultiGroup {
+                box-sizing: border-box;
+                max-width: 100%;
+                & > div {
+                    margin-bottom: var(--smallestSpace);
+                }
+            }
+            & > * { /* FIRST LEVEL STUFF ON DISPLAY FORMS*/
+                box-sizing: border-box;
+                max-width: 100%;
+                &.flexedArea {
+                    display: flex
+                }
+                display: block;
+                &.idComponent { /* ID on display forms */
+                    margin: 0 auto;
+                    & .openMainPageButton {
+                        margin: auto 0;
+                        position: relative;
+                        left: 0.5em;
+                    }
+                }
+            }
+
+        }
+        /* TODO: ALL INTERNALS HERE! */
+    }
+    &.newEntryForm {
+        /* TODO: ALL INTERNALS HERE! */
+    }
+    &.importEntryForm {
+        /* TODO: ALL INTERNALS HERE! */
+    }
+    & > div { /* direct children of a subform (ex: MostRecentImage, ACL, grouped fields */
+
+    }
+}
