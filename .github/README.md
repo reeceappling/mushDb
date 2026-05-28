@@ -49,3 +49,10 @@ docker compose logs -f  api
 (cd rfid/goGenerator
 ./buildAndGenerate.sh)
 ```
+
+# Repo Links
+- [AUTHORS](AUTHORS.md)
+- [CHANGELOG](CHANGELOG.md)
+- [CODEOWNERS](CODEOWNERS)
+- [CONTRIBUTING](CONTRIBUTING.md)
+- [CONTRIBUTORS](CONTRIBUTORS.md)
