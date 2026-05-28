@@ -8,17 +8,6 @@ This is a group of containers (a docker-compose project) I use to keep track and
   - Pictures are stored in their own volume.
 - The Webserver is a next.js app that serves the frontend.
 - The API is made public via a Cloudflare tunnel.
-## TODO
-<details>
-  <summary>TODOs</summary>
-
-- Backend Testing
-- Frontend Testing (Cypress?)
-- Add metrics and monitoring (grafana?)
-- Add DB and image backup system
-- Dictation on the frontend for hands-free operation when working in a sterile environment.
-</details>
-
 
 # Running Locally
 ## Requirements
@@ -86,7 +75,7 @@ TODO: THIS
 TODO: THIS
 
 
-# Repo Links
+# Misc. Repo Links
 - [Acknowledgements](ACKNOWLEDGEMENTS.md) Still a template
 - [Authors](AUTHORS.md)
 - [Changelog](CHANGELOG.md)
@@ -95,5 +84,6 @@ TODO: THIS
 - [Contributors](CONTRIBUTORS.md)
 - [Funding](FUNDING.md) Still a template
 - [Issue Template](ISSUE_TEMPLATE.md) Still a template
+- [LICENSE](../LICENSE) Still a template
 - [Pull Request Template](pull_request_template.md) Still a template
 - [Security](SECURITY.md) Still a template
