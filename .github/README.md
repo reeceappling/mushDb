@@ -9,23 +9,53 @@ This is a group of containers (a docker-compose project) I use to keep track and
 - The Webserver is a next.js app that serves the frontend.
 - The API is made public via a Cloudflare tunnel.
 ## TODO
+<details>
+  <summary>TODOs</summary>
+
 - Backend Testing
 - Frontend Testing (Cypress?)
 - Add metrics and monitoring (grafana?)
 - Add DB and image backup system
 - Dictation on the frontend for hands-free operation when working in a sterile environment.
+</details>
+
 
 # Running Locally
-### With force recreate
+## Requirements
+<details>
+  <summary>Hardware Requirements</summary>
+
+- TODO: CPU requirements!
+- TODO: RAM requirements!
+- TODO: Storage requirements!
+- TODO: Network requirements!
+</details>
+
+<details>
+  <summary>Dependencies</summary>
+
+- Typescript -  TODO: VERSION
+- Go (if developing or compiling the API locally)
+- React -  TODO: VERSION
+- Next.js -  TODO: VERSION
+- MongoDB (Container) TODO: VERSION
+- TODO: ADD MY OTHER REPO
+</details>
+
+## How to Run
+### Environment setup
+TODO: how to setup your env file
+### Running the containers
+#### With force recreate
 ```bash
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up --build --force-recreate
 ```
-### Without force recreate
+#### Without force recreate
 ```bash
 
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up --build
 ```
-### Without rebuilding
+#### Without rebuilding
 ```bash
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up
 ```
@@ -41,18 +71,29 @@ following the api logs
 ```bash
 docker compose logs -f  api
 ```
-
-## Regenerating Go Files
+## Building Locally
+Most of the building is done when you run docker compose for the project, but you can also build each part separately for development purposes.
+### API
+TODO: THIS
+#### Regenerating Go Files
 
 ```bash
 # Use subshell to change into the directory and run the script, so that we dont have to change back to the original directory after
 (cd rfid/goGenerator
 ./buildAndGenerate.sh)
 ```
+### Webserver
+TODO: THIS
+
 
 # Repo Links
-- [AUTHORS](AUTHORS.md)
-- [CHANGELOG](CHANGELOG.md)
+- [Acknowledgements](ACKNOWLEDGEMENTS.md) Still a template
+- [Authors](AUTHORS.md)
+- [Changelog](CHANGELOG.md)
 - [CODEOWNERS](CODEOWNERS)
-- [CONTRIBUTING](CONTRIBUTING.md)
-- [CONTRIBUTORS](CONTRIBUTORS.md)
+- [Contributing](CONTRIBUTING.md)
+- [Contributors](CONTRIBUTORS.md)
+- [Funding](FUNDING.md) Still a template
+- [Issue Template](ISSUE_TEMPLATE.md) Still a template
+- [Pull Request Template](pull_request_template.md) Still a template
+- [Security](SECURITY.md) Still a template
