@@ -1,5 +1,6 @@
 FROM --platform=linux/arm64 golang:latest AS builder
 
+# TODO: THIS IS UNUSED IN THIS PROJECT!!!!
 WORKDIR /app
 COPY rfidServer server
 

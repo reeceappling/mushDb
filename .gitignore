@@ -50,9 +50,9 @@ html
 nginx
 nginx/*
 old
-rfid/secrets
-rfid/sessions
-/rfid/client/src/app/testpage
+api/secrets
+api/sessions
+/src/web/src/app/testpage
 test
 tests
 sessions

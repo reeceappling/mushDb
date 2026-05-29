@@ -4,22 +4,24 @@ services:
     image: mush-web:latest
     restart: unless-stopped
     build:
-      context: ./rfid/client
+      context: ./web
       dockerfile: ./Dockerfile
       args:
-        MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-http}
+        MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-https} # TODO: https?
         MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
-        MAIN_API_EXTERNAL_PORT: ${MAIN_API_EXTERNAL_PORT:-80}
-        MAIN_API_INTERNAL_HOST: "api"
+        MAIN_API_EXTERNAL_PORT: ${MAIN_API_EXTERNAL_PORT:-443}
         GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID?error}
       tags:
         - "mush-web:latest"
     environment:
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID?error}
+      # TODO: ensure next 2 ok
+#      NEXT_PRIVATE_BASE_API_URL: "http://api:8080"
+#      NEXT_PUBLIC_BASE_API_URL: https://mush.appli.ng
       NEXT_PRIVATE_BASE_API_URL: "http://api:8080"
-      NEXT_PUBLIC_BASE_API_URL: https://mush.appli.ng
-      #Was http
-      #NEXT_PUBLIC_BASE_API_URL: "${MAIN_API_EXTERNAL_PROTOCOL:-http}://${MAIN_API_EXTERNAL_HOST:-localhost}"
+      NEXT_PUBLIC_DOMAIN: ${MAIN_API_EXTERNAL_HOST:-localhost}
+      NEXT_PUBLIC_PORT: ${MAIN_API_EXTERNAL_PORT:-443}
+      NEXT_PUBLIC_BASE_API_URL: ${MAIN_API_EXTERNAL_PROTOCOL:-https}://${MAIN_API_EXTERNAL_HOST:-localhost}
     networks:
       - mushNet
 # TODO: https://github.com/offen/docker-volume-backup
