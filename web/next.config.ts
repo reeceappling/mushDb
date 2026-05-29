@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     crossOrigin: 'anonymous', // TODO: ok?
     experimental: {
         serverActions: {
-            allowedOrigins: ['appli.ng', 'mush.appli.ng', 'web', 'http://web:3000', 'web:3000', 'api'],
+            allowedOrigins: ['appli.ng', 'mush.appli.ng', 'web', 'http://web:3000', 'web:3000', 'api'], // TODO: GET THESE FROM ELSEWHERE!
         },
     },
 
@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
 };
 
 module.exports = {
-    productionBrowserSourceMaps: true, // TODO: deleteme
+    productionBrowserSourceMaps: true, // TODO: deleteme!
     output: "standalone",
 };
 

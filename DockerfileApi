@@ -2,17 +2,20 @@ FROM golang:latest AS builder
 #FROM --platform=linux/arm64 golang:latest AS builder
 
 WORKDIR /app
-COPY ./go.mod go.mod
-COPY ./go.sum go.sum
-COPY ./api /api/
-COPY ./main.go main.go
-
-# TODO: ensure next line ok
-RUN GOOS=linux GOARCH=arm64 go build -o server .
+COPY bin/mushApi server
+# TODO: enable the following to stop needing the main_run script all the time...
+#COPY ./go.mod go.mod
+#COPY ./go.sum go.sum
+#COPY ./api /api/
+#COPY ./main.go main.go
+#
+## TODO: ensure next line ok
+#RUN GOOS=linux GOARCH=arm64 go build -o server .
 
 FROM alpine:latest
 #FROM --platform=linux/arm64 alpine:latest
 
+# TODO: workdir ok?
 WORKDIR /root/s
 COPY --from=builder /app/server .
 RUN chmod 777 server

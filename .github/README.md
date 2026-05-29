@@ -76,6 +76,20 @@ chmod 666 etc/mongodb.key
 chown mongodb:mongodb etc/mongodb.key
 ```
 ### Running the containers
+**The quick way** (If everything is already set up)
+```bash
+./scripts/run_main.sh
+```
+**The first way if the quick way is unavailable**
+
+Before running the containers, ensure the api binary is built. It should exist at [/bin/mushApi](../bin/mushApi).
+If it does not exist, run the following from the root of the project:
+```bash
+# Remove if exists already
+rm -rf bin/mushApi
+# Build the api binary
+go build -o bin/mushApi .
+```
 #### With force recreate
 ```bash
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up --build --force-recreate
