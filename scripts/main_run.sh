@@ -11,4 +11,6 @@ workingDir=$(git rev-parse --show-toplevel)
   # Only builds and launches 2
   #MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up --build web --build api --force-recreate
   MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --verbose --env-file env/.env.devhttps up --build --force-recreate
+  # build only
+  #MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --verbose --env-file env/.env.devhttps build api --no-cache --progress=plain
 )

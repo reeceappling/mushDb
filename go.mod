@@ -5,8 +5,7 @@ go 1.24.2
 require (
 	github.com/docker/go-connections v0.5.0
 	github.com/google/uuid v1.6.0
-	github.com/gorilla/pat v0.0.0-20180118222023-199c85a7f6d1
-	github.com/gorilla/websocket v1.5.3
+	github.com/gorilla/sessions v1.4.0
 	github.com/itchyny/base58-go v0.2.2
 	github.com/markbates/goth v1.82.0
 	github.com/reeceappling/goUtils/v2 v2.0.0-20250605212538-82fddbe29f22
@@ -68,10 +67,9 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
-	github.com/gorilla/sessions v1.4.0 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

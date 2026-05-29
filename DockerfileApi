@@ -15,7 +15,6 @@ COPY bin/mushApi server
 FROM alpine:latest
 #FROM --platform=linux/arm64 alpine:latest
 
-# TODO: workdir ok?
 WORKDIR /root/s
 COPY --from=builder /app/server .
 RUN chmod 777 server
