@@ -13,9 +13,9 @@ import (
 	google2 "github.com/markbates/goth/providers/google"
 	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"github.com/reeceappling/mushDb/rfid"
-	"github.com/reeceappling/mushDb/rfid/pics"
-	"github.com/reeceappling/mushDb/rfid/request"
+	rfid "github.com/reeceappling/mushDb/api"
+	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/shared"
 	"github.com/ulule/limiter/v3"
@@ -36,7 +36,17 @@ import (
 	"time"
 )
 
-var baseApiUrl = "https://mush.appli.ng" // Overwritten main() early // TODO: likely set a different default
+var (
+	extProto   string
+	extHost    string
+	baseApiUrl string
+)
+
+func init() {
+	extProto = os.Getenv("MAIN_API_EXTERNAL_PROTOCOL")
+	extHost = os.Getenv("MAIN_API_EXTERNAL_HOST")
+	baseApiUrl = fmt.Sprintf("%s://%s", extProto, extHost)
+}
 
 func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, err error) {
 	dbHostName := os.Getenv("DB_HOST_NAME")
@@ -81,7 +91,7 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 	return ctx, rfid.GetMongoClient(ctx), nil
 }
 
-var oauthConfig *oauth2.Config
+var oauthConfig *oauth2.Config // TODO: ????
 
 const defaultHttpPort = 8080
 
@@ -115,26 +125,24 @@ func main() {
 		panic("env var missing for RFID_SECRET")
 	}
 	googId, googSecret := os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET")
-	apiProtocol := strings.ToLower(os.Getenv("MAIN_API_EXTERNAL_PROTOCOL"))
-	MAIN_API_EXTERNAL_HOST := os.Getenv("MAIN_API_EXTERNAL_HOST")
-	apiPort, err := strconv.Atoi(os.Getenv("API_PORT"))
+	apiPort, err := strconv.Atoi(os.Getenv("API_PORT")) // TODO: ok?
 	if err != nil {
 		fmt.Printf(`No api port configured, defaulting to port %d`, defaultHttpPort)
 		apiPort = defaultHttpPort
 	}
-	tempPortStr := ""
-	if (apiProtocol == "https" && apiPort != 443) || (apiProtocol == "http" && (apiPort != 80 && apiPort != defaultHttpPort)) { // TODO: 80 AND 8080 ok here?
-		tempPortStr = fmt.Sprintf(`:%d`, apiPort)
-	}
-	apiHostPort := MAIN_API_EXTERNAL_HOST + tempPortStr
-	baseApiUrl = fmt.Sprintf("%s://%s", apiProtocol, apiHostPort)
+	// TODO: api is hosted internally on 8080, but the actual site on cloudflare uses 443! Web is on 3000
+	//tempPortStr := ""
+	//if (extProto == "https" && apiPort != 443) || (extProto == "http" && (apiPort != 80 && apiPort != defaultHttpPort)) { // TODO: 80 AND 8080 ok here?
+	//	tempPortStr = fmt.Sprintf(`:%d`, apiPort)
+	//}
+	//apiHostPort := extHost + tempPortStr
+	//baseApiUrl = fmt.Sprintf("%s://%s", extProto, apiHostPort)
 	oauthConfig = &oauth2.Config{
 		ClientID:     googId,
 		ClientSecret: googSecret,
-		RedirectURL:  baseApiUrl + "/auth/google/callback",
-		// TODO: works but want to use other... RedirectURL: "http://mush.appli.ng/auth/google/callback", // TODO: ensure fixed
-		Scopes:   []string{"email", "profile", "openid"},
-		Endpoint: google.Endpoint,
+		RedirectURL:  extHost + "/auth/google/callback",
+		Scopes:       []string{"email", "profile", "openid"},
+		Endpoint:     google.Endpoint,
 	}
 
 	ctx, client, err := setupDb(ctx)
@@ -148,7 +156,7 @@ func main() {
 		}
 	}()
 
-	webHostName := envVarOrDefault("WEB_HOST_INTERNAL", "web") // Can have port if not hosting on 80      // TODO: CONFIGURE (localhost default or web?)
+	webHostName := envVarOrDefault("WEB_HOST_INTERNAL", "web") // Can have port if not hosting on 80
 
 	// Set up server
 	srv := &http.Server{
@@ -229,7 +237,7 @@ func main() {
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
 	webHostPort := 3000
-	webHostPortStr := os.Getenv("WEB_HOST_INTERNAL_PORT")
+	webHostPortStr := os.Getenv("WEB_HOST_INTERNAL_PORT") // TODO: only for running outside of docker compose
 	if webHostPortStr != "" {
 		webHostPort, err = strconv.Atoi(webHostPortStr)
 		if err != nil {

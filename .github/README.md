@@ -9,6 +9,9 @@ This is a group of containers (a docker-compose project) I use to keep track and
 - The Webserver is a next.js app that serves the frontend.
 - The API is made public via a Cloudflare tunnel.
 
+[webserver README](../web/README.md)
+
+[api README](../api/README.md)
 # Running Locally
 ## Requirements
 <details>
@@ -34,6 +37,14 @@ This is a group of containers (a docker-compose project) I use to keep track and
 ## How to Run
 ### Environment setup
 TODO: how to setup your env file
+#### Mongodb keys
+ensure /etc/mongodb.key exists. It is required to keep mongodb secure. If you don't have one, generate it with:
+```bash
+mkdir -p /etc
+openssl rand -base64 741 > etc/mongodb.key
+chmod 666 etc/mongodb.key
+chown mongodb:mongodb etc/mongodb.key
+```
 ### Running the containers
 #### With force recreate
 ```bash
@@ -68,11 +79,12 @@ TODO: THIS
 
 ```bash
 # Use subshell to change into the directory and run the script, so that we dont have to change back to the original directory after
-(cd rfid/goGenerator
+(cd api/goGenerator
 ./buildAndGenerate.sh)
 ```
 ### Webserver
 TODO: THIS
+[webserver README](../web/README.md)
 
 
 # Misc. Repo Links
