@@ -20,6 +20,7 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
     DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
@@ -31,7 +32,7 @@ import {
     OptionalSimpleKey,
     resolveContamsFormData,
     resolvePicsFormData, SendMultipartRequest, SendMultipartRequest2, setFormData,
-    setFormImages, viewUrlFor,
+    setFormImages, updateApiUrlFor, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -236,7 +237,7 @@ export default function StasisTubeDisplay(
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl+"/db/update/stasisTube/"+initial._id, cookies, body)
+            SendMultipartRequest(updateApiUrlFor("stasisTube", initial._id), cookies, body)
                 .then(HandleJsonResponse)
                 .then((entry) => {
                     AssertStasisTube(entry)
@@ -307,7 +308,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
             writeTagTo:writeTagTo,
         }
 
-        fetch(BaseExternalUrl+"/db/create/stasisTube", {
+        fetch(createApiUrlFor("stasisTube"), {
             method: "POST",
             headers: {
                 credentials: 'include',

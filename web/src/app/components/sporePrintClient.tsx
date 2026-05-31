@@ -26,7 +26,7 @@ import {
     NewColumn,
     NumberToDateStr,
     ListPageTable,
-    ExistingRecentSelector, CreatedLinkFor, ErrHandler, MultipartImportRequest
+    ExistingRecentSelector, CreatedLinkFor, ErrHandler, MultipartImportRequest, updateApiUrlFor, createApiUrlFor
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -239,7 +239,7 @@ export default function SporePrintDisplay(
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl+"/db/update/sporePrint/"+data._id, cookies, body)
+            SendMultipartRequest(updateApiUrlFor("sporePrint",data._id), cookies, body)
                 .then(HandleJsonResponse)
                 .then((entry) => {
                     AssertSporePrint(entry)
@@ -368,7 +368,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
             body.set(fileName, toSend.img, fileName)
         }
 
-        SendMultipartRequest(BaseExternalUrl+"/db/create/sporePrint", cookies, body)
+        SendMultipartRequest(createApiUrlFor("sporePrint"), cookies, body)
             .then(HandleJsonResponse)
             .then((resJson)=>{
                 AssertSporePrint(resJson)

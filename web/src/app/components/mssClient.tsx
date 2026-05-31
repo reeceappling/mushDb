@@ -16,7 +16,7 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, SendMultipartRequest2, viewUrlFor,
+    OptionalSimpleKey, SendMultipartRequest2, updateApiUrlFor, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -201,7 +201,7 @@ export default function MssDisplay(
                 notes: notes,
                 acl:MarshalAcl(acl),
             }
-            fetch(BaseExternalUrl+"/db/update/mss/"+data._id, {
+            fetch(updateApiUrlFor("mss", data._id), {
                 method: 'Post',
                 body: JSON.stringify(body),
                 headers: {

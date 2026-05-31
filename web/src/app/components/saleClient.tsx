@@ -10,11 +10,12 @@ import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
     DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey
+    OptionalKey, updateApiUrlFor
 } from "@/app/components/common";
 import {redirect} from "next/navigation";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
@@ -87,7 +88,7 @@ export default function SaleDisplay(
         //             perms: perms, // TODO: validate on insert
         //         }
         const saleUpdateSubmit = () => {
-            fetch(BaseExternalUrl+"/db/update/sale/"+data._id, {
+            fetch(updateApiUrlFor("sale",data._id), {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -149,7 +150,7 @@ export function NewSaleForm(
             notes: notes,
             //perms: perms, // TODO: KEEP PERMS FROM PARENT?
         }
-        fetch(BaseExternalUrl+"/db/create/sale", {
+        fetch(createApiUrlFor("sale"), {
             method: "POST",
             headers: {
                 credentials: 'include',

@@ -22,6 +22,7 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
     DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
@@ -32,7 +33,7 @@ import {
     OptionalSimpleKey,
     resolveContamsFormData,
     resolvePicsFormData, SendMultipartRequest, SendMultipartRequest2, setFormData,
-    setFormImages, viewUrlFor,
+    setFormImages, updateApiUrlFor, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -234,7 +235,7 @@ export default function SlantDisplay(
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl+"/db/update/slant/"+initial._id, cookies, body)
+            SendMultipartRequest(updateApiUrlFor("slant",initial._id), cookies, body)
                 .then(HandleJsonResponse)
                 .then((entry) => {
                     AssertSlant(entry)
@@ -316,7 +317,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl+"/db/create/slant", {
+        fetch(createApiUrlFor("slant"), {
             method: "POST",
             headers: {
                 credentials: 'include',

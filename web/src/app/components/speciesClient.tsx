@@ -11,6 +11,7 @@ import React, {JSX, useEffect, useState} from "react";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {
+    createApiUrlFor,
     CreateNewEntryButton,
     DisplayFormWrapper,
     DisplayInput, ErrHandler, ExistingRecentSelector,
@@ -32,7 +33,7 @@ import {
     OptionalArrayOfType,
     OptionalKey,
     SelectorWrapper,
-    Subform
+    Subform, updateApiUrlFor
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
@@ -114,7 +115,7 @@ export default function SpeciesDisplay(
         const update = ()=>{
             // Notes, aliases, substrate recipe, and have only
 
-            fetch(BaseExternalUrl+"/db/update/species/"+encodeURI(data._id), { // TODO: ensure correct
+            fetch(updateApiUrlFor("species", encodeURI(data._id)), { // TODO: ensure correct
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -193,7 +194,7 @@ export function NewSpeciesForm(
             setErr("Substrate must not be blank!")
             return
         }
-        fetch(BaseExternalUrl+"/db/create/species", {
+        fetch(createApiUrlFor("species"), {
             method: 'Post',
             body: JSON.stringify({
                 name:name,

@@ -19,7 +19,6 @@ import ReaderWriterSelector, {
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {InitialNotesState,} from "@/app/components/formSubcomponents/contaminations";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {WaterJarData} from "@/app/components/waterJarServer";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {NewMssForm} from "@/app/components/mssClient";
@@ -86,7 +85,7 @@ export default function WaterJarDisplay(
             setErr("No changes found")
             return
         }
-        fetch(updateApiUrlFor("waterJar",initial._id), { // This ID is in base58 // TODO: ID IS NOT PROPERLY POPULATING
+        fetch(updateApiUrlFor("waterJar",initial._id), { // TODO: ID IS NOT PROPERLY POPULATING
             method: 'Post',
             body: JSON.stringify({
                 notes: notes,
@@ -125,7 +124,7 @@ export default function WaterJarDisplay(
     return (
         <DisplayFormWrapper entryType={"waterJar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID txt={"Water Jar"} id={id} entryType={"waterJar"} />
+            <ID txt={"Water Jar"} id={initial._id} entryType={"waterJar"} />
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
