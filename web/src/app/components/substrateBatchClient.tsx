@@ -11,14 +11,15 @@ import {
 } from "@/app/components/substrateRecipeServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
+    createApiUrlFor,
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey
+    OptionalKey, updateApiUrlFor
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -91,7 +92,7 @@ export default function SubstrateBatchDisplay(
             setAcl(updated.acl)
         }
         const substrateSubmit = () => {
-            fetch(BaseExternalUrl + "/db/update/substrateBatch/" + initial._id, {
+            fetch(updateApiUrlFor("substrateBatch",initial._id), {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -107,9 +108,7 @@ export default function SubstrateBatchDisplay(
                     AssertSubstrateBatch(entry)
                     updateInitial(entry)
                 })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
+                .catch(ErrHandler(setErr));
         }
         const onViewCreators: OnViewCreatorTriCol[] = [
             {
@@ -183,7 +182,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
             setErr("a recipe must be selected")
             return
         } else {
-            fetch(BaseExternalUrl + "/db/create/substrateBatch", {
+            fetch(createApiUrlFor("substrateBatch"), {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -200,9 +199,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
                     AssertSubstrateBatch(entry)
                     handlers.onCreate && handlers.onCreate(entry)
                 })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
+                .catch(ErrHandler(setErr));
         }
     }
     if (!formOpen) {

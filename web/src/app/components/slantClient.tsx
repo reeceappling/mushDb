@@ -23,15 +23,15 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    ImportDisplayInput, ImportEntryFormWrapper, importUrlFor,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    ImportDisplayInput, ImportEntryFormWrapper, ImportResponseHandler, importUrlFor,
+    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
     resolveContamsFormData,
-    resolvePicsFormData, SendMultipartRequest, setFormData,
+    resolvePicsFormData, SendMultipartRequest, SendMultipartRequest2, setFormData,
     setFormImages, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
@@ -155,16 +155,14 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
             formData.set("image", imageFile, "imgFile")
         }
 
-
-        SendMultipartRequest(importUrlFor("slant"), cookies, formData)
-            .then(HandleJsonResponse) // TODO: all of these for imports should be HandleJsonResponse, NOT HandleTxtResponse
-            .then((newItem) => {
-                AssertSlant(newItem)
-                redirect(viewUrlFor("slant",newItem._id))
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        MultipartImportRequest(formData, "slant", AssertSlant, setErr)
+        // SendMultipartRequest(importUrlFor("slant"), cookies, formData)
+        //     .then(HandleJsonResponse) // TODO: all of these for imports should be HandleJsonResponse, NOT HandleTxtResponse
+        //     .then((newItem) => {
+        //         AssertSlant(newItem)
+        //         redirect(viewUrlFor("slant",newItem._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -243,9 +241,7 @@ export default function SlantDisplay(
                     updateInitial(entry)
                     //window.location.reload()
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -333,9 +329,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
                 AssertSlant(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err}/>

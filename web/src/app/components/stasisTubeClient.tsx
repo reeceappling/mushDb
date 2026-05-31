@@ -21,17 +21,17 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse,
+    HandleTxtResponse, importApiUrlFor,
     ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
     resolveContamsFormData,
-    resolvePicsFormData, SendMultipartRequest, setFormData,
-    setFormImages,
+    resolvePicsFormData, SendMultipartRequest, SendMultipartRequest2, setFormData,
+    setFormImages, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -61,6 +61,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {AssertSporeSwab} from "@/app/components/sporeSwabClient";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
@@ -151,14 +152,15 @@ export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput
         }
         writeTagTo && (dataObj.writeTagTo=writeTagTo)
 
-        SendMultipartRequest(BaseExternalUrl+"/db/import/stasisTube", cookies, formData)
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then((newId) => {
-                redirect(BaseExternalUrl+"/view/stasisTube/"+newId)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        MultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr)
+        // TODO: reenable if does not work without cookies... SendMultipartRequest(importApiUrlFor("stasisTube"), cookies, formData)
+        // SendMultipartRequest2(importApiUrlFor("stasisTube"), formData)
+        //     .then(HandleJsonResponse)
+        //     .then(newItem => {
+        //         AssertStasisTube(newItem)
+        //         redirect(viewUrlFor("stasisTube", newItem._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"stasisTube"}>
         {err!=undefined && <div>{"Error: "+err}</div>}
@@ -240,9 +242,7 @@ export default function StasisTubeDisplay(
                     AssertStasisTube(entry)
                     updateInitial(entry)
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -320,9 +320,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
                 AssertStasisTube(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"stasisTube"}>
         <ErrorDisplay err={err} />

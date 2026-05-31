@@ -10,14 +10,15 @@ import {
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
+    createApiUrlFor,
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey
+    OptionalSimpleKey, updateApiUrlFor
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -105,7 +106,7 @@ export default function GrainBatchDisplay(
         }
         ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
         const submit = () => {
-            fetch(BaseExternalUrl + "/db/update/grainBatch/" + data._id, {
+            fetch(updateApiUrlFor("grainBatch",data._id), {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -123,9 +124,7 @@ export default function GrainBatchDisplay(
                     AssertGrainBatch(updated)
                     updateInitial(updated)
                 })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
+                .catch(ErrHandler(setErr));
         }
         const handleFormChangeBoil = (val?: string) => {
             const n = Number(val)
@@ -226,7 +225,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
             setErr("jarRecipe must exist")
             return
         }
-        fetch(BaseExternalUrl + "/db/create/grainBatch", {
+        fetch(createApiUrlFor("grainBatch"), {
             method: 'Post',
             body: JSON.stringify({
                 recipe: jarRecipe?._id,
@@ -242,9 +241,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
                 AssertGrainBatch(newEntry)
                 handlers.onCreate && handlers.onCreate(newEntry)
             })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"grainBatch"}>
         <ErrorDisplay err={err}/>

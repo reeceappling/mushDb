@@ -4,8 +4,8 @@ import React, {JSX, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     createApiUrlFor, DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    HandleJsonResponse, importApiUrlFor,
     ImportDisplayInput, ImportEntryFormWrapper,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
@@ -276,7 +276,7 @@ export function PlugsImportDisplay({cookies}: ImportDisplayInput) {
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl + "/db/import/plugs", {
+        fetch(importApiUrlFor("plugs"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -289,9 +289,7 @@ export function PlugsImportDisplay({cookies}: ImportDisplayInput) {
                 AssertPlugs(newItem)
                 redirect(viewUrlFor("plugs", newItem._id))
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"plugs"}>
 
@@ -360,9 +358,7 @@ export function NewPlugsForm(
                 AssertPlugs(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"plugs"}>
         <ErrorDisplay err={err}/>

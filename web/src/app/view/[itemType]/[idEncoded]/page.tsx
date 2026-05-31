@@ -5,6 +5,7 @@ import PageWrapper from "@/app/components/clientGeneric";
 import {cookies} from 'next/headers'
 import {MainViewArea} from "@/app/view/[itemType]/[idEncoded]/client";
 import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
+import {viewApiUrlFor} from "@/app/components/common";
 
 export default async function Page({
                                        params,
@@ -22,7 +23,7 @@ export default async function Page({
 
     const getData: (a1: string, a2: string) => Promise<any> = async (itemTypeA: string, idEnc: string) => {
         return new Promise<React.JSX.Element>((accept, reject) => { // TODO: REIMPLEMENT!
-            fetch(BaseExternalUrl + "/db/get/" + itemTypeA + "/" + idEnc, {
+            fetch(viewApiUrlFor(itemTypeA, idEnc), {
                 method: 'Get',
                 credentials: 'include',
                 headers: {

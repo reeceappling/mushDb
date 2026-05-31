@@ -2,12 +2,13 @@
 
 import {JarData} from "@/app/components/jarServer";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     importApiUrlFor,
     ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
@@ -17,7 +18,7 @@ import {
     resolvePicsFormData, SelectorWrapper,
     SendMultipartRequest,
     setFormData,
-    setFormImages, viewUrlFor
+    setFormImages, updateApiUrlFor, viewUrlFor
 } from "@/app/components/common";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import React, {JSX, useState} from "react";
@@ -74,6 +75,7 @@ import {GrainBatchData, GrainBatchSelectorCloseable} from "@/app/components/grai
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
+import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -190,15 +192,14 @@ export function JarImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         writeTagTo && (dataObj.writeTagTo = writeTagTo)
 
 
-        SendMultipartRequest(importApiUrlFor("jar"), cookies, formData)
-            .then(HandleJsonResponse)
-            .then((newItem) => {
-                AssertJar(newItem)
-                redirect(viewUrlFor("jar",newItem._id))
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        MultipartImportRequest(formData, "jar", AssertJar, setErr)
+        // SendMultipartRequest(importApiUrlFor("jar"), cookies, formData)
+        //     .then(HandleJsonResponse)
+        //     .then((newItem) => {
+        //         AssertJar(newItem)
+        //         redirect(viewUrlFor("jar",newItem._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"jar"}>
         {err != undefined && <div>{"Error: " + err}</div>}
@@ -322,7 +323,7 @@ export default function JarDisplay(
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl + "/db/update/jar/" + initial._id, cookies, body)
+            SendMultipartRequest(updateApiUrlFor("jar",initial._id), cookies, body)
                 .then(HandleJsonResponse)
                 .then((newEntry) => {
                     AssertJar(newEntry)
@@ -421,7 +422,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
             setErr("must select a valid jar volume")
             return
         }
-        fetch(BaseExternalUrl + "/db/create/jar", {
+        fetch(createApiUrlFor("jar"), {
             method: "POST",
             headers: {
                 credentials: 'include',

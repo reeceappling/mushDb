@@ -6,6 +6,7 @@ import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
     DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
@@ -13,7 +14,7 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey
+    OptionalSimpleKey, updateApiUrlFor
 } from "@/app/components/common";
 import {ErrorDisplay, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {ProjectData,} from "@/app/components/projectServer";
@@ -129,7 +130,7 @@ export default function ProjectDisplay(
             console.log("sending perms: " + JSON.stringify(Object.fromEntries(perms)))
 
 
-            fetch(BaseExternalUrl + "/db/update/project/" + encodeURIComponent(data._id), { // TODO: question marks in id cause issues
+            fetch(updateApiUrlFor("project",encodeURIComponent(data._id)), { // TODO: question marks in id cause issues
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -194,7 +195,7 @@ export function NewProjectForm(
             name: name, // TODO: validate that project name is valid for url
             notes: notes,
         }
-        fetch(BaseExternalUrl + "/db/create/project", {
+        fetch(createApiUrlFor("project"), {
             method: "POST",
             headers: {
                 credentials: 'include',

@@ -23,12 +23,13 @@ export default async function Page({
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
     let speciesData: SpeciesData | undefined = undefined
     if (species !== undefined){
-        speciesData = await fetch(BaseExternalUrl + "/db/get/" + species + "/" + species, {
+        speciesData = await fetch(BaseExternalUrl + "/db/get/species/" + species, { // TODO: this feels way incorrect? need to un-urlencode species?
             method: 'Get',
             credentials: 'include',
             headers: {
+                credentials: 'include',
                 'Accept': 'application/json',
-                'Cookie': allCookies,
+                'Cookie': allCookies, // TODO: ok?
             },
         }).then((res) => {
             if(!res.ok){

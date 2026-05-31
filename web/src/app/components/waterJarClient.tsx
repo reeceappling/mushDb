@@ -5,13 +5,14 @@ import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/
 import {AddCreatedQuadColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import {
+    createApiUrlFor,
     CreatedLinkFor, DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey, SelectorWrapper,
+    OptionalSimpleKey, SelectorWrapper, updateApiUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -85,7 +86,7 @@ export default function WaterJarDisplay(
             setErr("No changes found")
             return
         }
-        fetch(BaseExternalUrl + "/db/update/waterJar/" + initial._id, { // This ID is in base58 // TODO: ID IS NOT PROPERLY POPULATING
+        fetch(updateApiUrlFor("waterJar",initial._id), { // This ID is in base58 // TODO: ID IS NOT PROPERLY POPULATING
             method: 'Post',
             body: JSON.stringify({
                 notes: notes,
@@ -102,9 +103,7 @@ export default function WaterJarDisplay(
                 AssertWaterJar(newEntry)
                 updateInitial(newEntry)
             })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+            .catch(ErrHandler(setErr));
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         {
@@ -162,7 +161,7 @@ export function NewWaterJarForm(
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl + "/db/create/waterJar", {
+        fetch(createApiUrlFor("waterJar"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -175,9 +174,7 @@ export function NewWaterJarForm(
                 AssertWaterJar(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"waterJar"}>
         <ErrorDisplay err={err}/>
@@ -191,6 +188,8 @@ export function NewWaterJarForm(
         <button className={"greenButton buttonFullWidth"} onClick={createJar}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
+
+// TODO: WATER JAR IMPORT?
 
 export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<WaterJarData>) {
     let cols: ListTableColumn<WaterJarData>[] = [

@@ -24,25 +24,39 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {AddToTransfers, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
-    CreatedLinkFor, DisplayFormWrapper,
+    createApiUrlFor,
+    CreatedLinkFor,
+    DisplayFormWrapper,
+    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
     HandleTxtResponse,
-    ImportDisplayInput, ImportEntryFormWrapper,
+    importApiUrlFor,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
     InlineExpansionArea,
     InlineExpansionButton,
     InlineProps,
     InlineSubArea,
-    IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
+    IsString,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    MultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     resolvePicsFormData,
     SendMultipartRequest,
+    SendMultipartRequest2,
     setFormData,
-    setFormImages
+    setFormImages, updateApiUrlFor,
+    viewUrlFor
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -76,6 +90,7 @@ import {SporePrintData} from "@/app/components/sporePrintServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {OnViewCreatorsQuadColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {AssertBag} from "@/app/components/bagClient";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -210,15 +225,13 @@ export default function FruitDisplay(
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl + "/db/update/fruit/" + initial._id, cookies, body)
+            SendMultipartRequest2(updateApiUrlFor("fruit",initial._id), body)
                 .then(HandleJsonResponse)
                 .then((newEntry) => {
                     AssertFruit(newEntry)
                     updateInitial(newEntry)
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: setTransfersOut on this as needed!
@@ -338,7 +351,7 @@ export function NewFruitForm(
             }
         }
         setFormData(body, dataObj)
-        SendMultipartRequest(BaseExternalUrl + "/db/create/fruit", cookies, body)
+        SendMultipartRequest(createApiUrlFor("fruit"), cookies, body)
             .then(HandleJsonResponse).then((newEntry) => {
             try {
                 AssertFruit(newEntry)
@@ -348,9 +361,7 @@ export function NewFruitForm(
             } catch (er) {
                 setErr("failed to decode response:")
             }
-        }).catch((er) => {
-            setErr(JSON.stringify(er))
-        });
+        }).catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"fruit"}>
@@ -398,23 +409,24 @@ export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         subspecies && (dataObj.subspecies = subspecies?._id)
         imageFile && formData.set("img", imageFile, "img")
 
+        MultipartImportRequest(formData, "fruit", AssertFruit, setErr)
         // TODO: CHANGE TO MULTIPART!!!!!!
-        fetch(BaseExternalUrl + "/db/import/fruit", {
-            method: 'Post',
-            body: formData,
-            headers: {
-                credentials: 'include',
-                'Cookie': cookies,
-                // 'Content-type': "multipart/form-data" // TODO: auth?
-            },
-        })
-            .then(HandleTxtResponse)  // TODO: change to json for reasons
-            .then((newid) => {
-                redirect(BaseExternalUrl + "/view/fruit/" + newid)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        //SendMultipartRequest(importApiUrlFor("fruit"), "", formData)
+        // fetch(importApiUrlFor("fruit"), {
+        //     method: 'Post',
+        //     body: formData,
+        //     headers: {
+        //         credentials: 'include',
+        //         'Cookie': cookies,
+        //         // 'Content-type': "multipart/form-data" // TODO: auth?
+        //     },
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then(newItem => {
+        //         AssertFruit(newItem)
+        //         redirect(viewUrlFor("fruit", newItem._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"fruit"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -449,7 +461,7 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const handleCreate = () => {
-        fetch(BaseExternalUrl + "/db/create/clone", { // TODO: ensure ok!
+        fetch(createApiUrlFor("clone"), { // TODO: ensure ok!
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -472,9 +484,7 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
             } catch (er) {
                 setErr("failed to decode response:")
             }
-        }).catch((er) => {
-            setErr(JSON.stringify(er))
-        });
+        }).catch(ErrHandler(setErr));
     }
     return <div>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>

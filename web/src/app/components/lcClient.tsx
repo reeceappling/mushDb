@@ -15,12 +15,12 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     ConfirmedCleanArea,
-    ConfirmedCleanSelector, CreatedLinkFor, DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    ConfirmedCleanSelector, createApiUrlFor, CreatedLinkFor, DisplayFormWrapper,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse,
+    HandleTxtResponse, importApiUrlFor,
     ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
@@ -29,7 +29,7 @@ import {
     resolvePicsFormData,
     SendMultipartRequest,
     setFormData,
-    setFormImages,
+    setFormImages, updateApiUrlFor, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -74,6 +74,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {LcRecipeArea} from "@/app/components/lcRecipeClient";
+import {AssertJar} from "@/app/components/jarClient";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -178,14 +179,14 @@ export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
             formData.set("img", imageFile, "img")
         }
 
-        SendMultipartRequest(BaseExternalUrl + "/db/import/lc", cookies, formData)
-            .then(HandleTxtResponse)  // TODO: change to json for reasons
-            .then((newLcId) => {
-                redirect(BaseExternalUrl + "/view/lc/" + newLcId)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        MultipartImportRequest(formData, "lc", AssertLc, setErr)
+        // SendMultipartRequest(importApiUrlFor("lc"), cookies, formData) // TODO: remove cookies from call?
+        //     .then(HandleJsonResponse)
+        //     .then(newItem => {
+        //         AssertLc(newItem)
+        //         redirect(viewUrlFor("lc", newItem._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"lc"}>
         {err != undefined && <div>{"Error: " + err}</div>}
@@ -265,15 +266,13 @@ export default function LcDisplay(
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl + "/db/update/lc/" + initial._id, cookies, body)
+            SendMultipartRequest(updateApiUrlFor("lc",initial._id), cookies, body)
                 .then(HandleJsonResponse)
                 .then((updatedEntry) => {
                     AssertLc(updatedEntry)
                     updateInitial(updatedEntry)
                 })
-                .catch((err) => {
-                    setErr(JSON.stringify(err))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -383,7 +382,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
         let body: any = {creationDate: creationDate, recipe: lcRecipe, pcRun: pcRun}
         notes && (body.notes = notes)
         writeTagTo && (body.writeTagTo = writeTagTo)
-        fetch(BaseExternalUrl + "/db/create/lc", {
+        fetch(createApiUrlFor("lc"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -396,9 +395,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
                 AssertLc(newEntry)
                 handlers.onCreate && handlers.onCreate(newEntry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
 
     return <NewEntryFormWrapper entryType={"lc"}>

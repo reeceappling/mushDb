@@ -21,21 +21,22 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse,
+    HandleTxtResponse, importApiUrlFor,
     ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     resolveContamsFormData,
     resolvePicsFormData,
-    SendMultipartRequest,
+    SendMultipartRequest, SendMultipartRequest2,
     setFormData,
-    setFormImages,
+    setFormImages, updateApiUrlFor, viewUrlFor,
     YesNoSelector,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
@@ -76,6 +77,8 @@ import Slider from "@mui/material/Slider";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {AssertMss} from "@/app/components/mssClient";
+import {AssertLc} from "@/app/components/lcClient";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
@@ -194,7 +197,7 @@ export default function PlateDisplay(
     }
     const submit = () => {
         console.log("submitting update request")
-        let body = new FormData()
+        let formData = new FormData()
         let dataObj: any = {
             knownFruitable: knownFruitable,
             sale: sale,
@@ -209,32 +212,28 @@ export default function PlateDisplay(
         }
 
         try {
+
             // Pics
             let picsInfo = resolvePicsFormData(images)
-            let newImages = picsInfo.images
             dataObj.images = picsInfo.obj
+            setFormImages(formData, "newPic", picsInfo.images)
             // Contams
             let contamsInfo = resolveContamsFormData(contams)
-            let newContams = contamsInfo.images
             dataObj.contams = contamsInfo.obj
+            setFormImages(formData, "newContam", contamsInfo.images)
             // Set data on form
-            setFormData(body, dataObj)
-            setFormImages(body, "newPic", newImages)
-            setFormImages(body, "newContam", newContams)
+            setFormData(formData, dataObj)
         } catch (caught: any) {
             console.log("error in submit")
             setErr(JSON.stringify(caught))
             return
         }
-        SendMultipartRequest(BaseExternalUrl + "/db/update/plate/" + initial._id, cookies, body)
+        SendMultipartRequest(updateApiUrlFor("plate",initial._id), cookies, formData)
             .then(HandleJsonResponse)
             .then((entry) => {
                 AssertPlate(entry)
                 updateInitial(entry)
-            }).catch((er) => {
-            console.log("error in getting response: " + JSON.stringify(er))
-            setErr(JSON.stringify(er))
-        });
+            }).catch(ErrHandler(setErr));
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         WriteRfidOvcArea(initial._id),
@@ -372,12 +371,6 @@ export function NumberSlider({min, max, label, defaultValue, onChange}:
                 onChange={onChange}
             />
         </Box>
-        // <div>
-        //     <div className={"inline"}>{"Wetness"}</div>
-        //     <div className={"inline"}>
-        //
-        //     </div>
-        // </div>
     );
 }
 
@@ -419,10 +412,6 @@ function OptionalSliderSelector({txt, label, initial, min, max, updateParent, de
 }
 
 export function PlateImportDisplay({cookies}: ImportDisplayInput) {
-    // TODO: condensationCoverageAtSealTime?: number
-    // TODO: pourCoverage?: number
-    // TODO: wetAtCooledTime?: boolean
-    // TODO: agarOnOutsideAtPourTime?: boolean
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
@@ -441,12 +430,12 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
         let dataObj: any = {
             created: created,
             species: species._id,
-            //perms: perms,
+            //perms: perms, // TODO: ensure not on go side, use spec/subspec perms
             // Optionals
             subspecies: subspecies?._id,
             knownFruitable: knownFruitable,
             generation: generation,
-            pourCoverage: pourCoverage,
+            pourCoverage: pourCoverage, // TODO: ensure covered in go
 
         }
         if (imageFile !== undefined) {
@@ -454,14 +443,15 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
         }
         writeTagTo && (dataObj.writeTagTo = writeTagTo)
         setFormData(formData, dataObj)
-        SendMultipartRequest(BaseExternalUrl + "/db/import/plate", cookies, formData)
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then((newId) => {
-                redirect(BaseExternalUrl + "/view/plate/" + newId)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        MultipartImportRequest(formData, "plate", AssertPlate, setErr)
+        // TODO: revert if not work: SendMultipartRequest(BaseExternalUrl + "/db/import/plate", cookies, formData)
+        // SendMultipartRequest2(importApiUrlFor("plate"), formData)
+        //     .then(HandleJsonResponse)
+        //     .then(newItem => {
+        //         AssertPlate(newItem)
+        //         redirect(viewUrlFor("plate", newItem._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"plate"}>
         {err != undefined && <div>{"Error: " + err}</div>}
@@ -506,12 +496,7 @@ export function NewPlateForm(
             setErr("An agar batch must be selected")
             return
         }
-        // TODO: FIC THIS WHOLE FUNC BELOW THIS POINT
-        let body: any = {
-            agarBatch: agarBatch,
-            writeTagTo: writeTagTo,
-        }
-        fetch(BaseExternalUrl + "/db/create/plate", {
+        fetch(createApiUrlFor("plate"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -519,6 +504,10 @@ export function NewPlateForm(
             },
             body: JSON.stringify({
                 agarBatch: agarBatch,
+                condensationCoverageAtSealTime: condensationCoverageAtSealTime, // TODO: ensure ok on go side
+                pourCoverage: pourCoverage, // TODO: ensure ok on go side
+                wetAtCooledTime: wetAtCooledTime, // TODO: ensure ok on go side
+                agarOnOutsideAtPourTime: agarOnOutsideAtPourTime, // TODO: ensure ok on go side
                 notes: notes,
                 writeTagTo: writeTagTo,
             })
@@ -528,9 +517,7 @@ export function NewPlateForm(
                 AssertPlate(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"plate"}>
         <ErrorDisplay err={err}/>

@@ -53,6 +53,8 @@ import {ActionTypes, useDictationContext} from "@/app/components/formSubcomponen
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
+import {redirect} from "next/navigation";
+import {AssertPlugs} from "@/app/components/plugsClient";
 
 
 export function SendMultipartRequest(url: string, cookies: string, formData: FormData) {
@@ -62,7 +64,19 @@ export function SendMultipartRequest(url: string, cookies: string, formData: For
         credentials: 'include',
         headers: {
             credentials: 'include',
-            'Cookie': cookies, // TODO: does this need to be here? I think so for multipart
+            //'Cookie': cookies, // TODO: reenable if fails
+            'Access-Control-Allow-Origin': '*',
+        },
+    })
+}
+
+export function SendMultipartRequest2(url: string, formData: FormData) {
+    return fetch(url, {
+        method: 'Post',
+        body: formData,
+        credentials: 'include',
+        headers: {
+            credentials: 'include',
             'Access-Control-Allow-Origin': '*',
         },
     })
@@ -1032,7 +1046,7 @@ export function viewUrlFor(itemType: string, newId: string) {
     return webUrl("/view/" + itemType + "/" + newId)
 }
 
-export function viewApiUrlFor(itemType: string, id: string) {
+export function viewApiUrlFor(itemType: string, id: string) { // TODO: use?
     return apiUrl("/get/" + itemType + "/" + id)
 }
 
@@ -1053,7 +1067,7 @@ export function importApiUrlFor(itemType: string) {
 }
 
 export function updateApiUrlFor(itemType: string, id: string) {
-    return apiUrl("/update/" + itemType + "/" + id) // TODO: ensure ok
+    return apiUrl("/update/" + itemType + "/" + id)
 }
 
 
@@ -1125,9 +1139,37 @@ export function HandleJsonResponse(res: Response): Promise<any> {
     return res.json()
 }
 
+export interface Importable { // TODO: USED IN IMPORT PAGES
+    _id: string
+}
+type TypeAsserter<T> = (value: unknown) => asserts value is T; // TODO: USE THIS! MOVE THIS!
+
+// TODO: USE THIS IN MANY IMPORTS!
+export function ImportResponseHandler<T extends Importable>(asserter: TypeAsserter<T>, typeStr: string, setErr: (e:any)=>void): (res: Response)=>void {
+    return (res: Response)=>{
+        HandleJsonResponse(res)
+            .then(item=>{
+                asserter(item)
+                redirect(viewUrlFor(typeStr, item._id))
+            })
+            .catch(ErrHandler(setErr))
+    }
+}
+
+export function MultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void) {
+    SendMultipartRequest2(importUrlFor(typeStr), formData)
+        .then(ImportResponseHandler(asserter,typeStr, setErr))
+}
+
 export function HandleTxtResponse(res: Response): Promise<string> {
     checkResponseStatus(res)
     return res.text()
+}
+
+export function ErrHandler(setErr: (err:any)=>void): (err:any)=>void { // TODO: find any other places where we can use this
+    return (e: any) => {
+        setErr(JSON.stringify(e))
+    }
 }
 
 function checkResponseStatus(res: Response) {

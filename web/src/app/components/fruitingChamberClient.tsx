@@ -19,13 +19,14 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
+    createApiUrlFor,
     dataFor, DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, FloatInput,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, FloatInput,
     HandleJsonResponse,
-    HandleTxtResponse,
+    HandleTxtResponse, importApiUrlFor,
     ImportDisplayInput, ImportEntryFormWrapper,
     ListPageItems, ListPageTable, ListTableColumn,
-    MainCollectionInputOrRead, NewColumn, NewEntryFormWrapper,
+    MainCollectionInputOrRead, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
@@ -33,9 +34,9 @@ import {
     RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData, SelectorWrapper,
-    SendMultipartRequest,
+    SendMultipartRequest, SendMultipartRequest2,
     setFormData,
-    setFormImages
+    setFormImages, updateApiUrlFor, viewUrlFor
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -75,6 +76,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {AssertFruit} from "@/app/components/fruitClient";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
@@ -227,7 +229,7 @@ export default function FruitingChamberDisplay(
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl + "/db/update/fruitingChamber/" + initial._id, cookies, body)
+            SendMultipartRequest(updateApiUrlFor("fruitingChamber",initial._id), cookies, body)
                 .then(HandleJsonResponse).then((newEntry) => {
                 try {
                     AssertFruitingChamber(newEntry)
@@ -235,9 +237,7 @@ export default function FruitingChamberDisplay(
                 } catch (er) {
                     setErr("failed to decode response: " + JSON.stringify(er))
                 }
-            }).catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            }).catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForNewFruit(data._id, "fruitingChamber", cookies),
@@ -394,7 +394,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
             notes: notes
         }
         writeTagTo && (body.writeTagTo = writeTagTo)
-        fetch(BaseExternalUrl + "/db/create/fruitingChamber", {
+        fetch(createApiUrlFor("fruitingChamber"), {
             method: 'Post',
             body: JSON.stringify(body),
             headers: {
@@ -411,9 +411,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
                     throw new Error("failed to decode response: " + JSON.stringify(er))
                 }
             })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            .catch(ErrHandler(setErr));
     }
     const batchArea = () => {
         if (substrateBatchIn) {
@@ -503,18 +501,24 @@ export function FruitingChamberImportDisplay({headerLevel, cookies}: ImportDispl
         imageFile && formData.set("img", imageFile, "img")
         setFormData(formData, bodyObj)
 
-        fetch(BaseExternalUrl + "/db/import/fruitingChamber", {
-            method: 'Post',
-            body: formData,
-            headers: {
-                credentials: 'include',
-                'Content-type': "multipart/form-data"
-            },
-        }).then(HandleTxtResponse).then((newId) => { // TODO: change to json for reasons
-            redirect(BaseExternalUrl + "/view/fruitingChamber/" + newId)
-        }).catch((err) => {
-            setErr(JSON.stringify(err))
-        });
+        MultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr)
+        // TODO: reenable if needs cookies
+        // SendMultipartRequest(importApiUrlFor("fruitingChamber"), "", formData)
+        //SendMultipartRequest2(importApiUrlFor("fruitingChamber"), formData)
+        // TODO: change to proper multipart request! NOT fetch call
+        // fetch(importApiUrlFor("fruitingChamber"), {
+        //     method: 'Post',
+        //     body: formData,
+        //     headers: {
+        //         credentials: 'include',
+        //         'Content-type': "multipart/form-data"
+        //     },
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then(newItem => {
+        //         AssertFruitingChamber(newItem)
+        //         redirect(viewUrlFor("fruitingChamber", newItem._id))
+        //     }).catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"fruitingChamber"}>
         <ErrorDisplay headerLevel={headerLevel} err={err}/>

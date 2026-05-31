@@ -5,9 +5,9 @@ import ID from "@/app/components/formSubcomponents/id";
 import {
     CheckArrayType,
     DisplayFormWrapper,
-    DisplayInput, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    OptionalKey, validatorForAssertion,
+    OptionalKey, updateApiUrlFor, validatorForAssertion,
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -75,7 +75,7 @@ export default function UserDisplay(
         }
         const userSubmit = () => {
             if ((!perms.admin && (initial.perms === undefined || initial.perms.admin)) || (perms.admin && (initial.perms && initial.perms.admin === false))) { // TODO: ensure ok
-                fetch(BaseExternalUrl + "/db/update/user", { // TODO: MAKE SURE TO ONLY REMOVE ADMIN OR MAKE IT TRUE, DONT REMOVE ADMIN FROM SELF-USER
+                fetch(updateApiUrlFor("user",initial._id), { // TODO: MAKE SURE TO ONLY REMOVE ADMIN OR MAKE IT TRUE, DONT REMOVE ADMIN FROM SELF-USER
                     method: 'Post',
                     body: JSON.stringify(perms),
                     headers: {
@@ -88,9 +88,7 @@ export default function UserDisplay(
                         AssertUser(entry)
                         updateInitial(entry)
                     })
-                    .catch((er) => {
-                        setErr(JSON.stringify(er))
-                    });
+                    .catch(ErrHandler(setErr));
             }
         }
         return (

@@ -26,7 +26,7 @@ import {
     NewColumn,
     NumberToDateStr,
     ListPageTable,
-    ExistingRecentSelector, CreatedLinkFor
+    ExistingRecentSelector, CreatedLinkFor, ErrHandler, MultipartImportRequest
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -69,6 +69,7 @@ import {MssData} from "@/app/components/mssServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
+import {AssertPlate} from "@/app/components/plateClient";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -148,7 +149,7 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
             setErr("A species must be selected")
             return
         }
-        let body = new FormData()
+        let formData = new FormData()
         let dataObj:any = {
             color: color, // TODO: validate on insert
             density: density, // TODO: validate on insert
@@ -157,20 +158,19 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
             notes:notes,
         }
         subspecies && (dataObj.subspecies = subspecies._id) // TODO: validate on in
-        setFormData(body, dataObj)
+        setFormData(formData, dataObj)
         if(image!==undefined){
-            body.set("img",image,"img")
+            formData.set("img",image,"img")
         }
 
-        SendMultipartRequest(importUrlFor("sporePrint"), cookies, body)
-            .then(HandleJsonResponse)
-            .then(newItem=>{
-                AssertSporePrint(newItem)
-                redirect(viewUrlFor("sporePrint",newItem._id))
-            })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+        MultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr)
+        // SendMultipartRequest(importUrlFor("sporePrint"), cookies, formData)
+        //     .then(HandleJsonResponse)
+        //     .then(newItem=>{
+        //         AssertSporePrint(newItem)
+        //         redirect(viewUrlFor("sporePrint",newItem._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     //no parent because we couldn't possibly know it
         return <ImportEntryFormWrapper entryType={"sporePrint"}>
@@ -245,9 +245,7 @@ export default function SporePrintDisplay(
                     AssertSporePrint(entry)
                     updateInitial(entry)
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: test heavily for all
@@ -376,9 +374,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
                 AssertSporePrint(resJson)
                 onCreate(resJson)
             })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            .catch(ErrHandler(setErr));
     }
     if(fruitIn===undefined){
         // TODO: FRUIT SELECTOR!?

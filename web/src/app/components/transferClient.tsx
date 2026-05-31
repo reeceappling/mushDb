@@ -10,14 +10,15 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {ImageLocationFor} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse, ListPageItems, ListPageTable, ListTableColumn,
     MainCollectionInputOrRead, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
-    SendMultipartRequest
+    SendMultipartRequest, updateApiUrlFor
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -133,7 +134,7 @@ export default function TransferDisplay(
             </div>
         }
         const transferSubmit = () => {
-            fetch(BaseExternalUrl + "/db/update/transfer", {
+            fetch(updateApiUrlFor("transfer",initial._id), {
                 method: 'Post',
                 body: JSON.stringify({
                     notes: notes,
@@ -149,9 +150,7 @@ export default function TransferDisplay(
                     AssertTransfer(newEntry)
                     updateInitial(newEntry)
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const b58idMain = initial._id
         return <DisplayFormWrapper entryType={"transfer"} id={"transferDisplay"}>
@@ -225,15 +224,13 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         // Send request
-        SendMultipartRequest(BaseExternalUrl + "/db/create/transfer", cookies, formData)
+        SendMultipartRequest(createApiUrlFor("transfer"), cookies, formData)
             .then(HandleJsonResponse)
             .then((newEntry) => {
                 AssertTransfer(newEntry)
                 onCreated && onCreated(newEntry)
             })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            .catch(ErrHandler(setErr));
     }
     const toggleOpen = () => {
         setIsOpen(!isOpen)
@@ -334,15 +331,13 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated, c
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         // Send request
-        SendMultipartRequest(BaseExternalUrl + "/db/create/transfer", cookies, formData)
+        SendMultipartRequest(createApiUrlFor("transfer"), cookies, formData)
             .then(HandleJsonResponse)
             .then((newEntry) => {
                 AssertTransfer(newEntry)
                 onCreated && onCreated(newEntry)
             })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            .catch(ErrHandler(setErr));
     }
     const toggleOpen = () => {
         setIsOpen(!isOpen)

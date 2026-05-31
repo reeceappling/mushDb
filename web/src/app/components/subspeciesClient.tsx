@@ -7,14 +7,14 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {
-    AssertArrayResult,
+    AssertArrayResult, createApiUrlFor,
     CreateNewEntryButton, DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey, Subform,
+    OptionalKey, Subform, updateApiUrlFor,
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -89,7 +89,7 @@ export default function SubspeciesDisplay(
             setDefaultAcl(updated.defaultAcl)
         }
         const update = () => {
-            fetch(BaseExternalUrl + "/db/update/subspecies/"+encodeURI(initial._id), {
+            fetch(updateApiUrlFor("subspecies",encodeURI(initial._id)), {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -156,7 +156,7 @@ export function NewSubspeciesForm({handlers, species}: {
             setErr("Species must be selected")
             return
         }
-        fetch(BaseExternalUrl + "/db/create/subspecies", {
+        fetch(createApiUrlFor("subspecies"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -174,9 +174,7 @@ export function NewSubspeciesForm({handlers, species}: {
                 AssertSubspecies(entry)
                 onCreate && onCreate(entry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"subspecies"}>
@@ -233,9 +231,7 @@ export function ExistingSubSpeciesSelector(
                 setSelectable(species !== undefined)
                 setErr(undefined)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }, [species]);
     let errArea = () => {
         return <ErrorDisplay err={err} headerLevel={headerLevel}/>

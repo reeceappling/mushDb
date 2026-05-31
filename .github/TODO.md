@@ -1,4 +1,7 @@
 # TODO
+- [ ] Ensure all imports return and properly utilize JSON
+- [ ] Ensure all updates return and properly utilize JSON
+- [ ] Ensure all creates return and properly utilize JSON
 - [ ] Backend Testing
   - [ ] ADD MORE SUB-ITEMS HERE
 - [ ] Frontend Testing (Cypress?)

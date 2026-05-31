@@ -18,12 +18,12 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse,
     ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
@@ -33,7 +33,7 @@ import {
     resolvePicsFormData, SelectorWrapper,
     SendMultipartRequest,
     setFormData,
-    setFormImages
+    setFormImages, updateApiUrlFor, viewUrlFor
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -75,6 +75,7 @@ import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
+import {AssertSlant} from "@/app/components/slantClient";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -227,15 +228,13 @@ export default function BagDisplay(
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl + "/db/update/bag/" + initial._id, cookies, body)
+            SendMultipartRequest(updateApiUrlFor("bag",initial._id), cookies, body)
                 .then(HandleJsonResponse)
                 .then((newEntry) => {
                     AssertBag(newEntry)
                     updateInitial(newEntry)
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForNewFruit(initial._id, "bag", cookies), // TODO: test heavily
@@ -366,7 +365,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             writeTagTo: writeTagTo,
             notes: notes,
         }
-        fetch(BaseExternalUrl + "/db/create/bag", {
+        fetch(createApiUrlFor("bag"), {
             method: 'Post',
             body: JSON.stringify(body),
             headers: {
@@ -384,9 +383,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
                     setErr("failed to decode response:")
                 }
             })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            .catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"bag"}>
@@ -461,21 +458,21 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
         setFormData(formData, dataObj)
         //formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
-        fetch(BaseExternalUrl + "/db/import/bag", {
-            method: 'Post',
-            body: formData,
-            headers: {
-                credentials: 'include',
-                'Content-type': "multipart/form-data"
-            },
-        })
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then((newBagId) => {
-                redirect(BaseExternalUrl + "/view/bag/" + newBagId)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        MultipartImportRequest(formData, "bag", AssertBag, setErr)
+        // fetch(importApiUrlFor("bag"), {
+        //     method: 'Post',
+        //     body: formData,
+        //     headers: {
+        //         credentials: 'include',
+        //         'Content-type': "multipart/form-data"
+        //     },
+        // })
+            // .then(HandleJsonResponse)
+            // .then(newItem => {
+            //     AssertBag(newItem)
+            //     redirect(viewUrlFor("bag", newItem._id))
+            // })
+            // .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"bag"}>
         {/* Required Fields */}

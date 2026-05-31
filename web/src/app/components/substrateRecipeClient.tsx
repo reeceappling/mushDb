@@ -13,14 +13,15 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
+    createApiUrlFor,
     CreatedLinkFor,
     CreateNewEntryButton, DisplayFormWrapper,
-    DisplayInput, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey
+    OptionalKey, updateApiUrlFor
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -100,7 +101,7 @@ export default function SubstrateRecipeDisplay(
             setAcl(initial.acl)
         }
         const substrateSubmit = () => {
-            fetch(BaseExternalUrl + "/db/update/substrateRecipe/" + initial._id, {
+            fetch(updateApiUrlFor("substrateRecipe",initial._id), {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -119,9 +120,7 @@ export default function SubstrateRecipeDisplay(
                     AssertSubstrateRecipe(entry)
                     updateInitial(entry)
                 })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorTriCol[] = [
             {
@@ -184,7 +183,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     const [err, setErr] = useState<string | undefined>()
     // TODO: TEMPLATE!!!!
     const submit = () => {
-        fetch(BaseExternalUrl + "/db/create/substrateRecipe", {
+        fetch(createApiUrlFor("substrateRecipe"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -202,9 +201,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
                 AssertSubstrateRecipe(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"substrateRecipe"}>

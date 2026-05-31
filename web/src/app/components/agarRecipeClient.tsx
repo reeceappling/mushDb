@@ -26,16 +26,17 @@ import SugarsArea, {
     SugarEntriesGroupForNew,
 } from "@/app/components/formSubcomponents/sugars";
 import {
+    createApiUrlFor,
     CreatedLinkFor,
     CreateNewEntryButton, dataFor, DisplayFormWrapper,
-    DisplayInput, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     IsString,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    RequiredArrayOfType,
+    RequiredArrayOfType, updateApiUrlFor,
     ViewInNewTabButton
 } from "@/app/components/common";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -156,7 +157,7 @@ export default function AgarRecipeDisplay(
                 return
             }
 
-            fetch(BaseExternalUrl + "/db/update/agarRecipe/" + initial._id, {
+            fetch(updateApiUrlFor("agarRecipe",initial._id), {
                 method: 'Post',
                 body: JSON.stringify({
                     name: name,
@@ -179,9 +180,7 @@ export default function AgarRecipeDisplay(
                         throw new Error("failed to decode response:" + JSON.stringify(er))
                     }
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -282,7 +281,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             antibiotics: antibiotics.length !== 0 ? antibiotics : undefined,
             notes: notes.length !== 0 ? notes : undefined,
         }
-        fetch(BaseExternalUrl + "/db/create/agarRecipe", {
+        fetch(createApiUrlFor("agarRecipe"), {
             method: 'Post',
             body: JSON.stringify(body),
             headers: {
@@ -297,9 +296,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                 setErr("result was not recipe: " + JSON.stringify(e))
             }
         })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            })
+            .catch(ErrHandler(setErr));
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {

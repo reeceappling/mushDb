@@ -3,11 +3,11 @@
 import React, {JSX, useState} from "react";
 import {
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector,
+    DisplayInput, ErrHandler, ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse,
+    HandleTxtResponse, importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     IsString,
@@ -16,7 +16,7 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey,
+    OptionalSimpleKey, SendMultipartRequest2, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -49,6 +49,8 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/contaminatio
 import {SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {redirect} from "next/navigation";
+import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -141,7 +143,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         }
         subspecies && (body.subspecies = subspecies._id)
         notes.length>0 && (body.notes = notes)
-        fetch(BaseExternalUrl+"/db/import/mss", {
+        fetch(importApiUrlFor("mss"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -149,14 +151,12 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
             },
             body: JSON.stringify(body)
         })
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then((id) => {
-                setEntriesCreated([...entriesCreated, id])
-                // TODO: REDIRECT!
+            .then(HandleJsonResponse)
+            .then(newItem => {
+                AssertMss(newItem)
+                redirect(viewUrlFor("mss", newItem._id))
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"mss"}>
         <ErrorDisplay err={err}/>
@@ -214,9 +214,7 @@ export default function MssDisplay(
                     AssertMss(entry)
                     updateInitial(entry)
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -289,9 +287,7 @@ export function NewMssForm(
                 AssertMss(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
 
     return <NewEntryFormWrapper entryType={"mss"}>

@@ -2,14 +2,30 @@
 
 import React, {JSX, useState} from "react";
 import {
+    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, HandleJsonResponse, HandleTxtResponse,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
+    DisplayInput, ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    HandleJsonResponse,
+    HandleTxtResponse,
+    importApiUrlFor,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    IsString,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn, MultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
-    SendMultipartRequest, setFormData
+    SendMultipartRequest,
+    SendMultipartRequest2,
+    setFormData, updateApiUrlFor, viewUrlFor
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -43,6 +59,7 @@ import {SaleArea} from "@/app/components/saleClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsTriColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
+import {AssertSporePrint} from "@/app/components/sporePrintClient";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -101,7 +118,7 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwab {
 }
 
 export function SporeSwabImportDisplay({headerLevel, cookies}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
-    const [printDate, setPrintDate] = useState<number>(Date.now())
+    const [swabDate, setSwabDate] = useState<number>(Date.now())
     const [notes, setNotes] = useState<Note[]>([])
     const [species, setSpecies] = useState<SpeciesData | undefined>()
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
@@ -113,33 +130,34 @@ export function SporeSwabImportDisplay({headerLevel, cookies}: ImportDisplayInpu
             setErr("A species must be selected")
             return
         }
-        let body = new FormData()
+        let formData = new FormData()
         let dataObj: any = {
-            printDate: printDate,
-            species: species._id,
+            printDate: swabDate, // TODO: rename from printDate to swabDate???
+            species: species._id, // TODO: validate on insert
             subspecies: subspecies?._id, // TODO: validate on insert
             notes: notes,
         }
-        setFormData(body, dataObj)
-        body.set("data", JSON.stringify(dataObj))
+        setFormData(formData, dataObj)
+        formData.set("data", JSON.stringify(dataObj))
         // Img
         if (image) {
-            body.set("img", image, "img")
+            formData.set("img", image, "img")
         }
 
-        SendMultipartRequest(BaseExternalUrl + "/db/import/sporePrint", cookies, body)
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then(id => {
-                redirect(BaseExternalUrl + "/view/sporePrint/" + id)
-            })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+        MultipartImportRequest(formData, "sporeSwab", AssertSporeSwab, setErr)
+        // TODO: reenable if not work: SendMultipartRequest(BaseExternalUrl + "/db/import/sporeSwab", cookies, body)
+        // SendMultipartRequest2(importApiUrlFor("sporeSwab"), formData)
+        //     .then(HandleJsonResponse)
+        //     .then(newItem => {
+        //         AssertSporeSwab(newItem)
+        //         redirect(viewUrlFor("sporeSwab", newItem._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     //no parent because we couldn't possibly know it
     return <ImportEntryFormWrapper entryType={"sporeSwab"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
-        <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
+        <DateArea pre={"Swab Date: "} readonly={false} when={Date.now()} updateParent={setSwabDate}/>
         <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>
         <ImageSelector updateParent={setImage}/>
@@ -181,7 +199,7 @@ export default function SporeSwabDisplay(
                 acl: MarshalAcl(acl),
             }
 
-            fetch(BaseExternalUrl + "/db/update/sporeSwab/" + data._id, {
+            fetch(updateApiUrlFor("sporeSwab",data._id), {
                 method: 'Post',
                 body: JSON.stringify(dataObj),
                 headers: {
@@ -194,9 +212,7 @@ export default function SporeSwabDisplay(
                     AssertSporeSwab(entry)
                     updateInitial(entry)
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: use the next one in other places...
@@ -263,7 +279,7 @@ export function NewSporeSwabForm(
             notes: notes,
         }
 
-        fetch(BaseExternalUrl + "/db/create/sporeSwab", {
+        fetch(createApiUrlFor("sporeSwab"), {
             method: 'Post',
             body: JSON.stringify(dataObj),
             headers: {
@@ -276,9 +292,7 @@ export function NewSporeSwabForm(
                 AssertSporeSwab(resJson)
                 onCreate(resJson)
             })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            .catch(ErrHandler(setErr));
     }
 
     return <NewEntryFormWrapper entryType={"sporeSwab"}>

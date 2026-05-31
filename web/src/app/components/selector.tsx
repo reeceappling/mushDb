@@ -170,9 +170,7 @@ export function SelectorResetsOnSelectForCustom<T>(
 //                 setSelectable(data as T[])
 //                 setLoaded(true)
 //             })
-//             .catch((error) => {
-//                 setErr(JSON.stringify(error))
-//             });
+//             .catch(ErrHandler(setErr));
 //     }, [reload]);
 //     //const ch = CreateChannel()
 //     // ch.onmessage = (event) => {
@@ -422,9 +420,7 @@ export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISS
 //                     setSelectable(data as T[])
 //                     setLoaded(true)
 //                 })
-//                 .catch((error) => {
-//                     setErr(JSON.stringify(error))
-//                 });
+//                 .catch(ErrHandler(setErr));
 //         }, [reload]);
 //         //const ch = CreateChannel()
 //         // ch.onmessage = (event) => {

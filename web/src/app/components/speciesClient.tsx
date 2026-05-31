@@ -13,7 +13,7 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {
     CreateNewEntryButton,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector,
+    DisplayInput, ErrHandler, ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
@@ -133,9 +133,7 @@ export default function SpeciesDisplay(
                     AssertSpecies(entry)
                     updateInitial
                 })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
+                .catch(ErrHandler(setErr));
         }
         return (
             <DisplayFormWrapper entryType={"species"}>
@@ -214,9 +212,7 @@ export function NewSpeciesForm(
                 AssertSpecies(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"species"}>
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"Name :"} setName={setName}/>
@@ -332,9 +328,7 @@ export function ExistingSpeciesSelector(
                 setErr(undefined)
                 setLoaded(true)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }, []);
     // TODO: CLEAR SELECTION
     if(!selected && !selectorOpen) {

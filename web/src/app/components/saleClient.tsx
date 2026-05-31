@@ -11,7 +11,7 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, HandleJsonResponse,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey
@@ -99,9 +99,7 @@ export default function SaleDisplay(
                 .then((entry)=>{
                     AssertSale(entry)
                     updateInitial(entry)
-                }).catch((er)=>{
-                    setErr(JSON.stringify(er))
-                })
+                }).catch(ErrHandler(setErr));
         }
         return (
             <DisplayFormWrapper entryType={"sale"}>
@@ -165,9 +163,7 @@ export function NewSaleForm(
                 AssertSale(sale)
                 onCreate?onCreate(sale):redirect(BaseExternalUrl+"/view/sale/"+sale._id)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"sale"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>

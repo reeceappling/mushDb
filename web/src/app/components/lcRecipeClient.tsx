@@ -22,17 +22,18 @@ import SugarsArea, {
     SugarEntriesGroupForNew
 } from "@/app/components/formSubcomponents/sugars";
 import {
+    createApiUrlFor,
     CreatedLinkFor,
     dataFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn,
     NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    RequiredArrayOfType
+    RequiredArrayOfType, updateApiUrlFor
 } from "@/app/components/common";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
@@ -123,7 +124,7 @@ export default function LcRecipeDisplay(
             setAcl(updated.acl)
         }
         const lcRecipeSubmit = () => {
-            fetch(BaseExternalUrl + "/db/update/lcRecipe/" + initial._id, {
+            fetch(updateApiUrlFor("lcRecipe",initial._id), {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -141,9 +142,7 @@ export default function LcRecipeDisplay(
                     AssertLcRecipe(entry)
                     updateInitial(entry)
                 })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -230,7 +229,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
             setErr("invalid name")
             return
         }
-        fetch(BaseExternalUrl + "/db/create/lcRecipe", {
+        fetch(createApiUrlFor("lcRecipe"), {
             method: "POST",
             headers: {
                 credentials: 'include',
@@ -251,9 +250,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
                 AssertLcRecipe(newEntry)
                 handlers.onCreate && handlers.onCreate(newEntry)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {

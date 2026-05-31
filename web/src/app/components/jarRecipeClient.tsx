@@ -21,8 +21,9 @@ import SugarsArea, {
     SugarEntriesGroupForNew
 } from "@/app/components/formSubcomponents/sugars";
 import {
+    createApiUrlFor,
     CreatedLinkFor, DisplayFormWrapper,
-    DisplayInput, ExistingDualSelector, FlexedArea,
+    DisplayInput, ErrHandler, ExistingDualSelector, FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
     HandleTxtResponse,
@@ -30,7 +31,7 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    RequiredArrayOfType
+    RequiredArrayOfType, updateApiUrlFor
 } from "@/app/components/common";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
@@ -129,7 +130,7 @@ export default function JarRecipeDisplay(
             setAcl(updated.acl)
         }
         const submit = () => {
-            fetch(BaseExternalUrl + "/db/update/jarRecipe/" + data._id, {
+            fetch(updateApiUrlFor("jarRecipe",data._id), {
                 method: "POST",
                 headers: {
                     credentials: 'include',
@@ -146,9 +147,7 @@ export default function JarRecipeDisplay(
                     AssertJarRecipe(newEntry)
                     updateInitial(newEntry)
                 })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
+                .catch(ErrHandler(setErr));
         }
         const jarGrainsArea = () => {
             return <div>
@@ -253,7 +252,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
             setErr("Grain percentages must equal 100")
             return
         }
-        fetch(BaseExternalUrl + "/db/create/jarRecipe", {
+        fetch(createApiUrlFor("jarRecipe"), {
             method: 'Post',
             body: JSON.stringify({
                 name: name,
@@ -274,9 +273,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
                 AssertJarRecipe(newEntry)
                 handlers.onCreate && handlers.onCreate(newEntry)
             })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+            .catch(ErrHandler(setErr));
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {

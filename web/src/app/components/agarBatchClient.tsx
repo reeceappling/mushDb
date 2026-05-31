@@ -15,9 +15,10 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import {AgarBatchData, AgarColor} from "@/app/components/agarBatchServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
+    createApiUrlFor,
     CreatedLinkFor,
     dataFor, DisplayFormWrapper,
-    DisplayInput,
+    DisplayInput, ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     HandleJsonResponse,
@@ -28,7 +29,7 @@ import {
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey, Subform,
+    OptionalKey, Subform, updateApiUrlFor,
 } from "@/app/components/common";
 import {
     AgarRecipeArea,
@@ -110,7 +111,7 @@ export default function AgarBatchDisplay(
                 setErr("No changes found")
                 return
             }
-            fetch(BaseExternalUrl + "/db/update/agarBatch/" + initial._id, { // This ID is in base58
+            fetch(updateApiUrlFor("agarBatch", initial._id), { // This ID is in base58
                 method: 'Post',
                 body: JSON.stringify({notes: notes, acl: acl}),
                 headers: {
@@ -123,9 +124,7 @@ export default function AgarBatchDisplay(
                     AssertAgarBatch(newEntry)
                     updateInitial(newEntry)
                 })
-                .catch((err) => {
-                    setErr(JSON.stringify(err))
-                });
+                .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -216,7 +215,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             recipe: recipe._id,
             notes: notes,
         }
-        fetch(BaseExternalUrl + "/db/create/agarBatch", {
+        fetch(createApiUrlFor("agarBatch"), {
             method: 'Post',
             body: JSON.stringify(body),
             headers: {
@@ -229,9 +228,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
                 AssertAgarBatch(entry)
                 handlers.onCreate && handlers.onCreate(entry)
             })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+            .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"agarBatch"}>
         <div data-cy-id="Header">{"Creating a new agar batch"}</div>

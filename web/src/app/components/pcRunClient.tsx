@@ -15,13 +15,14 @@ import {PcRunData} from "@/app/components/pcRunServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {
+    createApiUrlFor,
     dataFor, DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey
+    OptionalKey, updateApiUrlFor
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
@@ -97,7 +98,7 @@ export default function PcRunDisplay(
             setAcl(updated.acl)
         }
         const pcRunUpdate = () => {
-            fetch(BaseExternalUrl + "/db/update/pcRun/" + data._id, {
+            fetch(updateApiUrlFor("pcRun",data._id), {
                 method: 'Post',
                 body: JSON.stringify({
                     notes: notes,
@@ -113,9 +114,7 @@ export default function PcRunDisplay(
                     AssertPcRun(entry)
                     updateInitial(entry)
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(ErrHandler(setErr));
         }
         const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
             return <EntryLink props={{displayedId: linkText, linkId: linkId, entryType: typ}}>
@@ -258,7 +257,7 @@ export function NewPcRunForm(
         e.preventDefault()
 
         let body = {creationDate: date, runTime: runTime, notes: notes}
-        fetch(BaseExternalUrl + "/db/create/pcRun", {
+        fetch(createApiUrlFor("pcRun"), {
             method: "POST",
             headers: {
                 credentials: 'include',
