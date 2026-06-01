@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
@@ -51,6 +51,7 @@ import {GrainBatchData} from "@/app/components/grainBatchServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertJar} from "@/app/components/jarClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -130,13 +131,14 @@ export default function JarRecipeDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const submit = () => {
             const body: any = {
                 standard: isStandard,
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("jarRecipe",initial._id, body, AssertJarRecipe)
+            DoUpdateRequest("jarRecipe",initial._id, body, AssertJarRecipe, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("jarRecipe",data._id), {
@@ -238,6 +240,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
         setAdditives(template.additives || [])
     }
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const newJarRecipeSubmit = () => {
         if (!name) {
             setErr("Name must be set!")
@@ -268,7 +271,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
             additives: additives,
             notes: notes,
         }
-        DoCreateRequest("jarRecipe", body, AssertJarRecipe)
+        DoCreateRequest("jarRecipe", body, AssertJarRecipe, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("jarRecipe"), {

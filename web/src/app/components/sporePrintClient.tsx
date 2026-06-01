@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     OptionalArrayOfType,
@@ -12,7 +12,6 @@ import {
     setFormImages,
     OptionalKey,
     HandleJsonResponse,
-    SendMultipartRequest,
     setFormData,
     ListPageItems,
     importUrlFor,
@@ -76,6 +75,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertPlate} from "@/app/components/plateClient";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -139,7 +139,7 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
     return
 }
 
-export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
+export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
     const [printDate, setPrintDate] = useState<number>(Date.now())
     const [color, setColor] = useState<string | undefined>()
     const [density, setDensity] = useState<string | undefined>()
@@ -148,7 +148,7 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
     const [image, setImage] = useState<File | undefined>()
     const [err, setErr] = useState<string | undefined>()
-    //const [perms, setPerms] = useState<EntryPerms | undefined>()
+    const cookies = useContext(CookiesContext)
     const importEntry = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(!species){
@@ -169,7 +169,7 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
             formData.set("img",image,"img")
         }
 
-        MultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr)
+        MultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies))
         // SendMultipartRequest(importUrlFor("sporePrint"), cookies, formData)
         //     .then(HandleJsonResponse)
         //     .then(newItem=>{
@@ -184,8 +184,8 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
             <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
             <SporePrintColorArea readonly={false} setColor={setColor} />
             <SporePrintDensityArea readonly={false} setDensity={setColor} />
-            <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
-            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
+            <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
+            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>
             <ImageSelector updateParent={setImage}/>
             <NewEntryNotes setNotes={setNotes} />
             <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
@@ -195,7 +195,7 @@ export function SporePrintImportDisplay({headerLevel, cookies}:ImportDisplayInpu
 
 export default function SporePrintDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertSporePrint(data)
@@ -221,6 +221,7 @@ export default function SporePrintDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const submit = ()=>{
             // sale disposed, project, pics, notes
             let formData = new FormData()
@@ -245,7 +246,7 @@ export default function SporePrintDisplay(
                 return
             }
 
-            DoUpdateMultipartRequest("sporePrint",data._id, formData, AssertSporePrint)
+            DoUpdateMultipartRequest("sporePrint",data._id, formData, AssertSporePrint, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
 
@@ -333,12 +334,11 @@ export default function SporePrintDisplay(
 
 // Should only be accessible from a fruit's page
 export function NewSporePrintForm( // TODO: currently do not like this one...
-    {fruitIn, headerLevel, offset, onCreate, cookies}: {
+    {fruitIn, headerLevel, offset, onCreate}: {
         fruitIn?: FruitData
         headerLevel?: number
         offset?: number
         onCreate:(sp: SporePrintData)=>void
-        cookies: string
 }){
     const [fruit, setFruit] = useState<FruitData | undefined>(fruitIn)
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
@@ -347,6 +347,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
     const [err, setErr] = useState<string | undefined>(undefined)
     //const [perms, setPerms] = useState<EntryPerms | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(!fruit){
@@ -379,7 +380,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
             const fileName = "newPic" + "-" + i
             formData.set(fileName, toSend.img, fileName)
         }
-        DoCreateRequestMultipart("sporePrint", formData, AssertSporePrint)
+        DoCreateRequestMultipart("sporePrint", formData, AssertSporePrint, allCookies(cookies))
             .then(onCreate)
             .catch(errHandler)
 

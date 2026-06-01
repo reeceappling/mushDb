@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useEffect, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {useQuery,} from '@tanstack/react-query'
 import NotesArea, {
     IsValidNote,
@@ -49,6 +49,7 @@ import {NewSlantForm} from "@/app/components/slantClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertMss} from "@/app/components/mssClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     if (typeof input !== 'object') {
@@ -93,7 +94,7 @@ export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
 
 export default function AgarBatchDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertAgarBatch(data)
@@ -107,6 +108,7 @@ export default function AgarBatchDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const agarBatchSubmit = () => {
             if (notes.new.length === 0 && notes.existing === dataFor(initial.notes)) {
                 setErr("No changes found")
@@ -116,7 +118,7 @@ export default function AgarBatchDisplay(
                 notes: notes,
                 acl: MarshalAcl(acl), // TODO; use this everywhere if it works
             }
-            DoUpdateRequest("agarBatch",initial._id, body, AssertAgarBatch)
+            DoUpdateRequest("agarBatch",initial._id, body, AssertAgarBatch, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("agarBatch", initial._id), { // This ID is in base58
@@ -205,6 +207,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const newAgarBatchSubmit = () => {
         // pcRun, recipe must exist
         if (!pcRun) {
@@ -221,7 +224,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             recipe: recipe._id,
             notes: notes,
         }
-        DoCreateRequest("agarBatch", body, AssertAgarBatch)
+        DoCreateRequest("agarBatch", body, AssertAgarBatch, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("agarBatch"), {

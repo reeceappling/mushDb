@@ -16,42 +16,42 @@ import {StasisTubeImportDisplay} from "@/app/components/stasisTubeClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {PlugsImportDisplay} from "@/app/components/plugsClient";
 
-export function ImportArea({itemType, allCookies}: { itemType: string, allCookies: string }) {
+export function ImportArea({itemType}: { itemType: string }) {
     switch (itemType) {
         // AgarBatch cannot be imported
         // AgarRecipe cannot be imported
         case "bag":
-            return <BagImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <BagImportDisplay headerLevel={TopPageHeaderLevel}/>;
         case "fruit":
-            return <FruitImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <FruitImportDisplay headerLevel={TopPageHeaderLevel}/>;
         case "fruitingChamber":
-            return <FruitingChamberImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <FruitingChamberImportDisplay headerLevel={TopPageHeaderLevel}/>;
         case "jar":
-            return <JarImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <JarImportDisplay headerLevel={TopPageHeaderLevel}/>;
         // JarRecipe cannot be imported
         case "lc":
-            return <LcImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <LcImportDisplay headerLevel={TopPageHeaderLevel} />;
         case "lcSyringe":
-            return <LcSyringeImportDisplay cookies={allCookies}/>
+            return <LcSyringeImportDisplay/>
         // LcRecipe cannot be imported
         case "mss":
-            return <MssImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <MssImportDisplay headerLevel={TopPageHeaderLevel} />;
         // PcRun cannot be imported
         case "plate":
-            return <PlateImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <PlateImportDisplay headerLevel={TopPageHeaderLevel} />;
         case "plugs":
-            return <PlugsImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+            return <PlugsImportDisplay headerLevel={TopPageHeaderLevel} />
         // projects cannot be imported
         // Sales cannot be imported
         case "slant":
-            return <SlantImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <SlantImportDisplay headerLevel={TopPageHeaderLevel} />;
         // Species cannot be imported
         case "sporePrint":
-            return <SporePrintImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <SporePrintImportDisplay headerLevel={TopPageHeaderLevel} />;
         case "sporeSwab":
-            return <SporeSwabImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+            return <SporeSwabImportDisplay headerLevel={TopPageHeaderLevel} />
         case "stasisTube":
-            return <StasisTubeImportDisplay headerLevel={TopPageHeaderLevel} cookies={allCookies}/>;
+            return <StasisTubeImportDisplay/>;
         // Subspecies cannot be imported
         // SubstrateRecipe cannot be imported
         // Transfers cannot be imported

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedQuadColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -39,6 +39,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {AssertUser} from "@/app/components/userClient";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -79,7 +80,7 @@ export function AssertWaterJar(input: any): asserts input is WaterJarData {
 
 export default function WaterJarDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     const [initial, setInitial] = useState(data as WaterJarData)
     const [disposed, setDisposed] = useState<number | undefined>(data.disposed)
@@ -92,7 +93,7 @@ export default function WaterJarDisplay(
         setDisposed(updated.disposed)
         setNotes(InitialNotesState(updated.notes))
     }
-
+    const cookies = useContext(CookiesContext)
     const submit = () => {
         if (notes.new.length === 0 && notes.existing === InitialNotesState(initial.notes).existing) { // TODO: ensure ok
             setErr("No changes found")
@@ -103,7 +104,7 @@ export default function WaterJarDisplay(
             disposed: disposed,
             writeTagTo: writeTagTo
         }
-        DoUpdateRequest("waterJar",initial._id, body, AssertWaterJar)
+        DoUpdateRequest("waterJar",initial._id, body, AssertWaterJar, allCookies(cookies))
             .then(updateInitial)
             .catch(ErrHandler(setErr))
         // fetch(updateApiUrlFor("waterJar",initial._id), { // TODO: ID IS NOT PROPERLY POPULATING
@@ -163,6 +164,7 @@ export function NewWaterJarForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
         if (pcRun === undefined) {
@@ -174,7 +176,7 @@ export function NewWaterJarForm(
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        DoCreateRequest("waterJar", body, AssertWaterJar)
+        DoCreateRequest("waterJar", body, AssertWaterJar, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(ErrHandler(setErr))
         // fetch(createApiUrlFor("waterJar"), {

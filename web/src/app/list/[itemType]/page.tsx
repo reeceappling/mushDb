@@ -6,6 +6,7 @@ import {BaseExternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import ListDisplay from "@/app/list/[itemType]/client";
 import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
+import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export default async function Page({
                                        params,
@@ -47,11 +48,11 @@ export default async function Page({
         const data = await getData(itemType)
 
         return <PageWrapper props={{pageType:"list",readers:readers}}>
-            <SessionProvider session={session?.value}>
+            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
             <div className={"fullPage"}>
                 <ListDisplay itemType={itemType} inpData={data}/>
             </div>
-            </SessionProvider>
+            </CookiesProvider>
         </PageWrapper>
     } catch (e) {
         return <div className={"fullPage"}>

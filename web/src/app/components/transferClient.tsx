@@ -37,6 +37,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {GetTransferReasons} from "@/app/components/formSubcomponents/server";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -140,12 +141,13 @@ export default function TransferDisplay(
                 {imageArea("toImage", initial.toImage)}
             </div>
         }
+        const cookies = useContext(CookiesContext)
         const transferSubmit = () => {
             const body: any = {
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("transfer",initial._id, body, AssertTransfer)
+            DoUpdateRequest("transfer",initial._id, body, AssertTransfer, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("transfer",initial._id), {
@@ -192,12 +194,11 @@ export default function TransferDisplay(
     }
 }
 
-export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cookies}: {
+export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: {
     idFrom: string,
     typeFrom: string,
     validTypesTo: string[],
     onCreated: (xfer: TransferData) => void,
-    cookies: string,
 }) {
     const [isOpen, setIsOpen] = useState(false)
 
@@ -208,6 +209,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
     const [reason, setReason] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const submitNewTransfer = () => {
         if (!idFrom || idFrom === "") {
             setErr("ID From cannot be blank!")
@@ -232,7 +234,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
         formData.set('data', JSON.stringify(dataObj))
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
-        DoCreateRequestMultipart("transfer", formData, AssertTransfer)
+        DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
             .then(onCreated)
             .catch(errHandler)
         // Send request
@@ -303,12 +305,11 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
     </NewEntryFormWrapper>
 }
 
-export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated, cookies}: {
+export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated}: {
     idFrom: string,
     typeFrom: string,
     validTypesTo: string[],
     onCreated: (xfer: TransferData) => void,
-    cookies: string,
 }) {
     const [isOpen, setIsOpen] = useState(false)
 
@@ -318,6 +319,7 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated, c
     const [notes, setNotes] = useState<Note[]>([])
     const [reason, setReason] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
     const submitNewTransfer = () => {
         if (!idFrom || idFrom === "") {
             setErr("ID From cannot be blank!")
@@ -343,7 +345,7 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated, c
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         // Send request
-        DoCreateRequestMultipart("transfer", formData, AssertTransfer)
+        DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
             .then(onCreated)
             .catch(ErrHandler(setErr))
     }
@@ -424,7 +426,6 @@ export function TransfersOutDisplay( // TODO: likely overhaul
         allowNewTransferCreation,
         headerTxt,
         validTypesTo,
-        cookies,
     }: {
         thisId: string,
         thisEntryType: string,
@@ -432,8 +433,8 @@ export function TransfersOutDisplay( // TODO: likely overhaul
         allowNewTransferCreation: boolean,
         headerTxt?: string,
         validTypesTo?: string[],
-        cookies: string,
     }) {
+    const cookies = useContext(CookiesContext)
     const openInNewTab = false
     if (!allowNewTransferCreation) {
         return <TransfersOutViewOnlyDisplay transfersOut={transfersOut} headerTxt={headerTxt}/>
@@ -491,7 +492,7 @@ export function TransfersOutDisplay( // TODO: likely overhaul
                         <NewTransferArea idFrom={thisId} typeFrom={thisEntryType} validTypesTo={validNewXferTypes}
                                          onCreated={(newXfer: TransferData) => {
                                              setNewXfers([...newXfers, newXfer._id])
-                                         }} cookies={cookies}/>}
+                                         }}/>}
                 </div>
             </div>
         </div>

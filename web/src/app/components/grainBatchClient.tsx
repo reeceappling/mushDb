@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -35,6 +35,7 @@ import {JarData} from "@/app/components/jarServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 // TODO: GRAIN BATCHES LIST IS NOT WORKING!
 // TODO: ENSURE DISPLAY IS LOOKING GOOD
@@ -85,7 +86,7 @@ export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
 
 export default function GrainBatchDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertGrainBatch(data)
@@ -108,7 +109,7 @@ export default function GrainBatchDisplay(
             setDryTime(updated.dryTimeHours)
             setNotes(InitialNotesState(updated.notes))
         }
-        ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+        const cookies = useContext(CookiesContext)
         const submit = () => {
             const body: any = {
                 soakTimeHrs: soakTime, // TODO: validate
@@ -116,7 +117,7 @@ export default function GrainBatchDisplay(
                 dryTimeHours: dryTime, // TODO: validate
                 notes: notes,
             }
-            DoUpdateRequest("grainBatch", initial._id, body, AssertGrainBatch)
+            DoUpdateRequest("grainBatch", initial._id, body, AssertGrainBatch, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("grainBatch",data._id), {
@@ -182,7 +183,7 @@ export default function GrainBatchDisplay(
         return <DisplayFormWrapper entryType={"grainBatch"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID id={id} txt={"Grain Batch"} entryType={"grainBatch"}/>
-            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <JarRecipeArea recipeId={data.recipe}/>
@@ -234,6 +235,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const newGrainBatchSubmit = () => {
         if (jarRecipe === undefined) {
             setErr("jarRecipe must exist")
@@ -243,7 +245,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
             recipe: jarRecipe?._id,
             notes: notes,
         }
-        DoCreateRequest("grainBatch", body, AssertGrainBatch)
+        DoCreateRequest("grainBatch", body, AssertGrainBatch, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("grainBatch"), {

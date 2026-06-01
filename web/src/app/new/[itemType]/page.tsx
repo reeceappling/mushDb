@@ -7,6 +7,7 @@ import {cookies} from "next/headers";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ClientNewPage} from "@/app/new/[itemType]/client";
 import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
+import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export default async function Page({
                                        params,
@@ -47,7 +48,8 @@ export default async function Page({
         })
     }
     return <PageWrapper props={{pageType:"new",readers: readers}}>
-        <SessionProvider session={session?.value}>
+        <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
             <ClientNewPage itemType={itemType} species={speciesData}/>{/*fullPage class contained within*/}
-        </SessionProvider></PageWrapper>
+        </CookiesProvider>
+    </PageWrapper>
 }

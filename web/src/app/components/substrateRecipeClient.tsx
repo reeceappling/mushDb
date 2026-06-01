@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
@@ -32,6 +32,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -100,6 +101,7 @@ export default function SubstrateRecipeDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(initial.acl)
         }
+        const cookies = useContext(CookiesContext)
         const substrateSubmit = () => {
             const body: any = {
                 name: name,
@@ -108,7 +110,7 @@ export default function SubstrateRecipeDisplay(
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("substrateRecipe",initial._id, body, AssertSubstrateRecipe)
+            DoUpdateRequest("substrateRecipe",initial._id, body, AssertSubstrateRecipe, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("substrateRecipe",initial._id), {
@@ -184,6 +186,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     const [err, setErr] = useState<string | undefined>()
     // TODO: TEMPLATE!!!!
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const submit = () => {
         // TODO: validate name is valid
         const body = {
@@ -192,7 +195,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
                 standard: isStandard,
                 notes: notes
             }
-        DoCreateRequest("substrateRecipe", body, AssertSubstrateRecipe)
+        DoCreateRequest("substrateRecipe", body, AssertSubstrateRecipe, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("substrateRecipe"), {

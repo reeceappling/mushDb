@@ -29,14 +29,13 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     SelectorWrapper,
-    SendMultipartRequest,
     setFormData,
     setFormImages,
     updateApiUrlFor,
     viewUrlFor
 } from "@/app/components/common";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
 import ID from "@/app/components/formSubcomponents/id";
 import {
@@ -92,6 +91,7 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
 import {AssertGrainBatch} from "@/app/components/grainBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -171,7 +171,7 @@ export function AssertJar(input: any): asserts input is JarData {
     return
 }
 
-export function JarImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
+export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
     const [created, setCreated] = useState<number>(Date.now())
     const [recipe, setRecipe] = useState<JarRecipeData | undefined>()
     const [sizeCups, setSizeCups] = useState<number>(4)
@@ -182,6 +182,7 @@ export function JarImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
     const [imageFile, setImageFile] = useState<File | undefined>()
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
     const importEntry = () => {
         let formData = new FormData()
         if (species === undefined) {
@@ -207,7 +208,7 @@ export function JarImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         }
         writeTagTo && (dataObj.writeTagTo = writeTagTo)
 
-        MultipartImportRequest(formData, "jar", AssertJar, setErr)
+        MultipartImportRequest(formData, "jar", AssertJar, setErr, allCookies(cookies))
         // SendMultipartRequest(importApiUrlFor("jar"), cookies, formData)
         //     .then(HandleJsonResponse)
         //     .then((newItem) => {
@@ -234,8 +235,8 @@ export function JarImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         <SelectorWrapper current={recipe} title={"Jar Recipe"} nameFunc={(v: JarRecipeData) => v._id}>
             <JarRecipeSelector doSelect={setRecipe} allowCreate={true}/>
         </SelectorWrapper>
-        <ExistingSpeciesSelector doSelect={setSpecies/*cookies={cookies}*/}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
+        <ExistingSpeciesSelector doSelect={setSpecies}/>
+        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
@@ -274,7 +275,7 @@ function cupsPer(unit: string) {
 
 export default function JarDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
 
 
@@ -309,6 +310,7 @@ export default function JarDisplay(
             // TODO: burst grains (but can only be set once)
             setTransfersOut(updated.transfersOut || [])
         }
+        const cookies = useContext(CookiesContext)
         const submit = () => {
             let formData = new FormData()
             let dataObj: any = {
@@ -338,7 +340,7 @@ export default function JarDisplay(
                 return
             }
 
-            DoUpdateMultipartRequest("jar",initial._id, formData, AssertJar)
+            DoUpdateMultipartRequest("jar",initial._id, formData, AssertJar, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
 
@@ -392,7 +394,7 @@ export default function JarDisplay(
             </FlexedArea>
 
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"jar"} transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly} cookies={cookies}/>
+                                 allowNewTransferCreation={!readonly}/>
             <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>
@@ -432,6 +434,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!recipe || !pcRun) {
@@ -451,7 +454,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
             notes: notes || [],
             writeTagTo: writeTagTo,
         }
-        DoCreateRequest("jar", body, AssertJar)
+        DoCreateRequest("jar", body, AssertJar, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("jar"), {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useEffect, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcData} from "@/app/components/lcServer";
@@ -44,7 +44,6 @@ import {
     OptionalSimpleKey,
     resolveContamsFormData,
     resolvePicsFormData,
-    SendMultipartRequest,
     setFormData,
     setFormImages,
     updateApiUrlFor,
@@ -95,6 +94,7 @@ import {LcRecipeArea} from "@/app/components/lcRecipeClient";
 import {AssertJar} from "@/app/components/jarClient";
 import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -161,7 +161,7 @@ export function AssertLc(input: any): asserts input is LcData {
     return
 }
 
-export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
+export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
     const [recipe, setRecipe] = useState<LcRecipeData | undefined>(undefined)
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
@@ -172,6 +172,7 @@ export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const ImportLc = () => {
         let formData = new FormData()
         if (species === undefined) {
@@ -199,7 +200,7 @@ export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
             formData.set("img", imageFile, "img")
         }
 
-        MultipartImportRequest(formData, "lc", AssertLc, setErr)
+        MultipartImportRequest(formData, "lc", AssertLc, setErr, allCookies(cookies))
         // SendMultipartRequest(importApiUrlFor("lc"), cookies, formData) // TODO: remove cookies from call?
         //     .then(HandleJsonResponse)
         //     .then(newItem => {
@@ -230,7 +231,7 @@ export function LcImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
 
 export default function LcDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertLc(data)
@@ -257,6 +258,7 @@ export default function LcDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const lcSubmit = () => {
             let formData = new FormData()
             let bodyObj: any = {
@@ -286,7 +288,7 @@ export default function LcDisplay(
                 return
             }
 
-            DoUpdateMultipartRequest("lc",initial._id, formData, AssertLc)
+            DoUpdateMultipartRequest("lc",initial._id, formData, AssertLc, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
 
@@ -303,7 +305,7 @@ export default function LcDisplay(
                 txt: "New Liquid Culture Syringe",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                     return <NewLcSyringeForm txt={"Create New Liquid Culture Syringe"} parentLc={initial}
-                                             cookies={cookies} onCreate={(lcs: LcSyringe) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                                             onCreate={(lcs: LcSyringe) => { // TODO: should swap to handler={{}} format rather than direct onCreate
                         onCreate([{
                             typeText: "Liquid Culture Syringe",
                             node: <CreatedLinkFor linkId={lcs._id} typ={"lcSyringe"}/>,// TODO: ENSURE lcs or lcSyringe is correct here
@@ -357,8 +359,7 @@ export default function LcDisplay(
             </FlexedArea>
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
                                  transfersOut={initial.transfersOut}
-                                 allowNewTransferCreation={!readonly}
-                                 cookies={cookies}/>
+                                 allowNewTransferCreation={!readonly}/>
             <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly}
                          headerLevel={headerLevel}/>{/* Pics */}
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
@@ -394,6 +395,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (lcRecipe === undefined) {
@@ -411,7 +413,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        DoCreateRequest("lc", body, AssertLc)
+        DoCreateRequest("lc", body, AssertLc, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("lc"), {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {
     IsValidNote,
     NewEntryNotes,
@@ -74,6 +74,7 @@ import {SporePrintData} from "@/app/components/sporePrintServer";
 import {OnViewCreatorsQuadColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -134,7 +135,7 @@ export function AssertFruit(input: any): asserts input is FruitData {
 
 export default function FruitDisplay(
     {
-        id, readonly, data, headerLevel, openSporesInNewTab, allowPrintCreation, isTopLevel, cookies
+        id, readonly, data, headerLevel, openSporesInNewTab, allowPrintCreation, isTopLevel
     }: {
         id: string;
         readonly: boolean;
@@ -143,7 +144,6 @@ export default function FruitDisplay(
         headerLevel?: number;
         openSporesInNewTab?: boolean;
         allowPrintCreation?: boolean;
-        cookies: string;
     }) {
     try {
         AssertFruit(data)
@@ -186,6 +186,7 @@ export default function FruitDisplay(
         //         })}
         //     </div>
         // }
+        const cookies = useContext(CookiesContext)
         const fruitSubmit = () => {
             // disposed, notes, existing pics
             let formData = new FormData()
@@ -208,7 +209,7 @@ export default function FruitDisplay(
                 return
             }
 
-            DoUpdateMultipartRequest("fruit",initial._id, formData, AssertFruit)
+            DoUpdateMultipartRequest("fruit",initial._id, formData, AssertFruit, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
 
@@ -223,7 +224,8 @@ export default function FruitDisplay(
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: setTransfersOut on this as needed!
             // TODO: USE THIS!
-            OvcForXfers(data._id, "fruit", ["plate", "slant", "jar", "stasisTube"], cookies, AddToTransfers(setTransfersOut, transfersOut), "Clone/Transfer Fruit"), // TODO: ensure list correct// TODO: OVC for clone to plate (transfer)
+            // TODO: OvcForXfers on others, or use TransfersOut???
+            OvcForXfers(data._id, "fruit", ["plate", "slant", "jar", "stasisTube"], allCookies(cookies), AddToTransfers(setTransfersOut, transfersOut), "Clone/Transfer Fruit"), // TODO: ensure list correct// TODO: OVC for clone to plate (transfer)
             {
                 txt: "Create Spore Swab",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
@@ -239,7 +241,6 @@ export default function FruitDisplay(
                 txt: "Create Spore Print",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                     return <NewSporePrintForm fruitIn={data}
-                                              cookies={cookies/* TODO: remove cookies and make like others*/}
                                               onCreate={(item: SporePrintData) => {
                                                   onCreate([{
                                                       typeText: "Spore Print",
@@ -254,7 +255,7 @@ export default function FruitDisplay(
             <DisplayFormWrapper entryType={"fruit"}>
                 <ErrorDisplay err={err}/>
                 <ID txt={"Fruit"} id={data._id} entryType={"fruit"}/>
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
@@ -273,8 +274,7 @@ export default function FruitDisplay(
                     </FlexedSinglesGroup>
                 </FlexedArea>
                 <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
-                                     allowNewTransferCreation={false}
-                                     cookies={cookies}/>
+                                     allowNewTransferCreation={false}/>
                 <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
@@ -292,13 +292,12 @@ export default function FruitDisplay(
 }
 
 export function NewFruitForm(
-    {parentId, parentType, headerLevel, readonly, onCreate, cookies}: {
+    {parentId, parentType, headerLevel, readonly, onCreate}: {
         parentId: string,
         parentType: string,
         headerLevel?: number,
         readonly: boolean,
-        onCreate: (f: FruitData) => void,
-        cookies: string
+        onCreate: (f: FruitData) => void
     }) {
     if (readonly) {
         return null
@@ -309,6 +308,7 @@ export function NewFruitForm(
     const [err, setErr] = useState<string | undefined>()
     //const [perms, setPerms] = useState<EntryPerms | undefined>() // inherit from parents
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const newFruitSubmit = () => {
         let formData = new FormData()
         let dataObj: any = {
@@ -316,7 +316,6 @@ export function NewFruitForm(
             parentType: parentType,
             harvestDate: harvestDate,
         }
-        // TODO: do we need custom perms here? Probably not, inherit
         if (notes.length > 0) {
             dataObj.notes = notes
         }
@@ -339,21 +338,9 @@ export function NewFruitForm(
             }
         }
         setFormData(formData, dataObj)
-        const errHandler = ErrHandler(setErr)
-        DoCreateRequestMultipart("fruit", formData, AssertFruit)
+        DoCreateRequestMultipart("fruit", formData, AssertFruit, allCookies(cookies))
             .then(onCreate)
             .catch(errHandler)
-        // SendMultipartRequest(createApiUrlFor("fruit"), cookies, formData)
-        //     .then(HandleJsonResponse).then((newEntry) => {
-        //     try {
-        //         AssertFruit(newEntry)
-        //         onCreate(newEntry)
-        //         // TODO: WE HAVE CREATED A NEW FRUIT!!!!! NOTIFY???
-        //         // TODO ? redirect(BaseUrl+"/view/fruit/"+newId) // TODO: ok?
-        //     } catch (er) {
-        //         setErr("failed to decode response:")
-        //     }
-        // }).catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"fruit"}>
@@ -371,13 +358,14 @@ export function NewFruitForm(
     )
 }
 
-export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) { // TODO: USE ONLY FOR FRUITS PURCHASED OR FOUND
+export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR FRUITS PURCHASED OR FOUND
     const [parentType, setParentType] = useState<string | undefined>(undefined) // TODO: ensure this is everywhere in ts and go
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const submitImportFruit = () => { // TODO: rework so we only have the one image, and the one data set
         if (parentType === undefined) {
             setErr("source area must be set!")
@@ -401,26 +389,13 @@ export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         subspecies && (dataObj.subspecies = subspecies?._id)
         imageFile && formData.set("img", imageFile, "img")
 
-        MultipartImportRequest(formData, "fruit", AssertFruit, setErr)
-        // TODO: CHANGE TO MULTIPART!!!!!!
-        //SendMultipartRequest(importApiUrlFor("fruit"), "", formData)
-        // fetch(importApiUrlFor("fruit"), {
-        //     method: 'Post',
-        //     body: formData,
-        //     headers: clientPostRequestHeaders, //'Content-type': "multipart/form-data"
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then(newItem => {
-        //         AssertFruit(newItem)
-        //         redirect(viewUrlFor("fruit", newItem._id))
-        //     })
-        //     .catch(ErrHandler(setErr));
+        MultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"fruit"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         {/* Required Fields */}
         {/* TODO: ParentType: FOR "store" OR "outside" ONLY!!!!! */}{/* TODO: THIS!*/}
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
+        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
         {/* Optional fields*/}
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}
                                     headerLevel={headerLevel}/>
@@ -433,13 +408,12 @@ export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
 
 export function CreateCloneArea( // TODO: this vs NewFruitForm
     {
-        fruitId, headerLevel, onCloneCreated, readonly, cookies,
+        fruitId, headerLevel, onCloneCreated, readonly,
     }: {
         fruitId: string,
         headerLevel?: number,
         onCloneCreated: (f: FruitData) => void,
         readonly: boolean,
-        cookies: string,
     }) {
     if (readonly) {
         return null
@@ -449,6 +423,7 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const handleCreate = () => {
         const body: any = {
             idFrom: fruitId,
@@ -457,29 +432,9 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
             idTo: idTo,
             notes: notes,
         }
-        DoCreateRequest("clone", body, AssertFruit)
+        DoCreateRequest("clone", body, AssertFruit, allCookies(cookies)) // TODO: ensure ok!
             .then(onCloneCreated)
             .catch(errHandler)
-        // fetch(createApiUrlFor("clone"), { // TODO: ensure ok!
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify({
-        //         idFrom: fruitId,
-        //         typeFrom: "fruit",
-        //         typeTo: typeTo,
-        //         idTo: idTo,
-        //         notes: notes,
-        //     })
-        // }).then(HandleJsonResponse).then((newEntry) => {
-        //     try {
-        //         AssertFruit(newEntry)
-        //         onCloneCreated(newEntry)
-        //         // TODO: WE HAVE CREATED A NEW FRUIT!!!!! NOTIFY???
-        //         // TODO ? redirect(BaseUrl+"/view/fruit/"+newId) // TODO: ok?
-        //     } catch (er) {
-        //         setErr("failed to decode response:")
-        //     }
-        // }).catch(ErrHandler(setErr));
     }
     return <div>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -543,16 +498,13 @@ export function FruitSelectorTable({data, onClick}: ListPageItems<FruitData>) {
 export function FruitSelector(
     {
         doSelect,
-        // TODO: ok? allowCreate
     }: {
         doSelect: (val: FruitData | undefined) => void,
-        // TODO: ok? allowCreate?: boolean
     }) {
     const table = (items: FruitData[]):JSX.Element=>{
         return <FruitSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"fruit"} entryTypes={"fruits"} doSelect={doSelect} asserter={AssertFruit}
-                                   table={table}>
-    </ExistingRecentSelector>
+                                   table={table}/>
 }

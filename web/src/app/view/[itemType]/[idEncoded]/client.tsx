@@ -32,7 +32,7 @@ import PlugsDisplay from "@/app/components/plugsClient";
 import GrainBatchDisplay from "@/app/components/grainBatchClient";
 import SporeSwabDisplay from "@/app/components/sporeSwabClient";
 
-export function MainViewArea({inpData, itemType, allCookies}: { inpData: any, itemType: string, allCookies: string }) {
+export function MainViewArea({inpData, itemType}: { inpData: any, itemType: string}) {
     const id = decodeURI(inpData.idEncoded)
     //try {
         // TODO: EVERYTHING IN HERE IS LOADING TWICE???
@@ -40,88 +40,88 @@ export function MainViewArea({inpData, itemType, allCookies}: { inpData: any, it
 
             case "agarBatch":
                 return <AgarBatchDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                         headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                         headerLevel={TopPageHeaderLevel}/>
             case "agarRecipe":
                 return <AgarRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                          headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                          headerLevel={TopPageHeaderLevel}/>
             case "bag":
                 return <BagDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                   headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                   headerLevel={TopPageHeaderLevel}/>
             case "fruit":
                 return <FruitDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                     headerLevel={TopPageHeaderLevel} allowPrintCreation={true} cookies={allCookies}/>
+                                     headerLevel={TopPageHeaderLevel} allowPrintCreation={true}/>
             case "fruitingChamber":
                 return <FruitingChamberDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                               headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                               headerLevel={TopPageHeaderLevel}/>
             case "grainBatch":
                 return <GrainBatchDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                               headerLevel={TopPageHeaderLevel} cookies={allCookies}/> // TODO: validate working
+                                               headerLevel={TopPageHeaderLevel}/> // TODO: validate working
             case "jar":
                 return <JarDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                   headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                   headerLevel={TopPageHeaderLevel}/>
             case "jarRecipe":
                 return <JarRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                         headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                         headerLevel={TopPageHeaderLevel}/>
             case "lc":
                 return <LcDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                  headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                  headerLevel={TopPageHeaderLevel}/>
             case "lcRecipe":
                 return <LcRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                        headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                        headerLevel={TopPageHeaderLevel}/>
             case "lcSyringe":
                 return <LcSyringeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                         headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                         headerLevel={TopPageHeaderLevel}/>
             case "mss":
                 return <MssDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                   headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                   headerLevel={TopPageHeaderLevel}/>
             case "pcRun":
                 return <PcRunDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                     headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                     headerLevel={TopPageHeaderLevel}/>
             case "plate":
                 return <PlateDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                     headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                     headerLevel={TopPageHeaderLevel}/>
             case "plugs":
                 return <PlugsDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                     headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                     headerLevel={TopPageHeaderLevel}/>
             case "project":
                 return <ProjectDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                       headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                       headerLevel={TopPageHeaderLevel}/>
             case "sale":
                 return <SaleDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                    headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                    headerLevel={TopPageHeaderLevel}/>
             case "slant":
                 return <SlantDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                     headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                     headerLevel={TopPageHeaderLevel}/>
             case "species":
                 return <SpeciesDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                       headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                       headerLevel={TopPageHeaderLevel}/>
             case "sporePrint":
                 return <SporePrintDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                          headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                          headerLevel={TopPageHeaderLevel}/>
             case "sporeSwab": // TODO: validate working
                 return <SporeSwabDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                         headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                         headerLevel={TopPageHeaderLevel} />
             case "stasisTube":
                 return <StasisTubeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                          headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                          headerLevel={TopPageHeaderLevel} />
             case "subspecies":
                 return <SubspeciesDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                          headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                          headerLevel={TopPageHeaderLevel} />
             case "substrateRecipe":
                 return <SubstrateRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                               headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                               headerLevel={TopPageHeaderLevel} />
             case "substrateBatch":
                 return <SubstrateBatchDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                              headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                              headerLevel={TopPageHeaderLevel} />
             case "transfer":
                 return <TransferDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                        headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                        headerLevel={TopPageHeaderLevel} />
             case "user":
                 return <UserDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                    headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                    headerLevel={TopPageHeaderLevel} />
             case "waterJar":
                 return <WaterJarDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
-                                        headerLevel={TopPageHeaderLevel} cookies={allCookies}/>
+                                        headerLevel={TopPageHeaderLevel} />
             default:
                 return <ErrorDisplay err={"Invalid view item type: " + itemType} headerLevel={TopPageHeaderLevel}/>
         }

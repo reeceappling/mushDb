@@ -1,6 +1,6 @@
 'use client'
 
-import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
+import React, {Dispatch, SetStateAction, useContext, useEffect, useState} from "react";
 import ID from "@/app/components/formSubcomponents/id";
 import {
     CheckArrayType, clientPostRequestHeaders,
@@ -15,6 +15,7 @@ import {IsValidUserPerms, UserData, UserPerms} from "@/app/components/userServer
 import {SelectorResetsOnSelectForCustom} from "@/app/components/selector";
 import {MarshalAcl} from "@/app/components/accessControlClient";
 import {AssertTransfer} from "@/app/components/transferClient";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertUser(input: any): asserts input is UserData {
     if (typeof input !== 'object') {
@@ -75,10 +76,11 @@ export default function UserDisplay(
             setInitial(updated)
             setPerms(updated.perms || {admin: true, projects: []})
         }
+        const cookies = useContext(CookiesContext)
         const userSubmit = () => {
             if ((!perms.admin && (initial.perms === undefined || initial.perms.admin)) || (perms.admin && (initial.perms && initial.perms.admin === false))) { // TODO: ensure ok
                 const body: any = perms
-                DoUpdateRequest("user",initial._id, body, AssertUser)
+                DoUpdateRequest("user",initial._id, body, AssertUser, allCookies(cookies))
                     .then(updateInitial)
                     .catch(ErrHandler(setErr))
                 // fetch(updateApiUrlFor("user",initial._id), { // TODO: MAKE SURE TO ONLY REMOVE ADMIN OR MAKE IT TRUE, DONT REMOVE ADMIN FROM SELF-USER

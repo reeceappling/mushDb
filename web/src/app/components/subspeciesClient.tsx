@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useEffect, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -30,6 +30,7 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {AssertStasisTube} from "@/app/components/stasisTubeClient";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
@@ -89,6 +90,7 @@ export default function SubspeciesDisplay(
             setAcl(updated.acl)
             setDefaultAcl(updated.defaultAcl)
         }
+        const cookies = useContext(CookiesContext)
         const update = () => {
             const body: any = {
                 aliases: aliases,
@@ -96,7 +98,7 @@ export default function SubspeciesDisplay(
                 acl: MarshalAcl(acl), // TODO: ensure ok
                 defaultAcl: MarshalAcl(defaultAcl), // TODO: ensure ok
             }
-            DoUpdateRequest("subspecies",encodeURIComponent(initial._id), body, AssertSubspecies)
+            DoUpdateRequest("subspecies",encodeURIComponent(initial._id), body, AssertSubspecies, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("subspecies",encodeURI(initial._id)), {
@@ -149,6 +151,7 @@ export function NewSubspeciesForm({handlers, species}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const submitNewSubspecies = () => {
         if (!name) {
             setErr("Name must note be blank")
@@ -164,7 +167,7 @@ export function NewSubspeciesForm({handlers, species}: {
                 aliases: aliases,
                 notes: notes,
             }
-        DoCreateRequest("subspecies", body, AssertSubspecies)
+        DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("subspecies"), {
@@ -207,6 +210,7 @@ export function ExistingSubSpeciesSelector(
         doSelect: (val: SubspeciesData | undefined) => void,
         headerLevel?: number
     }) {
+    const cookies = useContext(CookiesContext)
     const [isLoaded, setLoaded] = useState(false)
     const [selectable, setSelectable] = useState(false)
     const [selectorOpen, setSelectorOpen] = useState(false)

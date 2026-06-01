@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {
     createApiUrlFor,
     DisplayFormWrapper,
@@ -24,7 +24,6 @@ import {
     OptionalKey,
     OptionalSimpleKey,
     SendMultipartRequest,
-    SendMultipartRequestNew,
     setFormData, updateApiUrlFor, viewUrlFor
 } from "@/app/components/common";
 import {
@@ -60,6 +59,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsTriColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
 import {AssertSporePrint} from "@/app/components/sporePrintClient";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -117,13 +117,14 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwab {
     return
 }
 
-export function SporeSwabImportDisplay({headerLevel, cookies}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
+export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
     const [swabDate, setSwabDate] = useState<number>(Date.now())
     const [notes, setNotes] = useState<Note[]>([])
     const [species, setSpecies] = useState<SpeciesData | undefined>()
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
     const [image, setImage] = useState<File | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
     const importEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!species) {
@@ -144,7 +145,7 @@ export function SporeSwabImportDisplay({headerLevel, cookies}: ImportDisplayInpu
             formData.set("img", image, "img")
         }
 
-        MultipartImportRequest(formData, "sporeSwab", AssertSporeSwab, setErr)
+        MultipartImportRequest(formData, "sporeSwab", AssertSporeSwab, setErr, allCookies(cookies))
         // TODO: reenable if not work: SendMultipartRequest(BaseExternalUrl + "/db/import/sporeSwab", cookies, body)
         // SendMultipartRequest2(importApiUrlFor("sporeSwab"), formData)
         //     .then(HandleJsonResponse)
@@ -173,7 +174,7 @@ export function SporeSwabImportDisplay({headerLevel, cookies}: ImportDisplayInpu
 
 export default function SporeSwabDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies,
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertSporeSwab(data)
@@ -191,6 +192,7 @@ export default function SporeSwabDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const submit = () => {
             let body: any = {
                 sale: sale,
@@ -198,7 +200,7 @@ export default function SporeSwabDisplay(
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("sporeSwab",data._id, body, AssertSporeSwab)
+            DoUpdateRequest("sporeSwab",data._id, body, AssertSporeSwab, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
 
@@ -216,7 +218,7 @@ export default function SporeSwabDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: use the next one in other places...
-            OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], cookies),
+            OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], allCookies(cookies)),
             WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
@@ -248,7 +250,7 @@ export default function SporeSwabDisplay(
                                       readonly={readonly}/> {/*swab to agar and that's about it */}
         </DisplayFormWrapper>
     } catch (err) {
-        return <div>{"ERROR: Spore swab data format incorrect: " + err}</div>
+        return <div>{"ERROR: Spore swab data format incorrect: " + JSON.stringify(err)}</div>
     }
 }
 
@@ -269,6 +271,7 @@ export function NewSporeSwabForm(
 
     const [err, setErr] = useState<string | undefined>(undefined)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!parent || parent === "") {
@@ -279,7 +282,7 @@ export function NewSporeSwabForm(
             parent: parent,
             notes: notes,
         }
-        DoCreateRequest("sporeSwab", body, AssertSporeSwab)
+        DoCreateRequest("sporeSwab", body, AssertSporeSwab, allCookies(cookies))
             .then(onCreate)
             .catch(errHandler)
 

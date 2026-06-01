@@ -4,6 +4,7 @@ import React, {Suspense} from "react";
 import {cookies} from "next/headers";
 import {ImportArea} from "@/app/import/[itemType]/client";
 import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
+import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 export default async function Page({
                                        params,
                                    }: {
@@ -16,11 +17,11 @@ export default async function Page({
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
     return <PageWrapper props={{pageType:"import",readers: readers}}>
         <Suspense fallback={<p>{"Loading..."}</p>}>
-            <SessionProvider session={session?.value}>{/* TODO: likely get rid of all uses of this*/}
+            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
                 <div className={"fullPage"}>
-                    <ImportArea allCookies={allCookies} itemType={itemType} />
+                    <ImportArea itemType={itemType} />
                 </div>
-            </SessionProvider>
+            </CookiesProvider>
         </Suspense>
     </PageWrapper>
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
@@ -49,7 +49,6 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     SendMultipartRequest,
-    SendMultipartRequestNew,
     setFormData,
     setFormImages,
     updateApiUrlFor,
@@ -93,10 +92,8 @@ import Slider from "@mui/material/Slider";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
-import {AssertMss} from "@/app/components/mssClient";
-import {AssertLc} from "@/app/components/lcClient";
-import {AssertPcRun} from "@/app/components/pcRunClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
@@ -183,7 +180,7 @@ export function PourCoverageSelectorRequired({value, setPourCoverage}: {
 
 export default function PlateDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     const [initial, setInitial] = useState(data as PlateData)
 
@@ -213,6 +210,7 @@ export default function PlateDisplay(
         setTransfersOut(updated.transfersOut || [])
         setAcl(updated.acl)
     }
+    const cookies = useContext(CookiesContext)
     const submit = () => {
         console.log("submitting update request")
         let formData = new FormData()
@@ -246,7 +244,7 @@ export default function PlateDisplay(
             setErr(JSON.stringify(caught))
             return
         }
-        DoUpdateMultipartRequest("plate",initial._id, formData, AssertPlate)
+        DoUpdateMultipartRequest("plate",initial._id, formData, AssertPlate, allCookies(cookies))
             .then(updateInitial)
             .catch(ErrHandler(setErr))
         // SendMultipartRequest(updateApiUrlFor("plate",initial._id), cookies, formData)
@@ -298,7 +296,7 @@ export default function PlateDisplay(
             </FlexedArea>
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
                                  transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly} cookies={cookies}/>{/* TODO: have this rely on dictation as well to figure out if we want it open on the screen*/}
+                                 allowNewTransferCreation={!readonly}/>{/* TODO: have this rely on dictation as well to figure out if we want it open on the screen*/}
             <PicsDisplay pix={initial.pics || []} readonly={readonly}
                          headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
@@ -432,7 +430,7 @@ function OptionalSliderSelector({txt, label, initial, min, max, updateParent, de
     </div>
 }
 
-export function PlateImportDisplay({cookies}: ImportDisplayInput) {
+export function PlateImportDisplay({}: ImportDisplayInput) {
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
@@ -442,6 +440,7 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const ImportPlate = () => {
         if (species === undefined) {
             setErr("Species must be set!")
@@ -464,7 +463,7 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
         }
         writeTagTo && (dataObj.writeTagTo = writeTagTo)
         setFormData(formData, dataObj)
-        MultipartImportRequest(formData, "plate", AssertPlate, setErr)
+        MultipartImportRequest(formData, "plate", AssertPlate, setErr, allCookies(cookies))
         // TODO: revert if not work: SendMultipartRequest(BaseExternalUrl + "/db/import/plate", cookies, formData)
         // SendMultipartRequest2(importApiUrlFor("plate"), formData)
         //     .then(HandleJsonResponse)
@@ -481,11 +480,10 @@ export function PlateImportDisplay({cookies}: ImportDisplayInput) {
             <ExistingSpeciesSelector initialSpecies={species?._id}
                                      doSelect={(spec?: SpeciesData) => {
                                          setSpecies(spec)
-                                         setSubspecies(undefined)
-                                     }/*cookies={cookies}*/}/>
+                                         setSubspecies(undefined)}}/>
         </div>
         {species !== undefined ? <div className={"centerH"}>
-            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
+            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
         </div> : null}
         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
@@ -512,6 +510,7 @@ export function NewPlateForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createPlate = (e: React.MouseEvent) => {
         e.preventDefault()
         if (agarBatch === undefined) {
@@ -527,7 +526,7 @@ export function NewPlateForm(
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        DoCreateRequest("plate", body, AssertPlate)
+        DoCreateRequest("plate", body, AssertPlate, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("plate"), {

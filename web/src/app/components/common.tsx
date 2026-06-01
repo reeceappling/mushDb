@@ -52,23 +52,9 @@ import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {redirect} from "next/navigation";
 
-
-export function SendMultipartRequest(url: string, cookies: string, formData: FormData) {
-    return fetch(url, {
-        method: 'Post',
-        body: formData,
-        credentials: 'include',
-        headers: {
-        credentials: 'include',
-            'Cookie': cookies, // TODO: does this need to be here? I think so for multipart
-            'Access-Control-Allow-Origin': '*',
-        },//clientPostRequestHeadersMultipart, // TODO: set multipart request type?
-    })
-}
-
 export const clientPostRequestHeaders = {
     credentials: 'include',
-    //'Cookie': cookies, // TODO: reenable if fails
+    //'Cookie': cookies, // TODO: reenable if fails // TODO: see SendMultipartRequestNew
     'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
     'Content-type': "application/json",
     'Accept': "application/json", // TODO: ensure ok
@@ -78,20 +64,20 @@ export const clientPostRequestHeadersMultipart = {
     credentials: 'include',
     //'Cookie': cookies, // TODO: reenable if fails
     'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
-    'Content-type': "multipart/form-data",
-    'Accept': "application/json", // TODO: ensure ok
+    // 'Content-type': "multipart/form-data", // If this is set, it will not work (bounds not auto-calculated)
+    'Accept': "application/json",
 }
 
-// TODO: if this works, then we should get rid of SendMultipartRequest
-export function SendMultipartRequestNew(url: string, /*cookies: string, */formData: FormData) {
+// TODO: remove cookies from args if it works without
+export function SendMultipartRequest(url: string, formData: FormData, cookies: string) {
     return fetch(url, {
         method: 'Post',
         body: formData,
         credentials: 'include',
         //
         headers: {...clientPostRequestHeadersMultipart,
-            /*'Cookie': cookies, TODO: RE-ADD COOKIES TO HEADER!*/
-        }, // TODO: ensure ok
+            //'Cookie': cookies, // TODO: ensure once auth reenabled, this still works without
+        },
     })
 }
 
@@ -507,12 +493,10 @@ export type DisplayInput = {
     data: any
     headerLevel?: number
     isTopLevel: boolean
-    cookies: string
 }
 
 export type ImportDisplayInput = {
     headerLevel: number
-    cookies: string
 }
 
 export function DisposedContamArea( // TODO: THIS AND USE THIS WHEN NEEDED!!!
@@ -769,8 +753,8 @@ export function ImportResponseHandler<T extends Importable>(asserter: TypeAssert
     }
 }
 
-export function MultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void) {
-    SendMultipartRequestNew(importApiUrlFor(typeStr), formData)
+export function MultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
+    SendMultipartRequest(importApiUrlFor(typeStr), formData, cookies)
         .then(ImportResponseHandler(asserter,typeStr, setErr))
 }
 
@@ -1109,10 +1093,10 @@ function assertThenReturn<T>(asserter: TypeAsserter<T>, item: any): T {
     return item
 }
 
-export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeAsserter<T>): Promise<T> {
+export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
     return fetch(createApiUrlFor(entryType), {
         method: "POST",
-        headers: clientPostRequestHeaders,
+        headers: {...clientPostRequestHeaders, 'Cookie': cookies},
         body: JSON.stringify(body)
     })
         .then(HandleJsonResponse)
@@ -1122,8 +1106,8 @@ export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeA
         //TODO:.catch(e=>throw e);
 }
 
-export function DoCreateRequestMultipart<T>(entryType: string, formData: FormData, asserter: TypeAsserter<T>): Promise<T> {
-    return SendMultipartRequestNew(createApiUrlFor(entryType), formData)
+export function DoCreateRequestMultipart<T>(entryType: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
+    return SendMultipartRequest(createApiUrlFor(entryType), formData, cookies)
         .then(HandleJsonResponse)
         .then((entry) => {
             return assertThenReturn(entry, asserter)
@@ -1131,10 +1115,10 @@ export function DoCreateRequestMultipart<T>(entryType: string, formData: FormDat
         // TODO: .catch(e=>throw e);
 }
 
-export function DoUpdateRequest<T>(entryType: string, urlId: string, body: any, asserter: TypeAsserter<T>): Promise<T> {
+export function DoUpdateRequest<T>(entryType: string, urlId: string, body: any, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
     return fetch(updateApiUrlFor(entryType, urlId), {
         method: "POST",
-        headers: clientPostRequestHeaders,
+        headers: {...clientPostRequestHeaders, 'Cookie': cookies},
         body: JSON.stringify(body)
     }).then(HandleJsonResponse)
         .then((entry) => {
@@ -1142,8 +1126,8 @@ export function DoUpdateRequest<T>(entryType: string, urlId: string, body: any, 
         })
         // TODO: .catch(e=>throw e);
 }
-export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, formData: FormData, asserter: TypeAsserter<T>): Promise<T> {
-    return SendMultipartRequestNew(updateApiUrlFor(entryType,urlId), formData)
+export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
+    return SendMultipartRequest(updateApiUrlFor(entryType,urlId), formData, cookies)
         .then(HandleJsonResponse)
         .then((entry) => {
             return assertThenReturn(entry, asserter)

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {
     IsValidNote,
     NewEntryNotes,
@@ -40,6 +40,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AssertProject} from "@/app/components/projectClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -101,12 +102,13 @@ export default function SaleDisplay(
         //,
         //             perms: perms, // TODO: validate on insert
         //         }
+        const cookies = useContext(CookiesContext)
         const saleUpdateSubmit = () => {
             const body: any = {
                 notes:notes,
                 acl:MarshalAcl(acl), // TODO: ok?
             }
-            DoUpdateRequest("sale",data._id, body, AssertSale)
+            DoUpdateRequest("sale",data._id, body, AssertSale, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("sale",data._id), {
@@ -160,6 +162,7 @@ export function NewSaleForm(
     //const [perms, setPerms] = useState<EntryPerms | undefined>()
     ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createSale = (e: React.MouseEvent) => {
         e.preventDefault()
 
@@ -168,7 +171,7 @@ export function NewSaleForm(
             notes: notes,
             //perms: perms, // TODO: KEEP PERMS FROM PARENT?
         }
-        DoCreateRequest("sale", body, AssertSale)
+        DoCreateRequest("sale", body, AssertSale, allCookies(cookies))
             .then(s=>{
                 // TODO: ok? different than other creates
                 onCreate?onCreate(s):redirect(viewUrlFor("sale",s._id))

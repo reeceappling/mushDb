@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -51,6 +51,7 @@ import {LcData} from "@/app/components/lcServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -106,7 +107,7 @@ export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
 
 export default function LcRecipeDisplay(
     {
-        id, readonly, data, headerLevel, cookies
+        id, readonly, data, headerLevel
     }: DisplayInput) {
     try {
         AssertLcRecipe(data)
@@ -124,6 +125,7 @@ export default function LcRecipeDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const lcRecipeSubmit = () => {
             const body: any = {
                 name: recName,
@@ -131,7 +133,7 @@ export default function LcRecipeDisplay(
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("lcRecipe",initial._id, body, AssertLcRecipe)
+            DoUpdateRequest("lcRecipe",initial._id, body, AssertLcRecipe, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("lcRecipe",initial._id), {
@@ -231,6 +233,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
         setAdditives(template.additives || [])
     }
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (name === "") {
@@ -246,7 +249,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
             additives: additives,
             notes: notes
         }
-        DoCreateRequest("lcRecipe", body, AssertLcRecipe)
+        DoCreateRequest("lcRecipe", body, AssertLcRecipe, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("lcRecipe"), {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useEffect, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -39,6 +39,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
     if (typeof input !== 'object') {
@@ -82,7 +83,7 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
 
 export default function SubstrateBatchDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertSubstrateBatch(data)
@@ -96,12 +97,13 @@ export default function SubstrateBatchDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const substrateSubmit = () => {
             const body: any = {
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("substrateBatch", initial._id, body, AssertSubstrateBatch)
+            DoUpdateRequest("substrateBatch", initial._id, body, AssertSubstrateBatch, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("substrateBatch", initial._id), {
@@ -184,6 +186,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const submit = () => {
         if (selectedRecipe === undefined) {
             setErr("a recipe must be selected")
@@ -193,7 +196,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
             recipe: selectedRecipe._id,
             notes: notes
         }
-        DoCreateRequest("substrateBatch", body, AssertSubstrateBatch)
+        DoCreateRequest("substrateBatch", body, AssertSubstrateBatch, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("substrateBatch"), {

@@ -5,6 +5,7 @@ import PageWrapper from "@/app/components/clientGeneric";
 import {cookies} from 'next/headers'
 import {MainViewArea} from "@/app/view/[itemType]/[idEncoded]/client";
 import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
+import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export default async function Page({
                                        params,
@@ -55,11 +56,11 @@ export default async function Page({
     const data = await getData(itemType, idEncoded)
     const readers = await GetReaderWriterNames()
     return <PageWrapper props={{pageType: "view", readers: readers}}>
-        <SessionProvider session={session?.value}> {/* TODO: validate working*/}
-            <div className={"fullPage"}>
-                <MainViewArea itemType={itemType} inpData={data} allCookies={allCookies}/>
-            </div>
-        </SessionProvider>
+        <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
+                <div className={"fullPage"}>
+                    <MainViewArea itemType={itemType} inpData={data}/>
+                </div>
+        </CookiesProvider>
     </PageWrapper>
 }
 

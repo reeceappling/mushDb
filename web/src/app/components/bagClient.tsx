@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
@@ -88,6 +88,7 @@ import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSu
 import {AssertSlant} from "@/app/components/slantClient";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -170,7 +171,7 @@ export function AssertBag(input: any): asserts input is BagData {
 
 export default function BagDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertBag(data)
@@ -206,6 +207,7 @@ export default function BagDisplay(
             setFlushes(InitialPicsEntries(updated.flushes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const bagSubmit = () => {
             let formData = new FormData()
             let dataObj: any = {
@@ -239,7 +241,7 @@ export default function BagDisplay(
                 setErr(JSON.stringify(caught))
                 return
             }
-            DoUpdateMultipartRequest("bag",initial._id, formData, AssertBag)
+            DoUpdateMultipartRequest("bag",initial._id, formData, AssertBag, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // SendMultipartRequest(updateApiUrlFor("bag",initial._id), cookies, formData)
@@ -251,14 +253,14 @@ export default function BagDisplay(
             //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            OvcForNewFruit(initial._id, "bag", cookies), // TODO: test heavily
+            OvcForNewFruit(initial._id, "bag", allCookies(cookies)), // TODO: test heavily
             WriteRfidOvcArea(initial._id),
         ]
         return (
             <DisplayFormWrapper entryType={"bag"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID id={data._id} txt={"Bag"} entryType={"bag"}/>
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
@@ -296,8 +298,7 @@ export default function BagDisplay(
 
                 <TransfersOutDisplay validTypesTo={["plate"]} thisId={initial._id} thisEntryType={"bag"}
                                      transfersOut={initial.transfersOut}
-                                     allowNewTransferCreation={true}
-                                     cookies={cookies}/>
+                                     allowNewTransferCreation={true}/>
                 <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
                 {/* Flushes */}
                 <PicsDisplay pix={initial.flushes || []} readonly={readonly}
@@ -359,6 +360,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const newBagSubmit = () => {
         if (pcRun === undefined) {
             setErr("PC Run cannot be undefined!");
@@ -380,7 +382,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             writeTagTo: writeTagTo,
             notes: notes,
         }
-        DoCreateRequest("bag", body, AssertBag)
+        DoCreateRequest("bag", body, AssertBag, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("bag"), {
@@ -424,7 +426,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     )
 }
 
-export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { // TODO: USE
+export function BagImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE
     // Required
     const [sealDate, setSealDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
@@ -437,6 +439,7 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const submitImportBag = () => {
         const reqd = new Map<string, any>([
             ['recipe', recipe],
@@ -472,7 +475,7 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
         setFormData(formData, dataObj)
         //formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
-        MultipartImportRequest(formData, "bag", AssertBag, setErr)
+        MultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies))
         // fetch(importApiUrlFor("bag"), {
         //     method: 'Post',
         //     body: formData,

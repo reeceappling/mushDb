@@ -52,7 +52,7 @@ export default async function Page({
         <PageWrapper props={{pageType: "view", readers: ["reader1","reader2"]}}>
             <div className={"fullPage"}>
                 <PlateDisplay data={TestPlateOk()} readonly={false} id={"testId"} isTopLevel={true}
-                              headerLevel={TopPageHeaderLevel} cookies={""}/>
+                              headerLevel={TopPageHeaderLevel}/>
             </div>
         </PageWrapper>
         </Closeable>
@@ -68,7 +68,7 @@ export default async function Page({
                 <DisplayFormWrapper entryType={"plate"}>
                     <TransfersOutDisplay headerTxt={"Transfers"} thisId={"1"} thisEntryType={"plate"}
                                          transfersOut={["exTransfer1","exTransfer2"]}
-                                         allowNewTransferCreation={true} cookies={""}/>
+                                         allowNewTransferCreation={true}/>
                 </DisplayFormWrapper>
 
             </div>
@@ -77,14 +77,14 @@ export default async function Page({
         <Closeable title={"TestProjectWrite1"}>
             <PageWrapper props={{pageType:"testPage",readers:[]}}>
                 <div className={"fullPage"}>
-                    <ProjectDisplay data={TestProjectOk()} id={"TestProjectWrite"} cookies={""} readonly={false} isTopLevel={true} />
+                    <ProjectDisplay data={TestProjectOk()} id={"TestProjectWrite"} readonly={false} isTopLevel={true} />
                 </div>
             </PageWrapper>
         </Closeable>
         <Closeable title={"TestProjectWriteNoPermsNotComplete"}>
             <PageWrapper props={{pageType:"testPage",readers:[]}}>
                 <div className={"fullPage"}>
-                    <ProjectDisplay data={TestProjectOk2()} id={"TestProjectWrite"} cookies={""} readonly={false} isTopLevel={true} />
+                    <ProjectDisplay data={TestProjectOk2()} id={"TestProjectWrite"} readonly={false} isTopLevel={true} />
                 </div>
             </PageWrapper>
         </Closeable>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {
     clientPostRequestHeaders,
     createApiUrlFor,
@@ -18,7 +18,7 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, SendMultipartRequestNew, updateApiUrlFor, viewUrlFor,
+    OptionalSimpleKey, SendMultipartRequest, updateApiUrlFor, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -55,6 +55,7 @@ import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -172,7 +173,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
 
 export default function MssDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertMss(data)
@@ -194,6 +195,7 @@ export default function MssDisplay(
             setAcl(updated.acl)
             setTransfersOut(updated.transfersOut || [])
         }
+        const cookies = useContext(CookiesContext)
         const mssSubmit = () => {
             let body: any = {
                 sale:sale,
@@ -202,7 +204,7 @@ export default function MssDisplay(
                 notes: notes,
                 acl:MarshalAcl(acl),
             }
-            DoUpdateRequest("mss",initial._id, body, AssertMss)
+            DoUpdateRequest("mss",initial._id, body, AssertMss, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("mss", data._id), {
@@ -234,7 +236,7 @@ export default function MssDisplay(
                     <ParentDisplay parent={data.parent} parentType={"sporePrint"} headerLevel={headerLevel} />{/* TODO: can this be spore swab????*/}
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <TransfersOutDisplay thisId={data._id} thisEntryType={"mss"} transfersOut={data.transfersOut} allowNewTransferCreation={!readonly} validTypesTo={["plate","slant","jar","bag"]} cookies={cookies}/>
+            <TransfersOutDisplay thisId={data._id} thisEntryType={"mss"} transfersOut={data.transfersOut} allowNewTransferCreation={!readonly} validTypesTo={["plate","slant","jar","bag"]}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes} />
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
@@ -259,6 +261,7 @@ export function NewMssForm(
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (sporePrint === undefined){
@@ -276,7 +279,7 @@ export function NewMssForm(
             writeTagTo: writeTagTo,
         }
 
-        DoCreateRequest("mss", body, AssertMss)
+        DoCreateRequest("mss", body, AssertMss, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("mss"), { // TODO: validate all creates are using this format of url

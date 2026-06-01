@@ -3,7 +3,7 @@
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {
     AddCreatedQuadColFunction,
     AddCreatedTriColFunction,
@@ -45,6 +45,7 @@ import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
 import {AssertMss} from "@/app/components/mssClient";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -99,12 +100,13 @@ export default function PcRunDisplay(
             setNotes({existing: dataFor(updated.notes || []), new: []})
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const pcRunUpdate = () => {
             const body: any = {
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("pcRun",initial._id, body, AssertPcRun)
+            DoUpdateRequest("pcRun",initial._id, body, AssertPcRun, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("pcRun",data._id), {
@@ -260,6 +262,7 @@ export function NewPcRunForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const newPcRunSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
@@ -268,7 +271,7 @@ export function NewPcRunForm(
             runTime: runTime,
             notes: notes,
         }
-        DoCreateRequest("pcRun", body, AssertPcRun)
+        DoCreateRequest("pcRun", body, AssertPcRun, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("pcRun"), {

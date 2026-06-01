@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
@@ -76,6 +76,7 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {AssertPlate} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -139,7 +140,7 @@ export function AssertSlant(input: any): asserts input is SlantData {
     return
 }
 
-export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
+export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
     const [created, setCreated] = useState<number>(Date.now())
     const [stickType, setStickType] = useState<string | undefined>(undefined)
     const [species, setSpecies] = useState<SpeciesData | undefined>()
@@ -149,6 +150,7 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
     const [imageFile, setImageFile] = useState<File | undefined>()
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
     const ImportSlant = () => {
         let formData = new FormData()
         if(species===undefined){
@@ -168,7 +170,7 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
             formData.set("image", imageFile, "imgFile")
         }
 
-        MultipartImportRequest(formData, "slant", AssertSlant, setErr)
+        MultipartImportRequest(formData, "slant", AssertSlant, setErr, allCookies(cookies))
         // SendMultipartRequest(importUrlFor("slant"), cookies, formData)
         //     .then(HandleJsonResponse) // TODO: all of these for imports should be HandleJsonResponse, NOT HandleTxtResponse
         //     .then((newItem) => {
@@ -180,8 +182,8 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
     return <ImportEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
-        {species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel/*cookies={cookies}*/}/>:null}
+        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
+        {species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>:null}
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
@@ -193,7 +195,7 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
 
 export default function SlantDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertSlant(data)
@@ -220,6 +222,7 @@ export default function SlantDisplay(
             setTransfersOut(updated.transfersOut || [])
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const slantSubmit = ()=>{
             let formData = new FormData()
             let dataObj:any={
@@ -246,7 +249,7 @@ export default function SlantDisplay(
                 setErr(JSON.stringify(caught))
                 return
             }
-            DoUpdateMultipartRequest("slant",initial._id, formData, AssertSlant)
+            DoUpdateMultipartRequest("slant",initial._id, formData, AssertSlant, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
 
@@ -294,7 +297,7 @@ export default function SlantDisplay(
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
                 </FlexedArea>
 
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"slant"} transfersOut={transfersOut} allowNewTransferCreation={!readonly} cookies={cookies}/>
+                <TransfersOutDisplay thisId={initial._id} thisEntryType={"slant"} transfersOut={transfersOut} allowNewTransferCreation={!readonly}/>
                 <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
                 <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
@@ -321,6 +324,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createSlant = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(agarBatch===undefined){
@@ -333,7 +337,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        DoCreateRequest("slant", body, AssertSlant)
+        DoCreateRequest("slant", body, AssertSlant, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("slant"), {

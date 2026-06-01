@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
@@ -50,7 +50,6 @@ import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
@@ -58,7 +57,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
-import {AssertSporeSwab} from "@/app/components/sporeSwabClient";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
@@ -122,7 +121,7 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     return
 }
 
-export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput) { // TODO: use headerLevel
+export function StasisTubeImportDisplay() {
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
@@ -131,6 +130,7 @@ export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const importEntry = () => {
         let formData = new FormData()
         let dataObj: any = {
@@ -149,7 +149,7 @@ export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput
         }
         writeTagTo && (dataObj.writeTagTo=writeTagTo)
 
-        MultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr)
+        MultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies))
         // TODO: reenable if does not work without cookies... SendMultipartRequest(importApiUrlFor("stasisTube"), cookies, formData)
         // SendMultipartRequest2(importApiUrlFor("stasisTube"), formData)
         //     .then(HandleJsonResponse)
@@ -162,8 +162,8 @@ export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput
     return <ImportEntryFormWrapper entryType={"stasisTube"}>
         {err!=undefined && <div>{"Error: "+err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies/*cookies={cookies}*/}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
+        <ExistingSpeciesSelector doSelect={setSpecies}/>
+        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
@@ -174,7 +174,7 @@ export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput
 
 export default function StasisTubeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertStasisTube(data)
@@ -206,6 +206,7 @@ export default function StasisTubeDisplay(
             setTransfersOut(updated.transfersOut || [])
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
         const stasisTubeSubmit = () => {
             let formData = new FormData()
             let dataObj:any={
@@ -233,7 +234,7 @@ export default function StasisTubeDisplay(
                 return
             }
 
-            DoUpdateRequest("stasisTube",data._id, formData, AssertStasisTube)
+            DoUpdateRequest("stasisTube",data._id, formData, AssertStasisTube, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
 
@@ -273,7 +274,7 @@ export default function StasisTubeDisplay(
                         <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut} validTypesTo={["plate","stasisTube","jar"/* TODO: ANYMORE????*/]} cookies={cookies} headerTxt={"Transfers"}/>
+                <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut} validTypesTo={["plate","stasisTube","jar"/* TODO: ANYMORE????*/]} headerTxt={"Transfers"}/>
                 <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel} />{/* Pics */}
                 <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
@@ -297,6 +298,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createStasisTube = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(pcRun===undefined){
@@ -308,7 +310,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
             notes: notes,
             writeTagTo:writeTagTo,
         }
-        DoCreateRequest("stasisTube", body, AssertStasisTube)
+        DoCreateRequest("stasisTube", body, AssertStasisTube, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("stasisTube"), {

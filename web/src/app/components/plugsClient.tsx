@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     clientPostRequestHeaders,
@@ -43,6 +43,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {AssertPlate} from "@/app/components/plateClient";
 import {AssertJar} from "@/app/components/jarClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertPlugs(input: any): asserts input is PlugsJar {
     if (typeof input !== 'object') {
@@ -146,7 +147,7 @@ export function AssertDowel(input: any): asserts input is DowelType {
 
 export default function PlugsDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     const [initial, setInitial] = useState(data as PlugsJar)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(data.knownFruitable)
@@ -169,6 +170,7 @@ export default function PlugsDisplay(
         setTransfersOut(updated.transfersOut || [])
         setAcl(updated.acl)
     }
+    const cookies = useContext(CookiesContext)
     const submit = () => {
         let body: any = {
             pcRun: pcRun,
@@ -179,7 +181,7 @@ export default function PlugsDisplay(
             acl: MarshalAcl(acl),
         }
         // TODO: do we want pics on this?
-        DoUpdateRequest("plugs",initial._id, body, AssertPlugs)
+        DoUpdateRequest("plugs",initial._id, body, AssertPlugs, allCookies(cookies))
             .then(updateInitial)
             .catch(ErrHandler(setErr))
 
@@ -226,7 +228,7 @@ export default function PlugsDisplay(
             <SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales}/>
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plugs"}
                                  transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly} cookies={cookies}/>
+                                 allowNewTransferCreation={!readonly}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
@@ -257,7 +259,8 @@ export function DowelTypesTable({data}: { data: DowelType[] }) {
 }
 
 
-export function PlugsImportDisplay({cookies}: ImportDisplayInput) {
+export function PlugsImportDisplay({}: ImportDisplayInput) {
+    const cookies = useContext(CookiesContext)
     const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
     const [gen, setGen] = useState<number | undefined>(undefined)
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
@@ -327,6 +330,7 @@ export function NewPlugsForm(
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createPlugs = (e: React.MouseEvent) => {
         e.preventDefault()
         if (dowelTypes.length === 0) {
@@ -346,7 +350,7 @@ export function NewPlugsForm(
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        DoCreateRequest("plugs", body, AssertPlugs)
+        DoCreateRequest("plugs", body, AssertPlugs, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("plugs"), {

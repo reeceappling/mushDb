@@ -7,7 +7,7 @@ import {
 } from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import React, {JSX, useEffect, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {
@@ -50,6 +50,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {AssertSlant} from "@/app/components/slantClient";
 import {AssertProject} from "@/app/components/projectClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 // TODO: list page not working
 
@@ -115,6 +116,7 @@ export default function SpeciesDisplay(
             setAcl(updated.acl)
             setDefaultAcl(updated.defaultAcl)
         }
+        const cookies = useContext(CookiesContext)
         const update = ()=>{
             // TODO: validate substrate?
             // Notes, aliases, substrate recipe, and have only
@@ -125,7 +127,7 @@ export default function SpeciesDisplay(
                 acl: MarshalAcl(acl), // TODO: ensure ok
                 defaultAcl: MarshalAcl(defaultAcl), // TODO: ensure ok
             }
-            DoUpdateRequest("species",encodeURIComponent(data._id), body, AssertSpecies)
+            DoUpdateRequest("species",encodeURIComponent(data._id), body, AssertSpecies, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("species", encodeURI(data._id)), { // TODO: ensure correct
@@ -189,6 +191,7 @@ export function NewSpeciesForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>();
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const submitNewSpecies = () => {
         console.log("submitting new species")
         if(name===""){
@@ -206,7 +209,7 @@ export function NewSpeciesForm(
             sub:sub._id,
             notes:notes,
         }
-        DoCreateRequest("species", body, AssertSpecies)
+        DoCreateRequest("species", body, AssertSpecies, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("species"), {
@@ -287,8 +290,8 @@ export function ExistingSpeciesSelector(
         doSelect: (val?: SpeciesData) => void,
         headerLevel?: number,
         initialSpecies?: string,
-        //cookies: string,
     }) {
+    const cookies = useContext(CookiesContext)
     const [expandedAfterSelected, setExpandedAfterSelected] = useState<boolean>(false)
     const [isLoaded, setLoaded] = useState(false)
     const [speciesList, setSpeciesList] = useState<SpeciesData[]>([]);

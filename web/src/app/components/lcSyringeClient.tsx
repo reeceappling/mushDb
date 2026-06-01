@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcData} from "@/app/components/lcServer";
@@ -43,6 +43,7 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {AssertLcRecipe} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringe {
     if (typeof input !== 'object') {
@@ -102,7 +103,8 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringe {
     return
 }
 
-export function LcSyringeImportDisplay({cookies}: {cookies: string }) {
+export function LcSyringeImportDisplay() {
+    const cookies = useContext(CookiesContext)
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
@@ -153,7 +155,7 @@ export function LcSyringeImportDisplay({cookies}: {cookies: string }) {
 
 export default function LcSyringeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertLcSyringe(data)
@@ -180,7 +182,7 @@ export default function LcSyringeDisplay(
         setAcl(updated.acl)
     }
 
-
+    const cookies = useContext(CookiesContext)
     const lcSyringeSubmit = () => {
         let body: any = { // TODO: ensure ok
             confirmedClean: confirmedClean,
@@ -190,7 +192,7 @@ export default function LcSyringeDisplay(
             writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
         }
-        DoUpdateRequest("lcSyringe",initial._id, body, AssertLcSyringe)
+        DoUpdateRequest("lcSyringe",initial._id, body, AssertLcSyringe, allCookies(cookies))
             .then(updateInitial)
             .catch(ErrHandler(setErr))
 
@@ -234,8 +236,7 @@ export default function LcSyringeDisplay(
             </FlexedSinglesGroup>
         </FlexedArea>
         <TransfersOutDisplay thisId={initial._id} thisEntryType={"plate"} transfersOut={transfersOut}
-                             allowNewTransferCreation={!readonly}
-                             cookies={cookies}/>
+                             allowNewTransferCreation={!readonly}/>
         <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
         <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
             <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
@@ -249,19 +250,18 @@ export default function LcSyringeDisplay(
 
 }
 
-export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
+export function NewLcSyringeForm({parentLc, onCreate, txt}: {
     parentLc?: LcData,
     onCreate?: (newItem: LcSyringe) => void,
-    cookies: string
     txt: string
 }) {
     // TODO: THIS WHOLE FUNC?
+    const cookies = useContext(CookiesContext)
     const [itemsCreated, setItemsCreated] = useState<string[]>([])
     const [parent, setParent] = useState<LcData | undefined>(parentLc) // TODO: this ok to not call set??
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    // //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
     const createdItemsDiv = () => {
         if (itemsCreated.length === 0) {
             return null
@@ -290,7 +290,7 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
             parent: parent,
             notes: notes,
         }
-        DoCreateRequest("lcSyringe", body, AssertLcSyringe)
+        DoCreateRequest("lcSyringe", body, AssertLcSyringe, allCookies(cookies))
             .then(item=>{
                 onCreate && onCreate(item)
                 setItemsCreated([...itemsCreated, item._id]) // TODO: ok?

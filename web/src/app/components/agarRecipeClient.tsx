@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
@@ -60,6 +60,7 @@ import {AgarBatchData} from "@/app/components/agarBatchServer";
 import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     if (typeof input !== 'object') {
@@ -129,7 +130,7 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
 
 export default function AgarRecipeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }:
     DisplayInput
 ) {
@@ -150,6 +151,7 @@ export default function AgarRecipeDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
         }
+        const cookies = useContext(CookiesContext)
 
         const agarRecipeSubmit = () => {
             if (name === undefined || name === "") {
@@ -162,7 +164,7 @@ export default function AgarRecipeDisplay(
                 notes: notes,
                 acl: MarshalAcl(acl), // TODO; use this everywhere if it works
             }
-            DoUpdateRequest("agarRecipe",initial._id, body, AssertAgarRecipe)
+            DoUpdateRequest("agarRecipe",initial._id, body, AssertAgarRecipe, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("agarRecipe",initial._id), {
@@ -265,6 +267,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
     const [agarErr, setAgarErr] = useState<string | undefined>()
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState<boolean>(false)
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const newAgarRecipeSubmit = () => {
         if (name === "") {
             setErr("name must not be empty")
@@ -286,7 +289,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             antibiotics: antibiotics.length !== 0 ? antibiotics : undefined,
             notes: notes.length !== 0 ? notes : undefined,
         }
-        DoCreateRequest("agarRecipe", body, AssertAgarRecipe)
+        DoCreateRequest("agarRecipe", body, AssertAgarRecipe, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("agarRecipe"), {

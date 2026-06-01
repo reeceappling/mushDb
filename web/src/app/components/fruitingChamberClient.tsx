@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
@@ -19,7 +19,6 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
-    createApiUrlFor,
     dataFor,
     DisplayFormWrapper,
     DisplayInput,
@@ -30,9 +29,6 @@ import {
     FlexedArea,
     FlexedSinglesGroup,
     FloatInput,
-    HandleJsonResponse,
-    HandleTxtResponse,
-    importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     ListPageItems,
@@ -51,12 +47,8 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     SelectorWrapper,
-    SendMultipartRequest,
-    SendMultipartRequestNew,
     setFormData,
     setFormImages,
-    updateApiUrlFor,
-    viewUrlFor
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -76,13 +68,12 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import ReaderWriterSelector, {
+import {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SaleArea} from "@/app/components/saleClient";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
@@ -96,7 +87,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
-import {AssertFruit} from "@/app/components/fruitClient";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
@@ -178,7 +169,7 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
 
 export default function FruitingChamberDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
+        id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
     try {
         AssertFruitingChamber(data)
@@ -216,6 +207,7 @@ export default function FruitingChamberDisplay(
             setFlushes(InitialPicsEntries(updated.flushes))
             setTransfersOut(updated.transfersOut || [])
         }
+        const cookies = useContext(CookiesContext)
         const fruitingChamberSubmit = () => {
             let formData = new FormData()
             let dataObj: any = {
@@ -249,7 +241,7 @@ export default function FruitingChamberDisplay(
                 return
             }
 
-            DoUpdateMultipartRequest("fruitingChamber",initial._id, formData, AssertFruitingChamber)
+            DoUpdateMultipartRequest("fruitingChamber",initial._id, formData, AssertFruitingChamber, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
 
@@ -264,7 +256,7 @@ export default function FruitingChamberDisplay(
             // }).catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            OvcForNewFruit(data._id, "fruitingChamber", cookies),
+            OvcForNewFruit(data._id, "fruitingChamber", allCookies(cookies)),
             WriteRfidOvcArea(initial._id),
             // TODO: xfers? OvcForXfers(data._id, "fruit", ["plate","slant","jar","stasisTube"], "Clone/Transfer Fruit"), // TODO: ensure list correct //OVC for clone to plate? (transfer)
             // TODO: spore swab directly from box? (should also create a fruit in the interim)
@@ -276,6 +268,7 @@ export default function FruitingChamberDisplay(
                 <ID id={data._id} txt={"Fruiting Chamber"} entryType={"fruitingChamber"}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage}
                                         headerLevel={headerLevel}/>{/* Most recent image! */}
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -308,8 +301,7 @@ export default function FruitingChamberDisplay(
                     </FlexedSinglesGroup>
                 </FlexedArea>
                 <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"}
-                                     transfersOut={initial.transfersOut} allowNewTransferCreation={false}
-                                     cookies={cookies}/>
+                                     transfersOut={initial.transfersOut} allowNewTransferCreation={false}/>
 
                 <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
                 {/* Flushes */}<PicsDisplay pix={initial.flushes || []} readonly={readonly}
@@ -321,12 +313,12 @@ export default function FruitingChamberDisplay(
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
+                {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
                 {readonly ? null :
                     <button className={"bottomButton greenButton"} onClick={(e) => {
                         e.stopPropagation();
                         fruitingChamberSubmit()
                     }}>{"Update"}</button>}
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
             </DisplayFormWrapper>
         )
     } catch (err) {
@@ -393,6 +385,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const newFruitingChamberSubmit = () => {
         if (!subBatch) {
             setErr("substrate batch must be selected")
@@ -419,8 +412,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
             notes: notes
         }
         writeTagTo && (body.writeTagTo = writeTagTo)
-        const errHandler = ErrHandler(setErr)
-        DoCreateRequest("fruitingChamber", body, AssertFruitingChamber)
+        DoCreateRequest("fruitingChamber", body, AssertFruitingChamber, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("fruitingChamber"), {
@@ -451,7 +443,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
         if (!parent) {
             return <MainCollectionInputOrRead onIdSelected={setParentId}/>
         }
-        return <div>{parentId || "unknown"}</div> // TODO: FIX
+        return <div>{parentId || "unknown parent"}</div> // TODO: FIX
     }
     return (
         <NewEntryFormWrapper entryType={"fruitingChamber"}>
@@ -481,7 +473,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
     )
 }
 
-export function FruitingChamberImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
+export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) {
     const [recipe, setRecipe] = useState<SubstrateRecipeData | undefined>()
     const [creationDate, setCreationDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>()
@@ -495,7 +487,7 @@ export function FruitingChamberImportDisplay({headerLevel, cookies}: ImportDispl
     const [imageFile, setImageFile] = useState<File | undefined>()
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
-    //const [perms, setPerms] = useState<EntryPerms | undefined>()
+    const cookies = useContext(CookiesContext)
     const submitImportFruitingChamber = () => {
         const reqd = new Map<string, any>([
             ['recipe', recipe],
@@ -516,7 +508,7 @@ export function FruitingChamberImportDisplay({headerLevel, cookies}: ImportDispl
             substrateRatio: mixedSubRatio,
             casingRatio: casingRatio,
             species: species?._id,
-            //perms: perms,
+            //perms: perms, // From spec/subspec
         }
         subspecies && (bodyObj.subspecies = subspecies._id)
         generation && (bodyObj.generation = generation)
@@ -527,21 +519,7 @@ export function FruitingChamberImportDisplay({headerLevel, cookies}: ImportDispl
         imageFile && formData.set("img", imageFile, "img")
         setFormData(formData, bodyObj)
 
-        MultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr)
-        // TODO: reenable if needs cookies
-        // SendMultipartRequest(importApiUrlFor("fruitingChamber"), "", formData)
-        //SendMultipartRequest2(importApiUrlFor("fruitingChamber"), formData)
-        // TODO: change to proper multipart request! NOT fetch call
-        // fetch(importApiUrlFor("fruitingChamber"), {
-        //     method: 'Post',
-        //     body: formData,
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then(newItem => {
-        //         AssertFruitingChamber(newItem)
-        //         redirect(viewUrlFor("fruitingChamber", newItem._id))
-        //     }).catch(ErrHandler(setErr));
+        MultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"fruitingChamber"}>
         <ErrorDisplay headerLevel={headerLevel} err={err}/>

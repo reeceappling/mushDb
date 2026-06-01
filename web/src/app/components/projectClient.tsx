@@ -30,6 +30,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {AssertPlugs} from "@/app/components/plugsClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -81,7 +82,7 @@ export function AssertProject(input: any): asserts input is ProjectData {
 
 export default function ProjectDisplay(
     {
-        id, readonly, data, headerLevel, cookies
+        id, readonly, data, headerLevel
     }: DisplayInput) {
     try {
         AssertProject(data)
@@ -123,6 +124,7 @@ export default function ProjectDisplay(
                 }}/>
             </div>
         }
+        const cookies = useContext(CookiesContext)
         const projectSubmit = () => {
             let body: any = {
                 notes: notes,
@@ -132,7 +134,7 @@ export default function ProjectDisplay(
             console.log("sending perms: " + JSON.stringify(Object.fromEntries(perms)))
 
 
-            DoUpdateRequest("project",encodeURIComponent(data._id), body, AssertProject)
+            DoUpdateRequest("project",encodeURIComponent(data._id), body, AssertProject, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("project",encodeURIComponent(data._id)), { // TODO: question marks in id cause issues
@@ -188,6 +190,7 @@ export function NewProjectForm(
     const [err, setErr] = useState<string | undefined>(undefined)
     // TODO: handle isTopLevel
     const errHandler = ErrHandler(setErr)
+    const cookies = useContext(CookiesContext)
     const createProject = () => {
         if (name === undefined) {
             setErr("Name field cannot be undefined")
@@ -197,7 +200,7 @@ export function NewProjectForm(
             name: name, // TODO: validate that project name is valid for url
             notes: notes,
         }
-        DoCreateRequest("project", body, AssertProject)
+        DoCreateRequest("project", body, AssertProject, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
         // fetch(createApiUrlFor("project"), {

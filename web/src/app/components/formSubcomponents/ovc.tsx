@@ -19,7 +19,7 @@ export function OvcForXfers(parentId: string, parentType: string, validTypesTo: 
     return {
         txt: altTxt || "New Transfer",
         newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-            return <NewTransferArea cookies={cookies} idFrom={parentId} typeFrom={parentType}
+            return <NewTransferArea idFrom={parentId} typeFrom={parentType}
                                     validTypesTo={validTypesTo}
                                     onCreated={(xfer: TransferData) => {
                                         addTransferOut && addTransferOut(xfer)
@@ -38,7 +38,7 @@ export function OvcForNewFruit(parentId: string, parentType: string, cookies: st
     return {
         txt: "Record New Fruit",
         newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-            return <NewFruitForm parentId={parentId} parentType={parentType} readonly={false} cookies={cookies}
+            return <NewFruitForm parentId={parentId} parentType={parentType} readonly={false}
                                  onCreate={(fr: FruitData) => {
                                      onCreate([{
                                          typeText: "Fruit",
