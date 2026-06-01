@@ -14,7 +14,7 @@ export default async function Page({
 }) {
     const itemType = (await params).itemType
     const cookieStore = await cookies()
-    const session = cookieStore.get('_gothic_session')
+    const session = cookieStore.get('_gothic_session') // TODO: USE THIS SOMEWHERE????
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 
     const getData:(a1:string)=>Promise<any>= async (itemTypeA: string)=>{
@@ -24,7 +24,7 @@ export default async function Page({
                 credentials: 'include',
                 headers: {
                     'Accept': 'application/json',
-                    //'Cookie': allCookies, // TODO: REENABLE IF DOES NOT WORK
+                    'Cookie': allCookies, // TODO: FIX THIS! THIS IS CURRENTLY REQUIRED FOR AUTHENTICATION
                 },
             }).then((res) => {
                 if (!res.ok) {

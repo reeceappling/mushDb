@@ -7,7 +7,6 @@ import {cookies} from "next/headers";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ClientNewPage} from "@/app/new/[itemType]/client";
 import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
-import {getUrlFor, viewApiUrlFor} from "@/app/components/common";
 
 export default async function Page({
                                        params,
@@ -24,7 +23,7 @@ export default async function Page({
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
     let speciesData: SpeciesData | undefined = undefined
     if (species !== undefined){
-        speciesData = await fetch(getUrlFor("species", species[0]), { // TODO: this feels way incorrect? need to un-urlencode species? need only first entry of species?
+        speciesData = await fetch(BaseExternalUrl+"/db/get/species/"+species[0], { // TODO: this feels way incorrect? need to un-urlencode species? need only first entry of species?
             method: 'Get',
             credentials: 'include',
             headers: { // TODO: use diff type?

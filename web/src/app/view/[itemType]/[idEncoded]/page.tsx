@@ -1,11 +1,10 @@
-import {BaseExternalUrl} from "@/app/components/Constants";
+import {BaseExternalUrl, BaseInternalUrl} from "@/app/components/Constants";
 import React from "react";
 import {GetReaderWriterNames} from "@/app/components/serverActions";
 import PageWrapper from "@/app/components/clientGeneric";
 import {cookies} from 'next/headers'
 import {MainViewArea} from "@/app/view/[itemType]/[idEncoded]/client";
 import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
-import {viewApiUrlFor} from "@/app/components/common";
 
 export default async function Page({
                                        params,
@@ -24,13 +23,13 @@ export default async function Page({
 
     const getData: (a1: string, a2: string) => Promise<any> = async (itemTypeA: string, idEnc: string) => {
         return new Promise<React.JSX.Element>((accept, reject) => { // TODO: REIMPLEMENT!
-            fetch(viewApiUrlFor(itemTypeA, idEnc), {
+            fetch(BaseExternalUrl+"/db/get/"+itemTypeA+"/"+idEnc, {
                 method: 'Get',
                 credentials: 'include',
                 headers: {
                     'Accept': 'application/json',
-                    'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: ENSURE OK! maybe "*"?
-                    // TODO: reenable if not work 'Cookie': allCookies, // TODO: ensure this is everywhere // TODO: probably get rid of
+                    //'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: ENSURE OK! maybe "*"?
+                    'Cookie': allCookies, // TODO: may be REQUIRED... try without before removing!
                     // TODO: set Origin header to web? or should this be BaseExternalUrl?
                 },
             }).then((res) => {
