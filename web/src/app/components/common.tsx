@@ -58,7 +58,11 @@ export function SendMultipartRequest(url: string, cookies: string, formData: For
         method: 'Post',
         body: formData,
         credentials: 'include',
-        headers: clientPostRequestHeadersMultipart, // TODO: set multipart request type?
+        headers: {
+        credentials: 'include',
+            'Cookie': cookies, // TODO: does this need to be here? I think so for multipart
+            'Access-Control-Allow-Origin': '*',
+        },//clientPostRequestHeadersMultipart, // TODO: set multipart request type?
     })
 }
 
@@ -79,12 +83,15 @@ export const clientPostRequestHeadersMultipart = {
 }
 
 // TODO: if this works, then we should get rid of SendMultipartRequest
-export function SendMultipartRequestNew(url: string, formData: FormData) {
+export function SendMultipartRequestNew(url: string, /*cookies: string, */formData: FormData) {
     return fetch(url, {
         method: 'Post',
         body: formData,
         credentials: 'include',
-        headers: clientPostRequestHeadersMultipart, // TODO: ensure ok
+        //
+        headers: {...clientPostRequestHeadersMultipart,
+            /*'Cookie': cookies, TODO: RE-ADD COOKIES TO HEADER!*/
+        }, // TODO: ensure ok
     })
 }
 
