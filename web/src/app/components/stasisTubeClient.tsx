@@ -20,23 +20,18 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
-    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse, importApiUrlFor,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     ImportDisplayInput, ImportEntryFormWrapper,
     ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
     resolveContamsFormData,
-    resolvePicsFormData, SendMultipartRequest, SendMultipartRequest2, setFormData,
-    setFormImages, updateApiUrlFor, viewUrlFor,
+    resolvePicsFormData, setFormData,
+    setFormImages,
 } from "@/app/components/common";
-import ReaderWriterSelector, {
-    WriteRfidOvcArea
-} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
@@ -45,9 +40,10 @@ import {
     PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
-    ContaminationForm, ContamsDisplay, InitialContamState, InitialNotesState, IsValidContamination,
+    ContaminationForm, ContamsDisplay, InitialContamState, IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {StasisTubeData} from "@/app/components/stasisTubeServer";
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
@@ -211,7 +207,7 @@ export default function StasisTubeDisplay(
             setAcl(updated.acl)
         }
         const stasisTubeSubmit = () => {
-            let body = new FormData()
+            let formData = new FormData()
             let dataObj:any={
                 knownFruitable: knownFruitable,
                 sale: sale,
@@ -229,21 +225,25 @@ export default function StasisTubeDisplay(
                 let newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
+                setFormData(formData, dataObj)
+                setFormImages(formData, "newPic", newImages)
+                setFormImages(formData, "newContam", newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
 
-            SendMultipartRequest(updateApiUrlFor("stasisTube", initial._id), cookies, body)
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertStasisTube(entry)
-                    updateInitial(entry)
-                })
-                .catch(ErrHandler(setErr));
+            DoUpdateRequest("stasisTube",data._id, formData, AssertStasisTube)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+
+            // SendMultipartRequest(updateApiUrlFor("stasisTube", initial._id), cookies, formData)
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertStasisTube(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -296,6 +296,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const errHandler = ErrHandler(setErr)
     const createStasisTube = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(pcRun===undefined){
@@ -307,21 +308,20 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
             notes: notes,
             writeTagTo:writeTagTo,
         }
-
-        fetch(createApiUrlFor("stasisTube"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify(body),
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertStasisTube(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+        DoCreateRequest("stasisTube", body, AssertStasisTube)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("stasisTube"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body),
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertStasisTube(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"stasisTube"}>
         <ErrorDisplay err={err} />

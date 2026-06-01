@@ -4,7 +4,7 @@ import React, {JSX, useState} from "react";
 import {
     createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler,
+    DisplayInput, DoCreateRequest, DoCreateRequestMultipart, DoUpdateRequest, ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -24,7 +24,7 @@ import {
     OptionalKey,
     OptionalSimpleKey,
     SendMultipartRequest,
-    SendMultipartRequest2,
+    SendMultipartRequestNew,
     setFormData, updateApiUrlFor, viewUrlFor
 } from "@/app/components/common";
 import {
@@ -45,7 +45,7 @@ import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/
 import {SporeSwab} from "@/app/components/sporeSwabServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {ACL} from "@/app/components/accessControlServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -192,27 +192,27 @@ export default function SporeSwabDisplay(
             setAcl(updated.acl)
         }
         const submit = () => {
-            let dataObj: any = {
+            let body: any = {
                 sale: sale,
                 disposed: disposed,
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
+            DoUpdateRequest("sporeSwab",data._id, body, AssertSporeSwab)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
 
-            fetch(updateApiUrlFor("sporeSwab",data._id), {
-                method: 'Post',
-                body: JSON.stringify(dataObj),
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSporeSwab(entry)
-                    updateInitial(entry)
-                })
-                .catch(ErrHandler(setErr));
+            // fetch(updateApiUrlFor("sporeSwab",data._id), {
+            //     method: 'Post',
+            //     body: JSON.stringify(dataObj),
+            //     headers: clientPostRequestHeaders,
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertSporeSwab(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: use the next one in other places...
@@ -268,31 +268,32 @@ export function NewSporeSwabForm(
     const [notes, setNotes] = useState<Note[]>([])
 
     const [err, setErr] = useState<string | undefined>(undefined)
+    const errHandler = ErrHandler(setErr)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!parent || parent === "") {
             setErr("Parent must be selected")
             return
         }
-        let dataObj: any = {
+        let body: any = {
             parent: parent,
             notes: notes,
         }
+        DoCreateRequest("sporeSwab", body, AssertSporeSwab)
+            .then(onCreate)
+            .catch(errHandler)
 
-        fetch(createApiUrlFor("sporeSwab"), {
-            method: 'Post',
-            body: JSON.stringify(dataObj),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((resJson) => {
-                AssertSporeSwab(resJson)
-                onCreate(resJson)
-            })
-            .catch(ErrHandler(setErr));
+        // fetch(createApiUrlFor("sporeSwab"), {
+        //     method: 'Post',
+        //     body: JSON.stringify(body),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((resJson) => {
+        //         AssertSporeSwab(resJson)
+        //         onCreate(resJson)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
 
     return <NewEntryFormWrapper entryType={"sporeSwab"}>

@@ -20,23 +20,43 @@ import {
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     createApiUrlFor,
-    dataFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, FloatInput,
+    dataFor,
+    DisplayFormWrapper,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateMultipartRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    FloatInput,
     HandleJsonResponse,
-    HandleTxtResponse, importApiUrlFor,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn,
-    MainCollectionInputOrRead, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    HandleTxtResponse,
+    importApiUrlFor,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    MainCollectionInputOrRead,
+    MultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData, SelectorWrapper,
-    SendMultipartRequest, SendMultipartRequest2,
+    resolvePicsFormData,
+    SelectorWrapper,
+    SendMultipartRequest,
+    SendMultipartRequestNew,
     setFormData,
-    setFormImages, updateApiUrlFor, viewUrlFor
+    setFormImages,
+    updateApiUrlFor,
+    viewUrlFor
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -197,7 +217,7 @@ export default function FruitingChamberDisplay(
             setTransfersOut(updated.transfersOut || [])
         }
         const fruitingChamberSubmit = () => {
-            let body = new FormData()
+            let formData = new FormData()
             let dataObj: any = {
                 knownFruitable: knownFruitable,
                 disposed: disposed,
@@ -220,24 +240,28 @@ export default function FruitingChamberDisplay(
                 let newFlushes = flushesInfo.images
                 dataObj.flushes = flushesInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
-                setFormImages(body, "newFlush", newFlushes)
+                setFormData(formData, dataObj)
+                setFormImages(formData, "newPic", newImages)
+                setFormImages(formData, "newContam", newContams)
+                setFormImages(formData, "newFlush", newFlushes)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
 
-            SendMultipartRequest(updateApiUrlFor("fruitingChamber",initial._id), cookies, body)
-                .then(HandleJsonResponse).then((newEntry) => {
-                try {
-                    AssertFruitingChamber(newEntry)
-                    updateInitial(newEntry)
-                } catch (er) {
-                    setErr("failed to decode response: " + JSON.stringify(er))
-                }
-            }).catch(ErrHandler(setErr));
+            DoUpdateMultipartRequest("fruitingChamber",initial._id, formData, AssertFruitingChamber)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+
+            // SendMultipartRequest(updateApiUrlFor("fruitingChamber",initial._id), cookies, formData)
+            //     .then(HandleJsonResponse).then((newEntry) => {
+            //     try {
+            //         AssertFruitingChamber(newEntry)
+            //         updateInitial(newEntry)
+            //     } catch (er) {
+            //         setErr("failed to decode response: " + JSON.stringify(er))
+            //     }
+            // }).catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForNewFruit(data._id, "fruitingChamber", cookies),
@@ -368,6 +392,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const newFruitingChamberSubmit = () => {
         if (!subBatch) {
             setErr("substrate batch must be selected")
@@ -394,24 +419,25 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
             notes: notes
         }
         writeTagTo && (body.writeTagTo = writeTagTo)
-        fetch(createApiUrlFor("fruitingChamber"), {
-            method: 'Post',
-            body: JSON.stringify(body),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                try {
-                    AssertFruitingChamber(newEntry)
-                    handlers.onCreate && handlers.onCreate(newEntry)
-                } catch (er) {
-                    throw new Error("failed to decode response: " + JSON.stringify(er))
-                }
-            })
-            .catch(ErrHandler(setErr));
+        const errHandler = ErrHandler(setErr)
+        DoCreateRequest("fruitingChamber", body, AssertFruitingChamber)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("fruitingChamber"), {
+        //     method: 'Post',
+        //     body: JSON.stringify(body),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         try {
+        //             AssertFruitingChamber(newEntry)
+        //             handlers.onCreate && handlers.onCreate(newEntry)
+        //         } catch (er) {
+        //             throw new Error("failed to decode response: " + JSON.stringify(er))
+        //         }
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     const batchArea = () => {
         if (substrateBatchIn) {
@@ -509,10 +535,7 @@ export function FruitingChamberImportDisplay({headerLevel, cookies}: ImportDispl
         // fetch(importApiUrlFor("fruitingChamber"), {
         //     method: 'Post',
         //     body: formData,
-        //     headers: {
-        //         credentials: 'include',
-        //         'Content-type': "multipart/form-data"
-        //     },
+        //     headers: clientPostRequestHeaders,
         // })
         //     .then(HandleJsonResponse)
         //     .then(newItem => {

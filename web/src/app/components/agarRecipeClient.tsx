@@ -29,7 +29,7 @@ import {
     createApiUrlFor,
     CreatedLinkFor,
     CreateNewEntryButton, dataFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     IsString,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
@@ -55,11 +55,11 @@ import {
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
+import {AssertAgarBatch, NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     if (typeof input !== 'object') {
@@ -156,31 +156,35 @@ export default function AgarRecipeDisplay(
                 setErr("Name field must not be empty")
                 return
             }
-
-            fetch(updateApiUrlFor("agarRecipe",initial._id), {
-                method: 'Post',
-                body: JSON.stringify({
-                    name: name,
-                    standard: isStandard,
-                    notes: notes,
-                    acl: MarshalAcl(acl), // TODO; use this everywhere if it works
-                }),
-                headers: {
-                    credentials: 'include',
-                    'Cookie': cookies,
-                    'Content-type': "application/json"
-                },
-            })
-                .then(HandleJsonResponse)
-                .then((newEntry) => {
-                    try {
-                        AssertAgarRecipe(newEntry)
-                        updateInitial(newEntry)
-                    } catch (er) {
-                        throw new Error("failed to decode response:" + JSON.stringify(er))
-                    }
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                name: name,
+                standard: isStandard,
+                notes: notes,
+                acl: MarshalAcl(acl), // TODO; use this everywhere if it works
+            }
+            DoUpdateRequest("agarRecipe",initial._id, body, AssertAgarRecipe)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("agarRecipe",initial._id), {
+            //     method: 'Post',
+            //     body: JSON.stringify({
+            //         name: name,
+            //         standard: isStandard,
+            //         notes: notes,
+            //         acl: MarshalAcl(acl), // TODO; use this everywhere if it works
+            //     }),
+            //     headers: clientPostRequestHeaders,
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((newEntry) => {
+            //         try {
+            //             AssertAgarRecipe(newEntry)
+            //             updateInitial(newEntry)
+            //         } catch (er) {
+            //             throw new Error("failed to decode response:" + JSON.stringify(er))
+            //         }
+            //     })
+                //.catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -260,6 +264,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
     const [err, setErr] = useState<string | undefined>()
     const [agarErr, setAgarErr] = useState<string | undefined>()
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState<boolean>(false)
+    const errHandler = ErrHandler(setErr)
     const newAgarRecipeSubmit = () => {
         if (name === "") {
             setErr("name must not be empty")
@@ -281,22 +286,22 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             antibiotics: antibiotics.length !== 0 ? antibiotics : undefined,
             notes: notes.length !== 0 ? notes : undefined,
         }
-        fetch(createApiUrlFor("agarRecipe"), {
-            method: 'Post',
-            body: JSON.stringify(body),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        }).then(HandleJsonResponse).then((newRecipe) => {
-            try {
-                AssertAgarRecipe(newRecipe)
-                handlers.onCreate && handlers.onCreate(newRecipe)
-            } catch (e) {
-                setErr("result was not recipe: " + JSON.stringify(e))
-            }
-        })
-            .catch(ErrHandler(setErr));
+        DoCreateRequest("agarRecipe", body, AssertAgarRecipe)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("agarRecipe"), {
+        //     method: 'Post',
+        //     body: JSON.stringify(body),
+        //     headers: clientPostRequestHeaders,
+        // }).then(HandleJsonResponse).then((newRecipe) => {
+        //     try {
+        //         AssertAgarRecipe(newRecipe)
+        //         handlers.onCreate && handlers.onCreate(newRecipe)
+        //     } catch (e) {
+        //         setErr("result was not recipe: " + JSON.stringify(e))
+        //     }
+        // })
+            //.catch(ErrHandler(setErr));
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {

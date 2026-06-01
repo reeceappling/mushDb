@@ -9,7 +9,7 @@ import {NewFruitForm} from "@/app/components/fruitClient";
 import {FruitData} from "@/app/components/fruitServer";
 import {TransferData} from "@/app/components/transferServer";
 import {NewTransferArea} from "@/app/components/transferClient";
-import {CreatedLinkFor, Subform} from "@/app/components/common";
+import {CreatedLinkFor, Subform, viewUrlFor} from "@/app/components/common";
 import {JSX, useState} from "react";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -63,7 +63,7 @@ export type CreatedLinkQuadCol = CreatedLinkTriCol & CreatedLinkExtraCol
 
 // TODO: MOVE
 export function QuadColLastCol({dstType, id}: { dstType: string, id: string }) {
-    return <div>{"To " + dstType + " "}<a href={BaseExternalUrl + "/view/" + dstType + "/" + id}>{id}</a></div>
+    return <div>{"To " + dstType + " "}<a href={viewUrlFor(dstType, id)}>{id}</a></div>
 }
 
 // TODO: MOVE

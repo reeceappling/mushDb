@@ -12,7 +12,7 @@ interface writeTagRequest {
 export async function GetReaderWriterNames() {
     const resp = await fetch(BaseInternalUrl + '/rfid/readers'/*, {
         method: 'GET',
-        headers: {
+        headers: { // TODO: change?
             credentials: 'include',
             'Accept': 'text/html',
         },
@@ -25,7 +25,7 @@ export async function WriteRfidTag(toWrite: string, writerName: string) { // TOD
     const req: writeTagRequest = {secret: secret, data: toWrite} // TODO: FIX FOR SECRET
     const resp = await fetch(BaseInternalUrl + '/rfid/write/' + writerName, {
         method: 'POST',
-        headers: {
+        headers: { // TODO: CHANGE?
             credentials: 'include',
             'Accept': 'text/html',
             'Content-Type': 'application/json',
@@ -53,7 +53,7 @@ export async function ReadRfidTag(session: string, readerName?: string) { // TOD
 
     const resp = await fetch(BaseInternalUrl + 'rfid/read/' + readerName, {
         method: 'POST',
-        headers: {
+        headers: { // TODO: CHANGE?
             credentials: 'include',
             'Accept': 'text/html',
             'Content-Type': 'text/html'

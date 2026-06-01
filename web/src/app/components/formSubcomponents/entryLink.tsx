@@ -4,6 +4,7 @@ import {
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
 import {ReactNode} from "react";
 import {BaseExternalUrl} from "@/app/components/Constants";
+import {viewUrlFor} from "@/app/components/common";
 
 export default function EntryLink(
     {
@@ -48,12 +49,13 @@ export function EntryLinkWrapper(
     const onClickStopPropagation = (e: React.MouseEvent) => {
         e.stopPropagation();
     }
+    const actualLink = viewUrlFor(props.entryType, props.linkId)
     if (props.openInNewTab===true){
-        return <a href={BaseExternalUrl+"/view/"+props.entryType+"/"+props.linkId} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}>
+        return <a href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}>
             {children}
         </a>
     }
-    return <a href={BaseExternalUrl+"/view/"+props.entryType+"/"+props.linkId} onClick={onClickStopPropagation}>
+    return <a href={actualLink} onClick={onClickStopPropagation}>
         {children}
     </a>
 }

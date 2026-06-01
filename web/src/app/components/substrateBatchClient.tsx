@@ -5,24 +5,29 @@ import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {
-    SubstrateRecipeData,
-    SubstrateRecipeSelectorCloseable
-} from "@/app/components/substrateRecipeServer";
+import {SubstrateRecipeData, SubstrateRecipeSelectorCloseable} from "@/app/components/substrateRecipeServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
-    createApiUrlFor,
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey, updateApiUrlFor
+    OptionalKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {SubstrateRecipeArea} from "@/app/components/substrateRecipeClient";
 import {NewBagForm} from "@/app/components/bagClient";
@@ -32,7 +37,7 @@ import {NewFruitingChamberForm} from "@/app/components/fruitingChamberClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
@@ -92,23 +97,24 @@ export default function SubstrateBatchDisplay(
             setAcl(updated.acl)
         }
         const substrateSubmit = () => {
-            fetch(updateApiUrlFor("substrateBatch",initial._id), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    notes: notes,
-                    acl: MarshalAcl(acl),
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSubstrateBatch(entry)
-                    updateInitial(entry)
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                notes: notes,
+                acl: MarshalAcl(acl),
+            }
+            DoUpdateRequest("substrateBatch", initial._id, body, AssertSubstrateBatch)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("substrateBatch", initial._id), {
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify(body)
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertSubstrateBatch(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const onViewCreators: OnViewCreatorTriCol[] = [
             {
@@ -157,7 +163,7 @@ export default function SubstrateBatchDisplay(
                                         closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     substrateSubmit()
                 }}>{"Update"}</button>}
@@ -177,30 +183,30 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     const [selectedRecipe, setSelectedRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const submit = () => {
         if (selectedRecipe === undefined) {
             setErr("a recipe must be selected")
             return
-        } else {
-            fetch(createApiUrlFor("substrateBatch"), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    // TODO: may need 'Cookie': cookies,
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    recipe: selectedRecipe._id,
-                    notes: notes
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSubstrateBatch(entry)
-                    handlers.onCreate && handlers.onCreate(entry)
-                })
-                .catch(ErrHandler(setErr));
         }
+        const body: any = {
+            recipe: selectedRecipe._id,
+            notes: notes
+        }
+        DoCreateRequest("substrateBatch", body, AssertSubstrateBatch)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("substrateBatch"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertSubstrateBatch(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     if (!formOpen) {
         return <div>
@@ -220,18 +226,18 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
                 {recipe === undefined ?
                     <SubstrateRecipeArea txt={"Substrate Recipe: "} readonly={true} id={selectedRecipe?._id}/> :
                     <SubstrateRecipeSelectorCloseable doSelect={setSelectedRecipe}
-                                             allowCreation={handlers.isTopLevel} creatorInPage={false/* TODO: false ok?*/}/>}{/* TODO: closeable vs not?*/}
+                                                      allowCreation={handlers.isTopLevel}
+                                                      creatorInPage={false/* TODO: false ok?*/}/>}{/* TODO: closeable vs not?*/}
             </TestAndValidate>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
-            <button className={"bottomButton greenButton"} onClick={(e)=>{
+            <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>
         </NewEntryFormWrapper>
     )
 }
-
 
 
 export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
@@ -244,18 +250,19 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
     // TODO: FIX THIS WHOLE THING! Update id on prop id update! Store id internally!
     const [open, setOpen] = useState(false)
     const [val, setVal] = useState(id)
-    useEffect(()=>{
+    useEffect(() => {
         setVal(id)
-    },[id])
+    }, [id])
     const updateId = (batch?: SubstrateBatchData) => {
         setVal(batch?._id) // TODO: ensure ok
         onSelect && onSelect(batch)
     }
-    let linkArea = ()=>{
+    let linkArea = () => {
         if (!val) {
             return <div>{"unknown"}</div>
         }
-        const tempLink = <EntryLink props={{displayedId: val, linkId: val, entryType: "substrateBatch"}}>{val}</EntryLink>
+        const tempLink = <EntryLink
+            props={{displayedId: val, linkId: val, entryType: "substrateBatch"}}>{val}</EntryLink>
         if (readonly) {
             return tempLink
         }
@@ -263,7 +270,7 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
             {tempLink}
             <button className={"basicButton"} onClick={() => {
                 setOpen(!open)
-            }}>{(open?"Close Selector":"Select a new substrate batch")}</button>
+            }}>{(open ? "Close Selector" : "Select a new substrate batch")}</button>
         </>
     }
     return <div>
@@ -276,27 +283,30 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
 
 export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageItems<SubstrateBatchData>) {
     let cols: ListTableColumn<SubstrateBatchData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Created", (v)=>{
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
         }),
-        NewColumn("Recipe", (v)=>v.recipe),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Recipe", (v) => v.recipe),
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: SubstrateBatchData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"substrateBatch",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: SubstrateBatchData) => {
+            return <EntryLinkWrapper
+                props={{linkId: encodeURI(v._id), entryType: "substrateBatch", openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
     return <ListPageTable cols={cols} data={data} onClick={onClick}/>
 }
+
 export function SubstrateBatchSelectorTable({data, onClick}: ListPageItems<SubstrateBatchData>) {
-    return <SubstrateBatchListPageTable data={data} onClick={onClick} withLink={true} />
+    return <SubstrateBatchListPageTable data={data} onClick={onClick} withLink={true}/>
 }
+
 export function SubstrateBatchSelector(
     {
         doSelect,
@@ -307,13 +317,14 @@ export function SubstrateBatchSelector(
         allowCreate?: boolean
         creatorInPage?: boolean,
     }) {
-    const table = (items: SubstrateBatchData[]):JSX.Element=>{
+    const table = (items: SubstrateBatchData[]): JSX.Element => {
         return <SubstrateBatchSelectorTable data={items} onClick={doSelect}/>
     }
 
-    return <ExistingRecentSelector entryType={"substrateBatch"} entryTypes={"substrateBatches"} doSelect={doSelect} asserter={AssertSubstrateBatch}
+    return <ExistingRecentSelector entryType={"substrateBatch"} entryTypes={"substrateBatches"} doSelect={doSelect}
+                                   asserter={AssertSubstrateBatch}
                                    table={table}>
-        {allowCreate && (creatorInPage?<NewSubstrateBatchForm handlers={{onCreate: doSelect,isTopLevel: false}}/>:
+        {allowCreate && (creatorInPage ? <NewSubstrateBatchForm handlers={{onCreate: doSelect, isTopLevel: false}}/> :
             <div>{"LINK TO CREATOR HERE FIXME"}</div>)}
     </ExistingRecentSelector>
 }

@@ -97,8 +97,8 @@ export function IsValidAcl(input: any): boolean {
         AssertACL(input) // TODO: may not properly replace the ACL
         return true
     } catch (error) {
-        console.error("acl invalid")
-        console.error(error)
+        console.error("acl invalid") // TODO: del
+        console.error(error) // TODO: del
         return false
     }
 }
@@ -146,8 +146,6 @@ export function IsStringMapToBool(data: any): data is Record<string, boolean> {
     return true;
 }
 
-
-// TODO: move?
 export function ProjectsDisplay({readonly, perms, onClick, updateParent, allowAddingCompletedProjects}: {
     readonly: boolean,
     perms: Map<string, boolean>,
@@ -248,6 +246,7 @@ export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent,
     const userNameAreaFor = (val: [string, boolean]) => {
         return <text onClick={(e) => {
             // TODO: stopProp or prevDef?
+            // TODO: why val[0]?
             onClick && onClick(val[0])
         }}>{val[0]}</text>
     }

@@ -2,6 +2,7 @@ import {useContext} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 import {OpenMainPage} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
+import {viewUrlFor} from "@/app/components/common";
 
 export default function ID({txt, id, entryType, linkPage, allowOpenMainPage}: {
     id: string;
@@ -29,7 +30,7 @@ export function IdPageLink({
                                        openInNewTab?: boolean // TODO: use this everywhere needed 5/21/26
                                    }
 ) {
-    const url = BaseExternalUrl + "/view/" + entryType + "/" + id
+    const url = viewUrlFor(entryType, id)
     const onClickStopPropagation = (e: React.MouseEvent)=>{
         e.preventDefault(); // TODO: ok?
         e.stopPropagation();

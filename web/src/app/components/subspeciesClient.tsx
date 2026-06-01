@@ -7,9 +7,9 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {
-    AssertArrayResult, createApiUrlFor,
+    AssertArrayResult, clientPostRequestHeaders, createApiUrlFor,
     CreateNewEntryButton, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
@@ -18,17 +18,18 @@ import {
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import {AssertSpecies, ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {
     AclDefaultAclDisplay,
-    IsValidAcl
+    IsValidAcl, MarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {HandleErr} from "@/app/components/userClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {AssertStasisTube} from "@/app/components/stasisTubeClient";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
@@ -89,27 +90,28 @@ export default function SubspeciesDisplay(
             setDefaultAcl(updated.defaultAcl)
         }
         const update = () => {
-            fetch(updateApiUrlFor("subspecies",encodeURI(initial._id)), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': 'application/json'
-                },
-                body: JSON.stringify({
-                    aliases: aliases,
-                    notes: notes,
-                    acl: acl,
-                    defaultAcl: defaultAcl,
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSubspecies(entry)
-                    updateInitial(entry)
-                })
-                .catch((error) => {
-                    HandleErr(error, setErr)
-                });
+            const body: any = {
+                aliases: aliases,
+                notes: notes,
+                acl: MarshalAcl(acl), // TODO: ensure ok
+                defaultAcl: MarshalAcl(defaultAcl), // TODO: ensure ok
+            }
+            DoUpdateRequest("subspecies",encodeURIComponent(initial._id), body, AssertSubspecies)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("subspecies",encodeURI(initial._id)), {
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify(body)
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertSubspecies(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch((error) => {
+            //         HandleErr(error, setErr)
+            //     });
         }
         return (
             <DisplayFormWrapper entryType={"subspecies"}>
@@ -141,12 +143,12 @@ export function NewSubspeciesForm({handlers, species}: {
     handlers: NewEntryInput<SubspeciesData>,
     species?: SpeciesData
 }) {
-    const {onCreate} = handlers
     const [name, setName] = useState<string | undefined>()
     const [selectedSpecies, setSelectedSpecies] = useState(species)
     const [aliases, setAliases] = useState<string[]>([])
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
+    const errHandler = ErrHandler(setErr)
     const submitNewSubspecies = () => {
         if (!name) {
             setErr("Name must note be blank")
@@ -156,25 +158,26 @@ export function NewSubspeciesForm({handlers, species}: {
             setErr("Species must be selected")
             return
         }
-        fetch(createApiUrlFor("subspecies"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify({
+        const body: any = {
                 name: name,
                 species: selectedSpecies,
                 aliases: aliases,
                 notes: notes,
-            })
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertSubspecies(entry)
-                onCreate && onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+            }
+        DoCreateRequest("subspecies", body, AssertSubspecies)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("subspecies"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertSubspecies(entry)
+        //         onCreate && onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"subspecies"}>
@@ -218,10 +221,7 @@ export function ExistingSubSpeciesSelector(
         setLoaded(false)
         fetch(BaseExternalUrl + "/subspeciesFor/" + encodeURI(species), { // TODO: ensure endpoint ok
             method: "GET",
-            headers: {
-                credentials: 'include',
-                'Accept': 'application/json',
-            },
+            headers: clientPostRequestHeaders,
         })
             .then(HandleJsonResponse)
             .then((data) => {

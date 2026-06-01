@@ -18,6 +18,7 @@ export default async function Page({
     const {itemType, idEncoded} = await params
     const cookieStore = await cookies()
     const session = cookieStore.get('_gothic_session')
+    // TODO: probably get rid of allCookies later
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 
 
@@ -27,9 +28,10 @@ export default async function Page({
                 method: 'Get',
                 credentials: 'include',
                 headers: {
-                    // TODO: ensure all session headers exist here
                     'Accept': 'application/json',
-                    'Cookie': allCookies, // TODO: ensure this is everywhere
+                    'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: ENSURE OK! maybe "*"?
+                    // TODO: reenable if not work 'Cookie': allCookies, // TODO: ensure this is everywhere // TODO: probably get rid of
+                    // TODO: set Origin header to web? or should this be BaseExternalUrl?
                 },
             }).then((res) => {
                 if (!res.ok) {

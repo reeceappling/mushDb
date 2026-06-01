@@ -6,9 +6,10 @@ import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {
+    clientPostRequestHeaders,
     createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
@@ -24,10 +25,11 @@ import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector"
 import {IsStringMapToString} from "@/app/components/accessControlClient";
 import {HandleErr, UserSelector} from "@/app/components/userClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
+import {AssertPlugs} from "@/app/components/plugsClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -130,22 +132,21 @@ export default function ProjectDisplay(
             console.log("sending perms: " + JSON.stringify(Object.fromEntries(perms)))
 
 
-            fetch(updateApiUrlFor("project",encodeURIComponent(data._id)), { // TODO: question marks in id cause issues
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Cookie': cookies,
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify(body)
-            }).then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertProject(entry)
-                    updateInitial(entry)
-                })
-                .catch((err) => {
-                    HandleErr(err, setErr)
-                });
+            DoUpdateRequest("project",encodeURIComponent(data._id), body, AssertProject)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("project",encodeURIComponent(data._id)), { // TODO: question marks in id cause issues
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify(body)
+            // }).then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertProject(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch((err) => {
+            //         HandleErr(err, setErr)
+            //     });
         }
         return (
             <DisplayFormWrapper entryType={"project"}>
@@ -186,6 +187,7 @@ export function NewProjectForm(
     // TODO: load up user on server side into the userperms as write (unless blanket is write)
     const [err, setErr] = useState<string | undefined>(undefined)
     // TODO: handle isTopLevel
+    const errHandler = ErrHandler(setErr)
     const createProject = () => {
         if (name === undefined) {
             setErr("Name field cannot be undefined")
@@ -195,22 +197,22 @@ export function NewProjectForm(
             name: name, // TODO: validate that project name is valid for url
             notes: notes,
         }
-        fetch(createApiUrlFor("project"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((proj) => {
-                AssertProject(proj)
-                handlers.onCreate && handlers.onCreate(proj)
-            })
-            .catch((error) => {
-                HandleErr(error, setErr)
-            });
+        DoCreateRequest("project", body, AssertProject)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("project"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((proj) => {
+        //         AssertProject(proj)
+        //         handlers.onCreate && handlers.onCreate(proj)
+        //     })
+        //     .catch((error) => {
+        //         HandleErr(error, setErr)
+        //     });
     }
     const handleChangeName = (event: ChangeEvent<HTMLInputElement>) => {
         setName(event.target.value)
@@ -447,12 +449,7 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
 //             fetch(BaseExternalUrl + "/db/userIdFor", { // TODO: handle on the go side
 //                 method: 'Get',
 //                 body: val,
-//                 headers: {
-//                     credentials: 'include',
-//                     'Cookie': cookies,
-//                     //'Content-type': "application/json"
-//                     //Authorization: tokenFetch, // TODO: auth?
-//                 },
+//                 headers: clientPostRequestHeaders,
 //             }).then(HandleTxtResponse).then((id) => {
 //                 let updated = {...fullPerms}
 //                 updated.users.ids.push({id: id, val: val})
@@ -501,11 +498,7 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
 export async function GetMyProjects() {
     return await fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: ensure works like we want! We JUST want the user's perms on each project
         method: "GET",
-        headers: {
-            credentials: 'include',
-            // TODO: SessionId: sessionId,
-            'Content-type': "application/json"
-        }
+        headers: clientPostRequestHeaders,
     }).then(HandleJsonResponse).then((projs) => {
         try {
             return projs as ProjectWithPerm[]
@@ -523,11 +516,7 @@ export async function GetSessionUserProjects(complete?:boolean): Promise<string[
     }
     return fetch(BaseExternalUrl + "/sessionUserProjects"+params, { // TODO: ensure works like we want! We JUST want the user's perms on each project
         method: "GET",
-        headers: {
-            credentials: 'include',
-            //'SessionId': sessionId || "", // TODO: ok?
-            'Content-type': "application/json"
-        }
+        headers: clientPostRequestHeaders,
     }).then(HandleJsonResponse).then((projs) => {
         try {
             return projs as string[]
@@ -556,11 +545,7 @@ export function ProjectsSelector(inp: {
         // fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: ensure user has projects attached
         //     // TODO: do we also want to pull the user's perms for each project?
         //     method: "GET",
-        //     headers: {
-        //         credentials: 'include',
-        //         // TODO: SessionId: sessionId,
-        //         'Content-type': "application/json"
-        //     }
+        //     headers: clientPostRequestHeaders,
         // }).then(HandleJsonResponse).then((projs) => {
         //     try {
         //         return projs as string[] // TODO: FIXME!

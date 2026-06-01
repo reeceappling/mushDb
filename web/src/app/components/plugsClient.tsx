@@ -3,8 +3,9 @@
 import React, {JSX, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
+    clientPostRequestHeaders,
     createApiUrlFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse, importApiUrlFor,
     ImportDisplayInput, ImportEntryFormWrapper,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
@@ -24,7 +25,6 @@ import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
 import {ExistingSubSpeciesSelector} from "./subspeciesClient";
 import ReaderWriterSelector from "./formSubcomponents/readerWriterButtons/readerSelector";
 import {AllEntries} from "./formSubcomponents/shared";
-import {InitialNotesState} from "./formSubcomponents/contaminations";
 import {ACL} from "./accessControlServer";
 import {BaseExternalUrl} from "./Constants";
 import {HandleErr} from "./userClient";
@@ -40,6 +40,9 @@ import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
 import {WoodEntriesGroupForNew} from "@/app/components/formSubcomponents/plugs";
 import {SalesArea} from "@/app/components/saleClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {AssertPlate} from "@/app/components/plateClient";
+import {AssertJar} from "@/app/components/jarClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertPlugs(input: any): asserts input is PlugsJar {
     if (typeof input !== 'object') {
@@ -175,22 +178,23 @@ export default function PlugsDisplay(
             writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
         }
+        // TODO: do we want pics on this?
+        DoUpdateRequest("plugs",initial._id, body, AssertPlugs)
+            .then(updateInitial)
+            .catch(ErrHandler(setErr))
 
-        fetch(updateApiUrlFor("plugs", data._id), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify(body)
-        }).then(HandleJsonResponse)
-            .then((entry) => {
-                AssertPlugs(entry)
-                updateInitial(entry)
-            })
-            .catch((err) => {
-                HandleErr(err, setErr)
-            });
+        // fetch(updateApiUrlFor("plugs", data._id), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // }).then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertPlugs(entry)
+        //         updateInitial(entry)
+        //     })
+        //     .catch((err) => {
+        //         HandleErr(err, setErr)
+        //     });
     }
     return (
         <DisplayFormWrapper entryType={"plugs"}>
@@ -278,10 +282,7 @@ export function PlugsImportDisplay({cookies}: ImportDisplayInput) {
         }
         fetch(importApiUrlFor("plugs"), {
             method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
+            headers: clientPostRequestHeaders,
             body: JSON.stringify(body)
         })
             .then(HandleJsonResponse)
@@ -325,6 +326,7 @@ export function NewPlugsForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const errHandler = ErrHandler(setErr)
     const createPlugs = (e: React.MouseEvent) => {
         e.preventDefault()
         if (dowelTypes.length === 0) {
@@ -344,21 +346,20 @@ export function NewPlugsForm(
             notes: notes,
             writeTagTo: writeTagTo,
         }
-
-        fetch(createApiUrlFor("plugs"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertPlugs(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+        DoCreateRequest("plugs", body, AssertPlugs)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("plugs"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertPlugs(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"plugs"}>
         <ErrorDisplay err={err}/>

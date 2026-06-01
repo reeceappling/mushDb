@@ -5,7 +5,7 @@ import {SelectorFor} from "@/app/components/selector";
 import {GetSessionUserProjects, NumberToPerm, PermToNumber} from "@/app/components/projectClient";
 import Textbox from "@/app/components/formSubcomponents/textbox";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {CheckArrayType, HandleTxtResponse, IsString} from "@/app/components/common";
+import {CheckArrayType, clientPostRequestHeaders, HandleTxtResponse, IsString} from "@/app/components/common";
 
 interface CookieValues {
     SessionId?: string;
@@ -184,23 +184,19 @@ export function PermissionSelector({dontShowBelow,canWrite,onChange}:permSelecto
     )
 }
 
-export async function GetUserByString(sessionId?: string, nameOrEmail?: string):Promise<string>{
+export async function GetUserByString(/*sessionId?: string, */nameOrEmail?: string):Promise<string>{
     if(!nameOrEmail){
         return new Promise<string>((_,reject)=>{
             reject("no current name or email")
         })
     }
     const encodedNameOrEmail = encodeURIComponent(nameOrEmail)
-    if(!sessionId){
-        return new Promise<string>((_,reject)=>{reject("missing session")})
-    }
-    return fetch(BaseExternalUrl+"/idForUserOrEmail/"+encodedNameOrEmail, { // TODO: ensure works like we want!
+    // if(!sessionId){
+    // throw "missing session"
+    // }
+    return await fetch(BaseExternalUrl+"/idForUserOrEmail/"+encodedNameOrEmail, { // TODO: ensure works like we want!
         method: "GET",
-        headers: {
-            credentials: 'include',
-            SessionId: sessionId, // TODO: ew
-            'Content-type': "application/json"
-        },
+        headers: clientPostRequestHeaders,
         credentials: 'include' // To include cookies
     }).then(HandleTxtResponse)
 }

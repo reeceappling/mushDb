@@ -7,9 +7,10 @@ import {LcData} from "@/app/components/lcServer";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
+    clientPostRequestHeaders,
     ConfirmedCleanArea,
     ConfirmedCleanSelector, createApiUrlFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse, importApiUrlFor, ImportEntryFormWrapper,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
@@ -38,9 +39,10 @@ import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/en
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {AssertLcRecipe} from "@/app/components/lcRecipeClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringe {
     if (typeof input !== 'object') {
@@ -127,10 +129,7 @@ export function LcSyringeImportDisplay({cookies}: {cookies: string }) {
         fetch(importApiUrlFor("lcSyringe"), {
             method: 'Post',
             body: JSON.stringify(dataObj),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
+            headers: clientPostRequestHeaders,
         })
             .then(HandleJsonResponse)
             .then((newLcSyringe) => {
@@ -183,7 +182,7 @@ export default function LcSyringeDisplay(
 
 
     const lcSyringeSubmit = () => {
-        let bodyObj: any = {
+        let body: any = { // TODO: ensure ok
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             disposed: disposed,
@@ -191,21 +190,21 @@ export default function LcSyringeDisplay(
             writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
         }
+        DoUpdateRequest("lcSyringe",initial._id, body, AssertLcSyringe)
+            .then(updateInitial)
+            .catch(ErrHandler(setErr))
 
-        fetch(updateApiUrlFor("lcSyringe",initial._id), {
-            method: 'Post',
-            body: JSON.stringify(bodyObj),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((updatedEntry) => {
-                AssertLcSyringe(updatedEntry)
-                updateInitial(updatedEntry)
-            })
-            .catch(ErrHandler(setErr));
+        // fetch(updateApiUrlFor("lcSyringe",initial._id), {
+        //     method: 'Post',
+        //     body: JSON.stringify(body),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((updatedEntry) => {
+        //         AssertLcSyringe(updatedEntry)
+        //         updateInitial(updatedEntry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         WriteRfidOvcArea(initial._id),
@@ -279,6 +278,7 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
             })}
         </div>
     }
+    const errHandler = ErrHandler(setErr)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!parent) {
@@ -290,21 +290,24 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
             parent: parent,
             notes: notes,
         }
-        fetch(createApiUrlFor("lcSyringe"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertLcSyringe(newEntry)
-                onCreate && onCreate(newEntry)
-                setItemsCreated([...itemsCreated, newEntry._id]) // TODO: ok?
+        DoCreateRequest("lcSyringe", body, AssertLcSyringe)
+            .then(item=>{
+                onCreate && onCreate(item)
+                setItemsCreated([...itemsCreated, item._id]) // TODO: ok?
             })
-            .catch(ErrHandler(setErr));
+            .catch(errHandler)
+        // fetch(createApiUrlFor("lcSyringe"), { // TODO: del if not needed
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         AssertLcSyringe(newEntry)
+        //         onCreate && onCreate(newEntry)
+        //         setItemsCreated([...itemsCreated, newEntry._id]) // TODO: ok?
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
 
     return <NewEntryFormWrapper entryType={"lcSyringe"}>

@@ -15,13 +15,30 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     ConfirmedCleanArea,
-    ConfirmedCleanSelector, createApiUrlFor, CreatedLinkFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    ConfirmedCleanSelector,
+    createApiUrlFor,
+    CreatedLinkFor,
+    DisplayFormWrapper,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateMultipartRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse, importApiUrlFor,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    HandleTxtResponse,
+    importApiUrlFor,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    MultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
@@ -29,7 +46,9 @@ import {
     resolvePicsFormData,
     SendMultipartRequest,
     setFormData,
-    setFormImages, updateApiUrlFor, viewUrlFor,
+    setFormImages,
+    updateApiUrlFor,
+    viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -46,7 +65,6 @@ import {
     ContaminationForm,
     ContamsDisplay,
     InitialContamState,
-    InitialNotesState,
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
@@ -75,6 +93,8 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {LcRecipeArea} from "@/app/components/lcRecipeClient";
 import {AssertJar} from "@/app/components/jarClient";
+import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -238,7 +258,7 @@ export default function LcDisplay(
             setAcl(updated.acl)
         }
         const lcSubmit = () => {
-            let body = new FormData()
+            let formData = new FormData()
             let bodyObj: any = {
                 notes: notes,
                 // Optionals
@@ -258,21 +278,25 @@ export default function LcDisplay(
                 let newContams = contamsInfo.images
                 bodyObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(body, bodyObj)
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
+                setFormData(formData, bodyObj)
+                setFormImages(formData, "newPic", newImages)
+                setFormImages(formData, "newContam", newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
 
-            SendMultipartRequest(updateApiUrlFor("lc",initial._id), cookies, body)
-                .then(HandleJsonResponse)
-                .then((updatedEntry) => {
-                    AssertLc(updatedEntry)
-                    updateInitial(updatedEntry)
-                })
-                .catch(ErrHandler(setErr));
+            DoUpdateMultipartRequest("lc",initial._id, formData, AssertLc)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+
+            // SendMultipartRequest(updateApiUrlFor("lc",initial._id), cookies, body)
+            //     .then(HandleJsonResponse)
+            //     .then((updatedEntry) => {
+            //         AssertLc(updatedEntry)
+            //         updateInitial(updatedEntry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -369,6 +393,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const errHandler = ErrHandler(setErr)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (lcRecipe === undefined) {
@@ -379,23 +404,27 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             setErr("A PC Run must be selected")
             return
         }
-        let body: any = {creationDate: creationDate, recipe: lcRecipe, pcRun: pcRun}
-        notes && (body.notes = notes)
-        writeTagTo && (body.writeTagTo = writeTagTo)
-        fetch(createApiUrlFor("lc"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertLc(newEntry)
-                handlers.onCreate && handlers.onCreate(newEntry)
-            })
-            .catch(ErrHandler(setErr));
+        let body: any = {
+            creationDate: creationDate,
+            recipe: lcRecipe,
+            pcRun: pcRun,
+            notes: notes,
+            writeTagTo: writeTagTo,
+        }
+        DoCreateRequest("lc", body, AssertLc)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("lc"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         AssertLc(newEntry)
+        //         handlers.onCreate && handlers.onCreate(newEntry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
 
     return <NewEntryFormWrapper entryType={"lc"}>

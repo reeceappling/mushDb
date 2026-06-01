@@ -23,20 +23,37 @@ import {GenerationInput} from "@/app/components/formSubcomponents/generationInpu
 import {
     createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateMultipartRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse, importApiUrlFor,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    HandleTxtResponse,
+    importApiUrlFor,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    MultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     resolveContamsFormData,
     resolvePicsFormData,
-    SendMultipartRequest, SendMultipartRequest2,
+    SendMultipartRequest,
+    SendMultipartRequestNew,
     setFormData,
-    setFormImages, updateApiUrlFor, viewUrlFor,
+    setFormImages,
+    updateApiUrlFor,
+    viewUrlFor,
     YesNoSelector,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
@@ -58,7 +75,6 @@ import {
     ContaminationForm,
     ContamsDisplay,
     InitialContamState,
-    InitialNotesState,
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
@@ -79,6 +95,8 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {AssertMss} from "@/app/components/mssClient";
 import {AssertLc} from "@/app/components/lcClient";
+import {AssertPcRun} from "@/app/components/pcRunClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
@@ -228,12 +246,15 @@ export default function PlateDisplay(
             setErr(JSON.stringify(caught))
             return
         }
-        SendMultipartRequest(updateApiUrlFor("plate",initial._id), cookies, formData)
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertPlate(entry)
-                updateInitial(entry)
-            }).catch(ErrHandler(setErr));
+        DoUpdateMultipartRequest("plate",initial._id, formData, AssertPlate)
+            .then(updateInitial)
+            .catch(ErrHandler(setErr))
+        // SendMultipartRequest(updateApiUrlFor("plate",initial._id), cookies, formData)
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertPlate(entry)
+        //         updateInitial(entry)
+        //     }).catch(ErrHandler(setErr));
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         WriteRfidOvcArea(initial._id),
@@ -490,34 +511,44 @@ export function NewPlateForm(
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
+    const errHandler = ErrHandler(setErr)
     const createPlate = (e: React.MouseEvent) => {
         e.preventDefault()
         if (agarBatch === undefined) {
             setErr("An agar batch must be selected")
             return
         }
-        fetch(createApiUrlFor("plate"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify({
-                agarBatch: agarBatch,
-                condensationCoverageAtSealTime: condensationCoverageAtSealTime, // TODO: ensure ok on go side
-                pourCoverage: pourCoverage, // TODO: ensure ok on go side
-                wetAtCooledTime: wetAtCooledTime, // TODO: ensure ok on go side
-                agarOnOutsideAtPourTime: agarOnOutsideAtPourTime, // TODO: ensure ok on go side
-                notes: notes,
-                writeTagTo: writeTagTo,
-            })
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertPlate(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+        const body: any = {
+            agarBatch: agarBatch,
+            condensationCoverageAtSealTime: condensationCoverageAtSealTime, // TODO: ensure ok on go side
+            pourCoverage: pourCoverage, // TODO: ensure ok on go side
+            wetAtCooledTime: wetAtCooledTime, // TODO: ensure ok on go side
+            agarOnOutsideAtPourTime: agarOnOutsideAtPourTime, // TODO: ensure ok on go side
+            notes: notes,
+            writeTagTo: writeTagTo,
+        }
+        DoCreateRequest("plate", body, AssertPlate)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("plate"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify({
+        //         agarBatch: agarBatch,
+        //         condensationCoverageAtSealTime: condensationCoverageAtSealTime, // TODO: ensure ok on go side
+        //         pourCoverage: pourCoverage, // TODO: ensure ok on go side
+        //         wetAtCooledTime: wetAtCooledTime, // TODO: ensure ok on go side
+        //         agarOnOutsideAtPourTime: agarOnOutsideAtPourTime, // TODO: ensure ok on go side
+        //         notes: notes,
+        //         writeTagTo: writeTagTo,
+        //     })
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertPlate(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"plate"}>
         <ErrorDisplay err={err}/>

@@ -26,7 +26,7 @@ import {
     CreatedLinkFor,
     dataFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn,
     NewEntryFormWrapper,
@@ -46,10 +46,11 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {NewLcForm} from "@/app/components/lcClient";
+import {AssertLc, NewLcForm} from "@/app/components/lcClient";
 import {LcData} from "@/app/components/lcServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -124,25 +125,31 @@ export default function LcRecipeDisplay(
             setAcl(updated.acl)
         }
         const lcRecipeSubmit = () => {
-            fetch(updateApiUrlFor("lcRecipe",initial._id), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    name: recName,
-                    standard: isStandard,
-                    notes: notes,
-                    acl: MarshalAcl(acl),
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertLcRecipe(entry)
-                    updateInitial(entry)
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                name: recName,
+                standard: isStandard,
+                notes: notes,
+                acl: MarshalAcl(acl),
+            }
+            DoUpdateRequest("lcRecipe",initial._id, body, AssertLcRecipe)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("lcRecipe",initial._id), {
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify({
+            //         name: recName,
+            //         standard: isStandard,
+            //         notes: notes,
+            //         acl: MarshalAcl(acl),
+            //     })
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertLcRecipe(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -223,34 +230,44 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
         setSugars(template.sugars || [])
         setAdditives(template.additives || [])
     }
+    const errHandler = ErrHandler(setErr)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (name === "") {
             setErr("invalid name")
             return
         }
-        fetch(createApiUrlFor("lcRecipe"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify({
-                name: name,
-                standard: isStandard,
-                liquids: liquids,
-                nutrients: nutrients,
-                sugars: sugars,
-                additives: additives,
-                notes: notes
-            })
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertLcRecipe(newEntry)
-                handlers.onCreate && handlers.onCreate(newEntry)
-            })
-            .catch(ErrHandler(setErr));
+        const body: any = {
+            name: name,
+            standard: isStandard,
+            liquids: liquids,
+            nutrients: nutrients,
+            sugars: sugars,
+            additives: additives,
+            notes: notes
+        }
+        DoCreateRequest("lcRecipe", body, AssertLcRecipe)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("lcRecipe"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify({
+        //         name: name,
+        //         standard: isStandard,
+        //         liquids: liquids,
+        //         nutrients: nutrients,
+        //         sugars: sugars,
+        //         additives: additives,
+        //         notes: notes
+        //     })
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         AssertLcRecipe(newEntry)
+        //         handlers.onCreate && handlers.onCreate(newEntry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {

@@ -9,12 +9,10 @@ export default async function Page({
         nextUrl: string,
     }>,
 }) {
-    // TODO: TOP BAR?
     const {nextUrl} = await params
-    return <PageWrapper props={{pageType:"login",readers: []}}>{/* TODO: remove readers? */}
+    return <PageWrapper props={{pageType:"login",readers: []}}>
         <Suspense fallback={<p>{"Loading..."}</p>}>
-            {/*<div>{"HOMEPAGE STUFF HERE: TODO: THIS"}</div> /!* TODO: remove! *!/*/}
-            <AuthArea successUrl={nextUrl} loggedIn={false}/>{/* TODO: setting the success url???*/}
+            <AuthArea successUrl={nextUrl} loggedIn={false}/>
         </Suspense>
     </PageWrapper>
 }

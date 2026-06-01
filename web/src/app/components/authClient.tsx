@@ -94,10 +94,7 @@ export default function AuthArea( // TODO: any depth?????
 //         const hashedPassword = bcrypt.hashSync(pass)
 //         fetch(BaseExternalUrl+'/signup', {
 //             method: 'POST',
-//             headers: {
-//                 //Accept: 'application/json', // TODO: text
-//                 'Content-Type': 'application/json',
-//             },
+//             headers: clientPostRequestHeaders,
 //             body: JSON.stringify({
 //                 username: user,
 //                 password: hashedPassword,
@@ -133,7 +130,7 @@ export default function AuthArea( // TODO: any depth?????
 //         fetch(BaseExternalUrl+'/signup', {
 //             method: 'POST',
 //             headers: {
-//                 'isAdmin': "true",
+//                 'isAdmin': "true", // TODO: delete or no?
 //                 //Accept: 'application/json', // TODO: text
 //                 'Content-Type': 'application/json',
 //             },
@@ -227,7 +224,7 @@ function SignUpArea({onSignup}:{onSignup:(sessId:string)=>void}) {
         // Send the authorization code to your backend server
         fetch('/login', { // TODO: FIX THIS ENDPOINT
             method: 'POST',
-            headers: {
+            headers: { // TODO: no auth headers?
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ code: authorizationCode }),
@@ -242,7 +239,7 @@ function SignUpArea({onSignup}:{onSignup:(sessId:string)=>void}) {
     const guestSignIn = ()=>{
         fetch('/guestLogin', { // TODO: FIX THIS ENDPOINT
             method: 'POST',
-            headers: {
+            headers: { // TODO: no auth headers?
                 'Content-Type': 'application/json',
             },
         })
@@ -282,7 +279,7 @@ function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
         // //fetch('/auth/google/callback', { // TODO: FIX THIS ENDPOINT
         // //fetch('/login', { // TODO: FIX THIS ENDPOINT
         //     method: 'POST',
-        //     headers: {
+        //     headers: { // TODO: no auth headers?
         //         'Content-Type': 'application/json',
         //     },
         //     body: JSON.stringify({ token: authorizationCode, code: authorizationCode }),
@@ -298,7 +295,7 @@ function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
 
         fetch('/guestSignin', { // TODO: FIX THIS ENDPOINT
             method: 'POST',
-            headers: {
+            headers: { // TODO: no auth headers?
                 'Content-Type': 'application/json',
             },
         })

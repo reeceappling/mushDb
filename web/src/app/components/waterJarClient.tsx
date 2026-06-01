@@ -5,20 +5,31 @@ import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/
 import {AddCreatedQuadColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import {
-    createApiUrlFor,
-    CreatedLinkFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    CreatedLinkFor,
+    DisplayFormWrapper,
+    DisplayInput, DoCreateRequest,
+    DoUpdateRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey, SelectorWrapper, updateApiUrlFor,
+    OptionalSimpleKey,
+    SelectorWrapper,
+    updateApiUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {InitialNotesState,} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {WaterJarData} from "@/app/components/waterJarServer";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {NewMssForm} from "@/app/components/mssClient";
@@ -26,6 +37,8 @@ import {MssData} from "@/app/components/mssServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {AssertTransfer} from "@/app/components/transferClient";
+import {AssertUser} from "@/app/components/userClient";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -85,24 +98,25 @@ export default function WaterJarDisplay(
             setErr("No changes found")
             return
         }
-        fetch(updateApiUrlFor("waterJar",initial._id), { // TODO: ID IS NOT PROPERLY POPULATING
-            method: 'Post',
-            body: JSON.stringify({
-                notes: notes,
-                disposed: disposed,
-                writeTagTo: writeTagTo
-            }),
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertWaterJar(newEntry)
-                updateInitial(newEntry)
-            })
-            .catch(ErrHandler(setErr));
+        const body: any = {
+            notes: notes,
+            disposed: disposed,
+            writeTagTo: writeTagTo
+        }
+        DoUpdateRequest("waterJar",initial._id, body, AssertWaterJar)
+            .then(updateInitial)
+            .catch(ErrHandler(setErr))
+        // fetch(updateApiUrlFor("waterJar",initial._id), { // TODO: ID IS NOT PROPERLY POPULATING
+        //     method: 'Post',
+        //     body: JSON.stringify(body),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         AssertWaterJar(newEntry)
+        //         updateInitial(newEntry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         {
@@ -160,20 +174,20 @@ export function NewWaterJarForm(
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(createApiUrlFor("waterJar"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertWaterJar(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+        DoCreateRequest("waterJar", body, AssertWaterJar)
+            .then(handlers?.onCreate)
+            .catch(ErrHandler(setErr))
+        // fetch(createApiUrlFor("waterJar"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertWaterJar(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"waterJar"}>
         <ErrorDisplay err={err}/>

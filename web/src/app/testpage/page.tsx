@@ -1,13 +1,13 @@
 import React from "react";
 import PageWrapper from "@/app/components/clientGeneric";
-import TestSlider from "@/app/testpage/testClient";
+import TestSlider from "@/app/testpage/testClient";// TODO: del?
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import {TopPageHeaderLevel} from "@/app/components/Constants";
 import PlateDisplay from "@/app/components/plateClient";
-import {TestPlateOk} from "@/app/components/plateServer";
-import {Closeable, SpeechToText, TestNewAgarBatch, TestNewPlate, TextToSpeech} from "@/app/testpage/client";
+import {TestPlateOk} from "@/app/components/plateServer"; // TODO: del?
+import {Closeable, TestNewAgarBatch, TestNewPlate} from "@/app/testpage/client";
 import ProjectDisplay from "@/app/components/projectClient";
-import {TestProjectOk, TestProjectOk2} from "@/app/components/projectServer";
+import {TestProjectOk, TestProjectOk2} from "@/app/components/projectServer";// TODO: del?
 import {DisplayFormWrapper} from "@/app/components/common";
 
 export default async function Page({
@@ -20,20 +20,20 @@ export default async function Page({
         value.toString()
     }
     return <div>
-        <Closeable title={"Text To Speech"}>
-            <PageWrapper props={{pageType:"testPage",readers:[]}}>
-                <div className={"fullPage"}>
-                    <TextToSpeech />
-                </div>
-            </PageWrapper>
-        </Closeable>
-        <Closeable title={"Speech to text to speech"}>
-            <PageWrapper props={{pageType:"testPage",readers:[]}}>
-                <div className={"fullPage"}>
-                    <SpeechToText/>
-                </div>
-            </PageWrapper>
-        </Closeable>
+        {/*<Closeable title={"Text To Speech"}>*/}
+        {/*    <PageWrapper props={{pageType:"testPage",readers:[]}}>*/}
+        {/*        <div className={"fullPage"}>*/}
+        {/*            <TextToSpeech />*/}
+        {/*        </div>*/}
+        {/*    </PageWrapper>*/}
+        {/*</Closeable>*/}
+        {/*<Closeable title={"Speech to text to speech"}>*/}
+        {/*    <PageWrapper props={{pageType:"testPage",readers:[]}}>*/}
+        {/*        <div className={"fullPage"}>*/}
+        {/*            <SpeechToText/>*/}
+        {/*        </div>*/}
+        {/*    </PageWrapper>*/}
+        {/*</Closeable>*/}
         <Closeable title={"CreatePlate"}>
             <PageWrapper props={{pageType:"testPage",readers:[]}}>
                 <div className={"fullPage"}>

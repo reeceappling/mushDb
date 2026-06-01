@@ -18,7 +18,7 @@ import {
     createApiUrlFor,
     CreatedLinkFor,
     dataFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, DoUpdateMultipartRequest, ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     HandleJsonResponse,
@@ -41,13 +41,14 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SelectorFor} from "@/app/components/selector";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
-import {AclDisplay, IsValidAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
+import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {NewPlateForm} from "@/app/components/plateClient";
+import {AssertPlate, NewPlateForm} from "@/app/components/plateClient";
 import {PlateData} from "@/app/components/plateServer";
 import {NewSlantForm} from "@/app/components/slantClient";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {AssertMss} from "@/app/components/mssClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     if (typeof input !== 'object') {
@@ -111,20 +112,24 @@ export default function AgarBatchDisplay(
                 setErr("No changes found")
                 return
             }
-            fetch(updateApiUrlFor("agarBatch", initial._id), { // This ID is in base58
-                method: 'Post',
-                body: JSON.stringify({notes: notes, acl: acl}),
-                headers: {
-                    credentials: 'include',
-                    'Content-type': 'application/json'
-                },
-            })
-                .then(HandleJsonResponse)
-                .then((newEntry) => {
-                    AssertAgarBatch(newEntry)
-                    updateInitial(newEntry)
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                notes: notes,
+                acl: MarshalAcl(acl), // TODO; use this everywhere if it works
+            }
+            DoUpdateRequest("agarBatch",initial._id, body, AssertAgarBatch)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("agarBatch", initial._id), { // This ID is in base58
+            //     method: 'Post',
+            //     body: JSON.stringify({notes: notes, acl: acl}),
+            //     headers: clientPostRequestHeaders,
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((newEntry) => {
+            //         AssertAgarBatch(newEntry)
+            //         updateInitial(newEntry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -199,6 +204,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     const [color, setColor] = useState<AgarColor>(defaultColor)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const newAgarBatchSubmit = () => {
         // pcRun, recipe must exist
         if (!pcRun) {
@@ -215,20 +221,20 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             recipe: recipe._id,
             notes: notes,
         }
-        fetch(createApiUrlFor("agarBatch"), {
-            method: 'Post',
-            body: JSON.stringify(body),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            }
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertAgarBatch(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+        DoCreateRequest("agarBatch", body, AssertAgarBatch)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("agarBatch"), {
+        //     method: 'Post',
+        //     body: JSON.stringify(body),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertAgarBatch(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"agarBatch"}>
         <div data-cy-id="Header">{"Creating a new agar batch"}</div>

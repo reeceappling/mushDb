@@ -11,10 +11,11 @@ import React, {JSX, useEffect, useState} from "react";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {
+    clientPostRequestHeaders,
     createApiUrlFor,
     CreateNewEntryButton,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
@@ -40,13 +41,15 @@ import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/sub
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {
     AclDefaultAclDisplay,
-    IsValidAcl
+    IsValidAcl, MarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {AssertSlant} from "@/app/components/slantClient";
+import {AssertProject} from "@/app/components/projectClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 // TODO: list page not working
 
@@ -98,7 +101,7 @@ export default function SpeciesDisplay(
         AssertSpecies(data)
         const [initial, setInitial] = useState(data)
 
-        const [substrate, setSubstrate] = useState(data.standardSubstrate)
+        const [substrate, setSubstrate] = useState<string | undefined>(data.standardSubstrate)
         const [aliases, setAliases] = useState<string[]>(initial.aliases || [])
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>(undefined)
@@ -113,28 +116,29 @@ export default function SpeciesDisplay(
             setDefaultAcl(updated.defaultAcl)
         }
         const update = ()=>{
+            // TODO: validate substrate?
             // Notes, aliases, substrate recipe, and have only
-
-            fetch(updateApiUrlFor("species", encodeURI(data._id)), { // TODO: ensure correct
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': 'application/json'
-                },
-                body: JSON.stringify({
-                    substrate: substrate, // TODO: something is going wrong with this
-                    notes: notes,
-                    aliases:aliases,
-                    acl: acl,
-                    defaultAcl: defaultAcl,
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSpecies(entry)
-                    updateInitial
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                substrate: substrate, // TODO: something is going wrong with this
+                notes: notes,
+                aliases:aliases,
+                acl: MarshalAcl(acl), // TODO: ensure ok
+                defaultAcl: MarshalAcl(defaultAcl), // TODO: ensure ok
+            }
+            DoUpdateRequest("species",encodeURIComponent(data._id), body, AssertSpecies)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("species", encodeURI(data._id)), { // TODO: ensure correct
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify(body)
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertSpecies(entry)
+            //         updateInitial
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         return (
             <DisplayFormWrapper entryType={"species"}>
@@ -184,6 +188,7 @@ export function NewSpeciesForm(
     const [sub, setSub] = useState(substrateIn)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>();
+    const errHandler = ErrHandler(setErr)
     const submitNewSpecies = () => {
         console.log("submitting new species")
         if(name===""){
@@ -194,26 +199,33 @@ export function NewSpeciesForm(
             setErr("Substrate must not be blank!")
             return
         }
-        fetch(createApiUrlFor("species"), {
-            method: 'Post',
-            body: JSON.stringify({
-                name:name,
-                scientificName:sciName,
-                aliases:aliases,
-                sub:sub._id,
-                notes:notes,
-            }),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then(entry=> {
-                AssertSpecies(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+        const body: any = {
+            name:name,
+            scientificName:sciName,
+            aliases:aliases,
+            sub:sub._id,
+            notes:notes,
+        }
+        DoCreateRequest("species", body, AssertSpecies)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("species"), {
+        //     method: 'Post',
+        //     body: JSON.stringify({
+        //         name:name,
+        //         scientificName:sciName,
+        //         aliases:aliases,
+        //         sub:sub._id,
+        //         notes:notes,
+        //     }),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then(entry=> {
+        //         AssertSpecies(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"species"}>
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"Name :"} setName={setName}/>
@@ -301,12 +313,9 @@ export function ExistingSpeciesSelector(
         // setLoaded(true) // TODO: REMOVE
         // return // TODO: REMOVE
 
-        fetch(BaseExternalUrl + "/db/list/species", {
+        fetch(BaseExternalUrl + "/db/list/species", { // TODO: simplify?
             method: "GET",
-            headers: {
-                credentials: 'include',
-                // TODO: THIS!
-            },
+            headers: clientPostRequestHeaders,
         })
             .then(HandleJsonResponse)
             .then((data) => {

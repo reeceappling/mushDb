@@ -2,8 +2,10 @@
 
 import React, {JSX, useState} from "react";
 import {
+    clientPostRequestHeaders,
+    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
@@ -16,7 +18,7 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, SendMultipartRequest2, updateApiUrlFor, viewUrlFor,
+    OptionalSimpleKey, SendMultipartRequestNew, updateApiUrlFor, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -45,12 +47,14 @@ import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/
 import {ACL} from "@/app/components/accessControlServer";
 import {SporePrintData, SporePrintSelectorCloseable} from "@/app/components/sporePrintServer";
 import {WaterJarData, WaterJarSelectorCloseable} from "@/app/components/waterJarServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {redirect} from "next/navigation";
 import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
+import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
+import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -112,7 +116,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
 
-    // const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
+    // const [writeTagTo, setWriteTagTo] = useState<string | undefined>() // TODO: do we want this?
     const [entriesCreated, setEntriesCreated] = useState<string[]>([])
     const [err, setErr] = useState<string | undefined>()
     const entriesCreatedDiv = ()=>{
@@ -143,12 +147,9 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         }
         subspecies && (body.subspecies = subspecies._id)
         notes.length>0 && (body.notes = notes)
-        fetch(importApiUrlFor("mss"), {
+        fetch(importApiUrlFor("mss"), { // TODO: use other func?
             method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
+            headers: clientPostRequestHeaders,
             body: JSON.stringify(body)
         })
             .then(HandleJsonResponse)
@@ -201,20 +202,20 @@ export default function MssDisplay(
                 notes: notes,
                 acl:MarshalAcl(acl),
             }
-            fetch(updateApiUrlFor("mss", data._id), {
-                method: 'Post',
-                body: JSON.stringify(body),
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertMss(entry)
-                    updateInitial(entry)
-                })
-                .catch(ErrHandler(setErr));
+            DoUpdateRequest("mss",initial._id, body, AssertMss)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("mss", data._id), {
+            //     method: 'Post',
+            //     body: JSON.stringify(body),
+            //     headers: clientPostRequestHeaders,
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertMss(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -257,6 +258,7 @@ export function NewMssForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const errHandler = ErrHandler(setErr)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (sporePrint === undefined){
@@ -274,20 +276,20 @@ export function NewMssForm(
             writeTagTo: writeTagTo,
         }
 
-        fetch(BaseExternalUrl+"/db/create/mss", {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertMss(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+        DoCreateRequest("mss", body, AssertMss)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("mss"), { // TODO: validate all creates are using this format of url
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertMss(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
 
     return <NewEntryFormWrapper entryType={"mss"}>

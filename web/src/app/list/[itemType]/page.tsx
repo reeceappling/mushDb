@@ -23,9 +23,8 @@ export default async function Page({
                 method: 'Get',
                 credentials: 'include',
                 headers: {
-                    //'credentials': 'include', // TODO: ok?
                     'Accept': 'application/json',
-                    'Cookie': allCookies,
+                    //'Cookie': allCookies, // TODO: REENABLE IF DOES NOT WORK
                 },
             }).then((res) => {
                 if (!res.ok) {

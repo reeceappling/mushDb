@@ -23,7 +23,7 @@ import SugarsArea, {
 import {
     createApiUrlFor,
     CreatedLinkFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingDualSelector, FlexedArea,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingDualSelector, FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
     HandleTxtResponse,
@@ -46,10 +46,11 @@ import {Grain, GrainsSelector, IsValidGrain} from "@/app/components/formSubcompo
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {NewGrainBatchForm} from "@/app/components/grainBatchClient";
+import {AssertGrainBatch, NewGrainBatchForm} from "@/app/components/grainBatchClient";
 import {GrainBatchData} from "@/app/components/grainBatchServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {AssertJar} from "@/app/components/jarClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -130,24 +131,29 @@ export default function JarRecipeDisplay(
             setAcl(updated.acl)
         }
         const submit = () => {
-            fetch(updateApiUrlFor("jarRecipe",data._id), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    standard: isStandard,
-                    notes: notes,
-                    acl: MarshalAcl(acl),
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((newEntry) => {
-                    AssertJarRecipe(newEntry)
-                    updateInitial(newEntry)
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                standard: isStandard,
+                notes: notes,
+                acl: MarshalAcl(acl),
+            }
+            DoUpdateRequest("jarRecipe",initial._id, body, AssertJarRecipe)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("jarRecipe",data._id), {
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify({
+            //         standard: isStandard,
+            //         notes: notes,
+            //         acl: MarshalAcl(acl),
+            //     })
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((newEntry) => {
+            //         AssertJarRecipe(newEntry)
+            //         updateInitial(newEntry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const jarGrainsArea = () => {
             return <div>
@@ -231,6 +237,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
         setSugars(template.sugars || [])
         setAdditives(template.additives || [])
     }
+    const errHandler = ErrHandler(setErr)
     const newJarRecipeSubmit = () => {
         if (!name) {
             setErr("Name must be set!")
@@ -252,28 +259,37 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
             setErr("Grain percentages must equal 100")
             return
         }
-        fetch(createApiUrlFor("jarRecipe"), {
-            method: 'Post',
-            body: JSON.stringify({
-                name: name,
-                grain: grains,
-                standard: isStandard,
-                nutrients: nutrients,
-                sugars: sugars,
-                additives: additives,
-                notes: notes,
-            }),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertJarRecipe(newEntry)
-                handlers.onCreate && handlers.onCreate(newEntry)
-            })
-            .catch(ErrHandler(setErr));
+        const body: any = {
+            name: name,
+            grain: grains,
+            standard: isStandard,
+            nutrients: nutrients,
+            sugars: sugars,
+            additives: additives,
+            notes: notes,
+        }
+        DoCreateRequest("jarRecipe", body, AssertJarRecipe)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("jarRecipe"), {
+        //     method: 'Post',
+        //     body: JSON.stringify({
+        //         name: name,
+        //         grain: grains,
+        //         standard: isStandard,
+        //         nutrients: nutrients,
+        //         sugars: sugars,
+        //         additives: additives,
+        //         notes: notes,
+        //     }),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         AssertJarRecipe(newEntry)
+        //         handlers.onCreate && handlers.onCreate(newEntry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {

@@ -24,22 +24,14 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {AddToTransfers, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
-    createApiUrlFor,
     CreatedLinkFor,
-    DisplayFormWrapper,
+    DisplayFormWrapper, DoCreateRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest,
     ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse,
-    importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
     IsString,
     ListPageItems,
     ListPageTable,
@@ -52,27 +44,19 @@ import {
     OptionalKey,
     OptionalSimpleKey,
     resolvePicsFormData,
-    SendMultipartRequest,
-    SendMultipartRequest2,
     setFormData,
-    setFormImages, updateApiUrlFor,
-    viewUrlFor
+    setFormImages,
 } from "@/app/components/common";
 import {
-    DisposedDisplay,
     ErrorDisplay,
     GensFormDisplay,
-    GensInlineDisplay,
     MostRecentImageDisplay,
     NameArea,
     ParentDisplay,
     PicsDisplay,
-    SpeciesArea,
-    SubspeciesArea
 } from "@/app/components/formSubcomponents/commonClient";
 import {FruitData} from "@/app/components/fruitServer";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {redirect} from "next/navigation";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -87,10 +71,9 @@ import {ACL} from "@/app/components/accessControlServer";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwab} from "@/app/components/sporeSwabServer";
 import {SporePrintData} from "@/app/components/sporePrintServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {OnViewCreatorsQuadColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
-import {AssertBag} from "@/app/components/bagClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -205,7 +188,7 @@ export default function FruitDisplay(
         // }
         const fruitSubmit = () => {
             // disposed, notes, existing pics
-            let body = new FormData()
+            let formData = new FormData()
             let dataObj: any = {
                 notes: notes,
                 disposed: disposed,
@@ -217,21 +200,25 @@ export default function FruitDisplay(
                 let newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
+                setFormData(formData, dataObj)
                 //body.set("data", JSON.stringify(dataObj))
-                setFormImages(body, "newPic", newImages)
+                setFormImages(formData, "newPic", newImages)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
 
-            SendMultipartRequest2(updateApiUrlFor("fruit",initial._id), body)
-                .then(HandleJsonResponse)
-                .then((newEntry) => {
-                    AssertFruit(newEntry)
-                    updateInitial(newEntry)
-                })
-                .catch(ErrHandler(setErr));
+            DoUpdateMultipartRequest("fruit",initial._id, formData, AssertFruit)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+
+            // SendMultipartRequest2(updateApiUrlFor("fruit",initial._id), body)
+            //     .then(HandleJsonResponse)
+            //     .then((newEntry) => {
+            //         AssertFruit(newEntry)
+            //         updateInitial(newEntry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: setTransfersOut on this as needed!
@@ -321,8 +308,9 @@ export function NewFruitForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     //const [perms, setPerms] = useState<EntryPerms | undefined>() // inherit from parents
+    const errHandler = ErrHandler(setErr)
     const newFruitSubmit = () => {
-        let body = new FormData()
+        let formData = new FormData()
         let dataObj: any = {
             parentId: parentId,
             parentType: parentType,
@@ -347,21 +335,25 @@ export function NewFruitForm(
                     return
                 }
                 const filePrefix = "newPic" + "-" + i
-                body.set(filePrefix, imgi, filePrefix)
+                formData.set(filePrefix, imgi, filePrefix)
             }
         }
-        setFormData(body, dataObj)
-        SendMultipartRequest(createApiUrlFor("fruit"), cookies, body)
-            .then(HandleJsonResponse).then((newEntry) => {
-            try {
-                AssertFruit(newEntry)
-                onCreate(newEntry)
-                // TODO: WE HAVE CREATED A NEW FRUIT!!!!! NOTIFY???
-                // TODO ? redirect(BaseUrl+"/view/fruit/"+newId) // TODO: ok?
-            } catch (er) {
-                setErr("failed to decode response:")
-            }
-        }).catch(ErrHandler(setErr));
+        setFormData(formData, dataObj)
+        const errHandler = ErrHandler(setErr)
+        DoCreateRequestMultipart("fruit", formData, AssertFruit)
+            .then(onCreate)
+            .catch(errHandler)
+        // SendMultipartRequest(createApiUrlFor("fruit"), cookies, formData)
+        //     .then(HandleJsonResponse).then((newEntry) => {
+        //     try {
+        //         AssertFruit(newEntry)
+        //         onCreate(newEntry)
+        //         // TODO: WE HAVE CREATED A NEW FRUIT!!!!! NOTIFY???
+        //         // TODO ? redirect(BaseUrl+"/view/fruit/"+newId) // TODO: ok?
+        //     } catch (er) {
+        //         setErr("failed to decode response:")
+        //     }
+        // }).catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"fruit"}>
@@ -415,11 +407,7 @@ export function FruitImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         // fetch(importApiUrlFor("fruit"), {
         //     method: 'Post',
         //     body: formData,
-        //     headers: {
-        //         credentials: 'include',
-        //         'Cookie': cookies,
-        //         // 'Content-type': "multipart/form-data" // TODO: auth?
-        //     },
+        //     headers: clientPostRequestHeaders, //'Content-type': "multipart/form-data"
         // })
         //     .then(HandleJsonResponse)
         //     .then(newItem => {
@@ -460,31 +448,38 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
     const [idTo, setIdTo] = useState<string | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const handleCreate = () => {
-        fetch(createApiUrlFor("clone"), { // TODO: ensure ok!
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Cookie': cookies,
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify({
-                idFrom: fruitId,
-                typeFrom: "fruit",
-                typeTo: typeTo,
-                idTo: idTo,
-                notes: notes,
-            })
-        }).then(HandleJsonResponse).then((newEntry) => {
-            try {
-                AssertFruit(newEntry)
-                onCloneCreated(newEntry)
-                // TODO: WE HAVE CREATED A NEW FRUIT!!!!! NOTIFY???
-                // TODO ? redirect(BaseUrl+"/view/fruit/"+newId) // TODO: ok?
-            } catch (er) {
-                setErr("failed to decode response:")
-            }
-        }).catch(ErrHandler(setErr));
+        const body: any = {
+            idFrom: fruitId,
+            typeFrom: "fruit",
+            typeTo: typeTo,
+            idTo: idTo,
+            notes: notes,
+        }
+        DoCreateRequest("clone", body, AssertFruit)
+            .then(onCloneCreated)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("clone"), { // TODO: ensure ok!
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify({
+        //         idFrom: fruitId,
+        //         typeFrom: "fruit",
+        //         typeTo: typeTo,
+        //         idTo: idTo,
+        //         notes: notes,
+        //     })
+        // }).then(HandleJsonResponse).then((newEntry) => {
+        //     try {
+        //         AssertFruit(newEntry)
+        //         onCloneCreated(newEntry)
+        //         // TODO: WE HAVE CREATED A NEW FRUIT!!!!! NOTIFY???
+        //         // TODO ? redirect(BaseUrl+"/view/fruit/"+newId) // TODO: ok?
+        //     } catch (er) {
+        //         setErr("failed to decode response:")
+        //     }
+        // }).catch(ErrHandler(setErr));
     }
     return <div>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>

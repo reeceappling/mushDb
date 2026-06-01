@@ -3,9 +3,9 @@
 import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
 import ID from "@/app/components/formSubcomponents/id";
 import {
-    CheckArrayType,
+    CheckArrayType, clientPostRequestHeaders,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoUpdateRequest, ErrHandler, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     OptionalKey, updateApiUrlFor, validatorForAssertion,
 } from "@/app/components/common";
@@ -13,6 +13,8 @@ import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {IsValidUserPerms, UserData, UserPerms} from "@/app/components/userServer";
 import {SelectorResetsOnSelectForCustom} from "@/app/components/selector";
+import {MarshalAcl} from "@/app/components/accessControlClient";
+import {AssertTransfer} from "@/app/components/transferClient";
 
 export function AssertUser(input: any): asserts input is UserData {
     if (typeof input !== 'object') {
@@ -75,20 +77,21 @@ export default function UserDisplay(
         }
         const userSubmit = () => {
             if ((!perms.admin && (initial.perms === undefined || initial.perms.admin)) || (perms.admin && (initial.perms && initial.perms.admin === false))) { // TODO: ensure ok
-                fetch(updateApiUrlFor("user",initial._id), { // TODO: MAKE SURE TO ONLY REMOVE ADMIN OR MAKE IT TRUE, DONT REMOVE ADMIN FROM SELF-USER
-                    method: 'Post',
-                    body: JSON.stringify(perms),
-                    headers: {
-                        credentials: 'include',
-                        'Content-type': "application/json"
-                    },
-                })
-                    .then(HandleJsonResponse)
-                    .then((entry) => {
-                        AssertUser(entry)
-                        updateInitial(entry)
-                    })
-                    .catch(ErrHandler(setErr));
+                const body: any = perms
+                DoUpdateRequest("user",initial._id, body, AssertUser)
+                    .then(updateInitial)
+                    .catch(ErrHandler(setErr))
+                // fetch(updateApiUrlFor("user",initial._id), { // TODO: MAKE SURE TO ONLY REMOVE ADMIN OR MAKE IT TRUE, DONT REMOVE ADMIN FROM SELF-USER
+                //     method: 'Post',
+                //     body: JSON.stringify(perms),
+                //     headers: clientPostRequestHeaders,
+                // })
+                //     .then(HandleJsonResponse)
+                //     .then((entry) => {
+                //         AssertUser(entry)
+                //         updateInitial(entry)
+                //     })
+                //     .catch(ErrHandler(setErr));
             }
         }
         return (
@@ -130,14 +133,11 @@ export function HandleErr(error: any, setErr: Dispatch<SetStateAction<string | u
     }
 }
 
-// TODO: move?
+// TODO: move? keep on client because user can have different accesses
 function getAllOptions<T>(itemType: string, assertEntry: (input: any) => void) {
     return fetch(BaseExternalUrl + "/db/list/" + itemType, {
         method: "GET",
-        headers: {
-            credentials: 'include',
-            'Content-type': 'application/json',
-        },
+        headers: clientPostRequestHeaders,
     }).then(HandleJsonResponse)
         .then((data) => {
             console.log("handling user selector response") // TODO: del

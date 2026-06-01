@@ -2,23 +2,38 @@
 
 import {JarData} from "@/app/components/jarServer";
 import {
-    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateMultipartRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
     HandleJsonResponse,
     importApiUrlFor,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    MultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData, SelectorWrapper,
+    resolvePicsFormData,
+    SelectorWrapper,
     SendMultipartRequest,
     setFormData,
-    setFormImages, updateApiUrlFor, viewUrlFor
+    setFormImages,
+    updateApiUrlFor,
+    viewUrlFor
 } from "@/app/components/common";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import React, {JSX, useState} from "react";
@@ -51,7 +66,6 @@ import {
     ContaminationForm,
     ContamsDisplay,
     InitialContamState,
-    InitialNotesState,
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
@@ -76,6 +90,8 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
+import {AssertGrainBatch} from "@/app/components/grainBatchClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -191,7 +207,6 @@ export function JarImportDisplay({headerLevel, cookies}: ImportDisplayInput) {
         }
         writeTagTo && (dataObj.writeTagTo = writeTagTo)
 
-
         MultipartImportRequest(formData, "jar", AssertJar, setErr)
         // SendMultipartRequest(importApiUrlFor("jar"), cookies, formData)
         //     .then(HandleJsonResponse)
@@ -295,7 +310,7 @@ export default function JarDisplay(
             setTransfersOut(updated.transfersOut || [])
         }
         const submit = () => {
-            let body = new FormData()
+            let formData = new FormData()
             let dataObj: any = {
                 knownFruitable: knownFruitable,
                 disposed: disposed,
@@ -314,24 +329,28 @@ export default function JarDisplay(
                 let newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
+                setFormData(formData, dataObj)
                 //body.set("data", JSON.stringify(dataObj))
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
+                setFormImages(formData, "newPic", newImages)
+                setFormImages(formData, "newContam", newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
 
-            SendMultipartRequest(updateApiUrlFor("jar",initial._id), cookies, body)
-                .then(HandleJsonResponse)
-                .then((newEntry) => {
-                    AssertJar(newEntry)
-                    updateInitial(newEntry)
-                })
-                .catch((er) => {
-                    setErr("failed to decode response: " + JSON.stringify(er))
-                });
+            DoUpdateMultipartRequest("jar",initial._id, formData, AssertJar)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+
+            // SendMultipartRequest(updateApiUrlFor("jar",initial._id), cookies, formData)
+            //     .then(HandleJsonResponse)
+            //     .then((newEntry) => {
+            //         AssertJar(newEntry)
+            //         updateInitial(newEntry)
+            //     })
+            //     .catch((er) => {
+            //         setErr("failed to decode response: " + JSON.stringify(er))
+            //     });
         }
         const jarSizeArea = () => {
             return <div>
@@ -412,6 +431,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
 
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!recipe || !pcRun) {
@@ -422,30 +442,39 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
             setErr("must select a valid jar volume")
             return
         }
-        fetch(createApiUrlFor("jar"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify({
-                //creationDate: creationDate, // TODO: GET FROM PC RUN! handle in go
-                sizeCups: sizeCups,
+        const body: any = {
+            //creationDate: creationDate, // TODO: GET FROM PC RUN! handle in go
+            sizeCups: sizeCups,
                 recipe: recipe, // TODO: handle properly in go
-                batch: grainBatch?._id, // TODO: handle properly in go
-                pcRun: pcRun._id,
-                notes: notes || [],
-                writeTagTo: writeTagTo,
-            })
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertJar(newEntry)
-                handlers.onCreate && handlers.onCreate(newEntry)
-            })
-            .catch((error) => {
-                setErr("failed to unmarshal create jar response: " + JSON.stringify(error))
-            });
+            batch: grainBatch?._id, // TODO: handle properly in go
+            pcRun: pcRun._id,
+            notes: notes || [],
+            writeTagTo: writeTagTo,
+        }
+        DoCreateRequest("jar", body, AssertJar)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("jar"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify({
+        //         //creationDate: creationDate, // TODO: GET FROM PC RUN! handle in go
+        //         sizeCups: sizeCups,
+        //         recipe: recipe, // TODO: handle properly in go
+        //         batch: grainBatch?._id, // TODO: handle properly in go
+        //         pcRun: pcRun._id,
+        //         notes: notes || [],
+        //         writeTagTo: writeTagTo,
+        //     })
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         AssertJar(newEntry)
+        //         handlers.onCreate && handlers.onCreate(newEntry)
+        //     })
+        //     .catch((error) => {
+        //         setErr("failed to unmarshal create jar response: " + JSON.stringify(error))
+        //     });
     }
     const hasGrainBatchOrRecipe = grainBatchIn !== undefined || recipeIn !== undefined
     return <NewEntryFormWrapper entryType={"jar"}>

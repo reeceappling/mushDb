@@ -47,7 +47,7 @@ export function MssSelectorCloseable(sp: SelectorProps<MssData>) {
     return <CloseableSelector<MssData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: change
+        msgTxt: ChannelTextNewAgarBatch, // TODO: change/get rid of
         closeTxt: "Close MSS List",
         createTxt: "Create MSS",
         lowercase: "mss",

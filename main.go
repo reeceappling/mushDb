@@ -30,6 +30,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -1502,4 +1503,34 @@ func (s *guestSession) Authorize(provider goth.Provider, params goth.Params) (st
 	s.RefreshToken = refreshToken
 	s.ExpiresAt = time.Now().Add(1 * time.Hour)
 	return accessToken, nil
+}
+
+var corsAllowedOrigins = []string{
+	"https://mush.appli.ng",
+	"http://web", // TODO: ok?
+	"http://api", // TODO: likely don't need
+}
+
+// TODO: USE THIS WHERE NEEDED
+func enableCors(w *http.ResponseWriter, r *http.Request) {
+	origin := r.Header.Get("Origin")
+	if origin == "*" {
+		// TODO: what here?
+	} else if slices.Contains(corsAllowedOrigins, origin) {
+		(*w).Header().Set("Access-Control-Allow-Origin", origin)
+	}
+
+	(*w).Header().Set("Access-Control-Allow-Credentials", "true")
+	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS") // TODO: which
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Authorization")    // TODO: ok? probably need more
+	(*w).Header().Set("Access-Control-Max-Age", "Content-Type, Authorization")                  // Specifies how long preflight results can be cached            // TODO: ok? probably need more
+	(*w).Header().Set("Access-Control-Expose-Headers", "Accept, Content-Type, Authorization")   // Lists headers accessible to JavaScript            // TODO: fix
+	/*
+		Access-Control-Allow-Origin: Specifies allowed origins or *.
+		Access-Control-Allow-Methods: Lists allowed HTTP methods.
+		Access-Control-Allow-Headers: Lists allowed HTTP headers.
+		Access-Control-Allow-Credentials: Indicates if credentials are permitted.
+		Access-Control-Expose-Headers: Lists headers accessible to JavaScript.
+		Access-Control-Max-Age: Defines the preflight cache duration.
+	*/
 }

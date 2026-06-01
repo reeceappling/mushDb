@@ -428,7 +428,7 @@ var (
 
 const (
 	AuthPermsContextHeaderKey = "Auth-Info"
-	AuthSessionCookieKey      = "SessionId"
+	AuthSessionCookieKey      = "SessionId" // TODO: FIX THIS! I REMOVED IT SOMEWHERE!
 )
 
 // authSplitterMiddleware , if the email does not supply a session, will need to handle GetSessionCookie returning http.ErrNoCookie

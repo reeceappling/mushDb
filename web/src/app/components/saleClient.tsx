@@ -12,20 +12,34 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import {
     createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, HandleJsonResponse,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
+    DisplayInput,
+    DoCreateRequest, DoUpdateRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    HandleJsonResponse,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey, updateApiUrlFor
+    OptionalKey,
+    updateApiUrlFor,
+    viewUrlFor
 } from "@/app/components/common";
 import {redirect} from "next/navigation";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SaleData} from "@/app/components/saleServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {AssertProject} from "@/app/components/projectClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -88,19 +102,22 @@ export default function SaleDisplay(
         //             perms: perms, // TODO: validate on insert
         //         }
         const saleUpdateSubmit = () => {
-            fetch(updateApiUrlFor("sale",data._id), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    // TODO: may need 'Cookie': cookies,
-                    'Content-type': 'application/json'
-                },
-                body: JSON.stringify({notes:notes,acl:acl,}) // TODO: used to just be notes. Fix in go
-            }).then(HandleJsonResponse)
-                .then((entry)=>{
-                    AssertSale(entry)
-                    updateInitial(entry)
-                }).catch(ErrHandler(setErr));
+            const body: any = {
+                notes:notes,
+                acl:MarshalAcl(acl), // TODO: ok?
+            }
+            DoUpdateRequest("sale",data._id, body, AssertSale)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("sale",data._id), {
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify({notes:notes,acl:acl,}) // TODO: used to just be notes. Fix in go
+            // }).then(HandleJsonResponse)
+            //     .then((entry)=>{
+            //         AssertSale(entry)
+            //         updateInitial(entry)
+            //     }).catch(ErrHandler(setErr));
         }
         return (
             <DisplayFormWrapper entryType={"sale"}>
@@ -142,6 +159,7 @@ export function NewSaleForm(
     const [err, setErr] = useState<string | undefined>()
     //const [perms, setPerms] = useState<EntryPerms | undefined>()
     ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
+    const errHandler = ErrHandler(setErr)
     const createSale = (e: React.MouseEvent) => {
         e.preventDefault()
 
@@ -150,21 +168,23 @@ export function NewSaleForm(
             notes: notes,
             //perms: perms, // TODO: KEEP PERMS FROM PARENT?
         }
-        fetch(createApiUrlFor("sale"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                // TODO: may need 'Cookie': cookies,
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((sale) => {
-                AssertSale(sale)
-                onCreate?onCreate(sale):redirect(BaseExternalUrl+"/view/sale/"+sale._id)
+        DoCreateRequest("sale", body, AssertSale)
+            .then(s=>{
+                // TODO: ok? different than other creates
+                onCreate?onCreate(s):redirect(viewUrlFor("sale",s._id))
             })
-            .catch(ErrHandler(setErr));
+            .catch(errHandler)
+        // fetch(createApiUrlFor("sale"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((sale) => {
+        //         AssertSale(sale)
+        //         onCreate?onCreate(sale):redirect(viewUrlFor("sale",sale._id))
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"sale"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>

@@ -18,22 +18,33 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
-    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateMultipartRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    MultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData, SelectorWrapper,
-    SendMultipartRequest,
+    resolvePicsFormData,
+    SelectorWrapper,
     setFormData,
-    setFormImages, updateApiUrlFor, viewUrlFor
+    setFormImages,
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -49,7 +60,6 @@ import {
     ContaminationForm,
     ContamsDisplay,
     InitialContamState,
-    InitialNotesState,
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
@@ -76,6 +86,8 @@ import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {AssertSlant} from "@/app/components/slantClient";
+import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -195,7 +207,7 @@ export default function BagDisplay(
             setAcl(updated.acl)
         }
         const bagSubmit = () => {
-            let body = new FormData()
+            let formData = new FormData()
             let dataObj: any = {
                 knownFruitable: knownFruitable,
                 sale: sale, // TODO: how/when should sales be made?
@@ -218,23 +230,25 @@ export default function BagDisplay(
                 let newFlushes = flushesInfo.images
                 dataObj.flushes = flushesInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
-                //body.set("data", JSON.stringify(dataObj))
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
-                setFormImages(body, "newFlush", newFlushes)
+                setFormData(formData, dataObj)
+                //formData.set("data", JSON.stringify(dataObj))
+                setFormImages(formData, "newPic", newImages)
+                setFormImages(formData, "newContam", newContams)
+                setFormImages(formData, "newFlush", newFlushes)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
-
-            SendMultipartRequest(updateApiUrlFor("bag",initial._id), cookies, body)
-                .then(HandleJsonResponse)
-                .then((newEntry) => {
-                    AssertBag(newEntry)
-                    updateInitial(newEntry)
-                })
-                .catch(ErrHandler(setErr));
+            DoUpdateMultipartRequest("bag",initial._id, formData, AssertBag)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // SendMultipartRequest(updateApiUrlFor("bag",initial._id), cookies, formData)
+            //     .then(HandleJsonResponse)
+            //     .then((newEntry) => {
+            //         AssertBag(newEntry)
+            //         updateInitial(newEntry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForNewFruit(initial._id, "bag", cookies), // TODO: test heavily
@@ -344,6 +358,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const newBagSubmit = () => {
         if (pcRun === undefined) {
             setErr("PC Run cannot be undefined!");
@@ -365,25 +380,24 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             writeTagTo: writeTagTo,
             notes: notes,
         }
-        fetch(createApiUrlFor("bag"), {
-            method: 'Post',
-            body: JSON.stringify(body),
-            headers: {
-                credentials: 'include',
-                //'Cookie': cookies,
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                try {
-                    AssertBag(newEntry)
-                    handlers.onCreate && handlers.onCreate(newEntry)
-                } catch (er) {
-                    setErr("failed to decode response:")
-                }
-            })
-            .catch(ErrHandler(setErr));
+        DoCreateRequest("bag", body, AssertBag)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("bag"), {
+        //     method: 'Post',
+        //     body: JSON.stringify(body),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         try {
+        //             AssertBag(newEntry)
+        //             handlers.onCreate && handlers.onCreate(newEntry)
+        //         } catch (er) {
+        //             setErr("failed to decode response:")
+        //         }
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"bag"}>
@@ -462,10 +476,7 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
         // fetch(importApiUrlFor("bag"), {
         //     method: 'Post',
         //     body: formData,
-        //     headers: {
-        //         credentials: 'include',
-        //         'Content-type': "multipart/form-data"
-        //     },
+        //     headers: clientPostRequestHeaders, // TODO: multipart type header?
         // })
             // .then(HandleJsonResponse)
             // .then(newItem => {

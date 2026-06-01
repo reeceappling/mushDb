@@ -2,35 +2,39 @@
 
 import React, {JSX, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import {
-    AddCreatedTriColFunction,
-    AllEntries,
-    OnViewCreatorQuadCol
-} from "@/app/components/formSubcomponents/shared";
+import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
-    createApiUrlFor,
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey, updateApiUrlFor
+    OptionalSimpleKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {GrainBatchData} from "./grainBatchServer";
 import {JarRecipeArea, JarRecipeSelector} from "@/app/components/jarRecipeClient";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {NewJarForm} from "@/app/components/jarClient";
 import {JarData} from "@/app/components/jarServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 // TODO: GRAIN BATCHES LIST IS NOT WORKING!
 // TODO: ENSURE DISPLAY IS LOOKING GOOD
@@ -106,25 +110,31 @@ export default function GrainBatchDisplay(
         }
         ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
         const submit = () => {
-            fetch(updateApiUrlFor("grainBatch",data._id), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    soakTimeHrs: soakTime,
-                    boilTimeMins: boilTime,
-                    dryTimeHours: dryTime,
-                    notes: notes,
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((updated) => {
-                    AssertGrainBatch(updated)
-                    updateInitial(updated)
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                soakTimeHrs: soakTime, // TODO: validate
+                boilTimeMins: boilTime, // TODO: validate
+                dryTimeHours: dryTime, // TODO: validate
+                notes: notes,
+            }
+            DoUpdateRequest("grainBatch", initial._id, body, AssertGrainBatch)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("grainBatch",data._id), {
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify({
+            //         soakTimeHrs: soakTime,
+            //         boilTimeMins: boilTime,
+            //         dryTimeHours: dryTime,
+            //         notes: notes,
+            //     })
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((updated) => {
+            //         AssertGrainBatch(updated)
+            //         updateInitial(updated)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const handleFormChangeBoil = (val?: string) => {
             const n = Number(val)
@@ -171,42 +181,45 @@ export default function GrainBatchDisplay(
         ]
         return <DisplayFormWrapper entryType={"grainBatch"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={id} txt={"Grain Batch"} entryType={"grainBatch"}/>
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
-                <FlexedArea>
-                    <FlexedSinglesGroup>
-                        <JarRecipeArea recipeId={data.recipe}/>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                        <div>
-                            {"Soak time (hrs): "}{initial.soakTimeHrs?<NumericalArea value={soakTime ? soakTime.toString() : undefined}
-                                                                                     onChange={handleFormChangeSoak} label="SoakTimeHrs" min={0} step={1}
-                                                                                     errorMessage={'invalid amount'}
-                                                                                     mode={"integer"} readonly={readonly}/>:
-                            (""+initial.soakTimeHrs)}
+            <ID id={id} txt={"Grain Batch"} entryType={"grainBatch"}/>
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+            <FlexedArea>
+                <FlexedSinglesGroup>
+                    <JarRecipeArea recipeId={data.recipe}/>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                    <div>
+                        {"Soak time (hrs): "}{initial.soakTimeHrs ?
+                        <NumericalArea value={soakTime ? soakTime.toString() : undefined}
+                                       onChange={handleFormChangeSoak} label="SoakTimeHrs" min={0} step={1}
+                                       errorMessage={'invalid amount'}
+                                       mode={"integer"} readonly={readonly}/> :
+                        ("" + initial.soakTimeHrs)}
 
-                        </div>
-                        <div>
-                            {"Boil time (mins): "}{initial.boilTimeMins? <NumericalArea value={boilTime ? boilTime.toString() : undefined}
-                                           onChange={handleFormChangeBoil} label="BoilTimeMinutes" min={0} step={1}
-                                           errorMessage={'invalid amount'}
-                                           mode={"integer"} readonly={readonly}/>:
-                            (""+initial.boilTimeMins)}
-                        </div>
-                        <div>
-                            {"Dry time (hrs): "}{initial.dryTimeHours? <NumericalArea value={dryTime ? dryTime.toString() : undefined}
-                                           onChange={handleFormChangeDry} label="DryTimeHours" min={0} step={1}
-                                           errorMessage={'invalid amount'}
-                                           mode={"integer"} readonly={readonly}/>:
-                            (""+initial.dryTimeHours)}
-                        </div>
-                    </FlexedSinglesGroup>
-                </FlexedArea>
+                    </div>
+                    <div>
+                        {"Boil time (mins): "}{initial.boilTimeMins ?
+                        <NumericalArea value={boilTime ? boilTime.toString() : undefined}
+                                       onChange={handleFormChangeBoil} label="BoilTimeMinutes" min={0} step={1}
+                                       errorMessage={'invalid amount'}
+                                       mode={"integer"} readonly={readonly}/> :
+                        ("" + initial.boilTimeMins)}
+                    </div>
+                    <div>
+                        {"Dry time (hrs): "}{initial.dryTimeHours ?
+                        <NumericalArea value={dryTime ? dryTime.toString() : undefined}
+                                       onChange={handleFormChangeDry} label="DryTimeHours" min={0} step={1}
+                                       errorMessage={'invalid amount'}
+                                       mode={"integer"} readonly={readonly}/> :
+                        ("" + initial.dryTimeHours)}
+                    </div>
+                </FlexedSinglesGroup>
+            </FlexedArea>
 
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
-                    e.stopPropagation();
-                    submit()
-                }}>{"Update"}</button>}
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
+                e.stopPropagation();
+                submit()
+            }}>{"Update"}</button>}
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: Grain Batch data format incorrect: " + err}</div>
@@ -220,28 +233,33 @@ export function NewGrainBatchForm({handlers, recipe}: {
     const [jarRecipe, setJarRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const newGrainBatchSubmit = () => {
         if (jarRecipe === undefined) {
             setErr("jarRecipe must exist")
             return
         }
-        fetch(createApiUrlFor("grainBatch"), {
-            method: 'Post',
-            body: JSON.stringify({
-                recipe: jarRecipe?._id,
-                notes: notes,
-            }),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertGrainBatch(newEntry)
-                handlers.onCreate && handlers.onCreate(newEntry)
-            })
-            .catch(ErrHandler(setErr));
+        const body: any = {
+            recipe: jarRecipe?._id,
+            notes: notes,
+        }
+        DoCreateRequest("grainBatch", body, AssertGrainBatch)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("grainBatch"), {
+        //     method: 'Post',
+        //     body: JSON.stringify({
+        //         recipe: jarRecipe?._id,
+        //         notes: notes,
+        //     }),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         AssertGrainBatch(newEntry)
+        //         handlers.onCreate && handlers.onCreate(newEntry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"grainBatch"}>
         <ErrorDisplay err={err}/>
@@ -249,7 +267,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
             <JarRecipeSelector doSelect={setJarRecipe} allowCreate={handlers.isTopLevel}
                                creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>
-        <button className={"bottomButton greenButton"} onClick={(e)=>{
+        <button className={"bottomButton greenButton"} onClick={(e) => {
             e.stopPropagation();
             newGrainBatchSubmit()
         }}>{"Update"}</button>
@@ -258,17 +276,17 @@ export function NewGrainBatchForm({handlers, recipe}: {
 
 export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems<GrainBatchData>) {
     let cols: ListTableColumn<GrainBatchData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Created", (v)=>{
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
         }),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: GrainBatchData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"grainBatch",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: GrainBatchData) => {
+            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "grainBatch", openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -279,6 +297,7 @@ export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems
 export function GrainBatchSelectorTable({data, onClick}: ListPageItems<GrainBatchData>) {
     return <GrainBatchListPageTable data={data} onClick={onClick} withLink={true}/>
 }
+
 export function GrainBatchSelector(
     {
         doSelect,
@@ -287,12 +306,13 @@ export function GrainBatchSelector(
         doSelect: (val: GrainBatchData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: GrainBatchData[]):JSX.Element=>{
+    const table = (items: GrainBatchData[]): JSX.Element => {
         return <GrainBatchSelectorTable data={items} onClick={doSelect}/>
     }
 
-    return <ExistingRecentSelector entryType={"grainBatch"} entryTypes={"grainBatches"} doSelect={doSelect} asserter={AssertGrainBatch}
+    return <ExistingRecentSelector entryType={"grainBatch"} entryTypes={"grainBatches"} doSelect={doSelect}
+                                   asserter={AssertGrainBatch}
                                    table={table}>
-        {allowCreate && <NewGrainBatchForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+        {allowCreate && <NewGrainBatchForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

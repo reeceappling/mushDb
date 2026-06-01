@@ -16,7 +16,7 @@ import {
     createApiUrlFor,
     CreatedLinkFor,
     CreateNewEntryButton, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
@@ -25,12 +25,12 @@ import {
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
+import {AssertSubstrateBatch, NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
@@ -101,26 +101,27 @@ export default function SubstrateRecipeDisplay(
             setAcl(initial.acl)
         }
         const substrateSubmit = () => {
-            fetch(updateApiUrlFor("substrateRecipe",initial._id), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    name: name,
-                    standard: isStandard,
-                    aliases: aliases,
-                    notes: notes,
-                    acl: MarshalAcl(acl),
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSubstrateRecipe(entry)
-                    updateInitial(entry)
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                name: name,
+                standard: isStandard,
+                aliases: aliases,
+                notes: notes,
+                acl: MarshalAcl(acl),
+            }
+            DoUpdateRequest("substrateRecipe",initial._id, body, AssertSubstrateRecipe)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("substrateRecipe",initial._id), {
+            //     method: "POST",
+            //     headers: clientPostRequestHeaders,
+            //     body: JSON.stringify(body)
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertSubstrateRecipe(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorTriCol[] = [
             {
@@ -182,26 +183,29 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     // TODO: TEMPLATE!!!!
+    const errHandler = ErrHandler(setErr)
     const submit = () => {
-        fetch(createApiUrlFor("substrateRecipe"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify({
+        // TODO: validate name is valid
+        const body = {
                 name: name,
                 aliases: aliases,
                 standard: isStandard,
                 notes: notes
-            })
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertSubstrateRecipe(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+            }
+        DoCreateRequest("substrateRecipe", body, AssertSubstrateRecipe)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("substrateRecipe"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertSubstrateRecipe(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return (
         <NewEntryFormWrapper entryType={"substrateRecipe"}>

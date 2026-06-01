@@ -9,12 +9,13 @@ import {
 import {IsValidNote, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {ImageLocationFor, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {dataFor, OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";
+import {OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {useContext, useEffect, useState} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 import TestAndValidate from "@/app/components/testing/untested";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export const ExampleImageLocation: string = "test.jpg"
 
@@ -54,10 +55,6 @@ export function IsValidContamination(input: any): boolean {
         'mold' in input && typeof input.mold === 'boolean' &&
         OptionalSimpleKey('location', input, "string") &&
         OptionalArrayOfType('notes', input, IsValidNote)
-}
-
-export function InitialNotesState(existingNotes?: Note[]): AllEntries<Note> {
-    return {existing: dataFor(existingNotes), new: []}
 }
 
 export function InitialContamState(contamination?: Contamination[]): SplitAllEntries<ContaminationForm, NewContaminationForm> {

@@ -11,30 +11,16 @@ import {
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {PixRows} from "@/app/components/formSubcomponents/commonClient2";
-import {
-    InputText,
-    InputTextInlineTitle,
-    InputTextWithSmallTitle,
-    NumericalArea,
-    NumericalAreaWithAbsolutes
-} from "./numericInput";
+import {InputText, InputTextInlineTitle, InputTextWithSmallTitle, NumericalAreaWithAbsolutes} from "./numericInput";
 import DateArea, {NumberToDate} from "./date";
-import NotesArea, {
-    NotesAreaOld,
-    Note,
-    NotesAreaMostRecentImage,
-    NotesGrid,
-    NotesAreaViewSubcomponent,
-    NotesFormArea
-} from "./notes";
+import {Note, NotesAreaMostRecentImage, NotesFormArea} from "./notes";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {ExistingSubSpeciesSelector, SubspeciesFormArea} from "@/app/components/subspeciesClient";
+import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NoSsr} from "@mui/material";
 import {useQuery} from "@tanstack/react-query";
-import {BaseExternalUrl} from "@/app/components/Constants";
-import {dataFor, HandleJsonResponse} from "@/app/components/common";
+import {dataFor, viewUrlFor} from "@/app/components/common";
 import {SelectorFor} from "@/app/components/selector";
 import {redirect} from "next/navigation";
 import TextBoxArea from "@/app/components/formSubcomponents/singleTextBoxArea";
@@ -43,8 +29,8 @@ import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Additive} from "@/app/components/formSubcomponents/additives";
 import {DepthContext, DepthProvider} from "./depthContext/depth";
 import {DowelType} from "@/app/components/plugsServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 // export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
 //     return <div className={"hoverClickable"} onClick={(e) => {
@@ -54,15 +40,23 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 //     }}>{props.children}</div>
 // }
 
-export function RemoveToggle({disabled,click,keptClass,removedClass,keptTxt,removedTxt}:{disabled:boolean,click:()=>void,keptClass:string,removedClass?:string,keptTxt:string,removedTxt?:string}){
-    return <button className={disabled ? removedClass:keptClass}
-                   onClick={(e)=>{
+export function RemoveToggle({disabled, click, keptClass, removedClass, keptTxt, removedTxt}: {
+    disabled: boolean,
+    click: () => void,
+    keptClass: string,
+    removedClass?: string,
+    keptTxt: string,
+    removedTxt?: string
+}) {
+    return <button className={disabled ? removedClass : keptClass}
+                   onClick={(e) => {
                        e.stopPropagation();
                        click();
                    }}>{disabled ? removedTxt : keptTxt}</button>
 }
-export function RemoveButton({txt,click}:{click:()=>void,txt:string}){
-    return <button className={"removeButtonSmall"} onClick={(e)=>{
+
+export function RemoveButton({txt, click}: { click: () => void, txt: string }) {
+    return <button className={"removeButtonSmall"} onClick={(e) => {
         e.stopPropagation();
         click();
     }}>{txt}</button>
@@ -117,20 +111,22 @@ export function NutrientEntryForNew({currentValue, updateParent}: {
     return <>
         <div className={"text-m"}>{currentValue.nutrient}</div>
         <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
-                                    errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
-            try {
-                const n = Number(val) // TODO: allow only numbers here
-                if (Number.isNaN(n)) {
-                    setErr("NaN input")
-                } else {
-                    val && handleFormChangeAmt(n)
-                    setErr(undefined)
-                }
-            } catch (e) {
-                setErr(JSON.stringify(e))
-            }
-        }}/>
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.amount.toString()} onChange={(val?: string) => {
+                                    errorMessage={err} value={currentValue.amount.toString()}
+                                    onChange={(val?: string) => {
+                                        try {
+                                            const n = Number(val) // TODO: allow only numbers here
+                                            if (Number.isNaN(n)) {
+                                                setErr("NaN input")
+                                            } else {
+                                                val && handleFormChangeAmt(n)
+                                                setErr(undefined)
+                                            }
+                                        } catch (e) {
+                                            setErr(JSON.stringify(e))
+                                        }
+                                    }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
+                                 value={currentValue.amount.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -159,20 +155,22 @@ export function SugarEntryForNew({currentValue, updateParent}: {
     return <>
         <div className={"text-m"}>{currentValue.type}</div>
         <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
-                                    errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
-            try {
-                const n = Number(val) // TODO: allow only numbers here
-                if (Number.isNaN(n)) {
-                    setErr("NaN input")
-                } else {
-                    val && handleFormChangeAmt(n)
-                    setErr(undefined)
-                }
-            } catch (e) {
-                setErr(JSON.stringify(e))
-            }
-        }}/>
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.amount.toString()} onChange={(val?: string) => {
+                                    errorMessage={err} value={currentValue.amount.toString()}
+                                    onChange={(val?: string) => {
+                                        try {
+                                            const n = Number(val) // TODO: allow only numbers here
+                                            if (Number.isNaN(n)) {
+                                                setErr("NaN input")
+                                            } else {
+                                                val && handleFormChangeAmt(n)
+                                                setErr(undefined)
+                                            }
+                                        } catch (e) {
+                                            setErr(JSON.stringify(e))
+                                        }
+                                    }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
+                                 value={currentValue.amount.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -201,20 +199,22 @@ export function AdditiveEntryForNew({currentValue, updateParent}: {
     return <>
         <div className={"text-m"}>{currentValue.additive}</div>
         <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
-                                    errorMessage={err} value={currentValue.amount.toString()} onChange={(val?: string) => {
-            try {
-                const n = Number(val) // TODO: allow only numbers here
-                if (Number.isNaN(n)) {
-                    setErr("NaN input")
-                } else {
-                    val && handleFormChangeAmt(n)
-                    setErr(undefined)
-                }
-            } catch (e) {
-                setErr(JSON.stringify(e))
-            }
-        }}/>
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.amount.toString()} onChange={(val?: string) => {
+                                    errorMessage={err} value={currentValue.amount.toString()}
+                                    onChange={(val?: string) => {
+                                        try {
+                                            const n = Number(val) // TODO: allow only numbers here
+                                            if (Number.isNaN(n)) {
+                                                setErr("NaN input")
+                                            } else {
+                                                val && handleFormChangeAmt(n)
+                                                setErr(undefined)
+                                            }
+                                        } catch (e) {
+                                            setErr(JSON.stringify(e))
+                                        }
+                                    }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
+                                 value={currentValue.amount.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -243,20 +243,22 @@ export function DowelEntryForNew({currentValue, updateParent}: {
     return <>
         <div className={"text-m"}>{currentValue.wood}</div>
         <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
-                                    errorMessage={err} value={currentValue.size.toString()} onChange={(val?: string) => {
-            try {
-                const n = Number(val) // TODO: allow only numbers here
-                if (Number.isNaN(n)) {
-                    setErr("NaN input")
-                } else {
-                    val && handleFormChangeRadius(n)
-                    setErr(undefined)
-                }
-            } catch (e) {
-                setErr(JSON.stringify(e))
-            }
-        }}/>
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt} value={currentValue.units.toString()} onChange={(val?: string) => {
+                                    errorMessage={err} value={currentValue.size.toString()}
+                                    onChange={(val?: string) => {
+                                        try {
+                                            const n = Number(val) // TODO: allow only numbers here
+                                            if (Number.isNaN(n)) {
+                                                setErr("NaN input")
+                                            } else {
+                                                val && handleFormChangeRadius(n)
+                                                setErr(undefined)
+                                            }
+                                        } catch (e) {
+                                            setErr(JSON.stringify(e))
+                                        }
+                                    }}/>
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
+                                 value={currentValue.units.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -279,41 +281,42 @@ export function ParentDisplay(
     if (parentType === undefined) {
         return <div>{"Error: PARENT TYPE UNDEFINED"}</div>
     }
-    const txtFor = (typ:string,id:string)=>{
-        return typ+" "+id
+    const txtFor = (typ: string, id: string) => {
+        return typ + " " + id
     }
-    const LinkFor = (typ:string,entryTyp:string,linkId:string, displayId:string)=>{
+    const LinkFor = (typ: string, entryTyp: string, linkId: string, displayId: string) => {
         return <div>
-            {"Parent: "}<EntryLinkWrapper props={{linkId:linkId,entryType:entryTyp}}>{txtFor(typ, displayId)}</EntryLinkWrapper>
+            {"Parent: "}<EntryLinkWrapper
+            props={{linkId: linkId, entryType: entryTyp}}>{txtFor(typ, displayId)}</EntryLinkWrapper>
         </div>
     }
     switch (parentType) {
         case 'fruit':
-            return LinkFor("Fruit",parentType,parent,parent)
+            return LinkFor("Fruit", parentType, parent, parent)
         case 'mss':
-            return LinkFor("Spore Syringe",parentType,parent,parent)
+            return LinkFor("Spore Syringe", parentType, parent, parent)
         case 'plate':
-            return LinkFor("Plate",parentType,parent,parent)
+            return LinkFor("Plate", parentType, parent, parent)
         case 'slant':
-            return LinkFor("Slant",parentType,parent,parent)
+            return LinkFor("Slant", parentType, parent, parent)
         case 'stasisTube':
-            return LinkFor("Stasis Tube",parentType,parent,parent)
+            return LinkFor("Stasis Tube", parentType, parent, parent)
         case 'jar':
-            return LinkFor("Grain Jar",parentType,parent,parent)
+            return LinkFor("Grain Jar", parentType, parent, parent)
         case 'lc':
-            return LinkFor("Liquid Culture",parentType,parent,parent)
+            return LinkFor("Liquid Culture", parentType, parent, parent)
         case 'lcSyringe':
-            return LinkFor("Liquid Culture Syringe",parentType,parent,parent)
+            return LinkFor("Liquid Culture Syringe", parentType, parent, parent)
         case 'bag':
-            return LinkFor("Bag",parentType,parent,parent)
+            return LinkFor("Bag", parentType, parent, parent)
         case 'fruitingChamber':
-            return LinkFor("Fruiting Chamber",parentType,parent,parent)
+            return LinkFor("Fruiting Chamber", parentType, parent, parent)
         case 'sporePrint':
-            return LinkFor("Spore Print",parentType,parent,parent)
+            return LinkFor("Spore Print", parentType, parent, parent)
         case 'sporeSwab':
-            return LinkFor("Spore Swab",parentType,parent,parent)
+            return LinkFor("Spore Swab", parentType, parent, parent)
         default:
-            return <div>{"Unknown parentType: " + parentType + " with ID "+parent}</div>
+            return <div>{"Unknown parentType: " + parentType + " with ID " + parent}</div>
     }
 }
 
@@ -352,7 +355,7 @@ export function GensInlineDisplay(
         <div>{"Generations since:"}</div>
         <div>
             <div>{"Spore: "}</div>
-            <div >{gensSinceSpore || "unknown"}</div>
+            <div>{gensSinceSpore || "unknown"}</div>
         </div>
         {(!dontDisplayGensFruitOrSpore) && <div>
             <div>{"Fruit or Spore: "}</div>
@@ -360,6 +363,7 @@ export function GensInlineDisplay(
         </div>}
     </div>
 }
+
 export function GensFormDisplay(
     {gensSinceSpore, gensSinceFruitOrSpore, dontDisplayGensFruitOrSpore, headerLevel, offset}: {
         gensSinceSpore?: number,
@@ -371,8 +375,8 @@ export function GensFormDisplay(
 ) {
     return <>
         <div>{"Generations since:"}</div>
-        <div>{"Spore: "+(gensSinceSpore || "unknown")}</div>
-        {(!dontDisplayGensFruitOrSpore) && <div>{"Fruit or Spore: "+(gensSinceFruitOrSpore || "unknown")}</div>}
+        <div>{"Spore: " + (gensSinceSpore || "unknown")}</div>
+        {(!dontDisplayGensFruitOrSpore) && <div>{"Fruit or Spore: " + (gensSinceFruitOrSpore || "unknown")}</div>}
     </>
 }
 
@@ -387,51 +391,54 @@ export const PicsDisplay = (
         offset?: number,
     }
 ) => {
-    const pwnfFor = (item: PicWithNotesIncoming):Data<PicWithNotesForm>=>{
-        return {data:{time: item.time, img: item.location, notes: InitialNotesState(item.notes)},disabled:false}
+    const pwnfFor = (item: PicWithNotesIncoming): Data<PicWithNotesForm> => {
+        return {data: {time: item.time, img: item.location, notes: InitialNotesState(item.notes)}, disabled: false}
     }
-    const pwnfs = (items: PicWithNotesIncoming[]):Data<PicWithNotesForm>[]=>{
-        return items.map(v=>{return pwnfFor(v)})
+    const pwnfs = (items: PicWithNotesIncoming[]): Data<PicWithNotesForm>[] => {
+        return items.map(v => {
+            return pwnfFor(v)
+        })
     }
     const [existing, setExisting] = useState<Data<PicWithNotesForm>[]>(pwnfs(props.pix))
     const [created, setCreated] = useState<NewPicWithNotesForm[]>([])
-    useEffect(()=>{
+    useEffect(() => {
         setExisting(pwnfs(props.pix))
         setCreated([])
         //doUpdate() // TODO: do we need this?
-    },[props.pix])
-    const doUpdate = ()=>{
+    }, [props.pix])
+    const doUpdate = () => {
         props.updateParent({
-            existing:existing,
-            new:created,
+            existing: existing,
+            new: created,
         })
     }
-    const updateExisting = (updated: Data<PicWithNotesForm>[])=>{
+    const updateExisting = (updated: Data<PicWithNotesForm>[]) => {
         setExisting(updated)
         doUpdate()
     }
-    const updateNew = (updated: NewPicWithNotesForm[])=>{
+    const updateNew = (updated: NewPicWithNotesForm[]) => {
         setCreated(updated)
         doUpdate()
     }
     const depth = useContext(DepthContext)
     // TODO: OVERHAUL WITH EITHER GRID OR FLEXBOX?
-    return <div /*key={count}*/ className={"depthContainer depth"+depth}>
+    return <div /*key={count}*/ className={"depthContainer depth" + depth}>
         <div className={"areaHeader"}>{props.sectionHeader || "Pictures"}</div>
         <div className={"picsGroup picsRows"}>{/* TODO: change to grid???*/}
             {props.pix.map((img, i) => {
-                {/* TODO: REMOVE CURRENT FROM INPUTS! DO INITIAL INSTEAD!*/}
+                {/* TODO: REMOVE CURRENT FROM INPUTS! DO INITIAL INSTEAD!*/
+                }
                 return <PixRowExisting key={i} initial={img} readonly={props.readonly} updateParent={a => {
                     let upd = structuredClone(existing)
                     upd[i] = a
                     updateExisting(upd)
-                }} />
+                }}/>
             })}
         </div>
-            {!props.readonly && <PixRows initial={props.pix} updateParent={a => {
-                let upd = structuredClone(a)
-                updateNew(upd)
-            }}/>}
+        {!props.readonly && <PixRows initial={props.pix} updateParent={a => {
+            let upd = structuredClone(a)
+            updateNew(upd)
+        }}/>}
 
     </div>
 }
@@ -443,46 +450,50 @@ export const PixRowExisting = (
         updateParent?: (d: Data<PicWithNotesForm>) => void
     }
 ) => {
-    const pwnfFor = (item: PicWithNotesIncoming):Data<PicWithNotesForm> => {
-        return {data:{
-            time:item.time,
-                img:item.location,
-                notes:InitialNotesState(item.notes),
-            },disabled:false}
+    const pwnfFor = (item: PicWithNotesIncoming): Data<PicWithNotesForm> => {
+        return {
+            data: {
+                time: item.time,
+                img: item.location,
+                notes: InitialNotesState(item.notes),
+            }, disabled: false
+        }
     }
     const [current, setCurrent] = useState<Data<PicWithNotesForm>>(pwnfFor(initial))
-    useEffect(()=>{
+    useEffect(() => {
         setCurrent(pwnfFor(initial))// reset when initial changes
-    },[initial])
-    const update = (updated: Data<PicWithNotesForm>)=>{
+    }, [initial])
+    const update = (updated: Data<PicWithNotesForm>) => {
         setCurrent(updated)
         updateParent && updateParent(updated)
     }
-    const disabledClass = ()=>{
+    const disabledClass = () => {
         return current.disabled ? " disabled" : ""
     }
     const leftArea = () => {
         return <div className={"picLeft" + disabledClass()}>
             {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
             <img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>
-            {!readonly && <button className={current.disabled?"basicButtonSmall":"removeButtonSmall"} onClick={(e) => {
-                e.stopPropagation();
-                let upd = structuredClone(current)
-                upd.disabled = !current.disabled
-                update(upd)
-            }}>
-                {(current.disabled ? "ENABLE" : "DISABLE") + " THIS IMAGE"}{/* TODO: THIS IS NOT WORKING!!!!!*/}
-            </button>}
+            {!readonly &&
+                <button className={current.disabled ? "basicButtonSmall" : "removeButtonSmall"} onClick={(e) => {
+                    e.stopPropagation();
+                    let upd = structuredClone(current)
+                    upd.disabled = !current.disabled
+                    update(upd)
+                }}>
+                    {(current.disabled ? "ENABLE" : "DISABLE") + " THIS IMAGE"}{/* TODO: THIS IS NOT WORKING!!!!!*/}
+                </button>}
         </div>
     }
     const rightArea = () => {
         return <div className={"picRight" + disabledClass()}>
             <DateArea readonly={true} when={initial.time}/>
-            <NotesFormArea initial={initial.notes} readonly={readonly || false} updateParent={(nts: AllEntries<Note>) => {
-                let updated = structuredClone(current)
-                updated.data.notes = nts
-                update(updated)
-            }} removeHeader={true} />
+            <NotesFormArea initial={initial.notes} readonly={readonly || false}
+                           updateParent={(nts: AllEntries<Note>) => {
+                               let updated = structuredClone(current)
+                               updated.data.notes = nts
+                               update(updated)
+                           }} removeHeader={true}/>
         </div>
     }
     return <div className={"contentsOnly picRow" + disabledClass()}>
@@ -506,7 +517,7 @@ export function MostRecentImageDisplay(
     const mostRecentImageHeader = headerTxt || "Image Upload Date: "
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div className={"mriParent depthContainer depth"+depth}>
+        <div className={"mriParent depthContainer depth" + depth}>
             <div>
                 <img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>
             </div>
@@ -657,7 +668,7 @@ export function StringOptionsSelector({queryKey, variant, current, onSelect}: {
 }) {
     const {isPending, error, data} = useQuery({
         queryKey: [queryKey],
-        queryFn: ()=>{
+        queryFn: () => {
             return getOptionsResponse(variant)
         }
         // queryFn: () => { // TODO: FIX THIS!
@@ -744,7 +755,7 @@ export function DisposedDisplay(
 }
 
 export const ErrorDisplay = ({ // TODO: USE
-                                 err, headerLevel, offset,classNames
+                                 err, headerLevel, offset, classNames
                              }: {
     err?: string
     headerLevel?: number // TODO: REMOVE
@@ -754,7 +765,7 @@ export const ErrorDisplay = ({ // TODO: USE
     if (err === undefined) {
         return null
     }
-    return <div className={"Error centerH"+(classNames?" "+classNames:"")}>
+    return <div className={"Error centerH" + (classNames ? " " + classNames : "")}>
         <p>{err}</p>
     </div>
 }
@@ -798,28 +809,34 @@ export function NameArea(
     if (readonly) {
         return <div>{headerTxt || "Name: "}{currentName || ""}</div>
     }
-    return <div className={"my-5"+(classNames?" "+classNames:"")}>
+    return <div className={"my-5" + (classNames ? " " + classNames : "")}>
         <InlineTitle title={headerTxt || "Name: "} titleClasses={titleClasses}>
-            <InputText value={currentName} readonly={false} errorMessage={"invalid name"} placeholder={"name"} onChange={(s)=>{setName && setName(s||"")}}  />
+            <InputText value={currentName} readonly={false} errorMessage={"invalid name"} placeholder={"name"}
+                       onChange={(s) => {
+                           setName && setName(s || "")
+                       }}/>
         </InlineTitle>
     </div>
 }
 
-export function InlineTitle(props:React.PropsWithChildren<{title:string,titleClasses?:string}>){
+export function InlineTitle(props: React.PropsWithChildren<{ title: string, titleClasses?: string }>) {
     return <>
-    <div className={props.titleClasses||""}>{props.title}</div>
+        <div className={props.titleClasses || ""}>{props.title}</div>
         {props.children}
     </>
 }
 
-export function InputTextWithInlineTitle({currentContent, setContent, headerTxt, placeholder}:{
+export function InputTextWithInlineTitle({currentContent, setContent, headerTxt, placeholder}: {
     currentContent?: string,
     setContent?: (n: string) => void
     headerTxt: string
     placeholder?: string
-}){
+}) {
     return <div className={"my-5"}>
-        <InputTextInlineTitle label={headerTxt} readonly={false} errorMessage={""} value={currentContent || ""} placeholder={placeholder} onChange={(v)=>{setContent && setContent(v || "")}}/>
+        <InputTextInlineTitle label={headerTxt} readonly={false} errorMessage={""} value={currentContent || ""}
+                              placeholder={placeholder} onChange={(v) => {
+            setContent && setContent(v || "")
+        }}/>
     </div>
 }
 
@@ -835,7 +852,7 @@ export function OpenMainPage(
     const isTopLevel = useContext(DepthContext) === 0
     const handleClick = (e: React.MouseEvent) => {
         e.preventDefault()
-        const url = BaseExternalUrl + "/view/" + type + "/" + linkId
+        const url = viewUrlFor(type, linkId)
         if (redirect) {
             redirect(url)
         } else {
@@ -863,9 +880,9 @@ export function AliasesArea( // TODO: OVERHAUL
     }) {
     const [vals, setVals] = useState<string[]>(aliases || [])
 
-    useEffect(()=>{
+    useEffect(() => {
         setVals(aliases || [])
-    },[aliases])
+    }, [aliases])
     // TODO: keep aliases internally, and only return active ones to parent
     if (readonly) {
         if (!aliases) {

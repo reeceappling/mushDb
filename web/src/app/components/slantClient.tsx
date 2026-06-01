@@ -22,18 +22,28 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
-    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    ImportDisplayInput, ImportEntryFormWrapper, ImportResponseHandler, importUrlFor,
-    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType, OptionalKey,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateMultipartRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup, ImportDisplayInput, ImportEntryFormWrapper, ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    MultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
+    OptionalArrayOfType,
+    OptionalKey,
     OptionalSimpleKey,
     resolveContamsFormData,
-    resolvePicsFormData, SendMultipartRequest, SendMultipartRequest2, setFormData,
-    setFormImages, updateApiUrlFor, viewUrlFor,
+    resolvePicsFormData,
+    setFormData,
+    setFormImages,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -49,7 +59,7 @@ import {
     AgarBatchArea,
 } from "@/app/components/agarBatchClient";
 import {
-    ContaminationForm, ContamsDisplay, InitialContamState, InitialNotesState, IsValidContamination,
+    ContaminationForm, ContamsDisplay, InitialContamState, IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
@@ -57,13 +67,15 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {SaleArea} from "@/app/components/saleClient";
+import {AssertSale, SaleArea} from "@/app/components/saleClient";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {AssertPlate} from "@/app/components/plateClient";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -144,7 +156,7 @@ export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
             return
         }
         formData.set('data', JSON.stringify({
-            created:created,
+            created:created, // TODO: validate not in future or too far in the past
             stickType: stickType,
             species: species._id,
             subspecies: subspecies?._id,
@@ -209,7 +221,7 @@ export default function SlantDisplay(
             setAcl(updated.acl)
         }
         const slantSubmit = ()=>{
-            let body = new FormData()
+            let formData = new FormData()
             let dataObj:any={
                 knownFruitable:knownFruitable,
                 sale: sale,
@@ -227,22 +239,25 @@ export default function SlantDisplay(
                 let newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
+                setFormData(formData, dataObj)
+                setFormImages(formData, "newPic", newImages)
+                setFormImages(formData, "newContam", newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
+            DoUpdateMultipartRequest("slant",initial._id, formData, AssertSlant)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
 
-            SendMultipartRequest(updateApiUrlFor("slant",initial._id), cookies, body)
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSlant(entry)
-                    updateInitial(entry)
-                    //window.location.reload()
-                })
-                .catch(ErrHandler(setErr));
+            // SendMultipartRequest(updateApiUrlFor("slant",initial._id), cookies, body)
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertSlant(entry)
+            //         updateInitial(entry)
+            //         //window.location.reload()
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -305,6 +320,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const errHandler = ErrHandler(setErr)
     const createSlant = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(agarBatch===undefined){
@@ -317,20 +333,20 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(createApiUrlFor("slant"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertSlant(entry)
-                handlers.onCreate && handlers.onCreate(entry)
-            })
-            .catch(ErrHandler(setErr));
+        DoCreateRequest("slant", body, AssertSlant)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("slant"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body)
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((entry) => {
+        //         AssertSlant(entry)
+        //         handlers.onCreate && handlers.onCreate(entry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err}/>

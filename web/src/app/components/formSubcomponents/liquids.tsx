@@ -203,15 +203,3 @@ export function LiquidEntriesGroup({
     </div>
 }
 
-// export function LiquidDisplayArea(
-//     {
-//         headerLevel, liquid
-//     }:{
-//         headerLevel?: number,
-//         liquid?: Liquid,
-//     }){
-//     return <div>
-//
-//     </div>
-// }
-

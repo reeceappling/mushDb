@@ -48,13 +48,9 @@ import {AssertSubstrateBatch} from "@/app/components/substrateBatchClient";
 import {AssertUser} from "./userClient";
 import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
-import SpeechRecognition, {useSpeechRecognition} from "react-speech-recognition";
-import {ActionTypes, useDictationContext} from "@/app/components/formSubcomponents/dictationContext/dictationContext";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {redirect} from "next/navigation";
-import {AssertPlugs} from "@/app/components/plugsClient";
 
 
 export function SendMultipartRequest(url: string, cookies: string, formData: FormData) {
@@ -62,421 +58,37 @@ export function SendMultipartRequest(url: string, cookies: string, formData: For
         method: 'Post',
         body: formData,
         credentials: 'include',
-        headers: {
-            credentials: 'include',
-            //'Cookie': cookies, // TODO: reenable if fails
-            'Access-Control-Allow-Origin': '*',
-        },
+        headers: clientPostRequestHeadersMultipart, // TODO: set multipart request type?
     })
 }
 
-export function SendMultipartRequest2(url: string, formData: FormData) {
+export const clientPostRequestHeaders = {
+    credentials: 'include',
+    //'Cookie': cookies, // TODO: reenable if fails
+    'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
+    'Content-type': "application/json",
+    'Accept': "application/json", // TODO: ensure ok
+}
+
+export const clientPostRequestHeadersMultipart = {
+    credentials: 'include',
+    //'Cookie': cookies, // TODO: reenable if fails
+    'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
+    'Content-type': "multipart/form-data",
+    'Accept': "application/json", // TODO: ensure ok
+}
+
+// TODO: if this works, then we should get rid of SendMultipartRequest
+export function SendMultipartRequestNew(url: string, formData: FormData) {
     return fetch(url, {
         method: 'Post',
         body: formData,
         credentials: 'include',
-        headers: {
-            credentials: 'include',
-            'Access-Control-Allow-Origin': '*',
-        },
+        headers: clientPostRequestHeadersMultipart, // TODO: ensure ok
     })
 }
 
-export function SayString(toDictate: string) {
-    DictateString(toDictate)
-}
 
-export function DictateString(toDictate: string) { // TODO: USE!
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.speak(new SpeechSynthesisUtterance(toDictate))
-    } else {
-        throw "client speech synthesis not currently available"
-    }
-}
-
-// TODO: DICTAPHONES SHOULD BE USED IN:
-// TODO: creates: anything that needs a sterile environment (LIST)
-// TODO: views: all of them!
-// TODO: consider embedding dictaphones in notes areas for views and creates, and controlling the notes with a context of some sort?
-export function Dictaphone({createNoteHandler}: { createNoteHandler?: (note: string) => void }) {
-    // const cmds = ["simon says", "new note"]
-    const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
-    const [activeCommand, setActiveCommand] = useState<string | undefined>(undefined)
-    const [startedBody, setStartedBody] = useState(false)
-    const listenArgs = {
-        continuous: true, // TODO: ok? was false
-        interimResults: true, // TODO: ok? was false
-        language: "en-US",
-    }
-
-    // const startBodyListener = ()=>{
-    //
-    // }
-    // const startCommandListener = ()=>{
-    //
-    // }
-    //
-    // //const fullCmdRegex = new RegExp("(?<=^command )simon says [a-zA-Z0-9 ]+(?= end dictation)")
-    // //const startDictationString = "command"
-    // const resetString = "clear dictation"
-    // const resetDictationRegex = new RegExp(resetString, "g")
-    // const endBodyString = "end dictation"
-    // const endDictationRegex = new RegExp("^[a-zA-Z0-9 ]+ "+endBodyString+"$)", "g")
-    // const bodyCommand = "* "+endBodyString
-    // const simonSaysRegex = regexForCmd("simon says")
-    // const cmdRegex = [simonSaysRegex]
-    // const removePrefix = (str: string, pre: string):string => {
-    //     str.slice(pre.length);
-    // }
-    // const bodyCallback = (command: string, resetTranscript:()=>void):void=>{
-    //     const body = command.substring(0,command.length-(2+endBodyString.length)) // TODO: ensure length right
-    //     switch(activeCommand){
-    //         case undefined:
-    //             // TODO: ERROR
-    //     }
-    // }
-    // const cmdCallback = (command: string, resetTranscript:()=>void):void => {
-    //     const commandAndBody = removePrefix(lessEnd, prefixes[0])
-    //     switch(command){
-    //         case cmds[0]: //simon says
-    //             setActiveCommand(cmds[0])
-    //             break;
-    //         default:
-    //     }
-    //     if (lessEnd.startsWith(prefixes[0])){
-    //         let body = removePrefix(lessEnd, prefixes[0])
-    //
-    //     }
-    //     resetTranscript()
-    // }
-    const commands = [
-        {
-            command: ["reset dictation", "clear transcript", "reset transcript"],
-            callback: () => {
-                resetTranscript()
-                setActiveCommand(undefined)
-            },
-            matchInterim: true,
-        },
-        {
-            command: ["repeat after me", "simon says"],
-            callback: () => {
-                resetTranscript()
-                setActiveCommand("repeat after me")
-            },
-            matchInterim: true,
-        },
-        {
-            command: [
-                "new note",
-                "create note",
-                "create new note",
-                "create a note",
-                "create a new note",
-                "make note",
-                "make a note",
-                "make new note",
-                "make a new note",
-
-            ],
-            callback: () => {
-                resetTranscript()
-                setActiveCommand("create note")
-            },
-            matchInterim: true,
-        },
-    ]
-    const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
-        commands: commands,
-    });
-    // 3-Second Timeout Logic
-    useEffect(() => {
-        // Clear existing timeout each time a new transcript word is detected
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
-        }
-
-        // Set a new 3-second timer
-        const currentText = transcript
-        // TODO: handle 0-length transcripts?
-        const onTimeout = () => {
-            switch (activeCommand) {
-                case "repeat after me":
-                    console.log("repeat after me: " + currentText)
-                    SayString(currentText)
-                    break;
-                // TODO: CREATE PLATE? Bag, Slant, Transfer?
-                case "create note":
-                    // TODO: repeat and ask to save??????
-                    console.log("created note: " + currentText)
-                    createNoteHandler && createNoteHandler(currentText)
-                    break;
-                default:
-                    return
-                // TODO: this!
-            }
-            setActiveCommand(undefined)
-            resetTranscript()
-        }
-        timeoutRef.current = setTimeout(onTimeout, 3000);
-
-        return () => clearTimeout(timeoutRef.current);
-    }, [transcript, activeCommand]);
-
-    if (!browserSupportsSpeechRecognition) {
-        return <span>{"Browser doesn't support speech recognition."}</span>;
-    }
-
-    return (
-        <div>
-            <p>{"Microphone: " + (listening ? 'on' : 'off')}</p>
-            <button onClick={e => {
-                e.stopPropagation();
-                SpeechRecognition.startListening(listenArgs)
-            }}>{"Start"}</button>
-            <button onClick={e => {
-                e.stopPropagation();
-                SpeechRecognition.stopListening()
-            }}>{"Stop"}</button>
-            <button onClick={e => {
-                e.stopPropagation();
-                resetTranscript()
-            }}>Reset
-            </button>
-            <p>{transcript}</p>
-        </div>
-    );
-};
-
-// TODO: USE ON TFID VIEW PAGES!
-// TODO: SHOULD ADD WHERE NEEDED
-// TODO: LIKELY NEEDS MAJOR OVERHAUL
-export function ViewPageDictaphone({doUpdate}: {
-    doUpdate: () => void
-}) {
-    const rfidRdr = useRfidReaderContext()
-    const dict = useDictationContext()
-    // TODO: let readerWriter = state.selected // TODO: or lastReaderUsed???
-    const listenArgs = {
-        continuous: true,
-        interimResults: true,
-        language: "en-US",
-    }
-    const handleViewById = (idToSearch: string) => {
-        getPathFor(idToSearch).then((path) => {
-            location.assign(BaseExternalUrl + "/view/" + path)
-        }).catch((err) => {
-            console.log("failed to get path for id: " + JSON.stringify(err))
-            SpeechRecognition.startListening(listenArgs)
-        })
-    }
-    const commands = [
-        {
-            command: ["create transfer", "new transfer"],
-            callback: () => {
-                resetTranscript()
-                SpeechRecognition.stopListening()
-                dict.dispatch({type: ActionTypes.SET_CURRENT,payload:"create transfer"})
-            },
-            matchInterim: true,
-        },
-        {
-            command: ["view tag"], // TODO: ok?
-            callback: () => {
-                SpeechRecognition.stopListening()
-                resetTranscript()
-                ReadTagFunc(rfidRdr.dispatch, undefined, rfidRdr.state.selected)
-                    .then(handleViewById)// redir to the new page
-                    .catch(e => {
-                        console.error("failed to read linking tag: " + JSON.stringify(e))
-                        SpeechRecognition.startListening(listenArgs)
-                    })
-            },
-            matchInterim: true,
-        },
-        {
-            command: ["submit updates"], // TODO: ok?
-            callback: () => {
-                SpeechRecognition.stopListening()
-                resetTranscript()
-                doUpdate()
-                SpeechRecognition.startListening(listenArgs)
-            },
-            matchInterim: true,
-        },
-        {
-            command: [
-                "new note",
-                "create note",
-                "create new note",
-                "create a note",
-                "create a new note",
-                "make note",
-                "make a note",
-                "make new note",
-                "make a new note",
-                "add a new note",
-                "add new note",
-                "add a note",
-                "add note",
-            ],
-            callback: () => {
-                SpeechRecognition.stopListening()
-                resetTranscript()
-                dict.dispatch({type: ActionTypes.SET_CURRENT,payload:"create note"})
-            },
-            matchInterim: true,
-        },
-    ]
-    const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
-        commands: commands,
-    });
-
-    if (!browserSupportsSpeechRecognition) {
-        return <span>{"Browser doesn't support speech recognition."}</span>;
-    }
-    useEffect(() => { // TODO: validate works right
-        if (dict.state.current === "main") {
-            SpeechRecognition.startListening(listenArgs)
-        }
-    }, [dict.state.current])
-
-    return (
-        <div>
-            <button onClick={e => {
-                e.stopPropagation();
-                SpeechRecognition.startListening(listenArgs)
-            }}>{"Enable Dictation"}</button>{/* TODO: dictation enablement in cookies? We want to be able to traverse pages without touching the screen*/}
-            <button onClick={e => {
-                e.stopPropagation();
-                SpeechRecognition.stopListening()
-            }}>{"Disable Dictation"}</button>
-        </div>
-    );
-};
-
-export function AddNoteDictaphone({parent,createNote}:{parent?:string,createNote:(s:string)=>void}){
-    // Always created in a state that is not listening by default
-    try {
-        const {state, dispatch} = useDictationContext()
-        const listenArgs = {
-            continuous: false,
-            interimResults: false, // TODO: UNSURE IF WE WANT THIS OR NOT
-            language: "en-US",
-        }
-        const commands = [
-            {
-                command: ["* complete note"],
-                callback: (note: string) => {
-                    SpeechRecognition.stopListening()
-                    createNote(note)
-                    resetTranscript()
-                    dispatch({type: ActionTypes.SET_CURRENT,payload:parent||"main"}) // Because if this is not right below the main parent, then it should revert to the closest parent
-                },
-                matchInterim: true,
-            },
-        ]
-        const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
-            commands: commands,
-        });
-        const parentPrefix = ((parent && parent !== "main")?parent+".":"")
-        useEffect(() => { // TODO: validate works right
-            if (state.current === parentPrefix+"create note") {
-                SpeechRecognition.startListening(listenArgs)
-            }
-        }, [state.current])
-    } catch (e){
-        console.error("failed to create note dictation component: " + JSON.stringify(e))
-        return null
-    }
-}
-
-// TODO: USE THIS!
-export function CreateTransferDictaphone({submit,deleteLastNote,setDstId,setTransferReason}:{
-    submit:()=>void,
-    deleteLastNote:()=>void,
-    setDstId:(id:string)=>void,
-    setTransferReason:(id:string)=>void,
-}){
-    // Always created in a state that is not listening by default
-    try {
-        const rfidCtx = useRfidReaderContext()
-        const {state, dispatch} = useDictationContext()
-        const listenArgs = {
-            continuous: false,
-            interimResults: false, // TODO: UNSURE IF WE WANT THIS OR NOT
-            language: "en-US",
-        }
-        const commands = [
-            {
-                command: ["scan destination"],
-                callback: () => {
-                    SpeechRecognition.stopListening()
-                    resetTranscript()
-                    ReadTagFunc(rfidCtx.dispatch, undefined, rfidCtx.state.selected)
-                        .then((idRead)=>{
-                            setDstId(idRead) // TODO: validate working
-                            SpeechRecognition.startListening(listenArgs)
-                        })
-                        .catch(e => {
-                            console.error("failed to read linking tag: " + JSON.stringify(e))
-                            SpeechRecognition.startListening(listenArgs)
-                        })
-                },
-                matchInterim: true,
-            },
-            {
-                command: ["* is the transfer reason"], // TODO: EW!
-                callback: (arg:string) => {
-                    SpeechRecognition.stopListening()
-                    resetTranscript()
-                    setTransferReason(arg) // TODO: validate working
-                    SpeechRecognition.startListening(listenArgs)
-                },
-                matchInterim: true,
-            },
-            {
-                command: ["list transfer reason options"], // TODO: EW!
-                callback: () => {
-                    // TODO: THIS!
-                },
-                matchInterim: true,
-            },
-            // TODO: add notes (change to "create transfer.create note" in dictation context)
-            {
-                command: ["delete last note"],
-                callback: () => {
-                    SpeechRecognition.stopListening()
-                    resetTranscript()
-                    deleteLastNote()// TODO: THIS!
-                    SpeechRecognition.startListening(listenArgs)
-                },
-                matchInterim: true,
-            },
-            { // TODO: "with note * submit transfer" ?
-                command: ["submit current transfer"],
-                callback: () => {
-                    SpeechRecognition.stopListening()
-                    resetTranscript()
-                    submit()
-                    dispatch({type: ActionTypes.SET_CURRENT, payload:"main"}) // main is parent of transfer
-                },
-                matchInterim: true,
-            },
-        ]
-        const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
-            commands: commands,
-        });
-        useEffect(() => { // TODO: validate works right
-            if (state.current === "create transfer") {
-                SpeechRecognition.startListening(listenArgs)
-            }
-        }, [state.current])
-    } catch (e){
-        console.error("failed to create transfer dictation component: " + JSON.stringify(e))
-        return null
-    }
-}
 
 // TODO: USE THIS!
 export function MainCollectionInputOrRead({label, onIdSelected, copyText}: {
@@ -589,10 +201,7 @@ export function ListItemsRequest(entryType: string) {
     return fetch(BaseExternalUrl + "/db/list/" + entryType, {
         method: 'Get',
         credentials: 'include',
-        headers: {
-            credentials: 'include',
-            'Accept': 'application/json',
-        },
+        headers: clientPostRequestHeaders,
     }).then((res) => {
         if (!res.ok) {
             throw new Error('response not ok. Status=' + res.status + ', body=' + res.text())
@@ -1006,10 +615,7 @@ export async function getTypeFor(id: string) { // TODO: ensure this works????
     // TODO: USE EXAMPLE ITEMS FOR DEV ENVIRONMENT!
     return await fetch(BaseExternalUrl + "/typeOf/" + id, {
         method: "GET",
-        headers: {
-            credentials: 'include',
-            SessionId: "FIXME!!!", // TODO; THIS
-        },
+        headers: clientPostRequestHeaders,
     }).then(HandleTxtResponse)
         .then((entryType) => {
             return entryType
@@ -1022,10 +628,7 @@ export async function getTypeFor(id: string) { // TODO: ensure this works????
 export async function getPathFor(id: string) { // TODO: ensure this works????
     let resp = await fetch(BaseExternalUrl + "/db/pathFor/" + id, {
         method: "GET",
-        headers: {
-            credentials: 'include',
-            'Content-type': 'application/json'
-        },
+        headers: clientPostRequestHeaders,
     })
     if (!resp.ok) {
         throw "failed to get path for id"
@@ -1033,7 +636,7 @@ export async function getPathFor(id: string) { // TODO: ensure this works????
     return await resp.text()
 }
 
-function webUrl(subPath: string) {
+export function webUrl(subPath: string) {
     return BaseExternalUrl + subPath
 }
 
@@ -1048,6 +651,9 @@ export function viewUrlFor(itemType: string, newId: string) {
 
 export function viewApiUrlFor(itemType: string, id: string) { // TODO: use?
     return apiUrl("/get/" + itemType + "/" + id)
+}
+export function getUrlFor(itemType: string, id: string) { // TODO: use?
+    return viewApiUrlFor(itemType, id)
 }
 
 export function createUrlFor(itemType: string) {
@@ -1157,7 +763,7 @@ export function ImportResponseHandler<T extends Importable>(asserter: TypeAssert
 }
 
 export function MultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void) {
-    SendMultipartRequest2(importUrlFor(typeStr), formData)
+    SendMultipartRequestNew(importApiUrlFor(typeStr), formData)
         .then(ImportResponseHandler(asserter,typeStr, setErr))
 }
 
@@ -1475,9 +1081,9 @@ export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) =>
     return
 }
 
-export function AssertSubRecipeListResult(input: any): asserts input is ListResult<SubstrateRecipeData> {
-    AssertDualListResult<SubstrateRecipeData>(input, AssertSubstrateRecipe)
-}
+// export function AssertSubRecipeListResult(input: any): asserts input is ListResult<SubstrateRecipeData> {
+//     AssertDualListResult<SubstrateRecipeData>(input, AssertSubstrateRecipe)
+// }
 
 export function validatorForAssertion(asserter: ((input: any) => void)) {
     return (inp: any) => {
@@ -1490,3 +1096,446 @@ export function validatorForAssertion(asserter: ((input: any) => void)) {
         }
     }
 }
+
+function assertThenReturn<T>(asserter: TypeAsserter<T>, item: any): T {
+    asserter(item)
+    return item
+}
+
+export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeAsserter<T>): Promise<T> {
+    return fetch(createApiUrlFor(entryType), {
+        method: "POST",
+        headers: clientPostRequestHeaders,
+        body: JSON.stringify(body)
+    })
+        .then(HandleJsonResponse)
+        .then((entry) => {
+            return assertThenReturn(entry, asserter)
+        })
+        //TODO:.catch(e=>throw e);
+}
+
+export function DoCreateRequestMultipart<T>(entryType: string, formData: FormData, asserter: TypeAsserter<T>): Promise<T> {
+    return SendMultipartRequestNew(createApiUrlFor(entryType), formData)
+        .then(HandleJsonResponse)
+        .then((entry) => {
+            return assertThenReturn(entry, asserter)
+        })
+        // TODO: .catch(e=>throw e);
+}
+
+export function DoUpdateRequest<T>(entryType: string, urlId: string, body: any, asserter: TypeAsserter<T>): Promise<T> {
+    return fetch(updateApiUrlFor(entryType, urlId), {
+        method: "POST",
+        headers: clientPostRequestHeaders,
+        body: JSON.stringify(body)
+    }).then(HandleJsonResponse)
+        .then((entry) => {
+            return assertThenReturn(entry, asserter)
+        })
+        // TODO: .catch(e=>throw e);
+}
+export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, formData: FormData, asserter: TypeAsserter<T>): Promise<T> {
+    return SendMultipartRequestNew(updateApiUrlFor(entryType,urlId), formData)
+        .then(HandleJsonResponse)
+        .then((entry) => {
+            return assertThenReturn(entry, asserter)
+        })
+        // TODO: .catch(e=>throw e);
+}
+
+// TODO: DICTAPHONES SHOULD BE USED IN:
+// TODO: creates: anything that needs a sterile environment (LIST)
+// TODO: views: all of them!
+// TODO: consider embedding dictaphones in notes areas for views and creates, and controlling the notes with a context of some sort?
+// export function Dictaphone({createNoteHandler}: { createNoteHandler?: (note: string) => void }) {
+//     // const cmds = ["simon says", "new note"]
+//     const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+//     const [activeCommand, setActiveCommand] = useState<string | undefined>(undefined)
+//     // TODO: const [startedBody, setStartedBody] = useState(false)
+//     const listenArgs = {
+//         continuous: true, // TODO: ok? was false
+//         interimResults: true, // TODO: ok? was false
+//         language: "en-US",
+//     }
+//
+//     // const startBodyListener = ()=>{
+//     //
+//     // }
+//     // const startCommandListener = ()=>{
+//     //
+//     // }
+//     //
+//     // //const fullCmdRegex = new RegExp("(?<=^command )simon says [a-zA-Z0-9 ]+(?= end dictation)")
+//     // //const startDictationString = "command"
+//     // const resetString = "clear dictation"
+//     // const resetDictationRegex = new RegExp(resetString, "g")
+//     // const endBodyString = "end dictation"
+//     // const endDictationRegex = new RegExp("^[a-zA-Z0-9 ]+ "+endBodyString+"$)", "g")
+//     // const bodyCommand = "* "+endBodyString
+//     // const simonSaysRegex = regexForCmd("simon says")
+//     // const cmdRegex = [simonSaysRegex]
+//     // const removePrefix = (str: string, pre: string):string => {
+//     //     str.slice(pre.length);
+//     // }
+//     // const bodyCallback = (command: string, resetTranscript:()=>void):void=>{
+//     //     const body = command.substring(0,command.length-(2+endBodyString.length)) // TODO: ensure length right
+//     //     switch(activeCommand){
+//     //         case undefined:
+//     //             // TODO: ERROR
+//     //     }
+//     // }
+//     // const cmdCallback = (command: string, resetTranscript:()=>void):void => {
+//     //     const commandAndBody = removePrefix(lessEnd, prefixes[0])
+//     //     switch(command){
+//     //         case cmds[0]: //simon says
+//     //             setActiveCommand(cmds[0])
+//     //             break;
+//     //         default:
+//     //     }
+//     //     if (lessEnd.startsWith(prefixes[0])){
+//     //         let body = removePrefix(lessEnd, prefixes[0])
+//     //
+//     //     }
+//     //     resetTranscript()
+//     // }
+//     const commands = [
+//         {
+//             command: ["reset dictation", "clear transcript", "reset transcript"],
+//             callback: () => {
+//                 resetTranscript()
+//                 setActiveCommand(undefined)
+//             },
+//             matchInterim: true,
+//         },
+//         {
+//             command: ["repeat after me", "simon says"],
+//             callback: () => {
+//                 resetTranscript()
+//                 setActiveCommand("repeat after me")
+//             },
+//             matchInterim: true,
+//         },
+//         {
+//             command: [
+//                 "new note",
+//                 "create note",
+//                 "create new note",
+//                 "create a note",
+//                 "create a new note",
+//                 "make note",
+//                 "make a note",
+//                 "make new note",
+//                 "make a new note",
+//
+//             ],
+//             callback: () => {
+//                 resetTranscript()
+//                 setActiveCommand("create note")
+//             },
+//             matchInterim: true,
+//         },
+//     ]
+//     const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
+//         commands: commands,
+//     });
+//     // 3-Second Timeout Logic
+//     useEffect(() => {
+//         // Clear existing timeout each time a new transcript word is detected
+//         if (timeoutRef.current) {
+//             clearTimeout(timeoutRef.current);
+//         }
+//
+//         // Set a new 3-second timer
+//         const currentText = transcript
+//         // TODO: handle 0-length transcripts?
+//         const onTimeout = () => {
+//             switch (activeCommand) {
+//                 case "repeat after me":
+//                     console.log("repeat after me: " + currentText)
+//                     SayString(currentText)
+//                     break;
+//                 // TODO: CREATE PLATE? Bag, Slant, Transfer?
+//                 case "create note":
+//                     // TODO: repeat and ask to save??????
+//                     console.log("created note: " + currentText)
+//                     createNoteHandler && createNoteHandler(currentText)
+//                     break;
+//                 default:
+//                     return
+//                 // TODO: this!
+//             }
+//             setActiveCommand(undefined)
+//             resetTranscript()
+//         }
+//         timeoutRef.current = setTimeout(onTimeout, 3000);
+//
+//         return () => clearTimeout(timeoutRef.current);
+//     }, [transcript, activeCommand]);
+//
+//     if (!browserSupportsSpeechRecognition) {
+//         return <span>{"Browser doesn't support speech recognition."}</span>;
+//     }
+//
+//     return (
+//         <div>
+//             <p>{"Microphone: " + (listening ? 'on' : 'off')}</p>
+//             <button onClick={e => {
+//                 e.stopPropagation();
+//                 SpeechRecognition.startListening(listenArgs)
+//             }}>{"Start"}</button>
+//             <button onClick={e => {
+//                 e.stopPropagation();
+//                 SpeechRecognition.stopListening()
+//             }}>{"Stop"}</button>
+//             <button onClick={e => {
+//                 e.stopPropagation();
+//                 resetTranscript()
+//             }}>Reset
+//             </button>
+//             <p>{transcript}</p>
+//         </div>
+//     );
+// };
+//
+// // TODO: USE ON TFID VIEW PAGES!
+// // TODO: SHOULD ADD WHERE NEEDED
+// // TODO: LIKELY NEEDS MAJOR OVERHAUL
+// export function ViewPageDictaphone({doUpdate}: {
+//     doUpdate: () => void
+// }) {
+//     const rfidRdr = useRfidReaderContext()
+//     const dict = useDictationContext()
+//     // TODO: let readerWriter = state.selected // TODO: or lastReaderUsed???
+//     const listenArgs = {
+//         continuous: true,
+//         interimResults: true,
+//         language: "en-US",
+//     }
+//     const handleViewById = (idToSearch: string) => {
+//         getPathFor(idToSearch).then((path) => {
+//             location.assign(webUrl("/view/" + path))
+//         }).catch((err) => {
+//             console.log("failed to get path for id: " + JSON.stringify(err))
+//             SpeechRecognition.startListening(listenArgs)
+//         })
+//     }
+//     const commands = [
+//         {
+//             command: ["create transfer", "new transfer"],
+//             callback: () => {
+//                 resetTranscript()
+//                 SpeechRecognition.stopListening()
+//                 dict.dispatch({type: ActionTypes.SET_CURRENT,payload:"create transfer"})
+//             },
+//             matchInterim: true,
+//         },
+//         {
+//             command: ["view tag"], // TODO: ok?
+//             callback: () => {
+//                 SpeechRecognition.stopListening()
+//                 resetTranscript()
+//                 ReadTagFunc(rfidRdr.dispatch, undefined, rfidRdr.state.selected)
+//                     .then(handleViewById)// redir to the new page
+//                     .catch(e => {
+//                         console.error("failed to read linking tag: " + JSON.stringify(e))
+//                         SpeechRecognition.startListening(listenArgs)
+//                     })
+//             },
+//             matchInterim: true,
+//         },
+//         {
+//             command: ["submit updates"], // TODO: ok?
+//             callback: () => {
+//                 SpeechRecognition.stopListening()
+//                 resetTranscript()
+//                 doUpdate()
+//                 SpeechRecognition.startListening(listenArgs)
+//             },
+//             matchInterim: true,
+//         },
+//         {
+//             command: [
+//                 "new note",
+//                 "create note",
+//                 "create new note",
+//                 "create a note",
+//                 "create a new note",
+//                 "make note",
+//                 "make a note",
+//                 "make new note",
+//                 "make a new note",
+//                 "add a new note",
+//                 "add new note",
+//                 "add a note",
+//                 "add note",
+//             ],
+//             callback: () => {
+//                 SpeechRecognition.stopListening()
+//                 resetTranscript()
+//                 dict.dispatch({type: ActionTypes.SET_CURRENT,payload:"create note"})
+//             },
+//             matchInterim: true,
+//         },
+//     ]
+//     const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
+//         commands: commands,
+//     });
+//
+//     if (!browserSupportsSpeechRecognition) {
+//         return <span>{"Browser doesn't support speech recognition."}</span>;
+//     }
+//     useEffect(() => { // TODO: validate works right
+//         if (dict.state.current === "main") {
+//             SpeechRecognition.startListening(listenArgs)
+//         }
+//     }, [dict.state.current])
+//
+//     return (
+//         <div>
+//             <button onClick={e => {
+//                 e.stopPropagation();
+//                 SpeechRecognition.startListening(listenArgs)
+//             }}>{"Enable Dictation"}</button>{/* TODO: dictation enablement in cookies? We want to be able to traverse pages without touching the screen*/}
+//             <button onClick={e => {
+//                 e.stopPropagation();
+//                 SpeechRecognition.stopListening()
+//             }}>{"Disable Dictation"}</button>
+//         </div>
+//     );
+// };
+//
+// export function AddNoteDictaphone({parent,createNote}:{parent?:string,createNote:(s:string)=>void}){
+//     // Always created in a state that is not listening by default
+//     try {
+//         const {state, dispatch} = useDictationContext()
+//         const listenArgs = {
+//             continuous: false,
+//             interimResults: false, // TODO: UNSURE IF WE WANT THIS OR NOT
+//             language: "en-US",
+//         }
+//         const commands = [
+//             {
+//                 command: ["* complete note"],
+//                 callback: (note: string) => {
+//                     SpeechRecognition.stopListening()
+//                     createNote(note)
+//                     resetTranscript()
+//                     dispatch({type: ActionTypes.SET_CURRENT,payload:parent||"main"}) // Because if this is not right below the main parent, then it should revert to the closest parent
+//                 },
+//                 matchInterim: true,
+//             },
+//         ]
+//         const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
+//             commands: commands,
+//         });
+//         const parentPrefix = ((parent && parent !== "main")?parent+".":"")
+//         useEffect(() => { // TODO: validate works right
+//             if (state.current === parentPrefix+"create note") {
+//                 SpeechRecognition.startListening(listenArgs)
+//             }
+//         }, [state.current])
+//     } catch (e){
+//         console.error("failed to create note dictation component: " + JSON.stringify(e))
+//         return null
+//     }
+// }
+//
+// // TODO: USE THIS!
+// export function CreateTransferDictaphone({submit,deleteLastNote,setDstId,setTransferReason}:{
+//     submit:()=>void,
+//     deleteLastNote:()=>void,
+//     setDstId:(id:string)=>void,
+//     setTransferReason:(id:string)=>void,
+// }){
+//     // Always created in a state that is not listening by default
+//     try {
+//         const rfidCtx = useRfidReaderContext()
+//         const {state, dispatch} = useDictationContext()
+//         const listenArgs = {
+//             continuous: false,
+//             interimResults: false, // TODO: UNSURE IF WE WANT THIS OR NOT
+//             language: "en-US",
+//         }
+//         const commands = [
+//             {
+//                 command: ["scan destination"],
+//                 callback: () => {
+//                     SpeechRecognition.stopListening()
+//                     resetTranscript()
+//                     ReadTagFunc(rfidCtx.dispatch, undefined, rfidCtx.state.selected)
+//                         .then((idRead)=>{
+//                             setDstId(idRead) // TODO: validate working
+//                             SpeechRecognition.startListening(listenArgs)
+//                         })
+//                         .catch(e => {
+//                             console.error("failed to read linking tag: " + JSON.stringify(e))
+//                             SpeechRecognition.startListening(listenArgs)
+//                         })
+//                 },
+//                 matchInterim: true,
+//             },
+//             {
+//                 command: ["* is the transfer reason"], // TODO: EW!
+//                 callback: (arg:string) => {
+//                     SpeechRecognition.stopListening()
+//                     resetTranscript()
+//                     setTransferReason(arg) // TODO: validate working
+//                     SpeechRecognition.startListening(listenArgs)
+//                 },
+//                 matchInterim: true,
+//             },
+//             {
+//                 command: ["list transfer reason options"], // TODO: EW!
+//                 callback: () => {
+//                     // TODO: THIS!
+//                 },
+//                 matchInterim: true,
+//             },
+//             // TODO: add notes (change to "create transfer.create note" in dictation context)
+//             {
+//                 command: ["delete last note"],
+//                 callback: () => {
+//                     SpeechRecognition.stopListening()
+//                     resetTranscript()
+//                     deleteLastNote()// TODO: THIS!
+//                     SpeechRecognition.startListening(listenArgs)
+//                 },
+//                 matchInterim: true,
+//             },
+//             { // TODO: "with note * submit transfer" ?
+//                 command: ["submit current transfer"],
+//                 callback: () => {
+//                     SpeechRecognition.stopListening()
+//                     resetTranscript()
+//                     submit()
+//                     dispatch({type: ActionTypes.SET_CURRENT, payload:"main"}) // main is parent of transfer
+//                 },
+//                 matchInterim: true,
+//             },
+//         ]
+//         const {transcript, listening, resetTranscript, browserSupportsSpeechRecognition} = useSpeechRecognition({
+//             commands: commands,
+//         });
+//         useEffect(() => { // TODO: validate works right
+//             if (state.current === "create transfer") {
+//                 SpeechRecognition.startListening(listenArgs)
+//             }
+//         }, [state.current])
+//     } catch (e){
+//         console.error("failed to create transfer dictation component: " + JSON.stringify(e))
+//         return null
+//     }
+// }
+
+// export function SayString(toDictate: string) {
+//     DictateString(toDictate)
+// }
+//
+// export function DictateString(toDictate: string) { // TODO: USE!
+//     if ('speechSynthesis' in window) {
+//         window.speechSynthesis.speak(new SpeechSynthesisUtterance(toDictate))
+//     } else {
+//         throw "client speech synthesis not currently available"
+//     }
+// }

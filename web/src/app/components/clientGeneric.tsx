@@ -8,7 +8,6 @@ import {CookiesProvider} from "react-cookie";
 import {GoogleOAuthProvider} from "@react-oauth/google";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {PageTypeContext, PageTypeProvider} from "@/app/components/formSubcomponents/pageTypeContext/pageType";
-import {DictationContextProvider} from "@/app/components/formSubcomponents/dictationContext/dictationContext";
 
 
 export default function PageWrapper(
@@ -34,10 +33,8 @@ export default function PageWrapper(
             <GoogleOAuthProvider clientId={GoogleApiClient}>
                 <QueryClientProvider client={queryClient}>
                     <PageTypeProvider pageType={props.pageType}>
-                        <DictationContextProvider>{/* TODO: ENSURE WORKING FINE!*/}
                             <TopBar/>
                             {children}
-                        </DictationContextProvider>
                     </PageTypeProvider>
                 </QueryClientProvider>
             </GoogleOAuthProvider>

@@ -10,24 +10,31 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {ImageLocationFor} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {
-    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse, ListPageItems, ListPageTable, ListTableColumn,
-    MainCollectionInputOrRead, NewColumn, NewEntryFormWrapper, NumberToDateStr,
+    DisplayInput,
+    DoCreateRequestMultipart, DoUpdateRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    MainCollectionInputOrRead,
+    NewColumn,
+    NewEntryFormWrapper,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey,
-    SendMultipartRequest, updateApiUrlFor
+    OptionalSimpleKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {useQuery} from "@tanstack/react-query";
 import {SelectorFor} from "@/app/components/selector";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {GetTransferReasons} from "@/app/components/formSubcomponents/server";
 // TODO: list not working
@@ -134,23 +141,24 @@ export default function TransferDisplay(
             </div>
         }
         const transferSubmit = () => {
-            fetch(updateApiUrlFor("transfer",initial._id), {
-                method: 'Post',
-                body: JSON.stringify({
-                    notes: notes,
-                    acl: MarshalAcl(acl),
-                }),
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-            })
-                .then(HandleJsonResponse)
-                .then((newEntry) => {
-                    AssertTransfer(newEntry)
-                    updateInitial(newEntry)
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                notes: notes,
+                acl: MarshalAcl(acl),
+            }
+            DoUpdateRequest("transfer",initial._id, body, AssertTransfer)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("transfer",initial._id), {
+            //     method: 'Post',
+            //     body: JSON.stringify(body),
+            //     headers: clientPostRequestHeaders,
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((newEntry) => {
+            //         AssertTransfer(newEntry)
+            //         updateInitial(newEntry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const b58idMain = initial._id
         return <DisplayFormWrapper entryType={"transfer"} id={"transferDisplay"}>
@@ -199,6 +207,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
     const [notes, setNotes] = useState<Note[]>([])
     const [reason, setReason] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const submitNewTransfer = () => {
         if (!idFrom || idFrom === "") {
             setErr("ID From cannot be blank!")
@@ -223,14 +232,17 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, cook
         formData.set('data', JSON.stringify(dataObj))
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
+        DoCreateRequestMultipart("transfer", formData, AssertTransfer)
+            .then(onCreated)
+            .catch(errHandler)
         // Send request
-        SendMultipartRequest(createApiUrlFor("transfer"), cookies, formData)
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertTransfer(newEntry)
-                onCreated && onCreated(newEntry)
-            })
-            .catch(ErrHandler(setErr));
+        // SendMultipartRequest(createApiUrlFor("transfer"), cookies, formData)
+        //     .then(HandleJsonResponse)
+        //     .then((newEntry) => {
+        //         AssertTransfer(newEntry)
+        //         onCreated && onCreated(newEntry)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     const toggleOpen = () => {
         setIsOpen(!isOpen)
@@ -331,13 +343,9 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated, c
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         // Send request
-        SendMultipartRequest(createApiUrlFor("transfer"), cookies, formData)
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                AssertTransfer(newEntry)
-                onCreated && onCreated(newEntry)
-            })
-            .catch(ErrHandler(setErr));
+        DoCreateRequestMultipart("transfer", formData, AssertTransfer)
+            .then(onCreated)
+            .catch(ErrHandler(setErr))
     }
     const toggleOpen = () => {
         setIsOpen(!isOpen)
@@ -499,7 +507,7 @@ export function TransfersOutViewOnlyDisplay(
         headerTxt?: string,
     }) {
     const depth = useContext(DepthContext)
-    const openInNewTab = false
+    const openInNewTab = false // TODO: ???
     if (!transfersOut){
         return null
     }

@@ -26,7 +26,13 @@ import {
     NewColumn,
     NumberToDateStr,
     ListPageTable,
-    ExistingRecentSelector, CreatedLinkFor, ErrHandler, MultipartImportRequest, updateApiUrlFor, createApiUrlFor
+    ExistingRecentSelector,
+    CreatedLinkFor,
+    ErrHandler,
+    MultipartImportRequest,
+    updateApiUrlFor,
+    createApiUrlFor,
+    DoCreateRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -58,7 +64,7 @@ import {
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {redirect} from "next/navigation";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {AssertSpecies, ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewMssForm} from "@/app/components/mssClient";
 import {FruitData, FruitSelectorCloseable} from "@/app/components/fruitServer";
@@ -66,7 +72,7 @@ import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {MssData} from "@/app/components/mssServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertPlate} from "@/app/components/plateClient";
@@ -217,7 +223,7 @@ export default function SporePrintDisplay(
         }
         const submit = ()=>{
             // sale disposed, project, pics, notes
-            let body = new FormData()
+            let formData = new FormData()
             let dataObj:any={
                 color: color,
                 density: density,
@@ -232,23 +238,28 @@ export default function SporePrintDisplay(
                 let newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
-                setFormImages(body, "newPic", newImages)
+                setFormData(formData, dataObj)
+                setFormImages(formData, "newPic", newImages)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
 
-            SendMultipartRequest(updateApiUrlFor("sporePrint",data._id), cookies, body)
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSporePrint(entry)
-                    updateInitial(entry)
-                })
-                .catch(ErrHandler(setErr));
+            DoUpdateMultipartRequest("sporePrint",data._id, formData, AssertSporePrint)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+
+            // SendMultipartRequest(updateApiUrlFor("sporePrint",data._id), cookies, formData)
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertSporePrint(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: test heavily for all
+            // TODO: print transfer to agar?
             // TODO: Chain spore print (do not allow after too long) ---------------------------- TODO!!!!
             {
                 txt: "Create Spore Swab",
@@ -276,12 +287,12 @@ export default function SporePrintDisplay(
                 },
             },
             WriteRfidOvcArea(initial._id),
-            // TODO: TRANSFERS SKIPPING SWABS/SYRINGES!
+            // TODO: TRANSFERS SKIPPING SWABS/SYRINGES?! Probably not...
         ]
         return <DisplayFormWrapper entryType={"sporePrint"}>
             <ErrorDisplay err={err} headerLevel={headerLevel} />
             <ID id={data._id} txt={"Spore Print"} entryType={"sporePrint"}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: is this position ok???? */}{/* TODO: OR TRI??? where to put? Chain print, swab from print, print transfer to agar*/}
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <MostRecentImageDisplay data={data.mostRecentImage} headerLevel={headerLevel}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -335,6 +346,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
     // Spore prints don't have rfid tags, although they have MainCollectionIDs
     const [err, setErr] = useState<string | undefined>(undefined)
     //const [perms, setPerms] = useState<EntryPerms | undefined>()
+    const errHandler = ErrHandler(setErr)
     const createEntry = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(!fruit){
@@ -346,7 +358,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
             setErr("Must at least contain one picture")
             return
         }
-        let body = new FormData()
+        let formData = new FormData()
         let dataObj:any = {
             notes:notes,
             fruitId:fruit._id,
@@ -357,7 +369,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
                 return n.data
             })}})
         // Perms
-        setFormData(body, dataObj)
+        setFormData(formData, dataObj)
         for (let i = 0; i < pics.length; i++) {
             let toSend = pics[i]
             if (toSend.img === undefined) {
@@ -365,16 +377,19 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
                 return
             }
             const fileName = "newPic" + "-" + i
-            body.set(fileName, toSend.img, fileName)
+            formData.set(fileName, toSend.img, fileName)
         }
+        DoCreateRequestMultipart("sporePrint", formData, AssertSporePrint)
+            .then(onCreate)
+            .catch(errHandler)
 
-        SendMultipartRequest(createApiUrlFor("sporePrint"), cookies, body)
-            .then(HandleJsonResponse)
-            .then((resJson)=>{
-                AssertSporePrint(resJson)
-                onCreate(resJson)
-            })
-            .catch(ErrHandler(setErr));
+        // SendMultipartRequest(createApiUrlFor("sporePrint"), cookies, formData)
+        //     .then(HandleJsonResponse)
+        //     .then((resJson)=>{
+        //         AssertSporePrint(resJson)
+        //         onCreate(resJson)
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     if(fruitIn===undefined){
         // TODO: FRUIT SELECTOR!?

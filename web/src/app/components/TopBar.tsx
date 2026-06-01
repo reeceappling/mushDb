@@ -13,8 +13,7 @@ import Button from "@mui/material/Button"
 import Menu from "@mui/material/Menu"
 import MenuItem from "@mui/material/MenuItem"
 import TextBox from "@/app/components/formSubcomponents/textbox";
-import {getPathFor} from "@/app/components/common";
-import {BaseExternalUrl} from "@/app/components/Constants";
+import {getPathFor, webUrl} from "@/app/components/common";
 
 
 const buttonProps = {
@@ -219,7 +218,7 @@ export function TopBarViewMenu() {
     }
     const handleViewById = () => {
         getPathFor(id).then((path) => {
-            location.assign(BaseExternalUrl + "/view/" + path)
+            location.assign(webUrl("/view/" + path))
         }).catch((err) => {
             // TODO: handle the error!
             console.log("failed to get path for id: "+JSON.stringify(err))

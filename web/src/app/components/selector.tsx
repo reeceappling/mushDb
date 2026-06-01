@@ -2,7 +2,7 @@
 import {JSX, useEffect, useState} from "react";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {HandleJsonResponse, InlineProps} from "@/app/components/common";
+import {createUrlFor, HandleJsonResponse, InlineProps} from "@/app/components/common";
 import {TestAgarBatchOk} from "@/app/components/agarBatchServer";
 import {TestFruitOK} from "@/app/components/fruitServer";
 import {TestJarOK} from "@/app/components/jarServer";
@@ -159,11 +159,7 @@ export function SelectorResetsOnSelectForCustom<T>(
 //         return
 //         fetch(BaseExternalUrl + "/db/recent/" + props.recentEndpt, { // TODO: ensure correct
 //             method: "GET",
-//             headers: {
-//                 credentials: 'include',
-//                 //'Cookie': cookies,
-//                 // TODO: THIS!
-//             },
+//             headers: clientPostRequestHeaders,
 //         }).then(HandleJsonResponse)
 //             .then((data) => {
 //                 Array.isArray(data) && data.every(props.assertType)
@@ -323,7 +319,7 @@ export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISS
     const openCreateNew = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!props.creatorInPage) {
-            window.open(BaseExternalUrl + "/new/" + props.createEndpt, '_blank', 'noopener'); // TODO: ensure ok
+            window.open(createUrlFor(props.createEndpt||"unknown"), '_blank', 'noopener'); // TODO: ensure ok
             return
         }
         setOpen(false)
@@ -408,11 +404,7 @@ export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISS
 //             return
 //             fetch(BaseExternalUrl+"/db/recent/"+recentEndpt, { // TODO: ensure correct
 //                 method: "GET",
-//                 headers: {
-//                 credentials: 'include',
-//                 'Cookie': cookies,
-//                     // TODO: THIS!
-//                 },
+//                 headers: clientPostRequestHeaders,
 //             })
 //                 .then(HandleJsonResponse)
 //                 .then((data) => {

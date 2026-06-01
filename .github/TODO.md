@@ -29,6 +29,9 @@
     - [ ] SECURITY
     - [ ] SUPPORT
     - [ ] .github/workflows
+- [ ] CORS
+  - [ ] In go, fix and utilize enableCors function
+  - [ ] https://blog.logrocket.com/using-cors-next-js-handle-cross-origin-requests/ 
 
 # In Progress
 ## Actively Working On

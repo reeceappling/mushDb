@@ -17,7 +17,7 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {
     createApiUrlFor,
     dataFor, DisplayFormWrapper,
-    DisplayInput, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
@@ -43,6 +43,8 @@ import {JarData} from "@/app/components/jarServer";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
+import {AssertMss} from "@/app/components/mssClient";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -98,23 +100,27 @@ export default function PcRunDisplay(
             setAcl(updated.acl)
         }
         const pcRunUpdate = () => {
-            fetch(updateApiUrlFor("pcRun",data._id), {
-                method: 'Post',
-                body: JSON.stringify({
-                    notes: notes,
-                    acl: MarshalAcl(acl),
-                }),
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertPcRun(entry)
-                    updateInitial(entry)
-                })
-                .catch(ErrHandler(setErr));
+            const body: any = {
+                notes: notes,
+                acl: MarshalAcl(acl),
+            }
+            DoUpdateRequest("pcRun",initial._id, body, AssertPcRun)
+                .then(updateInitial)
+                .catch(ErrHandler(setErr))
+            // fetch(updateApiUrlFor("pcRun",data._id), {
+            //     method: 'Post',
+            //     body: JSON.stringify({
+            //         notes: notes,
+            //         acl: MarshalAcl(acl),
+            //     }),
+            //     headers: clientPostRequestHeaders,
+            // })
+            //     .then(HandleJsonResponse)
+            //     .then((entry) => {
+            //         AssertPcRun(entry)
+            //         updateInitial(entry)
+            //     })
+            //     .catch(ErrHandler(setErr));
         }
         const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
             return <EntryLink props={{displayedId: linkText, linkId: linkId, entryType: typ}}>
@@ -253,24 +259,29 @@ export function NewPcRunForm(
     const [runTime, setRunTime] = useState("")
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
+    const errHandler = ErrHandler(setErr)
     const newPcRunSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
-        let body = {creationDate: date, runTime: runTime, notes: notes}
-        fetch(createApiUrlFor("pcRun"), {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify(body),
-        })
-            .then(HandleJsonResponse)
-            .then((newItem) => {
-                AssertPcRun(newItem)
-                handlers.onCreate && handlers.onCreate(newItem)
-            })
-            .catch(setErr);
+        let body = {
+            creationDate: date,
+            runTime: runTime,
+            notes: notes,
+        }
+        DoCreateRequest("pcRun", body, AssertPcRun)
+            .then(handlers?.onCreate)
+            .catch(errHandler)
+        // fetch(createApiUrlFor("pcRun"), {
+        //     method: "POST",
+        //     headers: clientPostRequestHeaders,
+        //     body: JSON.stringify(body),
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newItem) => {
+        //         AssertPcRun(newItem)
+        //         handlers.onCreate && handlers.onCreate(newItem)
+        //     })
+        //     .catch(setErr);
     }
     return (
         <NewEntryFormWrapper entryType={"pcRun"}>
