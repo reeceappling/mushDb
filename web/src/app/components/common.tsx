@@ -2,7 +2,7 @@
 
 import {defaultHeaderLevel} from "@/app/components/formSubcomponents/utils/headers";
 import * as React from "react";
-import {JSX, ReactNode, SetStateAction, SyntheticEvent, useContext, useEffect, useRef, useState} from "react";
+import {JSX, ReactNode, SetStateAction, SyntheticEvent, useContext, useEffect, useState} from "react";
 import {
     Contamination,
     ContaminationForm,

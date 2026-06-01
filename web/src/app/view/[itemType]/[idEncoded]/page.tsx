@@ -1,5 +1,5 @@
-import {BaseExternalUrl, BaseInternalUrl} from "@/app/components/Constants";
 import React from "react";
+import {BaseExternalUrl} from "@/app/components/Constants";
 import {GetReaderWriterNames} from "@/app/components/serverActions";
 import PageWrapper from "@/app/components/clientGeneric";
 import {cookies} from 'next/headers'
@@ -17,7 +17,6 @@ export default async function Page({
     const {itemType, idEncoded} = await params
     const cookieStore = await cookies()
     const session = cookieStore.get('_gothic_session')
-    // TODO: probably get rid of allCookies later
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
 
 
@@ -29,7 +28,7 @@ export default async function Page({
                 headers: {
                     'Accept': 'application/json',
                     //'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: ENSURE OK! maybe "*"?
-                    'Cookie': allCookies, // TODO: may be REQUIRED... try without before removing!
+                    'Cookie': allCookies, // REQUIRED
                     // TODO: set Origin header to web? or should this be BaseExternalUrl?
                 },
             }).then((res) => {
