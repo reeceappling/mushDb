@@ -198,7 +198,7 @@ export default function AgarBatchDisplay(
     }
 }
 
-// TODO: NOT WORKING IN SELECTOR!
+// TODO: NOT WORKING IN SELECTOR! Also not working on agar recipe page!
 export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     handlers: NewEntryInput<AgarBatchData>,
     agarRecipeIn?: AgarRecipeData,
@@ -210,7 +210,6 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     const [color, setColor] = useState<AgarColor>(defaultColor)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    const errHandler = ErrHandler(setErr)
     const cookies = useContext(CookiesContext)
     const newAgarBatchSubmit = () => {
         // pcRun, recipe must exist
@@ -229,8 +228,14 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             notes: notes,
         }
         DoCreateRequest("agarBatch", body, AssertAgarBatch, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
+            .then(v=>{ // TODO: test and collapse this down?
+                console.log("Trying to create using "+JSON.stringify(v))
+                handlers.onCreate && handlers.onCreate(v)
+            }) // TODO: used to be handlers?.onCreate and not working! Make this work!
+            .catch(e=>{
+                console.error(JSON.stringify(e))
+                setErr(JSON.stringify(e))
+            })
         // fetch(createApiUrlFor("agarBatch"), {
         //     method: 'Post',
         //     body: JSON.stringify(body),
@@ -280,11 +285,11 @@ export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: AgarBatchData)=>{
             return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
-                <button className={"basicButtonSmall"} onClick={e=>e.preventDefault()/* TODO: unsure if preventDefault ok*/}>{"View"}</button>
+                <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new AgarBatchData(v)}}/>
 }
 
 export function AgarBatchArea({agarBatchId, headerLevel, offset}: {
@@ -342,7 +347,7 @@ export function AgarBatchSelectorTable({data, onClick, withLink}: ListPageItems<
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new AgarBatchData(v)}}/>
 }
 
 export function AgarBatchSelector(

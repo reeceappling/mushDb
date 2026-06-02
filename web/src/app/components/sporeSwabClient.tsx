@@ -60,6 +60,7 @@ import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterB
 import {OnViewCreatorsTriColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
 import {AssertSporePrint} from "@/app/components/sporePrintClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -326,7 +327,7 @@ export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SporeSwab(v)}}/>
 }
 export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwab>) {
     return <SporeSwabListPageTable data={data} onClick={onClick} withLink={true} />

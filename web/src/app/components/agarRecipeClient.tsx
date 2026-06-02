@@ -194,10 +194,11 @@ export default function AgarRecipeDisplay(
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewAgarBatchForm agarRecipeIn={data} handlers={{
                         onCreate: (newItem: AgarBatchData) => {
+                            // TODO: THIS IS NOT WORKING!!!!
                             return onCreate([{
                                 typeText: "Agar Batch",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"agarBatch"}/>
-                            }], false)
+                            }], true)
                         },
                         isTopLevel: false,
                     }}/>
@@ -473,7 +474,7 @@ export function AgarRecipeListPageTable({data, onClick, withLink}: ListPageItems
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new AgarRecipeData(v)}}/>
 }
 
 export function AgarRecipeSelectorTable({data, onClick, withLink}: ListPageItems<AgarRecipeData>) {
@@ -489,5 +490,5 @@ export function AgarRecipeSelectorTable({data, onClick, withLink}: ListPageItems
             return <ViewInNewTabButton entry={v}/>
         })]
     }
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new AgarRecipeData(v)}}/>
 }

@@ -31,6 +31,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
 import {AssertStasisTube} from "@/app/components/stasisTubeClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
@@ -313,7 +314,7 @@ export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SubspeciesData(v)}}/>
 }
 export function SubspeciesSelectorTable({data, onClick}: ListPageItems<SubspeciesData>) {
     return <SubspeciesListPageTable data={data} onClick={onClick} withLink={true} />

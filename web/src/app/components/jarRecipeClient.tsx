@@ -52,6 +52,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertJar} from "@/app/components/jarClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -433,7 +434,7 @@ export function JarRecipeListPageTable({data, onClick, withLink}: ListPageItems<
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new JarRecipeData(v)}}/>
 }
 
 export function JarRecipeSelectorTable({data, onClick}: ListPageItems<JarRecipeData>) {
@@ -450,7 +451,7 @@ export function JarRecipeSelectorTable({data, onClick}: ListPageItems<JarRecipeD
         })
         // TODO: bonus area for notes???
     ]
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new JarRecipeData(v)}}/>
 }
 
 export function JarRecipeSelector(

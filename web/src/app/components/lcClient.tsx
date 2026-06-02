@@ -95,6 +95,7 @@ import {AssertJar} from "@/app/components/jarClient";
 import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -462,7 +463,7 @@ export function LcListPageTable({data, onClick, withLink}: ListPageItems<LcData>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcData(v)}}/>
 }
 
 export function LcSelectorTable({data, onClick}: ListPageItems<LcData>) {
@@ -483,7 +484,7 @@ export function LcSelectorTable({data, onClick}: ListPageItems<LcData>) {
             </EntryLinkWrapper>
         })
     ]
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcData(v)}}/>
 }
 
 export function LcSelector(

@@ -40,6 +40,7 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
     if (typeof input !== 'object') {
@@ -303,7 +304,7 @@ export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageI
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SubstrateBatchData(v)}}/>
 }
 
 export function SubstrateBatchSelectorTable({data, onClick}: ListPageItems<SubstrateBatchData>) {

@@ -35,12 +35,12 @@ func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 		println("making ID 1!")
 		return utils.Pointer(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....
 	}
-	var out MainCollectionId
-	idBytes := []byte(id)
-	if len(idBytes) == 8 { // TODO: unsure if base58 bytes should ever be len 8 in this case... Will likely cause bugs since we shouldnt be expecting base2 to come in from anywhere except the db...
-		out = MainCollectionId(idBytes)
-		return &out, nil
-	}
+	//var out MainCollectionId
+	//idBytes := []byte(id)
+	//if len(idBytes) == 8 { // TODO: unsure if base58 bytes should ever be len 8 in this case... Will likely cause bugs since we shouldnt be expecting base2 to come in from anywhere except the db...
+	//	out = MainCollectionId(idBytes)
+	//	return &out, nil
+	//}
 	println("ID BYTES NOT LENGTH 8! CONVERTING!")
 	realId, err := Base58Str(id).toMainCollectionId()
 	if err != nil {
@@ -51,14 +51,14 @@ func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 }
 
 func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
-	var out AlternateCollectionId
-	idBytes := []byte(id)
-	if len(idBytes) == 12 { // TODO: unsure if base58 bytes should ever be len 12 in this case...
-		out = [12]byte(idBytes)
-		return &out, nil
-	}
+	//idBytes := []byte(id)
+	//var out AlternateCollectionId
+	//if len(idBytes) == 12 { // TODO: unsure if base58 bytes should ever be len 12 in this case...
+	//	out = [12]byte(idBytes)
+	//	return &out, nil
+	//}
 	println("ID BYTES NOT LENGTH 12! CONVERTING!")
-	realId, err := Base58Str(idBytes).toAltCollectionId()
+	realId, err := Base58Str(id).toAltCollectionId()
 	if err != nil {
 		return nil, err
 	}

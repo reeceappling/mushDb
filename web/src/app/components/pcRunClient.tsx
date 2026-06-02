@@ -43,6 +43,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
 import {AssertMss} from "@/app/components/mssClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -336,7 +337,7 @@ export function PcRunListPageTable({data, onClick, withLink}: ListPageItems<PcRu
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new PcRunData(v)}}/>
 }
 
 export function PcRunSelectorTable({data, onClick}: ListPageItems<PcRunData>) {

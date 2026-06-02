@@ -87,6 +87,7 @@ import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
@@ -573,7 +574,7 @@ export function FruitingChamberListPageTable({data, onClick, withLink}: ListPage
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new FruitingChamberData(v)}}/>
 }
 
 export function FruitingChamberSelectorTable({data, onClick}: ListPageItems<FruitingChamberData>) {

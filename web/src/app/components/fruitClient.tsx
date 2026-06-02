@@ -75,6 +75,7 @@ import {OnViewCreatorsQuadColArea, OvcForXfers} from "@/app/components/formSubco
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -488,7 +489,7 @@ export function FruitListPageTable({data, onClick, withLink}: ListPageItems<Frui
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new FruitData(v)}}/>
 }
 export function FruitSelectorTable({data, onClick}: ListPageItems<FruitData>) {
     return <FruitListPageTable data={data} onClick={onClick} withLink={true}/>

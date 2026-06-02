@@ -44,6 +44,7 @@ import {AssertPlate} from "@/app/components/plateClient";
 import {AssertJar} from "@/app/components/jarClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertPlugs(input: any): asserts input is PlugsJar {
     if (typeof input !== 'object') {
@@ -405,7 +406,7 @@ export function PlugsListPageTable({data, onClick, withLink}: ListPageItems<Plug
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new PlugsJar(v)}}/>
 }
 
 export function PlugsSelectorTable({data, onClick}: ListPageItems<PlugsJar>) {

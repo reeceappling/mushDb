@@ -279,12 +279,21 @@ export default function CloseableSelector<T extends Entry>({props}: { // TODO: F
     const [selected, setSelected] = useState<T | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const [creatorOpen, setCreatorOpen] = useState(false)
+    // TODO: handle making closeable using escape key!
+    // useEffect(() => {
+    //     const handleKeyDown = (event: KeyboardEvent) => {
+    //         if (event.key === "Escape") {
+    //             setOpen(false); // Trigger your close logic here
+    //         }
+    //     };
+    //     document.addEventListener("keydown", handleKeyDown);
+    //     return () => {
+    //         document.removeEventListener("keydown", handleKeyDown);
+    //     };
+    // }, []);
 
     const toggleOpen = () => {
         setOpen(!open)
-    }
-    const deselect = () => { // TODO: USE THIS!
-
     }
     const closeButton = <button className={"basicButton"} onClick={() => {
         toggleOpen();
@@ -341,7 +350,7 @@ export default function CloseableSelector<T extends Entry>({props}: { // TODO: F
                 {selected && <div>{selected.getId()}</div>}
                 <button className={"basicButton"}
                         onClick={toggleOpen}>{"Select a " + (selected ? "different" : "") + " " + props.lowercase}</button>
-                {deselectButton}
+                {selected && deselectButton}
             </div>
         </div>
     }
@@ -351,7 +360,7 @@ export default function CloseableSelector<T extends Entry>({props}: { // TODO: F
         {closeButton}
         {props.createSelector(selectItem)}
         {pre}
-        {deselectButton}{closeButton}
+        {closeButton}{selected && deselectButton}
     </div>
 }
 

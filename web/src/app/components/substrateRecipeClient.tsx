@@ -38,6 +38,7 @@ import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -288,7 +289,7 @@ export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPage
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable className={"text-m"} cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable className={"text-m"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new SubstrateRecipeData(v)}}/>
 }
 
 export function SubstrateRecipeSelectorTable({data, onClick}: ListPageItems<SubstrateRecipeData>) {

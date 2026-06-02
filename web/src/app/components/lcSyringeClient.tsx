@@ -44,6 +44,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {AssertLcRecipe} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringe {
     if (typeof input !== 'object') {
@@ -343,7 +344,7 @@ export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcSyringe(v)}}/>
 }
 export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringe>) {
     return <LcSyringeListPageTable data={data} onClick={onClick} withLink={true} />

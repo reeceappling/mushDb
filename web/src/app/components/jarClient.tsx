@@ -92,6 +92,7 @@ import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
 import {AssertGrainBatch} from "@/app/components/grainBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -508,7 +509,7 @@ export function JarListPageTable({data, onClick, withLink}: ListPageItems<JarDat
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new JarData(v)}}/>
 }
 
 export function JarSelectorTable({data, onClick}: ListPageItems<JarData>) {

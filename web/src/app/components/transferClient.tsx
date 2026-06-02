@@ -38,6 +38,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {GetTransferReasons} from "@/app/components/formSubcomponents/server";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -590,7 +591,7 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new TransferData(v)}}/>
 }
 
 export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<TransferData>) {
@@ -618,7 +619,7 @@ export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<T
             </EntryLinkWrapper>
         })
     ]
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new TransferData(v)}}/>
 }
 
 // TODO: likely will not be used. Consider delete

@@ -56,6 +56,7 @@ import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -320,7 +321,7 @@ export function MssListPageTable({data, onClick, withLink}: ListPageItems<MssDat
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new MssData(v)}}/>
 }
 
 export function MssSelectorTable({data, onClick}: ListPageItems<MssData>) {

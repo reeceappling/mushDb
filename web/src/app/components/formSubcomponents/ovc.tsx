@@ -11,7 +11,6 @@ import {TransferData} from "@/app/components/transferServer";
 import {NewTransferArea} from "@/app/components/transferClient";
 import {CreatedLinkFor, Subform, viewUrlFor} from "@/app/components/common";
 import {JSX, useState} from "react";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 
@@ -189,7 +188,7 @@ export function OnViewCreatorsQuadColArea({OnViewCreators, readonly}: {
     const [created, setCreated] = useState<CreatedLinkQuadCol[]>([]);
     const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
     const addCreated: AddCreatedQuadColFunction = (newLinks: CreatedLinkQuadCol[], closeAfter:boolean) => {
-        setCreated(created.concat(newLinks))
+        setCreated(created.concat(newLinks)) // TODO: structuredClone not working here
         if (closeAfter) {
             setActiveTab(undefined)
         }
@@ -239,7 +238,7 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
     const [created, setCreated] = useState<CreatedLinkTriCol[]>([]);
     const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
     const addCreated = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => {
-        setCreated(created.concat(newLinks))
+        setCreated(created.concat(newLinks)) // TODO: structuredClone not working here
         if (closeAfter) {
             setActiveTab(undefined)
         }

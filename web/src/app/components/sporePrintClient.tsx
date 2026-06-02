@@ -76,6 +76,7 @@ import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterB
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertPlate} from "@/app/components/plateClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -424,7 +425,7 @@ export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SporePrintData(v)}}/>
 }
 export function SporePrintSelectorTable({data, onClick}: ListPageItems<SporePrintData>) {
     return <SporePrintListPageTable data={data} onClick={onClick} withLink={true} />

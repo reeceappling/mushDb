@@ -52,6 +52,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -376,7 +377,7 @@ export function LcRecipeListPageTable({data, onClick, withLink}: ListPageItems<L
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcRecipeData(v)}}/>
 }
 
 export function LcRecipeSelectorTable({data, onClick}: ListPageItems<LcRecipeData>) {
@@ -392,7 +393,7 @@ export function LcRecipeSelectorTable({data, onClick}: ListPageItems<LcRecipeDat
             </EntryLinkWrapper>
         })
     ]
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcRecipeData(v)}}/>
 }
 
 export function LcRecipeSelector(

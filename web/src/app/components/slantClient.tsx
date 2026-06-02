@@ -77,6 +77,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {AssertPlate} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -392,7 +393,7 @@ export function SlantListPageTable({data, onClick, withLink}: ListPageItems<Slan
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SlantData(v)}}/>
 }
 export function SlantSelectorTable({data, onClick}: ListPageItems<SlantData>) {
     return <SlantListPageTable data={data} onClick={onClick} withLink={true} />

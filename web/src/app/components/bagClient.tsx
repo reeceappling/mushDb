@@ -89,6 +89,7 @@ import {AssertSlant} from "@/app/components/slantClient";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -529,7 +530,7 @@ export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagDat
         })]
     }
     // TODO: expansion for everything else????
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new BagData(v)}}/>
 }
 
 export function BagSelectorTable({data, onClick}: ListPageItems<BagData>) {

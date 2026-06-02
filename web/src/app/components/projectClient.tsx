@@ -31,6 +31,7 @@ import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericIn
 import {AssertPlugs} from "@/app/components/plugsClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -604,7 +605,7 @@ export function ProjectListPageTable({data, onClick, withLink}: ListPageItems<Pr
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new ProjectData(v)}}/>
 }
 
 export function ProjectSelectorTable({data, onClick}: ListPageItems<ProjectData>) {

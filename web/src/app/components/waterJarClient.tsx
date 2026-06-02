@@ -40,6 +40,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {AssertUser} from "@/app/components/userClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -227,7 +228,7 @@ export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<W
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new WaterJarData(v)}}/>
 }
 export function WaterJarSelectorTable({data, onClick}: ListPageItems<WaterJarData>) {
     let cols: ListTableColumn<WaterJarData>[] = [
@@ -247,7 +248,7 @@ export function WaterJarSelectorTable({data, onClick}: ListPageItems<WaterJarDat
             </EntryLinkWrapper>
         })
     ]
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new WaterJarData(v)}}/>
 }
 
 export function WaterJarSelector(

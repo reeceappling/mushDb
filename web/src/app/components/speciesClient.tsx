@@ -51,6 +51,7 @@ import {AssertSlant} from "@/app/components/slantClient";
 import {AssertProject} from "@/app/components/projectClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 // TODO: list page not working
 
@@ -413,7 +414,7 @@ export function SpeciesListPageTable({data, onClick, withLink}: ListPageItems<Sp
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SpeciesData(v)}}/>
 }
 export function SpeciesSelectorTable({data, onClick}: ListPageItems<SpeciesData>) {
     return <SpeciesListPageTable data={data} onClick={onClick} withLink={true} />

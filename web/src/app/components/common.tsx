@@ -811,11 +811,12 @@ export function NewColumn<T>(key:string,f:(v:T)=>any):ListTableColumn<T> {
     return {key:key,f:f}
 }
 
-export function ListPageTable<T>({data, onClick, cols,className}: {
+export function ListPageTable<T extends Entry>({data, onClick, cols,className, newClass}: {
     data: T[],
     onClick?: (v: T) => void,
     cols: ListTableColumn<T>[],
     className?: string,
+    newClass: (inp: any)=>T,
     // TODO: give this a reload button????
 }){
     return <table className={"listPageTable"}>
@@ -824,7 +825,7 @@ export function ListPageTable<T>({data, onClick, cols,className}: {
                 return <th className="text-left" key={i} >{col.key}</th>
             })}
         </tr>
-        {data.map((item,i) => {
+        {data.map(newClass).map((item,i) => {
             return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
                 {cols.map((col,i)=>{
                     return <td className="text-left" key={i}>{col.f(item)}</td>
@@ -856,11 +857,11 @@ export function ExistingDualSelector<T>(props: React.PropsWithChildren<{
             setLoaded(true)
             return
         } catch (e) {
-            console.error(e)
+            console.error(JSON.stringify(e))
             throw e
         }
     }).catch(e => {
-        console.error(e)
+        console.error(JSON.stringify(e))
         setErr("error on listItems request: " + JSON.stringify(e))
     })},[])
     if (!loaded || data === undefined) {
@@ -896,7 +897,7 @@ export function SelectorCreationArea(props:React.PropsWithChildren<{}>){
     </>
 }
 
-export function ExistingRecentSelector<T>(props: React.PropsWithChildren<{
+export function ExistingRecentSelector<T extends Entry>(props: React.PropsWithChildren<{
     doSelect: (val?: T) => void,
     table: (items: T[],onSelect: (v?: T)=>void) => JSX.Element,
     entryType:string,
@@ -1109,17 +1110,23 @@ export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeA
         headers: {...clientPostRequestHeaders, 'Cookie': cookies},
         body: JSON.stringify(body)
     })
-        .then(HandleJsonResponse)
-        .then((entry) => {
-            return assertThenReturn(entry, asserter)
+        .then((v:Response):any=>{
+            console.log("HANDLING JSON RESPONSE")
+            return HandleJsonResponse(v)
         })
-        //TODO:.catch(e=>throw e);
+        .then((entry:any):T => {
+            console.log("ASSERTING THEN RETURNING")
+            asserter(entry)
+            return entry
+            // TODO: this is not returning the way I want it to...
+        })
+        .catch((e)=> {throw e});
 }
 
 export function DoCreateRequestMultipart<T>(entryType: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
     return SendMultipartRequest(createApiUrlFor(entryType), formData, cookies)
         .then(HandleJsonResponse)
-        .then((entry) => {
+        .then((entry):T => {
             return assertThenReturn(entry, asserter)
         })
         // TODO: .catch(e=>throw e);

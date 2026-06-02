@@ -39,6 +39,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -289,7 +290,7 @@ export function SaleListPageTable({data, onClick, withLink}: ListPageItems<SaleD
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SaleData(v)}}/>
 }
 
 export function SaleSelectorTable({data, onClick}: ListPageItems<SaleData>) {

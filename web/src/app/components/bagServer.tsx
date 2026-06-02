@@ -4,8 +4,6 @@ import {Contamination} from "@/app/components/formSubcomponents/contaminations";
 import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {AgarBatchSelector, NewAgarBatchForm} from "@/app/components/agarBatchClient";
-import {AgarBatchData, ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {BagSelector, NewBagForm} from "@/app/components/bagClient";
 
 export function TestBagOk(){ // TODO: DELETEME? // TODO: FIXME!
