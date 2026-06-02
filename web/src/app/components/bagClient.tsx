@@ -523,7 +523,7 @@ export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagDat
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: BagData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "bag", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

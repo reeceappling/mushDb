@@ -177,7 +177,6 @@ export default function FruitDisplay(
         //             const b58id = spid
         //             return <div key={b58id}>
         //                 <EntryLink props={{
-        //                     displayedId: b58id,
         //                     linkId: b58id,
         //                     entryType: "sporePrint",
         //                     openInNewTab: openSporesInNewTab
@@ -484,7 +483,7 @@ export function FruitListPageTable({data, onClick, withLink}: ListPageItems<Frui
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: FruitData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"fruit",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

@@ -457,7 +457,7 @@ export function LcListPageTable({data, onClick, withLink}: ListPageItems<LcData>
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "lc", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -478,7 +478,7 @@ export function LcSelectorTable({data, onClick}: ListPageItems<LcData>) {
             return NumberToDateStr(v.lastUpdated)
         }),
         NewColumn("Link", (v: LcData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "lc", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })

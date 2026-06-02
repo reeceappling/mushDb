@@ -394,11 +394,7 @@ export const AgarRecipeArea = ({agarRecipeBinId}: { agarRecipeBinId?: string }) 
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (agarRecipeBinId !== undefined) {
         const displayId = agarRecipeBinId
-        linkArea = <EntryLink
-            props={{displayedId: displayId, linkId: displayId, entryType: "agarRecipe"}}> {/* TODO: DISPLAY NAME? */}
-            <div>{displayId}</div>
-            {/* TODO: NAME? */}
-        </EntryLink>
+        linkArea = <EntryLink props={{displayId: displayId, linkId: displayId, entryType: "agarRecipe"}}/> // TODO: DISPLAY NAME?
     }
     return <div className={"agarRecipeArea"}>
         <div>{"Agar Recipe ID: "}</div>
@@ -472,7 +468,7 @@ export function AgarRecipeListPageTable({data, onClick, withLink}: ListPageItems
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: AgarRecipeData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "agarRecipe", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -490,7 +486,7 @@ export function AgarRecipeSelectorTable({data, onClick, withLink}: ListPageItems
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: AgarRecipeData) => {
-            return <ViewInNewTabButton entryType={"agarRecipe"} id={v._id}/>
+            return <ViewInNewTabButton entry={v}/>
         })]
     }
     return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick}/>

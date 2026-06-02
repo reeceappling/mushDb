@@ -222,7 +222,7 @@ export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<W
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: WaterJarData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"waterJar",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -242,7 +242,7 @@ export function WaterJarSelectorTable({data, onClick}: ListPageItems<WaterJarDat
             return v.disposed?NumberToDateStr(v.disposed):""
         }),
         NewColumn("Link", (v: WaterJarData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"waterJar",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })

@@ -9,7 +9,7 @@ import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {AgarRecipeSelector, NewAgarRecipeForm} from "@/app/components/agarRecipeClient";
 
 export function TestAgarRecipeOk(){
-    const a: AgarRecipeData = {
+    return new AgarRecipeData({
         _id: "(AGAR RECIPE ID HERE)",
         name: "(AGAR RECIPE NAME HERE)",
         liquids: [{name:"Water",pct:100}],
@@ -21,8 +21,7 @@ export function TestAgarRecipeOk(){
         antibiotics: [], // TODO: this
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 
 export interface AgarRecipeData {
@@ -39,6 +38,23 @@ export interface AgarRecipeData {
     lastUpdated: number
     acl?: ACL
 }
+export class AgarRecipeData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<AgarRecipeData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this.getId())
+    }
+    public entryType(): string {
+        return "agarRecipe"
+    }
+}
 
 export function AgarRecipeSelectorCloseable(sp: SelectorProps<AgarRecipeData>) {
     const doSel = (val?: AgarRecipeData): void => {
@@ -47,13 +63,11 @@ export function AgarRecipeSelectorCloseable(sp: SelectorProps<AgarRecipeData>) {
     return <CloseableSelector<AgarRecipeData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: "ChannelTextNewAgarRecipe",
         closeTxt: "Close Recipe List",
         createTxt: "Create Agar Recipe",
         lowercase: "agar recipe",
         creatorInPage: sp.creatorInPage,
         createEndpt: "agarRecipe",
-        getId: (v: AgarRecipeData) => v._id,
         createSelector: (selHdl: (onSelect: AgarRecipeData) => void) => {
             return <AgarRecipeSelector allowCreate={sp.allowCreation} doSelect={(v) => {
                 v && selHdl(v)

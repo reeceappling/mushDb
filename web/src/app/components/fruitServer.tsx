@@ -13,7 +13,7 @@ import {MssData} from "@/app/components/mssServer";
 import {FruitSelector} from "@/app/components/fruitClient";
 
 export function TestFruitOK(){
-    const a: FruitData = {
+    return new FruitData({
         _id: "(FRUIT ID HERE)",
         creationDate: 1,
         species: "(SPECIES)",
@@ -28,9 +28,8 @@ export function TestFruitOK(){
         mostRecentImage: ExamplePicWithNotesIncoming,
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+        // TODO: acl?
+    })
 }
 
 export interface FruitData {
@@ -50,6 +49,20 @@ export interface FruitData {
     lastUpdated: number
     acl?: ACL
 }
+export class FruitData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<FruitData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "fruit"
+    }
+}
 
 export function FruitSelectorCloseable({onSelect}:{onSelect: (val?: FruitData)=>void}) {
     const doSel = (val?: FruitData):void=>{
@@ -61,13 +74,11 @@ export function FruitSelectorCloseable({onSelect}:{onSelect: (val?: FruitData)=>
     return <CloseableSelector<FruitData> props={{
         allowCreation: false, // TODO: ok?
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch,
         closeTxt: "Close Fruit List",
         //createTxt: "Create Fruit", // TODO: ok?
         lowercase: "fruit",
         //creatorInPage: sp.creatorInPage, // TODO: ok?
         //createEndpt: "fruit", // TODO: ok?
-        getId: (v: FruitData) => v._id,
         createSelector:(selHdl: (onSelect: FruitData) => void)=>{
             return <FruitSelector doSelect={(v)=>{
                 v && selHdl(v)

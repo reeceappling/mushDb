@@ -387,7 +387,7 @@ export function SlantListPageTable({data, onClick, withLink}: ListPageItems<Slan
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SlantData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"slant",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

@@ -424,21 +424,22 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     pcRunIn?: PcRunData,
     grainBatchIn?: GrainBatchData
 }) {
-    const [creationDate, setCreationDate] = useState(Date.now()) // TODO: use?
-    const [grainBatch, setGrainBatch] = useState(grainBatchIn) // TODO: use?
-    const [recipe, setRecipe] = useState(recipeIn) // TODO: use?
+    const [creationDate, setCreationDate] = useState(Date.now()) // TODO: likely get rid of and set this on the serverside
+    const [grainBatch, setGrainBatch] = useState<GrainBatchData | undefined>(grainBatchIn) // TODO: use?
+    const [recipe, setRecipe] = useState<string | undefined>(recipeIn) // TODO: use?
     const [sizeCups, setSizeCups] = useState<number>(4) // TODO: change initial state?
-    const [pcRun, setPcRun] = useState(pcRunIn)
+    const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
 
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>()
+
     const errHandler = ErrHandler(setErr)
     const cookies = useContext(CookiesContext)
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
-        if (!recipe || !pcRun) {
-            setErr("recipe and pc run must both exist!")
+        if (!recipe || !grainBatch) {
+            setErr("recipe and batch must exist!")
             return
         }
         if (sizeCups < 1) {
@@ -446,57 +447,40 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
             return
         }
         const body: any = {
-            //creationDate: creationDate, // TODO: GET FROM PC RUN! handle in go
+            //creationDate: creationDate, // TODO: GET FROM PC RUN (or from now?)! handle in go
             sizeCups: sizeCups,
-                recipe: recipe, // TODO: handle properly in go
+            //recipe: recipe, // TODO: handle properly in go (if we plan to use it at all)
             batch: grainBatch?._id, // TODO: handle properly in go
-            pcRun: pcRun._id,
+            pcRun: pcRun?._id,
             notes: notes || [],
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("jar", body, AssertJar, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
-        // fetch(createApiUrlFor("jar"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify({
-        //         //creationDate: creationDate, // TODO: GET FROM PC RUN! handle in go
-        //         sizeCups: sizeCups,
-        //         recipe: recipe, // TODO: handle properly in go
-        //         batch: grainBatch?._id, // TODO: handle properly in go
-        //         pcRun: pcRun._id,
-        //         notes: notes || [],
-        //         writeTagTo: writeTagTo,
-        //     })
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         AssertJar(newEntry)
-        //         handlers.onCreate && handlers.onCreate(newEntry)
-        //     })
-        //     .catch((error) => {
-        //         setErr("failed to unmarshal create jar response: " + JSON.stringify(error))
-        //     });
     }
-    const hasGrainBatchOrRecipe = grainBatchIn !== undefined || recipeIn !== undefined
+    // TODO: Must have either grain batch, or grain batch AND recipe!
+    // TODO: or can only-recipe create a new batch?
+    const hasGrainBatch = grainBatchIn !== undefined || recipeIn !== undefined
+    //const hasRecipe = recipeIn !== undefined // TODO: ????
     return <NewEntryFormWrapper entryType={"jar"}>
         <ErrorDisplay err={err}/>
-        {/* TODO: REMOVE? */}<DateArea pre={"Creation date: "} when={Date.now()} readonly={false}
-                                       updateParent={setCreationDate}/>
+        {/*/!* TODO: REMOVE? *!/<DateArea pre={"Creation date: "} when={Date.now()} readonly={false}*/}
+        {/*                               updateParent={setCreationDate}/>*/}
         {/* TODO: BATCH!!!!*/}
         {/* TODO: PICK BETWEEN NEXT 2! */}
-        {hasGrainBatchOrRecipe && <GrainBatchSelectorCloseable doSelect={setGrainBatch}
+        {hasGrainBatch && <GrainBatchSelectorCloseable doSelect={setGrainBatch}
                                                                allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}
-        {/*{hasGrainBatchOrRecipe && <GrainBatchSelector doSelect={setGrainBatch}*/}
+        {/*{hasGrainBatch && <GrainBatchSelector doSelect={setGrainBatch}*/}
         {/*                                              allowCreate={handlers.isTopLevel}/>}*/}
-        {hasGrainBatchOrRecipe && // TODO: validate ok
-            <JarRecipeSelector allowCreate={handlers.isTopLevel} doSelect={(rec?: JarRecipeData) => {
-                setRecipe(rec?._id)
-            }}/>} {/* TODO: CreatorInPage reference from non-isTopLevel. CLOSEABLE???*/}
+        {/*{hasGrainBatch && // TODO: validate ok*/}
+        {/*    <JarRecipeSelector allowCreate={handlers.isTopLevel} doSelect={(rec?: JarRecipeData) => {*/}
+        {/*        setRecipe(rec?._id)*/}
+        {/*    }}/>} /!* TODO: CreatorInPage reference from non-isTopLevel. CLOSEABLE???*!/*/}
         <JarSizeSelector onChange={(unit: string) => {
             setSizeCups(cupsPer(unit))
         }}/>
+        {/* TODO: PC RUN IS NOT REQUIRED TO START, JARS MAY SIT BETWEEN PC RUNS!*/}
         {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>
@@ -519,7 +503,7 @@ export function JarListPageTable({data, onClick, withLink}: ListPageItems<JarDat
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: JarData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "jar", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

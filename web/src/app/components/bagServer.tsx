@@ -9,7 +9,7 @@ import {AgarBatchData, ChannelTextNewAgarBatch} from "@/app/components/agarBatch
 import {BagSelector, NewBagForm} from "@/app/components/bagClient";
 
 export function TestBagOk(){ // TODO: DELETEME? // TODO: FIXME!
-    const a: BagData = {
+    return new BagData({
         _id: "(BAG ID HERE)",
         recipe: "(SUB RECIPE)",
         //substrateBatch: // TODO: this
@@ -36,8 +36,7 @@ export function TestBagOk(){ // TODO: DELETEME? // TODO: FIXME!
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 
 export interface BagData {
@@ -68,6 +67,20 @@ export interface BagData {
     lastUpdated: number
     acl?: ACL
 }
+export class BagData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<BagData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "bag"
+    }
+}
 
 export function BagSelectorCloseable(sp: SelectorProps<BagData>) { // TODO: use
     const doSel = (val?: BagData):void=>{
@@ -79,13 +92,11 @@ export function BagSelectorCloseable(sp: SelectorProps<BagData>) { // TODO: use
     return <CloseableSelector<BagData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Bag List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "bag",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: BagData) => v._id,
         createSelector:(selHdl: (onSelect: BagData) => void)=>{
             return <BagSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

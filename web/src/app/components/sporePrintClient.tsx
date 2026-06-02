@@ -306,7 +306,7 @@ export default function SporePrintDisplay(
                     <div>
                         <div>{"Parent: "}</div>
                         {data.parent?
-                            <EntryLink props={{displayedId:data.parent,linkId:data.parent,entryType:"fruit",openInNewTab:true}}>{data.parent}</EntryLink>
+                            <EntryLink props={{displayId:data.parent,linkId:data.parent,entryType:"fruit",openInNewTab:true}}/>
                             :"Store"}
                     </div>
                 </FlexedSinglesGroup>
@@ -419,7 +419,7 @@ export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SporePrintData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"sporePrint",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

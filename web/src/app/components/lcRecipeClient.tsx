@@ -320,9 +320,12 @@ export function LcRecipeArea({lcRecipeId, headerLevel, offset}: {
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (lcRecipeId !== undefined) {
         const b58id = lcRecipeId
-        linkArea = <EntryLink props={{displayedId: b58id, linkId: b58id, entryType: "lcRecipe"}}>
-            <div>{b58id}</div>
-        </EntryLink>
+        linkArea = <EntryLink props={{
+            displayId: b58id,
+            linkId: b58id,
+            entryType: "lcRecipe",
+            openInNewTab: false, // TODO: ok?
+            }}/>
     }
     return <div className={"lcRecipeArea"}>
         <div>{"Liquid Culture Recipe ID: "}</div>
@@ -368,7 +371,7 @@ export function LcRecipeListPageTable({data, onClick, withLink}: ListPageItems<L
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcRecipeData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "lcRecipe", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -384,7 +387,7 @@ export function LcRecipeSelectorTable({data, onClick}: ListPageItems<LcRecipeDat
             return NumberToDateStr(v.lastUpdated)
         }),
         NewColumn("Link", (v: LcRecipeData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "lcRecipe", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })

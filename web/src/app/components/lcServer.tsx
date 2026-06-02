@@ -15,8 +15,7 @@ import {JarData} from "@/app/components/jarServer";
 import {LcSelector} from "@/app/components/lcClient";
 
 export function TestLcOk(){
-    let ExampleNotes;
-    const a: LcData = {
+    return new LcData({
         _id: "(LC ID HERE)",
         recipe: "(LC RECIPE ID HERE)",
         creationDate: Date.now()-2000,
@@ -34,11 +33,10 @@ export function TestLcOk(){
         knownFruitable: true,
         disposed: Date.now()+40000,
         mostRecentImage: ExamplePicWithNotesIncoming,
-        notes: ExampleNotes,
+        notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 export interface LcData {
     _id: string
@@ -63,6 +61,20 @@ export interface LcData {
     lastUpdated: number
     acl?: ACL
 }
+export class LcData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<LcData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "lc"
+    }
+}
 
 export function LcSelectorCloseable(sp: SelectorProps<LcData>) { // TODO: use
     const doSel = (val?: LcData):void=>{
@@ -74,13 +86,11 @@ export function LcSelectorCloseable(sp: SelectorProps<LcData>) { // TODO: use
     return <CloseableSelector<LcData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close LC List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "liquid culture",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: LcData) => v._id,
         createSelector:(selHdl: (onSelect: LcData) => void)=>{
             return <LcSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

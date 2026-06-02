@@ -2,7 +2,7 @@
 
 import {JSX, useContext, useEffect, useState} from "react";
 import {Liquid} from "./liquids";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLink, {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
 import {AllEntries, Data, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {
     ImageLocationFor,
@@ -286,8 +286,8 @@ export function ParentDisplay(
     }
     const LinkFor = (typ: string, entryTyp: string, linkId: string, displayId: string) => {
         return <div>
-            {"Parent: "}<EntryLinkWrapper
-            props={{linkId: linkId, entryType: entryTyp}}>{txtFor(typ, displayId)}</EntryLinkWrapper>
+            {"Parent: "}<EntryLinkWrapperForId
+            props={{linkId: linkId, entryType: entryTyp}}>{txtFor(typ, displayId)}</EntryLinkWrapperForId>
         </div>
     }
     switch (parentType) {
@@ -544,10 +544,11 @@ export const SpeciesArea = (
         spArea = <div>{"unknown"}</div>
         if (initial !== undefined) {
             spArea = <EntryLink props={{
-                displayedId: initial,
-                linkId: initial.split(" ").join("_"),
-                entryType: "species"
-            }}>{initial}</EntryLink>
+                linkId: initial.split(" ").join("_"), // TODO: FIX THIS! URLENCODE!
+                displayId: initial,
+                entryType: "species",
+                openInNewTab: false, // TODO: ok?
+            }}/>
         }
     } else {
         // TODO: CSS
@@ -596,10 +597,11 @@ export const SubspeciesArea = (
     if (readonly) {
         if (initialSub !== undefined) {
             spArea = <EntryLink props={{
-                displayedId: initialSub,
-                linkId: initialSub.split(" ").join("_"),
-                entryType: "subspecies"
-            }}>{initialSub}</EntryLink> // TODO: ensure subspecies is correct entryType
+                displayId: initialSub,
+                linkId: initialSub.split(" ").join("_"), // TODO: FIX! URLENCODE!
+                entryType: "subspecies",
+                openInNewTab: false, // TODO: ok?
+            }}/>
         }
     } else {
         spArea = <ExistingSubSpeciesSelector species={currentSpecies} doSelect={(s) => {

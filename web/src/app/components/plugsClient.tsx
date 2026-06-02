@@ -18,7 +18,7 @@ import {
     viewUrlFor,
 } from "@/app/components/common";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
-import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
 import {DowelType, PlugsJar} from "@/app/components/plugsServer";
 import {PcRunData} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
@@ -374,9 +374,9 @@ export function NewPlugsForm(
 
 
         {pcRunIn ? <div>{"PC Run: "}
-                <EntryLinkWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
+                <EntryLinkWrapperForId props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
                     {pcRunIn._id}
-                </EntryLinkWrapper>
+                </EntryLinkWrapperForId>
             </div>
             : <PcRunSelector doSelect={setPcRun} allowCreate={true}/>
         }
@@ -400,7 +400,7 @@ export function PlugsListPageTable({data, onClick, withLink}: ListPageItems<Plug
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PlugsJar) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "plugs", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

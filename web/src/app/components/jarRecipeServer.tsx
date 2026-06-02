@@ -11,7 +11,7 @@ import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {JarRecipeSelector, NewJarRecipeForm} from "@/app/components/jarRecipeClient";
 
 export function TestJarRecipeOK() {
-    const a: JarRecipeData = {
+    return new JarRecipeData({
         _id: "(JAR RECIPE ID HERE)",
         name: "(JAR RECIPE NAME)",
         grains: [{grain: "Oats", percentage: 100}],
@@ -30,8 +30,7 @@ export function TestJarRecipeOK() {
         ],
         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 
 export interface JarRecipeData {
@@ -46,6 +45,23 @@ export interface JarRecipeData {
     lastUpdated: number
     acl?: ACL
 }
+export class JarRecipeData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<JarRecipeData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id // TODO: should this be urlEncoded?
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this.getId())
+    }
+    public entryType(): string {
+        return "jarRecipe"
+    }
+}
 
 export function JarRecipeSelectorCloseable(sp: SelectorProps<JarRecipeData>) { // TODO: use
     const doSel = (val?: JarRecipeData):void=>{
@@ -57,13 +73,11 @@ export function JarRecipeSelectorCloseable(sp: SelectorProps<JarRecipeData>) { /
     return <CloseableSelector<JarRecipeData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewJarRecipe,
         closeTxt: "Close Jar Recipe List",
         createTxt: "Create Jar Recipe",
         lowercase: "jar recipe",
         creatorInPage: sp.creatorInPage,
         createEndpt: "jarRecipe",
-        getId: (v: JarRecipeData) => v._id,
         createSelector:(selHdl: (onSelect: JarRecipeData) => void)=>{
             return <JarRecipeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

@@ -8,7 +8,7 @@ import {SlantData} from "@/app/components/slantServer";
 import {SpeciesSelector} from "@/app/components/speciesClient";
 
 export function TestSpeciesOk() {
-    const a: SpeciesData = {
+    return new SpeciesData({
         _id: "(ID_HERE)",
         scientificName: "(SCI_NAME_HERE)",
         aliases: ["(Alias 1)", "(Alias 2)"],
@@ -22,8 +22,7 @@ export function TestSpeciesOk() {
         }],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 
 export interface SpeciesData {
@@ -35,6 +34,23 @@ export interface SpeciesData {
     lastUpdated: number
     acl?: ACL
     defaultAcl?: ACL
+}
+export class SpeciesData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<SpeciesData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this.getId())
+    }
+    public entryType(): string {
+        return "species"
+    }
 }
 
 // TODO: there is an alternative to this, so we may not want this or to use it
@@ -48,13 +64,11 @@ export function SpeciesSelectorCloseable(sp: SelectorProps<SpeciesData>) { // TO
     return <CloseableSelector<SpeciesData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Species List",
         //createTxt: "Create Species",// TODO: ???
         lowercase: "species",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "species",// TODO: ???
-        getId: (v: SpeciesData) => v._id,
         createSelector:(selHdl: (onSelect: SpeciesData) => void)=>{
             return <SpeciesSelector doSelect={(v)=>{
                 v && selHdl(v)

@@ -33,12 +33,10 @@ import {
 import {redirect} from "next/navigation";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SaleData} from "@/app/components/saleServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AssertProject} from "@/app/components/projectClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
@@ -229,7 +227,7 @@ export function SaleArea(
     return <div className={"areaWrapper"}>
         <div className={"areaHeader"}>{"Sold: "}</div>
         <div>
-            <EntryLink props={{displayedId: b58id, linkId: b58id, entryType:"sale", openInNewTab:true}}>{b58id}</EntryLink>
+            <EntryLink props={{displayId: b58id, linkId: b58id, entryType:"sale", openInNewTab:true}}/>
         </div>
     </div>
 }
@@ -267,9 +265,7 @@ export function SalesArea(
             {(sales || []).map(s=>{
                 const b58id = s
                 return <div>
-                    <EntryLink props={{displayedId:b58id,linkId:b58id,entryType:"sale",openInNewTab:true}}>
-                        <div>{b58id}</div>
-                    </EntryLink>
+                    <EntryLink props={{displayId:b58id,linkId:b58id,entryType:"sale",openInNewTab:true}}/>
                 </div>
             })}
             {(!readonly&&allowCreate) && addArea()}
@@ -288,7 +284,7 @@ export function SaleListPageTable({data, onClick, withLink}: ListPageItems<SaleD
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SaleData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"sale",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

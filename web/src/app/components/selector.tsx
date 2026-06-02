@@ -2,7 +2,7 @@
 import {JSX, useEffect, useState} from "react";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {createUrlFor, HandleJsonResponse, InlineProps} from "@/app/components/common";
+import {createUrlFor, HandleJsonResponse, Entry, InlineProps} from "@/app/components/common";
 import {TestAgarBatchOk} from "@/app/components/agarBatchServer";
 import {TestFruitOK} from "@/app/components/fruitServer";
 import {TestJarOK} from "@/app/components/jarServer";
@@ -262,16 +262,14 @@ export function SelectorResetsOnSelectForCustom<T>(
 //     </div>
 // }
 
-export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISSIONED ONES?
+export default function CloseableSelector<T extends Entry>({props}: { // TODO: FIX FOR PERMISSIONED ONES?
     props: {
-        msgTxt: string,// TODO: del?
         createSelector: (selectHandler:(onSelect: T)=>void)=>JSX.Element,
         createCreator?: (selectHandler:(onSelect: T)=>void)=>JSX.Element,
         closeTxt: string,
         createTxt?: string,
         createEndpt?: string,
         lowercase: string,
-        getId: (v: T) => string, // TODO: CHANGE THIS ON ALL
         doSelect: (v: T) => void,
         allowCreation?: boolean,
         creatorInPage?: boolean,
@@ -285,10 +283,17 @@ export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISS
     const toggleOpen = () => {
         setOpen(!open)
     }
+    const deselect = () => { // TODO: USE THIS!
+
+    }
     const closeButton = <button className={"basicButton"} onClick={() => {
         toggleOpen();
         setCreatorOpen(false)
     }}>{props.closeTxt}</button>
+    const deselectButton = <button className={"removeButtonSmall"} onClick={() => {
+        setSelected(undefined)
+        setCreatorOpen(false)
+    }}>{"Clear Selection"/* TODO: variable?*/}</button>
     const selectItem = (item: T) => {
         props.doSelect(item)
         setSelected(item)
@@ -319,7 +324,7 @@ export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISS
     const openCreateNew = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!props.creatorInPage) {
-            window.open(createUrlFor(props.createEndpt||"unknown"), '_blank', 'noopener'); // TODO: ensure ok
+            window.open(createUrlFor(props.createEndpt||"unknown"), '_blank', 'noopener');
             return
         }
         setOpen(false)
@@ -333,9 +338,10 @@ export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISS
         return <div>
             <ErrorDisplay err={err}/>
             <div className={"centerH"}>
-                {selected && <div>{props.getId(selected)}</div>}
+                {selected && <div>{selected.getId()}</div>}
                 <button className={"basicButton"}
                         onClick={toggleOpen}>{"Select a " + (selected ? "different" : "") + " " + props.lowercase}</button>
+                {deselectButton}
             </div>
         </div>
     }
@@ -345,7 +351,7 @@ export default function CloseableSelector<T>({props}: { // TODO: FIX FOR PERMISS
         {closeButton}
         {props.createSelector(selectItem)}
         {pre}
-        {closeButton}
+        {deselectButton}{closeButton}
     </div>
 }
 

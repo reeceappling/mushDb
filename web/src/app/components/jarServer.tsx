@@ -17,7 +17,7 @@ import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {JarSelector} from "@/app/components/jarClient";
 
 export function TestJarOK(){
-    const a: JarData = {
+    return new JarData({
         _id: "(JAR ID HERE)",
         sizeCups: 4,
         recipe: "(JAR RECIPE ID)",
@@ -43,8 +43,7 @@ export function TestJarOK(){
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 
 export interface JarData {
@@ -73,6 +72,20 @@ export interface JarData {
     lastUpdated: number
     acl?: ACL
 }
+export class JarData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<JarData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "jar"
+    }
+}
 
 export function JarSelectorCloseable(sp: SelectorProps<JarData>) { // TODO: use
     const doSel = (val?: JarData):void=>{
@@ -84,13 +97,11 @@ export function JarSelectorCloseable(sp: SelectorProps<JarData>) { // TODO: use
     return <CloseableSelector<JarData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Jar List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "jar",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: JarData) => v._id,
         createSelector:(selHdl: (onSelect: JarData) => void)=>{
             return <JarSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

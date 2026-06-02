@@ -14,7 +14,7 @@ import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
 
 export function TestFruitingChamberOk(){
-    const a: FruitingChamberData = {
+    return new FruitingChamberData({
         _id: "(FC ID HERE)",
         recipe: "(SUB RECIPE)",
         substrateBatch: "(SUB BATCH)",
@@ -39,8 +39,7 @@ export function TestFruitingChamberOk(){
         disposed: Date.now()+5000,
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 
 export interface FruitingChamberData {
@@ -70,6 +69,20 @@ export interface FruitingChamberData {
     lastUpdated: number
     acl?: ACL
 }
+export class FruitingChamberData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<FruitingChamberData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "fruitingChamber"
+    }
+}
 
 export function BagSelectorCloseable(sp: SelectorProps<FruitingChamberData>) { // TODO: use
     const doSel = (val?: FruitingChamberData):void=>{
@@ -81,13 +94,11 @@ export function BagSelectorCloseable(sp: SelectorProps<FruitingChamberData>) { /
     return <CloseableSelector<FruitingChamberData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Fruiting Chamber List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "fruiting chamber",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: FruitingChamberData) => v._id,
         createSelector:(selHdl: (onSelect: FruitingChamberData) => void)=>{
             return <FruitingChamberSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

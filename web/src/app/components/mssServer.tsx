@@ -8,7 +8,7 @@ import {MssSelector, NewMssForm} from "@/app/components/mssClient";
 
 
 export function TestMssOk(){
-    const a: MssData = {
+    return new MssData({
         _id: "(MSS ID HERE)",
         creationDate: Date.now()-2000,
         species: "(SPECIES NAME)",
@@ -20,8 +20,7 @@ export function TestMssOk(){
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 export interface MssData {
     _id: string
@@ -36,6 +35,20 @@ export interface MssData {
     lastUpdated: number
     acl?: ACL
 }
+export class MssData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<MssData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "mss"
+    }
+}
 
 export function MssSelectorCloseable(sp: SelectorProps<MssData>) {
     const doSel = (val?: MssData):void=>{
@@ -47,13 +60,11 @@ export function MssSelectorCloseable(sp: SelectorProps<MssData>) {
     return <CloseableSelector<MssData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: change/get rid of
         closeTxt: "Close MSS List",
         createTxt: "Create MSS",
         lowercase: "mss",
         creatorInPage: sp.creatorInPage,
         createEndpt: "mss",
-        getId: (v: MssData) => v._id,
         createSelector:(selHdl: (onSelect: MssData) => void)=>{
             return <MssSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

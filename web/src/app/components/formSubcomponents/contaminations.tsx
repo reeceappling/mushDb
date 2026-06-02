@@ -1,11 +1,6 @@
 // non-client even though it uses state?
 
-import {
-    AllEntries,
-    Data,
-    InitialToAllEntries,
-    SplitAllEntries
-} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, Data, InitialToAllEntries, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {IsValidNote, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {ImageLocationFor, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
@@ -151,7 +146,7 @@ export function ContamsRows({initial, updateParent, readonly}: {
     updateParent: (u: Data<ContaminationForm>[]) => void,
     readonly: boolean,
 }) {
-    const InitialData = (inp: Contamination[]): Data<ContaminationForm>[] =>{
+    const InitialData = (inp: Contamination[]): Data<ContaminationForm>[] => {
         return inp.map(v => {
             return {
                 data: ContamForm(v),
@@ -195,11 +190,25 @@ export function ContamsRows({initial, updateParent, readonly}: {
                 </div>
                 <div className={"contamOverviewTable" + disabledClass}>
                     <DateArea when={ctm.data.time} readonly={true}/>
-                    <TestAndValidate todos={["toggle for confirmed and handle on the serverside"]}>
-                        <div>{ctm.data.confirmed ? "Confirmed" : "Unconfirmed"}</div>
-                    </TestAndValidate>
-                    {readonly ?
-                        <div>{"Bacteria: " + (ctm.data.bacteria ? "yes" : "no")}</div> :
+                    {readonly ? <>
+                        <div>{"Confirmed?: "+(ctm.data.confirmed ? "Confirmed" : "Unconfirmed")}</div>
+                        <div>{"Bacteria: " + (ctm.data.bacteria ? "yes" : "no")}</div>
+                        <div>{"Mold: " + (ctm.data.mold ? "yes" : "no")}</div>
+                    </> : <>
+                        <TestAndValidate todos={["toggle for confirmed and handle on the serverside"]}>
+                            <div>{ctm.data.confirmed ? "Confirmed" : "Unconfirmed"}</div>
+                        </TestAndValidate>
+                        {/*<div>*/}{/* TODO: THIS!*/}
+                        {/*    <div className={"inline"}>{"Confirmed? "}</div>*/}
+                        {/*    <input className={"inline"} type={'checkbox'} disabled={init.confirmed}*/}
+                        {/*           checked={ctm.data.confirmed}*/}
+                        {/*           onChange={e => {*/}
+                        {/*               e.stopPropagation();*/}
+                        {/*               let updated = structuredClone(current)*/}
+                        {/*               updated[i].data.confirmed = !ctm.data.confirmed*/}
+                        {/*               doUpdate(updated)*/}
+                        {/*           }}/>*/}
+                        {/*</div>*/}
                         <div>
                             <div className={"inline"}>{"Bacteria: "}</div>
                             <input className={"inline"} type={'checkbox'} disabled={init.bacteria}
@@ -212,9 +221,6 @@ export function ContamsRows({initial, updateParent, readonly}: {
                                        doUpdate(updated)
                                    }}/>
                         </div>
-                    }
-                    {readonly ?
-                        <div>{"Mold: " + (ctm.data.mold ? "yes" : "no")}</div> :
                         <div>
                             <div className={"inline"}>{"Mold: "}</div>
                             <input className={"inline"} type={'checkbox'} disabled={initial[i].mold}
@@ -227,7 +233,7 @@ export function ContamsRows({initial, updateParent, readonly}: {
                                        doUpdate(updated)
                                    }}/>
                         </div>
-                    }
+                    </>}
                 </div>
                 <div className={"inline" + disabledClass}>
                     <NotesFormArea readonly={readonly} initial={initial[i].notes} updateParent={nts => {
@@ -341,7 +347,8 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
                     },
                     disabled: false
                 }]
-                update(updated)}}>{"Add New Contamination"}</button>
+                update(updated)
+            }}>{"Add New Contamination"}</button>
         </div>}
     </>
 }

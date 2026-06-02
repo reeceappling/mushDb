@@ -348,7 +348,7 @@ export function StasisTubeListPageTable({data, onClick, withLink}: ListPageItems
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: StasisTubeData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"stasisTube",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

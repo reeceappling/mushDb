@@ -2,30 +2,35 @@
 
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import {
-    AddCreatedTriColFunction,
-    AllEntries,
-    ListResult,
-    OnViewCreatorTriCol
-} from "@/app/components/formSubcomponents/shared";
+import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
-    createApiUrlFor,
     CreatedLinkFor,
-    CreateNewEntryButton, DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    CreateNewEntryButton,
+    DisplayFormWrapper,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ErrHandler,
+    ExistingDualSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    IsString,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey, updateApiUrlFor
+    OptionalKey
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
-import {AssertSubstrateBatch, NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
+import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
@@ -110,7 +115,7 @@ export default function SubstrateRecipeDisplay(
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("substrateRecipe",initial._id, body, AssertSubstrateRecipe, allCookies(cookies))
+            DoUpdateRequest("substrateRecipe", initial._id, body, AssertSubstrateRecipe, allCookies(cookies))
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("substrateRecipe",initial._id), {
@@ -167,7 +172,7 @@ export default function SubstrateRecipeDisplay(
                                         closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     substrateSubmit()
                 }}>{"Update"}</button>}
@@ -190,11 +195,11 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     const submit = () => {
         // TODO: validate name is valid
         const body = {
-                name: name,
-                aliases: aliases,
-                standard: isStandard,
-                notes: notes
-            }
+            name: name,
+            aliases: aliases,
+            standard: isStandard,
+            notes: notes
+        }
         DoCreateRequest("substrateRecipe", body, AssertSubstrateRecipe, allCookies(cookies))
             .then(handlers?.onCreate)
             .catch(errHandler)
@@ -213,7 +218,8 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     return (
         <NewEntryFormWrapper entryType={"substrateRecipe"}>
             <ErrorDisplay err={err}/>
-            <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} readonly={false} headerTxt={"Substrate Name: "}/>
+            <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} readonly={false}
+                      headerTxt={"Substrate Name: "}/>
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}/>
             <TestAndValidate todos={["this whole thing"]}>{/* TODO: ensure NEW is not displayed*/}
                 <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases}/>
@@ -226,36 +232,41 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     )
 }
 
-export const SubstrateRecipeArea = ({id, headerLevel, txt, readonly, onSelect}: { // TODO: OVERHAUL!!!!
+export function SubstrateRecipeArea({id, headerLevel, txt, readonly, onSelect}: { // TODO: OVERHAUL!!!!
     id?: string,
     headerLevel?: number,
     txt?: string,
     readonly: boolean,
     onSelect?: (d?: SubstrateRecipeData) => void
-}) => {
+}){
     const [open, setOpen] = useState(false)
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (id !== undefined) {
         const b58id = id
         linkArea =
-            <EntryLink props={{displayedId: b58id, linkId: b58id, entryType: "substrateRecipe"}}>{b58id}</EntryLink>
-        {
-            (!readonly && !open) && <button className={"basicButton"} onClick={() => {
-                setOpen(true)
-            }}>{"Select a new substrate"}</button>
-        }
-        {
-            (!readonly && open) && <div>
-                <div>
-                    <button className={"basicButton"} onClick={() => {
-                        setOpen(true)
-                    }}>{"Close Selector"}</button>
-                </div>
-                <SubstrateRecipeSelector doSelect={r => { // TODO: FIX! CLOSEABLE?
-                    onSelect && onSelect(r)
-                }}/> {/* TODO: allow create? */}
-            </div>
-        }
+            <EntryLink props={{
+                openInNewTab: false/* TODO: ok?*/,
+                displayId: b58id,
+                linkId: b58id,
+                entryType: "substrateRecipe"
+            }}/>
+        //     { // TODO: where does this go?
+        //         (!readonly && !open) && <button className={"basicButton"} onClick={() => {
+        //             setOpen(true)
+        //         }}>{"Select a new substrate"}</button>
+        //     }
+        //     {
+        //         (!readonly && open) && <div>
+        //             <div>
+        //                 <button className={"basicButton"} onClick={() => {
+        //                     setOpen(true)
+        //                 }}>{"Close Selector"}</button>
+        //             </div>
+        //             <SubstrateRecipeSelector doSelect={r => { // TODO: FIX! CLOSEABLE?
+        //                 onSelect && onSelect(r)
+        //             }}/> {/* TODO: allow create? */}
+        //         </div>
+        //     }
     }
     return <div>
         {txt ? txt : "Substrate Recipe: "}{linkArea}
@@ -264,23 +275,24 @@ export const SubstrateRecipeArea = ({id, headerLevel, txt, readonly, onSelect}: 
 
 export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPageItems<SubstrateRecipeData>) {
     let cols: ListTableColumn<SubstrateRecipeData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Name", (v)=>v.name), // TODO: shortname?
-        NewColumn("Last Updated", (v)=>{
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         })
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: SubstrateRecipeData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"substrateRecipe",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: SubstrateRecipeData) => {
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
     return <ListPageTable className={"text-m"} cols={cols} data={data} onClick={onClick}/>
 }
+
 export function SubstrateRecipeSelectorTable({data, onClick}: ListPageItems<SubstrateRecipeData>) {
-    return <SubstrateRecipeListPageTable data={data} onClick={onClick} withLink={true} />
+    return <SubstrateRecipeListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
 export function SubstrateRecipeSelector(
@@ -293,17 +305,18 @@ export function SubstrateRecipeSelector(
         allowCreate?: boolean
         creatorInPage?: boolean
     }) {
-    const table = (items: SubstrateRecipeData[]):JSX.Element=>{
+    const table = (items: SubstrateRecipeData[]): JSX.Element => {
         return <SubstrateRecipeSelectorTable data={items} onClick={doSelect}/>
     }
-    const creator = ()=>{
+    const creator = () => {
         if (creatorInPage) {
-            return <NewSubstrateRecipeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>
+            return <NewSubstrateRecipeForm handlers={{onCreate: doSelect, isTopLevel: false}}/>
         }
         return <div>{"LINK TO CREATOR HERE FIXME"}</div>
     }
-    return <ExistingDualSelector entryType={"substrateRecipe"} entryTypes={"substrateRecipes"} doSelect={doSelect} asserter={AssertSubstrateRecipe}
-                                   table={table}>
+    return <ExistingDualSelector entryType={"substrateRecipe"} entryTypes={"substrateRecipes"} doSelect={doSelect}
+                                 asserter={AssertSubstrateRecipe}
+                                 table={table}>
         {allowCreate && <>{creator()}</>}
     </ExistingDualSelector>
 }

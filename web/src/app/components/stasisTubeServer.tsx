@@ -14,7 +14,7 @@ import {SporeSwab} from "@/app/components/sporeSwabServer";
 import {StasisTubeSelector} from "@/app/components/stasisTubeClient";
 
 export function TestStasisTubeOk(){
-    const a: StasisTubeData = {
+    return new StasisTubeData({
         _id: "(TUBE ID HERE)",
         pcRun: "(PC RUN ID)",
         waterSource: undefined,
@@ -36,8 +36,7 @@ export function TestStasisTubeOk(){
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 export interface StasisTubeData {
     _id: string
@@ -62,6 +61,20 @@ export interface StasisTubeData {
     lastUpdated: number
     acl?: ACL
 }
+export class StasisTubeData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<StasisTubeData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "stasisTube"
+    }
+}
 
 export function StasisTubneSelectorCloseable(sp: SelectorProps<StasisTubeData>) { // TODO: use
     const doSel = (val?: StasisTubeData):void=>{
@@ -73,13 +86,11 @@ export function StasisTubneSelectorCloseable(sp: SelectorProps<StasisTubeData>) 
     return <CloseableSelector<StasisTubeData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Stasis Tube List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "stasis tube",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: StasisTubeData) => v._id,
         createSelector:(selHdl: (onSelect: StasisTubeData) => void)=>{
             return <StasisTubeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

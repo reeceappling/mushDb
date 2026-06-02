@@ -272,9 +272,7 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             </div>
             {itemsCreated.map((createdLc) => {
                 const b58id = createdLc
-                return <EntryLink props={{displayedId: b58id, linkId: b58id, entryType: "lcSyringe"}}>
-                    <div>{b58id}</div>
-                </EntryLink>
+                return <EntryLink props={{displayId: b58id, linkId: b58id, entryType: "lcSyringe", openInNewTab: false /* TODO: ok?*/}}/>
             })}
         </div>
     }
@@ -340,7 +338,7 @@ export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcSyringe)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"lcSyringe",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

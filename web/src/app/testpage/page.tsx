@@ -34,28 +34,28 @@ export default async function Page({
         {/*        </div>*/}
         {/*    </PageWrapper>*/}
         {/*</Closeable>*/}
-        <Closeable title={"CreatePlate"}>
-            <PageWrapper props={{pageType:"testPage",readers:[]}}>
-                <div className={"fullPage"}>
-                    <TestNewPlate />
-                </div>
-            </PageWrapper>
-        </Closeable>
-        <Closeable title={"CreateAgarBatch"}>
-            <PageWrapper props={{pageType:"testPage",readers:[]}}>
-                <div className={"fullPage"}>
-                    <TestNewAgarBatch />
-                </div>
-            </PageWrapper>
-        </Closeable>
-        <Closeable title={"PlateDisplay"}>
-        <PageWrapper props={{pageType: "view", readers: ["reader1","reader2"]}}>
-            <div className={"fullPage"}>
-                <PlateDisplay data={TestPlateOk()} readonly={false} id={"testId"} isTopLevel={true}
-                              headerLevel={TopPageHeaderLevel}/>
-            </div>
-        </PageWrapper>
-        </Closeable>
+        {/*<Closeable title={"CreatePlate"}>*/}
+        {/*    <PageWrapper props={{pageType:"testPage",readers:[]}}>*/}
+        {/*        <div className={"fullPage"}>*/}
+        {/*            <TestNewPlate />*/}
+        {/*        </div>*/}
+        {/*    </PageWrapper>*/}
+        {/*</Closeable>*/}
+        {/*<Closeable title={"CreateAgarBatch"}>*/}
+        {/*    <PageWrapper props={{pageType:"testPage",readers:[]}}>*/}
+        {/*        <div className={"fullPage"}>*/}
+        {/*            <TestNewAgarBatch />*/}
+        {/*        </div>*/}
+        {/*    </PageWrapper>*/}
+        {/*</Closeable>*/}
+        {/*<Closeable title={"PlateDisplay"}>*/}
+        {/*<PageWrapper props={{pageType: "view", readers: ["reader1","reader2"]}}>*/}
+        {/*    <div className={"fullPage"}>*/}
+        {/*        <PlateDisplay data={TestPlateOk()} readonly={false} id={"testId"} isTopLevel={true}*/}
+        {/*                      headerLevel={TopPageHeaderLevel}/>*/}
+        {/*    </div>*/}
+        {/*</PageWrapper>*/}
+        {/*</Closeable>*/}
         <Closeable title={"TestSlider"}>
         <div className={"whiteBackground"}>
 
@@ -74,20 +74,20 @@ export default async function Page({
             </div>
         </PageWrapper>
         </Closeable>
-        <Closeable title={"TestProjectWrite1"}>
-            <PageWrapper props={{pageType:"testPage",readers:[]}}>
-                <div className={"fullPage"}>
-                    <ProjectDisplay data={TestProjectOk()} id={"TestProjectWrite"} readonly={false} isTopLevel={true} />
-                </div>
-            </PageWrapper>
-        </Closeable>
-        <Closeable title={"TestProjectWriteNoPermsNotComplete"}>
-            <PageWrapper props={{pageType:"testPage",readers:[]}}>
-                <div className={"fullPage"}>
-                    <ProjectDisplay data={TestProjectOk2()} id={"TestProjectWrite"} readonly={false} isTopLevel={true} />
-                </div>
-            </PageWrapper>
-        </Closeable>
+        {/*<Closeable title={"TestProjectWrite1"}>*/}
+        {/*    <PageWrapper props={{pageType:"testPage",readers:[]}}>*/}
+        {/*        <div className={"fullPage"}>*/}
+        {/*            <ProjectDisplay data={TestProjectOk()} id={"TestProjectWrite"} readonly={false} isTopLevel={true} />*/}
+        {/*        </div>*/}
+        {/*    </PageWrapper>*/}
+        {/*</Closeable>*/}
+        {/*<Closeable title={"TestProjectWriteNoPermsNotComplete"}>*/}
+        {/*    <PageWrapper props={{pageType:"testPage",readers:[]}}>*/}
+        {/*        <div className={"fullPage"}>*/}
+        {/*            <ProjectDisplay data={TestProjectOk2()} id={"TestProjectWrite"} readonly={false} isTopLevel={true} />*/}
+        {/*        </div>*/}
+        {/*    </PageWrapper>*/}
+        {/*</Closeable>*/}
 
     </div>
 

@@ -96,11 +96,12 @@ export default function AgarBatchDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
+
     try {
         AssertAgarBatch(data)
 
         const [initial, setInitial] = useState(data)
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
+        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         const updateInitial = (updated: AgarBatchData) => {
@@ -119,6 +120,7 @@ export default function AgarBatchDisplay(
                 acl: MarshalAcl(acl), // TODO; use this everywhere if it works
             }
             DoUpdateRequest("agarBatch",initial._id, body, AssertAgarBatch, allCookies(cookies))
+                //.then(v=>updateInitial(new AgarBatchData(v))) // TODO: DO THIS EVERYWHERE!!!!
                 .then(updateInitial)
                 .catch(ErrHandler(setErr))
             // fetch(updateApiUrlFor("agarBatch", initial._id), { // This ID is in base58
@@ -137,7 +139,8 @@ export default function AgarBatchDisplay(
             {
                 txt: "Create Plates",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewPlateForm agarBatchIn={data} handlers={{
+                    return <NewPlateForm agarBatchIn={data} handlers={{ // TODO: data initial here? or data?
+                    //return <NewPlateForm agarBatchIn={new AgarBatchData(data)} handlers={{ // TODO: data initial here? or data?
                         onCreate: (newItem: PlateData) => {
                             return onCreate([{
                                 typeText: "Plate",
@@ -153,7 +156,8 @@ export default function AgarBatchDisplay(
                 // TODO: also sticks should be boiled BEFORE going in the PC!
                 txt: "Create Slants",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewSlantForm agarBatchIn={data} handlers={{
+                    return <NewSlantForm agarBatchIn={data} handlers={{ // TODO: DO THE new AgarBatchData(data) EVERYWHERE!
+                    //return <NewSlantForm agarBatchIn={new AgarBatchData(data)} handlers={{ // TODO: DO THE new AgarBatchData(data) EVERYWHERE!
                         onCreate: (newItem: PlateData) => {
                             return onCreate([{
                                 typeText: "Slant",
@@ -275,8 +279,8 @@ export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: AgarBatchData)=>{
-            return <EntryLinkWrapper props={{linkId:v._id,entryType:"agarBatch",openInNewTab:true}}>
-                <button className={"basicButtonSmall"}>{"View"}</button>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
+                <button className={"basicButtonSmall"} onClick={e=>e.preventDefault()/* TODO: unsure if preventDefault ok*/}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
@@ -288,17 +292,11 @@ export function AgarBatchArea({agarBatchId, headerLevel, offset}: {
     headerLevel?: number,
     offset?: number
 }) {
-    let linkArea: JSX.Element = <div>{"unknown"}</div>
-    if (agarBatchId !== undefined) {
-        const displayId = agarBatchId
-        linkArea = <EntryLink props={{displayedId: displayId, linkId: displayId, entryType: "agarBatch"}}
-                              data-cy-id="AgarBatchAreaEntryLink">
-            {displayId}
-        </EntryLink>
-    }
     return <div data-cy-id="AgarBatchAreaWrapper" className={"agarBatchAreaWrapper"}>
         <div data-cy-id="AgarBatchAreaHeader">{"Agar Batch ID: "}</div>
-        {linkArea}
+        {agarBatchId ? <EntryLink props={{linkId: agarBatchId, entryType: "agarBatch"}}
+                                  data-cy-id="AgarBatchAreaEntryLink"/> :
+            <div>{"unknown"}</div>}
     </div>
 }
 
@@ -339,7 +337,7 @@ export function AgarBatchSelectorTable({data, onClick, withLink}: ListPageItems<
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: AgarBatchData)=>{
-            return <EntryLinkWrapper props={{linkId:v._id,entryType:"agarBatch",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

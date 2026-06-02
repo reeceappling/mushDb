@@ -5,15 +5,12 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import React, {JSX, useContext, useState} from "react";
 import {
-    AddCreatedQuadColFunction,
     AddCreatedTriColFunction,
     AllEntries,
-    OnViewCreatorQuadCol,
     OnViewCreatorTriCol
 } from "@/app/components/formSubcomponents/shared";
 import {PcRunData} from "@/app/components/pcRunServer";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {
     createApiUrlFor,
     dataFor, DisplayFormWrapper,
@@ -125,9 +122,7 @@ export default function PcRunDisplay(
             //     .catch(ErrHandler(setErr));
         }
         const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
-            return <EntryLink props={{displayedId: linkText, linkId: linkId, entryType: typ}}>
-                <div>{linkText}</div>
-            </EntryLink>
+            return <EntryLink props={{openInNewTab:false/* TODO: ok?*/,displayId: linkText, linkId: linkId, entryType: typ}}/>
         }
         const onViewCreators: OnViewCreatorTriCol[] = [
             {
@@ -314,7 +309,7 @@ export function PcRunArea({binaryId, headerLevel, offset}: {
     offset?: number
 }) {
     let linkArea: JSX.Element = <div>{(binaryId !== undefined) ?
-        <EntryLink props={{displayedId: binaryId, linkId: binaryId, entryType: "pcRun"}}>{binaryId}</EntryLink> :
+        <EntryLink props={{linkId: binaryId, entryType: "pcRun",openInNewTab:false/* TODO: ok?*/}}/>:
         "unknown"}
     </div>
     return <div className={"pcRunArea"}>
@@ -336,7 +331,7 @@ export function PcRunListPageTable({data, onClick, withLink}: ListPageItems<PcRu
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PcRunData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "pcRun", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

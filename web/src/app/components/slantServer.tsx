@@ -10,7 +10,7 @@ import {PlateData} from "@/app/components/plateServer";
 import {SlantSelector} from "@/app/components/slantClient";
 
 export function TestSlantOk(){
-    const a: SlantData = {
+    return new SlantData({
         _id: "(slant ID HERE)",
         agarBatch: "(AGAR BATCH ID)",
         stickType: "(STICK TYPE HERE)",
@@ -32,8 +32,7 @@ export function TestSlantOk(){
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 
 export interface SlantData {
@@ -59,6 +58,20 @@ export interface SlantData {
     lastUpdated: number
     acl?: ACL
 }
+export class SlantData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<SlantData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "slant"
+    }
+}
 
 export function SlantSelectorCloseable(sp: SelectorProps<SlantData>) { // TODO: use
     const doSel = (val?: SlantData):void=>{
@@ -70,13 +83,11 @@ export function SlantSelectorCloseable(sp: SelectorProps<SlantData>) { // TODO: 
     return <CloseableSelector<SlantData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Slant List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "slant",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: SlantData) => v._id,
         createSelector:(selHdl: (onSelect: SlantData) => void)=>{
             return <SlantSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

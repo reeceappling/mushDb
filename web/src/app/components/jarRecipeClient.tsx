@@ -377,10 +377,12 @@ export const JarRecipeArea = ({recipeId}: { recipeId?: string, headerLevel?: num
     if (recipeId !== undefined) {
         const b58id = recipeId
         linkArea = <EntryLink
-            props={{displayedId: b58id, linkId: b58id, entryType: "jarRecipe"}}>{/* TODO: display name as well? */}
-            <div>{b58id}</div>
-            ]
-        </EntryLink>
+            props={{
+                displayId: b58id,
+                linkId: b58id,
+                entryType: "jarRecipe",
+                openInNewTab: false, // TODO: ok?
+        }}/>// TODO: display name as well?
     }
     return <div>
         <div>{"Grain Recipe ID: "}</div>
@@ -426,7 +428,7 @@ export function JarRecipeListPageTable({data, onClick, withLink}: ListPageItems<
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: JarRecipeData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "jarRecipe", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -442,7 +444,7 @@ export function JarRecipeSelectorTable({data, onClick}: ListPageItems<JarRecipeD
             return NumberToDateStr(v.lastUpdated)
         }),
         NewColumn("Link", (v: JarRecipeData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "jarRecipe", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })

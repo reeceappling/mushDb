@@ -11,7 +11,7 @@ import {SporePrintSelector} from "@/app/components/sporePrintClient";
 
 
 export function TestSporePrintOk(){
-    const a: SporePrintData = {
+    return new SporePrintData({
         _id: "(SUBSTR ID HERE)",
         parent: "(PARENT ID)",
         creationDate: Date.now()-2000,
@@ -26,8 +26,7 @@ export function TestSporePrintOk(){
         notes: TestNotes,
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 
 export interface SporePrintData {
@@ -46,6 +45,20 @@ export interface SporePrintData {
     lastUpdated: number
     acl?: ACL
 }
+export class SporePrintData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<SporePrintData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "sporePrint"
+    }
+}
 
 export function SporePrintSelectorCloseable({onSelect}:{onSelect: (val?: SporePrintData)=>void}) {
     const doSel = (val?: SporePrintData):void=>{
@@ -57,13 +70,11 @@ export function SporePrintSelectorCloseable({onSelect}:{onSelect: (val?: SporePr
     return <CloseableSelector<SporePrintData> props={{
         allowCreation: false, // TODO: ok?
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Spore Print List",
         //createTxt: "Create Fruit", // TODO: ok?
         lowercase: "sporePrint",
         //creatorInPage: sp.creatorInPage, // TODO: ok?
         //createEndpt: "fruit", // TODO: ok?
-        getId: (v: FruitData) => v._id,
         createSelector:(selHdl: (onSelect: SporePrintData) => void)=>{
             return <SporePrintSelector doSelect={(v)=>{
                 v && selHdl(v)

@@ -68,10 +68,9 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {
+import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
@@ -313,7 +312,7 @@ export default function FruitingChamberDisplay(
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
+                {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTo}/>}
                 {readonly ? null :
                     <button className={"bottomButton greenButton"} onClick={(e) => {
                         e.stopPropagation();
@@ -569,7 +568,7 @@ export function FruitingChamberListPageTable({data, onClick, withLink}: ListPage
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: FruitingChamberData) => {
             return <EntryLinkWrapper
-                props={{linkId: encodeURI(v._id), entryType: "fruitingChamber", openInNewTab: true}}>
+                props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

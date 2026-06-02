@@ -184,8 +184,8 @@ export function OptionalArrayOfType(key: string, input: any, validateChildren: (
 //     })
 // }
 
-export function ViewInNewTabButton({entryType, id}: { entryType: string, id: string }) {
-    return <EntryLinkWrapper props={{linkId: encodeURI(encodeURI(id)), entryType: entryType, openInNewTab: true}}>
+export function ViewInNewTabButton<T extends Entry>({entry}: { entry:T}) {
+    return <EntryLinkWrapper props={{entry:entry, openInNewTab: true}}>
         <button className={"basicButtonSmall"}>{"View"}</button>
     </EntryLinkWrapper>
 }
@@ -530,11 +530,11 @@ export function DisposedSaleContamArea(
             {sectionHeader}
             <div>{"Sold in sale "}
                 <EntryLink props={{
-                    displayedId: displayId,
+                    displayId: displayId,
                     linkId: displayId,
                     entryType: "sale",
                     openInNewTab: true
-                }}>{displayId}</EntryLink>
+                }}/>
             </div>
         </div>
     }
@@ -738,6 +738,18 @@ export function HandleJsonResponse(res: Response): Promise<any> {
 
 export interface Importable { // TODO: USED IN IMPORT PAGES
     _id: string
+}
+
+export function EntryUrlId(item: Entry){
+    return (item && typeof (item as any).getIdUrlEncoded === "function") ? (item as any).getIdUrlEncoded() : item.getId()
+}
+
+export interface Entry { // TODO: USE!
+    getId(): string;
+    entryType(): string;
+}
+export interface StringNameEntry extends Entry { // TODO: USE!
+    getIdUrlEncoded(): string;
 }
 type TypeAsserter<T> = (value: unknown) => asserts value is T; // TODO: USE THIS! MOVE THIS!
 
@@ -1047,9 +1059,7 @@ export function Subform(props: React.PropsWithChildren<{}>) {
 }
 
 export function CreatedLinkFor({linkId, typ, linkText}: { linkId: string, typ: string, linkText?: string }) {
-    return <EntryLink props={{displayedId: linkText || linkId, linkId: linkId, entryType: typ}}>
-        <div>{linkText}</div>
-    </EntryLink>
+    return <EntryLink props={{displayId: linkText || linkId, linkId: linkId, entryType: typ, openInNewTab: false/* TODO: ok?*/}}/>
 }
 
 export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) => void): asserts input is ListResult<T> {

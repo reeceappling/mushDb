@@ -9,15 +9,14 @@ export function TestSubstrateRecipeOkStd(std: boolean){
     return a
 }
 export function TestSubstrateRecipeOk(){
-    const a: SubstrateRecipeData = {
+    return new SubstrateRecipeData({
         _id: "(SUBSTR ID HERE)",
         name: "(SUBSTR NAME HERE)",
         standard: false,
         aliases: ["(Alias 1)","(Alias 2)"],
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 
 export interface SubstrateRecipeData {
@@ -29,19 +28,34 @@ export interface SubstrateRecipeData {
     lastUpdated: number
     acl?: ACL
 }
+export class SubstrateRecipeData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<SubstrateRecipeData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this.getId())
+    }
+    public entryType(): string {
+        return "substrateRecipe"
+    }
+}
 
 // TODO: VALIDATE WORKS!
 export function SubstrateRecipeSelectorCloseable(sp: SelectorProps<SubstrateRecipeData>){ // TODO: likely overhaul
     return <CloseableSelector<SubstrateRecipeData> props={{
         allowCreation: sp.allowCreation,
         doSelect: sp.doSelect, // For selecting normally
-        msgTxt: "", // TODO: del?
         closeTxt: "Close Substrate Recipe List",
         createTxt: "Create Substrate Recipe",
         createEndpt: "substrateRecipe",
         lowercase: "substrate recipe",
         creatorInPage: sp.creatorInPage,
-        getId: (v: SubstrateRecipeData)=>v._id,
         createSelector:(selHdl: (onSelect: SubstrateRecipeData) => void)=>{
             return <SubstrateRecipeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

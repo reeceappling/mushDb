@@ -8,7 +8,7 @@ import {LcRecipeSelector, NewLcRecipeForm} from "@/app/components/lcRecipeClient
 import {ACL} from "@/app/components/accessControlServer";
 
 export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
-    const a: LcRecipeData = {
+    return new LcRecipeData({
         _id: "(LC RECIPE ID HERE)",
         name: "(LC RECIPE NAME HERE)",
         liquids: [], //TODO: fixMe!
@@ -18,8 +18,7 @@ export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
         additives: [], //TODO: fixMe!
         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 
 export interface LcRecipeData {
@@ -34,6 +33,23 @@ export interface LcRecipeData {
     lastUpdated: number
     acl?: ACL
 }
+export class LcRecipeData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<LcRecipeData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this.getId())
+    }
+    public entryType(): string {
+        return "lcRecipe"
+    }
+}
 
 export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) { // TODO: use
     const doSel = (val?: LcRecipeData):void=>{
@@ -45,13 +61,11 @@ export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) { // 
     return <CloseableSelector<LcRecipeData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: "", // TODO: ???
         closeTxt: "Close LC Recipe List",
         createTxt: "Create LC Recipe",
         lowercase: "lc recipe",
         creatorInPage: sp.creatorInPage,
         createEndpt: "lcRecipe",
-        getId: (v: LcRecipeData) => v._id,
         createSelector:(selHdl: (onSelect: LcRecipeData) => void)=>{
             return <LcRecipeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

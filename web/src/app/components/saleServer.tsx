@@ -2,7 +2,7 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {ACL} from "@/app/components/accessControlServer";
 
 export function TestSaleOk() {
-    const a: SaleData = {
+    return new SaleData({
         _id: "(SALE ID HERE)",
         creationDate: 123,
         notes: [{
@@ -14,8 +14,7 @@ export function TestSaleOk() {
         }],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 
 export interface ItemWithNumber {
@@ -31,12 +30,25 @@ export interface SaleData {
     lastUpdated: number
     acl?: ACL
 }
+export class SaleData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<SaleData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "sale"
+    }
+}
 
 // // TODO: NECESSARY?
 // export function SaleSelector(sp: SelectorProps<SaleData>){
 //     // TODO: REDO?
 //     // return RecentSelector<SaleData>({
-//     //     msgTxt: ChannelTextNewSale,
 //     //     recentEndpt: "sales",
 //     //     assertType: AssertSale,
 //     //     closeTxt: "Close Sale List",

@@ -408,7 +408,7 @@ export function SpeciesListPageTable({data, onClick, withLink}: ListPageItems<Sp
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SpeciesData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"species",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

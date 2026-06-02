@@ -20,7 +20,7 @@ export function TestPlateOk(){
     const aPic: PicWithNotesIncoming = {time: now, notes: [...testNotes], location: "test.jpg"}
     const p: PicWithNotesIncoming[] = [aPic,aPic,aPic]
     const c: Contamination = {time: now, location: "test.jpg", mold:true, bacteria:false, confirmed:true, notes: [...testNotes]}
-    const a: PlateData = {
+    return new PlateData({
         _id: "(PLATE ID HERE)",
         agarBatch: "(AGAR BATCH ID)", // TODO: used to be agar?
         creationDate: Date.now()-2000,
@@ -41,8 +41,7 @@ export function TestPlateOk(){
         notes: [...testNotes],
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 export interface PlateData {
     _id: string
@@ -70,6 +69,20 @@ export interface PlateData {
     lastUpdated: number
     acl?: ACL
 }
+export class PlateData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<PlateData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "plate"
+    }
+}
 
 export function PlateSelectorCloseable(sp: SelectorProps<PlateData>) { // TODO: use
     const doSel = (val?: PlateData):void=>{
@@ -81,13 +94,11 @@ export function PlateSelectorCloseable(sp: SelectorProps<PlateData>) { // TODO: 
     return <CloseableSelector<PlateData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Plate List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "plate",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: PlateData) => v._id,
         createSelector:(selHdl: (onSelect: PlateData) => void)=>{
             return <PlateSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

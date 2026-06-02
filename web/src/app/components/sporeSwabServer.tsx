@@ -9,7 +9,7 @@ import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
 
 
 export function TestSporeSwabOk(){
-    const a: SporeSwab = {
+    return new SporeSwab({
         _id: "(SUBSTR ID HERE)",
         parent: "(PARENT ID)",
         creationDate: Date.now()-2000,
@@ -19,8 +19,7 @@ export function TestSporeSwabOk(){
         disposed: Date.now(),
         notes: TestNotes,
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 
 export interface SporeSwab {
@@ -37,6 +36,20 @@ export interface SporeSwab {
     lastUpdated: number
     acl?: ACL
 }
+export class SporeSwab {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<SporeSwab>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "sporeSwab"
+    }
+}
 
 export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwab>) { // TODO: use
     const doSel = (val?: SporeSwab):void=>{
@@ -48,13 +61,11 @@ export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwab>) { // TO
     return <CloseableSelector<SporeSwab> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Spore Swab List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "spore swab",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: SporeSwab) => v._id,
         createSelector:(selHdl: (onSelect: SporeSwab) => void)=>{
             return <SporeSwabSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

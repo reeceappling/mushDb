@@ -7,8 +7,7 @@ import {LcData} from "@/app/components/lcServer";
 import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
 
 export function TestLcSyringeOk(){
-    let ExampleNotes;
-    const a: LcSyringe = {
+    return new LcSyringe({
         _id: "(LC ID HERE)",
         creationDate: Date.now()-2000,
         species: "(SPECIES NAME)",
@@ -20,10 +19,9 @@ export function TestLcSyringeOk(){
         transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
         parent: "(PARENT ID)",
         disposed: Date.now()+40000,
-        notes: ExampleNotes,
+        notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 export interface LcSyringe {
     _id: string
@@ -42,6 +40,20 @@ export interface LcSyringe {
     lastUpdated: number
     acl?: ACL
 }
+export class LcSyringe {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<LcSyringe>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "lcSyringe"
+    }
+}
 
 export function LcSyringeSelectorCloseable(sp: SelectorProps<LcSyringe>) { // TODO: use
     const doSel = (val?: LcSyringe):void=>{
@@ -53,13 +65,11 @@ export function LcSyringeSelectorCloseable(sp: SelectorProps<LcSyringe>) { // TO
     return <CloseableSelector<LcSyringe> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close LC Syringe List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "liquid culture syringe",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: LcSyringe) => v._id,
         createSelector:(selHdl: (onSelect: LcSyringe) => void)=>{
             return <LcSyringeSelector doSelect={(v)=>{
                 v && selHdl(v)

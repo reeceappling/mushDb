@@ -265,7 +265,7 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
             return <div>{"unknown"}</div>
         }
         const tempLink = <EntryLink
-            props={{displayedId: val, linkId: val, entryType: "substrateBatch"}}>{val}</EntryLink>
+            props={{displayId: val, linkId: val, entryType: "substrateBatch", openInNewTab: false/* TODO: ok?*/}}/>
         if (readonly) {
             return tempLink
         }
@@ -298,7 +298,7 @@ export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageI
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubstrateBatchData) => {
             return <EntryLinkWrapper
-                props={{linkId: encodeURI(v._id), entryType: "substrateBatch", openInNewTab: true}}>
+                props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

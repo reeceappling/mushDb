@@ -6,7 +6,7 @@ import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID, {IdPageLink} from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {TransferData} from "@/app/components/transferServer";
-import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
 import {ImageLocationFor} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {
@@ -123,9 +123,9 @@ export default function TransferDisplay(
         const fromToLink = (preText: string, itemType: string, itemId: string,) => {
             const b58id = itemId
             return <div className={"fromToLink"}>
-                <EntryLinkWrapper props={{linkId: b58id, entryType: itemType, openInNewTab: false}}>
+                <EntryLinkWrapperForId props={{linkId: b58id, entryType: itemType, openInNewTab: false}}>
                     <div className={"xferEntryLink"}>{preText + ": " + itemType + " " + b58id}</div>
-                </EntryLinkWrapper>
+                </EntryLinkWrapperForId>
             </div>
         }
         const imageArea = (alt: string, loc?: string) => {
@@ -471,18 +471,18 @@ export function TransfersOutDisplay( // TODO: likely overhaul
                     <div>{"Existing:"}</div>
                     {!resultsHidden && <div>
                         {xfers.map((xfer, i) => {
-                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
+                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapperForId props={{
                                 linkId: xfer,
                                 entryType: "transfer",
                                 openInNewTab: openInNewTab,
-                            }}>{xfer}</EntryLinkWrapper></div>
+                            }}>{xfer}</EntryLinkWrapperForId></div>
                         })}
                         {newXfers.map((xfer, i) => {
-                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
+                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapperForId props={{
                                 linkId: xfer,
                                 entryType: "transfer",
                                 openInNewTab: openInNewTab,
-                            }}>{xfer}</EntryLinkWrapper></div>
+                            }}>{xfer}</EntryLinkWrapperForId></div>
                         })}
                     </div>}
                 </div>
@@ -516,11 +516,11 @@ export function TransfersOutViewOnlyDisplay(
         {headerTxt && <div className={"transferHeader"}><div className={"text-xl"}>{headerTxt}</div></div>}
         <div className={"transfersOutViewOnlyForm depth" + depth}>
             {transfersOut.map((xfer, i) => {
-                return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapper props={{
+                return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapperForId props={{
                     linkId: xfer,
                     entryType: "transfer",
                     openInNewTab: false,
-                }}>{xfer}</EntryLinkWrapper></div>
+                }}>{xfer}</EntryLinkWrapperForId></div>
             })}
         </div>
     </DepthProvider>
@@ -569,14 +569,14 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
             return NumberToDateStr(v.creationDate)
         }),
         NewColumn("Src", (v)=>{
-            return <EntryLinkWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
+            return <EntryLinkWrapperForId props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
                 <div>{v.from}</div>
-            </EntryLinkWrapper>
+            </EntryLinkWrapperForId>
         }),
         NewColumn("Dst", (v)=>{
-            return <EntryLinkWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
+            return <EntryLinkWrapperForId props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
                 <div>{v.to}</div>
-            </EntryLinkWrapper>
+            </EntryLinkWrapperForId>
         }),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
@@ -585,7 +585,7 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: TransferData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"transfer",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
@@ -600,20 +600,20 @@ export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<T
             return NumberToDateStr(v.creationDate)
         }),
         NewColumn("Src", (v)=>{
-            return <EntryLinkWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
+            return <EntryLinkWrapperForId props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
                 <div>{v.from}</div>
-            </EntryLinkWrapper>
+            </EntryLinkWrapperForId>
         }),
         NewColumn("Dst", (v)=>{
-            return <EntryLinkWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
+            return <EntryLinkWrapperForId props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
                 <div>{v.to}</div>
-            </EntryLinkWrapper>
+            </EntryLinkWrapperForId>
         }),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }),
         NewColumn("Link", (v: TransferData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"transfer",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })

@@ -7,7 +7,7 @@ export function TestProjectOk(){
     perms.set("USERNAME 1", "admin")
     perms.set("USERNAME 2", "write")
     perms.set("USERNAME 3", "read")
-    const a: ProjectData = {
+    return new ProjectData({
         _id: "(PROJECT NAME HERE)",
         creationDate: 123,
         completed: 456, // Optional
@@ -20,15 +20,14 @@ export function TestProjectOk(){
         }],
         lastUpdated: 789,
         perms: perms,
-    }
-    return a
+    })
 }
 export function TestProjectOk2(){
     let perms = new Map<string, string>();
     perms.set("USERNAME 1", "admin")
     perms.set("USERNAME 2", "write")
     perms.set("USERNAME 3", "read")
-    const a: ProjectData = {
+    return new ProjectData({
         _id: "(PROJECT NAME HERE)",
         creationDate: 123,
         notes: [{
@@ -39,17 +38,33 @@ export function TestProjectOk2(){
             note: "(NOTE 2)"
         }],
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 
-export type ProjectData = {
-    _id: string // project name
-    creationDate: number
-    completed?: number
-    notes?: Note[]
-    lastUpdated: number
-    perms?: Map<string, string> // Map of userId to canWrite // TODO: consider changing from bool to "read/write/admin" if serialization of mapped undefineds gets weird...
+export interface ProjectData {
+    _id: string, // project name
+    creationDate: number,
+    completed?: number,
+    notes?: Note[],
+    lastUpdated: number,
+    perms?: Map<string, string>, // Map of userId to canWrite // TODO: consider changing from bool to "read/write/admin" if serialization of mapped undefineds gets weird...
+}
+export class ProjectData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<ProjectData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this._id)
+    }
+    public entryType(): string {
+        return "project"
+    }
 }
 
 // Confirmed to be working without going to get data
@@ -57,7 +72,7 @@ export function ProjectSelector(sp: SelectorProps<ProjectData>){
     // TODO: FIX THIS?
     return <select className={"tailwindSelector"} onChange={e => { // TODO: DISABLE THIS RETURN!
         // TODO: FIX NEXT LINE
-        sp.doSelect({_id: e.currentTarget.value, creationDate: 0, lastUpdated: 0, perms: new Map<string, string>()})
+        sp.doSelect(new ProjectData({_id: e.currentTarget.value, creationDate: 0, lastUpdated: 0, perms: new Map<string, string>()}))
     }}>
         <option value={"A"}>{"A"}</option>
         <option value={"B"}>{"B"}</option>

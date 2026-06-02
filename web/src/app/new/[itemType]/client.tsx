@@ -47,9 +47,7 @@ import {PlugsJar} from "@/app/components/plugsServer";
 export function ClientNewPage({itemType, species}: { itemType: string, species?: SpeciesData }) {
     const [newEntries, setNewEntries] = useState<JSX.Element[]>([])
     const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
-        return <EntryLink props={{displayedId: linkText, linkId: linkId, entryType: typ}}>
-            <div>{linkText}</div>
-        </EntryLink>
+        return <EntryLink props={{openInNewTab:false/* TODO: ok?*/,displayId: linkText, linkId: linkId, entryType: typ}}/>
     }
     const createdItemsArea = ()=>{
         return <div>
@@ -127,7 +125,8 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
             case "plate": // from agarBatch only
                 // TODO: above newPlateForm (and all others), put links area for created items
                 return <NewPlateForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: PlateData) => {
+                    isTopLevel: true,
+                    onCreate: (newEntry: PlateData) => {
                         setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "plate")])
                     }
                 }}/>

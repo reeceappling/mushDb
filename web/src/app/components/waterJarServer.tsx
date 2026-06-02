@@ -33,6 +33,20 @@ export interface WaterJarData {
     disposed?: number
     lastUpdated: number
 }
+export class WaterJarData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<WaterJarData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "waterJar"
+    }
+}
 
 export function WaterJarSelectorCloseable(sp: SelectorProps<WaterJarData>) {
     const doSel = (val?: WaterJarData):void=>{
@@ -44,13 +58,11 @@ export function WaterJarSelectorCloseable(sp: SelectorProps<WaterJarData>) {
     return <CloseableSelector<WaterJarData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: "",
         closeTxt: "Close Water Jar List",
         createTxt: "Create Water Jar",
         lowercase: "water jar",
         creatorInPage: sp.creatorInPage,
         createEndpt: "waterJar",
-        getId: (v: WaterJarData) => v._id,
         createSelector:(selHdl: (onSelect: WaterJarData) => void)=>{
             return <WaterJarSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

@@ -28,7 +28,7 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {HandleErr} from "@/app/components/userClient";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
-import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
 import {AssertStasisTube} from "@/app/components/stasisTubeClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
@@ -292,11 +292,11 @@ export function ExistingSubSpeciesSelector(
     </div>
 }
 
-export function SubspeciesFormArea({subspecies}:{
-    subspecies: string,
-}){
-    return <EntryLinkWrapper props={{entryType:"subspecies",linkId:encodeURI(subspecies)}}><div>{"Subspecies: "+subspecies}</div></EntryLinkWrapper>
-}
+// export function SubspeciesFormArea({subspecies}:{
+//     subspecies: string,
+// }){
+//     return <EntryLinkWrapperForId props={{linkId: ""/* TODO: FIX*/, entryType: "subspecies",openInNewTab:false/* TODO: ok?*/}}><div>{"Subspecies: "+subspecies}</div></EntryLinkWrapperForId>
+// }
 
 export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems<SubspeciesData>) {
     let cols: ListTableColumn<SubspeciesData>[] = [
@@ -308,7 +308,7 @@ export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubspeciesData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"subspecies",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

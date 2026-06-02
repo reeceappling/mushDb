@@ -599,7 +599,7 @@ export function ProjectListPageTable({data, onClick, withLink}: ListPageItems<Pr
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: ProjectData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"project",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

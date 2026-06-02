@@ -128,11 +128,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
             <div><div>{"Multispore syringes Created:"}</div></div>
             {entriesCreated.map((created,i)=>{
                 const b58id = created
-                return <EntryLink props={{displayedId:b58id, linkId: b58id, entryType:"mss", openInNewTab: false}}>{/* TODO: OPENINNEWTAB false ok? */}
-                    <div key={i} className={i===entriesCreated.length-1?"lastCreated":"created"}>
-                        {b58id}
-                    </div>
-                </EntryLink>
+                return <EntryLink props={{displayId:b58id, linkId: b58id, entryType:"mss", openInNewTab: false}}/>// TODO: OPENINNEWTAB false ok?
             })}
         </div>
     }
@@ -319,7 +315,7 @@ export function MssListPageTable({data, onClick, withLink}: ListPageItems<MssDat
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: MssData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"mss",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]

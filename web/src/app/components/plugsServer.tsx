@@ -11,7 +11,7 @@ export function TestPlugsOk(){
         return {time: new Date().getTime(), note:"TEST_NOTE_TEXT_HERE"}
     }
     const testNotes: Note[] = [testNote(), testNote(), testNote()]
-    const a: PlugsJar = {
+    return new PlugsJar({
         _id: "(PLATE ID HERE)",
         dowelTypes: [
             {wood:"wood1",size:1,units:"miles"},
@@ -30,8 +30,7 @@ export function TestPlugsOk(){
         disposed: Date.now()+40000,
         notes: [...testNotes],
         lastUpdated: 789,
-    }
-    return a
+    })
 }
 export interface DowelType {
     wood: string
@@ -58,6 +57,20 @@ export interface PlugsJar {
     lastUpdated: number
     acl?: ACL
 }
+export class PlugsJar {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<PlugsJar>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "plugs" // TODO: ensure ok
+    }
+}
 
 export function PlugsSelectorCloseable(sp: SelectorProps<PlugsJar>) { // TODO: use
     const doSel = (val?: PlugsJar):void=>{
@@ -69,13 +82,11 @@ export function PlugsSelectorCloseable(sp: SelectorProps<PlugsJar>) { // TODO: u
     return <CloseableSelector<PlugsJar> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
         closeTxt: "Close Plugs List",
         //createTxt: "Create Bag",// TODO: ???
         lowercase: "plugs",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        getId: (v: PlugsJar) => v._id,
         createSelector:(selHdl: (onSelect: PlugsJar) => void)=>{
             return <PlugsSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

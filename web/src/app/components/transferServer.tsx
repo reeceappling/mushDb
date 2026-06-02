@@ -4,7 +4,7 @@ import {ACL} from "@/app/components/accessControlServer";
 
 
 export function TestTransferOk(){
-    const a: TransferData = {
+    return new TransferData({
         _id: "(TRANSFER ID HERE)",
         from: "(FROM 1)",
         to: "(TO)",
@@ -17,8 +17,7 @@ export function TestTransferOk(){
         notes: TestNotes,
         lastUpdated: 789,
         //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
+    })
 }
 
 export interface TransferData {
@@ -35,5 +34,20 @@ export interface TransferData {
     lastUpdated: number
     acl?: ACL
 }
+export class TransferData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<TransferData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "transfer"
+    }
+}
+
 
 // Likely will never need a closeable single selector for this

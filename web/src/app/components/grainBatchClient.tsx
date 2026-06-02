@@ -288,7 +288,7 @@ export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: GrainBatchData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "grainBatch", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
