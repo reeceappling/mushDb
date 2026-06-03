@@ -105,19 +105,12 @@ export default function SubstrateBatchDisplay(
                 acl: MarshalAcl(acl),
             }
             DoUpdateRequest("substrateBatch", initial._id, body, AssertSubstrateBatch, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("substrateBatch", initial._id), {
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify(body)
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertSubstrateBatch(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new SubstrateBatchData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const onViewCreators: OnViewCreatorTriCol[] = [
             {
@@ -198,19 +191,12 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
             notes: notes
         }
         DoCreateRequest("substrateBatch", body, AssertSubstrateBatch, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("substrateBatch"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertSubstrateBatch(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     if (!formOpen) {
         return <div>

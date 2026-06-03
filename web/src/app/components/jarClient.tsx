@@ -342,18 +342,12 @@ export default function JarDisplay(
             }
 
             DoUpdateMultipartRequest("jar",initial._id, formData, AssertJar, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-
-            // SendMultipartRequest(updateApiUrlFor("jar",initial._id), cookies, formData)
-            //     .then(HandleJsonResponse)
-            //     .then((newEntry) => {
-            //         AssertJar(newEntry)
-            //         updateInitial(newEntry)
-            //     })
-            //     .catch((er) => {
-            //         setErr("failed to decode response: " + JSON.stringify(er))
-            //     });
+                .then(v=>{
+                    updateInitial(new JarData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const jarSizeArea = () => {
             return <div>
@@ -457,8 +451,12 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("jar", body, AssertJar, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     // TODO: Must have either grain batch, or grain batch AND recipe!
     // TODO: or can only-recipe create a new batch?

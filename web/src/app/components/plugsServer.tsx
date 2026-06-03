@@ -11,7 +11,7 @@ export function TestPlugsOk(){
         return {time: new Date().getTime(), note:"TEST_NOTE_TEXT_HERE"}
     }
     const testNotes: Note[] = [testNote(), testNote(), testNote()]
-    return new PlugsJar({
+    return new PlugsData({
         _id: "(PLATE ID HERE)",
         dowelTypes: [
             {wood:"wood1",size:1,units:"miles"},
@@ -37,7 +37,7 @@ export interface DowelType {
     size: number
     units: string
 }
-export interface PlugsJar {
+export interface PlugsData {
     _id: string
     parentType?: string
     parent?: string
@@ -57,9 +57,9 @@ export interface PlugsJar {
     lastUpdated: number
     acl?: ACL
 }
-export class PlugsJar {
+export class PlugsData {
     // Accept a single object containing the fields
-    constructor(init?: Partial<PlugsJar>) {
+    constructor(init?: Partial<PlugsData>) {
         // Dynamically map the object fields onto the class instance
         Object.assign(this, init);
     }
@@ -72,14 +72,14 @@ export class PlugsJar {
     }
 }
 
-export function PlugsSelectorCloseable(sp: SelectorProps<PlugsJar>) { // TODO: use
-    const doSel = (val?: PlugsJar):void=>{
+export function PlugsSelectorCloseable(sp: SelectorProps<PlugsData>) { // TODO: use
+    const doSel = (val?: PlugsData):void=>{
         if (!val){
             return
         }
         sp.doSelect(val)
     }
-    return <CloseableSelector<PlugsJar> props={{
+    return <CloseableSelector<PlugsData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
         closeTxt: "Close Plugs List",
@@ -87,7 +87,7 @@ export function PlugsSelectorCloseable(sp: SelectorProps<PlugsJar>) { // TODO: u
         lowercase: "plugs",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        createSelector:(selHdl: (onSelect: PlugsJar) => void)=>{
+        createSelector:(selHdl: (onSelect: PlugsData) => void)=>{
             return <PlugsSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)
             }}/>

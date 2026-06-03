@@ -119,24 +119,12 @@ export default function GrainBatchDisplay(
                 notes: notes,
             }
             DoUpdateRequest("grainBatch", initial._id, body, AssertGrainBatch, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("grainBatch",data._id), {
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify({
-            //         soakTimeHrs: soakTime,
-            //         boilTimeMins: boilTime,
-            //         dryTimeHours: dryTime,
-            //         notes: notes,
-            //     })
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((updated) => {
-            //         AssertGrainBatch(updated)
-            //         updateInitial(updated)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new GrainBatchData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const handleFormChangeBoil = (val?: string) => {
             const n = Number(val)
@@ -247,22 +235,12 @@ export function NewGrainBatchForm({handlers, recipe}: {
             notes: notes,
         }
         DoCreateRequest("grainBatch", body, AssertGrainBatch, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("grainBatch"), {
-        //     method: 'Post',
-        //     body: JSON.stringify({
-        //         recipe: jarRecipe?._id,
-        //         notes: notes,
-        //     }),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         AssertGrainBatch(newEntry)
-        //         handlers.onCreate && handlers.onCreate(newEntry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <NewEntryFormWrapper entryType={"grainBatch"}>
         <ErrorDisplay err={err}/>

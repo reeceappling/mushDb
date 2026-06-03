@@ -140,23 +140,12 @@ export default function JarRecipeDisplay(
                 acl: MarshalAcl(acl),
             }
             DoUpdateRequest("jarRecipe",initial._id, body, AssertJarRecipe, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("jarRecipe",data._id), {
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify({
-            //         standard: isStandard,
-            //         notes: notes,
-            //         acl: MarshalAcl(acl),
-            //     })
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((newEntry) => {
-            //         AssertJarRecipe(newEntry)
-            //         updateInitial(newEntry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new JarRecipeData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const jarGrainsArea = () => {
             return <div>
@@ -273,27 +262,12 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
             notes: notes,
         }
         DoCreateRequest("jarRecipe", body, AssertJarRecipe, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("jarRecipe"), {
-        //     method: 'Post',
-        //     body: JSON.stringify({
-        //         name: name,
-        //         grain: grains,
-        //         standard: isStandard,
-        //         nutrients: nutrients,
-        //         sugars: sugars,
-        //         additives: additives,
-        //         notes: notes,
-        //     }),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         AssertJarRecipe(newEntry)
-        //         handlers.onCreate && handlers.onCreate(newEntry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {

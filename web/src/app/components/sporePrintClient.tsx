@@ -248,16 +248,12 @@ export default function SporePrintDisplay(
             }
 
             DoUpdateMultipartRequest("sporePrint",data._id, formData, AssertSporePrint, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-
-            // SendMultipartRequest(updateApiUrlFor("sporePrint",data._id), cookies, formData)
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertSporePrint(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new SporePrintData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: test heavily for all
@@ -382,16 +378,12 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
             formData.set(fileName, toSend.img, fileName)
         }
         DoCreateRequestMultipart("sporePrint", formData, AssertSporePrint, allCookies(cookies))
-            .then(onCreate)
-            .catch(errHandler)
-
-        // SendMultipartRequest(createApiUrlFor("sporePrint"), cookies, formData)
-        //     .then(HandleJsonResponse)
-        //     .then((resJson)=>{
-        //         AssertSporePrint(resJson)
-        //         onCreate(resJson)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                onCreate ? onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     if(fruitIn===undefined){
         // TODO: FRUIT SELECTOR!?

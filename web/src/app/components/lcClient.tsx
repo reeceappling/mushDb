@@ -86,7 +86,7 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {LcSyringe} from "@/app/components/lcSyringeServer";
+import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
@@ -290,23 +290,19 @@ export default function LcDisplay(
             }
 
             DoUpdateMultipartRequest("lc",initial._id, formData, AssertLc, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-
-            // SendMultipartRequest(updateApiUrlFor("lc",initial._id), cookies, body)
-            //     .then(HandleJsonResponse)
-            //     .then((updatedEntry) => {
-            //         AssertLc(updatedEntry)
-            //         updateInitial(updatedEntry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new LcData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
                 txt: "New Liquid Culture Syringe",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                     return <NewLcSyringeForm txt={"Create New Liquid Culture Syringe"} parentLc={initial}
-                                             onCreate={(lcs: LcSyringe) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                                             onCreate={(lcs: LcSyringeData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
                         onCreate([{
                             typeText: "Liquid Culture Syringe",
                             node: <CreatedLinkFor linkId={lcs._id} typ={"lcSyringe"}/>,// TODO: ENSURE lcs or lcSyringe is correct here
@@ -415,19 +411,12 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("lc", body, AssertLc, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("lc"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         AssertLc(newEntry)
-        //         handlers.onCreate && handlers.onCreate(newEntry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
 
     return <NewEntryFormWrapper entryType={"lc"}>

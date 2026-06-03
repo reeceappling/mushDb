@@ -243,15 +243,12 @@ export default function BagDisplay(
                 return
             }
             DoUpdateMultipartRequest("bag",initial._id, formData, AssertBag, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // SendMultipartRequest(updateApiUrlFor("bag",initial._id), cookies, formData)
-            //     .then(HandleJsonResponse)
-            //     .then((newEntry) => {
-            //         AssertBag(newEntry)
-            //         updateInitial(newEntry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new BagData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForNewFruit(initial._id, "bag", allCookies(cookies)), // TODO: test heavily
@@ -384,23 +381,12 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             notes: notes,
         }
         DoCreateRequest("bag", body, AssertBag, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("bag"), {
-        //     method: 'Post',
-        //     body: JSON.stringify(body),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         try {
-        //             AssertBag(newEntry)
-        //             handlers.onCreate && handlers.onCreate(newEntry)
-        //         } catch (er) {
-        //             setErr("failed to decode response:")
-        //         }
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return (
         <NewEntryFormWrapper entryType={"bag"}>

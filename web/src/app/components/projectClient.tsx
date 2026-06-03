@@ -136,20 +136,12 @@ export default function ProjectDisplay(
 
 
             DoUpdateRequest("project",encodeURIComponent(data._id), body, AssertProject, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("project",encodeURIComponent(data._id)), { // TODO: question marks in id cause issues
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify(body)
-            // }).then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertProject(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch((err) => {
-            //         HandleErr(err, setErr)
-            //     });
+                .then(v=>{
+                    updateInitial(new ProjectData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         return (
             <DisplayFormWrapper entryType={"project"}>
@@ -202,21 +194,12 @@ export function NewProjectForm(
             notes: notes,
         }
         DoCreateRequest("project", body, AssertProject, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("project"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((proj) => {
-        //         AssertProject(proj)
-        //         handlers.onCreate && handlers.onCreate(proj)
-        //     })
-        //     .catch((error) => {
-        //         HandleErr(error, setErr)
-        //     });
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const handleChangeName = (event: ChangeEvent<HTMLInputElement>) => {
         setName(event.target.value)

@@ -753,7 +753,6 @@ export interface StringNameEntry extends Entry { // TODO: USE!
 }
 type TypeAsserter<T> = (value: unknown) => asserts value is T; // TODO: USE THIS! MOVE THIS!
 
-// TODO: USE THIS IN MANY IMPORTS!
 export function ImportResponseHandler<T extends Importable>(asserter: TypeAsserter<T>, typeStr: string, setErr: (e:any)=>void): (res: Response)=>void {
     return (res: Response)=>{
         HandleJsonResponse(res)

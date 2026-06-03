@@ -106,19 +106,12 @@ export default function WaterJarDisplay(
             writeTagTo: writeTagTo
         }
         DoUpdateRequest("waterJar",initial._id, body, AssertWaterJar, allCookies(cookies))
-            .then(updateInitial)
-            .catch(ErrHandler(setErr))
-        // fetch(updateApiUrlFor("waterJar",initial._id), { // TODO: ID IS NOT PROPERLY POPULATING
-        //     method: 'Post',
-        //     body: JSON.stringify(body),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         AssertWaterJar(newEntry)
-        //         updateInitial(newEntry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                updateInitial(new WaterJarData(v))
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         {
@@ -178,19 +171,12 @@ export function NewWaterJarForm(
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("waterJar", body, AssertWaterJar, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(ErrHandler(setErr))
-        // fetch(createApiUrlFor("waterJar"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertWaterJar(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <NewEntryFormWrapper entryType={"waterJar"}>
         <ErrorDisplay err={err}/>

@@ -120,20 +120,12 @@ export default function AgarBatchDisplay(
                 acl: MarshalAcl(acl), // TODO; use this everywhere if it works
             }
             DoUpdateRequest("agarBatch",initial._id, body, AssertAgarBatch, allCookies(cookies))
-                //.then(v=>updateInitial(new AgarBatchData(v))) // TODO: DO THIS EVERYWHERE!!!!
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("agarBatch", initial._id), { // This ID is in base58
-            //     method: 'Post',
-            //     body: JSON.stringify({notes: notes, acl: acl}),
-            //     headers: clientPostRequestHeaders,
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((newEntry) => {
-            //         AssertAgarBatch(newEntry)
-            //         updateInitial(newEntry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new AgarBatchData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -228,12 +220,10 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             notes: notes,
         }
         DoCreateRequest("agarBatch", body, AssertAgarBatch, allCookies(cookies))
-            .then(v=>{ // TODO: test and collapse this down?
-                console.log("Trying to create using "+JSON.stringify(v))
-                handlers.onCreate && handlers.onCreate(v)
-            }) // TODO: used to be handlers?.onCreate and not working! Make this work!
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
             .catch(e=>{
-                console.error(JSON.stringify(e))
                 setErr(JSON.stringify(e))
             })
         // fetch(createApiUrlFor("agarBatch"), {

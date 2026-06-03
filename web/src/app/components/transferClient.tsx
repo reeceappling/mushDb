@@ -149,19 +149,12 @@ export default function TransferDisplay(
                 acl: MarshalAcl(acl),
             }
             DoUpdateRequest("transfer",initial._id, body, AssertTransfer, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("transfer",initial._id), {
-            //     method: 'Post',
-            //     body: JSON.stringify(body),
-            //     headers: clientPostRequestHeaders,
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((newEntry) => {
-            //         AssertTransfer(newEntry)
-            //         updateInitial(newEntry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new TransferData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const b58idMain = initial._id
         return <DisplayFormWrapper entryType={"transfer"} id={"transferDisplay"}>
@@ -236,16 +229,12 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: {
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
-            .then(onCreated)
-            .catch(errHandler)
-        // Send request
-        // SendMultipartRequest(createApiUrlFor("transfer"), cookies, formData)
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         AssertTransfer(newEntry)
-        //         onCreated && onCreated(newEntry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                onCreated ? onCreated(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const toggleOpen = () => {
         setIsOpen(!isOpen)
@@ -347,8 +336,12 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated}: 
         picTo && formData.set('picTo', picTo, 'picTo')
         // Send request
         DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
-            .then(onCreated)
-            .catch(ErrHandler(setErr))
+            .then(v=>{
+                onCreated ? onCreated(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const toggleOpen = () => {
         setIsOpen(!isOpen)

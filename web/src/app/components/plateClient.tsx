@@ -246,14 +246,12 @@ export default function PlateDisplay(
             return
         }
         DoUpdateMultipartRequest("plate",initial._id, formData, AssertPlate, allCookies(cookies))
-            .then(updateInitial)
-            .catch(ErrHandler(setErr))
-        // SendMultipartRequest(updateApiUrlFor("plate",initial._id), cookies, formData)
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertPlate(entry)
-        //         updateInitial(entry)
-        //     }).catch(ErrHandler(setErr));
+            .then(v=>{
+                updateInitial(new PlateData(v))
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         WriteRfidOvcArea(initial._id),
@@ -528,27 +526,12 @@ export function NewPlateForm(
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("plate", body, AssertPlate, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("plate"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify({
-        //         agarBatch: agarBatch,
-        //         condensationCoverageAtSealTime: condensationCoverageAtSealTime, // TODO: ensure ok on go side
-        //         pourCoverage: pourCoverage, // TODO: ensure ok on go side
-        //         wetAtCooledTime: wetAtCooledTime, // TODO: ensure ok on go side
-        //         agarOnOutsideAtPourTime: agarOnOutsideAtPourTime, // TODO: ensure ok on go side
-        //         notes: notes,
-        //         writeTagTo: writeTagTo,
-        //     })
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertPlate(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <NewEntryFormWrapper entryType={"plate"}>
         <ErrorDisplay err={err}/>

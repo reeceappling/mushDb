@@ -129,19 +129,12 @@ export default function SpeciesDisplay(
                 defaultAcl: MarshalAcl(defaultAcl), // TODO: ensure ok
             }
             DoUpdateRequest("species",encodeURIComponent(data._id), body, AssertSpecies, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("species", encodeURI(data._id)), { // TODO: ensure correct
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify(body)
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertSpecies(entry)
-            //         updateInitial
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new SpeciesData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         return (
             <DisplayFormWrapper entryType={"species"}>
@@ -211,25 +204,12 @@ export function NewSpeciesForm(
             notes:notes,
         }
         DoCreateRequest("species", body, AssertSpecies, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("species"), {
-        //     method: 'Post',
-        //     body: JSON.stringify({
-        //         name:name,
-        //         scientificName:sciName,
-        //         aliases:aliases,
-        //         sub:sub._id,
-        //         notes:notes,
-        //     }),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then(entry=> {
-        //         AssertSpecies(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <NewEntryFormWrapper entryType={"species"}>
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"Name :"} setName={setName}/>

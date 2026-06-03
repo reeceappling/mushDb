@@ -42,7 +42,7 @@ import {TopPageHeaderLevel} from "@/app/components/Constants";
 import React, {JSX, useState} from "react";
 import EntryLink from "@/app/components/formSubcomponents/entryLink";
 import { NewPlugsForm } from "@/app/components/plugsClient";
-import {PlugsJar} from "@/app/components/plugsServer";
+import {PlugsData} from "@/app/components/plugsServer";
 
 export function ClientNewPage({itemType, species}: { itemType: string, species?: SpeciesData }) {
     const [newEntries, setNewEntries] = useState<JSX.Element[]>([])
@@ -132,7 +132,7 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                 }}/>
             case "plugs": // TODO: validate
                 return <NewPlugsForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: PlugsJar) => {
+                    isTopLevel: true, onCreate: (newEntry: PlugsData) => {
                         setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "plugs")])
                     }
                 }}/>

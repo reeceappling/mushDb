@@ -41,7 +41,7 @@ import {SporePrintData} from "@/app/components/sporePrintServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {FruitData} from "@/app/components/fruitServer";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
-import {SporeSwab} from "@/app/components/sporeSwabServer";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
@@ -65,7 +65,7 @@ import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
-export function AssertSporeSwab(input: any): asserts input is SporeSwab {
+export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
@@ -186,7 +186,7 @@ export default function SporeSwabDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: SporeSwab) => {
+        const updateInitial = (updated: SporeSwabData) => {
             setInitial(updated)
             setSale(updated.sale)
             setDisposed(updated.disposed)
@@ -202,20 +202,12 @@ export default function SporeSwabDisplay(
                 acl: MarshalAcl(acl),
             }
             DoUpdateRequest("sporeSwab",data._id, body, AssertSporeSwab, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-
-            // fetch(updateApiUrlFor("sporeSwab",data._id), {
-            //     method: 'Post',
-            //     body: JSON.stringify(dataObj),
-            //     headers: clientPostRequestHeaders,
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertSporeSwab(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new SporeSwabData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: use the next one in other places...
@@ -262,7 +254,7 @@ export function NewSporeSwabForm(
         fruitIn?: FruitData
         headerLevel?: number
         offset?: number
-        onCreate: (sp: SporeSwab) => void
+        onCreate: (sp: SporeSwabData) => void
     }) {
     // TODO: EITHER PRINT OR FRUIT!!!!!
 
@@ -284,20 +276,12 @@ export function NewSporeSwabForm(
             notes: notes,
         }
         DoCreateRequest("sporeSwab", body, AssertSporeSwab, allCookies(cookies))
-            .then(onCreate)
-            .catch(errHandler)
-
-        // fetch(createApiUrlFor("sporeSwab"), {
-        //     method: 'Post',
-        //     body: JSON.stringify(body),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((resJson) => {
-        //         AssertSporeSwab(resJson)
-        //         onCreate(resJson)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                onCreate ? onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
 
     return <NewEntryFormWrapper entryType={"sporeSwab"}>
@@ -308,8 +292,8 @@ export function NewSporeSwabForm(
     </NewEntryFormWrapper>
 }
 
-export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<SporeSwab>) {
-    let cols: ListTableColumn<SporeSwab>[] = [
+export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<SporeSwabData>) {
+    let cols: ListTableColumn<SporeSwabData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -321,15 +305,15 @@ export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: SporeSwab)=>{
+        cols = [...cols, NewColumn("Link", (v: SporeSwabData)=>{
             return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SporeSwab(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SporeSwabData(v)}}/>
 }
-export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwab>) {
+export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwabData>) {
     return <SporeSwabListPageTable data={data} onClick={onClick} withLink={true} />
 }
 
@@ -338,10 +322,10 @@ export function SporeSwabSelector(
         doSelect,
         allowCreate // TODO: del?
     }: {
-        doSelect: (val: SporeSwab | undefined) => void,
+        doSelect: (val: SporeSwabData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: SporeSwab[]):JSX.Element=>{
+    const table = (items: SporeSwabData[]):JSX.Element=>{
         return <SporeSwabSelectorTable data={items} onClick={doSelect}/>
     }
 

@@ -57,6 +57,7 @@ import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {BagData} from "@/app/components/bagServer";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -202,19 +203,12 @@ export default function MssDisplay(
                 acl:MarshalAcl(acl),
             }
             DoUpdateRequest("mss",initial._id, body, AssertMss, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("mss", data._id), {
-            //     method: 'Post',
-            //     body: JSON.stringify(body),
-            //     headers: clientPostRequestHeaders,
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertMss(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new MssData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -277,19 +271,12 @@ export function NewMssForm(
         }
 
         DoCreateRequest("mss", body, AssertMss, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("mss"), { // TODO: validate all creates are using this format of url
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertMss(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
 
     return <NewEntryFormWrapper entryType={"mss"}>

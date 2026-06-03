@@ -108,17 +108,12 @@ export default function SaleDisplay(
                 acl:MarshalAcl(acl), // TODO: ok?
             }
             DoUpdateRequest("sale",data._id, body, AssertSale, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("sale",data._id), {
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify({notes:notes,acl:acl,}) // TODO: used to just be notes. Fix in go
-            // }).then(HandleJsonResponse)
-            //     .then((entry)=>{
-            //         AssertSale(entry)
-            //         updateInitial(entry)
-            //     }).catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new SaleData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         return (
             <DisplayFormWrapper entryType={"sale"}>
@@ -171,22 +166,12 @@ export function NewSaleForm(
             //perms: perms, // TODO: KEEP PERMS FROM PARENT?
         }
         DoCreateRequest("sale", body, AssertSale, allCookies(cookies))
-            .then(s=>{
-                // TODO: ok? different than other creates
-                onCreate?onCreate(s):redirect(viewUrlFor("sale",s._id))
+            .then(v=>{
+                onCreate ? onCreate(v) : redirect(viewUrlFor("sale", v._id))
             })
-            .catch(errHandler)
-        // fetch(createApiUrlFor("sale"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((sale) => {
-        //         AssertSale(sale)
-        //         onCreate?onCreate(sale):redirect(viewUrlFor("sale",sale._id))
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <NewEntryFormWrapper entryType={"sale"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>

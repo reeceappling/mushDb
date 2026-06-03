@@ -105,22 +105,12 @@ export default function PcRunDisplay(
                 acl: MarshalAcl(acl),
             }
             DoUpdateRequest("pcRun",initial._id, body, AssertPcRun, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("pcRun",data._id), {
-            //     method: 'Post',
-            //     body: JSON.stringify({
-            //         notes: notes,
-            //         acl: MarshalAcl(acl),
-            //     }),
-            //     headers: clientPostRequestHeaders,
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertPcRun(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new PcRunData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
             return <EntryLink props={{openInNewTab:false/* TODO: ok?*/,displayId: linkText, linkId: linkId, entryType: typ}}/>
@@ -268,19 +258,12 @@ export function NewPcRunForm(
             notes: notes,
         }
         DoCreateRequest("pcRun", body, AssertPcRun, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("pcRun"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body),
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newItem) => {
-        //         AssertPcRun(newItem)
-        //         handlers.onCreate && handlers.onCreate(newItem)
-        //     })
-        //     .catch(setErr);
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return (
         <NewEntryFormWrapper entryType={"pcRun"}>

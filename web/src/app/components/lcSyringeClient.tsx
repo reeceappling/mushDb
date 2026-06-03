@@ -32,7 +32,7 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {LcSyringe} from "@/app/components/lcSyringeServer";
+import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -46,7 +46,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
-export function AssertLcSyringe(input: any): asserts input is LcSyringe {
+export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
@@ -173,7 +173,7 @@ export default function LcSyringeDisplay(
     const [err, setErr] = useState<string | undefined>()
     // TODO: THIS WHOLE FUNC???
     const [initial, setInitial] = useState(data)
-    const updateInitial = (updated: LcSyringe) => {
+    const updateInitial = (updated: LcSyringeData) => {
         setInitial(updated)
         setTransfersOut(updated.transfersOut || [])
         setConfirmedClean(updated.confirmedClean)
@@ -194,20 +194,12 @@ export default function LcSyringeDisplay(
             acl: MarshalAcl(acl),
         }
         DoUpdateRequest("lcSyringe",initial._id, body, AssertLcSyringe, allCookies(cookies))
-            .then(updateInitial)
-            .catch(ErrHandler(setErr))
-
-        // fetch(updateApiUrlFor("lcSyringe",initial._id), {
-        //     method: 'Post',
-        //     body: JSON.stringify(body),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((updatedEntry) => {
-        //         AssertLcSyringe(updatedEntry)
-        //         updateInitial(updatedEntry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                updateInitial(new LcSyringeData(v))
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         WriteRfidOvcArea(initial._id),
@@ -253,7 +245,7 @@ export default function LcSyringeDisplay(
 
 export function NewLcSyringeForm({parentLc, onCreate, txt}: {
     parentLc?: LcData,
-    onCreate?: (newItem: LcSyringe) => void,
+    onCreate?: (newItem: LcSyringeData) => void,
     txt: string
 }) {
     // TODO: THIS WHOLE FUNC?
@@ -290,11 +282,13 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             notes: notes,
         }
         DoCreateRequest("lcSyringe", body, AssertLcSyringe, allCookies(cookies))
-            .then(item=>{
-                onCreate && onCreate(item)
-                setItemsCreated([...itemsCreated, item._id]) // TODO: ok?
+            .then(v=>{
+                onCreate ? onCreate(v) : console.log("no onCreate function provided")
+                setItemsCreated([...itemsCreated, v._id]) // TODO: ok?
             })
-            .catch(errHandler)
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
         // fetch(createApiUrlFor("lcSyringe"), { // TODO: del if not needed
         //     method: "POST",
         //     headers: clientPostRequestHeaders,
@@ -324,8 +318,8 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
     </NewEntryFormWrapper>
 }
 
-export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<LcSyringe>) {
-    let cols: ListTableColumn<LcSyringe>[] = [
+export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<LcSyringeData>) {
+    let cols: ListTableColumn<LcSyringeData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
@@ -338,15 +332,15 @@ export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: LcSyringe)=>{
+        cols = [...cols, NewColumn("Link", (v: LcSyringeData)=>{
             return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcSyringe(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcSyringeData(v)}}/>
 }
-export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringe>) {
+export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringeData>) {
     return <LcSyringeListPageTable data={data} onClick={onClick} withLink={true} />
 }
 
@@ -355,10 +349,10 @@ export function LcSyringeSelector(
         doSelect,
         // TODO: allowCreate
     }: {
-        doSelect: (val: LcSyringe | undefined) => void,
+        doSelect: (val: LcSyringeData | undefined) => void,
         // TODO: allowCreate?: boolean
     }) {
-    const table = (items: LcSyringe[]):JSX.Element=>{
+    const table = (items: LcSyringeData[]):JSX.Element=>{
         return <LcSyringeSelectorTable data={items} onClick={doSelect}/>
     }
 

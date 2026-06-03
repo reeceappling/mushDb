@@ -8,7 +8,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
-import {LcSyringe} from "@/app/components/lcSyringeServer";
+import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {PlateSelector} from "@/app/components/plateClient";
 
 export function TestPlateOk(){

@@ -81,19 +81,12 @@ export default function UserDisplay(
             if ((!perms.admin && (initial.perms === undefined || initial.perms.admin)) || (perms.admin && (initial.perms && initial.perms.admin === false))) { // TODO: ensure ok
                 const body: any = perms
                 DoUpdateRequest("user",initial._id, body, AssertUser, allCookies(cookies))
-                    .then(updateInitial)
-                    .catch(ErrHandler(setErr))
-                // fetch(updateApiUrlFor("user",initial._id), { // TODO: MAKE SURE TO ONLY REMOVE ADMIN OR MAKE IT TRUE, DONT REMOVE ADMIN FROM SELF-USER
-                //     method: 'Post',
-                //     body: JSON.stringify(perms),
-                //     headers: clientPostRequestHeaders,
-                // })
-                //     .then(HandleJsonResponse)
-                //     .then((entry) => {
-                //         AssertUser(entry)
-                //         updateInitial(entry)
-                //     })
-                //     .catch(ErrHandler(setErr));
+                    .then(v=>{
+                        updateInitial(new UserData(v))
+                    })
+                    .catch(e=>{
+                        setErr(JSON.stringify(e))
+                    })
             }
         }
         return (

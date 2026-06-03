@@ -9,7 +9,7 @@ import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
 
 
 export function TestSporeSwabOk(){
-    return new SporeSwab({
+    return new SporeSwabData({
         _id: "(SUBSTR ID HERE)",
         parent: "(PARENT ID)",
         creationDate: Date.now()-2000,
@@ -22,7 +22,7 @@ export function TestSporeSwabOk(){
     })
 }
 
-export interface SporeSwab {
+export interface SporeSwabData {
     _id: string
     parent?: string // Only empty if purchased and not printed yourself
     parentType?:string
@@ -36,9 +36,9 @@ export interface SporeSwab {
     lastUpdated: number
     acl?: ACL
 }
-export class SporeSwab {
+export class SporeSwabData {
     // Accept a single object containing the fields
-    constructor(init?: Partial<SporeSwab>) {
+    constructor(init?: Partial<SporeSwabData>) {
         // Dynamically map the object fields onto the class instance
         Object.assign(this, init);
     }
@@ -51,14 +51,14 @@ export class SporeSwab {
     }
 }
 
-export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwab>) { // TODO: use
-    const doSel = (val?: SporeSwab):void=>{
+export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwabData>) { // TODO: use
+    const doSel = (val?: SporeSwabData):void=>{
         if (!val){
             return
         }
         sp.doSelect(val)
     }
-    return <CloseableSelector<SporeSwab> props={{
+    return <CloseableSelector<SporeSwabData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
         closeTxt: "Close Spore Swab List",
@@ -66,7 +66,7 @@ export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwab>) { // TO
         lowercase: "spore swab",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        createSelector:(selHdl: (onSelect: SporeSwab) => void)=>{
+        createSelector:(selHdl: (onSelect: SporeSwabData) => void)=>{
             return <SporeSwabSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)
             }}/>

@@ -165,28 +165,12 @@ export default function AgarRecipeDisplay(
                 acl: MarshalAcl(acl), // TODO; use this everywhere if it works
             }
             DoUpdateRequest("agarRecipe",initial._id, body, AssertAgarRecipe, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("agarRecipe",initial._id), {
-            //     method: 'Post',
-            //     body: JSON.stringify({
-            //         name: name,
-            //         standard: isStandard,
-            //         notes: notes,
-            //         acl: MarshalAcl(acl), // TODO; use this everywhere if it works
-            //     }),
-            //     headers: clientPostRequestHeaders,
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((newEntry) => {
-            //         try {
-            //             AssertAgarRecipe(newEntry)
-            //             updateInitial(newEntry)
-            //         } catch (er) {
-            //             throw new Error("failed to decode response:" + JSON.stringify(er))
-            //         }
-            //     })
-                //.catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new AgarRecipeData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -267,7 +251,6 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
     const [err, setErr] = useState<string | undefined>()
     const [agarErr, setAgarErr] = useState<string | undefined>()
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState<boolean>(false)
-    const errHandler = ErrHandler(setErr)
     const cookies = useContext(CookiesContext)
     const newAgarRecipeSubmit = () => {
         if (name === "") {
@@ -291,8 +274,12 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             notes: notes.length !== 0 ? notes : undefined,
         }
         DoCreateRequest("agarRecipe", body, AssertAgarRecipe, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
         // fetch(createApiUrlFor("agarRecipe"), {
         //     method: 'Post',
         //     body: JSON.stringify(body),

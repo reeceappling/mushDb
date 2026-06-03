@@ -10,7 +10,7 @@ import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
-import {SporeSwab} from "@/app/components/sporeSwabServer";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import {StasisTubeSelector} from "@/app/components/stasisTubeClient";
 
 export function TestStasisTubeOk(){

@@ -19,7 +19,7 @@ import {
 } from "@/app/components/common";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
 import {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
-import {DowelType, PlugsJar} from "@/app/components/plugsServer";
+import {DowelType, PlugsData} from "@/app/components/plugsServer";
 import {PcRunData} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
 import {ExistingSubSpeciesSelector} from "./subspeciesClient";
@@ -46,7 +46,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
-export function AssertPlugs(input: any): asserts input is PlugsJar {
+export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
@@ -150,7 +150,7 @@ export default function PlugsDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput) {
-    const [initial, setInitial] = useState(data as PlugsJar)
+    const [initial, setInitial] = useState(data as PlugsData)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(data.knownFruitable)
     const [pcRun, setPcRun] = useState<string | undefined>(data.pcRun)
     const [sales, setSales] = useState<string[] | undefined>(data.sales)
@@ -161,7 +161,7 @@ export default function PlugsDisplay(
     const [transfersOut, setTransfersOut] = useState<string[]>(data.transfersOut || [])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
-    const updateInitial = (updated: PlugsJar) => {
+    const updateInitial = (updated: PlugsData) => {
         setInitial(updated)
         setPcRun(updated.pcRun)
         setKnownFruitable(updated.knownFruitable)
@@ -183,21 +183,12 @@ export default function PlugsDisplay(
         }
         // TODO: do we want pics on this?
         DoUpdateRequest("plugs",initial._id, body, AssertPlugs, allCookies(cookies))
-            .then(updateInitial)
-            .catch(ErrHandler(setErr))
-
-        // fetch(updateApiUrlFor("plugs", data._id), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // }).then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertPlugs(entry)
-        //         updateInitial(entry)
-        //     })
-        //     .catch((err) => {
-        //         HandleErr(err, setErr)
-        //     });
+            .then(v=>{
+                updateInitial(new PlugsData(v))
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return (
         <DisplayFormWrapper entryType={"plugs"}>
@@ -322,7 +313,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
 }
 
 export function NewPlugsForm(
-    {handlers, pcRunIn}: { handlers: NewEntryInput<PlugsJar>, pcRunIn?: PcRunData }
+    {handlers, pcRunIn}: { handlers: NewEntryInput<PlugsData>, pcRunIn?: PcRunData }
 ) {
     /* TODO: DOWEL TYPES AND AN OPTIONAL PC RUN FIELD! */
     const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
@@ -352,19 +343,12 @@ export function NewPlugsForm(
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("plugs", body, AssertPlugs, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("plugs"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertPlugs(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <NewEntryFormWrapper entryType={"plugs"}>
         <ErrorDisplay err={err}/>
@@ -387,8 +371,8 @@ export function NewPlugsForm(
     </NewEntryFormWrapper>
 }
 
-export function PlugsListPageTable({data, onClick, withLink}: ListPageItems<PlugsJar>) {
-    let cols: ListTableColumn<PlugsJar>[] = [
+export function PlugsListPageTable({data, onClick, withLink}: ListPageItems<PlugsData>) {
+    let cols: ListTableColumn<PlugsData>[] = [
         NewColumn("ID", (v) => v._id),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
@@ -400,16 +384,16 @@ export function PlugsListPageTable({data, onClick, withLink}: ListPageItems<Plug
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: PlugsJar) => {
+        cols = [...cols, NewColumn("Link", (v: PlugsData) => {
             return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new PlugsJar(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new PlugsData(v)}}/>
 }
 
-export function PlugsSelectorTable({data, onClick}: ListPageItems<PlugsJar>) {
+export function PlugsSelectorTable({data, onClick}: ListPageItems<PlugsData>) {
     return <PlugsListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
@@ -418,10 +402,10 @@ export function PlugsSelector(
         doSelect,
         allowCreate
     }: {
-        doSelect: (val: PlugsJar | undefined) => void,
+        doSelect: (val: PlugsData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: PlugsJar[]): JSX.Element => {
+    const table = (items: PlugsData[]): JSX.Element => {
         return <PlugsSelectorTable data={items} onClick={doSelect}/>
     }
 

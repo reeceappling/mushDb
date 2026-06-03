@@ -242,18 +242,12 @@ export default function FruitingChamberDisplay(
             }
 
             DoUpdateMultipartRequest("fruitingChamber",initial._id, formData, AssertFruitingChamber, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-
-            // SendMultipartRequest(updateApiUrlFor("fruitingChamber",initial._id), cookies, formData)
-            //     .then(HandleJsonResponse).then((newEntry) => {
-            //     try {
-            //         AssertFruitingChamber(newEntry)
-            //         updateInitial(newEntry)
-            //     } catch (er) {
-            //         setErr("failed to decode response: " + JSON.stringify(er))
-            //     }
-            // }).catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new FruitingChamberData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             OvcForNewFruit(data._id, "fruitingChamber", allCookies(cookies)),
@@ -413,23 +407,12 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
         }
         writeTagTo && (body.writeTagTo = writeTagTo)
         DoCreateRequest("fruitingChamber", body, AssertFruitingChamber, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("fruitingChamber"), {
-        //     method: 'Post',
-        //     body: JSON.stringify(body),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         try {
-        //             AssertFruitingChamber(newEntry)
-        //             handlers.onCreate && handlers.onCreate(newEntry)
-        //         } catch (er) {
-        //             throw new Error("failed to decode response: " + JSON.stringify(er))
-        //         }
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const batchArea = () => {
         if (substrateBatchIn) {

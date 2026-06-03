@@ -135,24 +135,12 @@ export default function LcRecipeDisplay(
                 acl: MarshalAcl(acl),
             }
             DoUpdateRequest("lcRecipe",initial._id, body, AssertLcRecipe, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("lcRecipe",initial._id), {
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify({
-            //         name: recName,
-            //         standard: isStandard,
-            //         notes: notes,
-            //         acl: MarshalAcl(acl),
-            //     })
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertLcRecipe(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new LcRecipeData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
@@ -251,27 +239,12 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
             notes: notes
         }
         DoCreateRequest("lcRecipe", body, AssertLcRecipe, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("lcRecipe"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify({
-        //         name: name,
-        //         standard: isStandard,
-        //         liquids: liquids,
-        //         nutrients: nutrients,
-        //         sugars: sugars,
-        //         additives: additives,
-        //         notes: notes
-        //     })
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         AssertLcRecipe(newEntry)
-        //         handlers.onCreate && handlers.onCreate(newEntry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {

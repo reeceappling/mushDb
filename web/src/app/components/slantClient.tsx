@@ -251,17 +251,12 @@ export default function SlantDisplay(
                 return
             }
             DoUpdateMultipartRequest("slant",initial._id, formData, AssertSlant, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-
-            // SendMultipartRequest(updateApiUrlFor("slant",initial._id), cookies, body)
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertSlant(entry)
-            //         updateInitial(entry)
-            //         //window.location.reload()
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new SlantData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -339,19 +334,12 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("slant", body, AssertSlant, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("slant"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertSlant(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <NewEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err}/>

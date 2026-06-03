@@ -117,19 +117,12 @@ export default function SubstrateRecipeDisplay(
                 acl: MarshalAcl(acl),
             }
             DoUpdateRequest("substrateRecipe", initial._id, body, AssertSubstrateRecipe, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("substrateRecipe",initial._id), {
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify(body)
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertSubstrateRecipe(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new SubstrateRecipeData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorTriCol[] = [
             {
@@ -202,19 +195,12 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
             notes: notes
         }
         DoCreateRequest("substrateRecipe", body, AssertSubstrateRecipe, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("substrateRecipe"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertSubstrateRecipe(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return (
         <NewEntryFormWrapper entryType={"substrateRecipe"}>

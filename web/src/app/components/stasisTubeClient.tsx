@@ -236,16 +236,12 @@ export default function StasisTubeDisplay(
             }
 
             DoUpdateRequest("stasisTube",data._id, formData, AssertStasisTube, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-
-            // SendMultipartRequest(updateApiUrlFor("stasisTube", initial._id), cookies, formData)
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertStasisTube(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new StasisTubeData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
@@ -312,19 +308,12 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
             writeTagTo:writeTagTo,
         }
         DoCreateRequest("stasisTube", body, AssertStasisTube, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("stasisTube"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body),
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertStasisTube(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <NewEntryFormWrapper entryType={"stasisTube"}>
         <ErrorDisplay err={err} />

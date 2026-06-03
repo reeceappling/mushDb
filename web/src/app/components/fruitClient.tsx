@@ -69,7 +69,7 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
-import {SporeSwab} from "@/app/components/sporeSwabServer";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import {OnViewCreatorsQuadColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
@@ -210,16 +210,12 @@ export default function FruitDisplay(
             }
 
             DoUpdateMultipartRequest("fruit",initial._id, formData, AssertFruit, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-
-            // SendMultipartRequest2(updateApiUrlFor("fruit",initial._id), body)
-            //     .then(HandleJsonResponse)
-            //     .then((newEntry) => {
-            //         AssertFruit(newEntry)
-            //         updateInitial(newEntry)
-            //     })
-            //     .catch(ErrHandler(setErr));
+                .then(v=>{
+                    updateInitial(new FruitData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: setTransfersOut on this as needed!
@@ -229,7 +225,7 @@ export default function FruitDisplay(
             {
                 txt: "Create Spore Swab",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                    return <NewSporeSwabForm fruitIn={data} onCreate={(item: SporeSwab) => {
+                    return <NewSporeSwabForm fruitIn={data} onCreate={(item: SporeSwabData) => {
                         onCreate([{
                             typeText: "Spore Swab",
                             node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
@@ -340,7 +336,9 @@ export function NewFruitForm(
         setFormData(formData, dataObj)
         DoCreateRequestMultipart("fruit", formData, AssertFruit, allCookies(cookies))
             .then(onCreate)
-            .catch(errHandler)
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return (
         <NewEntryFormWrapper entryType={"fruit"}>
@@ -434,7 +432,9 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
         }
         DoCreateRequest("clone", body, AssertFruit, allCookies(cookies)) // TODO: ensure ok!
             .then(onCloneCreated)
-            .catch(errHandler)
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return <div>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>

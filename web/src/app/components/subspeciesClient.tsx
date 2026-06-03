@@ -100,21 +100,12 @@ export default function SubspeciesDisplay(
                 defaultAcl: MarshalAcl(defaultAcl), // TODO: ensure ok
             }
             DoUpdateRequest("subspecies",encodeURIComponent(initial._id), body, AssertSubspecies, allCookies(cookies))
-                .then(updateInitial)
-                .catch(ErrHandler(setErr))
-            // fetch(updateApiUrlFor("subspecies",encodeURI(initial._id)), {
-            //     method: "POST",
-            //     headers: clientPostRequestHeaders,
-            //     body: JSON.stringify(body)
-            // })
-            //     .then(HandleJsonResponse)
-            //     .then((entry) => {
-            //         AssertSubspecies(entry)
-            //         updateInitial(entry)
-            //     })
-            //     .catch((error) => {
-            //         HandleErr(error, setErr)
-            //     });
+                .then(v=>{
+                    updateInitial(new SubspeciesData(v))
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
         }
         return (
             <DisplayFormWrapper entryType={"subspecies"}>
@@ -169,19 +160,12 @@ export function NewSubspeciesForm({handlers, species}: {
                 notes: notes,
             }
         DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
-            .then(handlers?.onCreate)
-            .catch(errHandler)
-        // fetch(createApiUrlFor("subspecies"), {
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertSubspecies(entry)
-        //         onCreate && onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+            })
     }
     return (
         <NewEntryFormWrapper entryType={"subspecies"}>

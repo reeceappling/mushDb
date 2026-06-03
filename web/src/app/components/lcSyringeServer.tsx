@@ -7,7 +7,7 @@ import {LcData} from "@/app/components/lcServer";
 import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
 
 export function TestLcSyringeOk(){
-    return new LcSyringe({
+    return new LcSyringeData({
         _id: "(LC ID HERE)",
         creationDate: Date.now()-2000,
         species: "(SPECIES NAME)",
@@ -23,7 +23,7 @@ export function TestLcSyringeOk(){
         lastUpdated: 789,
     })
 }
-export interface LcSyringe {
+export interface LcSyringeData {
     _id: string
     parent?: string
     creationDate: number
@@ -40,9 +40,9 @@ export interface LcSyringe {
     lastUpdated: number
     acl?: ACL
 }
-export class LcSyringe {
+export class LcSyringeData {
     // Accept a single object containing the fields
-    constructor(init?: Partial<LcSyringe>) {
+    constructor(init?: Partial<LcSyringeData>) {
         // Dynamically map the object fields onto the class instance
         Object.assign(this, init);
     }
@@ -55,14 +55,14 @@ export class LcSyringe {
     }
 }
 
-export function LcSyringeSelectorCloseable(sp: SelectorProps<LcSyringe>) { // TODO: use
-    const doSel = (val?: LcSyringe):void=>{
+export function LcSyringeSelectorCloseable(sp: SelectorProps<LcSyringeData>) { // TODO: use
+    const doSel = (val?: LcSyringeData):void=>{
         if (!val){
             return
         }
         sp.doSelect(val)
     }
-    return <CloseableSelector<LcSyringe> props={{
+    return <CloseableSelector<LcSyringeData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
         closeTxt: "Close LC Syringe List",
@@ -70,7 +70,7 @@ export function LcSyringeSelectorCloseable(sp: SelectorProps<LcSyringe>) { // TO
         lowercase: "liquid culture syringe",
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
-        createSelector:(selHdl: (onSelect: LcSyringe) => void)=>{
+        createSelector:(selHdl: (onSelect: LcSyringeData) => void)=>{
             return <LcSyringeSelector doSelect={(v)=>{
                 v && selHdl(v)
             }}/>
