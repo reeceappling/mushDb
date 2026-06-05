@@ -47,7 +47,7 @@ type AlternateCollectionOptionalParentField struct {
 	Parent *AlternateCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
 }
 
-type WetnessField struct {
+type WetnessField struct { // TODO: 5 is perfect, 0 is dry, 10 is soaked?
 	Wetness *int `bson:"wetness,omitempty" json:"wetness,omitempty"` // nil==unknown, 0== very dry, 10==veryWet, 5==perfect fieldCapacity, normal range 4-6
 }
 

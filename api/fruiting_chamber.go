@@ -200,7 +200,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 type createFruitingChamberRequest struct {
 	// TODO: removed: Recipe // substrate recipe // TODO: do not use this. Pull from batch
 	SubstrateBatchField
-	ParentJar          MainCollectionId
+	ParentJar          MainCollectionId // Parent jar
 	GrainCups          float64
 	MixedSubstrateCups float64
 	CasingCups         float64
@@ -268,7 +268,7 @@ type importFruitingChamberRequest struct {
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	PermsOnRequest
+	//PermsOnRequest `json:"acl"` // TODO: use spec/subspec
 	// image as "img"
 }
 
@@ -354,16 +354,24 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
-	perms, err := GetAuthInfo(ctx)
+	user, err := GetAuthInfo(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
-	acl, err := data.AclForUser(ctx, perms)
+	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	var finalPerms ACL
+	if subsp != nil {
+		finalPerms = subsp.DefaultAcl.Clone()
+	} else {
+		finalPerms = sp.DefaultAcl.Clone()
+	}
+	// Add user to the acl as a writer
+	finalPerms.Users[user.Email] = true
 
 	toInsert := &FruitingChamber{
 		MainCollectionIdField:       MainCollectionIdField{id},
@@ -383,7 +391,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-		AclField:             acl,
+		AclField:             finalPerms.AsField(),
 	}
 	_, err = data.SubstrateRecipeField.Get(ctx)
 	if err != nil {
@@ -395,7 +403,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishImportMainCollectionEntry(ctx, coll, toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, toInsert, w)
 
 }
 
@@ -407,8 +415,7 @@ type updateFruitingChamberRequest struct {
 	ImagesUpdateField  //"newPic-1"
 	ContamsUpdateField //"newContam-1"
 	FlushesUpdateField //"newFlush-1"
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest     `json:"acl"`
 }
 
 // TODO: MOVE THESE 3!!!!
@@ -440,10 +447,10 @@ type resolvedUpdateFruitingChamberRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
-	Images  SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams SplitEntries[contamForm, Contamination]
-	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsOnRequest
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams        SplitEntries[contamForm, Contamination]
+	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest `json:"acl"`
 }
 
 func (req resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChamber, aclField AclField) (bson.D, error) {
@@ -473,14 +480,8 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := *mainCollId
-	b58Id := mainCollId.AsBase58()
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "fruitingChamber", &data, b58Id)
+
+	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "fruitingChamber", &data, mainCollId.AsBase58())
 	if err != nil {
 		// Already wrotw
 		return
@@ -518,7 +519,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(FruitingChamberCollectionName)
 	// go get current FC
 	existing := &FruitingChamber{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

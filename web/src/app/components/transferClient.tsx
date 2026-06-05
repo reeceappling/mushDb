@@ -6,7 +6,10 @@ import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID, {IdPageLink} from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {TransferData} from "@/app/components/transferServer";
-import {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
+import {
+    EntryLinkWrapper,
+    EntryLinkIdWrapper
+} from "@/app/components/formSubcomponents/entryLink";
 import {ImageLocationFor} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {
@@ -26,7 +29,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey
+    OptionalSimpleKey, RequiredKey, setFormData
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {useQuery} from "@tanstack/react-query";
@@ -82,12 +85,12 @@ export function AssertTransfer(input: any): asserts input is TransferData {
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Transfer assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Transfer assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
@@ -113,20 +116,21 @@ export default function TransferDisplay(
 
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: TransferData) => {
             setInitial(updated)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
 
         // TODO: RESET BUTTON???
         const fromToLink = (preText: string, itemType: string, itemId: string,) => {
             const b58id = itemId
             return <div className={"fromToLink"}>
-                <EntryLinkWrapperForId props={{linkId: b58id, entryType: itemType, openInNewTab: false}}>
+                <EntryLinkIdWrapper props={{linkId: b58id, entryType: itemType, openInNewTab: false}}>
                     <div className={"xferEntryLink"}>{preText + ": " + itemType + " " + b58id}</div>
-                </EntryLinkWrapperForId>
+                </EntryLinkIdWrapper>
             </div>
         }
         const imageArea = (alt: string, loc?: string) => {
@@ -153,7 +157,7 @@ export default function TransferDisplay(
                     updateInitial(new TransferData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const b58idMain = initial._id
@@ -174,7 +178,7 @@ export default function TransferDisplay(
             {fromToArea()}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
             {readonly ? null : <div>
                 <button className={"bottomButton greenButton"} onClick={(e) => {
@@ -202,7 +206,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [reason, setReason] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const submitNewTransfer = () => {
         if (!idFrom || idFrom === "") {
@@ -221,11 +225,12 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: {
         let dataObj: any = {
             from: idFrom,
             to: idTo,
-            fromType: typeFrom,
             reason: reason,
+            // optional
+            fromType: typeFrom,
             notes: notes,
         }
-        formData.set('data', JSON.stringify(dataObj))
+        setFormData(formData, dataObj)
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
@@ -327,11 +332,12 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated}: 
         let dataObj: any = {
             from: idFrom,
             to: idTo,
-            fromType: typeFrom,
             reason: reason,
+            // optional
+            fromType: typeFrom,
             notes: notes,
         }
-        formData.set('data', JSON.stringify(dataObj))
+        setFormData(formData, dataObj)
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         // Send request
@@ -465,18 +471,18 @@ export function TransfersOutDisplay( // TODO: likely overhaul
                     <div>{"Existing:"}</div>
                     {!resultsHidden && <div>
                         {xfers.map((xfer, i) => {
-                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapperForId props={{
+                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkIdWrapper props={{
                                 linkId: xfer,
                                 entryType: "transfer",
                                 openInNewTab: openInNewTab,
-                            }}>{xfer}</EntryLinkWrapperForId></div>
+                            }}>{xfer}</EntryLinkIdWrapper></div>
                         })}
                         {newXfers.map((xfer, i) => {
-                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapperForId props={{
+                            return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkIdWrapper props={{
                                 linkId: xfer,
                                 entryType: "transfer",
                                 openInNewTab: openInNewTab,
-                            }}>{xfer}</EntryLinkWrapperForId></div>
+                            }}>{xfer}</EntryLinkIdWrapper></div>
                         })}
                     </div>}
                 </div>
@@ -510,11 +516,11 @@ export function TransfersOutViewOnlyDisplay(
         {headerTxt && <div className={"transferHeader"}><div className={"text-xl"}>{headerTxt}</div></div>}
         <div className={"transfersOutViewOnlyForm depth" + depth}>
             {transfersOut.map((xfer, i) => {
-                return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkWrapperForId props={{
+                return <div className={"existingTransferItem"} key={xfer + i}><EntryLinkIdWrapper props={{
                     linkId: xfer,
                     entryType: "transfer",
                     openInNewTab: false,
-                }}>{xfer}</EntryLinkWrapperForId></div>
+                }}>{xfer}</EntryLinkIdWrapper></div>
             })}
         </div>
     </DepthProvider>
@@ -549,7 +555,7 @@ export function TransferReasonSelector(
     return <SelectorFor disabled={onSelect === undefined} options={["", ...data.keys()]} initial={current || ""}
                         updateParent={(s) => {
                             if (s === "") {
-                                onSelect && onSelect()
+                                onSelect && onSelect(undefined)
                             }
                             onSelect && onSelect(s as string)
                         }
@@ -563,14 +569,14 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
             return NumberToDateStr(v.creationDate)
         }),
         NewColumn("Src", (v)=>{
-            return <EntryLinkWrapperForId props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
+            return <EntryLinkIdWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
                 <div>{v.from}</div>
-            </EntryLinkWrapperForId>
+            </EntryLinkIdWrapper>
         }),
         NewColumn("Dst", (v)=>{
-            return <EntryLinkWrapperForId props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
+            return <EntryLinkIdWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
                 <div>{v.to}</div>
-            </EntryLinkWrapperForId>
+            </EntryLinkIdWrapper>
         }),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
@@ -594,14 +600,14 @@ export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<T
             return NumberToDateStr(v.creationDate)
         }),
         NewColumn("Src", (v)=>{
-            return <EntryLinkWrapperForId props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
+            return <EntryLinkIdWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
                 <div>{v.from}</div>
-            </EntryLinkWrapperForId>
+            </EntryLinkIdWrapper>
         }),
         NewColumn("Dst", (v)=>{
-            return <EntryLinkWrapperForId props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
+            return <EntryLinkIdWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
                 <div>{v.to}</div>
-            </EntryLinkWrapperForId>
+            </EntryLinkIdWrapper>
         }),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)

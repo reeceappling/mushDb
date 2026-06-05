@@ -23,6 +23,7 @@ type WaterJar struct {
 	NotesField            `bson:"inline"`
 	DisposedField         `bson:"inline"`
 	LastUpdatedField      `bson:"inline"`
+	AclField              `bson:"inline"` // TODO: NEW! USE EVERYWHERE!
 }
 
 func (wj WaterJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -46,9 +47,9 @@ func (wj WaterJar) Innoculatable() bool {
 	return false
 }
 
-func (wj WaterJar) Permissions() *ACL {
+func (wj WaterJar) Permissions() ACL {
 	// Water jars always have full write perms
-	return nil
+	return ACL{Users: nil, Projects: nil, BlanketPerm: utils.Pointer(true)}
 }
 
 type WaterJarOptionalField struct {
@@ -91,6 +92,7 @@ func initializeWaterJars(ctx context.Context) error {
 		PcRunField:            PcRunField{exAltId},
 		NotesField:            NotesField{exampleNotes()},
 		LastUpdatedField:      LastUpdatedField{exampleTime},
+		// TODO: perms?
 	}
 	println("binary water jar id initial:"+string(exWaterId[:]), len(exWaterId[:]))
 	println("created waterJar with id: " + exWaterId.AsBase58())
@@ -101,6 +103,7 @@ type createWaterJarRequest struct {
 	PcRunField
 	NotesField
 	WriteTagToField
+	// Default perms are allCanWrite
 }
 
 func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: THIS! test ts!
@@ -131,6 +134,7 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		NotesField:            req.NotesField,
 		DisposedField:         DisposedField{nil},
 		LastUpdatedField:      LastUpdatedField{unixTimeForNow()},
+		AclField:              allCanWriteAcl(),
 	}
 
 	err = writeRfidTagIfNecessary(r.Context(), req.WriteTagTo, id)
@@ -144,12 +148,14 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 type updateWaterJarRequest struct {
 	NotesUpdateField
 	DisposedField
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateWaterJarRequest) modsFor(existing *WaterJar, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateNotesIfNeeded(req, existing).
 		updateDisposedIfNeeded(req, existing).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -180,6 +186,7 @@ func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "mcItem was not WaterJar", http.StatusInternalServerError)
 		return
 	}
-	unnecessaryPerms := PermsOnRequest{BlanketPerm: utils.Pointer(ReadWritePerm(true))}
+	// TODO: fix next line
+	unnecessaryPerms := PermsOnRequest{BlanketPerm: utils.Pointer(true)}
 	finishMainCollItemUpdate(ctx, w, coll, req.modsFor, wj, unnecessaryPerms)
 }

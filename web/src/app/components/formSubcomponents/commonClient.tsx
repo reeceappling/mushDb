@@ -2,7 +2,10 @@
 
 import {JSX, useContext, useEffect, useState} from "react";
 import {Liquid} from "./liquids";
-import EntryLink, {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {
+    EntryLinkWrapper,
+    EntryLinkIdWrapper
+} from "@/app/components/formSubcomponents/entryLink";
 import {AllEntries, Data, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {
     ImageLocationFor,
@@ -286,8 +289,9 @@ export function ParentDisplay(
     }
     const LinkFor = (typ: string, entryTyp: string, linkId: string, displayId: string) => {
         return <div>
-            {"Parent: "}<EntryLinkWrapperForId
-            props={{linkId: linkId, entryType: entryTyp}}>{txtFor(typ, displayId)}</EntryLinkWrapperForId>
+            {"Parent: "}<EntryLinkIdWrapper props={{linkId: linkId, entryType: entryTyp}}>
+                {txtFor(typ, displayId)}
+            </EntryLinkIdWrapper>
         </div>
     }
     switch (parentType) {
@@ -481,7 +485,7 @@ export const PixRowExisting = (
                     upd.disabled = !current.disabled
                     update(upd)
                 }}>
-                    {(current.disabled ? "ENABLE" : "DISABLE") + " THIS IMAGE"}{/* TODO: THIS IS NOT WORKING!!!!!*/}
+                    {(current.disabled ? "Keep" : "Delete") + " this image"}{/* TODO: THIS IS NOT WORKING!!!!!*/}
                 </button>}
         </div>
     }
@@ -543,7 +547,7 @@ export const SpeciesArea = (
     if (readonly) {
         spArea = <div>{"unknown"}</div>
         if (initial !== undefined) {
-            spArea = <EntryLink props={{
+            spArea = <EntryLinkForId props={{
                 linkId: initial.split(" ").join("_"), // TODO: FIX THIS! URLENCODE!
                 displayId: initial,
                 entryType: "species",
@@ -596,7 +600,7 @@ export const SubspeciesArea = (
     let spArea: JSX.Element | null = null
     if (readonly) {
         if (initialSub !== undefined) {
-            spArea = <EntryLink props={{
+            spArea = <EntryLinkForId props={{
                 displayId: initialSub,
                 linkId: initialSub.split(" ").join("_"), // TODO: FIX! URLENCODE!
                 entryType: "subspecies",
@@ -694,7 +698,7 @@ export function StringOptionsSelector({queryKey, variant, current, onSelect}: {
     return <SelectorFor disabled={onSelect === undefined} options={["", ...data]} initial={current || ""}
                         updateParent={(s) => {
                             if (s === "") {
-                                onSelect && onSelect()
+                                onSelect && onSelect(undefined)
                             }
                             onSelect && onSelect(s as string)
                         }

@@ -5,7 +5,7 @@ import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Additive} from "@/app/components/formSubcomponents/additives";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {LcRecipeSelector, NewLcRecipeForm} from "@/app/components/lcRecipeClient";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 
 export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
     return new LcRecipeData({
@@ -18,6 +18,7 @@ export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
         additives: [], //TODO: fixMe!
         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
+        acl: TestAcl(), // TODO: do we want?
     })
 }
 
@@ -31,7 +32,7 @@ export interface LcRecipeData {
     additives?: Additive[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class LcRecipeData {
     // Accept a single object containing the fields

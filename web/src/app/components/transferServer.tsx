@@ -1,6 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {TestNotes, ExampleImageLocation} from "@/app/components/formSubcomponents/contaminations";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 
 
 export function TestTransferOk(){
@@ -16,7 +16,7 @@ export function TestTransferOk(){
         toImage: ExampleImageLocation,
         notes: TestNotes,
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
     })
 }
 
@@ -32,7 +32,7 @@ export interface TransferData {
     toImage?: string
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class TransferData {
     // Accept a single object containing the fields

@@ -60,7 +60,7 @@ import {
     Data,
     OnViewCreatorQuadCol
 } from "@/app/components/formSubcomponents/shared";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {redirect} from "next/navigation";
 import {AssertSpecies, ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
@@ -110,26 +110,26 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    let complexOptionalKeys = new Map<string, (v: any) => boolean>([ // TODO: used to be required
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-    ])
-    for (let [key, validator] of complexRequiredKeys) {
-        if (!RequiredKey(key, input, validator)) {
-            throw new Error('Plate assertion failure: required key ' + key + ' was not valid');
-        }
-    }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-       ['acl', IsValidAcl]
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
-            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
+            throw new Error('Spore Print assertion failure: optional key ' + key + ' was not valid');
+        }
+    }
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl]
+    ])
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Spore Print assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
     let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
-        ['pics', IsValidPicWithNotesIncoming], // TODO: ensure ok
+        ['pics', IsValidPicWithNotesIncoming],
         ['notes', IsValidNote],
     ])
     for (let [key, validator] of complexOptionalArrayKeys) {
@@ -158,26 +158,20 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
         }
         let formData = new FormData()
         let dataObj:any = {
-            color: color, // TODO: validate on insert
-            density: density, // TODO: validate on insert
-            printDate:printDate,
+            creationDate:printDate,
+            color: color,
+            density: density,
             species:species._id,
+            // optional
+            subspecies: subspecies?._id,
             notes:notes,
         }
-        subspecies && (dataObj.subspecies = subspecies._id) // TODO: validate on in
         setFormData(formData, dataObj)
         if(image!==undefined){
             formData.set("img",image,"img")
         }
 
         MultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies))
-        // SendMultipartRequest(importUrlFor("sporePrint"), cookies, formData)
-        //     .then(HandleJsonResponse)
-        //     .then(newItem=>{
-        //         AssertSporePrint(newItem)
-        //         redirect(viewUrlFor("sporePrint",newItem._id))
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
     //no parent because we couldn't possibly know it
         return <ImportEntryFormWrapper entryType={"sporePrint"}>
@@ -211,7 +205,7 @@ export default function SporePrintDisplay(
         const [disposed, setDisposed] = useState(data.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>({existing: initNotes,new:[]})
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(data.acl)
+        const [acl, setAcl] = useState<ACL>(data.acl)
         const updateInitial= (updated: SporePrintData)=>{
             setInitial(updated)
             setColor(updated.color)
@@ -221,12 +215,14 @@ export default function SporePrintDisplay(
             setDisposed(updated.disposed)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const submit = ()=>{
             // sale disposed, project, pics, notes
             let formData = new FormData()
             let dataObj:any={
+                // All optional but acl
                 color: color,
                 density: density,
                 sale:sale,
@@ -252,7 +248,7 @@ export default function SporePrintDisplay(
                     updateInitial(new SporePrintData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -303,7 +299,7 @@ export default function SporePrintDisplay(
                     <div>
                         <div>{"Parent: "}</div>
                         {data.parent?
-                            <EntryLink props={{displayId:data.parent,linkId:data.parent,entryType:"fruit",openInNewTab:true}}/>
+                            <EntryLinkForId props={{displayId:data.parent,linkId:data.parent,entryType:"fruit",openInNewTab:true}}/>
                             :"Store"}
                     </div>
                 </FlexedSinglesGroup>
@@ -317,7 +313,7 @@ export default function SporePrintDisplay(
             <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
             <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                 e.stopPropagation();
@@ -342,8 +338,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
     const [notes, setNotes] = useState<Note[]>([])
     // Spore prints don't have rfid tags, although they have MainCollectionIDs
     const [err, setErr] = useState<string | undefined>(undefined)
-    //const [perms, setPerms] = useState<EntryPerms | undefined>()
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent)=>{
         e.preventDefault()
@@ -358,9 +353,9 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
         }
         let formData = new FormData()
         let dataObj:any = {
-            notes:notes,
             fruitId:fruit._id,
-            // No perms means inherit from parents?
+            notes:notes,
+            // optional pics also here
         }
         // Pics
         dataObj.pics = pics.map(p=>{return {time:p.time,notes:p.notes.new.map(n => {
@@ -425,10 +420,8 @@ export function SporePrintSelectorTable({data, onClick}: ListPageItems<SporePrin
 export function SporePrintSelector(
     {
         doSelect,
-        allowCreate // TODO: del?
     }: {
         doSelect: (val: SporePrintData | undefined) => void,
-        allowCreate?: boolean
     }) {
     const table = (items: SporePrintData[]):JSX.Element=>{
         return <SporePrintSelectorTable data={items} onClick={doSelect}/>
@@ -436,6 +429,5 @@ export function SporePrintSelector(
 
     return <ExistingRecentSelector entryType={"sporePrint"} entryTypes={"sporePrints"} doSelect={doSelect} asserter={AssertSporePrint}
                                    table={table}>
-        {/* TODO: ok? allowCreate && <NewSporePrintForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
     </ExistingRecentSelector>
 }

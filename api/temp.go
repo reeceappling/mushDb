@@ -176,7 +176,7 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 	return out, nil
 }
 
-func GetSubspeciesNameInTxn(ctx context.Context, name string) (out Subspecies, err error) { // TODO: make sure this works as intended!
+func GetSubspeciesByNameInTxn(ctx context.Context, name string) (out Subspecies, err error) { // TODO: make sure this works as intended!
 	out = Subspecies{}
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(SubspeciesCollectionName).

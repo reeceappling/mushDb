@@ -4,18 +4,17 @@ import {
     NewAgarBatchForm
 } from "@/app/components/agarBatchClient";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 
-// TODO: CHANGE AGAR COLORS TO USE THEM FROM THE SERVER
-export type AgarColor = "Clear" | "Black" | "Blue" | "Green" | "Yellow"| "Orange" | "Red";
 export function TestAgarBatchOk() {
     return new AgarBatchData({
         _id: "(Batch ID HERE)",
-        color: "clear",
+        color: "Clear",
         pcRun: "(Run ID HERE)",
         agarRecipe: "(Recipe ID HERE)",
         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
+        acl: TestAcl(),
     });
 }
 
@@ -26,7 +25,7 @@ export interface AgarBatchData {
     agarRecipe: string
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class AgarBatchData {
     // Accept a single object containing the fields

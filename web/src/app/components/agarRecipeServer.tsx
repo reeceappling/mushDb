@@ -4,7 +4,7 @@ import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
 import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Antibiotic} from "@/app/components/formSubcomponents/antibiotic";
 import {Additive} from "@/app/components/formSubcomponents/additives";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {AgarRecipeSelector, NewAgarRecipeForm} from "@/app/components/agarRecipeClient";
 
@@ -21,6 +21,7 @@ export function TestAgarRecipeOk(){
         antibiotics: [], // TODO: this
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
+        acl: TestAcl(), // TODO: unsure if want
     })
 }
 
@@ -36,7 +37,7 @@ export interface AgarRecipeData {
     antibiotics?: Antibiotic[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class AgarRecipeData {
     // Accept a single object containing the fields

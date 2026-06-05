@@ -1,7 +1,7 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {EntryPerms} from "@/app/components/perms";
 import {TestNotes} from "@/app/components/formSubcomponents/contaminations";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {SubspeciesSelector} from "@/app/components/subspeciesClient";
 
@@ -12,7 +12,8 @@ export function TestSubspeciesOk(){
         aliases: ["(Alias 1)","(Alias 2)"],
         notes: TestNotes,
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
+        defaultAcl: TestAcl(),
     })
 }
 
@@ -22,8 +23,8 @@ export interface SubspeciesData {
     aliases?: string[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
-    defaultAcl?: ACL
+    acl: ACL
+    defaultAcl: ACL
 }
 export class SubspeciesData {
     // Accept a single object containing the fields

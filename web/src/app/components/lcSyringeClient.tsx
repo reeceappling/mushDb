@@ -15,7 +15,7 @@ import {
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, updateApiUrlFor, viewUrlFor,
+    OptionalSimpleKey, RequiredKey, updateApiUrlFor, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -35,7 +35,7 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
@@ -80,13 +80,13 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
         }
     }
 
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Jar assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('LcSyringe assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
@@ -112,6 +112,7 @@ export function LcSyringeImportDisplay() {
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const ImportLcSyringe = () => {
@@ -126,6 +127,7 @@ export function LcSyringeImportDisplay() {
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             generation: generation,
+            notes: notes,
             writeTagTo: writeTagTo,
         }
 
@@ -149,6 +151,7 @@ export function LcSyringeImportDisplay() {
         <ConfirmedCleanSelector updateParent={setConfirmedClean}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton bottomButton"} onClick={ImportLcSyringe}>{"Submit"}</button>
     </ImportEntryFormWrapper>
@@ -168,10 +171,8 @@ export default function LcSyringeDisplay(
     const [knownFruitable, setKnownFruitable] = useState(data.knownFruitable)
     const [disposed, setDisposed] = useState(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
-    const [acl, setAcl] = useState<ACL | undefined>(data.acl)
+    const [acl, setAcl] = useState<ACL>(data.acl)
     const [err, setErr] = useState<string | undefined>()
-    // TODO: THIS WHOLE FUNC???
     const [initial, setInitial] = useState(data)
     const updateInitial = (updated: LcSyringeData) => {
         setInitial(updated)
@@ -181,16 +182,17 @@ export default function LcSyringeDisplay(
         setDisposed(updated.disposed)
         setNotes(InitialNotesState(updated.notes))
         setAcl(updated.acl)
+        setErr(undefined)
     }
 
     const cookies = useContext(CookiesContext)
     const lcSyringeSubmit = () => {
-        let body: any = { // TODO: ensure ok
+        let body: any = {
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             disposed: disposed,
+            sale: initial.sale, // TODO: this!?
             notes: notes,
-            writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
         }
         DoUpdateRequest("lcSyringe",initial._id, body, AssertLcSyringe, allCookies(cookies))
@@ -232,9 +234,8 @@ export default function LcSyringeDisplay(
                              allowNewTransferCreation={!readonly}/>
         <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
         <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-            <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+            <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
         </TogglableAreaWithDepth>
-        {readonly ? null : <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
         {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
             e.stopPropagation();
             lcSyringeSubmit()
@@ -248,7 +249,6 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
     onCreate?: (newItem: LcSyringeData) => void,
     txt: string
 }) {
-    // TODO: THIS WHOLE FUNC?
     const cookies = useContext(CookiesContext)
     const [itemsCreated, setItemsCreated] = useState<string[]>([])
     const [parent, setParent] = useState<LcData | undefined>(parentLc) // TODO: this ok to not call set??
@@ -265,11 +265,11 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             </div>
             {itemsCreated.map((createdLc) => {
                 const b58id = createdLc
-                return <EntryLink props={{displayId: b58id, linkId: b58id, entryType: "lcSyringe", openInNewTab: false /* TODO: ok?*/}}/>
+                return <EntryLinkForId props={{displayId: b58id, linkId: b58id, entryType: "lcSyringe", openInNewTab: false /* TODO: ok?*/}}/>
             })}
         </div>
     }
-    const errHandler = ErrHandler(setErr)
+
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!parent) {
@@ -284,23 +284,11 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
         DoCreateRequest("lcSyringe", body, AssertLcSyringe, allCookies(cookies))
             .then(v=>{
                 onCreate ? onCreate(v) : console.log("no onCreate function provided")
-                setItemsCreated([...itemsCreated, v._id]) // TODO: ok?
+                setItemsCreated([...itemsCreated, v._id])
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))
             })
-        // fetch(createApiUrlFor("lcSyringe"), { // TODO: del if not needed
-        //     method: "POST",
-        //     headers: clientPostRequestHeaders,
-        //     body: JSON.stringify(body)
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newEntry) => {
-        //         AssertLcSyringe(newEntry)
-        //         onCreate && onCreate(newEntry)
-        //         setItemsCreated([...itemsCreated, newEntry._id]) // TODO: ok?
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
 
     return <NewEntryFormWrapper entryType={"lcSyringe"}>
@@ -347,17 +335,13 @@ export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringeD
 export function LcSyringeSelector(
     {
         doSelect,
-        // TODO: allowCreate
     }: {
         doSelect: (val: LcSyringeData | undefined) => void,
-        // TODO: allowCreate?: boolean
     }) {
     const table = (items: LcSyringeData[]):JSX.Element=>{
         return <LcSyringeSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"lcSyringe"} entryTypes={"lcSyringes"} doSelect={doSelect} asserter={AssertLcSyringe}
-                                   table={table}>
-        {/* TODO: ok? allowCreate && <NewLcSyringeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
-    </ExistingRecentSelector>
+                                   table={table}/>
 }

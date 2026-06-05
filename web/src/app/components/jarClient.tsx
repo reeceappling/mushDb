@@ -136,9 +136,7 @@ export function AssertJar(input: any): asserts input is JarData {
     }
     // complex required keys
     let complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        // ['entryType', (inp: any) => {
-        //     return (typeof inp === 'string' && inp === "jar")
-        // }],
+        ['acl', IsValidAcl]
     ])
     for (let [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -148,7 +146,6 @@ export function AssertJar(input: any): asserts input is JarData {
     // complex optional keys
     let complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-        ['acl', IsValidAcl]
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
@@ -195,15 +192,17 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             return
         }
         let dataObj: any = {
-            created: created,
+            creationDate: created,
             sizeCups: sizeCups,
             recipe: recipe._id,
             species: species._id,
             //perms: perms,
+            // optional
+            subspecies: subspecies?._id,
+            knownFruitable: knownFruitable,
+            generation: generation,
+            writeTagTo: writeTagTo,
         }
-        subspecies && (dataObj.subspecies = subspecies._id)
-        knownFruitable && (dataObj.knownFruitable = knownFruitable)
-        generation && (dataObj.generation = generation)
         if (imageFile !== undefined) {
             formData.set("img", imageFile, "img")
         }
@@ -290,7 +289,7 @@ export default function JarDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
         // TODO: wetness (but can only be set once)
         // TODO: burst grains (but can only be set once)
@@ -307,9 +306,10 @@ export default function JarDisplay(
             setPics(InitialPicsEntries(updated.pics))
             setContams(InitialContamState(updated.contamination))
             setAcl(updated.acl)
-            // TODO: wetness (but can only be set once)
-            // TODO: burst grains (but can only be set once)
+            // TODO: wetness? (but can only be set once)
+            // TODO: burst grains? (but can only be set once)
             setTransfersOut(updated.transfersOut || [])
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const submit = () => {
@@ -318,7 +318,7 @@ export default function JarDisplay(
                 knownFruitable: knownFruitable,
                 disposed: disposed,
                 sale: sale,
-                writeTagTo: writeTagTo,
+                //writeTagTo: writeTagTo, // TODO: remove!
                 acl: MarshalAcl(acl),
                 notes: notes,
             }
@@ -346,7 +346,7 @@ export default function JarDisplay(
                     updateInitial(new JarData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const jarSizeArea = () => {
@@ -396,15 +396,13 @@ export default function JarDisplay(
 
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>
-            {readonly ? null :
-                <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
         </DisplayFormWrapper>
     } catch (err) {
         return <div>{"ERROR: Grain Jar data format incorrect: " + err}</div>
@@ -425,11 +423,12 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     const [sizeCups, setSizeCups] = useState<number>(4) // TODO: change initial state?
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
+    const [wetness, setWetness] = useState(0) // TODO: ensure ok
+    const [burstGrains, setBurstGrains] = useState(0) // TODO: ensure ok
 
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>()
 
-    const errHandler = ErrHandler(setErr)
     const cookies = useContext(CookiesContext)
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -442,11 +441,11 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
             return
         }
         const body: any = {
-            //creationDate: creationDate, // TODO: GET FROM PC RUN (or from now?)! handle in go
             sizeCups: sizeCups,
-            //recipe: recipe, // TODO: handle properly in go (if we plan to use it at all)
-            batch: grainBatch?._id, // TODO: handle properly in go
-            pcRun: pcRun?._id,
+            batch: grainBatch?._id,
+            // wetness: wetness,  // TODO: maybe add late?
+            // burstGrains: burstGrains,  // TODO: maybe add late?
+            pcRun: pcRun?._id, // could this be optional or required?
             notes: notes || [],
             writeTagTo: writeTagTo,
         }
@@ -458,28 +457,18 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
                 setErr(JSON.stringify(e))
             })
     }
-    // TODO: Must have either grain batch, or grain batch AND recipe!
-    // TODO: or can only-recipe create a new batch?
     const hasGrainBatch = grainBatchIn !== undefined || recipeIn !== undefined
     //const hasRecipe = recipeIn !== undefined // TODO: ????
     return <NewEntryFormWrapper entryType={"jar"}>
         <ErrorDisplay err={err}/>
-        {/*/!* TODO: REMOVE? *!/<DateArea pre={"Creation date: "} when={Date.now()} readonly={false}*/}
-        {/*                               updateParent={setCreationDate}/>*/}
-        {/* TODO: BATCH!!!!*/}
-        {/* TODO: PICK BETWEEN NEXT 2! */}
         {hasGrainBatch && <GrainBatchSelectorCloseable doSelect={setGrainBatch}
                                                                allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}
-        {/*{hasGrainBatch && <GrainBatchSelector doSelect={setGrainBatch}*/}
-        {/*                                              allowCreate={handlers.isTopLevel}/>}*/}
-        {/*{hasGrainBatch && // TODO: validate ok*/}
-        {/*    <JarRecipeSelector allowCreate={handlers.isTopLevel} doSelect={(rec?: JarRecipeData) => {*/}
-        {/*        setRecipe(rec?._id)*/}
-        {/*    }}/>} /!* TODO: CreatorInPage reference from non-isTopLevel. CLOSEABLE???*!/*/}
         <JarSizeSelector onChange={(unit: string) => {
             setSizeCups(cupsPer(unit))
         }}/>
-        {/* TODO: PC RUN IS NOT REQUIRED TO START, JARS MAY SIT BETWEEN PC RUNS!*/}
+        {/* TODO: set optional wetness! */}
+        {/* TODO: set optional burst grains! */}
+        {/* TODO: PC RUN IS NOT REQUIRED TO START, JARS MAY SIT BEFORE PC RUN!*/}
         {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>

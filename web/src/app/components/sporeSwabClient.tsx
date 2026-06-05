@@ -22,7 +22,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey,
+    OptionalSimpleKey, RequiredKey,
     SendMultipartRequest,
     setFormData, updateApiUrlFor, viewUrlFor
 } from "@/app/components/common";
@@ -56,7 +56,7 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SaleArea} from "@/app/components/saleClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsTriColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
 import {AssertSporePrint} from "@/app/components/sporePrintClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
@@ -69,7 +69,6 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
-    // TODO: THIS!
 
     // required simple keys
     let requiredSimpleKeys = new Map<string, string>([
@@ -96,13 +95,13 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
             throw new Error('Swab assertion failure: optional key ' + key + ' was not valid');
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Swab assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Spore Swab assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
@@ -134,9 +133,10 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
         }
         let formData = new FormData()
         let dataObj: any = {
-            printDate: swabDate, // TODO: rename from printDate to swabDate???
-            species: species._id, // TODO: validate on insert
-            subspecies: subspecies?._id, // TODO: validate on insert
+            creationDate: swabDate,
+            species: species._id,
+            // optional
+            subspecies: subspecies?._id,
             notes: notes,
         }
         setFormData(formData, dataObj)
@@ -147,14 +147,6 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
         }
 
         MultipartImportRequest(formData, "sporeSwab", AssertSporeSwab, setErr, allCookies(cookies))
-        // TODO: reenable if not work: SendMultipartRequest(BaseExternalUrl + "/db/import/sporeSwab", cookies, body)
-        // SendMultipartRequest2(importApiUrlFor("sporeSwab"), formData)
-        //     .then(HandleJsonResponse)
-        //     .then(newItem => {
-        //         AssertSporeSwab(newItem)
-        //         redirect(viewUrlFor("sporeSwab", newItem._id))
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
     //no parent because we couldn't possibly know it
     return <ImportEntryFormWrapper entryType={"sporeSwab"}>
@@ -184,7 +176,7 @@ export default function SporeSwabDisplay(
         const [sale, setSale] = useState(initial.sale)
         const [disposed, setDisposed] = useState(initial.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: SporeSwabData) => {
             setInitial(updated)
@@ -192,6 +184,7 @@ export default function SporeSwabDisplay(
             setDisposed(updated.disposed)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const submit = () => {
@@ -206,12 +199,11 @@ export default function SporeSwabDisplay(
                     updateInitial(new SporeSwabData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            // TODO: use the next one in other places...
-            OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], allCookies(cookies)),
+            // TODO: probably get rid of? OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], allCookies(cookies)),
             WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
@@ -233,7 +225,7 @@ export default function SporeSwabDisplay(
 
             <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                 e.stopPropagation();
@@ -261,9 +253,10 @@ export function NewSporeSwabForm(
     // TODO: THIS!
     const [parent, setParent] = useState<string | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
 
     const [err, setErr] = useState<string | undefined>(undefined)
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -274,6 +267,7 @@ export function NewSporeSwabForm(
         let body: any = {
             parent: parent,
             notes: notes,
+            writeTagTo: writeTagTo,
         }
         DoCreateRequest("sporeSwab", body, AssertSporeSwab, allCookies(cookies))
             .then(v=>{
@@ -286,8 +280,9 @@ export function NewSporeSwabForm(
 
     return <NewEntryFormWrapper entryType={"sporeSwab"}>
         <ErrorDisplay err={err} headerLevel={headerLevel} offset={offset}/>
-        {/* TODO: PARENT SELECTOR */}
+        {/* TODO: PARENT SELECTOR IF NOT PROVIDED!*/}
         <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
@@ -320,10 +315,8 @@ export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwabD
 export function SporeSwabSelector(
     {
         doSelect,
-        allowCreate // TODO: del?
     }: {
         doSelect: (val: SporeSwabData | undefined) => void,
-        allowCreate?: boolean
     }) {
     const table = (items: SporeSwabData[]):JSX.Element=>{
         return <SporeSwabSelectorTable data={items} onClick={doSelect}/>
@@ -331,6 +324,5 @@ export function SporeSwabSelector(
 
     return <ExistingRecentSelector entryType={"sporeSwab"} entryTypes={"sporeSwabs"} doSelect={doSelect} asserter={AssertSporeSwab}
                                    table={table}>
-        {/* TODO: ok?allowCreate && <NewSporeSwabForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
     </ExistingRecentSelector>
 }

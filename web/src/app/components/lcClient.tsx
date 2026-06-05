@@ -41,7 +41,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey,
+    OptionalSimpleKey, RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData,
     setFormData,
@@ -134,11 +134,18 @@ export function AssertLc(input: any): asserts input is LcData {
             throw new Error('Lc assertion failure: optional key ' + key + ' was not valid');
         }
     }
-
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl],
+    ])
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Lc assertion failure: required key ' + key + ' was not valid');
+        }
+    }
     // complex optional keys
     let complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-        ['acl', IsValidAcl],
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
@@ -186,8 +193,8 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
         }
         let bodyObj: any = {
             creationDate: created,
-            species: species._id,
             recipe: recipe._id,
+            species: species._id,
             // Optionals
             subspecies: subspecies?._id,
             confirmedClean: confirmedClean,
@@ -196,27 +203,16 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
             writeTagTo: writeTagTo,
         }
         setFormData(formData, bodyObj)
-        //formData.set("data", JSON.stringify(bodyObj))
         if (imageFile !== undefined) {
             formData.set("img", imageFile, "img")
         }
 
         MultipartImportRequest(formData, "lc", AssertLc, setErr, allCookies(cookies))
-        // SendMultipartRequest(importApiUrlFor("lc"), cookies, formData) // TODO: remove cookies from call?
-        //     .then(HandleJsonResponse)
-        //     .then(newItem => {
-        //         AssertLc(newItem)
-        //         redirect(viewUrlFor("lc", newItem._id))
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"lc"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
         <LcRecipeSelectorCloseable doSelect={setRecipe} txt={"Recipe"} creatorInPage={false/* TODO: ok?*/} allowCreation={true} />
-        {/*<SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: LcRecipeData) => v._id}>*/}
-        {/*    <LcRecipeSelector doSelect={setRecipe} allowCreate={true}/>/!* TODO: OPEN/CLOSE!*!/*/}
-        {/*</SelectorWrapper>*/}
         <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}
                                                                     headerLevel={headerLevel}/>
@@ -224,8 +220,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
-        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}
-                              headerLevel={headerLevel}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton buttonFullWidth"} onClick={ImportLc}>{"Import"}</button>
     </ImportEntryFormWrapper>
 }
@@ -247,7 +242,7 @@ export default function LcDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: LcData) => {
             setInitial(updated)
             setConfirmedClean(updated.confirmedClean)
@@ -258,6 +253,7 @@ export default function LcDisplay(
             setDisposed(updated.disposed)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const lcSubmit = () => {
@@ -294,7 +290,7 @@ export default function LcDisplay(
                     updateInitial(new LcData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -305,7 +301,7 @@ export default function LcDisplay(
                                              onCreate={(lcs: LcSyringeData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
                         onCreate([{
                             typeText: "Liquid Culture Syringe",
-                            node: <CreatedLinkFor linkId={lcs._id} typ={"lcSyringe"}/>,// TODO: ENSURE lcs or lcSyringe is correct here
+                            node: <CreatedLinkFor linkId={lcs._id} typ={"lcSyringe"}/>,
                         }], false)
                     }}/>
                 },
@@ -316,7 +312,7 @@ export default function LcDisplay(
         return <DisplayFormWrapper entryType={"lc"}>
             <ID txt={"Liquid Culture"} id={data._id} entryType={"lc"}/>
             {readonly ||
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>}{/* TODO: where to put?*/}
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>}
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <FlexedArea>
@@ -365,10 +361,9 @@ export default function LcDisplay(
 
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>
             {readonly || <>
-                <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
                 <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     lcSubmit()
@@ -391,7 +386,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -404,7 +399,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             return
         }
         let body: any = {
-            creationDate: creationDate,
+            //creationDate: creationDate, // made serverside
             recipe: lcRecipe,
             pcRun: pcRun,
             notes: notes,
@@ -425,7 +420,6 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
                                                        allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>} {/* TODO: isTopLevel? disallow ok? */}{/* TODO: closeable or no? */}
         {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={true}/>} {/* TODO: isTopLevel? disallow ok? */}
-        <DateArea pre={"Creation date: "} when={Date.now()} readonly={false} updateParent={setCreationDate}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>

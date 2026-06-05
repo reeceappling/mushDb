@@ -2,7 +2,7 @@ import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/component
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {EntryPerms} from "@/app/components/perms";
 import {ExamplePicsWithNotesIncoming, TestNotes} from "@/app/components/formSubcomponents/contaminations";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {FruitSelector} from "@/app/components/fruitClient";
@@ -25,7 +25,7 @@ export function TestSporePrintOk(){
         mostRecentImage: ExamplePicWithNotesIncoming,
         notes: TestNotes,
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
     })
 }
 
@@ -43,7 +43,7 @@ export interface SporePrintData {
     notes?: Note[]
     disposed?: number
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class SporePrintData {
     // Accept a single object containing the fields

@@ -42,7 +42,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey,
+    OptionalSimpleKey, RequiredKey,
     resolvePicsFormData,
     setFormData,
     setFormImages,
@@ -108,11 +108,19 @@ export function AssertFruit(input: any): asserts input is FruitData {
             throw new Error('Bag assertion failure: optional key ' + key + ' was not valid');
         }
     }
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl],
+    ])
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Plate assertion failure: required key ' + key + ' was not valid');
+        }
+    }
 
     // complex optional keys
     let complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-        ['acl', IsValidAcl]
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
@@ -155,9 +163,9 @@ export default function FruitDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         // Helper states
         const [transfersOut, setTransfersOut] = useState(data.transfersOut || [])
-        const [sporePrints, setSporePrints] = useState(data.prints || [])
+        const [sporePrints, setSporePrints] = useState(data.prints || []) // TODO: use?
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: FruitData) => {
             setInitial(updated)
             setPics(InitialPicsEntries(updated.pics))
@@ -167,6 +175,7 @@ export default function FruitDisplay(
             setTransfersOut(updated.transfersOut || [])
             setSporePrints(updated.prints || [])
             setAcl(updated.acl)
+            setErr(undefined)
         }
         // TODO: fix?
         // const sporePrintsArea = () => {
@@ -214,14 +223,13 @@ export default function FruitDisplay(
                     updateInitial(new FruitData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             // TODO: setTransfersOut on this as needed!
-            // TODO: USE THIS!
             // TODO: OvcForXfers on others, or use TransfersOut???
-            OvcForXfers(data._id, "fruit", ["plate", "slant", "jar", "stasisTube"], allCookies(cookies), AddToTransfers(setTransfersOut, transfersOut), "Clone/Transfer Fruit"), // TODO: ensure list correct// TODO: OVC for clone to plate (transfer)
+            // TODO: OvcForXfers(data._id, "fruit", ["plate", "slant", "jar", "stasisTube"], allCookies(cookies), AddToTransfers(setTransfersOut, transfersOut), "Clone/Transfer Fruit"), // TODO: ensure list correct// TODO: OVC for clone to plate (transfer)
             {
                 txt: "Create Spore Swab",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
@@ -274,7 +282,7 @@ export default function FruitDisplay(
                 <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
@@ -302,8 +310,7 @@ export function NewFruitForm(
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    //const [perms, setPerms] = useState<EntryPerms | undefined>() // inherit from parents
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const newFruitSubmit = () => {
         let formData = new FormData()
@@ -311,9 +318,8 @@ export function NewFruitForm(
             parentId: parentId,
             parentType: parentType,
             harvestDate: harvestDate,
-        }
-        if (notes.length > 0) {
-            dataObj.notes = notes
+            notes: notes,
+            // TODO: writeTagTo?
         }
         if (pics.length > 0) {
             dataObj.pics = pics.map(p => {
@@ -356,8 +362,8 @@ export function NewFruitForm(
     )
 }
 
-export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR FRUITS PURCHASED OR FOUND
-    const [parentType, setParentType] = useState<string | undefined>(undefined) // TODO: ensure this is everywhere in ts and go
+export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE ONLY FOR FRUITS PURCHASED OR FOUND
+    const [parentType, setParentType] = useState<string | undefined>(undefined) // TODO: ensure this is everywhere in ts and go. Also set parent type where needed
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
@@ -383,8 +389,11 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // TODO:
             parentType: parentType,
             species: species._id,
             notes: notes,
+            // optional
+            subspecies: subspecies?._id,
+            // TODO: RFID?
         }
-        subspecies && (dataObj.subspecies = subspecies?._id)
+        setFormData(formData, dataObj)
         imageFile && formData.set("img", imageFile, "img")
 
         MultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies))
@@ -420,7 +429,7 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
     const [idTo, setIdTo] = useState<string | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const handleCreate = () => {
         const body: any = {
@@ -429,11 +438,14 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
             typeTo: typeTo,
             idTo: idTo,
             notes: notes,
+            // TODO: writeTagTo?
         }
-        DoCreateRequest("clone", body, AssertFruit, allCookies(cookies)) // TODO: ensure ok!
-            .then(onCloneCreated)
+        DoCreateRequest("clone", body, AssertFruit, allCookies(cookies))
+            .then(c => {
+                onCloneCreated(new FruitData(c))
+            })
             .catch(e=>{
-                setErr(JSON.stringify(e))
+                setErr("failed to create/get new clone: "+JSON.stringify(e))
             })
     }
     return <div>

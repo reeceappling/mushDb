@@ -590,11 +590,18 @@ func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 }
 
 func (upd *Mods) updateDisposedIfNeeded(future, existing Disposable) *Mods {
-	existingDisposal := existing.DisposalInfo()
-	if existingDisposal != nil { // Only update if previously was not disposed, and now is
+	exist, fut := existing.DisposalInfo(), future.DisposalInfo()
+	if exist != nil { // Only update if previously was not disposed, and now is
+		if fut == nil {
+			upd.err = errors.New("disposed cannot be unset") // TODO: are we sure?
+		} else {
+			if *exist != *fut {
+				upd.err = errors.New("disposed cannot be changed once set") // TODO: are we sure?
+			}
+		}
 		return upd
 	}
-	return updatePointerIfNeeded(upd, "disposed", future.DisposalInfo(), existingDisposal)
+	return updatePointerIfNeeded(upd, "disposed", fut, exist)
 }
 
 func (upd *Mods) updatePcRunIfNeeded(next, current pcRunOptional) *Mods {
@@ -609,34 +616,60 @@ func (upd *Mods) updateKnownFruitableIfNeeded(future, existing hasKnownFruitable
 	return updatePointerIfNeeded(upd, "knownFruitable", future.knownToBeFruitable(), existing.knownToBeFruitable())
 }
 func (upd *Mods) updateCondensationCoverageIfNeeded(future, existing hasCondensCov) *Mods {
-	return updatePointerIfNeeded(upd, "condensationCoverageAtSealTime", future.condensationCoverage(), existing.condensationCoverage())
+	exist, fut := existing.condensationCoverage(), future.condensationCoverage()
+	if exist != nil {
+		if fut == nil || *fut != *exist {
+			upd.err = errors.New("condensationConverage mismatch")
+		}
+		return upd
+	} else {
+		if exist == fut { // Still empty
+			return upd
+		}
+	}
+	return updatePointerIfNeeded(upd, "condensationCoverageAtSealTime", fut, exist)
 }
 func (upd *Mods) updatePourCoverageIfNeeded(future, existing hasPourCoverage) *Mods {
-	if existing.pourCoverage() != nil {
-		if future.pourCoverage() == nil || *future.pourCoverage() != *existing.pourCoverage() {
+	exist, fut := existing.pourCoverage(), future.pourCoverage()
+	if exist != nil {
+		if fut == nil || *fut != *exist {
 			upd.err = errors.New("pourCoverage mismatch")
+		}
+		return upd
+	} else {
+		if exist == fut { // Still empty
 			return upd
 		}
 	}
-	return updatePointerIfNeeded(upd, "pourCoverage", future.pourCoverage(), existing.pourCoverage())
+	return updatePointerIfNeeded(upd, "pourCoverage", fut, exist)
 }
 func (upd *Mods) updateWetAtCooledTimeIfNeeded(future, existing hasWact) *Mods {
-	if existing.wetAtCool() != nil {
-		if future.wetAtCool() == nil || *future.wetAtCool() != *existing.wetAtCool() {
-			upd.err = errors.New("wetAtCooledTime mismatch")
+	exist, fut := existing.wetAtCool(), future.wetAtCool()
+	if exist != nil {
+		if fut == nil || *fut != *exist {
+			upd.err = errors.New("wetAtCool mismatch")
+		}
+		return upd
+	} else {
+		if exist == fut { // Still empty
 			return upd
 		}
 	}
-	return updatePointerIfNeeded(upd, "wetAtCooledTime", future.wetAtCool(), existing.wetAtCool())
+	return updatePointerIfNeeded(upd, "wetAtCooledTime", fut, exist)
 }
 func (upd *Mods) updateAgarOnOutsideAtPourTimeIfNeeded(future, existing hasAgarOutside) *Mods {
-	if existing.agarOutside() != nil {
-		if future.agarOutside() == nil || *future.agarOutside() != *existing.agarOutside() {
+	exist, fut := existing.agarOutside(), future.agarOutside()
+	if exist != nil {
+		if fut == nil || *fut != *exist {
 			upd.err = errors.New("agarOutside mismatch")
+		}
+		return upd
+	} else {
+		if exist == fut { // Still empty
 			return upd
 		}
 	}
-	return updatePointerIfNeeded(upd, "agarOnOutsideAtPourTime", future.agarOutside(), existing.agarOutside())
+	return updatePointerIfNeeded(upd, "agarOnOutsideAtPourTime", fut, exist)
 }
 
 func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {
@@ -672,14 +705,14 @@ func (upd *Mods) updateLastUpdatedIfNeeded() *Mods {
 	return upd.Set("lastUpdated", unixTimeFor(time.Now()))
 }
 
-func (upd *Mods) updatePermsIfNeeded(next, current *ACL) *Mods {
+func (upd *Mods) updatePermsIfNeeded(next, current ACL) *Mods {
 	if current.Equivalent(next) {
 		return upd
 	}
 	return upd.Set("acl", next)
 }
 
-func (upd *Mods) updateDefaultEntryPermsIfNeeded(nextReq PermsOnRequest, current *ACL) *Mods {
+func (upd *Mods) updateDefaultAclIfNeeded(nextReq PermsOnRequest, current ACL) *Mods {
 	next := nextReq.DefaultAcl()
 	if current.Equivalent(next) {
 		return upd
@@ -802,6 +835,17 @@ func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesFiel
 	return upd.Set("notes", finalNotes)       // TODO: ensure ok
 }
 
+func (upd *Mods) updateTimeIfNoLongerNil(fieldName string, updated *int, existing *int) *Mods { // TODO: make sure this works as anticipated
+	if updated == nil {
+		return upd
+	}
+	if *updated < 0 {
+		upd.err = errors.New("time cannot be negative")
+		return upd
+	}
+	return updateTimeIfWasNil(upd, fieldName, updated, existing)
+}
+
 func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
 	return upd.updatePwnIfNeeded("pics", updatedEntries, existing)
 }
@@ -844,8 +888,11 @@ func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, C
 		return upd
 	}
 	if !contamsWereModified(existing, updatedEntries) {
+		println("contams were NOT modified!------------------------")
+
 		return upd
 	}
+	println("CONTAMS WERE MODIFIED, SHOULD BE CHANGING!-------------------")
 	finalEntries := make([]Contamination, 0, len(existing)+len(updatedEntries.New))
 	for _, final := range updatedEntries.Existing {
 		if !final.Disabled {
@@ -912,8 +959,8 @@ func (upd *Mods) withParentType(parentType *string) *Mods {
 func (upd *Mods) withParent(parentId *MainCollectionId) *Mods {
 	return setPointerIfNonNil(upd, "parent", parentId)
 }
-func (upd *Mods) withPerms(acl *ACL) *Mods {
-	return setPointerIfNonNil(upd, "acl", acl)
+func (upd *Mods) withPerms(acl ACL) *Mods {
+	return upd.Set("acl", acl)
 }
 func (upd *Mods) withPics(pics []PicWithNotes) *Mods {
 	if len(pics) == 0 {
@@ -957,6 +1004,21 @@ func updatePointerIfNeeded[T comparable](upd *Mods, fieldName string, future, ex
 	}
 	return updateValueIfNeeded(upd, fieldName, *future, *existing)
 }
+func updateTimeIfWasNil[T comparable](upd *Mods, fieldName string, future, existing *T) *Mods {
+	if upd.err != nil {
+		return upd
+	}
+	if existing != nil {
+		if *existing != *future {
+			upd.err = errors.New(fieldName + "was already set to a different value. Cannot change value once set")
+		}
+		return upd
+	}
+	if future == nil {
+		return upd
+	}
+	return upd.Set(fieldName, *future)
+}
 func updatePointerIfNeededNew[T comparable](upd *Mods, fieldName string, future, existing *T) *Mods {
 	if upd.err != nil {
 		return upd
@@ -984,6 +1046,9 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 		break
 	case "antibiotics", "antibiotic":
 		toWrite = antibiotics
+		break
+	case "bagFilterSizes":
+		toWrite = bagFilterSizes
 		break
 	case "colors", "color",
 		"colorants", "colorant":

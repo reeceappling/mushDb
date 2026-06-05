@@ -1,7 +1,13 @@
 'use client'
 
 import React, {JSX, useContext, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
+import {
+    IsValidNote,
+    NewEntryNotes,
+    Note,
+    NoteEntriesGroup,
+    NotesFormArea
+} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
     Data,
@@ -26,7 +32,7 @@ import {
     ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
-    OptionalSimpleKey,
+    OptionalSimpleKey, RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData, setFormData,
     setFormImages,
@@ -95,10 +101,18 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
             throw new Error('StasisTube assertion failure: optional key ' + key + ' was not valid');
         }
     }
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl]
+    ])
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Stasis Tube assertion failure: required key ' + key + ' was not valid');
+        }
+    }
     // complex optional keys
     let complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-       ['acl', IsValidAcl]
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
@@ -129,36 +143,31 @@ export function StasisTubeImportDisplay() {
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
     const importEntry = () => {
         let formData = new FormData()
-        let dataObj: any = {
-            created:created,
-        }
         if(species===undefined){
             setErr("Species must be set!")
             return
         }
-        dataObj.species = species._id
-        subspecies && (dataObj.subspecies = subspecies._id)
-        knownFruitable && (dataObj.knownFruitable = knownFruitable)
-        generation && (dataObj.generation = generation)
+        let dataObj: any = {
+            creationDate:created,
+            species: species._id,
+            // optional
+            subspecies: subspecies?._id,
+            knownFruitable: knownFruitable,
+            generation: generation,
+            notes: notes,
+            writeTagTo: writeTagTo,
+        }
         if(imageFile!==undefined){
             formData.set("image", imageFile, "imgFile")
         }
-        writeTagTo && (dataObj.writeTagTo=writeTagTo)
-
+        setFormData(formData, dataObj)
         MultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies))
-        // TODO: reenable if does not work without cookies... SendMultipartRequest(importApiUrlFor("stasisTube"), cookies, formData)
-        // SendMultipartRequest2(importApiUrlFor("stasisTube"), formData)
-        //     .then(HandleJsonResponse)
-        //     .then(newItem => {
-        //         AssertStasisTube(newItem)
-        //         redirect(viewUrlFor("stasisTube", newItem._id))
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"stasisTube"}>
         {err!=undefined && <div>{"Error: "+err}</div>}
@@ -168,6 +177,7 @@ export function StasisTubeImportDisplay() {
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />
         <button className={"greenButton"} onClick={importEntry}>{"Import Stasis Tube"}</button>
     </ImportEntryFormWrapper>
@@ -194,7 +204,7 @@ export default function StasisTubeDisplay(
         // State helpers
         const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: StasisTubeData)=>{
             setInitial(updated)
             setImages(InitialPicsEntries(updated.pics))
@@ -206,6 +216,7 @@ export default function StasisTubeDisplay(
             // Helper states
             setTransfersOut(updated.transfersOut || [])
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const stasisTubeSubmit = () => {
@@ -240,7 +251,7 @@ export default function StasisTubeDisplay(
                     updateInitial(new StasisTubeData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -276,7 +287,7 @@ export default function StasisTubeDisplay(
                 <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
@@ -294,7 +305,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createStasisTube = (e: React.MouseEvent)=>{
         e.preventDefault()
@@ -303,6 +314,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
             return
         }
         let body:any={
+            // TODO; consider adding optional water jar field
             pcRun: pcRun._id,
             notes: notes,
             writeTagTo:writeTagTo,

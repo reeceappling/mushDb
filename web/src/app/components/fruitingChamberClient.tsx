@@ -130,9 +130,7 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
     }
     // complex required keys
     let complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        // ['entryType', (inp: any) => {
-        //     return (typeof inp === 'string' && inp === "fruitingChamber")
-        // }],
+        ['acl', IsValidAcl],
     ])
     for (let [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -142,7 +140,6 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
     // complex optional keys
     let complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-        ['acl', IsValidAcl]
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
@@ -184,7 +181,7 @@ export default function FruitingChamberDisplay(
         const [disposed, setDisposed] = useState(initial.disposed)
         const [sale, setSale] = useState(initial.sale)
         const [notes, setNotes] = useState<AllEntries<Note>>({existing: initNotes, new: []})
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const [writeTo, setWriteTo] = useState<string | undefined>()
 
         // Image-containing
@@ -206,6 +203,7 @@ export default function FruitingChamberDisplay(
             setContams(InitialContamState(updated.contamination))
             setFlushes(InitialPicsEntries(updated.flushes))
             setTransfersOut(updated.transfersOut || [])
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const fruitingChamberSubmit = () => {
@@ -246,7 +244,7 @@ export default function FruitingChamberDisplay(
                     updateInitial(new FruitingChamberData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -305,9 +303,8 @@ export default function FruitingChamberDisplay(
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTo}/>}
                 {readonly ? null :
                     <button className={"bottomButton greenButton"} onClick={(e) => {
                         e.stopPropagation();
@@ -371,14 +368,14 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
     parent?: string
 }) {
     const [subBatch, setSubBatch] = useState<SubstrateBatchData | undefined>(substrateBatchIn)
-    const [parentId, setParentId] = useState<string | undefined>() // TODO: do we even want this in the initial one? Keep it optional
+    const [parentId, setParentId] = useState<string | undefined>() // TODO: do we even want this in the initial one? Keep it optional?
     const [volumeGrainCups, setVolumeGrainCups] = useState<number>(0)
     const [mixedSubCups, setMixedSubCups] = useState<number>(0)
     const [casingCups, setCasingCups] = useState<number>(0)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const newFruitingChamberSubmit = () => {
         if (!subBatch) {
@@ -399,13 +396,14 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
         }
         let body: any = {
             substrateBatch: subBatch._id,
-            parentId: parentId,
+            parentJar: parentId,
             grainCups: volumeGrainCups,
-            mixedSubCups: mixedSubCups,
+            mixedSubstrateCups: mixedSubCups,
             casingCups: casingCups,
-            notes: notes
+            notes: notes,
+            // Optional
+            writeTagTo: writeTagTo,
         }
-        writeTagTo && (body.writeTagTo = writeTagTo)
         DoCreateRequest("fruitingChamber", body, AssertFruitingChamber, allCookies(cookies))
             .then(v=>{
                 handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
@@ -460,9 +458,9 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
     const [recipe, setRecipe] = useState<SubstrateRecipeData | undefined>()
     const [creationDate, setCreationDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>()
-    const [grainCups, setGrainCups] = useState<number>(4) // TODO: set
-    const [mixedSubRatio, setMixedSubRatio] = useState<number>(4) // TODO: set
-    const [casingRatio, setCasingRatio] = useState<number>(2) // TODO: set
+    const [grainCups, setGrainCups] = useState<number>(4) // TODO: set and initial?
+    const [mixedSubRatio, setMixedSubRatio] = useState<number>(4) // TODO: set and initial?
+    const [casingRatio, setCasingRatio] = useState<number>(2) // TODO: set and initial?
     // Non-required
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
     const [generation, setGeneration] = useState<number | undefined>()
@@ -487,18 +485,18 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
         let bodyObj: any = {
             recipe: recipe,
             creationDate: creationDate,
+            species: species?._id,
             grainCups: grainCups,
             substrateRatio: mixedSubRatio,
             casingRatio: casingRatio,
-            species: species?._id,
             //perms: perms, // From spec/subspec
+            // optional
+            subspecies: subspecies?._id,
+            generation: generation,
+            knownFruitable: knownFruitable,
+            writeTagTo: writeTagTo,
         }
-        subspecies && (bodyObj.subspecies = subspecies._id)
-        generation && (bodyObj.generation = generation)
-        knownFruitable && (bodyObj.knownFruitable = knownFruitable)
-        writeTagTo && (bodyObj.writeTagTo = writeTagTo)
         let formData = new FormData()
-
         imageFile && formData.set("img", imageFile, "img")
         setFormData(formData, bodyObj)
 

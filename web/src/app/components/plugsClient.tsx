@@ -13,18 +13,18 @@ import {
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
-    RequiredArrayOfType,
+    RequiredArrayOfType, RequiredKey,
     updateApiUrlFor,
     viewUrlFor,
 } from "@/app/components/common";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
-import {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkWrapper, EntryLinkIdWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {DowelType, PlugsData} from "@/app/components/plugsServer";
 import {PcRunData} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
 import {ExistingSubSpeciesSelector} from "./subspeciesClient";
-import ReaderWriterSelector from "./formSubcomponents/readerWriterButtons/readerSelector";
-import {AllEntries} from "./formSubcomponents/shared";
+import ReaderWriterSelector, {WriteRfidOvcArea} from "./formSubcomponents/readerWriterButtons/readerSelector";
+import {AllEntries, OnViewCreatorQuadCol} from "./formSubcomponents/shared";
 import {ACL} from "./accessControlServer";
 import {BaseExternalUrl} from "./Constants";
 import {HandleErr} from "./userClient";
@@ -45,6 +45,7 @@ import {AssertJar} from "@/app/components/jarClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
@@ -89,13 +90,13 @@ export function AssertPlugs(input: any): asserts input is PlugsData {
             throw new Error('Plug assertion failure: required array key ' + key + ' was not valid');
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Plug assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('plugs assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
@@ -156,10 +157,9 @@ export default function PlugsDisplay(
     const [sales, setSales] = useState<string[] | undefined>(data.sales)
     const [disposed, setDisposed] = useState<number | undefined>(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
-    const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+    const [acl, setAcl] = useState<ACL>(initial.acl)
     // Helper states
     const [transfersOut, setTransfersOut] = useState<string[]>(data.transfersOut || [])
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const updateInitial = (updated: PlugsData) => {
         setInitial(updated)
@@ -170,18 +170,17 @@ export default function PlugsDisplay(
         setNotes(InitialNotesState(updated.notes))
         setTransfersOut(updated.transfersOut || [])
         setAcl(updated.acl)
+        setErr(undefined)
     }
     const cookies = useContext(CookiesContext)
     const submit = () => {
         let body: any = {
-            pcRun: pcRun,
+            pcRun: pcRun, // TODO: optional? can only be set once
             knownFruitable: knownFruitable,
             disposed: disposed,
             notes: notes,
-            writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
         }
-        // TODO: do we want pics on this?
         DoUpdateRequest("plugs",initial._id, body, AssertPlugs, allCookies(cookies))
             .then(v=>{
                 updateInitial(new PlugsData(v))
@@ -190,10 +189,15 @@ export default function PlugsDisplay(
                 setErr(JSON.stringify(e))
             })
     }
+    const ovcs: OnViewCreatorQuadCol[] = [
+        // TODO: any more?
+        WriteRfidOvcArea(initial._id),
+    ]
     return (
         <DisplayFormWrapper entryType={"plugs"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID txt={"Plugs Jar"} id={initial._id} entryType={"plugs"} linkPage={false}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -223,10 +227,9 @@ export default function PlugsDisplay(
                                  allowNewTransferCreation={!readonly}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>
 
-            {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
             {readonly || <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
@@ -268,8 +271,9 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
         }
         let body: any = {
             dowelTypes: dowelTypes,
-            gen: gen,
-            species: species._id,
+            generation: gen,
+            // optional
+            species: species._id, // Unused if non-inoculated
             subspecies: subspecies?._id,
             knownFruitable: knownFruitable,
             notes: notes,
@@ -321,7 +325,6 @@ export function NewPlugsForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    const errHandler = ErrHandler(setErr)
     const cookies = useContext(CookiesContext)
     const createPlugs = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -359,9 +362,9 @@ export function NewPlugsForm(
 
 
         {pcRunIn ? <div>{"PC Run: "}
-                <EntryLinkWrapperForId props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
+                <EntryLinkIdWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
                     {pcRunIn._id}
-                </EntryLinkWrapperForId>
+                </EntryLinkIdWrapper>
             </div>
             : <PcRunSelector doSelect={setPcRun} allowCreate={true}/>
         }

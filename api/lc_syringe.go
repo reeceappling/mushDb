@@ -136,7 +136,7 @@ func initializeSyringes(ctx context.Context) error {
 }
 
 type createLCSyringeRequest struct {
-	LC MainCollectionId `json:"lc"`
+	LC MainCollectionId `json:"parent"`
 	NotesField
 	WriteTagToField
 }
@@ -196,7 +196,7 @@ type updateSyringeRequest struct {
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
 	KnownFruitableField       // TODO: handle in react
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updateSyringeRequest) baseItem() *LcSyringe {
@@ -220,7 +220,7 @@ type resolvedUpdateSyringeRequest struct {
 	ConfirmedClean *bool `json:"confirmedClean,omitempty"`
 	KnownFruitableField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField AclField) (bson.D, error) {
@@ -294,30 +294,30 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.GetPermsOnRequest())
 }
 
-// TODO: use and move!
-func mainUpdateHandler[T MainCollectionItem](w http.ResponseWriter, r *http.Request, req simpleUpdateHandler[T]) {
-	_, id, err := mainCollIdFromRequest(r, w) // TODO: use this everywhere
-	if err != nil {
-		return // Writes already if err
-	}
-	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
-		return // Writes already if err
-	}
-	// CHECK THAT ALL NEW PICS EXIST
-	// PROCESS ALL NEW PICS AND CONTAMS
-	out := req.reform()
-	existing := req.baseItem()
-	ctx, db := Db(r)
-	coll := db.Collection(existing.CollectionName())
-	// go get current LcSyringe
-
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
-	if err != nil {
-		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.GetPermsOnRequest())
-}
+//// TODO: use and move!
+//func mainUpdateHandler[T MainCollectionItem](w http.ResponseWriter, r *http.Request, req simpleUpdateHandler[T]) {
+//	_, id, err := mainCollIdFromRequest(r, w) // TODO: use this everywhere
+//	if err != nil {
+//		return // Writes already if err
+//	}
+//	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
+//		return // Writes already if err
+//	}
+//	// CHECK THAT ALL NEW PICS EXIST
+//	// PROCESS ALL NEW PICS AND CONTAMS
+//	out := req.reform()
+//	existing := req.baseItem()
+//	ctx, db := Db(r)
+//	coll := db.Collection(existing.CollectionName())
+//	// go get current LcSyringe
+//
+//	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+//	if err != nil {
+//		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.GetPermsOnRequest())
+//}
 
 // TODO: MOVE
 type simpleUpdateHandler[T CollectionItem] interface {
@@ -336,9 +336,9 @@ type importLcSyringeRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	KnownFruitableField
+	Generation *Generation // TODO: HANDLE!
 	NotesField
 	// pic as "img"
-	PermsOnRequest
 }
 
 // TODO: USE!!!
@@ -369,7 +369,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -381,8 +381,14 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(LcSyringeCollectionName)
 	toInsert := LcSyringe{
-		MainCollectionIdField:   MainCollectionIdField{Id: id},
-		CreationDateField:       data.CreationDateField,
+		MainCollectionIdField: MainCollectionIdField{Id: id},
+		CreationDateField:     data.CreationDateField,
+		GenerationsFields: GenerationsFields{
+			GenSporeField: GenSporeField{
+				GenSinceSpore: data.Generation, // TODO: ensure ok
+			},
+			GenSinceFruitOrSpore: data.Generation,
+		},
 		SpeciesField:            data.SpeciesField,
 		KnownFruitableField:     data.KnownFruitableField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
@@ -390,5 +396,5 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedFieldForNow(),
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
 }

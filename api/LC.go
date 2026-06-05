@@ -175,7 +175,6 @@ func initializeLCs(ctx context.Context) error {
 
 type createLiquidCultureRequest struct {
 	LcRecipeField
-	CreationDateField
 	PcRunField
 	NotesField
 	WriteTagToField
@@ -212,7 +211,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		MainCollectionIdField: MainCollectionIdField{id},
 		LcRecipeField:         data.LcRecipeField,
 		PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
-		CreationDateField:     CreationDateField{data.CreationDate},
+		CreationDateField:     CreationDateField{now},
 		NotesField:            NotesField{data.Notes},
 		LastUpdatedField:      LastUpdatedField{now},
 		AclField:              allCanWriteAcl(),
@@ -235,7 +234,7 @@ type importLiquidCultureRequest struct {
 	Generation *int
 	ConfirmedCleanField
 	WriteTagToField
-	PermsOnRequest
+	//PermsOnRequest `json:"acl"` // TODO: REMOVED
 	// image as "img"
 }
 
@@ -344,7 +343,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -379,7 +378,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
 		AclField:             AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
 }
 
 type updateLiquidCultureRequest struct {
@@ -389,8 +388,7 @@ type updateLiquidCultureRequest struct {
 	ConfirmedClean *bool                                                    `json:"confirmedClean,omitempty"`
 	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
 	Contams        SplitEntries[contamForm, ContaminationLessLocation]      //"newContam-1"
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updateLiquidCultureRequest) reform() resolvedUpdateLiquidCultureRequest {
@@ -426,7 +424,7 @@ type resolvedUpdateLiquidCultureRequest struct {
 	ConfirmedClean *bool
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams        SplitEntries[contamForm, Contamination]
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 // TODO: MOVE ME
@@ -461,14 +459,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := *mainCollId
-	b58Id := mainCollId.AsBase58()
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "lc", &data, b58Id) // TODO: "lc" ok here?
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "lc", &data, mainCollId.AsBase58())
 	if err != nil {
 		// Already wrotw
 		return
@@ -496,7 +487,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(LCCollectionName)
 	// go get current LC
 	existing := LiquidCulture{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

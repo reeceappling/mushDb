@@ -11,8 +11,8 @@ import (
 )
 
 // Required for
-// TODO: CreatePlates
-// TODO: CreateSlants (still required if the slants are directly PC'd
+// CreatePlates
+// CreateSlants (only if the slants are directly PC'd, which they should generally be)
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
@@ -39,16 +39,9 @@ func (field AgarBatchField) Get(ctx context.Context) (out AgarBatch, err error) 
 	return out, err
 }
 
-//type NewAgarBatchRequest struct {
-//	PcRunField
-//	AgarRecipeField
-//	Color *string
-//	NotesCreationField
-//}
-
 type updateAgarBatchRequest struct {
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bson.D, error) {
@@ -59,22 +52,6 @@ func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bs
 		Finalized()
 }
 
-// TODO: MOVE
-func ReadSimpleStructuredBody[T any](r *http.Request, w http.ResponseWriter, req *T) error {
-	defer r.Body.Close()
-	bytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		println("failed to read body: " + err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err
-	}
-	if err = json.Unmarshal(bytes, &req); err != nil {
-		println("bad body format: " + string(bytes))
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return err
-	}
-	return nil
-}
 func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	b58Id := Base58Str(r.PathValue("id"))
@@ -132,7 +109,7 @@ func initializeAgarBatches(ctx context.Context) error {
 		Color:                      clearColor,
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(),
+		AclField:                   allCanReadAcl(nil), // TODO: allCanWrite?
 	}
 	err = addTestAltEntries(ctx, testItem)
 	println("test Agar Batch:", testAltId.AsBase58())
@@ -185,7 +162,7 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		Color:                      req.Color,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanWriteAcl(),
+		AclField:                   allCanWriteAcl(), // TODO: or read?
 	}
 	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }

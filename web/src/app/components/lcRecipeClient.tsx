@@ -5,7 +5,7 @@ import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {LcRecipeData} from "@/app/components/lcRecipeServer";
+import {LcRecipeData, LcRecipeSelectorCloseable} from "@/app/components/lcRecipeServer";
 import LiquidsArea, {
     IsValidLiquid,
     Liquid,
@@ -33,9 +33,9 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    RequiredArrayOfType, updateApiUrlFor
+    RequiredArrayOfType, RequiredKey, updateApiUrlFor
 } from "@/app/components/common";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
     Additive,
     AdditiveEntriesGroupForNew,
@@ -71,13 +71,13 @@ export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
         }
     }
 
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Jar assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('LcRecipe assertion failure: required key ' + key + ' was not valid');
         }
     }
 
@@ -117,7 +117,7 @@ export default function LcRecipeDisplay(
         const [recName, setRecName] = useState(initial.name)
         const [isStandard, setIsStandard] = useState(initial.standard)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: LcRecipeData) => {
             setInitial(updated)
@@ -125,6 +125,7 @@ export default function LcRecipeDisplay(
             setIsStandard(updated.standard)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const lcRecipeSubmit = () => {
@@ -139,7 +140,7 @@ export default function LcRecipeDisplay(
                     updateInitial(new LcRecipeData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -192,7 +193,7 @@ export default function LcRecipeDisplay(
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
 
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
@@ -221,7 +222,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
         setSugars(template.sugars || [])
         setAdditives(template.additives || [])
     }
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -294,7 +295,7 @@ export function LcRecipeArea({lcRecipeId, headerLevel, offset}: {
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (lcRecipeId !== undefined) {
         const b58id = lcRecipeId
-        linkArea = <EntryLink props={{
+        linkArea = <EntryLinkForId props={{
             displayId: b58id,
             linkId: b58id,
             entryType: "lcRecipe",

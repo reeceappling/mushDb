@@ -21,7 +21,7 @@ type Subspecies struct {
 	NotesField       `bson:"inline"`
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
-	DefaultAcl       *ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // Only used when importing mainCollectionItems
+	DefaultAcl       ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // Only used when importing mainCollectionItems
 }
 
 func initializeSubspecies(ctx context.Context) error {
@@ -71,7 +71,7 @@ func initializeSubspecies(ctx context.Context) error {
 		AliasesField:     AliasesField{[]string{"testSubSpecies", "example subspecies"}},
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         allCanReadAcl(),
+		AclField:         allCanReadAcl(nil),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
@@ -81,6 +81,7 @@ type createSubspeciesRequest struct {
 	SpeciesField
 	AliasesField
 	NotesField
+	// ACL/DefaultACL are initially inherited from parent species
 }
 
 func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -131,8 +132,8 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 type updateSubspeciesRequest struct {
 	NotesUpdateField
 	AliasesField
-	PermsOnRequest
-	DefaultEntryPermsOnRequest PermsOnRequest // TODO: handle in TS
+	PermsOnRequest `json:"acl"`
+	DefaultAcl     PermsOnRequest // TODO: handle in TS! CHANGED TO POINTER!
 }
 
 func (req updateSubspeciesRequest) modsFor(existing *Subspecies, aclField AclField) (bson.D, error) {
@@ -140,7 +141,7 @@ func (req updateSubspeciesRequest) modsFor(existing *Subspecies, aclField AclFie
 		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateDefaultEntryPermsIfNeeded(req.DefaultEntryPermsOnRequest, existing.ACL).
+		updateDefaultAclIfNeeded(req.DefaultAcl, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -164,9 +165,18 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// TODO: ensure ok! updating perms to allow for creating user as well...
+	user, _ := GetAuthInfo(r.Context())
+	finalDefaultAcl, err := req.DefaultAcl.AclForUser(r.Context(), user)
+	if err != nil {
+		http.Error(w, "failed to create default acl: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	req.DefaultAcl = finalDefaultAcl.ACL.AsPermsOnRequest()
+
 	ctx, db := Db(r)
 	coll := db.Collection(SubspeciesCollectionName)
-	existing, err := GetSubspeciesNameInTxn(ctx, subspeciesName)
+	existing, err := GetSubspeciesByNameInTxn(ctx, subspeciesName) // TODO; does this need to be in txn?
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {

@@ -26,22 +26,20 @@ import SugarsArea, {
     SugarEntriesGroupForNew,
 } from "@/app/components/formSubcomponents/sugars";
 import {
-    createApiUrlFor,
     CreatedLinkFor,
     CreateNewEntryButton, dataFor, DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     IsString,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    RequiredArrayOfType, updateApiUrlFor,
+    RequiredArrayOfType,
+    RequiredKey,
     ViewInNewTabButton
 } from "@/app/components/common";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {ErrorDisplay, InlineTitle, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import AdditivesArea, {
     Additive,
     AdditiveEntriesGroupForNew,
@@ -55,7 +53,7 @@ import {
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {AssertAgarBatch, NewAgarBatchForm} from "@/app/components/agarBatchClient";
+import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
 import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
@@ -83,16 +81,13 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
         }
     }
 
-    // complex optional simple keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            console.error('AgarRecipe assertion failure: optional key ' + key + ' was not valid');
-            console.error(JSON.stringify(input));
-            console.error(JSON.stringify(input[key]));
-            throw new Error('AgarRecipe assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Agar Recipe assertion failure: required key ' + key + ' was not valid');
         }
     }
 
@@ -142,7 +137,7 @@ export default function AgarRecipeDisplay(
         // Optional
         const [isStandard, setIsStandard] = useState(data.standard)
         const [notes, setNotes] = useState<AllEntries<Note>>({existing: dataFor(data.notes || []), new: []})
-        const [acl, setAcl] = useState<ACL | undefined>(data.acl)
+        const [acl, setAcl] = useState<ACL>(data.acl)
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: AgarRecipeData) => {
             setInitial(updated)
@@ -150,6 +145,7 @@ export default function AgarRecipeDisplay(
             setIsStandard(updated.standard)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
 
@@ -162,14 +158,14 @@ export default function AgarRecipeDisplay(
                 name: name,
                 standard: isStandard,
                 notes: notes,
-                acl: MarshalAcl(acl), // TODO; use this everywhere if it works
+                acl: MarshalAcl(acl),
             }
             DoUpdateRequest("agarRecipe",initial._id, body, AssertAgarRecipe, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new AgarRecipeData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -178,11 +174,10 @@ export default function AgarRecipeDisplay(
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewAgarBatchForm agarRecipeIn={data} handlers={{
                         onCreate: (newItem: AgarBatchData) => {
-                            // TODO: THIS IS NOT WORKING!!!!
                             return onCreate([{
                                 typeText: "Agar Batch",
                                 node: <CreatedLinkFor linkId={newItem._id} typ={"agarBatch"}/>
-                            }], true)
+                            }], true) // TODO: true ok?
                         },
                         isTopLevel: false,
                     }}/>
@@ -195,7 +190,7 @@ export default function AgarRecipeDisplay(
                 <TestAndValidate todos={["Put name at top????"]}>
                     <ID id={data._id} txt={"Agar Recipe"} entryType={"agarRecipe"}/>
                 </TestAndValidate>
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <NameArea currentName={name} setName={setName}
@@ -220,11 +215,10 @@ export default function AgarRecipeDisplay(
                 <AdditivesArea readonly={true}
                                initialValues={dataFor(initial.additives)}/>{/* TODO: FIX AND REFORMAT THIS*/}
                 <AntibioticsDisplay antibiotics={initial.antibiotics}/>{/* TODO: FIX AND REFORMAT THIS*/}
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>{/* TODO: this is erroring when updating after creating a note, then erroring again when trying to click update with no changes because it says existing notes length is not the same!*/}
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {/* TODO: fix the ADD A PROJECT area*/}
                 {readonly ? null :
                     <button className={"bottomButton greenButton"} onClick={(e) => {
                         e.stopPropagation();
@@ -280,19 +274,6 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             .catch(e=>{
                 setErr(JSON.stringify(e))
             })
-        // fetch(createApiUrlFor("agarRecipe"), {
-        //     method: 'Post',
-        //     body: JSON.stringify(body),
-        //     headers: clientPostRequestHeaders,
-        // }).then(HandleJsonResponse).then((newRecipe) => {
-        //     try {
-        //         AssertAgarRecipe(newRecipe)
-        //         handlers.onCreate && handlers.onCreate(newRecipe)
-        //     } catch (e) {
-        //         setErr("result was not recipe: " + JSON.stringify(e))
-        //     }
-        // })
-            //.catch(ErrHandler(setErr));
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {
@@ -382,7 +363,7 @@ export const AgarRecipeArea = ({agarRecipeBinId}: { agarRecipeBinId?: string }) 
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (agarRecipeBinId !== undefined) {
         const displayId = agarRecipeBinId
-        linkArea = <EntryLink props={{displayId: displayId, linkId: displayId, entryType: "agarRecipe"}}/> // TODO: DISPLAY NAME?
+        linkArea = <EntryLinkForId props={{displayId: displayId, linkId: displayId, entryType: "agarRecipe"}}/> // TODO: DISPLAY NAME?
     }
     return <div className={"agarRecipeArea"}>
         <div>{"Agar Recipe ID: "}</div>

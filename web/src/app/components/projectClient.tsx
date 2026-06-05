@@ -101,6 +101,7 @@ export default function ProjectDisplay(
             setCompleted(updated.completed)
             setNotes(InitialNotesState(updated.notes))
             setPerms(ps)
+            setErr(undefined)
         }
         // TODO: users and entries for this!
         const completedArea = () => {
@@ -140,7 +141,7 @@ export default function ProjectDisplay(
                     updateInitial(new ProjectData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         return (
@@ -182,7 +183,7 @@ export function NewProjectForm(
     // TODO: load up user on server side into the userperms as write (unless blanket is write)
     const [err, setErr] = useState<string | undefined>(undefined)
     // TODO: handle isTopLevel
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createProject = () => {
         if (name === undefined) {

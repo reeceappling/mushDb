@@ -2,7 +2,7 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {Contamination, ExampleContaminations, ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/contaminations";
 import {EntryPerms} from "@/app/components/perms";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {PlateSelector} from "@/app/components/plateClient";
@@ -31,7 +31,7 @@ export function TestSlantOk(){
         mostRecentImage: ExamplePicWithNotesIncoming,
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
     })
 }
 
@@ -56,7 +56,7 @@ export interface SlantData {
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class SlantData {
     // Accept a single object containing the fields

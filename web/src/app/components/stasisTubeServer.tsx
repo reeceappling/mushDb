@@ -6,7 +6,7 @@ import {
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {EntryPerms} from "@/app/components/perms";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
@@ -35,7 +35,7 @@ export function TestStasisTubeOk(){
         mostRecentImage: ExamplePicWithNotesIncoming,
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
     })
 }
 export interface StasisTubeData {
@@ -59,7 +59,7 @@ export interface StasisTubeData {
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class StasisTubeData {
     // Accept a single object containing the fields

@@ -50,13 +50,12 @@ func initializePCRun(ctx context.Context) error {
 		RunTimeMinutes:             60,
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(),
+		AclField:                   allCanReadAcl(nil),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
 
 type createPcRunRequest struct {
-	CreationDateField
 	RunTimeMinutes int
 	NotesField
 }
@@ -80,20 +79,21 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 	id := newAlternateCollectionId()
 	ctx, db := Db(r)
 	coll := db.Collection(PcRunCollectionName)
+	user, _ := GetAuthInfo(ctx)
 	toInsert := PCRun{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		CreationDateField:          req.CreationDateField,
+		CreationDateField:          unixTimeForNow().asCreationDate(),
 		RunTimeMinutes:             req.RunTimeMinutes,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanWriteAcl(), // TODO: ? acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+		AclField:                   allCanReadAcl(&user.Email), // TODO: ? acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
 	}
 	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
 
 type updatePcRunRequest struct {
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updatePcRunRequest) modsFor(existing *PCRun, aclField AclField) (bson.D, error) {

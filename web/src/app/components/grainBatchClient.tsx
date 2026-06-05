@@ -22,8 +22,8 @@ import {
     NewEntryFormWrapper,
     NewEntryInput,
     NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalSimpleKey
+    OptionalArrayOfType, OptionalKey,
+    OptionalSimpleKey, RequiredKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {GrainBatchData} from "./grainBatchServer";
@@ -36,7 +36,12 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {
+    AclDisplay,
+    IsValidAcl, MarshalAcl,
+    TogglableAreaWithDepth
+} from "@/app/components/accessControlClient";
+import { ACL } from "./accessControlServer";
 
 // TODO: GRAIN BATCHES LIST IS NOT WORKING!
 // TODO: ENSURE DISPLAY IS LOOKING GOOD
@@ -72,6 +77,15 @@ export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
             throw new Error('Batch assertion failure: optional key ' + key + ' was not valid');
         }
     }
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl],
+    ])
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('GrainBatch assertion failure: required key ' + key + ' was not valid');
+        }
+    }
 
     // complex optional array keys
     let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
@@ -94,8 +108,6 @@ export default function GrainBatchDisplay(
         const [initial, setInitial] = useState(data)
 
         const [err, setErr] = useState<string | undefined>()
-        // TODO: THIS WHOLE THING!
-        // TODO: only allow setting unset values once
 
         // grain non-changeable (base grain)
         // name non-changeable
@@ -103,27 +115,31 @@ export default function GrainBatchDisplay(
         const [boilTime, setBoilTime] = useState<number | undefined>(initial.boilTimeMins)
         const [dryTime, setDryTime] = useState<number | undefined>(initial.dryTimeHours)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: GrainBatchData) => {
             setInitial(updated)
             setSoakTime(updated.soakTimeHrs)
             setBoilTime(updated.boilTimeMins)
             setDryTime(updated.dryTimeHours)
             setNotes(InitialNotesState(updated.notes))
+            setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const submit = () => {
             const body: any = {
-                soakTimeHrs: soakTime, // TODO: validate
-                boilTimeMins: boilTime, // TODO: validate
-                dryTimeHours: dryTime, // TODO: validate
+                soakTimeHrs: soakTime,
+                boilTimeMins: boilTime,
+                dryTimeHrs: dryTime,
                 notes: notes,
+                acl: MarshalAcl(acl),
             }
             DoUpdateRequest("grainBatch", initial._id, body, AssertGrainBatch, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new GrainBatchData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const handleFormChangeBoil = (val?: string) => {
@@ -156,6 +172,8 @@ export default function GrainBatchDisplay(
         const ovcs: OnViewCreatorQuadCol[] = [
             {
                 txt: "Create Jars From Batch",
+                // TODO: does this creation need a pcRun??? Can we do it before the run?
+                // TODO: can items be added when creating a PC run?
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                     return <NewJarForm grainBatchIn={initial} recipeIn={initial.recipe} handlers={{
                         onCreate: (newItem: JarData) => {
@@ -206,6 +224,9 @@ export default function GrainBatchDisplay(
             </FlexedArea>
 
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
+            </TogglableAreaWithDepth>
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
@@ -222,8 +243,9 @@ export function NewGrainBatchForm({handlers, recipe}: {
 }) {
     const [jarRecipe, setJarRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
+    const [acl, setAcl] = useState<ACL>({blanketPerm:true})
     const [err, setErr] = useState<string | undefined>()
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const newGrainBatchSubmit = () => {
         if (jarRecipe === undefined) {
@@ -233,6 +255,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
         const body: any = {
             recipe: jarRecipe?._id,
             notes: notes,
+            acl: MarshalAcl(acl),
         }
         DoCreateRequest("grainBatch", body, AssertGrainBatch, allCookies(cookies))
             .then(v=>{
@@ -248,6 +271,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
             <JarRecipeSelector doSelect={setJarRecipe} allowCreate={handlers.isTopLevel}
                                creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>
+        <AclDisplay readonly={false} updateParent={setAcl} initial={acl} />
         <button className={"bottomButton greenButton"} onClick={(e) => {
             e.stopPropagation();
             newGrainBatchSubmit()

@@ -45,7 +45,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey,
+    OptionalSimpleKey, RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData,
     SendMultipartRequest,
@@ -134,10 +134,18 @@ export function AssertPlate(input: any): asserts input is PlateData {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl],
+    ])
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Plate assertion failure: required key ' + key + ' was not valid');
+        }
+    }
     // complex optional keys
     let complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-        ['acl', IsValidAcl]
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
@@ -195,7 +203,7 @@ export default function PlateDisplay(
     const [sale, setSale] = useState<string | undefined>(data.sale)
     const [disposed, setDisposed] = useState<number | undefined>(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
-    const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+    const [acl, setAcl] = useState<ACL>(initial.acl)
     // Helper states
     const [transfersOut, setTransfersOut] = useState<string[]>(data.transfersOut || [])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
@@ -210,10 +218,11 @@ export default function PlateDisplay(
         setNotes(InitialNotesState(updated.notes))
         setTransfersOut(updated.transfersOut || [])
         setAcl(updated.acl)
+        setErr(undefined)
     }
     const cookies = useContext(CookiesContext)
     const submit = () => {
-        console.log("submitting update request")
+        console.log("creating update request")
         let formData = new FormData()
         let dataObj: any = {
             knownFruitable: knownFruitable,
@@ -222,10 +231,10 @@ export default function PlateDisplay(
             notes: notes,
             writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
-            pourCoverage: pourCoveragePct, // TODO: ensure covered by go
-            condensationCoverageAtSealTime: condensationCoveragePct, // TODO: ensure covered by go
-            wetAtCooledTime: wetAtCooledTime, // TODO: ensure covered by go
-            agarOnOutsideAtPourTime: agarOnOutsideAtPourTime // TODO: ensure covered by go
+            pourCoverage: pourCoveragePct,
+            condensationCoverageAtSealTime: condensationCoveragePct,
+            wetAtCooledTime: wetAtCooledTime,
+            agarOnOutsideAtPourTime: agarOnOutsideAtPourTime,
         }
 
         try {
@@ -245,12 +254,14 @@ export default function PlateDisplay(
             setErr(JSON.stringify(caught))
             return
         }
+        console.log("submitting update request")
         DoUpdateMultipartRequest("plate",initial._id, formData, AssertPlate, allCookies(cookies))
             .then(v=>{
                 updateInitial(new PlateData(v))
+                console.log("updated initial state")
             })
             .catch(e=>{
-                setErr(JSON.stringify(e))
+                setErr("Error in parsing updated plate: "+JSON.stringify(e))
             })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
@@ -303,10 +314,9 @@ export default function PlateDisplay(
             {/* TODO: SOMEHOW SHOVE THE DICTAPHONE INTO THE NotesFormArea*/}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>
 
-            {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
             {readonly || <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
@@ -328,7 +338,7 @@ function PourCoverageFieldDisplay({pourCoveragePct, updateParent}: {
     return <div>{header}<InputNumberWithSmallTitle value={"" + pourCoverage} readonly={false} min={0} max={100} step={1}
                                                    mode={"integer"} onChange={(s) => {
         const temp = Number(s)
-        updateParent && updateParent(temp) // TODO: ensure ok
+        updateParent ? updateParent(temp) : console.warn("pourCoverage has no updateParent prop")
         setPourCoverage(temp)
     }}/>{"%"}</div>
 }
@@ -447,20 +457,18 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
         }
         let formData = new FormData()
         let dataObj: any = {
-            created: created,
-            species: species._id,
-            //perms: perms, // TODO: ensure not on go side, use spec/subspec perms
+            creationDate: created,
+            species: species._id, // TODO: can this be optional? Importing existing uninnoculated plates?
             // Optionals
             subspecies: subspecies?._id,
             knownFruitable: knownFruitable,
             generation: generation,
             pourCoverage: pourCoverage, // TODO: ensure covered in go
-
+            writeTagTo: writeTagTo,
         }
         if (imageFile !== undefined) {
             formData.set("image", imageFile, "image")
         }
-        writeTagTo && (dataObj.writeTagTo = writeTagTo)
         setFormData(formData, dataObj)
         MultipartImportRequest(formData, "plate", AssertPlate, setErr, allCookies(cookies))
         // TODO: revert if not work: SendMultipartRequest(BaseExternalUrl + "/db/import/plate", cookies, formData)
@@ -508,7 +516,7 @@ export function NewPlateForm(
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createPlate = (e: React.MouseEvent) => {
         e.preventDefault()

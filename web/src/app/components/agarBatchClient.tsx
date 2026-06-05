@@ -1,35 +1,27 @@
 'use client'
 
-import React, {JSX, useContext, useEffect, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {useQuery,} from '@tanstack/react-query'
-import NotesArea, {
+import {
     IsValidNote,
     Note,
-    NotesAreaInline, NotesAreaViewSubcomponent,
-    NotesAreaOld,
-    NotesGrid, SingleNoteV2, NewEntryNotes, NotesFormArea
+    NewEntryNotes, NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {AgarBatchData, AgarColor} from "@/app/components/agarBatchServer";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {AgarBatchData} from "@/app/components/agarBatchServer";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
-    createApiUrlFor,
     CreatedLinkFor,
     dataFor, DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, DoUpdateMultipartRequest, ErrHandler,
+    DisplayInput, DoCreateRequest, DoUpdateRequest,
     ExistingRecentSelector,
     FlexedArea,
-    HandleJsonResponse,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey, Subform, updateApiUrlFor,
+    OptionalKey, RequiredKey, Subform,
 } from "@/app/components/common";
 import {
     AgarRecipeArea,
@@ -37,17 +29,15 @@ import {
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {AgarRecipeData, AgarRecipeSelectorCloseable} from "@/app/components/agarRecipeServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SelectorFor} from "@/app/components/selector";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {AssertPlate, NewPlateForm} from "@/app/components/plateClient";
+import {NewPlateForm} from "@/app/components/plateClient";
 import {PlateData} from "@/app/components/plateServer";
 import {NewSlantForm} from "@/app/components/slantClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
-import {AssertMss} from "@/app/components/mssClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
@@ -70,13 +60,13 @@ export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
         }
     }
 
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Plate assertion failure: required key ' + key + ' was not valid');
         }
     }
 
@@ -103,11 +93,12 @@ export default function AgarBatchDisplay(
         const [initial, setInitial] = useState(data)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: AgarBatchData) => {
             setInitial(updated)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const agarBatchSubmit = () => {
@@ -117,22 +108,21 @@ export default function AgarBatchDisplay(
             }
             const body: any = {
                 notes: notes,
-                acl: MarshalAcl(acl), // TODO; use this everywhere if it works
+                acl: MarshalAcl(acl),
             }
             DoUpdateRequest("agarBatch",initial._id, body, AssertAgarBatch, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new AgarBatchData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
                 txt: "Create Plates",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewPlateForm agarBatchIn={data} handlers={{ // TODO: data initial here? or data?
-                    //return <NewPlateForm agarBatchIn={new AgarBatchData(data)} handlers={{ // TODO: data initial here? or data?
+                    return <NewPlateForm agarBatchIn={data} handlers={{
                         onCreate: (newItem: PlateData) => {
                             return onCreate([{
                                 typeText: "Plate",
@@ -148,8 +138,7 @@ export default function AgarBatchDisplay(
                 // TODO: also sticks should be boiled BEFORE going in the PC!
                 txt: "Create Slants",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewSlantForm agarBatchIn={data} handlers={{ // TODO: DO THE new AgarBatchData(data) EVERYWHERE!
-                    //return <NewSlantForm agarBatchIn={new AgarBatchData(data)} handlers={{ // TODO: DO THE new AgarBatchData(data) EVERYWHERE!
+                    return <NewSlantForm agarBatchIn={data} handlers={{
                         onCreate: (newItem: PlateData) => {
                             return onCreate([{
                                 typeText: "Slant",
@@ -176,7 +165,7 @@ export default function AgarBatchDisplay(
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
 
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
@@ -190,16 +179,16 @@ export default function AgarBatchDisplay(
     }
 }
 
-// TODO: NOT WORKING IN SELECTOR! Also not working on agar recipe page!
+// TODO: NOT WORKING IN SELECTOR! Working on agar recipe page, make sure it is also working in the selector...
 export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     handlers: NewEntryInput<AgarBatchData>,
     agarRecipeIn?: AgarRecipeData,
     pcRunInp?: PcRunData
 }) {
-    const defaultColor: AgarColor = "Clear"
+    const defaultColor = "Clear"
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunInp)
     const [recipe, setRecipe] = useState<AgarRecipeData | undefined>(agarRecipeIn)
-    const [color, setColor] = useState<AgarColor>(defaultColor)
+    const [color, setColor] = useState<string>(defaultColor)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
@@ -221,22 +210,11 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
         }
         DoCreateRequest("agarBatch", body, AssertAgarBatch, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(v) : console.warn("no onCreate provided")
             })
             .catch(e=>{
-                setErr(JSON.stringify(e))
+                setErr("onCreate handler failed: "+JSON.stringify(e))
             })
-        // fetch(createApiUrlFor("agarBatch"), {
-        //     method: 'Post',
-        //     body: JSON.stringify(body),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((entry) => {
-        //         AssertAgarBatch(entry)
-        //         handlers.onCreate && handlers.onCreate(entry)
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
     return <NewEntryFormWrapper entryType={"agarBatch"}>
         <div data-cy-id="Header">{"Creating a new agar batch"}</div>
@@ -289,16 +267,16 @@ export function AgarBatchArea({agarBatchId, headerLevel, offset}: {
 }) {
     return <div data-cy-id="AgarBatchAreaWrapper" className={"agarBatchAreaWrapper"}>
         <div data-cy-id="AgarBatchAreaHeader">{"Agar Batch ID: "}</div>
-        {agarBatchId ? <EntryLink props={{linkId: agarBatchId, entryType: "agarBatch"}}
-                                  data-cy-id="AgarBatchAreaEntryLink"/> :
+        {agarBatchId ? <EntryLinkForId props={{linkId: agarBatchId, entryType: "agarBatch"}}
+                                       data-cy-id="AgarBatchAreaEntryLink"/> :
             <div>{"unknown"}</div>}
     </div>
 }
 
 export function AgarColorArea(
     {initial,onSelect}: {
-        initial: AgarColor,
-        onSelect?: (s: AgarColor) => void
+        initial: string,
+        onSelect?: (s: string) => void
     }) {
     const {isPending, error, data} = useQuery({
         queryKey: ['colorOptions'],
@@ -313,7 +291,7 @@ export function AgarColorArea(
         }
         return <SelectorFor disabled={onSelect === undefined} data-cy-id={"Color"} options={data || []}
                             initial={initial} updateParent={(colStr) => {
-            onSelect && onSelect(colStr as AgarColor)
+            onSelect && onSelect(colStr)
         }}/>
     }
     return <div className={"agarColorArea"}>

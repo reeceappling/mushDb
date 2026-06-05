@@ -60,7 +60,7 @@ func initializeSubstrates(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "roughly 40g dry coir, 1 cup H20 per quart"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: allCanReadAcl(nil),
 		},
 		// Coir and Vermiculite
 		{
@@ -72,7 +72,7 @@ func initializeSubstrates(ctx context.Context) error {
 				newNote(ogTime, "Recipe: roughly 40g dry coir, up to 1/2 cup vermiculite, 1 cup H20 per quart"),
 				newNote(ogTime, "Vermiculite helps to keep more moisture in the substrate over time"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: allCanReadAcl(nil),
 		},
 		{
 			AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
@@ -82,7 +82,7 @@ func initializeSubstrates(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "Roughly equal parts wood pellets and water (maybe less water. Do less at first to ensure field capacity)"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: allCanReadAcl(nil),
 		},
 	}
 	err = addBasicAltEntries(ctx, basicEntries...)
@@ -102,28 +102,26 @@ func initializeSubstrates(ctx context.Context) error {
 	return addTestAltEntries(ctx, testItem)
 }
 
-type PermsOnRequest struct {
-	UserPerms    map[string]bool      `json:"userPerms,omitempty"` // Bool is canEdit
-	ProjectPerms map[projectName]bool `json:"projectPerms,omitempty"`
-	BlanketPerm  *ReadWritePerm       `json:"blanketPerm,omitempty"` // If true then these entries are publicly readable
+type PermsOnRequest struct { // TODO: why not just make this an ACL
+	UserPerms    map[string]bool      `json:"users,omitempty"` // Bool is canEdit
+	ProjectPerms map[projectName]bool `json:"projects,omitempty"`
+	BlanketPerm  *bool                `json:"blanketPerm,omitempty"` // If true then these entries are publicly writeable, if false then publicly readable
 }
 
 func (requestPerms PermsOnRequest) GetPermsOnRequest() PermsOnRequest {
 	return requestPerms
 }
 
-func (requestPerms PermsOnRequest) DefaultAcl() *ACL {
-	return &ACL{
+func (requestPerms PermsOnRequest) DefaultAcl() ACL {
+	return ACL{
 		Users:       requestPerms.UserPerms,
 		Projects:    requestPerms.ProjectPerms,
-		BlanketPerm: requestPerms.BlanketPerm != nil,
+		BlanketPerm: requestPerms.BlanketPerm,
 	}
 }
 
+// TODO: use this everywhere needed?
 func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
-	if requestPerms.BlanketPerm != nil && *requestPerms.BlanketPerm {
-		return AclField{ACL: nil}, nil
-	}
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 
 	// validate Projects
@@ -155,7 +153,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	acl := ACL{
 		Users:       requestPerms.UserPerms,
 		Projects:    requestPerms.ProjectPerms,
-		BlanketPerm: (requestPerms.BlanketPerm != nil),
+		BlanketPerm: requestPerms.BlanketPerm,
 	}
 	if acl.Users == nil {
 		acl.Users = map[string]bool{}
@@ -164,7 +162,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 		acl.Projects = map[projectName]bool{}
 	}
 	acl.Users[perms.Email] = true
-	return AclField{ACL: &acl}, nil
+	return AclField{ACL: acl}, nil
 }
 
 type createSubstrateRecipeRequest struct {
@@ -172,6 +170,7 @@ type createSubstrateRecipeRequest struct {
 	AliasesField
 	StandardField // If this is a standard recipe
 	NotesField
+	// Initial perms are read by all and write only by owner
 }
 
 func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +187,7 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	id := newAlternateCollectionId()
 	ctx, db := Db(r)
 	coll := db.Collection(SubstrateRecipesCollectionName)
-
+	user, _ := GetAuthInfo(ctx)
 	toInsert := SubstrateRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		NameField:                  req.NameField,
@@ -196,6 +195,7 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		StandardField:              req.StandardField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedFieldForNow(),
+		AclField:                   allCanReadAcl(&user.Email),
 	}
 	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
@@ -205,7 +205,7 @@ type updateSubstrateRecipeRequest struct {
 	AliasesField
 	StandardField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateSubstrateRecipeRequest) modsFor(existing *SubstrateRecipe, aclField AclField) (bson.D, error) {

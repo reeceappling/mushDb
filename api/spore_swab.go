@@ -92,20 +92,24 @@ func initializeSporeSwabs(ctx context.Context) error {
 		DisposedField:                     DisposedField{&exampleTime},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		AclField:                          allCanWriteAcl(),
 	}
 	return addTestMainEntries(ctx, testItem)
 }
 
-type createSporeSwabsRequest struct {
-	num int
-	MainCollectionParentField
+type createSporeSwabRequest struct {
+	MainCollectionParentField // TODO; required
+	// TODO: DERIVE PARENT TYPE!
 	// SporePrintId MainCollectionId // TODO: make this just parentId, used to be SporePrintId. Ensure handled on ts side
 	NotesField
+	WriteTagToField // TODO: DO THIS!
 }
+
+// TODO: multi-swab creation request?
 
 // TODO: REALLY FLESH THIS OUT
 func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
-	data := createSporeSwabsRequest{}
+	data := createSporeSwabRequest{}
 	defer r.Body.Close()
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)
@@ -119,7 +123,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ids := NextMainCollectionIds(data.num)
+	id := NextMainCollectionId()
 	ctx := r.Context()
 	parentItem, err := GetMainCollectionItemWithId(ctx, data.Parent)
 	if err != nil {
@@ -141,29 +145,27 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := unixTimeForNow()
-	out := make([]interface{}, data.num)
+	out := SporeSwab{
+		MainCollectionIdField:             MainCollectionIdField{id},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.Parent},
+		ParentTypeField:                   ParentTypeField{utils.Pointer(parentItem.SourceType())}, // TODO: ensure ok
+		CreationDateField:                 now.asCreationDate(),
+		SpeciesField:                      SpeciesField{*parent.Species},
+		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+		NotesField:                        NotesField{data.Notes},
+		LastUpdatedField:                  LastUpdatedField{now},
+		// Do not check permissions, just pass parent perms to child
+		AclField: AclField{parentItem.Permissions()}, // TODO: do not add user
+	}
 	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		for i, _ := range out {
-			temp := SporeSwab{
-				MainCollectionIdField:             MainCollectionIdField{ids[i]},
-				MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.Parent},
-				ParentTypeField:                   ParentTypeField{utils.Pointer(parentItem.SourceType())}, // TODO: ensure ok
-				CreationDateField:                 now.asCreationDate(),
-				SpeciesField:                      SpeciesField{*parent.Species},
-				SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-				NotesField:                        NotesField{data.Notes},
-				LastUpdatedField:                  LastUpdatedField{now},
-				// Do not check permissions, just pass parent perms to child
-				AclField: AclField{parentItem.Permissions()},
-			}
-			out[i] = temp
-			if errr := addToIdMapCollection(sessCtx, &temp); errr != nil {
-				return nil, errr
-			}
+		if errr := addToIdMapCollection(sessCtx, &out); errr != nil {
+			return nil, errr
 		}
-		// Actually add the swabs to their collection
-		return mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(SporeSwabCollectionName).
-			InsertMany(ctx, out)
+		// Actually add the swab to their collection
+		return mongo.SessionFromContext(sessCtx).
+			Client().Database(dbName).
+			Collection(SporeSwabCollectionName).
+			InsertOne(ctx, out)
 	})
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -185,7 +187,7 @@ type updateSporeSwabRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
@@ -232,7 +234,6 @@ type importSporeSwabRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	PermsOnRequest
 }
 
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +268,7 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -287,5 +288,5 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedFieldForNow(),
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
 }

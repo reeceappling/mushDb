@@ -1,4 +1,4 @@
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import {Note} from "@/app/components/formSubcomponents/notes";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {NewSubstrateRecipeForm, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
@@ -16,6 +16,7 @@ export function TestSubstrateRecipeOk(){
         aliases: ["(Alias 1)","(Alias 2)"],
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
+        acl: TestAcl(), // TODO: do we want this?
     })
 }
 
@@ -26,7 +27,7 @@ export interface SubstrateRecipeData {
     aliases?: string[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class SubstrateRecipeData {
     // Accept a single object containing the fields

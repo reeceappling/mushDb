@@ -30,7 +30,7 @@ type updateAgarRecipeRequest struct {
 	NameField
 	StandardField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateAgarRecipeRequest) modsFor(existing *AgarRecipe, aclField AclField) (bson.D, error) {
@@ -95,7 +95,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		//newSimpleIndex("sugars", "sugars.type", false, false, false),
 		//newSimpleIndex("additives", "additives.additive", false, false, false),
 		//newSimpleIndex("antibiotics", "antibiotics", false, false, false),
-		//Notes (not indexed, unless tags)
+		//Notes (not indexed)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
@@ -104,6 +104,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	}
 	// Add built-in entries
 	builtinTime := RequiredTimeField{Time: ogTime}
+	basicEntryAcl := allCanReadAcl(nil) // TODO: ok?
 	basicEntries := []*AgarRecipe{
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
@@ -118,7 +119,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{Notes: []Note{
 				{Note: "Light Malt Extract Agar", RequiredTimeField: builtinTime},
 			}},
-			AclField: allCanReadAcl(),
+			AclField: basicEntryAcl,
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idPda)},
@@ -135,7 +136,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{Notes: []Note{
 				{Note: "Potato Dextrose Agar", RequiredTimeField: builtinTime},
 			}},
-			AclField: allCanReadAcl(),
+			AclField: basicEntryAcl,
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idWaterAgar)},
@@ -146,7 +147,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			SugarsField:                SugarsField{},
 			StandardField:              StandardField{true},
 			NotesField:                 NotesField{},
-			AclField:                   allCanReadAcl(),
+			AclField:                   basicEntryAcl,
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idGrainWaterAgar)},
@@ -162,7 +163,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("Grain water also acts as a nutrient source"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: basicEntryAcl,
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idAntibioticAgar)},
@@ -178,7 +179,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("50mg doxycycline per ?????"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: basicEntryAcl,
 		},
 	}
 
@@ -224,7 +225,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         AclField{&testAcl},
+		AclField:         AclField{testAcl},
 	}
 
 	// Add test entries
@@ -273,6 +274,11 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	id := newAlternateCollectionId()
 	ctx, db := Db(r)
 	coll := db.Collection(AgarRecipesCollectionName)
+	user, err := GetAuthInfo(ctx)
+	if err != nil || user.isGuest() {
+		http.Error(w, "only logged in users can create entries: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
 
 	toInsert := AgarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -286,7 +292,7 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AntibioticsField:           req.AntibioticsField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanWriteAcl(),
+		AclField:                   allCanReadAcl(&user.Email), // TODO: or write?
 	}
 	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }

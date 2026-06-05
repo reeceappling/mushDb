@@ -6,7 +6,7 @@ import {
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {EntryPerms} from "@/app/components/perms";
 import {ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/contaminations";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {MssSelector, NewMssForm} from "@/app/components/mssClient";
 import {MssData} from "@/app/components/mssServer";
@@ -28,7 +28,7 @@ export function TestFruitOK(){
         mostRecentImage: ExamplePicWithNotesIncoming,
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-        // TODO: acl?
+        acl: TestAcl(),
     })
 }
 
@@ -47,7 +47,7 @@ export interface FruitData {
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class FruitData {
     // Accept a single object containing the fields

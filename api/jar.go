@@ -47,7 +47,7 @@ type GrainJar struct {
 	AclField                          `bson:"inline"`
 }
 
-type BurstGrainsField struct {
+type BurstGrainsField struct { // 0 is none, 10 is most or all
 	BurstGrains *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"` // TODO: HANDLE IN JAVASCRIPT
 }
 
@@ -238,16 +238,17 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 
 type createJarRequest struct {
 	// TODO: ALSO CREATE WITH sizeCups
-	Recipe AlternateCollectionId // grain recipe
-	WetnessField
-	BurstGrainsField
-	CreationDateField
+	SizeCups int `json:"sizeCups"` // TODO: IMPLEMENT ON GO SIDE
+	SubstrateBatchField
+	//WetnessField                           // TODO: maybe add late?
+	//BurstGrainsField                       // TODO: maybe add late?
 	PcRunField
 	NotesField
 	WriteTagToField
 }
 
 func createJarHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: create creation date
 	data := createJarRequest{}
 	id := NextMainCollectionId()
 	defer r.Body.Close()
@@ -261,16 +262,22 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	ctx, _ := Db(r)
+	batch, err := data.SubstrateBatchField.Get(ctx)
+	if err != nil {
+		http.Error(w, "failed to find batch: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	now := unixTimeForNow()
 	pcrun := PcRunField{data.PcRun}
 	toInsert := GrainJar{
 		MainCollectionIdField: MainCollectionIdField{id},
-		JarRecipeField:        JarRecipeField{&data.Recipe},
+		JarRecipeField:        JarRecipeField{&batch.Substrate}, // TODO: if provided recipe, then just use that...
 		PcRunOptionalField:    pcrun.asOptional(),
-		BurstGrainsField:      data.BurstGrainsField,
-		WetnessField:          data.WetnessField,
-		CreationDateField:     CreationDateField{data.CreationDate},
+		BurstGrainsField:      BurstGrainsField{nil}, //      data.BurstGrainsField, // initially set to nil, can be updated later. TODO: set this optionally?
+		WetnessField:          WetnessField{nil},     //           data.WetnessField, // initially set to nil, can be updated later. TODO: set this optionally?
+		CreationDateField:     CreationDateField{now},
 		NotesField:            NotesField{data.Notes},
 		LastUpdatedField:      LastUpdatedField{now},
 		AclField:              allCanWriteAcl(),
@@ -302,7 +309,7 @@ type importJarRequest struct {
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	PermsOnRequest // TODO: maybe remove these perms and just use the default subspecies perms. Allow mods on edit page
+	//PermsOnRequest `json:"acl"` // TODO: maybe remove these perms and just use the default subspecies perms. Allow mods on edit page
 	// image as "img"
 }
 
@@ -346,7 +353,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -450,8 +457,7 @@ type updateJarRequest struct {
 	SaleField
 	ImagesUpdateField  //"newPic-1"
 	ContamsUpdateField //"newContam-1"
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest     `json:"acl"`
 }
 
 func (upr updateJarRequest) reform() resolvedUpdateJarRequest {
@@ -503,18 +509,8 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := *mainCollId
-	b58Id := mainCollId.AsBase58()
-	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "cannot write to new perms: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "jar", &data, b58Id)
+
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "jar", &data, mainCollId.AsBase58())
 	if err != nil {
 		// Already wrotw
 		return
@@ -541,7 +537,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(GrainJarCollectionName)
 	// go get current
 	existing := &GrainJar{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

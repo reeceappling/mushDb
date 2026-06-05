@@ -7,7 +7,7 @@ import {
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {EntryPerms} from "@/app/components/perms";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {JarSelector} from "@/app/components/jarClient";
@@ -35,7 +35,7 @@ export function TestLcOk(){
         mostRecentImage: ExamplePicWithNotesIncoming,
         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
     })
 }
 export interface LcData {
@@ -59,7 +59,7 @@ export interface LcData {
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class LcData {
     // Accept a single object containing the fields

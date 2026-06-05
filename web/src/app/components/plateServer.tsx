@@ -4,7 +4,7 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {EntryPerms} from "@/app/components/perms";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
@@ -40,7 +40,7 @@ export function TestPlateOk(){
         mostRecentImage: {...p[0]},
         notes: [...testNotes],
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
     })
 }
 export interface PlateData {
@@ -67,7 +67,7 @@ export interface PlateData {
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class PlateData {
     // Accept a single object containing the fields

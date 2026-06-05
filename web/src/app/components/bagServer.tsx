@@ -2,7 +2,7 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {Contamination} from "@/app/components/formSubcomponents/contaminations";
 import {EntryPerms} from "@/app/components/perms";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {BagSelector, NewBagForm} from "@/app/components/bagClient";
 
@@ -33,7 +33,7 @@ export function TestBagOk(){ // TODO: DELETEME? // TODO: FIXME!
         disposed: Date.now()+5000,
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
     })
 }
 
@@ -63,7 +63,7 @@ export interface BagData {
     disposed?: number
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class BagData {
     // Accept a single object containing the fields

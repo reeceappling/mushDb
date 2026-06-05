@@ -72,7 +72,7 @@ func initializeLcRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("0.667g nutes per pint jar"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: allCanReadAcl(nil),
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idMeaSugLC)},
@@ -87,7 +87,7 @@ func initializeLcRecipes(ctx context.Context) error {
 			AdditivesField: AdditivesField{},
 			StandardField:  StandardField{true},
 			NotesField:     NotesField{[]Note{}},
-			AclField:       allCanReadAcl(),
+			AclField:       allCanReadAcl(nil),
 		},
 	}
 	err = addBasicAltEntries(ctx, basicEntries...)
@@ -134,6 +134,7 @@ type createLcRecipeRequest struct {
 	SugarsField
 	AdditivesField
 	NotesField
+	// TODO: perms ensure allCanRead + user write
 }
 
 func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +169,7 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AdditivesField:             req.AdditivesField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanWriteAcl(),
+		AclField:                   allCanWriteAcl(), // TODO: or read with user as owner?
 	}
 	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
@@ -177,7 +178,7 @@ type updateLcRecipeRequest struct {
 	NameField
 	StandardField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateLcRecipeRequest) modsFor(existing *LcRecipe, aclField AclField) (bson.D, error) {

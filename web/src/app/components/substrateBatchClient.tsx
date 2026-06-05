@@ -6,7 +6,7 @@ import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/c
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData, SubstrateRecipeSelectorCloseable} from "@/app/components/substrateRecipeServer";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
@@ -25,7 +25,7 @@ import {
     NewEntryInput,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey
+    OptionalKey, RequiredKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
@@ -59,13 +59,13 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Jar assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Substrate Batch assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
@@ -91,12 +91,13 @@ export default function SubstrateBatchDisplay(
         const [initial, setInitial] = useState(data)
 
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: SubstrateBatchData) => {
             setInitial(updated)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const substrateSubmit = () => {
@@ -109,7 +110,7 @@ export default function SubstrateBatchDisplay(
                     updateInitial(new SubstrateBatchData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const onViewCreators: OnViewCreatorTriCol[] = [
@@ -157,7 +158,7 @@ export default function SubstrateBatchDisplay(
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
                                         closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
@@ -179,7 +180,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     const [selectedRecipe, setSelectedRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const submit = () => {
         if (selectedRecipe === undefined) {
@@ -188,7 +189,8 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
         }
         const body: any = {
             recipe: selectedRecipe._id,
-            notes: notes
+            notes: notes,
+            // Initially created with readonly by all and write by owner
         }
         DoCreateRequest("substrateBatch", body, AssertSubstrateBatch, allCookies(cookies))
             .then(v=>{
@@ -217,7 +219,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
                     <SubstrateRecipeArea txt={"Substrate Recipe: "} readonly={true} id={selectedRecipe?._id}/> :
                     <SubstrateRecipeSelectorCloseable doSelect={setSelectedRecipe}
                                                       allowCreation={handlers.isTopLevel}
-                                                      creatorInPage={false/* TODO: false ok?*/}/>}{/* TODO: closeable vs not?*/}
+                                                      creatorInPage={false/* TODO: false ok?*/}/>}
             </TestAndValidate>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
@@ -244,14 +246,14 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
         setVal(id)
     }, [id])
     const updateId = (batch?: SubstrateBatchData) => {
-        setVal(batch?._id) // TODO: ensure ok
+        setVal(batch?._id)
         onSelect && onSelect(batch)
     }
     let linkArea = () => {
         if (!val) {
             return <div>{"unknown"}</div>
         }
-        const tempLink = <EntryLink
+        const tempLink = <EntryLinkForId
             props={{displayId: val, linkId: val, entryType: "substrateBatch", openInNewTab: false/* TODO: ok?*/}}/>
         if (readonly) {
             return tempLink

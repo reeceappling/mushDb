@@ -26,14 +26,14 @@ import {
     NewEntryFormWrapper,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
+    OptionalKey, RequiredKey,
     updateApiUrlFor,
     viewUrlFor
 } from "@/app/components/common";
 import {redirect} from "next/navigation";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SaleData} from "@/app/components/saleServer";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -59,13 +59,13 @@ export function AssertSale(input: any): asserts input is SaleData {
             throw new Error('Sale assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-       ['acl', IsValidAcl]
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Sale assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
@@ -90,11 +90,12 @@ export default function SaleDisplay(
         
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: SaleData)=>{
             setInitial(updated)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
         // TODO: BE ABLE TO MODIFY SALES PERMS, USE WHOLE BODY
@@ -112,7 +113,7 @@ export default function SaleDisplay(
                     updateInitial(new SaleData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         return (
@@ -129,7 +130,7 @@ export default function SaleDisplay(
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
@@ -153,9 +154,7 @@ export function NewSaleForm(
     // id/lot, saleDate, lastUpdated are done on server
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    //const [perms, setPerms] = useState<EntryPerms | undefined>()
-    ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createSale = (e: React.MouseEvent) => {
         e.preventDefault()
@@ -163,7 +162,7 @@ export function NewSaleForm(
 
         let body = {
             notes: notes,
-            //perms: perms, // TODO: KEEP PERMS FROM PARENT?
+            //acl: perms, // TODO: THIS! // TODO: NEED TO FIX SALES AS A WHOLE!
         }
         DoCreateRequest("sale", body, AssertSale, allCookies(cookies))
             .then(v=>{
@@ -213,7 +212,7 @@ export function SaleArea(
     return <div className={"areaWrapper"}>
         <div className={"areaHeader"}>{"Sold: "}</div>
         <div>
-            <EntryLink props={{displayId: b58id, linkId: b58id, entryType:"sale", openInNewTab:true}}/>
+            <EntryLinkForId props={{displayId: b58id, linkId: b58id, entryType:"sale", openInNewTab:true}}/>
         </div>
     </div>
 }
@@ -251,7 +250,7 @@ export function SalesArea(
             {(sales || []).map(s=>{
                 const b58id = s
                 return <div>
-                    <EntryLink props={{displayId:b58id,linkId:b58id,entryType:"sale",openInNewTab:true}}/>
+                    <EntryLinkForId props={{displayId:b58id,linkId:b58id,entryType:"sale",openInNewTab:true}}/>
                 </div>
             })}
             {(!readonly&&allowCreate) && addArea()}

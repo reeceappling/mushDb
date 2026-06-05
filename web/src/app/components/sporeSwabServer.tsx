@@ -1,6 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {TestNotes} from "@/app/components/formSubcomponents/contaminations";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {SlantSelector} from "@/app/components/slantClient";
@@ -19,6 +19,7 @@ export function TestSporeSwabOk(){
         disposed: Date.now(),
         notes: TestNotes,
         lastUpdated: 789,
+        acl: TestAcl(),
     })
 }
 
@@ -34,7 +35,7 @@ export interface SporeSwabData {
     transfersOut?: string[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class SporeSwabData {
     // Accept a single object containing the fields

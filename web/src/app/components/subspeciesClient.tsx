@@ -14,7 +14,7 @@ import {
     IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey, Subform, updateApiUrlFor,
+    OptionalKey, RequiredKey, Subform, updateApiUrlFor,
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -28,7 +28,7 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {HandleErr} from "@/app/components/userClient";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
-import {EntryLinkWrapper, EntryLinkWrapperForId} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkWrapper, EntryLinkIdWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {AssertStasisTube} from "@/app/components/stasisTubeClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
@@ -48,14 +48,14 @@ export function AssertSubspecies(input: any): asserts input is SubspeciesData {
             throw new Error('Subspecies assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl],
         ['defaultAcl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Subspecies assertion failure: optional key ' + key + ' was not valid: ');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Subspecies assertion failure: required key ' + key + ' was not valid: ');
         }
     }
     // complex optional array keys
@@ -82,29 +82,30 @@ export default function SubspeciesDisplay(
         const [aliases, setAliases] = useState(data.aliases || [])
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
-        const [defaultAcl, setDefaultAcl] = useState<ACL | undefined>(initial.defaultAcl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
+        const [defaultAcl, setDefaultAcl] = useState<ACL>(initial.defaultAcl)
         const updateInitial = (updated: SubspeciesData) => {
             setInitial(updated)
             setAliases(updated.aliases || [])
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
             setDefaultAcl(updated.defaultAcl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const update = () => {
             const body: any = {
                 aliases: aliases,
                 notes: notes,
-                acl: MarshalAcl(acl), // TODO: ensure ok
-                defaultAcl: MarshalAcl(defaultAcl), // TODO: ensure ok
+                acl: MarshalAcl(acl),
+                defaultAcl: MarshalAcl(defaultAcl),
             }
             DoUpdateRequest("subspecies",encodeURIComponent(initial._id), body, AssertSubspecies, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new SubspeciesData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         return (
@@ -142,7 +143,7 @@ export function NewSubspeciesForm({handlers, species}: {
     const [aliases, setAliases] = useState<string[]>([])
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const submitNewSubspecies = () => {
         if (!name) {
@@ -158,6 +159,7 @@ export function NewSubspeciesForm({handlers, species}: {
                 species: selectedSpecies,
                 aliases: aliases,
                 notes: notes,
+                // ACL/DefaultACL are initially inherited from parent species
             }
         DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
             .then(v=>{
@@ -276,12 +278,6 @@ export function ExistingSubSpeciesSelector(
         </Subform>
     </div>
 }
-
-// export function SubspeciesFormArea({subspecies}:{
-//     subspecies: string,
-// }){
-//     return <EntryLinkWrapperForId props={{linkId: ""/* TODO: FIX*/, entryType: "subspecies",openInNewTab:false/* TODO: ok?*/}}><div>{"Subspecies: "+subspecies}</div></EntryLinkWrapperForId>
-// }
 
 export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems<SubspeciesData>) {
     let cols: ListTableColumn<SubspeciesData>[] = [

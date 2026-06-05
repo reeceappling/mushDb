@@ -120,18 +120,18 @@ func initializeTransfers(ctx context.Context) error {
 		ToImage:                    (*ImageLocation)(&exPicLoc),
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(),
+		AclField:                   allCanWriteAcl(),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
 
 type createTransferRequest struct {
-	From     MainCollectionId `json:"from"`
-	To       MainCollectionId `json:"to"`
-	FromType *string          `json:"fromType,omitempty"`
-	Reason   string           `json:"reason"`
+	From   MainCollectionId `json:"from"`
+	To     MainCollectionId `json:"to"`
+	Reason string           `json:"reason"`
 	// FromImage == 'picFrom'
 	// ToImage == 'picTo'
+	FromType *string `json:"fromType,omitempty"`
 	NotesField
 }
 
@@ -161,6 +161,7 @@ func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error
 	}, txnOptions)
 }
 
+// TODO: validate completely working the way I want
 func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	data := createTransferRequest{}
 	id := newAlternateCollectionId()
@@ -294,7 +295,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// Perms are checked later, and only guests cannot write
+	// Perms are checked earlier, and only guests cannot write
 	// Create Transfer
 	xfer := Transfer{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -343,7 +344,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateTransferRequest struct {
 	NotesUpdateField
-	PermsOnRequest // TODO: should transfers always keep parent or child perms? // TODO: ????????? handle in typescript and handler!
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateTransferRequest) modsFor(existing *Transfer, aclField AclField) (bson.D, error) {

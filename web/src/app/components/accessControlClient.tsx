@@ -61,14 +61,14 @@ export function AssertACL(input: any): asserts input is ACL { // TODO: FIX THIS!
     return
 }
 
-export function MarshalAcl(acl?: ACL): any {
+export function MarshalAcl(acl: ACL): any {
     if (acl === undefined) {
         return undefined
     }
-    let out: any = {}
-    if (acl.blanketPerm !== undefined) {
-        out.blanketPerm = acl.blanketPerm
+    let out: any = {
+        blanketPerm: acl.blanketPerm
     }
+
     if (("users" in acl) && acl.users !== undefined && acl.users.size !== 0) {
         // TODO: why is this occasionally coming back as an object and not a map????? FIX
         if (acl.users instanceof Map) {
@@ -97,8 +97,7 @@ export function IsValidAcl(input: any): boolean {
         AssertACL(input) // TODO: may not properly replace the ACL
         return true
     } catch (error) {
-        console.error("acl invalid") // TODO: del
-        console.error(error) // TODO: del
+        console.error("acl invalid: "+JSON.stringify(error)) // TODO: del
         return false
     }
 }
@@ -146,99 +145,100 @@ export function IsStringMapToBool(data: any): data is Record<string, boolean> {
     return true;
 }
 
-export function ProjectsDisplay({readonly, perms, onClick, updateParent, allowAddingCompletedProjects}: {
+export function ProjectsDisplay({readonly, initial, onClick, updateParent, allowAddingCompletedProjects}: { // TODO: validate working properly
     readonly: boolean,
-    perms: Map<string, boolean>,
+    initial: Map<string, boolean>,
     onClick?: (proj: string) => void
     updateParent?: (p: Map<string, boolean>) => void
     allowAddingCompletedProjects?: boolean // TODO: USE THIS IN CALLERS!
 }) {
-    console.log("current perms: " + JSON.stringify(Object.fromEntries(perms)))
     const projectNameAreaFor = (proj: [string, boolean]) => {
         return <text onClick={() => {
             onClick && onClick(proj[0])
         }}>{proj[0]}</text>
     }
     if (readonly) {
-        {
-            (perms.size !== 0) && [...perms.entries()].map(values => {
+        if (initial.size === 0) {
+            return null
+        }
+        // TODO: FIX THIS!?
+        return <>{
+            [...initial.entries()].map(values => {
                 return <div key={values[0]}>
                     {projectNameAreaFor(values)}
                     <text>{"Can " + (values[1] ? "edit" : "view")}</text>
                 </div>
             })
-        }
+        }</>
     }
+    const [current, setCurrent] = useState<Map<string, boolean>>(initial); // TODO: ensure new Map() not needed
+    useEffect(()=>{
+        setCurrent(initial) // TODO: ensure new Map() not needed
+    },[initial])
+
     const update = (newPs: Map<string, boolean>) => {
-        //console.log("updating to " + JSON.stringify(Object.fromEntries(newPs)));  // TODO: DEL
+        setCurrent(newPs) // TODO: vs structuredClone(newPs)
         updateParent && updateParent(newPs)
     }
     const addNewProject = (projName: string) => {
-        //console.log("adding project: ", projName, " with perms length ", perms.size) // TODO: DEL
-        //console.log("before: " + JSON.stringify(Object.fromEntries(perms))); // TODO: DEL
-        if (perms.size === 0) {
-            const nm = new Map<string, boolean>().set(projName, false)
-            //console.log("sending to update for previously empty: " + JSON.stringify(Object.fromEntries(nm))); // TODO: DEL
-            update(nm)
+        if (initial.size === 0) {
+            update(new Map<string, boolean>().set(projName, false))
         } else {
-            const nm = new Map<string, boolean>([...perms.entries()]).set(projName, false)
-            //console.log("sending to update for non-empty: " + JSON.stringify(Object.fromEntries(nm))); // TODO: DEL
-            update(nm)
+            update(new Map<string, boolean>([...current.entries()]).set(projName, false))
         }
         return
     }
     const removeProject = (projName: string) => {
-        const newProjs = new Map(perms)
+        const newProjs = new Map(current)
         newProjs.delete(projName)
         update(newProjs)
         return
     }
     return <div>
         <TestAndValidate>
-            {(perms === undefined || perms.size === 0) ? null : [...perms.entries()].map(values => { // TODO: THE ENTRIES MAP HERE IS THE CURRENT PROBLEM
-                return <div key={values[0]}>
+            {[...current.entries()].map(values => { // TODO: THE ENTRIES MAP HERE IS THE CURRENT PROBLEM
+                const projName = values[0]
+                const canWrite = values[1]
+                return <div key={projName}>
                     {projectNameAreaFor(values)}
-                    <SelectorFor options={["can view", "can edit"]} initial={values[1] ? "can edit" : "can view"}
+                    <SelectorFor options={["can view", "can edit"]} initial={canWrite ? "can edit" : "can view"}
                                  updateParent={s => {
-                                     const newProjs = new Map(perms).set(values[0], s === "can edit") // TODO: do this for users too!
+                                     const newProjs = new Map(current).set(projName, s === "can edit") // TODO: do this for users too!
                                      update(newProjs)
                                  }} disabled={false}/>
-                    <text>{"Can " + (values[1] ? "edit" : "view")}</text>
+                    <text>{"Can " + (canWrite? "edit" : "view")}</text>
                     <RemoveButton txt={"Remove project"} click={() => {
-                        removeProject(values[0])
+                        removeProject(projName)
                     }}/>
                 </div>
             })}
             {"Add a project:"}
             <ProjectsSelector onSelect={addNewProject} complete={allowAddingCompletedProjects}
-                              blacklist={(perms.size !== 0) ? [...perms.entries()].map(val => {
+                              blacklist={(initial.size !== 0) ? [...initial.entries()].map(val => {
                                   return val[0]
                               }) : []}/>
         </TestAndValidate>
     </div>
 }
 
-export function AclProjectsDisplay({readonly, ACL, onUsernClick, updateParent}: {
+export function AclProjectsDisplay({readonly, initial, onUsernClick, updateParent}: {
     readonly: boolean,
-    ACL?: ACL,
+    initial: Map<string,boolean>,
     onUsernClick?: (proj: string) => void // TODO: do we need both onClick and updateParent?
-    updateParent?: (acl: ACL) => void
+    updateParent?: (newProjects: Map<string,boolean>) => void
 }) {
     return <ProjectsDisplay readonly={readonly}
                             allowAddingCompletedProjects={false/* TODO: ok?*/}
-                            perms={(ACL === undefined || ACL.projects === undefined || ACL.projects.size === 0) ? new Map<string, boolean>() : new Map(ACL.projects)}
+                            initial={initial}
                             onClick={onUsernClick} updateParent={(projPerms) => {
-        let upd = {...ACL}
-        upd.projects = projPerms
-        console.log("final", JSON.stringify(Object.fromEntries(upd.projects))) // TODO: DEL
-        updateParent && updateParent(upd)
+        updateParent && updateParent(projPerms) // TODO: ensure clone not needed
     }}/>
 }
 
-// TODO: USE THIS!
-export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent, blanket}: {
+// TODO: USE THIS! validate working properly!
+export function AclUsersDisplayInternal({readonly, initial, onClick, updateParent, blanket}: {
     readonly: boolean,
-    perms: Map<string, boolean>,
+    initial: Map<string, boolean>,
     onClick?: (usr: string) => void
     updateParent?: (p: Map<string, boolean>) => void
     blanket?: boolean
@@ -253,7 +253,7 @@ export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent,
     if (readonly) {
         // TODO: Should have incremented depth?
         {
-            perms !== undefined && perms.size > 0 && [...perms.entries()].map(values => {
+            initial !== undefined && initial.size > 0 && [...initial.entries()].map(values => {
                 return <div key={values[0]}>
                     {userNameAreaFor(values)}
                     <text>{"Can " + (values[1] ? "edit" : "view")}</text>
@@ -261,65 +261,58 @@ export function AclUsersDisplayInternal({readonly, perms, onClick, updateParent,
             })
         }
     }
-    const update = (perms: Map<string, boolean>) => {
-        updateParent && updateParent(perms)
+    const [users, setUsers] = useState<Map<string, boolean>>(initial)
+    useEffect(() => {
+        setUsers(new Map(initial))
+    }, [initial]);
+    const update = (updated: Map<string, boolean>) => {
+        setUsers(updated)
+        updateParent && updateParent(updated)
     }
     const addNewUser = (uName: string) => {
         const defaultPerm = blanket || false
-        if (perms.size === 0) {/// TODO: ensure ok
-            const nm = (new Map<string, boolean>()).set(uName, defaultPerm)
-            //console.log("sending to update for previously empty: " + JSON.stringify(Object.fromEntries(nm)));  // TODO: DEL
-            update(nm)
+        if (users.size === 0) {/// TODO: ensure ok
+            update(new Map<string, boolean>().set(uName, defaultPerm))
         } else {
-            const nm = structuredClone(perms).set(uName, defaultPerm)
-            //const nm = (new Map<string, boolean>([...perms.entries()])).set(uName, defaultPerm)
-            //console.log("sending to update for non-empty: " + JSON.stringify(Object.fromEntries(nm)));  // TODO: DEL
-            update(nm)
+            update(new Map<string, boolean>(users).set(uName, defaultPerm)) // TODO: validate ok here and in projects
         }
         return
     }
     const removeUsr = (projName: string) => {
-        const newUsrs = new Map(perms)
+        const newUsrs = new Map(users)
         newUsrs.delete(projName)
         update(newUsrs)
         return
     }
-    const tempFunc = () => {
-        //console.log("perms before crash",JSON.stringify(Object.fromEntries(perms))) // TODO: DEL
-        return <></>
-    }
 
-    //console.log("current perms: "+JSON.stringify(Object.fromEntries(perms))) // TODO: DEL
     return <DepthProvider>
         <div>
-            {tempFunc()}
-
-            {(perms !== undefined && perms.size > 0) && [...perms.entries()].map(values => {
-                return <div key={values[0]}>
+            {(users.size > 0) && [...users.entries()].map(values => {
+                const email = values[0]
+                const canWrite = values[1]
+                return <div key={email}>
                     {userNameAreaFor(values)}
-                    <ReadWriteSelector value={values[1]} readonly={false} onUpdate={b => {
-                        const newUsrs = new Map(perms).set(values[0], b)
+                    <ReadWriteSelector value={canWrite} readonly={false} onUpdate={b => {
+                        const newUsrs = new Map(users).set(email, b)
                         update(newUsrs)
                     }}/>
-                    <text>{"Can " + (values[1] ? "edit" : "view")}</text>
+                    <text>{"Can " + (canWrite ? "edit" : "view")}</text>
                     <RemoveButton txt={"Remove user"} click={() => {
-                        removeUsr(values[0])
+                        removeUsr(email)
                     }}/>
                 </div>
             })}
             {"Add a user:"}
             <UserSelector onSelect={(u) => {
                 addNewUser(u._id)
-            }} blacklist={(perms !== undefined && perms.size > 0) ? [...perms.entries()].map(val => {
-                return val[0]
-            }) : []}/>
+            }} blacklist={(users.size > 0) ? [...users.entries()].map(val => val[0]) : []}/>
         </div>
     </DepthProvider>
 }
 
 export function AclBlanketDisplay(inp: {
     readonly: boolean,
-    ACL?: ACL,
+    ACL: ACL,
     updateParent: (a?: boolean) => void
 }) {
     // TODO: UPDATE TO STORE ACL LOCALLY, THEN UPDATE PARENT
@@ -344,8 +337,8 @@ export function AclBlanketDisplay(inp: {
     if (inp.readonly) {
         return <div>{(val === undefined || val.blanketPerm === true) ? "Publicly Editable" : ((val.blanketPerm === false) ? "Publicly Viewable" : "Private")}</div>
     }
-    const permToStr = (a?: ACL) => {
-        if (a === undefined || a.blanketPerm === true) {
+    const permToStr = (a: ACL) => {
+        if (a.blanketPerm === true) {
             return "Publicly Editable"
         } else if (a.blanketPerm === undefined) {
             return "Private"
@@ -389,28 +382,21 @@ export function TogglableAreaWithDepth(props: React.PropsWithChildren<{
     </DepthProvider>
 }
 
-export function CloneAcl(ACL?: ACL): ACL { // TODO: use?
-    if (ACL === undefined) {
-        return {users: new Map<string, boolean>(), projects: new Map<string, boolean>()}
+export function CloneAcl(acl: ACL): ACL { // TODO: use?
+    return {
+        blanketPerm: acl.blanketPerm,
+        users: (acl.users !== undefined && acl.users.size !== 0) ? new Map<string, boolean>(acl.users) : new Map<string, boolean>(),
+        projects: (acl.projects !== undefined && acl.projects.size !== 0) ? new Map<string, boolean>(acl.projects) : new Map<string, boolean>(),
     }
-    let out: ACL = {users: new Map<string, boolean>(), projects: new Map<string, boolean>()}
-    if (ACL.users !== undefined && ACL.users.size !== 0) {
-        ACL.users = new Map<string, boolean>(ACL.users);
-    }
-    if (ACL.projects !== undefined && ACL.projects.size !== 0) {
-        ACL.projects = new Map<string, boolean>(ACL.projects);
-    }
-    out.blanketPerm = ACL.blanketPerm;
-    return out;
 }
 
 
 export function AclDefaultAclDisplay(inp: {
     readonly: boolean,
-    ACL?: ACL,
-    defaultACL?: ACL,
-    updateAcl: (acl?: ACL) => void
-    updateDefaultAcl: (acl?: ACL) => void
+    ACL: ACL,
+    defaultACL: ACL,
+    updateAcl: (acl: ACL) => void
+    updateDefaultAcl: (acl: ACL) => void
 }) {
     const depth = useContext(DepthContext)
     const [open, setOpen] = useState<string | undefined>(undefined)
@@ -420,11 +406,11 @@ export function AclDefaultAclDisplay(inp: {
             return null
         }
         if (open === "ACL") {
-            return <><AclDisplay ACL={inp.ACL} updateParent={inp.updateAcl} readonly={inp.readonly}/>
+            return <><AclDisplay initial={inp.ACL} updateParent={inp.updateAcl} readonly={inp.readonly}/>
                 {hideButton}
             </>
         }
-        return <><AclDisplay ACL={inp.defaultACL} updateParent={inp.updateDefaultAcl} readonly={inp.readonly}/>
+        return <><AclDisplay initial={inp.defaultACL} updateParent={inp.updateDefaultAcl} readonly={inp.readonly}/>
             {hideButton}
         </>
     }
@@ -451,63 +437,79 @@ export function AclDefaultAclDisplay(inp: {
 
 export function AclDisplay(inp: {
     readonly: boolean,
-    //initial?: ACL,
-    ACL?: ACL,
-    updateParent: (acl?: ACL) => void
+    initial: ACL,
+    updateParent: (acl: ACL) => void
 }) {
-    // const [current, setCurrent] = useState(inp.initial)
-    // useEffect(()=>{
-    //     setCurrent(inp.initial)
-    // },[inp.initial])
+    const [current, setCurrent] = React.useState(inp.initial)
+    useEffect(()=>{
+        const updated = {
+            blanketPerm: inp.initial.blanketPerm,
+            users: mapFor(inp.initial.users),
+            projects: mapFor(inp.initial.projects),
+        }
+        setCurrent(updated)
+    },[inp.initial])
+    const cloneCurrent = ()=>{
+        return structuredClone(current)
+    }
+    const update = (updated: ACL)=>{
+        inp.updateParent(updated) // TODO: ensure ok
+        setCurrent(updated)
+
+    }
+    const updateProjects = (updated: Map<string,boolean>)=>{
+        update({...cloneCurrent(), projects: updated})
+    }
+    const updateUsers = (updated: Map<string,boolean>)=>{
+        update({...cloneCurrent(), users: updated})
+    }
+    const updateBlanket = (updated?: boolean)=>{
+        if (updated === undefined) {
+            update({
+                users: mapFor(current.users),
+                projects: mapFor(current.projects),
+            })
+        } else {
+            update({...cloneCurrent(), blanketPerm: updated})
+        }
+
+    }
+    const mapFor = (inpMap?: Map<string, boolean>):Map<string, boolean> => {
+        return ((inpMap !== undefined && inpMap.size !== 0) ? (new Map<string, boolean>(inpMap)) : new Map<string, boolean>())
+    }
     const depth = useContext(DepthContext)
     if (inp.readonly) {
         return <div>{/* TODO: TURN INTO A TABLE!!!!*/}
             <TestAndValidate todos={["preloaded values arent sticking around when updating.... troubleshoot"]}>
-                <AclBlanketDisplay readonly={true} ACL={inp.ACL} updateParent={(bp) => {
-                    let users = inp.ACL ?
-                        ((inp.ACL.users !== undefined && inp.ACL.users.size !== 0) ? (new Map<string, boolean>(inp.ACL.users)) : new Map<string, boolean>()) :
-                        new Map<string, boolean>()
-                    let projects = inp.ACL ?
-                        ((inp.ACL.projects !== undefined && inp.ACL.projects.size !== 0) ? (new Map<string, boolean>(inp.ACL.projects)) : new Map<string, boolean>()) :
-                        new Map<string, boolean>()
-                    inp.updateParent && inp.updateParent({projects: projects, users: users, blanketPerm: bp})
-                }}/>
-                <AclUsersDisplayInternal readonly={true}
-                                         perms={(inp.ACL !== undefined && inp.ACL.users !== undefined) ? inp.ACL.users : (new Map<string, boolean>())}
-                                         onClick={() => {/* TODO: onClick?*/
-                                         }} updateParent={u => {
-                    inp.updateParent({...(inp.ACL), users: u})
-                }}/>
-                <AclProjectsDisplay readonly={true} ACL={inp.ACL} onUsernClick={() => {/* TODO: onClick?*/
-                }} updateParent={inp.updateParent}/>
+                <AclBlanketDisplay readonly={true} ACL={inp.initial} updateParent={()=>{}}/>
+                <AclUsersDisplayInternal readonly={true} initial={inp.initial.users || new Map<string, boolean>()}/>
+                <AclProjectsDisplay readonly={true} initial={inp.initial.projects || new Map()} onUsernClick={() => {/* TODO: onClick?*/
+                }} updateParent={()=>{}}/>
             </TestAndValidate>
         </div>
 
     }
+    // TODO: COMPLETELY OVERHAUL
     return <div className={"subForm depth" + depth}>
-        <AclBlanketDisplay readonly={false} ACL={inp.ACL} updateParent={(b?: boolean) => {
-            inp.updateParent({...(inp.ACL), blanketPerm: b})
-        }}/>
-        <AclUsersDisplayInternal readonly={false} blanket={inp.ACL?.blanketPerm}
-                                 perms={(inp.ACL !== undefined && inp.ACL.users !== undefined) ? inp.ACL.users : (new Map<string, boolean>())}
+        <AclBlanketDisplay readonly={false} ACL={current} updateParent={updateBlanket}/>
+        <AclUsersDisplayInternal readonly={false} blanket={inp.initial.blanketPerm}
+                                 initial={inp.initial.users || new Map<string, boolean>()}
                                  onClick={() => {
-                                 }} updateParent={(us) => {
-            inp.updateParent({...structuredClone(inp.ACL), users: us})
-        }}/>
-        <AclProjectsDisplay readonly={false} ACL={inp.ACL} onUsernClick={() => {
-        }} updateParent={(newAcl) => {
-            inp.updateParent(structuredClone(newAcl))
-        }}/>
+                                     // TODO: this
+                                 }} updateParent={updateUsers}/>
+        <AclProjectsDisplay readonly={false} initial={inp.initial.projects || new Map()} onUsernClick={() => {
+            // TODO: this?
+        }} updateParent={updateProjects}/>
     </div>
 }
 
-export function DefaultAclDisplay({readonly, ACL, updateParent}: {
+export function DefaultAclDisplay({readonly, initial, updateParent}: {
     readonly: boolean,
-    ACL?: ACL,
-    updateParent: (acl?: ACL) => void
+    initial: ACL,
+    updateParent: (acl: ACL) => void
 }) {
     return <div>
         {"Default Access Control List"}
-        <AclDisplay readonly={readonly} ACL={ACL} updateParent={updateParent}/>
+        <AclDisplay readonly={readonly} initial={initial} updateParent={updateParent}/>
     </div>
 }

@@ -32,7 +32,7 @@ import {
     NewEntryInput,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
+    OptionalKey, RequiredKey,
     SelectorWrapper,
     Subform, updateApiUrlFor
 } from "@/app/components/common";
@@ -40,7 +40,7 @@ import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcompo
 import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {
-    AclDefaultAclDisplay,
+    AclDefaultAclDisplay, AclDisplay,
     IsValidAcl, MarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
@@ -71,14 +71,14 @@ export function AssertSpecies(input: any): asserts input is SpeciesData {
             throw 'Species assertion failure: ' + key + ' was not type ' + expType + '. Was ' + (typeof input[key]);
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-       ['acl', IsValidAcl],
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl],
         ['defaultAcl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw 'Plate assertion failure: optional key ' + key + ' was not valid' // TODO: change all throws to strings instead of errors
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw 'Species assertion failure: required key ' + key + ' was not valid'
         }
     }
     // complex optional array keys
@@ -107,15 +107,16 @@ export default function SpeciesDisplay(
         const [aliases, setAliases] = useState<string[]>(initial.aliases || [])
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>(undefined)
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
-        const [defaultAcl, setDefaultAcl] = useState<ACL | undefined>(initial.defaultAcl)
-        const updateInitial = (updated: SpeciesData): void => {
+        const [acl, setAcl] = useState<ACL>(initial.acl)
+        const [defaultAcl, setDefaultAcl] = useState<ACL>(initial.defaultAcl)
+        const updateInitial = (updated: SpeciesData) => {
             setInitial(updated)
             setSubstrate(updated.standardSubstrate)
             setAliases(updated.aliases || [])
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
             setDefaultAcl(updated.defaultAcl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const update = ()=>{
@@ -125,15 +126,15 @@ export default function SpeciesDisplay(
                 substrate: substrate, // TODO: something is going wrong with this
                 notes: notes,
                 aliases:aliases,
-                acl: MarshalAcl(acl), // TODO: ensure ok
-                defaultAcl: MarshalAcl(defaultAcl), // TODO: ensure ok
+                acl: MarshalAcl(acl),
+                defaultAcl: MarshalAcl(defaultAcl),
             }
             DoUpdateRequest("species",encodeURIComponent(data._id), body, AssertSpecies, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new SpeciesData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         return (
@@ -178,13 +179,19 @@ export function NewSpeciesForm(
     {handlers, substrateIn}:
     {handlers: NewEntryInput<SpeciesData>, substrateIn?: SubstrateRecipeData}
     ) {
+    const initialAcl: ACL = {
+        users:new Map<string, boolean>(),
+        projects:new Map<string, boolean>(),
+        blanketPerm:true,
+    }
     const [name, setName] = useState("")
     const [sciName, setSciName] = useState("")
     const [aliases, setAliases] = useState<string[]>([])
     const [sub, setSub] = useState(substrateIn)
     const [notes, setNotes] = useState<Note[]>([])
+    const [acl, setAcl] = useState<ACL>(initialAcl)
     const [err, setErr] = useState<string | undefined>();
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const submitNewSpecies = () => {
         console.log("submitting new species")
@@ -200,8 +207,10 @@ export function NewSpeciesForm(
             name:name,
             scientificName:sciName,
             aliases:aliases,
-            sub:sub._id,
+            recipe:sub._id, // substrate recipe
             notes:notes,
+            acl: acl, // TODO: add this!
+            // defaultAcl starts same as ACL... //defaultAcl: defaultAcl, // TODO: add this! optional because it will keep ACL
         }
         DoCreateRequest("species", body, AssertSpecies, allCookies(cookies))
             .then(v=>{
@@ -220,6 +229,7 @@ export function NewSpeciesForm(
                 <SubstrateRecipeSelector doSelect={setSub} allowCreate={handlers.isTopLevel} creatorInPage={false}/>
             </SelectorWrapper>
             <NewEntryNotes setNotes={setNotes}/>
+            <AclDisplay readonly={false} initial={initialAcl} updateParent={setAcl}/>
             {/* SUBMIT AREA */}
             <CreateNewEntryButton onSubmit={submitNewSpecies}/>
         </NewEntryFormWrapper>

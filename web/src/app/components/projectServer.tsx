@@ -1,6 +1,7 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {SelectorProps} from "@/app/components/selector";
 import {ProjectPerms} from "@/app/components/perms";
+import {TestAcl} from "@/app/components/accessControlServer";
 
 export function TestProjectOk(){
     let perms = new Map<string, string>();
@@ -19,7 +20,7 @@ export function TestProjectOk(){
             note: "(NOTE 2)"
         }],
         lastUpdated: 789,
-        perms: perms,
+        perms: perms, // TODO: is this ok?
     })
 }
 export function TestProjectOk2(){
@@ -38,6 +39,7 @@ export function TestProjectOk2(){
             note: "(NOTE 2)"
         }],
         lastUpdated: 789,
+        perms: perms,
     })
 }
 

@@ -46,7 +46,7 @@ func initializeSubstrateBatches(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "test coir batch"),
 			}},
-			AclField:         allCanWriteAcl(),
+			AclField:         allCanReadAcl(nil),
 			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
 		},
 		// HWFP
@@ -57,7 +57,7 @@ func initializeSubstrateBatches(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "test hwfp batch"),
 			}},
-			AclField:         allCanWriteAcl(),
+			AclField:         allCanReadAcl(nil),
 			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
 		},
 	}...)
@@ -99,13 +99,11 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(SubstrateRecipesCollectionName)
 	// all can read but only user can write perms
-	resolvedUserPerms, err := GetAuthInfo(r.Context())
+	user, err := GetAuthInfo(r.Context())
 	if err != nil {
 		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
 		return
 	}
-	acl := allCanReadAcl()
-	acl.ACL.Users[resolvedUserPerms.Email] = true
 	// Create entry to insert
 	toInsert := SubstrateBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -113,14 +111,14 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate},
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedFieldForNow(),
-		AclField:                   acl,
+		AclField:                   allCanReadAcl(&user.Email),
 	}
 	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
 }
 
 type updateSubstrateBatchRequest struct {
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateSubstrateBatchRequest) modsFor(existing *SubstrateBatch, aclField AclField) (bson.D, error) {

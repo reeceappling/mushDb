@@ -297,7 +297,7 @@ func testPlateFor(
 	mostRecentImage *PicWithNotes,
 	notes []Note,
 	lastUpdated UnixTime,
-	acl *ACL,
+	acl ACL,
 ) Plate {
 	return Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
@@ -382,7 +382,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:                          data.NotesField,
 		LastUpdatedField:                    LastUpdatedField{now},
 		// No Perms here for basic plates
-		AclField: allCanWriteAcl(),
+		AclField: allCanWriteAcl(), // TODO: ok?
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
@@ -398,8 +398,7 @@ type updatePlateRequest struct {
 	NotesUpdateField
 	ImagesUpdateField
 	ContamsUpdateField
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
@@ -414,7 +413,6 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 		NotesUpdateField:                    upr.NotesUpdateField,
 		Images:                              imageUpdates(upr.Images),
 		Contams:                             contamUpdates(upr.Contams),
-		WriteTagToField:                     upr.WriteTagToField,
 		PermsOnRequest:                      upr.PermsOnRequest,
 	}
 }
@@ -445,10 +443,9 @@ type resolvedUpdatePlateRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
-	Images  SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams SplitEntries[contamForm, Contamination]
-	WriteTagToField
-	PermsOnRequest
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams        SplitEntries[contamForm, Contamination]
+	PermsOnRequest `json:"acl"`
 }
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -470,12 +467,8 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	println(string(reqBs)) // TODO: del
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	println("REQUEST BYTES: ", string(reqBs)) // TODO: del
+
 	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plate", &data, b58Id)
 	if err != nil {
 		// Already wrotw
@@ -505,6 +498,13 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 			println("no contam location for", i)
 		}
 	}
+	finalReqBs, err := json.MarshalIndent(out, "", " ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	println("REQUEST BYTES: ", string(finalReqBs)) // TODO: del
+
 	ctx := r.Context()
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	coll := client.Database(dbName).Collection(PlatesCollectionName)
@@ -564,7 +564,6 @@ type importPlateRequest struct {
 	PourCoverageField
 	// pic as "img"
 	WriteTagToField
-	PermsOnRequest
 }
 
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -653,7 +652,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -681,5 +680,5 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:                    LastUpdatedField{unixTimeForNow()},
 		AclField:                            AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
 }

@@ -107,6 +107,7 @@ func initializeMSS(ctx context.Context) error {
 	testItem := &MSS{
 		MainCollectionIdField:             MainCollectionIdField{testId},
 		CreationDateField:                 CreationDateField{exampleTime},
+		WaterJarOptionalField:             WaterJarOptionalField{WaterSource: &exWaterId}, // TODO: ok?
 		SpeciesField:                      SpeciesField{testEntryStringId},
 		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
 		TransfersOutField:                 TransfersOutField{exAlts},
@@ -141,7 +142,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		return
 	}
 	ctx, db := Db(r)
-	// Validate parent // TODO: move into txn?
+	// Validate parent
 	parent := SporePrint{}
 	err = db.Collection(SporePrintCollectionName).FindOne(ctx, bsonFindFilter("_id", data.SporePrintId)).Decode(&parent)
 	if err != nil {
@@ -162,7 +163,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
 		NotesField:                        NotesField{data.Notes},
 		LastUpdatedField:                  LastUpdatedField{now},
-		AclField:                          parent.AclField, // NOTE: do NOT ensure email is authorized to write on parent, they will just be blocked from viewing.
+		AclField:                          parent.AclField, // do NOT ensure email is authorized to write on parent, they will just be blocked from viewing.
 	}
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
@@ -173,7 +174,6 @@ type importMssRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	WriteTagToField
-	PermsOnRequest // TODO: use species/subspecies perms instead? Remove this from both sides
 	// image as "img"
 	// No ParentType/Parent because these are assumed to be from outside sources
 }
@@ -208,7 +208,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -228,15 +228,14 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
 }
 
 type updateMssRequest struct {
 	NotesUpdateField
 	DisposedField
 	SaleField
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {
@@ -257,13 +256,11 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	mainCollId, err := StandardizeMainCollectionId(idStr) // TODO: do this in every update handler that needs it
+	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := *mainCollId
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
@@ -274,17 +271,12 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	ctx, db := Db(r)
 	coll := db.Collection(MssCollectionName)
 
 	// go get current entry
 	existing := MSS{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

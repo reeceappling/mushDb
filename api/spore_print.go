@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	slices2 "slices"
 	"strconv"
 	"strings"
 )
@@ -348,11 +349,11 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 type updateSporePrintRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
-	SporePrintColorField   // TODO: validate? // TODO: add to typescript side and validate
-	SporePrintDensityField // TODO: validate? // TODO: add to typescript side and validate
+	SporePrintColorField
+	SporePrintDensityField
 	NotesUpdateField
 	ImagesUpdateField //"newPic-1"
-	PermsOnRequest
+	PermsOnRequest    `json:"acl"`
 }
 
 func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
@@ -368,13 +369,13 @@ func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 }
 
 type resolvedUpdateSporePrintRequest struct {
-	SaleField
-	DisposedField
 	SporePrintColorField
 	SporePrintDensityField
+	SaleField
+	DisposedField
 	NotesUpdateField
-	Images SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsOnRequest
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest `json:"acl"`
 }
 
 func (req resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclField AclField) (bson.D, error) {
@@ -410,7 +411,19 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		// Already wrote
 		return
 	}
-	// TODO: validate spore print color and density inputs
+	// validate spore print color and density inputs
+	if data.Color != nil {
+		if !slices2.Contains(sporePrintColors, *data.Color) {
+			http.Error(w, "invalid spore print color: "+string(*data.Color), http.StatusBadRequest)
+			return
+		}
+	}
+	if data.Density != nil {
+		if !slices2.Contains(sporePrintDensities, *data.Density) {
+			http.Error(w, "invalid spore print density: "+string(*data.Density), http.StatusBadRequest)
+			return
+		}
+	}
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
@@ -437,13 +450,12 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 
 type importSporePrintRequest struct {
 	CreationDateField
-	SporePrintColorField   // TODO: add to typescript side and validate
-	SporePrintDensityField // TODO: add to typescript side and validate
+	SporePrintColorField
+	SporePrintDensityField
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
 	// pic as "img"
-	PermsOnRequest
 }
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
@@ -452,7 +464,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
-	reader, err := r.MultipartReader() // TODO: do streamlined
+	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
 		return
@@ -476,10 +488,6 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// TODO: ???? //if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 	// Try to get pic if exists
 	picsSaved := []string{}
 	defer func() {
@@ -525,7 +533,19 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	// TODO: validate spore print color and density inputs
+	// validate spore print color and density inputs
+	if data.Color != nil {
+		if !slices2.Contains(sporePrintColors, *data.Color) {
+			http.Error(w, "invalid spore print color: "+string(*data.Color), http.StatusBadRequest)
+			return
+		}
+	}
+	if data.Density != nil {
+		if !slices2.Contains(sporePrintDensities, *data.Density) {
+			http.Error(w, "invalid spore print density: "+string(*data.Density), http.StatusBadRequest)
+			return
+		}
+	}
 
 	ctx, db := Db(r)
 	coll := db.Collection(SporePrintCollectionName)
@@ -540,7 +560,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -562,5 +582,5 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedFieldForNow(),
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
 }

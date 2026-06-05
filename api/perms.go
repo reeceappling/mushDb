@@ -9,7 +9,7 @@ import (
 )
 
 type Permissioned interface {
-	Permissions() *ACL
+	Permissions() ACL
 }
 
 func SessionUserProjectsHandler() http.HandlerFunc {

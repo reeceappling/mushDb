@@ -12,6 +12,16 @@ export async function GetTransferReasons():Promise<Map<string,string>>{
     })
 }
 
+export async function GetFilterSizes():Promise<Map<string,string>>{
+    const resp = await fetch(BaseInternalUrl + "/options/bagFilterSizes") // TODO: validate internal works here. Do we need any headers?
+    if (!resp.ok){
+        throw new Error("response not ok: "+(await resp.text()))
+    }
+    return resp.json().then(resJson=>{
+        return convertObjectToStringMap(resJson)
+    })
+}
+
 function convertObjectToStringMap(obj: { [key: string]: string }): Map<string, string> {
     const map = new Map<string, any>();
     for (const key in obj) {

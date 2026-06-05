@@ -614,7 +614,7 @@ export function SingleNote( // TODO: notes need a pretty major overhaul
                autoComplete="off" onChange={handleChangeText}
                value={val.data.note} placeholder={"new note"}
                className={"noteValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
-               onBlur={() => {/* TODO: if empty then delete?*/
+               onBlur={() => {
                    setEditing(false)
                }}
         />)
@@ -699,7 +699,7 @@ export function NoteEntriesGroup({
                                  }: GroupProps<Note>) {
     const [inputFields, setInputFields] = useState<Data<Note>[]>(initialEntries || [])
     const handleFormChangeText = (index: number, newVal: string) => {
-        let data = [...(inputFields || [])];
+        let data = [...(structuredClone(inputFields) || [])];
         data[index].data.note = newVal
         updateParent(data)
         setInputFields(data);
@@ -770,9 +770,18 @@ export function NoteEntriesGroup({
                                   changeDate(index, n)
                               }}/>
                     {readonly ? <div className={"noteValue"}>{input.data.note}</div> :
-                        <TextBox readonly={false} label={"noteLabel"/* TODO: REPLACE TEXTBOX????*/}
-                                 value={input.data.note} fieldName={"noteLabel"}
-                                 updateTextHandler={(s) => handleFormChangeText(index, s)}/>
+                        <input name='txt' type="text" disabled={false}
+                               autoComplete="off" onChange={e => {handleFormChangeText(index, e.target.value)}}
+                               value={input.data.note} placeholder={"new note"}
+                               /* TODO: NOTEVALUE OK ON NEXT LINE? OR AT ALTERNATE DIV ABOVE?*/
+                               className={"noteValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
+                               onBlur={() => { // TODO: on focus elsewhere
+                                   // TODO: do nothing?
+                               }}
+                        />
+                        // <TextBox readonly={false} label={"noteLabel"/* TODO: REPLACE TEXTBOX????*/}
+                        //          value={input.data.note} fieldName={"noteLabel"}
+                        //          updateTextHandler={(s) => handleFormChangeText(index, s)}/>
                     }
                     {readonly ? null :
                         <button onClick={() => {

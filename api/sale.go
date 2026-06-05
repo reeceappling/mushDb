@@ -88,7 +88,7 @@ func initializeSales(ctx context.Context) error {
 		CreationDateField:          exampleTime.asCreationDate(),
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(),
+		AclField:                   allCanReadAcl(nil),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
@@ -117,6 +117,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(SalesCollectionName)
+	// TODO: HOW TO HANDLE PERMS? FOR NOW, JUST DO ONLY USER?
 
 	now := unixTimeForNow()
 	id := newAlternateCollectionId()
@@ -133,7 +134,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateSaleRequest struct {
 	NotesUpdateField
-	PermsOnRequest // TODO: ???? handle in typescript and handler!
+	PermsOnRequest `json:"acl"` // TODO: ???? handle in typescript and handler!
 }
 
 func (req updateSaleRequest) modsFor(existing *Sale, aclField AclField) (bson.D, error) {

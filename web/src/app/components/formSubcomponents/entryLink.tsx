@@ -2,11 +2,11 @@ import {
     ActionTypes,
     useRfidReaderContext
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
-import {ReactNode} from "react";
+import {JSX, ReactNode} from "react";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {Entry, EntryUrlId, viewUrlFor} from "@/app/components/common";
 
-export default function EntryLink(
+export default function EntryLinkForId(
     {
         props,
     }: {
@@ -17,14 +17,64 @@ export default function EntryLink(
             openInNewTab?: boolean;
         };
     }) {
-    return <EntryLinkWrapperForId props={{
-        linkId: props.linkId,
-        openInNewTab: props.openInNewTab || false, // TODO: false ok?
-        entryType: props.entryType,
-    }}><div  data-cy-id="EntryLink">
-        {props.displayId || props.linkId}
-    </div></EntryLinkWrapperForId>
+    return <EntryLinkIdWrapper props={props}>
+        {props.displayId || props.linkId/* TODO: wrap in text tag?*/}
+    </EntryLinkIdWrapper>
 }
+export function EntryLinkForEntry<T extends Entry>(
+    {
+        props,
+    }: {
+        props: {
+            entry: T;
+            openInNewTab?: boolean;
+        };
+    }) {
+    return <EntryLinkWrapper props={props}>
+        {props.entry.getId()/* TODO: wrap in text tag?*/}
+    </EntryLinkWrapper>
+}
+
+// export function DefaultLink<T extends Entry>(info:{
+//     entry:T,
+//     openInNewTab?: boolean
+// }): JSX.Element { // TODO: consider using???
+//     return <EntryLinkForEntry props={info}/>
+// }
+// export function DefaultIdLink(info:{
+//     entryType: string,
+//     linkId: string,
+//     openInNewTab?: boolean,
+//     displayId?: string
+// }): JSX.Element { // TODO: consider using???
+//     return <EntryLinkForId props={info}/>
+// }
+
+// export function EntryLinkWrapper<T extends Entry | {
+//     linkId: string;
+//     entryType: string;
+// }>(
+//     {props,children}:{
+//         props:{data:T,openInNewTab?:boolean};
+//         children: ReactNode;
+//     }){
+//     if ("linkId" in props.data) {
+//         return <EntryLinkWrapperForId props={{
+//             linkId: props.data.linkId,
+//             entryType: props.data.entryType,
+//             openInNewTab: props.openInNewTab,
+//         }}>
+//             {children}
+//         </EntryLinkWrapperForId>
+//     } else {
+//         return <EntryLinkWrapperForEntry props={{
+//             entry: props.data,
+//             openInNewTab:true,
+//         }}>
+//             {children}
+//         </EntryLinkWrapperForEntry>
+//     }
+// }
 
 export function EntryLinkWrapper<T extends Entry>(
     {
@@ -37,21 +87,15 @@ export function EntryLinkWrapper<T extends Entry>(
         };
         children: ReactNode;
     }) {
-    const onClickStopPropagation = (e: React.MouseEvent) => {
-        e.stopPropagation();
-    }
-    const actualLink = viewUrlFor(props.entry.entryType(), EntryUrlId(props.entry))
-    if (props.openInNewTab===true){
-        return <a href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={onClickStopPropagation}>
-            {children}
-        </a>
-    }
-    return <a href={actualLink} onClick={onClickStopPropagation}>
-        {children}
-    </a>
+    return <EntryLinkInternal props={{
+        entryType: props.entry.entryType(),
+        linkId: EntryUrlId(props.entry),
+        openInNewTab: props.openInNewTab,
+    }}>{children}</EntryLinkInternal>
 }
 
-export function EntryLinkWrapperForId(
+// TODO: swap all of these over to EntryLinkWrapper???
+export function EntryLinkIdWrapper(
     {
         props,
         children,
@@ -73,6 +117,29 @@ export function EntryLinkWrapperForId(
         </a>
     }
     return <a href={actualLink} onClick={onClickStopPropagation}>
+        {children}
+    </a>
+}
+
+export function EntryLinkInternal(
+    {
+        props,
+        children,
+    }: {
+        props: {
+            entryType: string,
+            linkId: string,
+            openInNewTab?: boolean;
+        };
+        children: ReactNode;
+    }) {
+    const actualLink = viewUrlFor(props.entryType, props.linkId)
+    if (props.openInNewTab===true){
+        return <a href={actualLink} target={"_blank"} rel={"noopener noreferrer"} onClick={e=>e.stopPropagation()}>
+            {children}
+        </a>
+    }
+    return <a href={actualLink} onClick={e=>e.stopPropagation()}>
         {children}
     </a>
 }

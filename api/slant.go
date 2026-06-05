@@ -213,7 +213,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 		CreationDateField:     CreationDateField{now},
 		NotesField:            data.NotesField,
 		LastUpdatedField:      LastUpdatedField{now},
-		AclField:              allCanWriteAcl(),
+		AclField:              allCanWriteAcl(), // TODO: ok?
 	}
 	_, err = toInsert.AgarBatchField.Get(ctx)
 	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
@@ -271,7 +271,7 @@ func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toI
 }
 
 // TODO: MOVE
-func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, reqPerms PermsOnRequest, w http.ResponseWriter) {
+func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, w http.ResponseWriter) {
 	//genetics, err := toInsert.GeneticInfoAsParent() // TODO: maybe switch this back?
 	//if err != nil {
 	//	http.Error(w, "failed to get genetic info: "+err.Error(), http.StatusInternalServerError)
@@ -295,7 +295,15 @@ func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
-type updateSlantRequest updatePlateRequest
+type updateSlantRequest struct { // TODO: overhauled, validate still works
+	KnownFruitableField
+	SaleField
+	DisposedField
+	NotesUpdateField
+	ImagesUpdateField
+	ContamsUpdateField
+	PermsOnRequest `json:"acl"`
+}
 
 func (upr updateSlantRequest) reform() resolvedUpdateSlantRequest {
 	return resolvedUpdateSlantRequest{
@@ -305,7 +313,6 @@ func (upr updateSlantRequest) reform() resolvedUpdateSlantRequest {
 		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
-		WriteTagToField:     upr.WriteTagToField,
 		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
@@ -345,11 +352,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	newPics, newContams, _, err := getMultipartImages(r.Context(), "slant", w, reader, b58Id) // TODO: SOME OTHER AREAS NEED TO DO THIS INSTEAD OF fullMultipartWithNoBreaks becaues rfid writer is in-between
 	if err != nil {
 		// Already wrotw
@@ -395,7 +398,6 @@ type importSlantRequest struct {
 	Generation *int
 	// pic as "img"
 	WriteTagToField
-	PermsOnRequest
 }
 
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
@@ -496,7 +498,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -521,5 +523,5 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
 		AclField:             AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
 }

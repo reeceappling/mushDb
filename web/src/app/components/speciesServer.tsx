@@ -1,6 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {EntryPerms} from "@/app/components/perms";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {SlantSelector} from "@/app/components/slantClient";
@@ -21,7 +21,8 @@ export function TestSpeciesOk() {
             note: "(NOTE 2)"
         }],
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
+        defaultAcl: TestAcl(),
     })
 }
 
@@ -32,8 +33,8 @@ export interface SpeciesData {
     standardSubstrate: string
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
-    defaultAcl?: ACL
+    acl: ACL
+    defaultAcl: ACL
 }
 export class SpeciesData {
     // Accept a single object containing the fields

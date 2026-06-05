@@ -61,6 +61,8 @@ func initializeUsers(ctx context.Context) error {
 const testUserEmailSelf = "reeceappling@gmail.com" // TODO: or dot?
 const testUserEmail = "nessapatch2408@gmail.com"
 
+// TODO: update user!!!
+
 func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	userIsAdmin := u.Perms.Admin
 	out := ResolvedUserPerms{

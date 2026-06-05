@@ -72,8 +72,7 @@ export function InitialContamState(contamination?: Contamination[]): SplitAllEnt
     }
 }
 
-// TODO: ensure used properly!!!
-export function ContamsDisplay( // TODO: SET THIS UP SIMILARLY TO HOW PicsDisplay IS SET UP
+export function ContamsDisplay(
     {
         readonly, initial, updateParent
     }: {
@@ -100,23 +99,22 @@ export function ContamsDisplay( // TODO: SET THIS UP SIMILARLY TO HOW PicsDispla
     const [existing, setExisting] = useState<Data<ContaminationForm>[]>(initFor(initial))
     const [created, setCreated] = useState<NewContaminationForm[]>([])
     useEffect(() => {
-        setExisting(initFor(initial))
+        setExisting(initFor(structuredClone(initial)))
         setCreated([])
-        // TODO: update parent or no?
     }, [initial])
-    const update = () => {
+    const update = (ex: Data<ContaminationForm>[], nw: NewContaminationForm[]) => {
         updateParent({
-            existing: structuredClone(existing),
-            new: structuredClone(created),
+            existing: structuredClone(ex),
+            new: structuredClone(nw),
         })
     }
     const doUpdateExisting = (updated: Data<ContaminationForm>[]) => {
         setExisting(updated)
-        update()
+        update(updated, created)
     }
     const doUpdateNew = (updated: NewContaminationForm[]) => {
         setCreated(updated)
-        update()
+        update(existing, updated)
     }
     const depth = useContext(DepthContext)
     return <div className={"depthContainer depth" + depth}>
@@ -142,6 +140,7 @@ export function ContamForm(v: Contamination): ContaminationForm {
 }
 
 export function ContamsRows({initial, updateParent, readonly}: {
+    // TODO: create func for ContamRow!
     initial: Contamination[],
     updateParent: (u: Data<ContaminationForm>[]) => void,
     readonly: boolean,
@@ -158,6 +157,10 @@ export function ContamsRows({initial, updateParent, readonly}: {
     useEffect(() => {
         setCurrent(InitialData(initial))
     }, [initial])
+    const doUpdate = (updated: Data<ContaminationForm>[]) => {
+        setCurrent(updated)
+        updateParent(updated)
+    }
     const disableButtonCreator = (i: number) => {
         if (readonly) {
             return null
@@ -166,14 +169,10 @@ export function ContamsRows({initial, updateParent, readonly}: {
                              keptClass={"removeButtonSmall"} removedClass={"basicButtonSmall"} click={() => {
             let updated = structuredClone(current)
             updated[i].disabled = !updated[i].disabled
-            setCurrent(updated)
-            updateParent(updated)
+            doUpdate(updated)
         }}/>
     }
-    const doUpdate = (updated: Data<ContaminationForm>[]) => {
-        setCurrent(updated)
-        updateParent(updated)
-    }
+
     return <div className={"contamsRows"}>
         {initial.map((init, i) => {
             const ctm = current[i]
@@ -219,24 +218,24 @@ export function ContamsRows({initial, updateParent, readonly}: {
                                        updated[i].data.bacteria = !ctm.data.bacteria
                                        updated[i].data.confirmed == !ctm.data.bacteria || ctm.data.mold
                                        doUpdate(updated)
+                                       console.log("updating bacteria "+i+ "to "+!ctm.data.bacteria )
                                    }}/>
                         </div>
                         <div>
                             <div className={"inline"}>{"Mold: "}</div>
-                            <input className={"inline"} type={'checkbox'} disabled={initial[i].mold}
+                            <input className={"inline"} type={'checkbox'} disabled={init.mold}
                                    checked={ctm.data.mold}
                                    onChange={e => {
                                        let updated = structuredClone(current)
-                                       const had = current[i].data
-                                       updated[i].data.mold = !had.mold
-                                       updated[i].data.confirmed == !had.mold || had.bacteria
+                                       updated[i].data.mold = !ctm.data.mold
+                                       updated[i].data.confirmed == !ctm.data.mold || ctm.data.bacteria
                                        doUpdate(updated)
                                    }}/>
                         </div>
                     </>}
                 </div>
                 <div className={"inline" + disabledClass}>
-                    <NotesFormArea readonly={readonly} initial={initial[i].notes} updateParent={nts => {
+                    <NotesFormArea readonly={readonly} initial={init.notes} updateParent={nts => {
                         let updated = structuredClone(current)
                         updated[i].data.notes = nts
                         doUpdate(updated)

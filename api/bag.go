@@ -165,17 +165,27 @@ func initializeBags(ctx context.Context) error {
 		DisposedField:                     DisposedField{&exampleTime},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          AclField{&testAcl},
+		AclField:                          AclField{testAcl},
 	}
 	return addTestMainEntries(ctx, testItem)
+}
+
+var bagFilterSizes = map[string]string{
+	"0.2 micron":  "Average large bag with filter", // Avg large bag // TODO; figure out which sizes apply to which bags
+	"0.22 micron": "Average filter patches",        // Avg patches
+	//"0.3 micron",
+	//"0.45 micron",
+	//"0.5 micron",
+	//"5 micron": "Airy large bags (do not have)", // TODO: Airy large bag?
+	"unknown": "monotub filter patches, etc",
 }
 
 type createBagRequest struct {
 	SubstrateBatchField
 	WetnessField
 	PcRunField
-	FilterSize string // TODO: ???? Also handle on ts side
-	CreationDateField
+	FilterSize        string // TODO: ???? Also handle on ts side
+	CreationDateField        // TODO: make this on the spot instead (already handled in TSX)
 	NotesField
 	WriteTagToField
 }
@@ -240,8 +250,7 @@ type updateBagRequest struct {
 	ImagesUpdateField  //"newPic-1"
 	ContamsUpdateField //"newContam-1"
 	FlushesUpdateField //"newFlush-1"
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest     `json:"acl"`
 }
 
 func (upr updateBagRequest) reform() resolvedUpdateBagRequest {
@@ -262,10 +271,10 @@ type resolvedUpdateBagRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
-	Images  SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams SplitEntries[contamForm, Contamination]
-	Flushes SplitEntries[picWithNotesForm, PicWithNotes]
-	PermsOnRequest
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams        SplitEntries[contamForm, Contamination]
+	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest `json:"acl"`
 }
 
 func (req resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (bson.D, error) {
@@ -284,17 +293,12 @@ func (req resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (b
 
 const maxMultipartRequestSize = 32<<25 + 1024 //32<<20 + 1024 // TODO: is this max size ok?
 
-func getBag(ctx context.Context, id MainCollectionId) (*Bag, error) {
-	// go get current plate
-	existing := &Bag{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
-	return existing, err
-}
-
-// TODO: move to common
-func bsonFindFilter(key string, value any) bson.D {
-	return bson.D{bson.E{Key: key, Value: value}}
-}
+//func getBag(ctx context.Context, id MainCollectionId) (*Bag, error) {
+//	// go get current plate
+//	existing := &Bag{}
+//	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+//	return existing, err
+//}
 
 func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateBagRequest{}
@@ -305,32 +309,14 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//id := *mainCollId
-	b58Id := mainCollId.AsBase58()
-	//reader, err := multipartReaderForRequest(r, w, &data) // TODO: worked before
-	//if err != nil {
-	//	// Already written
-	//	return
-	//}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, *mainCollId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "bag", &data, b58Id)
+	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "bag", &data, mainCollId.AsBase58())
 	if err != nil {
 		// Already wrotw
 		return
 	}
-	//newPics, newContams, newFlushes, err := getMultipartImages(r.Context(), "bag", w, reader, b58Id)
-	//if err != nil {
-	//	// Already wrotw
-	//	return
-	//}
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
@@ -378,7 +364,6 @@ type importBagRequest struct {
 	KnownFruitableField
 	WriteTagToField
 	// image as "img"
-	PermsOnRequest
 }
 
 func importBagHandler(w http.ResponseWriter, r *http.Request) {
@@ -408,7 +393,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	var importedPic *PicWithNotes = nil
 	dataProcessed := false
 	filesProcessed := 0
-	for { // TODO: FIX THIS MULTIPART READER
+	for { // TODO: FIX THIS MULTIPART READER? Unconfirmed that this even needs fixing as of 6/5/26
 		fileName := p.FileName()
 		defer p.Close()
 		if isFile := fileName != ""; isFile {
@@ -488,6 +473,24 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "substrate recipe retrieval error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
+	if err != nil {
+		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var finalPerms ACL
+	if subsp != nil {
+		finalPerms = subsp.DefaultAcl.Clone()
+	} else {
+		finalPerms = sp.DefaultAcl.Clone()
+	}
+	user, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		return
+	}
+	// Add user to the acl as a writer
+	finalPerms.Users[user.Email] = true
 	// Write
 	toInsert := &Bag{
 		MainCollectionIdField:   MainCollectionIdField{id},
@@ -508,6 +511,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		DisposedField:           DisposedField{},
 		NotesField:              NotesField{},
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+		AclField:                finalPerms.AsField(),
 	}
-	finishImportMainCollectionEntry(ctx, coll, toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, toInsert, w)
 }

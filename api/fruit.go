@@ -145,8 +145,8 @@ type createFruitRequest struct {
 	ParentId   MainCollectionId
 	ParentType string
 	NotesField
-	Pics []PicWithNotesLessLocation // newPic-1
-	PermsOnRequest
+	Pics           []PicWithNotesLessLocation // newPic-1
+	PermsOnRequest `json:"acl"`
 }
 
 func (req createFruitRequest) reform() createFruitResolved {
@@ -161,7 +161,7 @@ func (req createFruitRequest) reform() createFruitResolved {
 }
 
 type createFruitResolved struct {
-	MainCollectionParentField        // TODO: used to be ParentId
+	MainCollectionParentField        // TODO: ensure required        // TODO: used to be ParentId
 	ParentType                string // TODO: swap out for normal parentType
 	NotesField
 	PicsField // newPic-1
@@ -234,8 +234,8 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 type updateFruitRequest struct {
 	DisposedField
 	NotesUpdateField
-	Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
-	PermsOnRequest
+	Images         SplitEntries[picWithNotesForm, PicWithNotesLessLocation] //"newPic-1"
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updateFruitRequest) reform() resolvedUpdateFruitRequest {
@@ -324,7 +324,7 @@ type importFruitRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	PermsOnRequest
+	//PermsOnRequest `json:"acl"` // TODO: use parent perms
 	// image as "img"
 }
 
@@ -432,7 +432,7 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -458,5 +458,5 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, toInsert, w)
 }

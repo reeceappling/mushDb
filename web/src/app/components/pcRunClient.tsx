@@ -10,7 +10,7 @@ import {
     OnViewCreatorTriCol
 } from "@/app/components/formSubcomponents/shared";
 import {PcRunData} from "@/app/components/pcRunServer";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     createApiUrlFor,
     dataFor, DisplayFormWrapper,
@@ -19,7 +19,7 @@ import {
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey, updateApiUrlFor
+    OptionalKey, RequiredKey, updateApiUrlFor
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
@@ -61,13 +61,13 @@ export function AssertPcRun(input: any): asserts input is PcRunData {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('PcRun assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('PcRun assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
@@ -91,12 +91,13 @@ export default function PcRunDisplay(
         const [initial, setInitial] = useState(data)
 
         const [notes, setNotes] = useState<AllEntries<Note>>({existing: dataFor(data.notes || []), new: []})
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: PcRunData) => {
             setInitial(updated)
             setNotes({existing: dataFor(updated.notes || []), new: []})
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const pcRunUpdate = () => {
@@ -109,11 +110,11 @@ export default function PcRunDisplay(
                     updateInitial(new PcRunData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
-            return <EntryLink props={{openInNewTab:false/* TODO: ok?*/,displayId: linkText, linkId: linkId, entryType: typ}}/>
+            return <EntryLinkForId props={{openInNewTab:false/* TODO: ok?*/,displayId: linkText, linkId: linkId, entryType: typ}}/>
         }
         const onViewCreators: OnViewCreatorTriCol[] = [
             {
@@ -227,7 +228,7 @@ export default function PcRunDisplay(
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
@@ -247,14 +248,14 @@ export function NewPcRunForm(
     const [runTime, setRunTime] = useState("")
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const newPcRunSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
         let body = {
-            creationDate: date,
-            runTime: runTime,
+            //creationDate: date, // Handled serverside
+            runTimeMinutes: runTime,
             notes: notes,
         }
         DoCreateRequest("pcRun", body, AssertPcRun, allCookies(cookies))
@@ -272,8 +273,7 @@ export function NewPcRunForm(
             <DateArea pre={"Date : "} when={date} readonly={false} updateParent={setDate}/>
             {/* RunTime TODO: RETHINK THIS???*/}
             <div>
-                <div>{"RunTime:"}</div>
-                {/* TODO: Consider runtimeMinutes? ?*/}
+                <div>{"RunTime (minutes):"}</div>
                 <input type="text" value={runTime} onChange={(e) => {
                     setRunTime(e.currentTarget.value)
                 }}/>
@@ -293,7 +293,7 @@ export function PcRunArea({binaryId, headerLevel, offset}: {
     offset?: number
 }) {
     let linkArea: JSX.Element = <div>{(binaryId !== undefined) ?
-        <EntryLink props={{linkId: binaryId, entryType: "pcRun",openInNewTab:false/* TODO: ok?*/}}/>:
+        <EntryLinkForId props={{linkId: binaryId, entryType: "pcRun",openInNewTab:false}}/>:
         "unknown"}
     </div>
     return <div className={"pcRunArea"}>

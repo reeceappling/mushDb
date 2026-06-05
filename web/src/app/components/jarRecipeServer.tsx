@@ -3,7 +3,7 @@ import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
 import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Additive} from "@/app/components/formSubcomponents/additives";
 import {Grain} from "@/app/components/formSubcomponents/grains";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
@@ -30,6 +30,7 @@ export function TestJarRecipeOK() {
         ],
         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
+        acl: TestAcl(), // TODO; dow e want this?
     })
 }
 
@@ -43,7 +44,7 @@ export interface JarRecipeData {
     additives?: Additive[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class JarRecipeData {
     // Accept a single object containing the fields

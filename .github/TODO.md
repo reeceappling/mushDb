@@ -1,3 +1,11 @@
+# In Progress
+## Actively Working On
+- [ ] Project, sale, user tsx TODOs
+- [x] MSS and below, ensure api structs match up
+## Passively Working On
+- [ ] README
+## Waiting on something else
+
 # TODO
 - [x] Ensure all imports return and properly utilize JSON
   - [ ] TEST TO VALIDATE
@@ -31,13 +39,7 @@
     - [ ] .github/workflows
 - [ ] CORS
   - [ ] In go, fix and utilize enableCors function
-  - [ ] https://blog.logrocket.com/using-cors-next-js-handle-cross-origin-requests/ 
-
-# In Progress
-## Actively Working On
-## Passively Working On
-- [ ] README
-## Waiting on something else
+  - [ ] https://blog.logrocket.com/using-cors-next-js-handle-cross-origin-requests/
 
 # Complete
 - [x] Create TODO.md

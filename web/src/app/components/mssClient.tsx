@@ -3,13 +3,12 @@
 import React, {JSX, useContext, useState} from "react";
 import {
     clientPostRequestHeaders,
-    createApiUrlFor,
     DisplayFormWrapper,
     DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
-    HandleTxtResponse, importApiUrlFor,
+    importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     IsString,
@@ -18,7 +17,7 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, SendMultipartRequest, updateApiUrlFor, viewUrlFor,
+    OptionalSimpleKey, RequiredKey, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -29,12 +28,11 @@ import {
     SpeciesArea,
     SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     IsValidNote, NewEntryNotes,
     Note, NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {MssData} from "@/app/components/mssServer";
 import ID from "@/app/components/formSubcomponents/id";
@@ -51,13 +49,8 @@ import {SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {redirect} from "next/navigation";
-import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
-import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
-import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
-import {BagData} from "@/app/components/bagServer";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -89,13 +82,13 @@ export function AssertMss(input: any): asserts input is MssData {
         }
     }
 
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Jar assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('MSS assertion failure: required key ' + key + ' was not valid');
         }
     }
 
@@ -119,7 +112,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
     const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
 
-    // const [writeTagTo, setWriteTagTo] = useState<string | undefined>() // TODO: do we want this?
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>() // TODO: do we want this?
     const [entriesCreated, setEntriesCreated] = useState<string[]>([])
     const [err, setErr] = useState<string | undefined>()
     const entriesCreatedDiv = ()=>{
@@ -130,7 +123,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
             <div><div>{"Multispore syringes Created:"}</div></div>
             {entriesCreated.map((created,i)=>{
                 const b58id = created
-                return <EntryLink props={{displayId:b58id, linkId: b58id, entryType:"mss", openInNewTab: false}}/>// TODO: OPENINNEWTAB false ok?
+                return <EntryLinkForId props={{displayId:b58id, linkId: b58id, entryType:"mss", openInNewTab: false}}/>// TODO: OPENINNEWTAB false ok?
             })}
         </div>
     }
@@ -143,9 +136,11 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         let body: any = {
             creationDate: createdDate,
             species: species._id, // TODO: validate on insert
+            // optional
+            subspecies: subspecies?._id,
+            notes: notes,
+            writeTagTo: writeTagTo,
         }
-        subspecies && (body.subspecies = subspecies._id)
-        notes.length>0 && (body.notes = notes)
         fetch(importApiUrlFor("mss"), { // TODO: use other func?
             method: "POST",
             headers: clientPostRequestHeaders,
@@ -165,6 +160,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         <SpeciesArea initial={species?._id} readonly={false} setSpecies={setSpecies}/>
         <SubspeciesArea initialSub={subspecies?._id} currentSpecies={species?._id} readonly={false} setSubspecies={setSubspecies}/>
         <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={tryImport}>{"Submit"}</button>
     </ImportEntryFormWrapper>
 }
@@ -182,7 +178,7 @@ export default function MssDisplay(
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
         const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         // Helper states
         const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
         const updateInitial= (updated: MssData)=>{
@@ -192,6 +188,7 @@ export default function MssDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
             setTransfersOut(updated.transfersOut || [])
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const mssSubmit = () => {
@@ -207,7 +204,7 @@ export default function MssDisplay(
                     updateInitial(new MssData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -224,15 +221,14 @@ export default function MssDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    <ParentDisplay parent={data.parent} parentType={"sporePrint"} headerLevel={headerLevel} />{/* TODO: can this be spore swab????*/}
+                    <ParentDisplay parent={data.parent} parentType={"sporePrint"} headerLevel={headerLevel} />
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={data._id} thisEntryType={"mss"} transfersOut={data.transfersOut} allowNewTransferCreation={!readonly} validTypesTo={["plate","slant","jar","bag"]}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes} />
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
-            {readonly ? null : <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>/* TODO: ok?*/}
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                 e.stopPropagation();
                 mssSubmit()
@@ -251,7 +247,7 @@ export function NewMssForm(
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()

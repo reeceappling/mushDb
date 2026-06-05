@@ -68,13 +68,11 @@ import {TopLevelImageSelector} from "@/app/components/formSubcomponents/imageSel
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {SubstrateBatchArea} from "@/app/components/substrateBatchClient";
@@ -85,11 +83,11 @@ import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
-import {AssertSlant} from "@/app/components/slantClient";
-import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {useQuery} from "@tanstack/react-query";
+import {GetFilterSizes, GetTransferReasons} from "@/app/components/formSubcomponents/server";
+import {SelectorFor} from "@/app/components/selector";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -133,9 +131,7 @@ export function AssertBag(input: any): asserts input is BagData {
     }
     // complex required keys
     let complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        // ['entryType', (inp: any) => {
-        //     return (typeof inp === 'string' && inp === "bag")
-        // }],
+        ['acl', IsValidAcl],
     ])
     for (let [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -145,7 +141,6 @@ export function AssertBag(input: any): asserts input is BagData {
     // complex optional keys
     let complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-        ['acl', IsValidAcl]
     ])
     for (let [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
@@ -189,7 +184,7 @@ export default function BagDisplay(
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         //const [newFruits, setNewFruits] = useState<FruitData[]>([]) // TODO: get rid of???
         const filterSizeArea = (filterSize: string, headerLevel?: number) => {
             return <div>
@@ -207,6 +202,7 @@ export default function BagDisplay(
             setContams(InitialContamState(updated.contamination))
             setFlushes(InitialPicsEntries(updated.flushes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const bagSubmit = () => {
@@ -214,8 +210,8 @@ export default function BagDisplay(
             let dataObj: any = {
                 knownFruitable: knownFruitable,
                 sale: sale, // TODO: how/when should sales be made?
-                notes: notes,
                 disposed: disposed,
+                notes: notes,
                 writeTagTo: writeTagTo,
                 acl: MarshalAcl(acl),
             }
@@ -247,7 +243,7 @@ export default function BagDisplay(
                     updateInitial(new BagData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -287,7 +283,7 @@ export default function BagDisplay(
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
                         <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                        {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
+                        {/*TODO: THIS!<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                         <ParentDisplay parent={initial.parent} parentType={initial.parentType}
                                        headerLevel={headerLevel}/>
                         <InnocDisplay innoc={initial.innoc}/>
@@ -307,11 +303,8 @@ export default function BagDisplay(
                                 readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {/* Write tag area */}
-                {readonly ? null : <ReaderWriterSelector txt={"Writer to write to: "} onSelect={setWriteTagTo}
-                                                         headerLevel={headerLevel}/>}
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     bagSubmit()
@@ -330,17 +323,9 @@ export function WetnessDisplay({value}: { value?: number }) {
 }
 
 const filterSizeSelector = (setFilterSize: (f?: string) => void, filterSize?: string) => {
-    const possibleFilterSizes = ["5nm", "8nm", "unknown"]
     return <div className={"centerH medGapTop"}>
-        {"Filter size: "}<select className={"tailwindSelector"} value={filterSize || ""} onChange={
-        (evt) => {
-            setFilterSize(evt.currentTarget.value === "" ? undefined : evt.currentTarget.value)
-        }
-    }>
-        {possibleFilterSizes.map(function (size, i) {
-            return <option value={size} key={i}>{size}</option>
-        })}
-    </select></div>
+        {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize} current={filterSize}/>{/* TODO: ensure working!*/}
+    </div>
 }
 
 export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
@@ -357,7 +342,6 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
-    const errHandler = ErrHandler(setErr)
     const cookies = useContext(CookiesContext)
     const newBagSubmit = () => {
         if (pcRun === undefined) {
@@ -373,12 +357,12 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             return
         }
         let body: any = {
+            substrateBatch: substrateBatch._id,
+            wetness: wetness,
             pcRun: pcRun._id,
             filterSize: filterSize,
-            wetness: wetness,
-            substrateBatch: substrateBatch._id,
-            writeTagTo: writeTagTo,
             notes: notes,
+            writeTagTo: writeTagTo,
         }
         DoCreateRequest("bag", body, AssertBag, allCookies(cookies))
             .then(v=>{
@@ -399,12 +383,14 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             <WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {
                 setWetness(value)
             }}/>
-            {pcRunIn === undefined ||
+            {pcRunIn === undefined && // TODO: Show pc run if already exists?
                 <PcRunSelectorCloseable doSelect={setPcRun} creatorInPage={true} allowCreation={true}/>}
-            {filterSizeSelector(setFilterSize, filterSize)}
+            <div className={"centerH medGapTop"}>
+                {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize} current={filterSize}/>{/* TODO: ensure working!*/}
+            </div>
             <NewEntryNotes setNotes={setNotes}/>
             {/* Write tag area */}
-            <ReaderWriterSelector txt={"Writer to write to: "} onSelect={setWriteTagTo}/>
+            <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>
             {/* SUBMIT AREA */}
             <input type="submit" value="Submit" className={"bottomButton"} onClick={newBagSubmit} onSubmit={(e) => {
                 e.preventDefault();
@@ -413,7 +399,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     )
 }
 
-export function BagImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE
+export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
     // Required
     const [sealDate, setSealDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
@@ -441,39 +427,19 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         }
         let formData = new FormData()
         let dataObj: any = {
-            sealDate: sealDate,
-            recipe: recipe?._id, // MUST EXIST TODO: validate on insert
+            creationDate: sealDate,
+            recipe: recipe?._id, // MUST EXIST
             filterSize: filterSize,
-            species: species?._id, // MUST EXIST TODO: validate on insert
-        }
-
-        if (subspecies !== undefined) {
-            dataObj.subspecies = subspecies?._id
-        }
-        if (generation !== undefined) {
-            dataObj.generation = generation
-        }
-        if (knownFruitable !== undefined) {
-            dataObj.knownFruitable = knownFruitable
-        }
-        if (writeTagTo !== undefined) {
-            dataObj.rfidWriter = writeTagTo
+            species: species?._id, // MUST EXIST
+            // optional
+            subspecies: subspecies?._id,
+            generation: generation,
+            knownFruitable: knownFruitable,
+            writeTagTo: writeTagTo,
         }
         setFormData(formData, dataObj)
-        //formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
         MultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies))
-        // fetch(importApiUrlFor("bag"), {
-        //     method: 'Post',
-        //     body: formData,
-        //     headers: clientPostRequestHeaders, // TODO: multipart type header?
-        // })
-            // .then(HandleJsonResponse)
-            // .then(newItem => {
-            //     AssertBag(newItem)
-            //     redirect(viewUrlFor("bag", newItem._id))
-            // })
-            // .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"bag"}>
         {/* Required Fields */}
@@ -482,7 +448,9 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={false} creatorInPage={false}/>
         </SelectorWrapper>
-        {filterSizeSelector(setFilterSize, filterSize)}
+        <div className={"centerH medGapTop"}>
+            {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize} current={filterSize}/>{/* TODO: ensure working!*/}
+        </div>
         <ExistingSpeciesSelector doSelect={setSpecies}/>
 
         {/* Optional fields*/}
@@ -515,7 +483,6 @@ export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagDat
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
     return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new BagData(v)}}/>
 }
 
@@ -523,7 +490,7 @@ export function BagSelectorTable({data, onClick}: ListPageItems<BagData>) {
     return <BagListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
-export function BagSelector( // TODO: USE ELSEWHERE
+export function BagSelector(
     {
         doSelect,
         allowCreate
@@ -539,4 +506,26 @@ export function BagSelector( // TODO: USE ELSEWHERE
                                    table={table}>
         {allowCreate && <NewBagForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
+}
+
+export function FilterSizeSelector(
+    {current, onSelect}: {
+        current?: string,
+        onSelect?: (ab?: string) => void
+    }) {
+    const {isPending, error, data} = useQuery({
+        queryKey: ['filterSizes'],
+        queryFn: GetFilterSizes,
+    })
+    if (isPending || error !== null) {
+        return <div>{isPending ? "FILTER SIZE SELECTOR LOADING" : "FILTER SIZE SELECTOR ERROR: " + error.message}</div>
+    }
+    return <SelectorFor disabled={onSelect === undefined} options={["", ...data.keys()]} initial={current || ""}
+                        updateParent={(s) => {
+                            if (s === "") {
+                                onSelect && onSelect(undefined)
+                            }
+                            onSelect && onSelect(s as string)
+                        }
+                        }/>
 }

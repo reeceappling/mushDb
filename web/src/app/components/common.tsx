@@ -8,7 +8,7 @@ import {
     ContaminationForm,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NumbersOnlyFromText, NumberToDate} from "@/app/components/formSubcomponents/date";
 import {Data, ListResult, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
@@ -529,7 +529,7 @@ export function DisposedSaleContamArea(
         return <div>
             {sectionHeader}
             <div>{"Sold in sale "}
-                <EntryLink props={{
+                <EntryLinkForId props={{
                     displayId: displayId,
                     linkId: displayId,
                     entryType: "sale",
@@ -648,7 +648,7 @@ export function getUrlFor(itemType: string, id: string) { // TODO: use?
 }
 
 export function createUrlFor(itemType: string) {
-    return webUrl("/create/" + itemType)
+    return webUrl("/new/" + itemType)
 }
 
 export function createApiUrlFor(itemType: string) {
@@ -1059,7 +1059,7 @@ export function Subform(props: React.PropsWithChildren<{}>) {
 }
 
 export function CreatedLinkFor({linkId, typ, linkText}: { linkId: string, typ: string, linkText?: string }) {
-    return <EntryLink props={{displayId: linkText || linkId, linkId: linkId, entryType: typ, openInNewTab: false/* TODO: ok?*/}}/>
+    return <EntryLinkForId props={{displayId: linkText || linkId, linkId: linkId, entryType: typ, openInNewTab: false/* TODO: ok?*/}}/>
 }
 
 export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) => void): asserts input is ListResult<T> {
@@ -1098,37 +1098,26 @@ export function validatorForAssertion(asserter: ((input: any) => void)) {
     }
 }
 
-function assertThenReturn<T>(asserter: TypeAsserter<T>, item: any): T {
-    asserter(item)
-    return item
-}
-
 export function DoCreateRequest<T>(entryType: string, body: any, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
     return fetch(createApiUrlFor(entryType), {
         method: "POST",
         headers: {...clientPostRequestHeaders, 'Cookie': cookies},
         body: JSON.stringify(body)
     })
-        .then((v:Response):any=>{
-            console.log("HANDLING JSON RESPONSE")
-            return HandleJsonResponse(v)
-        })
+        .then(HandleJsonResponse)
         .then((entry:any):T => {
-            console.log("ASSERTING THEN RETURNING")
             asserter(entry)
             return entry
-            // TODO: this is not returning the way I want it to...
         })
-        .catch((e)=> {throw e});
 }
 
 export function DoCreateRequestMultipart<T>(entryType: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
     return SendMultipartRequest(createApiUrlFor(entryType), formData, cookies)
         .then(HandleJsonResponse)
         .then((entry):T => {
-            return assertThenReturn(entry, asserter)
+            asserter(entry)
+            return entry
         })
-        // TODO: .catch(e=>throw e);
 }
 
 export function DoUpdateRequest<T>(entryType: string, urlId: string, body: any, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
@@ -1138,17 +1127,17 @@ export function DoUpdateRequest<T>(entryType: string, urlId: string, body: any, 
         body: JSON.stringify(body)
     }).then(HandleJsonResponse)
         .then((entry) => {
-            return assertThenReturn(entry, asserter)
+            asserter(entry)
+            return entry
         })
-        // TODO: .catch(e=>throw e);
 }
 export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, formData: FormData, asserter: TypeAsserter<T>, cookies: string): Promise<T> {
     return SendMultipartRequest(updateApiUrlFor(entryType,urlId), formData, cookies)
         .then(HandleJsonResponse)
         .then((entry) => {
-            return assertThenReturn(entry, asserter)
+            asserter(entry)
+            return entry
         })
-        // TODO: .catch(e=>throw e);
 }
 
 // TODO: DICTAPHONES SHOULD BE USED IN:

@@ -200,7 +200,7 @@ func initializePlugs(ctx context.Context) error {
 		DisposedField:           DisposedField{&exampleTime},
 		NotesField:              NotesField{exampleNotes()},
 		LastUpdatedField:        LastUpdatedField{exampleTime},
-		AclField:                allCanReadAcl(),
+		AclField:                allCanReadAcl(nil),
 	}
 	return addTestMainEntries(ctx, testItem)
 }
@@ -256,7 +256,7 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 		NotesField:            NotesField{data.Notes},
 		LastUpdatedField:      LastUpdatedField{now},
 		// No Perms here for basic plugs
-		AclField: allCanWriteAcl(),
+		AclField: allCanWriteAcl(), // TODO: ok?
 	}
 
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
@@ -264,13 +264,14 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 
 // TODO: import plugs request!
 type importPlugsRequest struct { // TODO: USE THIS!
-	DowelTypes              []Dowel         `bson:"dowelTypes" json:"dowelTypes"` // TODO: ok?
-	Generation              *Generation     `json:"generation"`                   // Nil so we can // TODO; ensure ok
-	SpeciesOptionalField    `bson:"inline"` // TODO: ok?
-	SubspeciesOptionalField `bson:"inline"` // TODO: ok?
-	KnownFruitableField     `bson:"inline"` // TODO: ok?
-	NotesField              `bson:"inline"` // TODO: ok?
+	DowelTypes              []Dowel     `bson:"dowelTypes" json:"dowelTypes"` // TODO: ok?
+	Generation              *Generation `json:"generation"`                   // Nil so we can // TODO; ensure ok
+	SpeciesOptionalField    `bson:"inline"`                                   // TODO: ok?
+	SubspeciesOptionalField `bson:"inline"`                                   // TODO: ok?
+	KnownFruitableField     `bson:"inline"`                                   // TODO: ok?
+	NotesField              `bson:"inline"`                                   // TODO: ok?
 	WriteTagToField         `bson:"inline"`
+	// TODO: perms should follow species/subspec if exists, otherwise all can write
 }
 
 func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
@@ -310,7 +311,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:       NotesField{data.Notes},
 		LastUpdatedField: LastUpdatedField{now},
 		// No Perms here for basic plugs
-		AclField: allCanWriteAcl(),
+		AclField: allCanWriteAcl(), // TODO: add user and use species/subspecies perms
 	}
 	for i, d := range data.DowelTypes {
 		if err = d.validate(); err != nil {
@@ -362,11 +363,11 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: new sale?
 
 type updatePlugsRequest struct {
-	PcRunOptionalField // Can only be set once!
+	PcRunOptionalField  // Can only be set once!
+	KnownFruitableField // TODO: HANDLE IN GO! NEW!
 	NotesUpdateField
-	PermsOnRequest
-	WriteTagToField
 	DisposedField
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updatePlugsRequest) modsFor(existing *PlugsJar, acl AclField) (bson.D, error) {
@@ -391,17 +392,11 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := *mainCollId
-	err = writeRfidTagIfNecessary(r.Context(), req.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	ctx := r.Context()
 	existing := &PlugsJar{}
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	coll := client.Database(dbName).Collection(PlugsCollectionName)
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	err = coll.FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

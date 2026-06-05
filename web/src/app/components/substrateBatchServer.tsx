@@ -1,5 +1,5 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {NewSubstrateBatchForm, SubstrateBatchSelector} from "@/app/components/substrateBatchClient";
 
@@ -14,6 +14,7 @@ export function TestSubstrateBatchOk(){
         recipe: "(RECIPE ID HERE)",
         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
+        acl: TestAcl(),
     })
 }
 
@@ -23,7 +24,7 @@ export interface SubstrateBatchData {
     recipe: string
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class SubstrateBatchData {
     // Accept a single object containing the fields

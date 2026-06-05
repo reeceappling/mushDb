@@ -21,7 +21,7 @@ type Species struct {
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	AclField          `bson:"inline"`
-	DefaultAcl        *ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // TODO; NEW!!! // Only used when importing!
+	DefaultAcl        ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // TODO; NEW!!! // Only used when importing!
 
 }
 
@@ -140,7 +140,8 @@ func initializeSpecies(ctx context.Context) error {
 		StandardSubstrate: exAltId,
 		NotesField:        NotesField{exampleNotes()},
 		LastUpdatedField:  LastUpdatedField{exampleTime},
-		AclField:          allCanReadAcl(),
+		AclField:          allCanReadAcl(nil),
+		DefaultAcl:        allCanWriteAcl().ACL,
 	}
 	return addTestAltEntries(ctx, testItem)
 }
@@ -151,6 +152,7 @@ type createSpeciesRequest struct {
 	AliasesField
 	SubstrateRecipeField // TODO: tag used to be "sub" is now "recipe"
 	NotesField
+	PermsOnRequest `json:"acl"` // TODO: USE!
 }
 
 func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
@@ -163,10 +165,6 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	//if err = req.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "can not write with provided perms: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 	ctx, db := Db(r)
 	coll := db.Collection(SpeciesCollectionName)
 	// Validate
@@ -176,6 +174,12 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	user, _ := GetAuthInfo(ctx)
+	finalAcl, err := req.PermsOnRequest.AclForUser(ctx, user)
+	if err != nil {
+		dbErr(w, "failed to create final ACL: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	toInsert := Species{
 		NameIdField:       NameIdField{req.Name},
 		ScientificName:    req.ScientificName,
@@ -183,17 +187,18 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		StandardSubstrate: req.Substrate,
 		NotesField:        req.NotesField,
 		LastUpdatedField:  LastUpdatedField{unixTimeForNow()},
-		DefaultAcl:        allCanWriteAcl().ACL,
+		AclField:          finalAcl,
+		DefaultAcl:        finalAcl.ACL,
 	}
 	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
 }
 
 type updateSpeciesRequest struct {
-	Substrate AlternateCollectionId `json:"standardSubstrate"`
+	Substrate AlternateCollectionId `json:"substrate"`
 	NotesUpdateField
 	AliasesField
-	PermsOnRequest
-	DefaultEntryPermsOnRequest PermsOnRequest // TODO: handle in TS
+	PermsOnRequest `json:"acl"`
+	DefaultAcl     PermsOnRequest // TODO: handle in TS!
 }
 
 func (req updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (bson.D, error) {
@@ -202,7 +207,7 @@ func (req updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (b
 		updateNotesIfNeeded(req, existing).
 		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateDefaultEntryPermsIfNeeded(req.DefaultEntryPermsOnRequest, existing.ACL).
+		updateDefaultAclIfNeeded(req.DefaultAcl, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -220,12 +225,21 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	req := updateSpeciesRequest{}
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Add user to acls as needed // TODO: ensure ok!
+	user, _ := GetAuthInfo(r.Context())
+	finalDefaultAcl, err := req.DefaultAcl.AclForUser(r.Context(), user)
+	if err != nil {
+		http.Error(w, "failed to create default acl: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	req.DefaultAcl = finalDefaultAcl.ACL.AsPermsOnRequest()
 
 	ctx, db := Db(r)
 	coll := db.Collection(SpeciesCollectionName)

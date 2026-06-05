@@ -59,10 +59,11 @@ func initializeGrainBatches(ctx context.Context) error {
 type createGrainBatchRequest struct {
 	JarRecipeRequiredField
 	NotesField
+	PermsOnRequest `json:"acl"` // Nil means allCanWrite
 }
 
 // TODO: separate endpoints for updating soak, boil, and dry times
-
+// TODO: USE THIS!
 func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO THIS!
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -85,9 +86,14 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: 
 	coll := db.Collection(GrainBatchCollectionName)
 	// Validate fields
 	_, err = req.JarRecipeRequiredField.Get(ctx)
-
 	if err != nil {
 		dbErr(w, "Jar Recipe validation failure: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	user, _ := GetAuthInfo(ctx)
+	acl, err := req.AclForUser(ctx, user)
+	if err != nil {
+		dbErr(w, "ACL creation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// create new batch
@@ -98,7 +104,7 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: 
 		JarRecipeRequiredField:     req.JarRecipeRequiredField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
-		AclField:                   allCanWriteAcl(),
+		AclField:                   acl,
 	}
 	finishCreateAlternateEntry(ctx, coll, toInsert, w)
 }
@@ -106,17 +112,18 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: 
 type updateGrainBatchRequest struct {
 	SoakTimeHours *int `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
 	BoilTimeMins  *int `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
-	DryTimeHours  *int `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
+	DryTimeHours  *int `bson:"dryTimeHrs,omitempty" json:"dryTimeHours,omitempty"`
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateGrainBatchRequest) modsFor(existing *GrainBatch, acl AclField) (bson.D, error) {
-	mods := NewMods()
-	mods = updatePointerIfNeeded(mods, "soakTimeHours", req.SoakTimeHours, existing.SoakTimeHours)
-	mods = updatePointerIfNeeded(mods, "boilTimeMins", req.BoilTimeMins, existing.BoilTimeMins)
-	return updatePointerIfNeeded(mods, "dryTimeHours", req.DryTimeHours, existing.DryTimeHours).
+	return NewMods().
+		updateTimeIfNoLongerNil("soakTimeHours", req.SoakTimeHours, existing.SoakTimeHours).
+		updateTimeIfNoLongerNil("boilTimeMins", req.BoilTimeMins, existing.BoilTimeMins).
+		updateTimeIfNoLongerNil("dryTimeHours", req.DryTimeHours, existing.DryTimeHours).
 		updateNotesIfNeeded(req, existing).
+		updatePermsIfNeeded(acl.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
@@ -135,7 +142,7 @@ func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	PrettyPrintJson("new notes!", req.Notes.New) // TODO: del
+	//PrettyPrintJson("new notes!", req.Notes.New) // TODO: del
 	id, err := b58Id.toAltCollectionId()
 	if err != nil {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
@@ -152,5 +159,5 @@ func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, PermsOnRequest{})
 }

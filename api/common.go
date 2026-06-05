@@ -5,6 +5,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
@@ -15,6 +16,7 @@ import (
 	"golang.org/x/exp/maps"
 	"image/jpeg"
 	"image/png"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -557,6 +559,10 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 	return notesWereModified(existing.Notes, updated.Notes)
 }
 
+func bsonFindFilter(key string, value any) bson.D {
+	return bson.D{bson.E{Key: key, Value: value}}
+}
+
 //func setUnsetUnequalPointers[T comparable](key string, update *T, current *T, modsIn bson.D) bson.D {
 //	if (update == nil && current == nil) || ((update != nil && current != nil) && (*(update)) == (*(current))) {
 //		return modsIn
@@ -737,10 +743,9 @@ var (
 			exProjRead:  false,
 			exProjWrite: true,
 		},
-		BlanketPerm: false,
+		BlanketPerm: utils.Pointer(true),
 	}
 	testAcl = ACL{
-		// TODO: ensure ok
 		Users: map[string]bool{
 			exUserNoProjectRead:  false,
 			exUserNoProjectWrite: true,
@@ -749,7 +754,7 @@ var (
 			exProjRead:  false,
 			exProjWrite: true,
 		},
-		BlanketPerm: false,
+		BlanketPerm: utils.Pointer(false),
 	}
 	exBool                     = utils.Pointer(true)
 	exPicLoc                   = "test.jpg" // TODO: make sure this exists
@@ -830,12 +835,12 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if user.isGuest() {
-		dbErr(w, "guests cannot edit", http.StatusForbidden)
+	if user.isGuest() { // TODO: isnt this done elsewhere?
+		dbErr(w, "guests cannot edit", http.StatusUnauthorized)
 		return
 	}
 	if !user.HasPermissionToEdit(existing) {
-		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		dbErr(w, "unauthorized to edit", http.StatusUnauthorized)
 		return
 	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
@@ -870,4 +875,20 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 	upd, err := modsFor(existing, aclField)
 	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
 	return
+}
+
+func ReadSimpleStructuredBody[T any](r *http.Request, w http.ResponseWriter, req *T) error {
+	defer r.Body.Close()
+	bytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		println("failed to read body: " + err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	if err = json.Unmarshal(bytes, &req); err != nil {
+		println("bad body format: " + string(bytes))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	return nil
 }

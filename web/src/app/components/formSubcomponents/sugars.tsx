@@ -74,7 +74,7 @@ export function SugarTypeSelector( // TODO: USE THIS!!!!!
     return <SelectorFor disabled={onSelect === undefined} options={["", ...filteredOptions]} initial={initial || ""}
                         updateParent={(s) => {
                             if (s === "") {
-                                onSelect && onSelect()
+                                onSelect && onSelect(undefined)
                             }
                             onSelect && onSelect(s as string)
                         }

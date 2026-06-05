@@ -40,14 +40,14 @@ import {WaterJarData} from "@/app/components/waterJarServer";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {TopPageHeaderLevel} from "@/app/components/Constants";
 import React, {JSX, useState} from "react";
-import EntryLink from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId from "@/app/components/formSubcomponents/entryLink";
 import { NewPlugsForm } from "@/app/components/plugsClient";
 import {PlugsData} from "@/app/components/plugsServer";
 
 export function ClientNewPage({itemType, species}: { itemType: string, species?: SpeciesData }) {
     const [newEntries, setNewEntries] = useState<JSX.Element[]>([])
     const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
-        return <EntryLink props={{openInNewTab:false/* TODO: ok?*/,displayId: linkText, linkId: linkId, entryType: typ}}/>
+        return <EntryLinkForId props={{openInNewTab:false/* TODO: ok?*/,displayId: linkText, linkId: linkId, entryType: typ}}/>
     }
     const createdItemsArea = ()=>{
         return <div>

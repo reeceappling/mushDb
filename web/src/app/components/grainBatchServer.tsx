@@ -4,6 +4,7 @@ import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {GrainBatchSelector, NewGrainBatchForm} from "@/app/components/grainBatchClient";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 
 export function TestGrainBatchOkFull() {
     return new GrainBatchData({
@@ -15,6 +16,7 @@ export function TestGrainBatchOkFull() {
         creationDate: Date.now(),
         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
+        acl: TestAcl(),
     })
 }
 
@@ -27,6 +29,7 @@ export interface GrainBatchData {
     dryTimeHours?: number
     notes?: Note[]
     lastUpdated: number
+    acl: ACL // TODO: do we want this?
 }
 export class GrainBatchData {
     // Accept a single object containing the fields

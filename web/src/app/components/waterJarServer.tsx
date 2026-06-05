@@ -4,7 +4,7 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {EntryPerms} from "@/app/components/perms";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {AgarBatchSelector, NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {AgarBatchData, ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
@@ -22,6 +22,7 @@ import {NewWaterJarForm, WaterJarSelector} from "@/app/components/waterJarClient
 //         pcRun: "(PC RUN ID HERE)",
 //         notes: [...testNotes],
 //         lastUpdated: 789,
+//         acl: TestAcl(), // TODO: do we want this?
 //     }
 //     return a
 // }
@@ -32,6 +33,7 @@ export interface WaterJarData {
     notes?: Note[]
     disposed?: number
     lastUpdated: number
+    acl: ACL
 }
 export class WaterJarData {
     // Accept a single object containing the fields

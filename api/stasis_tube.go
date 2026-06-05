@@ -158,6 +158,7 @@ func initializeStasisTubes(ctx context.Context) error {
 		MostRecentImageField:              MostRecentImageField{&exPics[0]},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		AclField:                          allCanWriteAcl(), // TODO: ok?
 	}
 	return addTestMainEntries(ctx, testItem)
 }
@@ -196,7 +197,7 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		CreationDateField:     CreationDateField{now},
 		NotesField:            data.NotesField,
 		LastUpdatedField:      LastUpdatedField{now},
-		AclField:              allCanWriteAcl(),
+		AclField:              allCanWriteAcl(), // Because initial stasis tubes are empty
 	}
 	// Validate
 	if _, err := toInsert.PcRunOptionalField.Get(ctx); err != nil && !errors.Is(err, ErrMissingOptionalField) {
@@ -213,8 +214,7 @@ type updateStasisTubeRequest struct {
 	NotesUpdateField
 	ImagesUpdateField
 	ContamsUpdateField
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
@@ -225,7 +225,6 @@ func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
-		WriteTagToField:     upr.WriteTagToField,
 		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
@@ -237,7 +236,6 @@ type resolvedUpdateStasisTubeRequest struct {
 	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
-	WriteTagToField
 	PermsOnRequest
 }
 
@@ -293,11 +291,6 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
 		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Get any images
@@ -406,13 +399,14 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 
 type importStasisTubeRequest struct {
 	CreationDateField
-	SpeciesField
+	SpeciesField // TODO: consider making optional? probs not...
+	// Optional
 	SubspeciesOptionalField
 	KnownFruitableField
 	Generation *int
 	// pic as "img"
+	NotesField
 	WriteTagToField
-	PermsOnRequest
 }
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
@@ -488,7 +482,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var finalPerms *ACL = nil
+	var finalPerms ACL
 	if subsp != nil {
 		finalPerms = subsp.DefaultAcl.Clone()
 	} else {
@@ -508,8 +502,9 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		PicsField:               PicsField{pix},
 		KnownFruitableField:     data.KnownFruitableField,
 		MostRecentImageField:    MostRecentImageField{importedPic},
+		NotesField:              data.NotesField,
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
 }

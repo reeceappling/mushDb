@@ -1,5 +1,5 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 
 export function TestSaleOk() {
     return new SaleData({
@@ -13,7 +13,7 @@ export function TestSaleOk() {
             note: "(NOTE 2)"
         }],
         lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
+        acl: TestAcl(),
     })
 }
 
@@ -28,7 +28,7 @@ export interface SaleData {
     //itemsSold: ItemWithNumber[] // TODO: consider doing this!
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class SaleData {
     // Accept a single object containing the fields

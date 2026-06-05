@@ -1,5 +1,5 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {ACL} from "@/app/components/accessControlServer";
+import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {PlateSelector} from "@/app/components/plateClient";
@@ -30,6 +30,7 @@ export function TestPlugsOk(){
         disposed: Date.now()+40000,
         notes: [...testNotes],
         lastUpdated: 789,
+        acl: TestAcl(),
     })
 }
 export interface DowelType {
@@ -55,7 +56,7 @@ export interface PlugsData {
     disposed?: number
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
 export class PlugsData {
     // Accept a single object containing the fields

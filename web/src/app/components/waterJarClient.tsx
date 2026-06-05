@@ -21,7 +21,7 @@ import {
     NewEntryInput,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey,
+    OptionalSimpleKey, RequiredKey,
     SelectorWrapper,
     updateApiUrlFor,
 } from "@/app/components/common";
@@ -41,6 +41,7 @@ import {AssertTransfer} from "@/app/components/transferClient";
 import {AssertUser} from "@/app/components/userClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {IsValidAcl, MarshalAcl} from "@/app/components/accessControlClient";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -67,6 +68,15 @@ export function AssertWaterJar(input: any): asserts input is WaterJarData {
             throw new Error('WJ assertion failure: optional key ' + key + ' was not valid');
         }
     }
+    // complex optional keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        ['acl', IsValidAcl]
+    ])
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Transfer assertion failure: required key ' + key + ' was not valid');
+        }
+    }
     // complex optional array keys
     let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
@@ -87,12 +97,14 @@ export default function WaterJarDisplay(
     const [disposed, setDisposed] = useState<number | undefined>(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
     // Helper states
+    const [acl, setAcl] = useState(initial.acl)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const updateInitial = (updated: WaterJarData) => {
         setInitial(updated)
         setDisposed(updated.disposed)
         setNotes(InitialNotesState(updated.notes))
+        setErr(undefined)
     }
     const cookies = useContext(CookiesContext)
     const submit = () => {
@@ -103,7 +115,7 @@ export default function WaterJarDisplay(
         const body: any = {
             notes: notes,
             disposed: disposed,
-            writeTagTo: writeTagTo
+            acl: MarshalAcl(acl)
         }
         DoUpdateRequest("waterJar",initial._id, body, AssertWaterJar, allCookies(cookies))
             .then(v=>{
@@ -142,7 +154,6 @@ export default function WaterJarDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-            {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
             {readonly || <button className={"bottomButton greenButton"} onClick={(e)=>{
                 e.stopPropagation();
                 submit()

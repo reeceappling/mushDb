@@ -40,7 +40,7 @@ export function AssertUser(input: any): asserts input is UserData {
     //     }
     // }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    let complexOptionalKeys = new Map<string, (v: any) => boolean>([ // TODO: validate!
         ['perms', IsValidUserPerms]
     ])
     for (let [key, validator] of complexOptionalKeys) {
@@ -75,19 +75,21 @@ export default function UserDisplay(
         const updateInitial = (updated: UserData) => {
             setInitial(updated)
             setPerms(updated.perms || {admin: true, projects: []})
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const userSubmit = () => {
-            if ((!perms.admin && (initial.perms === undefined || initial.perms.admin)) || (perms.admin && (initial.perms && initial.perms.admin === false))) { // TODO: ensure ok
-                const body: any = perms
-                DoUpdateRequest("user",initial._id, body, AssertUser, allCookies(cookies))
-                    .then(v=>{
-                        updateInitial(new UserData(v))
-                    })
-                    .catch(e=>{
-                        setErr(JSON.stringify(e))
-                    })
-            }
+            console.error("user updating not currently implemented!") // TODO: fix!
+            // if ((!perms.admin && (initial.perms === undefined || initial.perms.admin)) || (perms.admin && (initial.perms && initial.perms.admin === false))) { // TODO: ensure ok
+            //     const body: any = perms
+            //     DoUpdateRequest("user",initial._id, body, AssertUser, allCookies(cookies))
+            //         .then(v=>{
+            //             updateInitial(new UserData(v))
+            //         })
+            //         .catch(e=>{
+            //             setErr(JSON.stringify(e))
+            //         })
+            // }
         }
         return (
 

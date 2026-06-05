@@ -6,7 +6,7 @@ import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/c
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     CreatedLinkFor,
     CreateNewEntryButton,
@@ -27,7 +27,7 @@ import {
     NewEntryInput,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey
+    OptionalKey, RequiredKey
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
@@ -59,14 +59,13 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
             throw new Error('SubRec assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    // complex required keys
+    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            console.error('SubRec assertion failure: optional key ' + key + ' was not valid');
-            throw new Error('SubRec assertion failure: optional key ' + key + ' was not valid');
+    for (let [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Substrate Recipe assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
@@ -98,7 +97,7 @@ export default function SubstrateRecipeDisplay(
         const [aliases, setAliases] = useState(initial.aliases || [])
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: SubstrateRecipeData) => {
             setInitial(updated)
             setName(updated.name)
@@ -106,13 +105,14 @@ export default function SubstrateRecipeDisplay(
             setAliases(updated.aliases || [])
             setNotes(InitialNotesState(updated.notes))
             setAcl(initial.acl)
+            setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const substrateSubmit = () => {
             const body: any = {
                 name: name,
-                standard: isStandard,
                 aliases: aliases,
+                standard: isStandard,
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
@@ -121,14 +121,13 @@ export default function SubstrateRecipeDisplay(
                     updateInitial(new SubstrateRecipeData(v))
                 })
                 .catch(e=>{
-                    setErr(JSON.stringify(e))
+                    setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
         const ovcs: OnViewCreatorTriCol[] = [
             {
                 txt: "Create Substrate Batch",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    // TODO: validate ok
                     return <NewSubstrateBatchForm recipe={data} handlers={{
                         onCreate: (newItem: SubstrateBatchData) => {
                             return onCreate([{
@@ -164,7 +163,7 @@ export default function SubstrateRecipeDisplay(
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
                                         closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
@@ -184,7 +183,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
     // TODO: TEMPLATE!!!!
-    const errHandler = ErrHandler(setErr)
+
     const cookies = useContext(CookiesContext)
     const submit = () => {
         // TODO: validate name is valid
@@ -193,6 +192,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
             aliases: aliases,
             standard: isStandard,
             notes: notes
+            // Initial perms are read by all and write only by owner
         }
         DoCreateRequest("substrateRecipe", body, AssertSubstrateRecipe, allCookies(cookies))
             .then(v=>{
@@ -231,8 +231,8 @@ export function SubstrateRecipeArea({id, headerLevel, txt, readonly, onSelect}: 
     if (id !== undefined) {
         const b58id = id
         linkArea =
-            <EntryLink props={{
-                openInNewTab: false/* TODO: ok?*/,
+            <EntryLinkForId props={{
+                openInNewTab: false,
                 displayId: b58id,
                 linkId: b58id,
                 entryType: "substrateRecipe"
