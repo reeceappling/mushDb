@@ -5,7 +5,6 @@ import {
     IsValidNote,
     NewEntryNotes,
     Note,
-    NoteEntriesGroup,
     NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
 import {
@@ -27,8 +26,7 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    ImportDisplayInput, ImportEntryFormWrapper,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, ImportEntryFormWrapper,
     ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
@@ -38,7 +36,6 @@ import {
     setFormImages,
 } from "@/app/components/common";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
     GensFormDisplay, MostRecentImageDisplay,
@@ -64,25 +61,24 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('StasisTube assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['pcRun', 'string'],
         ['waterSource', 'string'],
         ['species', 'string'],
@@ -96,31 +92,31 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
         ['sale', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('StasisTube assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Stasis Tube assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('StasisTube assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -128,7 +124,7 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
         ['contamination', IsValidContamination],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('StasisTube assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -148,12 +144,12 @@ export function StasisTubeImportDisplay() {
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
     const importEntry = () => {
-        let formData = new FormData()
+        const formData = new FormData()
         if(species===undefined){
             setErr("Species must be set!")
             return
         }
-        let dataObj: any = {
+        const dataObj: any = {
             creationDate:created,
             species: species._id,
             // optional
@@ -220,8 +216,8 @@ export default function StasisTubeDisplay(
         }
         const cookies = useContext(CookiesContext)
         const stasisTubeSubmit = () => {
-            let formData = new FormData()
-            let dataObj:any={
+            const formData = new FormData()
+            const dataObj:any={
                 knownFruitable: knownFruitable,
                 sale: sale,
                 disposed: disposed,
@@ -230,12 +226,12 @@ export default function StasisTubeDisplay(
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(images)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(images)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
+                const contamsInfo = resolveContamsFormData(contams)
+                const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
                 setFormData(formData, dataObj)
@@ -313,7 +309,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
             setErr("pc run must be defined")
             return
         }
-        let body:any={
+        const body:any={
             // TODO; consider adding optional water jar field
             pcRun: pcRun._id,
             notes: notes,

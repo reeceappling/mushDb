@@ -5,9 +5,6 @@ import {Additive} from "@/app/components/formSubcomponents/additives";
 import {Grain} from "@/app/components/formSubcomponents/grains";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {JarRecipeSelector, NewJarRecipeForm} from "@/app/components/jarRecipeClient";
 
 export function TestJarRecipeOK() {

@@ -1,10 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {SlantSelector} from "@/app/components/slantClient";
-import {SlantData} from "@/app/components/slantServer";
 import {SpeciesSelector} from "@/app/components/speciesClient";
 
 export function TestSpeciesOk() {

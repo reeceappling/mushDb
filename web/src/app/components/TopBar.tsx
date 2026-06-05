@@ -85,7 +85,7 @@ export default function TopBar() {
     // TODO: RECENTS FOR ALL ENTRIES?????
     const {dispatch} = useRfidReaderContext()
     const onReaderSelect = (s: string | undefined) => {
-        let session = "" // TODO: fix session
+        const session = "" // TODO: fix session
         ReadTagFunc(dispatch, session, s).then(id=>{
             // todo: do nothing with id result
         },err=>{
@@ -183,7 +183,7 @@ function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
                 })
 
             }, (err) => {
-                let toWrite = "failed to read tag: " + err
+                const toWrite = "failed to read tag: " + err
                 console.error(toWrite)
                 dispatch({
                     type: ActionTypes.SET_ERROR,
@@ -191,7 +191,7 @@ function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
                 })
             })
         } else {
-            let toWrite = "cannot read tag without knowing which reader to use!"
+            const toWrite = "cannot read tag without knowing which reader to use!"
             console.error(toWrite)
             dispatch({
                 type: ActionTypes.SET_ERROR,

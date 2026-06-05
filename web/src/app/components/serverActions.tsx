@@ -36,7 +36,7 @@ export async function WriteRfidTag(toWrite: string, writerName: string) { // TOD
     if (resp.status != 200) {
         throw "Error reading tag. Response status (" + resp.status + ")" + resp.statusText
     }
-    let contentType = resp.headers.get('Content-Type')
+    const contentType = resp.headers.get('Content-Type')
     if (contentType == null) {
         throw "Response had no content type!"
     }
@@ -63,7 +63,7 @@ export async function ReadRfidTag(session: string, readerName?: string) { // TOD
     if (resp.status != 200) {
         throw "Error reading tag. Response status code " + resp.status
     }
-    let contentType = resp.headers.get('Content-Type')
+    const contentType = resp.headers.get('Content-Type')
     if (contentType == null) {
         throw "Response had no content type!"
     }

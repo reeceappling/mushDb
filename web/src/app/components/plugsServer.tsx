@@ -1,9 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {PlateSelector} from "@/app/components/plateClient";
-import {PlateData} from "@/app/components/plateServer";
 import {PlugsSelector} from "@/app/components/plugsClient";
 
 export function TestPlugsOk(){

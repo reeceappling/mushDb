@@ -5,12 +5,8 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
-import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import {StasisTubeSelector} from "@/app/components/stasisTubeClient";
 
 export function TestStasisTubeOk(){

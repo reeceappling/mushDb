@@ -10,7 +10,6 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
 
 export function TestFruitingChamberOk(){

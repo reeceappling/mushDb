@@ -14,7 +14,6 @@ import {
     DisplayInput,
     DoCreateRequest,
     DoUpdateRequest,
-    ErrHandler,
     ExistingDualSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -26,8 +25,7 @@ import {
     NewEntryFormWrapper,
     NewEntryInput,
     NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey, RequiredKey
+    OptionalArrayOfType, RequiredKey
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
@@ -38,7 +36,6 @@ import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -47,33 +44,33 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['name', 'string'],
         ['standard', 'boolean'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             console.error('SubRec assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
             throw new Error('SubRec assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Substrate Recipe assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['aliases', IsString],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             console.error('SubRec assertion failure: optional array key ' + key + ' was not valid');
             throw new Error('SubRec assertion failure: optional array key ' + key + ' was not valid');

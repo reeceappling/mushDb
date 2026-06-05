@@ -18,7 +18,7 @@ export default function DateArea(
     const [month, setMonth] = useState<{n:number,err:string|undefined}>({n:whenDate.getMonth(),err:undefined}) // TODO: currently Jan==0?
     const [year, setYear] = useState<{n:number,err:string|undefined}>({n:whenDate.getFullYear(),err:undefined})
     const updateDay = (s: string) => {
-        let n = NumbersOnlyFromText(s)
+        const n = NumbersOnlyFromText(s)
         let err: string | undefined = undefined
         if(n<1||n>31){
             err = "Day must be [1,31]"
@@ -33,7 +33,7 @@ export default function DateArea(
         }
     }
     const updateMonth = (s: string) => {
-        let nInit = NumbersOnlyFromText(s)
+        const nInit = NumbersOnlyFromText(s)
 
         let err: string | undefined = undefined
         const n = nInit-1
@@ -51,7 +51,7 @@ export default function DateArea(
         }
     }
     const updateYear = (s: string) => {
-        let n = NumbersOnlyFromText(s)
+        const n = NumbersOnlyFromText(s)
         let err: string | undefined = undefined
         if(n<2024||n>(new Date()).getFullYear()){
             err = "invalid year, must be later than 2023 but not later than this year"
@@ -62,8 +62,8 @@ export default function DateArea(
         }
     }
     const setDateToNow = ()=>{
-        let now = Date.now()
-        let nowDate = new Date(now)
+        const now = Date.now()
+        const nowDate = new Date(now)
         setDay({n:nowDate.getDate(),err:undefined})
         setMonth({n:nowDate.getMonth(),err:undefined})
         setYear({n:nowDate.getFullYear(),err:undefined})

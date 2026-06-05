@@ -4,7 +4,7 @@ import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {NewSubstrateBatchForm, SubstrateBatchSelector} from "@/app/components/substrateBatchClient";
 
 export function TestSubstrateBatchOkStd(std: boolean){
-    let a: SubstrateBatchData = TestSubstrateBatchOk()
+    const a: SubstrateBatchData = TestSubstrateBatchOk()
     return a
 }
 export function TestSubstrateBatchOk(){

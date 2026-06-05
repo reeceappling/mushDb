@@ -36,10 +36,10 @@ export function GrainsSelector({current, onChange}:{current: Grain[], onChange: 
     const grainTypeAmountSelectors = ()=>{
         return <div>
             {current.map((g, idx)=>{
-                return <div>
+                return <div key={idx}>{/* TODO: ensure key ok*/}
                     <GrainsTypeSelector initial={g.grain} onSelect={(gr)=>{
                         if(gr){
-                            let newGs = [...current]
+                            const newGs = [...current]
                             newGs[idx].grain = gr
                             onChange(newGs)
                         }

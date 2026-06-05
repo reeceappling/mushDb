@@ -6,12 +6,8 @@ import {
     ExamplePicWithNotesIncoming,
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {JarSelector} from "@/app/components/jarClient";
-import {JarData} from "@/app/components/jarServer";
 import {LcSelector} from "@/app/components/lcClient";
 
 export function TestLcOk(){

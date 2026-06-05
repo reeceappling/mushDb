@@ -10,24 +10,19 @@ import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
-    createApiUrlFor,
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest, DoUpdateRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
     ListPageItems,
     ListPageTable,
     ListTableColumn,
     NewColumn,
     NewEntryFormWrapper,
     NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey, RequiredKey,
-    updateApiUrlFor,
+    OptionalArrayOfType, RequiredKey,
     viewUrlFor
 } from "@/app/components/common";
 import {redirect} from "next/navigation";
@@ -39,7 +34,6 @@ import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -49,30 +43,30 @@ export function AssertSale(input: any): asserts input is SaleData {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Sale assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Sale assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Sale assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -160,7 +154,7 @@ export function NewSaleForm(
         e.preventDefault()
 
 
-        let body = {
+        const body = {
             notes: notes,
             //acl: perms, // TODO: THIS! // TODO: NEED TO FIX SALES AS A WHOLE!
         }
@@ -249,7 +243,7 @@ export function SalesArea(
             <div>{"Associated Sales: "}</div>
             {(sales || []).map(s=>{
                 const b58id = s
-                return <div>
+                return <div key={b58id/* TODO: ensure ok*/}>
                     <EntryLinkForId props={{displayId:b58id,linkId:b58id,entryType:"sale",openInNewTab:true}}/>
                 </div>
             })}

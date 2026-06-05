@@ -3,13 +3,9 @@ import {
     ExamplePicWithNotesIncoming,
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {EntryPerms} from "@/app/components/perms";
+import CloseableSelector from "@/app/components/selector";
 import {ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/contaminations";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {MssSelector, NewMssForm} from "@/app/components/mssClient";
-import {MssData} from "@/app/components/mssServer";
 import {FruitSelector} from "@/app/components/fruitClient";
 
 export function TestFruitOK(){

@@ -33,7 +33,6 @@ import {
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
     RequiredArrayOfType,
     RequiredKey,
     ViewInNewTabButton
@@ -65,14 +64,14 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['name', 'string'],
         ['agar', 'number'],
         ['standard', 'boolean'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             console.error('Agar Recipe assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
             console.error(JSON.stringify(input));
@@ -82,20 +81,20 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     }
 
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Agar Recipe assertion failure: required key ' + key + ' was not valid');
         }
     }
 
     // complex required array keys
-    let complexRequiredArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredArrayKeys = new Map<string, (v: any) => boolean>([
         ['liquids', IsValidLiquid],
     ])
-    for (let [key, validator] of complexRequiredArrayKeys) {
+    for (const [key, validator] of complexRequiredArrayKeys) {
         if (!RequiredArrayOfType(key, input, validator)) {
             console.error('AgarRecipe assertion failure: required array key ' + key + ' was not valid');
             console.error(JSON.stringify(input));
@@ -105,14 +104,14 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     }
 
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['nutrients', IsValidNutrient],
         ['sugars', IsValidSugar],
         ['additives', IsValidAdditive],
         ['antibiotics', IsString],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             console.error('AgarRecipe assertion failure: optional array key ' + key + ' was not valid');
             console.error(JSON.stringify(input));
@@ -255,7 +254,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             setErr("at least one liquid must exist")
             return
         }
-        let body: any = {
+        const body: any = {
             name: name,
             standard: isStandard,
             agar: agar,

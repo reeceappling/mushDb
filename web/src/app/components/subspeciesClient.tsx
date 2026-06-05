@@ -7,63 +7,59 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {
-    AssertArrayResult, clientPostRequestHeaders, createApiUrlFor,
+    AssertArrayResult, clientPostRequestHeaders,
     CreateNewEntryButton, DisplayFormWrapper,
     DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey, RequiredKey, Subform, updateApiUrlFor,
+    OptionalArrayOfType, RequiredKey, Subform,
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {AssertSpecies, ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import { ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {
     AclDefaultAclDisplay,
     IsValidAcl, MarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {HandleErr} from "@/app/components/userClient";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
-import {EntryLinkWrapper, EntryLinkIdWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {AssertStasisTube} from "@/app/components/stasisTubeClient";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Subspecies assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl],
         ['defaultAcl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Subspecies assertion failure: required key ' + key + ' was not valid: ');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
         ['aliases', IsString],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Subspecies assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -224,7 +220,7 @@ export function ExistingSubSpeciesSelector(
             })
             .catch(ErrHandler(setErr));
     }, [species]);
-    let errArea = () => {
+    const errArea = () => {
         return <ErrorDisplay err={err} headerLevel={headerLevel}/>
     }
     const toggleButton = () => {

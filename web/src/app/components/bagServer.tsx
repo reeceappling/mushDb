@@ -1,10 +1,9 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {Contamination} from "@/app/components/formSubcomponents/contaminations";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {BagSelector, NewBagForm} from "@/app/components/bagClient";
+import {BagSelector} from "@/app/components/bagClient";
 
 export function TestBagOk(){ // TODO: DELETEME? // TODO: FIXME!
     return new BagData({

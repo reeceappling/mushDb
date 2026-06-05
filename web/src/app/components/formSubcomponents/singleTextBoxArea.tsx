@@ -10,13 +10,13 @@ export default function TextBoxArea(props: AreaProps<string>){
 function StringEntriesGroup({initialEntries, preexisting, readonly, updateParent}: GroupProps<string>){
     const [inputFields, setInputFields] = useState(initialEntries || [])
     const handleFormChangeText = (index: number, event: ChangeEvent<HTMLInputElement>) => {
-        let data = [...inputFields];
+        const data = [...inputFields];
         data[index].data = event.target.value
         updateParent(data)
         setInputFields(data);
     }
     const handleFormChangeText2 = (index: number, newVal: string) => {
-        let data = [...inputFields];
+        const data = [...inputFields];
         data[index].data = newVal
         updateParent(data)
         setInputFields(data);
@@ -31,7 +31,7 @@ function StringEntriesGroup({initialEntries, preexisting, readonly, updateParent
     }
     const removeFields = (index: number) => {
         return () => {
-            let data = [...inputFields];
+            const data = [...inputFields];
             data.splice(index, 1) // TODO: THIS WONT WORK PROPERLY WITH INDEX
             updateParent(data)
             setInputFields(data)
@@ -39,7 +39,7 @@ function StringEntriesGroup({initialEntries, preexisting, readonly, updateParent
     }
     const disableField = (index: number) => {
         return () => {
-            let data = [...inputFields]
+            const data = [...inputFields]
             data[index].disabled = !data[index].disabled
             updateParent(data)
             setInputFields(data)

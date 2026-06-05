@@ -4,7 +4,6 @@ import * as React from "react";
 import {ChangeEvent, SetStateAction, useEffect, useState} from "react";
 import {AllEntries, Data, GroupProps, RevertableAreaProps} from "@/app/components/formSubcomponents/shared";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
-import TextBox from "@/app/components/formSubcomponents/textbox";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 import {dataFor} from "@/app/components/common";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
@@ -72,12 +71,12 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
             {current.existing.map((n, i) => {
                 return <div key={i} className={"" + (n.disabled ? " disabled" : "")}>
                     <SingleNote value={n} readonly={readonly} updateParent={nd => {
-                        let out = structuredClone(current)
+                        const out = structuredClone(current)
                         out.existing[i] = structuredClone(nd)
                         updateCurrent(out)
                     }}/>
                     {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={()=>{
-                        let out = structuredClone(current)
+                        const out = structuredClone(current)
                         out.existing[i].disabled = !out.existing[i].disabled
                         updateCurrent(out)
                     }}/>}
@@ -100,7 +99,7 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
                 }
                 return <div key={i}> {/* TODO: should be able to rely on key for deletion because "deleted" new notes are still in-mem*/}
                     <SingleNote startEditing={true} updateParent={nd => {
-                        let out = structuredClone(current)
+                        const out = structuredClone(current)
                         out.new[i] = structuredClone(nd)
                         updateCurrent(out)
                     }}/>
@@ -116,7 +115,7 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
                 <button className={"basicButtonSmall"} onClick={(e) => { // TODO: button to create new
                     e.preventDefault()
                     if (!!current) {
-                        let out = structuredClone(current)
+                        const out = structuredClone(current)
                         out.new = [...current.new, createNewNote()]
                         updateCurrent(out)
                     } else {
@@ -163,13 +162,13 @@ export function NotesAreaViewSubcomponent({initial,updateParent,readonly}:{initi
     }
     const updateExisting = (updated:Data<Note>[])=>{
         setExisting(updated)
-        let out = currentClone()
+        const out = currentClone()
         out.existing = updated
         deliverUpdatesToParent(out)
     }
     const updateCreated = (updated:Data<Note>[])=>{
         setCreated(updated)
-        let out = currentClone()
+        const out = currentClone()
         out.new = updated
         deliverUpdatesToParent(out)
     }
@@ -181,12 +180,12 @@ export function NotesAreaViewSubcomponent({initial,updateParent,readonly}:{initi
             {existing.map((n, i) => {
                 return <div key={i} className={"existingNote" + (n.disabled ? " disabled" : "")}>
                     <SingleNoteV2 initial={initial[i]} readonly={readonly} updateParent={nd => {
-                        let updated = structuredClone(existing)
+                        const updated = structuredClone(existing)
                         updated[i] = structuredClone(nd)
                         updateExisting(updated)
                     }}/>
                     {readonly || <RemoveNoteButton disabled={n.disabled} click={() => {// TODO: does this need to be in a div?
-                        let updated = structuredClone(existing)
+                        const updated = structuredClone(existing)
                         updated[i].disabled = !n.disabled
                         updateExisting(updated)
                     }}/>}
@@ -229,12 +228,12 @@ export function NewNotesSubArea({count,readonly,updateParent}:{count:number,read
             }
             return <div key={i}>
                 <SingleNoteV2 readonly={false} startEditing={true} updateParent={nd => {
-                    let updated = structuredClone(notes)
+                    const updated = structuredClone(notes)
                     updated[i].data = structuredClone(nd.data)
                     propagateUpdate(updated)
                 }}/>
                 <RemoveNewNoteButton click={() => { // TODO: does this need to be in a div?
-                    let updated = structuredClone(notes)
+                    const updated = structuredClone(notes)
                     updated[i].disabled = true
                     propagateUpdate(updated)
                 }}/>
@@ -263,13 +262,13 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
             {current.existing.map((n, i) => {
                 return <div key={i} className={"" + (n.disabled ? " disabled" : "")}>
                     <SingleNote value={n} readonly={readonly} updateParent={nd => {
-                        let out = {...current}
+                        const out = {...current}
                         out.existing = [...out.existing]
                         out.existing[i] = nd
                         updateParent && updateParent(out)
                     }}/>
                     {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={() => {
-                            let out = structuredClone(current)
+                            const out = structuredClone(current)
                             out.existing[i].disabled = !current.existing[i].disabled
                             updateParent && updateParent(out)
                         }}/>}
@@ -289,14 +288,14 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
                 }
                 return <div key={i}>
                     <SingleNote startEditing={true} updateParent={nd => {
-                        let out = {...(current || {existing: [], new: []})}
+                        const out = {...(current || {existing: [], new: []})}
                         out.new[i] = nd
                         updateParent && updateParent(out)
                     }}/>
                     <RemoveNewNoteButton click={() => {
-                        let out = {...(current || {existing: [], new: []})}
+                        const out = {...(current || {existing: [], new: []})}
                         out.new[i].disabled = true;
-                        let toParent = {...out}
+                        const toParent = {...out}
                         toParent.new = toParent.new.filter(item => !item.disabled)
                         updateParent && updateParent(toParent)
                     }}/>
@@ -306,7 +305,7 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
                 <button className={"basicButtonSmall"} onClick={(e) => {
                     e.preventDefault()
                     if (!!current) {
-                        let out = {...current}
+                        const out = {...current}
                         out.new = [...current.new, {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}}]
                         updateParent && updateParent(out)
                     } else {
@@ -344,13 +343,13 @@ export function NotesGrid({
             {current.existing.map((n, i) => {
                 return <div key={i} className={"" + (n.disabled ? " disabled" : "")}>
                     <SingleNote value={n} readonly={readonly} updateParent={nd => {
-                        let out = structuredClone(current)
+                        const out = structuredClone(current)
                         out.existing = [...out.existing]
                         out.existing[i] = nd
                         updateParent && updateParent(out)
                     }}/>
                     {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={() => {
-                        let out = structuredClone(current)
+                        const out = structuredClone(current)
                         out.existing[i].disabled = !current.existing[i].disabled
                         updateParent && updateParent(out)
                     }}/>}
@@ -370,14 +369,14 @@ export function NotesGrid({
                 }
                 return <div key={i}> {/* TODO: CANNOT RELY ON KEY FOR DELETION*/}
                     <SingleNote startEditing={true} updateParent={nd => {
-                        let out = {...(current || {existing: [], new: []})}
+                        const out = {...(current || {existing: [], new: []})}
                         out.new[i] = nd
                         updateParent && updateParent(out)
                     }}/>
                     <RemoveNewNoteButton click={() => {
-                        let out = {...(current || {existing: [], new: []})}
+                        const out = {...(current || {existing: [], new: []})}
                         out.new[i].disabled = true;
-                        let toParent = {...out}
+                        const toParent = {...out}
                         toParent.new = toParent.new.filter(item => !item.disabled)
                         updateParent && updateParent(toParent)
                     }}/>
@@ -387,7 +386,7 @@ export function NotesGrid({
                 <button className={"basicButtonSmall"} onClick={(e) => {
                     e.preventDefault()
                     if (!!current) {
-                        let out = {...current}
+                        const out = {...current}
                         out.new = [...current.new, {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}}]
                         updateParent && updateParent(out)
                     } else {
@@ -424,14 +423,14 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
             {current.existing.map((n, i) => {
                 return <div key={i} className={"" + (n.disabled ? " disabled" : "")}>
                     <SingleNote value={n} readonly={readonly} updateParent={nd => {
-                        let out = structuredClone(current)
+                        const out = structuredClone(current)
                         out.existing = [...out.existing]
                         out.existing[i] = nd
                         updateParent && updateParent(out)
                     }}/>
                     {!readonly &&
                         <RemoveNoteButton disabled={current.existing[i].disabled} click={() => {
-                            let out = structuredClone(current)
+                            const out = structuredClone(current)
                             out.existing[i].disabled = !current.existing[i].disabled
                             updateParent && updateParent(out)
                         }}/>}
@@ -451,14 +450,14 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
                 }
                 return <div key={i}> {/* TODO: CANNOT RELY ON KEY FOR DELETION*/}
                     <SingleNote startEditing={true} updateParent={nd => {
-                        let out = {...(structuredClone(current) || {existing: [], new: []})}
+                        const out = {...(structuredClone(current) || {existing: [], new: []})}
                         out.new[i] = nd
                         updateParent && updateParent(out)
                     }}/>
                     <RemoveNewNoteButton click={() => {
-                        let out = {...(structuredClone(current) || {existing: [], new: []})}
+                        const out = {...(structuredClone(current) || {existing: [], new: []})}
                         out.new[i].disabled = true;
-                        let toParent = structuredClone(out)
+                        const toParent = structuredClone(out)
                         toParent.new = toParent.new.filter(item => !item.disabled)
                         updateParent && updateParent(toParent)
                     }}/>
@@ -468,7 +467,7 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
                 <button className={"basicButtonSmall"} onClick={(e) => {
                     e.preventDefault()
                     if (!!current) {
-                        let out = {...current}
+                        const out = {...current}
                         out.new = [...structuredClone(current.new), {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}}]
                         updateParent && updateParent(out)
                     } else {
@@ -586,13 +585,13 @@ export function SingleNote( // TODO: notes need a pretty major overhaul
     const [val, setVal] = useState(value || {data: {time: new Date().getTime(), note: ""}, disabled: false})
     const [editing, setEditing] = useState(startEditing || false)
     const handleChangeText = (event: ChangeEvent<HTMLInputElement>) => {
-        let data = {...val};
+        const data = {...val};
         data.data.note = event.target.value
         updateParent && updateParent(data)
         setVal(data)
     }
     const handleChangeDate = (newDate: number) => {
-        let data = {...val};
+        const data = {...val};
         data.data.time = newDate
         updateParent && updateParent(data)
         setVal(data)
@@ -653,7 +652,7 @@ export function SingleNoteV2(
     }
     return <div className={"note"}>
         <DateArea readonly={readonly || !editing} when={val.data.time} updateParent={(newDate)=>{
-            let updated = structuredClone(val);
+            const updated = structuredClone(val);
             updated.data.time = newDate
             handleChangeNote(updated)
         }}/>
@@ -668,7 +667,7 @@ export function SingleNoteV2(
                               e.stopPropagation();
                               //e.preventDefault();
                               console.log("new note value: "+e.target.value) // TODO: del
-                              let updated = structuredClone(val);
+                              const updated = structuredClone(val);
                               updated.data.note = e.target.value
                               handleChangeNote(updated)
                           }}
@@ -699,7 +698,7 @@ export function NoteEntriesGroup({
                                  }: GroupProps<Note>) {
     const [inputFields, setInputFields] = useState<Data<Note>[]>(initialEntries || [])
     const handleFormChangeText = (index: number, newVal: string) => {
-        let data = [...(structuredClone(inputFields) || [])];
+        const data = [...(structuredClone(inputFields) || [])];
         data[index].data.note = newVal
         updateParent(data)
         setInputFields(data);
@@ -715,19 +714,19 @@ export function NoteEntriesGroup({
         }
     }
     const changeDate = (index: number, newDate: number) => {
-        let data = [...(inputFields || [])];
+        const data = [...(inputFields || [])];
         data[index].data.time = newDate
         updateParent(data)
         setInputFields(data);
     }
     const addFields = () => {
-        let data = [...(inputFields || []), {data: {time: Date.now(), note: ''}, disabled: false}] // TODO: FIX DEFAULT
+        const data = [...(inputFields || []), {data: {time: Date.now(), note: ''}, disabled: false}] // TODO: FIX DEFAULT
         updateParent(data)
         setInputFields(data)
     }
     const removeFields = (index: number) => {
         return () => {
-            let data = [...(inputFields || [])];
+            const data = [...(inputFields || [])];
             data.splice(index, 1) // TODO: THIS WONT WORK PROPERLY WITH INDEX
             updateParent(data)
             setInputFields(data)
@@ -736,7 +735,7 @@ export function NoteEntriesGroup({
     const disableField = (index: number) => {
         return () => {
             //e.preventDefault()e: MouseEvent
-            let data = [...(inputFields || [])]
+            const data = [...(inputFields || [])]
             data[index].disabled = !data[index].disabled
             updateParent(data)
             setInputFields(data)

@@ -93,8 +93,8 @@ export function AntibioticEntriesGroup({
         updateParent([...(initialEntries || [])].filter((c, i) => c.data !== toRemove))
     }
     const disableField = (name: string) => { // TODO: unsure if this works properly
-        let data = [...(initialEntries || [])].map((v, i) => {
-            let val = v
+        const data = [...(initialEntries || [])].map((v, i) => {
+            const val = v
             if (val.data === name) {
                 val.disabled = !val.disabled
             }

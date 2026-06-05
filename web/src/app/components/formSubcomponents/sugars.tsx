@@ -87,7 +87,7 @@ export default function SugarsArea(props: AreaProps<Sugar>) {
 
 export function SugarEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Sugar[], updateParent: (l: Sugar[])=>void}){
     const handleSelect = (v: string) => {
-        let data = [...(currentEntries || []), {type: v, amount: 0, unit: ""}];
+        const data = [...(currentEntries || []), {type: v, amount: 0, unit: ""}];
         updateParent(data)
     }
     return <div>
@@ -112,17 +112,17 @@ export function SugarEntriesGroupForNew({currentEntries, updateParent}: {current
 // TODO: REMOVAL IS NOT MOVING THE TYPES UP! PROBABLY OVERHAUL
 export function SugarEntriesGroup({initialEntries, preexisting, readonly, updateParent, blacklist}: GroupProps<Sugar>) {
     const handleFormChangeSugarType = (index: number, event: ChangeEvent<HTMLInputElement>) => {
-        let data = initialEntries ? [...initialEntries] : []
+        const data = initialEntries ? [...initialEntries] : []
         data[index].data.type = event.target.value
         updateParent(data)
     }
     const handleSelSugarType = (index: number, newType: string) => {
-        let data = initialEntries ? [...initialEntries] : []
+        const data = initialEntries ? [...initialEntries] : []
         data[index].data.type = newType
         updateParent(data)
     }
     const handleFormChangeAmt = (index: number, amt: number) => {
-        let data = initialEntries ? [...initialEntries] : []
+        const data = initialEntries ? [...initialEntries] : []
         data[index].data.amount = amt
         if (isNaN(data[index].data.amount)) {
             console.log(amt + " could not be parsed to a number in handleFormChangeAmt in SugarEntriesGroup")
@@ -131,26 +131,26 @@ export function SugarEntriesGroup({initialEntries, preexisting, readonly, update
         updateParent(data)
     }
     const handleFormChangeUnit = (index: number, txt: string) => {
-        let data = [...(initialEntries || [])]
+        const data = [...(initialEntries || [])]
         data[index].data.unit = txt
         updateParent(data)
     }
     const addFields = (e: React.MouseEvent) => {
         e.preventDefault()
-        let data = [...(initialEntries || []), {
+        const data = [...(initialEntries || []), {
             data: {type: "NEW SUGAR TYPE", amount: 0.0, unit: 'NEW SUGAR UNIT'},
             disabled: false
         }]
         updateParent(data)
     }
     const removeFields = (index: number) => {
-        let data = [...(initialEntries || [])]
+        const data = [...(initialEntries || [])]
         data.splice(index, 1);
         updateParent(data)
     }
     const disableField = (name: string) => {
-        let data = [...(initialEntries || [])].map((v, i) => {
-            let val = v
+        const data = [...(initialEntries || [])].map((v, i) => {
+            const val = v
             if (val.data.type === name) {
                 val.disabled = !val.disabled
             }

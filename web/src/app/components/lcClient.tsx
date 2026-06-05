@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useEffect, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcData} from "@/app/components/lcServer";
@@ -16,19 +16,14 @@ import {GenerationInput} from "@/app/components/formSubcomponents/generationInpu
 import {
     ConfirmedCleanArea,
     ConfirmedCleanSelector,
-    createApiUrlFor,
     CreatedLinkFor,
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
     DoUpdateMultipartRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse,
-    importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     ListPageItems,
@@ -46,13 +41,10 @@ import {
     resolvePicsFormData,
     setFormData,
     setFormImages,
-    updateApiUrlFor,
-    viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
     GensFormDisplay,
@@ -67,7 +59,6 @@ import {
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {LcRecipeData, LcRecipeSelectorCloseable} from "@/app/components/lcRecipeServer";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -91,11 +82,8 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {LcRecipeArea} from "@/app/components/lcRecipeClient";
-import {AssertJar} from "@/app/components/jarClient";
-import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -103,20 +91,20 @@ export function AssertLc(input: any): asserts input is LcData {
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['recipe', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Lc assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['pcRun', 'string'],
         ['species', 'string'],
         ['subspecies', 'string'],
@@ -129,31 +117,31 @@ export function AssertLc(input: any): asserts input is LcData {
         ['knownFruitable', 'boolean'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Lc assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl],
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Lc assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Lc assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -161,7 +149,7 @@ export function AssertLc(input: any): asserts input is LcData {
         ['contamination', IsValidContamination],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Lc assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -182,7 +170,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
     const ImportLc = () => {
-        let formData = new FormData()
+        const formData = new FormData()
         if (species === undefined) {
             setErr("Species must be set!")
             return
@@ -191,7 +179,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
             setErr("Recipe must be set!")
             return
         }
-        let bodyObj: any = {
+        const bodyObj: any = {
             creationDate: created,
             recipe: recipe._id,
             species: species._id,
@@ -257,8 +245,8 @@ export default function LcDisplay(
         }
         const cookies = useContext(CookiesContext)
         const lcSubmit = () => {
-            let formData = new FormData()
-            let bodyObj: any = {
+            const formData = new FormData()
+            const bodyObj: any = {
                 notes: notes,
                 // Optionals
                 confirmedClean: confirmedClean,
@@ -269,12 +257,12 @@ export default function LcDisplay(
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(images)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(images)
+                const newImages = picsInfo.images
                 bodyObj.images = picsInfo.obj
                 // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
+                const contamsInfo = resolveContamsFormData(contams)
+                const newContams = contamsInfo.images
                 bodyObj.contams = contamsInfo.obj
                 // Set data on form
                 setFormData(formData, bodyObj)
@@ -398,7 +386,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             setErr("A PC Run must be selected")
             return
         }
-        let body: any = {
+        const body: any = {
             //creationDate: creationDate, // made serverside
             recipe: lcRecipe,
             pcRun: pcRun,
@@ -450,7 +438,7 @@ export function LcListPageTable({data, onClick, withLink}: ListPageItems<LcData>
 }
 
 export function LcSelectorTable({data, onClick}: ListPageItems<LcData>) {
-    let cols: ListTableColumn<LcData>[] = [
+    const cols: ListTableColumn<LcData>[] = [
         NewColumn("ID", (v) => v._id),
         NewColumn("Made", (v) => {
             return NumberToDateStr(v.creationDate)

@@ -1,9 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {LcSelector} from "@/app/components/lcClient";
-import {LcData} from "@/app/components/lcServer";
 import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
 
 export function TestLcSyringeOk(){

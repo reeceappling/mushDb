@@ -1,13 +1,8 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {
-    Contamination,
-} from "@/app/components/formSubcomponents/contaminations";
-import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
-import {EntryPerms} from "@/app/components/perms";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+
+
+import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {AgarBatchSelector, NewAgarBatchForm} from "@/app/components/agarBatchClient";
-import {AgarBatchData, ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {NewWaterJarForm, WaterJarSelector} from "@/app/components/waterJarClient";
 
 // export function TestWaterOk(){

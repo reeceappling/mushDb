@@ -409,7 +409,7 @@ export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr
     }
 
     const selectHandler = (e: SyntheticEvent<HTMLSelectElement, Event>) => {
-        let val = boolForStr(e.currentTarget.value)
+        const val = boolForStr(e.currentTarget.value)
         updateParent && updateParent(val)
         setSelected(val)
     }
@@ -538,7 +538,7 @@ export function DisposedSaleContamArea(
             </div>
         </div>
     }
-    let contamToUse: Contamination = {time: 0, confirmed: false, mold: false, bacteria: false, location: ""}
+    const contamToUse: Contamination = {time: 0, confirmed: false, mold: false, bacteria: false, location: ""}
     if (contams !== undefined && contams.length === 0) {
         contamToUse.time = contams[contams.length - 1].time
         for (let i = 0; i < contams.length; i++) {
@@ -562,12 +562,12 @@ export function DisposedSaleContamArea(
         if (contamToUse.mold && contamToUse.bacteria) {
             contamType = "mold, bacteria"
         }
-        let lastContamPart = (" last cited " + NumberToDate(new Date(contamToUse.time)))
+        const lastContamPart = (" last cited " + NumberToDate(new Date(contamToUse.time)))
         contamLine = <div>
             <div>{(contamToUse.confirmed ? "Confirmed" : "Unconfirmed") + " contamination (" + contamType + ")" + lastContamPart}</div>
         </div>
     }
-    let disposedSection = <div>
+    const disposedSection = <div>
         {disposed ? "Disposed on " + NumberToDate(new Date(disposed)) : "Available"}{/* TODO: DIFFERENT STYLING BASED ON ANSWER?*/}
     </div>
     return <div>
@@ -617,7 +617,7 @@ export async function getTypeFor(id: string) { // TODO: ensure this works????
 }
 
 export async function getPathFor(id: string) { // TODO: ensure this works????
-    let resp = await fetch(BaseExternalUrl + "/db/pathFor/" + id, {
+    const resp = await fetch(BaseExternalUrl + "/db/pathFor/" + id, {
         method: "GET",
         headers: clientPostRequestHeaders,
     })
@@ -674,10 +674,10 @@ export function CreateNewEntryButton(handler: { onSubmit: () => void }) {
 }
 
 export function resolvePicsFormData(picsIn: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>) {
-    let newImages: File[] = new Array(picsIn.new.length)
-    let dataOut = {existing: picsIn.existing, new: new Array(picsIn.new.length)}
+    const newImages: File[] = new Array(picsIn.new.length)
+    const dataOut = {existing: picsIn.existing, new: new Array(picsIn.new.length)}
     for (let i = 0; i < picsIn.new.length; i++) {
-        let toSend = picsIn.new[i]
+        const toSend = picsIn.new[i]
         if (toSend.img === undefined) {
             throw new Error("new image " + i + " is undefined")
         } else {
@@ -697,8 +697,8 @@ export function resolvePicsFormData(picsIn: SplitAllEntries<PicWithNotesForm, Ne
 }
 
 export function resolveContamsFormData(inp: SplitAllEntries<ContaminationForm, NewContaminationForm>) {
-    let conts: (File | undefined)[] = new Array(inp.new.length)
-    let dataOut = {existing: inp.existing, new: new Array(inp.new.length)}
+    const conts: (File | undefined)[] = new Array(inp.new.length)
+    const dataOut = {existing: inp.existing, new: new Array(inp.new.length)}
     for (let i = 0; i < inp.new.length; i++) {
         dataOut.new[i] = {
             time: inp.new[i].time,
@@ -774,9 +774,9 @@ export function HandleTxtResponse(res: Response): Promise<string> {
     return res.text()
 }
 
-export function ErrHandler(setErr: (err:any)=>void): (err:any)=>void { // TODO: find any other places where we can use this
+export function ErrHandler(setErr: (err:any)=>void): (err:any)=>void {
     return (e: any) => {
-        setErr(JSON.stringify(e))
+        setErr("error: "+JSON.stringify(e))
     }
 }
 
@@ -964,7 +964,7 @@ export function dataFor<Type>(vals?: Type[]): Data<Type>[] {
 export function FloatInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
     const [val, setVal] = useState<number>(initial || 0)
     const updateNumber = (s: string) => {
-        let n = NumbersOnlyFromText(s)
+        const n = NumbersOnlyFromText(s)
         setVal(n)
         onChange(n)
     }
@@ -1069,11 +1069,11 @@ export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) =>
     }
 
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['recent', validatorForAssertion(validateEntry)], // TODO: ensure ok
         ['standard', validatorForAssertion(validateEntry)],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             console.error('optional array key ' + key + ' was not valid')
             throw new Error('optional array key ' + key + ' was not valid');

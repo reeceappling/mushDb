@@ -21,18 +21,13 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
-    createApiUrlFor,
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
     DoUpdateMultipartRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse,
-    importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     ListPageItems,
@@ -48,19 +43,14 @@ import {
     OptionalSimpleKey, RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData,
-    SendMultipartRequest,
     setFormData,
     setFormImages,
-    updateApiUrlFor,
-    viewUrlFor,
     YesNoSelector,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {
-    DisposedDisplay,
     ErrorDisplay,
     GensFormDisplay,
     MostRecentImageDisplay,
@@ -78,7 +68,6 @@ import {
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
@@ -94,25 +83,24 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['agarBatch', 'string'],
         ['species', 'string'],
         ['subspecies', 'string'],
@@ -129,31 +117,31 @@ export function AssertPlate(input: any): asserts input is PlateData {
         ['wetAtCooledTime', 'boolean'],
         ['agarOnOutsideAtPourTime', 'boolean'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl],
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Plate assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -161,7 +149,7 @@ export function AssertPlate(input: any): asserts input is PlateData {
         ['contamination', IsValidContamination],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -223,8 +211,8 @@ export default function PlateDisplay(
     const cookies = useContext(CookiesContext)
     const submit = () => {
         console.log("creating update request")
-        let formData = new FormData()
-        let dataObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             knownFruitable: knownFruitable,
             sale: sale,
             disposed: disposed,
@@ -240,11 +228,11 @@ export default function PlateDisplay(
         try {
 
             // Pics
-            let picsInfo = resolvePicsFormData(images)
+            const picsInfo = resolvePicsFormData(images)
             dataObj.images = picsInfo.obj
             setFormImages(formData, "newPic", picsInfo.images)
             // Contams
-            let contamsInfo = resolveContamsFormData(contams)
+            const contamsInfo = resolveContamsFormData(contams)
             dataObj.contams = contamsInfo.obj
             setFormImages(formData, "newContam", contamsInfo.images)
             // Set data on form
@@ -455,8 +443,8 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             setErr("Species must be set!")
             return
         }
-        let formData = new FormData()
-        let dataObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             creationDate: created,
             species: species._id, // TODO: can this be optional? Importing existing uninnoculated plates?
             // Optionals
@@ -471,14 +459,6 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
         }
         setFormData(formData, dataObj)
         MultipartImportRequest(formData, "plate", AssertPlate, setErr, allCookies(cookies))
-        // TODO: revert if not work: SendMultipartRequest(BaseExternalUrl + "/db/import/plate", cookies, formData)
-        // SendMultipartRequest2(importApiUrlFor("plate"), formData)
-        //     .then(HandleJsonResponse)
-        //     .then(newItem => {
-        //         AssertPlate(newItem)
-        //         redirect(viewUrlFor("plate", newItem._id))
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"plate"}>
         {err != undefined && <div>{"Error: " + err}</div>}

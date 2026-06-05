@@ -11,6 +11,7 @@ import {DepthContext} from "@/app/components/formSubcomponents/depthContext/dept
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import Image from "next/image";
 
 export const ExampleImageLocation: string = "test.jpg"
 
@@ -56,7 +57,7 @@ export function InitialContamState(contamination?: Contamination[]): SplitAllEnt
     return {
         existing:
             contamination === undefined ? [] : contamination.map((ctn) => {
-                let out: Data<ContaminationForm> = {
+                const out: Data<ContaminationForm> = {
                     data: {
                         time: ctn.time,
                         confirmed: ctn.confirmed,
@@ -167,7 +168,7 @@ export function ContamsRows({initial, updateParent, readonly}: {
         }
         return <RemoveToggle disabled={current[i].disabled} keptTxt={"Delete"} removedTxt={"Don't delete"}
                              keptClass={"removeButtonSmall"} removedClass={"basicButtonSmall"} click={() => {
-            let updated = structuredClone(current)
+            const updated = structuredClone(current)
             updated[i].disabled = !updated[i].disabled
             doUpdate(updated)
         }}/>
@@ -181,9 +182,12 @@ export function ContamsRows({initial, updateParent, readonly}: {
             return <div key={i} className={"contentsOnly contamRow" + disabledClass}>
                 <div className={"picLeft" + disabledClass}>
                     {(ctm.data.location !== undefined) &&
-                        <img className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
+                        <Image className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
                              src={ImageLocationFor(ctm.data.location)}
                              alt={"existing contamination image " + i}/>
+                        // <img className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
+                        //      src={ImageLocationFor(ctm.data.location)}
+                        //      alt={"existing contamination image " + i}/>
                     }
                     {disableBtn}
                 </div>
@@ -214,7 +218,7 @@ export function ContamsRows({initial, updateParent, readonly}: {
                                    checked={ctm.data.bacteria}
                                    onChange={e => {
                                        e.stopPropagation();
-                                       let updated = structuredClone(current)
+                                       const updated = structuredClone(current)
                                        updated[i].data.bacteria = !ctm.data.bacteria
                                        updated[i].data.confirmed == !ctm.data.bacteria || ctm.data.mold
                                        doUpdate(updated)
@@ -226,7 +230,7 @@ export function ContamsRows({initial, updateParent, readonly}: {
                             <input className={"inline"} type={'checkbox'} disabled={init.mold}
                                    checked={ctm.data.mold}
                                    onChange={e => {
-                                       let updated = structuredClone(current)
+                                       const updated = structuredClone(current)
                                        updated[i].data.mold = !ctm.data.mold
                                        updated[i].data.confirmed == !ctm.data.mold || ctm.data.bacteria
                                        doUpdate(updated)
@@ -236,7 +240,7 @@ export function ContamsRows({initial, updateParent, readonly}: {
                 </div>
                 <div className={"inline" + disabledClass}>
                     <NotesFormArea readonly={readonly} initial={init.notes} updateParent={nts => {
-                        let updated = structuredClone(current)
+                        const updated = structuredClone(current)
                         updated[i].data.notes = nts
                         doUpdate(updated)
                     }}/>
@@ -278,12 +282,12 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
                 return <div key={i} className={"contentsOnly contamRow"}>
                     <div className={"picLeft"}>
                         <ImageSelector updateParent={(f) => {
-                            let updated = structuredClone(current)
+                            const updated = structuredClone(current)
                             updated[i].data.file = f
                             update(updated)
                         }}/>
                         <button className={"removeButtonSmall"} onClick={() => { // TODO: ensure works
-                            let updated = structuredClone(current)
+                            const updated = structuredClone(current)
                             updated[i].disabled = true
                             update(updated)
                         }}>{"REMOVE THIS CONTAM"}</button>
@@ -302,7 +306,7 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
                                 <div className={"inline"}>{"Bacteria: "}</div>
                                 <input className={"inline"} type={'checkbox'} checked={ctm.data.bacteria}
                                        onChange={e => {
-                                           let updated = structuredClone(current)
+                                           const updated = structuredClone(current)
                                            updated[i].data.bacteria = !ctm.data.bacteria
                                            // TODO: CHANGE HOW CONFIRMED WORKS!
                                            updated[i].data.confirmed = ctm.data.bacteria || ctm.data.mold
@@ -316,7 +320,7 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
                                 <div className={"inline"}>{"Mold: "}</div>
                                 <input className={"inline"} type={'checkbox'} checked={ctm.data.mold}
                                        onChange={e => {
-                                           let updated = structuredClone(current)
+                                           const updated = structuredClone(current)
                                            updated[i].data.mold = !ctm.data.mold
                                            // TODO: CHANGE HOW CONFIRMED WORKS!
                                            updated[i].data.confirmed = ctm.data.mold || ctm.data.bacteria
@@ -327,7 +331,7 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
                     </div>
                     <div className={"inline"}>
                         <NotesFormArea readonly={false} initial={[]} updateParent={nts => {
-                            let updated = structuredClone(current)
+                            const updated = structuredClone(current)
                             updated[i].data.notes = nts.new.map(n => {
                                 return n.data
                             })
@@ -339,7 +343,7 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
         </div>
         {!readonly && <div className={"centerH gapTop"}>
             <button className={"greenButton"} onClick={() => {
-                let updated = [...structuredClone(current), {
+                const updated = [...structuredClone(current), {
                     data: {
                         time: Date.now(), confirmed: false, file: undefined,
                         bacteria: false, mold: false, notes: [],

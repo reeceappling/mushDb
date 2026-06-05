@@ -4,7 +4,7 @@ import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {NewSubstrateRecipeForm, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
 
 export function TestSubstrateRecipeOkStd(std: boolean){
-    let a: SubstrateRecipeData = TestSubstrateRecipeOk()
+    const a: SubstrateRecipeData = TestSubstrateRecipeOk()
     a.standard =std
     return a
 }

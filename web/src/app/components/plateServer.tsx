@@ -3,12 +3,8 @@ import {
     Contamination,
 } from "@/app/components/formSubcomponents/contaminations";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
-import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {PlateSelector} from "@/app/components/plateClient";
 
 export function TestPlateOk(){

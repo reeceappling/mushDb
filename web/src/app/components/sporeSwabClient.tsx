@@ -2,15 +2,11 @@
 
 import React, {JSX, useContext, useState} from "react";
 import {
-    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoCreateRequestMultipart, DoUpdateRequest, ErrHandler,
+    DisplayInput, DoCreateRequest, DoUpdateRequest,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse,
-    importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     IsString,
@@ -21,10 +17,8 @@ import {
     NewEntryFormWrapper,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
     OptionalSimpleKey, RequiredKey,
-    SendMultipartRequest,
-    setFormData, updateApiUrlFor, viewUrlFor
+    setFormData
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -47,8 +41,6 @@ import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
-import {redirect} from "next/navigation";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
@@ -57,10 +49,8 @@ import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SaleArea} from "@/app/components/saleClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {OnViewCreatorsTriColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
-import {AssertSporePrint} from "@/app/components/sporePrintClient";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -71,45 +61,45 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['parent', 'string'],
         ['parentType', 'string'],
         ['subspecies', 'string'],
         ['sale', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Swab assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Spore Swab assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', IsString],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Swab assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -131,8 +121,8 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
             setErr("A species must be selected")
             return
         }
-        let formData = new FormData()
-        let dataObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             creationDate: swabDate,
             species: species._id,
             // optional
@@ -188,7 +178,7 @@ export default function SporeSwabDisplay(
         }
         const cookies = useContext(CookiesContext)
         const submit = () => {
-            let body: any = {
+            const body: any = {
                 sale: sale,
                 disposed: disposed,
                 notes: notes,
@@ -264,7 +254,7 @@ export function NewSporeSwabForm(
             setErr("Parent must be selected")
             return
         }
-        let body: any = {
+        const body: any = {
             parent: parent,
             notes: notes,
             writeTagTo: writeTagTo,

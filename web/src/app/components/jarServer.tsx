@@ -9,11 +9,7 @@ import {
     ExamplePicsWithNotesIncoming
 } from "@/app/components/formSubcomponents/contaminations";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {JarSelector} from "@/app/components/jarClient";
 
 export function TestJarOK(){

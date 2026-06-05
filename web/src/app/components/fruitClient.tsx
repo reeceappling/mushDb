@@ -5,7 +5,6 @@ import {
     IsValidNote,
     NewEntryNotes,
     Note,
-    NotesAreaInline,
     NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
 import {
@@ -22,11 +21,10 @@ import {
     NewPicWithNotesForm,
     PicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {AddToTransfers, TransfersOutDisplay} from "@/app/components/transferClient";
+import {TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     CreatedLinkFor,
     DisplayFormWrapper, DoCreateRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -59,7 +57,6 @@ import {FruitData} from "@/app/components/fruitServer";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NewSporePrintForm} from "@/app/components/sporePrintClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
@@ -71,11 +68,10 @@ import {ACL} from "@/app/components/accessControlServer";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import {SporePrintData} from "@/app/components/sporePrintServer";
-import {OnViewCreatorsQuadColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
+import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -83,58 +79,58 @@ export function AssertFruit(input: any): asserts input is FruitData {
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Bag assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['subspecies', 'string'],
         ['genSpore', 'number'],
         ['parentType', 'string'],
         ['parent', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Bag assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl],
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Plate assertion failure: required key ' + key + ' was not valid');
         }
     }
 
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Fruit assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', IsString],
         ['prints', IsString],
         ['pics', IsValidPicWithNotesIncoming],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Bag assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -198,16 +194,16 @@ export default function FruitDisplay(
         const cookies = useContext(CookiesContext)
         const fruitSubmit = () => {
             // disposed, notes, existing pics
-            let formData = new FormData()
-            let dataObj: any = {
+            const formData = new FormData()
+            const dataObj: any = {
                 notes: notes,
                 disposed: disposed,
                 acl: acl,
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(pics)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(pics)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Set data on form
                 setFormData(formData, dataObj)
@@ -313,8 +309,8 @@ export function NewFruitForm(
 
     const cookies = useContext(CookiesContext)
     const newFruitSubmit = () => {
-        let formData = new FormData()
-        let dataObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             parentId: parentId,
             parentType: parentType,
             harvestDate: harvestDate,
@@ -330,7 +326,7 @@ export function NewFruitForm(
                 }
             })
             for (let i = 0; i < pics.length; i++) {
-                let imgi = pics[i].img
+                const imgi = pics[i].img
                 if (imgi === undefined) {
                     setErr("new image #" + i + " was not set!")
                     return
@@ -384,8 +380,8 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
             setErr("Species must be set!")
             return
         }
-        let formData = new FormData()
-        let dataObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             parentType: parentType,
             species: species._id,
             notes: notes,

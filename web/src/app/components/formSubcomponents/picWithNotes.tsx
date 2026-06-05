@@ -20,7 +20,7 @@ export interface NewPicWithNotesForm {
 }
 
 export function InitialPicsEntries(initialPics?: PicWithNotesIncoming[]): SplitAllEntries<PicWithNotesForm,NewPicWithNotesForm>{
-    let initialEntries: Data<PicWithNotesForm>[] = initialPics===undefined?[]:initialPics.map((p)=>{
+    const initialEntries: Data<PicWithNotesForm>[] = initialPics===undefined?[]:initialPics.map((p)=>{
         return {
             data:{
                 time:p.time,

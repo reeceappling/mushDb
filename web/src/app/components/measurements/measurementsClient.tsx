@@ -54,12 +54,12 @@ export function TimespanProvider(
         endTime: props.initialEndTimeMs
     });
     const setStartTime = (st: number) => {
-        let upd = {...timespan}
+        const upd = {...timespan}
         upd.startTime = st;
         setTimespan(upd)
     }
     const setEndTime = (et?: number) => {
-        let upd = {...timespan}
+        const upd = {...timespan}
         upd.endTime = et;
         setTimespan(upd)
     }

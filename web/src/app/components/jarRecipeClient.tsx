@@ -21,17 +21,13 @@ import SugarsArea, {
     SugarEntriesGroupForNew
 } from "@/app/components/formSubcomponents/sugars";
 import {
-    createApiUrlFor,
     CreatedLinkFor, DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingDualSelector, FlexedArea,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingDualSelector, FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
-    RequiredArrayOfType, RequiredKey, updateApiUrlFor
+    RequiredArrayOfType, RequiredKey,
 } from "@/app/components/common";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
@@ -39,21 +35,17 @@ import AdditivesArea, {
     AdditiveEntriesGroupForNew,
     IsValidAdditive
 } from "@/app/components/formSubcomponents/additives";
-import {JarRecipeData, JarRecipeSelectorCloseable} from "@/app/components/jarRecipeServer";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {Grain, GrainsSelector, IsValidGrain} from "@/app/components/formSubcomponents/grains";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AssertGrainBatch, NewGrainBatchForm} from "@/app/components/grainBatchClient";
+import {NewGrainBatchForm} from "@/app/components/grainBatchClient";
 import {GrainBatchData} from "@/app/components/grainBatchServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
-import {AssertJar} from "@/app/components/jarClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
-import CloseableSelector from "@/app/components/selector";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -61,33 +53,33 @@ export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['name', 'string'],
         ['standard', 'boolean'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Grain Jar Recipe assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Jar Recipe assertion failure: required key ' + key + ' was not valid');
         }
     }
 
     // complex required array keys
-    let complexRequiredArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredArrayKeys = new Map<string, (v: any) => boolean>([
         ['grains', IsValidGrain], // TODO: ensure length > 0
     ])
-    for (let [key, validator] of complexRequiredArrayKeys) {
+    for (const [key, validator] of complexRequiredArrayKeys) {
         if (!RequiredArrayOfType(key, input, validator)) {
             throw new Error('Grain Jar Recipe assertion failure: required array key ' + key + ' was not valid');
         }
@@ -96,13 +88,13 @@ export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
         throw new Error('Grain Jar Recipe assertion failure: must have at least 1 grain type');
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['nutrients', IsValidNutrient],
         ['sugars', IsValidSugar],
         ['additives', IsValidAdditive],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Grain Jar Recipe assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -246,7 +238,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
             setErr("Grains must be set!")
             return
         }
-        let gs = grains || []
+        const gs = grains || []
         let totalPct = 0
         for (let i = 0; i < gs.length; i++) {
             if (gs[i].percentage < 0 || gs[i].percentage > 100) {
@@ -377,7 +369,7 @@ export function JarRecipeListPageTable({data, onClick, withLink}: ListPageItems<
 }
 
 export function JarRecipeSelectorTable({data, onClick}: ListPageItems<JarRecipeData>) {
-    let cols: ListTableColumn<JarRecipeData>[] = [
+    const cols: ListTableColumn<JarRecipeData>[] = [
         NewColumn("Name", (v) => v.name), // TODO: shortname?
         NewColumn("ID", (v) => v._id),
         NewColumn("Last Updated", (v) => {

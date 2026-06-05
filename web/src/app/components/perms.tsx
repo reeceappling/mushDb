@@ -1,9 +1,3 @@
-import {useEffect, useState} from "react";
-import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {useCookies} from "react-cookie";
-import {SelectorFor} from "@/app/components/selector";
-import {GetSessionUserProjects, NumberToPerm, PermToNumber} from "@/app/components/projectClient";
-import Textbox from "@/app/components/formSubcomponents/textbox";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {CheckArrayType, clientPostRequestHeaders, HandleTxtResponse, IsString} from "@/app/components/common";
 
@@ -64,13 +58,13 @@ export type ProjectPermSubset = {
 }
 
 export function filterProjectPermSubset(ppss: ProjectPermSubset, removeReads: boolean){
-    let out: ProjectPermSubset = {...ppss}
+    const out: ProjectPermSubset = {...ppss}
     if(!removeReads){
         return out
     }
     let toKeep: number[] = []
 
-    for(var i=0;i<ppss.ids.length;i++){
+    for(let i=0;i<ppss.ids.length;i++){
         if(ppss.canWrite){
             toKeep = [...toKeep, i]
         }
@@ -178,7 +172,7 @@ export function PermissionSelector({dontShowBelow,canWrite,onChange}:permSelecto
     return (
         <select className={"tailwindSelector"} value={valueFor(canWrite)} onChange={(e)=>onSelect(e.currentTarget.value)}>
             {optionsFor(dontShowBelow).map((str: string)=>{
-                return <option value={str}>{str}</option>
+                return <option key={str/* TODO: ensure ok*/} value={str}>{str}</option>
             })}
         </select>
     )

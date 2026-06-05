@@ -5,7 +5,7 @@ import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {LcRecipeData, LcRecipeSelectorCloseable} from "@/app/components/lcRecipeServer";
+import {LcRecipeData} from "@/app/components/lcRecipeServer";
 import LiquidsArea, {
     IsValidLiquid,
     Liquid,
@@ -22,18 +22,15 @@ import SugarsArea, {
     SugarEntriesGroupForNew
 } from "@/app/components/formSubcomponents/sugars";
 import {
-    createApiUrlFor,
     CreatedLinkFor,
     dataFor,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn,
     NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
-    RequiredArrayOfType, RequiredKey, updateApiUrlFor
+    RequiredArrayOfType, RequiredKey,
 } from "@/app/components/common";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
@@ -42,63 +39,60 @@ import AdditivesArea, {
     IsValidAdditive
 } from "@/app/components/formSubcomponents/additives";
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AssertLc, NewLcForm} from "@/app/components/lcClient";
+import {NewLcForm} from "@/app/components/lcClient";
 import {LcData} from "@/app/components/lcServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
-import {AssertJarRecipe} from "@/app/components/jarRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['name', 'string'],
         ['standard', 'boolean'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Agar Recipe assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('LcRecipe assertion failure: required key ' + key + ' was not valid');
         }
     }
 
     // complex required array keys
-    let complexRequiredArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredArrayKeys = new Map<string, (v: any) => boolean>([
         ['liquids', IsValidLiquid],
     ])
-    for (let [key, validator] of complexRequiredArrayKeys) {
+    for (const [key, validator] of complexRequiredArrayKeys) {
         if (!RequiredArrayOfType(key, input, validator)) {
             throw new Error('LcRecipe assertion failure: optional array key ' + key + ' was not valid. {' + JSON.stringify(input[key]) + '}{' + JSON.stringify(input) + '}');
         }
     }
 
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['nutrients', IsValidNutrient],
         ['sugars', IsValidSugar],
         ['additives', IsValidAdditive],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('LcRecipe assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -355,7 +349,7 @@ export function LcRecipeListPageTable({data, onClick, withLink}: ListPageItems<L
 }
 
 export function LcRecipeSelectorTable({data, onClick}: ListPageItems<LcRecipeData>) {
-    let cols: ListTableColumn<LcRecipeData>[] = [
+    const cols: ListTableColumn<LcRecipeData>[] = [
         NewColumn("ID", (v) => v._id),
         NewColumn("Name", (v) => v.name), // TODO: shortname?
         NewColumn("Last Updated", (v) => {

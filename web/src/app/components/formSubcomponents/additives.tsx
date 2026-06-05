@@ -86,7 +86,7 @@ export function AdditiveEntriesGroupForNew({currentEntries, updateParent}: {
     updateParent: (l: Additive[]) => void
 }) {
     const handleSelect = (v: string) => {
-        let data = [...(currentEntries || []), {additive: v, amount: 0, unit: ""}];
+        const data = [...(currentEntries || []), {additive: v, amount: 0, unit: ""}];
         updateParent(data)
     }
     return <div>
@@ -121,37 +121,37 @@ export function AdditiveEntriesGroup({
                                      }: GroupProps<Additive>) {
 
     const handleFormChangeAdditive = (index: number, ad: string) => {
-        let data = initialEntries ? [...initialEntries] : []
+        const data = initialEntries ? [...initialEntries] : []
         data[index].data.additive = ad
         updateParent(data)
     }
     const handleFormChangeAmt = (index: number, val: number) => {
         // TODO: HANDLE NON-NUMBERS!!!
-        let data = initialEntries ? [...initialEntries] : []
+        const data = initialEntries ? [...initialEntries] : []
         data[index].data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (index: number, val: string) => {
-        let data = [...(initialEntries || [])]
+        const data = [...(initialEntries || [])]
         data[index].data.unit = val
         updateParent(data)
     }
     const addFields = (e: React.MouseEvent) => {
         e.preventDefault()
-        let data = [...(initialEntries || []), {
+        const data = [...(initialEntries || []), {
             data: {additive: "UNDEFINED", amount: 0.0, unit: 'UNDEFINED'},
             disabled: false
         }] // TODO: FIX DEFAULT
         updateParent(data)
     }
     const removeFields = (index: number) => {
-        let data = [...(initialEntries || [])]
+        const data = [...(initialEntries || [])]
         data.splice(index, 1);
         updateParent(data)
     }
     const disableField = (name: string) => {
-        let data = [...(initialEntries || [])].map((v, i) => {
-            let val = v
+        const data = [...(initialEntries || [])].map((v, i) => {
+            const val = v
             if (val.data.additive === name) {
                 val.disabled = !val.disabled
             }

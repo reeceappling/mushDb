@@ -1,6 +1,6 @@
 'use client'
 
-import {createContext, useContext} from "react";
+import {createContext} from "react";
 import {RequestCookie} from "next/dist/compiled/@edge-runtime/cookies";
 import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
 

@@ -22,7 +22,6 @@ import {
     DisplayInput,
     DoCreateRequest,
     DoUpdateMultipartRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -86,7 +85,7 @@ import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSu
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {useQuery} from "@tanstack/react-query";
-import {GetFilterSizes, GetTransferReasons} from "@/app/components/formSubcomponents/server";
+import {GetFilterSizes} from "@/app/components/formSubcomponents/server";
 import {SelectorFor} from "@/app/components/selector";
 
 export function AssertBag(input: any): asserts input is BagData {
@@ -94,21 +93,21 @@ export function AssertBag(input: any): asserts input is BagData {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['recipe', 'string'],
         ['filterSize', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Bag assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['pcRun', 'string'],
         ['genSpore', 'number'],
         ['genFruitOrSpore', 'number'],
@@ -124,31 +123,31 @@ export function AssertBag(input: any): asserts input is BagData {
         ['disposed', 'number'],
         ['wetness', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Bag assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl],
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Bag assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Bag assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -157,7 +156,7 @@ export function AssertBag(input: any): asserts input is BagData {
         ['flushes', IsValidPicWithNotesIncoming],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Bag assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -206,8 +205,8 @@ export default function BagDisplay(
         }
         const cookies = useContext(CookiesContext)
         const bagSubmit = () => {
-            let formData = new FormData()
-            let dataObj: any = {
+            const formData = new FormData()
+            const dataObj: any = {
                 knownFruitable: knownFruitable,
                 sale: sale, // TODO: how/when should sales be made?
                 disposed: disposed,
@@ -217,16 +216,16 @@ export default function BagDisplay(
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(pics)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(pics)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
+                const contamsInfo = resolveContamsFormData(contams)
+                const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Flushes
-                let flushesInfo = resolvePicsFormData(flushes)
-                let newFlushes = flushesInfo.images
+                const flushesInfo = resolvePicsFormData(flushes)
+                const newFlushes = flushesInfo.images
                 dataObj.flushes = flushesInfo.obj
                 // Set data on form
                 setFormData(formData, dataObj)
@@ -356,7 +355,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             setErr("Substrate batch cannot be undefined!");
             return
         }
-        let body: any = {
+        const body: any = {
             substrateBatch: substrateBatch._id,
             wetness: wetness,
             pcRun: pcRun._id,
@@ -378,8 +377,6 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             <div>{"Creating Bag: "}</div>
             {substrateBatchIn !== undefined &&
                 <SubstrateBatchSelectorCloseable txt={"Substrate Batch (FIXME)"} doSelect={setSubstrateBatch} allowCreation={handlers.isTopLevel} creatorInPage={false} />}
-                {/*<SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreate={handlers.isTopLevel}
-                                         creatorInPage={false}/> TODO: Closeable?*/}
             <WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {
                 setWetness(value)
             }}/>
@@ -419,14 +416,14 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
             ['filterSize', filterSize],
             ['species', species]
         ])
-        for (let [key, val] of reqd) {
+        for (const [key, val] of reqd) {
             if (val === undefined) {
                 setErr(key + " must be defined!");
                 return
             }
         }
-        let formData = new FormData()
-        let dataObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             creationDate: sealDate,
             recipe: recipe?._id, // MUST EXIST
             filterSize: filterSize,

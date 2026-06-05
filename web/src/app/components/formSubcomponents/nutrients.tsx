@@ -80,7 +80,7 @@ export default function NutrientsArea(props: AreaProps<Nutrient>){
 
 export function NutrientsEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Nutrient[], updateParent: (l: Nutrient[])=>void}){
     const handleSelectNutrient = (v: string) => {
-        let data = [...(currentEntries || []), {nutrient: v, amount: 0, unit: ""}];
+        const data = [...(currentEntries || []), {nutrient: v, amount: 0, unit: ""}];
         updateParent(data)
     }
     return <div>
@@ -104,29 +104,29 @@ export function NutrientsEntriesGroupForNew({currentEntries, updateParent}: {cur
 
 export function NutrientEntriesGroup({initialEntries, preexisting, readonly, updateParent}: GroupProps<Nutrient>){
     const handleFormChangeNutrient = (index: number, val: string) => {
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data[index].data.nutrient = val
         updateParent(data)
     }
     const handleFormChangeAmt = (index: number, val: number) => {
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data[index].data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (index: number, txt: string) => {
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data[index].data.unit = txt
         updateParent(data)
     }
     const addFields = (e: React.MouseEvent) => {
         e.preventDefault()
-        let data = [...(initialEntries || []), { data: {nutrient: "UNDEFINED", amount: 0.0, unit: 'UNDEFINED'}, disabled: false }] // TODO: FIX DEFAULT
+        const data = [...(initialEntries || []), { data: {nutrient: "UNDEFINED", amount: 0.0, unit: 'UNDEFINED'}, disabled: false }] // TODO: FIX DEFAULT
         updateParent(data)
     }
     const removeFields = (index: number) => {
         return (event: MouseEvent) => {
             event.preventDefault()
-            let data = [...(initialEntries || [])];
+            const data = [...(initialEntries || [])];
             data.splice(index, 1) // TODO: THIS WONT WORK PROPERLY WITH INDEX
             updateParent(data)
         }
@@ -134,7 +134,7 @@ export function NutrientEntriesGroup({initialEntries, preexisting, readonly, upd
     const disableField = (index: number) => {
         return (event: MouseEvent) => {
             event.preventDefault()
-            let data = [...(initialEntries || [])];
+            const data = [...(initialEntries || [])];
             data[index].disabled = !data[index].disabled
             updateParent(data)
         }

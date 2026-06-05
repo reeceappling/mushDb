@@ -24,10 +24,10 @@ export function AssertACL(input: any): asserts input is ACL { // TODO: FIX THIS!
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['blanketPerm', 'boolean'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
 
         if (!OptionalSimpleKey(key, input, expType)) {
             //console.error("failed when validating NON maps!") // TODO: THIS!
@@ -36,11 +36,11 @@ export function AssertACL(input: any): asserts input is ACL { // TODO: FIX THIS!
     }
 
     // complex optional array keys
-    let complexOptionalMapKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalMapKeys = new Map<string, (v: any) => boolean>([
         ['users', IsStringMapToBool], // TODO: UNSURE IF WORKING
         ['projects', IsStringMapToBool], // TODO: UNSURE IF WORKING
     ])
-    for (let [key, validator] of complexOptionalMapKeys) {
+    for (const [key, validator] of complexOptionalMapKeys) {
         if (!OptionalKey(key, input, validator)) {
             console.error("failed when validating maps!") // TODO: THIS!
             throw new Error('ACL assertion failure: optional array key ' + key + ' was not valid: ' + JSON.stringify(input[key]));
@@ -65,7 +65,7 @@ export function MarshalAcl(acl: ACL): any {
     if (acl === undefined) {
         return undefined
     }
-    let out: any = {
+    const out: any = {
         blanketPerm: acl.blanketPerm
     }
 
@@ -322,7 +322,7 @@ export function AclBlanketDisplay(inp: {
     }, [inp.ACL])
     const updateBlanket = (b?: boolean) => {
         if (val !== undefined) {
-            let temp = structuredClone(val)
+            const temp = structuredClone(val)
             temp.blanketPerm = b
             setVal(temp)
         } else {

@@ -16,7 +16,6 @@ import {
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequestMultipart, DoUpdateRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -28,7 +27,6 @@ import {
     NewEntryFormWrapper,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
     OptionalSimpleKey, RequiredKey, setFormData
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
@@ -41,7 +39,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {GetTransferReasons} from "@/app/components/formSubcomponents/server";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import Image from "next/image";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -50,7 +48,7 @@ export function AssertTransfer(input: any): asserts input is TransferData {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['from', 'string'],
         ['to', 'string'],
@@ -60,7 +58,7 @@ export function AssertTransfer(input: any): asserts input is TransferData {
         ['reason', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Transfer assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
@@ -75,29 +73,29 @@ export function AssertTransfer(input: any): asserts input is TransferData {
     //     }
     // }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['fromImage', 'string'],
         ['toImage', 'string'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Transfer assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Transfer assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Transfer assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -135,7 +133,8 @@ export default function TransferDisplay(
         }
         const imageArea = (alt: string, loc?: string) => {
             return <div className={"fromToImage"}>
-                {loc ? <img src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"}
+                {loc ? <Image src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"/* TODO: if not working, switch back*/}
+                {/*{loc ? <img src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"}*/}
             </div>
         }
         const fromToArea = () => {
@@ -221,8 +220,8 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: {
             setErr("reason cannot be blank!")
             return
         }
-        let formData = new FormData();
-        let dataObj: any = {
+        const formData = new FormData();
+        const dataObj: any = {
             from: idFrom,
             to: idTo,
             reason: reason,
@@ -328,8 +327,8 @@ export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated}: 
             setErr("reason cannot be blank!")
             return
         }
-        let formData = new FormData();
-        let dataObj: any = {
+        const formData = new FormData();
+        const dataObj: any = {
             from: idFrom,
             to: idTo,
             reason: reason,
@@ -532,7 +531,7 @@ export function InnocDisplay(
         openInNewTab?: boolean
     }
 ) {
-    let out: JSX.Element | null = (innoc === undefined) ? null :
+    const out: JSX.Element | null = (innoc === undefined) ? null :
         <IdPageLink id={innoc} entryType={"transfer"} openInNewTab={true}/>
     return <div className={"innocDisplay"}>
         <div>{"Innoculation ID: "}</div>
@@ -594,7 +593,7 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
 }
 
 export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<TransferData>) {
-    let cols: ListTableColumn<TransferData>[] = [
+    const cols: ListTableColumn<TransferData>[] = [
         NewColumn("ID", (v)=>v._id),
         NewColumn("Date", (v)=>{
             return NumberToDateStr(v.creationDate)

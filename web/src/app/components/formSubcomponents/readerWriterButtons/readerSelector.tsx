@@ -23,7 +23,7 @@ export default function ReaderWriterSelector(props:rfidSelectorProps) {
     const {state, dispatch} = useRfidReaderContext()
     const defaultOpt = props.defaultOption || "none"
     const onSelect = (e: SyntheticEvent<HTMLSelectElement, Event>) => {
-        let val = e.currentTarget.value
+        const val = e.currentTarget.value
         if (val && val !== state.selected) {
             dispatch({
                 type: ActionTypes.SET_READER,
@@ -42,7 +42,7 @@ export default function ReaderWriterSelector(props:rfidSelectorProps) {
 export function WriteTagFunc(dispatch: React.Dispatch<Actions>, id: string, selectedReader?: string): Promise<string> {
     return new Promise((resolve, reject) => {
         if (!selectedReader) {
-            let toWrite = "no rfid reader selected"
+            const toWrite = "no rfid reader selected"
             dispatch({
                 type: ActionTypes.SET_ERROR,
                 payload: toWrite,
@@ -50,7 +50,7 @@ export function WriteTagFunc(dispatch: React.Dispatch<Actions>, id: string, sele
             reject(toWrite)
             return
         }
-        let readerName = selectedReader
+        const readerName = selectedReader
         if (readerName === "goodTestRfid"){ // TODO: comment out
             return resolve(id)
         } else if (readerName === "" || readerName === "none" || readerName === "badTestRfid"){
@@ -66,7 +66,7 @@ export function WriteTagFunc(dispatch: React.Dispatch<Actions>, id: string, sele
                 })
                 resolve(id)
             }).catch(e=>{
-                let errTxt = "failed to write tag: "+JSON.stringify(e)
+                const errTxt = "failed to write tag: "+JSON.stringify(e)
                 console.error(errTxt);
                 dispatch({
                     type: ActionTypes.SET_ERROR,
@@ -90,7 +90,7 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, se
         // })
         // TODO: remove all below when reenabled!!!!!!!!!!
         if (!selectedReader) {
-            let toWrite = "no rfid reader selected"
+            const toWrite = "no rfid reader selected"
             dispatch({
                 type: ActionTypes.SET_ERROR,
                 payload: toWrite,
@@ -98,7 +98,7 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, se
             reject(toWrite)
             return
         }
-        let readerName = selectedReader
+        const readerName = selectedReader
         let tagVal = Makeid(5)
         if (readerName === "goodTestRfid"){ // TODO: comment out
             tagVal = "4Wj8HxCMmcs" // TODO: Test empty plate id
@@ -126,7 +126,7 @@ export type selectReaderResult = {
 };
 
 export function SelectReaderFunc(dispatch: React.Dispatch<Actions>, doRead: boolean, session?: string, reader?: string): Promise<selectReaderResult> {
-    let out:selectReaderResult = {didRead: doRead}
+    const out:selectReaderResult = {didRead: doRead}
     return new Promise<selectReaderResult>((resolve, reject) => {
         dispatch({
             type: ActionTypes.SET_READER,

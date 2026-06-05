@@ -11,11 +11,8 @@ import {
     resolvePicsFormData,
     setFormImages,
     OptionalKey,
-    HandleJsonResponse,
     setFormData,
     ListPageItems,
-    importUrlFor,
-    viewUrlFor,
     ImportEntryFormWrapper,
     DisplayFormWrapper,
     FlexedArea,
@@ -27,11 +24,7 @@ import {
     ListPageTable,
     ExistingRecentSelector,
     CreatedLinkFor,
-    ErrHandler,
-    MultipartImportRequest,
-    updateApiUrlFor,
-    createApiUrlFor,
-    DoCreateRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest
+    MultipartImportRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -61,9 +54,7 @@ import {
     OnViewCreatorQuadCol
 } from "@/app/components/formSubcomponents/shared";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {BaseExternalUrl} from "@/app/components/Constants";
-import {redirect} from "next/navigation";
-import {AssertSpecies, ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import { ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewMssForm} from "@/app/components/mssClient";
 import {FruitData, FruitSelectorCloseable} from "@/app/components/fruitServer";
@@ -74,9 +65,7 @@ import {MssData} from "@/app/components/mssServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
-import {AssertPlate} from "@/app/components/plateClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -84,19 +73,19 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['parent', 'string'],
         ['subspecies', 'string'],
         ['sale', 'string'],
@@ -104,35 +93,35 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
         ['color', 'string'],
         ['density', 'string'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([ // TODO: used to be required
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([ // TODO: used to be required
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Spore Print assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Spore Print assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['pics', IsValidPicWithNotesIncoming],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -156,8 +145,8 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
             setErr("A species must be selected")
             return
         }
-        let formData = new FormData()
-        let dataObj:any = {
+        const formData = new FormData()
+        const dataObj:any = {
             creationDate:printDate,
             color: color,
             density: density,
@@ -220,8 +209,8 @@ export default function SporePrintDisplay(
         const cookies = useContext(CookiesContext)
         const submit = ()=>{
             // sale disposed, project, pics, notes
-            let formData = new FormData()
-            let dataObj:any={
+            const formData = new FormData()
+            const dataObj:any={
                 // All optional but acl
                 color: color,
                 density: density,
@@ -232,8 +221,8 @@ export default function SporePrintDisplay(
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(pics)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(pics)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Set data on form
                 setFormData(formData, dataObj)
@@ -351,8 +340,8 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
             setErr("Must at least contain one picture")
             return
         }
-        let formData = new FormData()
-        let dataObj:any = {
+        const formData = new FormData()
+        const dataObj:any = {
             fruitId:fruit._id,
             notes:notes,
             // optional pics also here
@@ -364,7 +353,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
         // Perms
         setFormData(formData, dataObj)
         for (let i = 0; i < pics.length; i++) {
-            let toSend = pics[i]
+            const toSend = pics[i]
             if (toSend.img === undefined) {
                 setErr("new image " + i + " is undefined")
                 return

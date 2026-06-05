@@ -1,12 +1,8 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {Contamination, ExampleContaminations, ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/contaminations";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {PlateSelector} from "@/app/components/plateClient";
-import {PlateData} from "@/app/components/plateServer";
 import {SlantSelector} from "@/app/components/slantClient";
 
 export function TestSlantOk(){

@@ -9,13 +9,12 @@ import {GenerationInput} from "@/app/components/formSubcomponents/generationInpu
 import {
     clientPostRequestHeaders,
     ConfirmedCleanArea,
-    ConfirmedCleanSelector, createApiUrlFor, DisplayFormWrapper,
+    ConfirmedCleanSelector, DisplayFormWrapper,
     DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse, importApiUrlFor, ImportEntryFormWrapper,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
-    OptionalSimpleKey, RequiredKey, updateApiUrlFor, viewUrlFor,
+    OptionalSimpleKey, RequiredKey, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -26,7 +25,6 @@ import {
     GensFormDisplay,
     ParentDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import ID from "@/app/components/formSubcomponents/id";
@@ -41,10 +39,8 @@ import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
-import {AssertLcRecipe} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
     if (typeof input !== 'object') {
@@ -52,20 +48,20 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Lc syringe assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['parent', 'string'],
         ['sale', 'string'],
         ['genSpore', 'number'],
@@ -74,29 +70,29 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
         ['knownFruitable', 'boolean'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Lc syringe assertion failure: optional key ' + key + ' was not valid');
         }
     }
 
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('LcSyringe assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Lc syringe assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -120,7 +116,7 @@ export function LcSyringeImportDisplay() {
             setErr("Species must be set!")
             return
         }
-        let dataObj: any = {
+        const dataObj: any = {
             creationDate: created,
             species: species._id,
             subspecies: subspecies?._id,
@@ -187,7 +183,7 @@ export default function LcSyringeDisplay(
 
     const cookies = useContext(CookiesContext)
     const lcSyringeSubmit = () => {
-        let body: any = {
+        const body: any = {
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             disposed: disposed,
@@ -265,7 +261,7 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             </div>
             {itemsCreated.map((createdLc) => {
                 const b58id = createdLc
-                return <EntryLinkForId props={{displayId: b58id, linkId: b58id, entryType: "lcSyringe", openInNewTab: false /* TODO: ok?*/}}/>
+                return <EntryLinkForId key={createdLc/* TODO: ensure ok*/} props={{displayId: b58id, linkId: b58id, entryType: "lcSyringe", openInNewTab: false /* TODO: ok?*/}}/>
             })}
         </div>
     }
@@ -276,7 +272,7 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             setErr("A parent must be selected")
             return
         }
-        let body: any = {
+        const body: any = {
             writeTagTo: writeTagTo,
             parent: parent,
             notes: notes,

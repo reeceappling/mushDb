@@ -24,12 +24,12 @@ export function PixRows(
     return <>
         <div className={"picsGroup picsRows"}>
             {current.map((v, i) => {
-                return <PixRowNew remv={() => {
-                    let upd = structuredClone(current)
+                return <PixRowNew key={i} remv={() => { // TODO: ensure key ok
+                    const upd = structuredClone(current)
                     upd[i].disabled = true
                     doUpdate(upd)
                 }} updateParent={(u) => {
-                    let upd = structuredClone(current)
+                    const upd = structuredClone(current)
                     upd[i].data = u
                     doUpdate(upd)
                 }}/>
@@ -70,7 +70,7 @@ export function PixRowNew(
         return <div className={"picLeft"}>
             {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
             <ImageSelector updateParent={f => {
-                let upd = structuredClone(current)
+                const upd = structuredClone(current)
                 upd.img = f
                 updateRow(upd)
             }}/>
@@ -81,7 +81,7 @@ export function PixRowNew(
         return <div className={"picRight"}>
             <DateArea readonly={true} when={current.time}/>
             <NotesFormArea readonly={false} initial={[]} updateParent={(nts: AllEntries<Note>) => {
-                let updated = structuredClone(current)
+                const updated = structuredClone(current)
                 updated.notes = nts
                 updateRow(updated)
             }} removeHeader={true}/>

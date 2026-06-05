@@ -1,16 +1,7 @@
 'use client'
-import {JSX, useEffect, useState} from "react";
-import {BaseExternalUrl} from "@/app/components/Constants";
+import {JSX, useState} from "react";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {createUrlFor, HandleJsonResponse, Entry, InlineProps} from "@/app/components/common";
-import {TestAgarBatchOk} from "@/app/components/agarBatchServer";
-import {TestFruitOK} from "@/app/components/fruitServer";
-import {TestJarOK} from "@/app/components/jarServer";
-import {TestPcRunOk} from "@/app/components/pcRunServer";
-import {TestProjectOk} from "@/app/components/projectServer";
-import {TestSaleOk} from "@/app/components/saleServer";
-import {useCookies} from "react-cookie";
-import {createSelector} from "reselect";
+import {createUrlFor, Entry} from "@/app/components/common";
 
 export interface SelectorProps<T> {
     doSelect: (val?: T) => void
@@ -342,7 +333,7 @@ export default function CloseableSelector<T extends Entry>({props}: { // TODO: F
     if (err) {
         return <ErrorDisplay err={err}/>
     }
-    let pre = createNewSubArea()
+    const pre = createNewSubArea()
     if (!open) {
         return <div>
             <ErrorDisplay err={err}/>

@@ -13,7 +13,6 @@ import {
     DisplayInput,
     DoCreateRequest,
     DoUpdateRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -24,8 +23,7 @@ import {
     NewEntryFormWrapper,
     NewEntryInput,
     NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey, RequiredKey
+    OptionalArrayOfType, RequiredKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
@@ -40,7 +38,6 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
     if (typeof input !== 'object') {
@@ -48,31 +45,31 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['recipe', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Substrate Batch assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -249,7 +246,7 @@ export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
         setVal(batch?._id)
         onSelect && onSelect(batch)
     }
-    let linkArea = () => {
+    const linkArea = () => {
         if (!val) {
             return <div>{"unknown"}</div>
         }

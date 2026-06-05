@@ -5,27 +5,25 @@ import ID from "@/app/components/formSubcomponents/id";
 import {
     CheckArrayType, clientPostRequestHeaders,
     DisplayFormWrapper,
-    DisplayInput, DoUpdateRequest, ErrHandler, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
-    OptionalKey, updateApiUrlFor, validatorForAssertion,
+    OptionalKey, validatorForAssertion,
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {IsValidUserPerms, UserData, UserPerms} from "@/app/components/userServer";
 import {SelectorResetsOnSelectForCustom} from "@/app/components/selector";
-import {MarshalAcl} from "@/app/components/accessControlClient";
-import {AssertTransfer} from "@/app/components/transferClient";
-import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import { CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export function AssertUser(input: any): asserts input is UserData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Transfer assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
@@ -40,10 +38,10 @@ export function AssertUser(input: any): asserts input is UserData {
     //     }
     // }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([ // TODO: validate!
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([ // TODO: validate!
         ['perms', IsValidUserPerms]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }

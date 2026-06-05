@@ -1,9 +1,6 @@
-import {
-    ActionTypes,
-    useRfidReaderContext
-} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
-import {JSX, ReactNode} from "react";
-import {BaseExternalUrl} from "@/app/components/Constants";
+
+
+import { ReactNode} from "react";
 import {Entry, EntryUrlId, viewUrlFor} from "@/app/components/common";
 
 export default function EntryLinkForId(

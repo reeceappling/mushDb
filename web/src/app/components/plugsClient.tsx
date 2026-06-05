@@ -3,18 +3,15 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
-    clientPostRequestHeaders,
-    createApiUrlFor, DisplayFormWrapper,
+    clientPostRequestHeaders, DisplayFormWrapper,
     DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse, importApiUrlFor,
     ImportDisplayInput, ImportEntryFormWrapper,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
     OptionalSimpleKey,
     RequiredArrayOfType, RequiredKey,
-    updateApiUrlFor,
     viewUrlFor,
 } from "@/app/components/common";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
@@ -26,8 +23,6 @@ import {ExistingSubSpeciesSelector} from "./subspeciesClient";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "./formSubcomponents/readerWriterButtons/readerSelector";
 import {AllEntries, OnViewCreatorQuadCol} from "./formSubcomponents/shared";
 import {ACL} from "./accessControlServer";
-import {BaseExternalUrl} from "./Constants";
-import {HandleErr} from "./userClient";
 import {ErrorDisplay, GensFormDisplay, ParentDisplay} from "./formSubcomponents/commonClient";
 import ID from "./formSubcomponents/id";
 import {PcRunArea, PcRunSelector} from "./pcRunClient";
@@ -40,30 +35,27 @@ import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
 import {WoodEntriesGroupForNew} from "@/app/components/formSubcomponents/plugs";
 import {SalesArea} from "@/app/components/saleClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
-import {AssertPlate} from "@/app/components/plateClient";
-import {AssertJar} from "@/app/components/jarClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
-import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
+import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plugs assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['parentType', 'string'],
         ['parent', 'string'],
         ['genSpore', 'number'],
@@ -76,31 +68,31 @@ export function AssertPlugs(input: any): asserts input is PlugsData {
         ['disposed', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Plugs assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexRequiredArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredArrayKeys = new Map<string, (v: any) => boolean>([
         ['dowelTypes', IsValidDowel]
     ])
-    for (let [key, validator] of complexRequiredArrayKeys) {
+    for (const [key, validator] of complexRequiredArrayKeys) {
         if (!RequiredArrayOfType(key, input, validator)) {
             throw new Error('Plug assertion failure: required array key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('plugs assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -109,7 +101,7 @@ export function AssertPlugs(input: any): asserts input is PlugsData {
         }],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plugs assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -134,12 +126,12 @@ export function AssertDowel(input: any): asserts input is DowelType {
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['wood', 'string'],
         ['size', 'number'],
         ['units', 'string'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Dowel assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
@@ -174,7 +166,7 @@ export default function PlugsDisplay(
     }
     const cookies = useContext(CookiesContext)
     const submit = () => {
-        let body: any = {
+        const body: any = {
             pcRun: pcRun, // TODO: optional? can only be set once
             knownFruitable: knownFruitable,
             disposed: disposed,
@@ -269,7 +261,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
             setErr("Species must be set!")
             return
         }
-        let body: any = {
+        const body: any = {
             dowelTypes: dowelTypes,
             generation: gen,
             // optional
@@ -339,7 +331,7 @@ export function NewPlugsForm(
                 return
             }
         }
-        let body: any = {
+        const body: any = {
             dowelTypes: dowelTypes,
             pcRun: pcRun?._id,
             notes: notes,

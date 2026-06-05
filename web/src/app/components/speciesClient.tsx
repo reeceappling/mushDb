@@ -12,7 +12,6 @@ import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {
     clientPostRequestHeaders,
-    createApiUrlFor,
     CreateNewEntryButton,
     DisplayFormWrapper,
     DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector,
@@ -31,10 +30,9 @@ import {
     NewEntryFormWrapper,
     NewEntryInput,
     NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey, RequiredKey,
+    OptionalArrayOfType, RequiredKey,
     SelectorWrapper,
-    Subform, updateApiUrlFor
+    Subform
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
@@ -47,11 +45,8 @@ import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {AssertSlant} from "@/app/components/slantClient";
-import {AssertProject} from "@/app/components/projectClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 // TODO: list page not working
 
@@ -60,33 +55,33 @@ export function AssertSpecies(input: any): asserts input is SpeciesData {
         throw 'Input is not an object! Input is ' + typeof input
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['scientificName', 'string'],
         ['standardSubstrate', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw 'Species assertion failure: ' + key + ' was not type ' + expType + '. Was ' + (typeof input[key]);
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl],
         ['defaultAcl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw 'Species assertion failure: required key ' + key + ' was not valid'
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
         ['aliases', IsString],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw 'Species assertion failure: optional array key ' + key + ' was not valid'
         }

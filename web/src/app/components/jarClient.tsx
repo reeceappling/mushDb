@@ -6,12 +6,9 @@ import {
     DisplayInput,
     DoCreateRequest,
     DoUpdateMultipartRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
-    importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     ListPageItems,
@@ -31,8 +28,6 @@ import {
     SelectorWrapper,
     setFormData,
     setFormImages,
-    updateApiUrlFor,
-    viewUrlFor
 } from "@/app/components/common";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import React, {JSX, useContext, useState} from "react";
@@ -53,7 +48,6 @@ import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     InitialPicsEntries,
@@ -78,7 +72,6 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {redirect} from "next/navigation";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {JarSizeSelector} from "@/app/components/formSubcomponents/utils/volumeSelector";
@@ -88,18 +81,15 @@ import {GrainBatchData, GrainBatchSelectorCloseable} from "@/app/components/grai
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
-import {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
-import {AssertGrainBatch} from "@/app/components/grainBatchClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['recipe', 'string'],
         ['sizeCups', 'number'],
@@ -107,13 +97,13 @@ export function AssertJar(input: any): asserts input is JarData {
         ['lastUpdated', 'number'],
         ['sizeCups', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Jar assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['pcRun', 'string'],
         ['burstGrains', 'number'],
         ['wetness', 'number'],
@@ -129,31 +119,31 @@ export function AssertJar(input: any): asserts input is JarData {
         ['grainBatch', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Jar assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Jar assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Jar assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -161,7 +151,7 @@ export function AssertJar(input: any): asserts input is JarData {
         ['contamination', IsValidContamination],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Jar assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -182,7 +172,7 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
     const importEntry = () => {
-        let formData = new FormData()
+        const formData = new FormData()
         if (species === undefined) {
             setErr("Species must be set!")
             return
@@ -191,7 +181,7 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             setErr("Recipe must be set!")
             return
         }
-        let dataObj: any = {
+        const dataObj: any = {
             creationDate: created,
             sizeCups: sizeCups,
             recipe: recipe._id,
@@ -209,13 +199,6 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
         writeTagTo && (dataObj.writeTagTo = writeTagTo)
 
         MultipartImportRequest(formData, "jar", AssertJar, setErr, allCookies(cookies))
-        // SendMultipartRequest(importApiUrlFor("jar"), cookies, formData)
-        //     .then(HandleJsonResponse)
-        //     .then((newItem) => {
-        //         AssertJar(newItem)
-        //         redirect(viewUrlFor("jar",newItem._id))
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"jar"}>
         {err != undefined && <div>{"Error: " + err}</div>}
@@ -313,8 +296,8 @@ export default function JarDisplay(
         }
         const cookies = useContext(CookiesContext)
         const submit = () => {
-            let formData = new FormData()
-            let dataObj: any = {
+            const formData = new FormData()
+            const dataObj: any = {
                 knownFruitable: knownFruitable,
                 disposed: disposed,
                 sale: sale,
@@ -324,12 +307,12 @@ export default function JarDisplay(
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(pics)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(pics)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
+                const contamsInfo = resolveContamsFormData(contams)
+                const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
                 setFormData(formData, dataObj)

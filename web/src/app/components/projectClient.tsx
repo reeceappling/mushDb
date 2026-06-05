@@ -7,15 +7,14 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {
     clientPostRequestHeaders,
-    createApiUrlFor,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, updateApiUrlFor
+    OptionalSimpleKey
 } from "@/app/components/common";
 import {ErrorDisplay, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {ProjectData,} from "@/app/components/projectServer";
@@ -28,10 +27,8 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
-import {AssertPlugs} from "@/app/components/plugsClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -40,40 +37,40 @@ export function AssertProject(input: any): asserts input is ProjectData {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Project assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['completed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Project assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['perms', IsStringMapToString], // TODO: THIS IS NOT WORKING PROPERLY!!! CHANGE TO STRING FORMAT!!!!
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Project assertion failure: required key ' + key + ' was not valid. was ' + JSON.stringify(input[key]));
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -128,7 +125,7 @@ export default function ProjectDisplay(
         }
         const cookies = useContext(CookiesContext)
         const projectSubmit = () => {
-            let body: any = {
+            const body: any = {
                 notes: notes,
                 completed: completed,
                 perms: Object.fromEntries(perms), // TODO: ensure this is being done on any maps that are being marshalled!!!!!
@@ -190,7 +187,7 @@ export function NewProjectForm(
             setErr("Name field cannot be undefined")
             return
         }
-        let body = {
+        const body = {
             name: name, // TODO: validate that project name is valid for url
             notes: notes,
         }
@@ -317,7 +314,7 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
 
             {/* AREA TO ADD USER */}
             <div className={"inlineChildren"}>{"Add user: "}<UserSelector onSelect={(u) => {
-                let out = structuredClone(perms) || new Map<string, string>()
+                const out = structuredClone(perms) || new Map<string, string>()
                 out.set(u._id, "read")
                 setPerms && setPerms(out)
             }} blacklist={(perms !== undefined && perms.size > 0) ? [...perms.entries()].map(u => {

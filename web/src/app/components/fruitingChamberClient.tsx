@@ -24,7 +24,6 @@ import {
     DisplayInput,
     DoCreateRequest,
     DoUpdateMultipartRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -87,14 +86,13 @@ import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['recipe', 'string'],
         ['creationDate', 'number'],
@@ -103,14 +101,14 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
         ['mixedSubstratePerGrain', 'number'],
         ['casingPerGrain', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('FruitingChamber assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['substrateBatch', 'string'],
         ['species', 'string'],
         ['subspecies', 'string'],
@@ -123,31 +121,31 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
         ['sale', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('FruitingChamber assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl],
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('FruitingChamber assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Fruiting chamber assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -156,7 +154,7 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
         ['flushes', IsValidPicWithNotesIncoming],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('FruitingChamber assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -207,8 +205,8 @@ export default function FruitingChamberDisplay(
         }
         const cookies = useContext(CookiesContext)
         const fruitingChamberSubmit = () => {
-            let formData = new FormData()
-            let dataObj: any = {
+            const formData = new FormData()
+            const dataObj: any = {
                 knownFruitable: knownFruitable,
                 disposed: disposed,
                 sale: sale,
@@ -218,16 +216,16 @@ export default function FruitingChamberDisplay(
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(pics)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(pics)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
+                const contamsInfo = resolveContamsFormData(contams)
+                const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Flushes
-                let flushesInfo = resolvePicsFormData(flushes)
-                let newFlushes = flushesInfo.images
+                const flushesInfo = resolvePicsFormData(flushes)
+                const newFlushes = flushesInfo.images
                 dataObj.flushes = flushesInfo.obj
                 // Set data on form
                 setFormData(formData, dataObj)
@@ -338,7 +336,7 @@ export function VolumeSelector({initialVal, initialUnit, updateNumberOfCups}: {
     const [u, setUnit] = useState(initialUnit || "quarts")
     const [val, setVal] = useState<number>(initialVal || 1)
     const updateNumber = (s: string) => {
-        let n = NumbersOnlyFromText(s)
+        const n = NumbersOnlyFromText(s)
         updateNumberOfCups(n * mulForUnit(u))
         setVal(n)
     }
@@ -394,7 +392,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
             setErr("mixed substrate must be a positive number")
             return
         }
-        let body: any = {
+        const body: any = {
             substrateBatch: subBatch._id,
             parentJar: parentId,
             grainCups: volumeGrainCups,
@@ -475,14 +473,14 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             ['creationDate', creationDate],
             ['species', species]
         ])
-        for (let [key, val] of reqd) {
+        for (const [key, val] of reqd) {
             if (val === undefined) {
                 setErr(key + " must be defined!");
                 return
             }
         }
 
-        let bodyObj: any = {
+        const bodyObj: any = {
             recipe: recipe,
             creationDate: creationDate,
             species: species?._id,
@@ -496,7 +494,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             knownFruitable: knownFruitable,
             writeTagTo: writeTagTo,
         }
-        let formData = new FormData()
+        const formData = new FormData()
         imageFile && formData.set("img", imageFile, "img")
         setFormData(formData, bodyObj)
 

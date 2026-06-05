@@ -66,7 +66,7 @@ export interface GroupProps<Type> {
 }
 
 export function FormListArea<Type>(listGroup: (props: GroupProps<Type>) => JSX.Element){
-    return (
+    return ( // TODO: probably issue here!
         function ({initialValues, readonly, updateParent, headerLevel, headerLevelOffset}: AreaProps<Type>) {
             const [existing, setExisting] = useState(initialValues || [])
             const [newEntries, setNewEntries] = useState<Data<Type>[]>([])
@@ -76,12 +76,12 @@ export function FormListArea<Type>(listGroup: (props: GroupProps<Type>) => JSX.E
                 setBlacklist([...data.existing,...data.new])
             }
             const updateExisting = (data: Data<Type>[]) => {
-                let newExisting = [...data]
+                const newExisting = [...data]
                 updateInternal({existing: newExisting, new: newEntries})
                 setExisting(newExisting)
             }
             const updateNew = (data: Data<Type>[]) => {
-                let newNew = [...data]
+                const newNew = [...data]
                 updateInternal({existing: existing, new: newNew})
                 setNewEntries(newNew)
             }

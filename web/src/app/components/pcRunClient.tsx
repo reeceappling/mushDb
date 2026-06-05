@@ -12,14 +12,11 @@ import {
 import {PcRunData} from "@/app/components/pcRunServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
-    createApiUrlFor,
     dataFor, DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey, RequiredKey, updateApiUrlFor
+    OptionalArrayOfType, RequiredKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
@@ -30,51 +27,46 @@ import {NewJarForm} from "@/app/components/jarClient";
 import {NewLcForm} from "@/app/components/lcClient";
 import {NewSlantForm} from "@/app/components/slantClient";
 import {NewStasisTubeForm} from "@/app/components/stasisTubeClient";
-import TestAndValidate from "@/app/components/testing/untested";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
 import {BagData} from "@/app/components/bagServer";
 import {LcData} from "@/app/components/lcServer";
 import {SlantData} from "@/app/components/slantServer";
 import {WaterJarData} from "@/app/components/waterJarServer";
 import {JarData} from "@/app/components/jarServer";
-import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
-import {AssertLcSyringe} from "@/app/components/lcSyringeClient";
-import {AssertMss} from "@/app/components/mssClient";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['runtimeMinutes', 'number'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('PcRun assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('PcRun assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -253,7 +245,7 @@ export function NewPcRunForm(
     const newPcRunSubmit = (e: React.FormEvent) => {
         e.preventDefault()
 
-        let body = {
+        const body = {
             //creationDate: date, // Handled serverside
             runTimeMinutes: runTime,
             notes: notes,
@@ -292,7 +284,7 @@ export function PcRunArea({binaryId, headerLevel, offset}: {
     headerLevel?: number
     offset?: number
 }) {
-    let linkArea: JSX.Element = <div>{(binaryId !== undefined) ?
+    const linkArea: JSX.Element = <div>{(binaryId !== undefined) ?
         <EntryLinkForId props={{linkId: binaryId, entryType: "pcRun",openInNewTab:false}}/>:
         "unknown"}
     </div>

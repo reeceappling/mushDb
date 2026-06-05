@@ -19,8 +19,8 @@ export function KnownFruitableArea(
     }
     const [knownFruitable, setKnownFruitable] = useState<string | undefined>(optionalBoolToOptionalString(initial))
     const onSelect = (e: SyntheticEvent<HTMLSelectElement, Event>) => {
-        let val = e.currentTarget.value
-        let selectFunc = (doSelect === undefined) ? () => {
+        const val = e.currentTarget.value
+        const selectFunc = (doSelect === undefined) ? () => {
         } : doSelect
         selectFunc((val === "" || val === "unknown") ? undefined : val === "true")
         setKnownFruitable(val)

@@ -2,9 +2,6 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {TestNotes} from "@/app/components/formSubcomponents/contaminations";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {SlantSelector} from "@/app/components/slantClient";
-import {SlantData} from "@/app/components/slantServer";
 import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
 
 

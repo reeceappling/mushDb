@@ -1,7 +1,6 @@
 import {useContext} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 import {OpenMainPage} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {viewUrlFor} from "@/app/components/common";
 
 export default function ID({txt, id, entryType, linkPage, allowOpenMainPage}: {

@@ -1,12 +1,8 @@
 import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {EntryPerms} from "@/app/components/perms";
 import {ExamplePicsWithNotesIncoming, TestNotes} from "@/app/components/formSubcomponents/contaminations";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {FruitSelector} from "@/app/components/fruitClient";
-import {FruitData} from "@/app/components/fruitServer";
 import {SporePrintSelector} from "@/app/components/sporePrintClient";
 
 

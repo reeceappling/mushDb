@@ -1,10 +1,8 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {SelectorProps} from "@/app/components/selector";
-import {ProjectPerms} from "@/app/components/perms";
-import {TestAcl} from "@/app/components/accessControlServer";
 
 export function TestProjectOk(){
-    let perms = new Map<string, string>();
+    const perms = new Map<string, string>();
     perms.set("USERNAME 1", "admin")
     perms.set("USERNAME 2", "write")
     perms.set("USERNAME 3", "read")
@@ -24,7 +22,7 @@ export function TestProjectOk(){
     })
 }
 export function TestProjectOk2(){
-    let perms = new Map<string, string>();
+    const perms = new Map<string, string>();
     perms.set("USERNAME 1", "admin")
     perms.set("USERNAME 2", "write")
     perms.set("USERNAME 3", "read")

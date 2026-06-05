@@ -16,7 +16,6 @@ import {
     NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
     OptionalSimpleKey, RequiredKey, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
@@ -58,46 +57,46 @@ export function AssertMss(input: any): asserts input is MssData {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['subspecies', 'string'],
         ['parent', 'string'],
         ['sale', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
 
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('MSS assertion failure: required key ' + key + ' was not valid');
         }
     }
 
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', IsString],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -123,7 +122,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
             <div><div>{"Multispore syringes Created:"}</div></div>
             {entriesCreated.map((created,i)=>{
                 const b58id = created
-                return <EntryLinkForId props={{displayId:b58id, linkId: b58id, entryType:"mss", openInNewTab: false}}/>// TODO: OPENINNEWTAB false ok?
+                return <EntryLinkForId key={i/* TODO: ensure ok*/} props={{displayId:b58id, linkId: b58id, entryType:"mss", openInNewTab: false}}/>// TODO: OPENINNEWTAB false ok?
             })}
         </div>
     }
@@ -133,7 +132,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
             setErr("Species field cannot be undefined")
             return
         }
-        let body: any = {
+        const body: any = {
             creationDate: createdDate,
             species: species._id, // TODO: validate on insert
             // optional
@@ -192,7 +191,7 @@ export default function MssDisplay(
         }
         const cookies = useContext(CookiesContext)
         const mssSubmit = () => {
-            let body: any = {
+            const body: any = {
                 sale:sale,
                 disposed:disposed,
                 writeTagTo:writeTagTo,
@@ -259,7 +258,7 @@ export function NewMssForm(
             setErr("A waterJar must be selected")
             return
         }
-        let body: any = {
+        const body: any = {
             sporePrintId: sporePrint._id,
             waterJar: waterJar._id, // TODO: DO THIS ON THE GO SIDE!
             notes: notes,

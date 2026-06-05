@@ -26,7 +26,6 @@ import {
     DisplayInput,
     DoCreateRequest,
     DoUpdateMultipartRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup, ImportDisplayInput, ImportEntryFormWrapper, ListPageItems,
@@ -48,7 +47,6 @@ import {
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
     GensFormDisplay, MostRecentImageDisplay,
@@ -64,38 +62,35 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {AssertSale, SaleArea} from "@/app/components/saleClient";
+import { SaleArea} from "@/app/components/saleClient";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
-import {AssertPlate} from "@/app/components/plateClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Slant assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['agarBatch', 'string'],
         ['stickType','string'],
         ['species', 'string'],
@@ -109,31 +104,31 @@ export function AssertSlant(input: any): asserts input is SlantData {
         ['sale', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Slant assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Slant assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Slant assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -141,7 +136,7 @@ export function AssertSlant(input: any): asserts input is SlantData {
         ['contamination', IsValidContamination],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Slant assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -161,7 +156,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
     const ImportSlant = () => {
-        let formData = new FormData()
+        const formData = new FormData()
         // TODO: Validate kf, gen, not exist if species does not exist!
         formData.set('data', JSON.stringify({
             creationDate:created, // TODO: validate not in future or too far in the past (do on all imports)
@@ -225,8 +220,8 @@ export default function SlantDisplay(
         }
         const cookies = useContext(CookiesContext)
         const slantSubmit = ()=>{
-            let formData = new FormData()
-            let dataObj:any={
+            const formData = new FormData()
+            const dataObj:any={
                 knownFruitable:knownFruitable,
                 sale: sale,
                 disposed:disposed,
@@ -235,12 +230,12 @@ export default function SlantDisplay(
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(images)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(images)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
+                const contamsInfo = resolveContamsFormData(contams)
+                const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
                 setFormData(formData, dataObj)
@@ -323,7 +318,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
             setErr("An agar batch must be selected")
             return
         }
-        let body: any = {
+        const body: any = {
             agarBatch: agarBatch,
             stickType: stickType,
             notes: notes,

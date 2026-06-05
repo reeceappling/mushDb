@@ -36,7 +36,7 @@ export function WoodEntriesGroupForNew({currentEntries, updateParent}: {
     updateParent: (l: DowelType[]) => void
 }) {
     const handleSelect = (v: DowelType) => {
-        let data = [...(currentEntries || []), v];
+        const data = [...(currentEntries || []), v];
         updateParent(data)
     }
     return <div>

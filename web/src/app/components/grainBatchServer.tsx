@@ -1,8 +1,5 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {GrainBatchSelector, NewGrainBatchForm} from "@/app/components/grainBatchClient";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 

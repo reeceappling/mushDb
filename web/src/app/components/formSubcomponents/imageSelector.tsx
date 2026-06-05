@@ -1,6 +1,7 @@
 'use client'
 
 import {useState} from "react";
+import Image from "next/image";
 
 export function TopLevelImageSelector({updateParent, buttonText}:{buttonText?:string, updateParent: (f: File | undefined)=> void}) {
     return <div className={"centerH padContent topLevelImageSelector"}>
@@ -16,7 +17,7 @@ export default function ImageSelector({updateParent, buttonText}:{buttonText?:st
     };
     const handleImageSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.currentTarget.files != null && e.currentTarget.files.length > 0) {
-            let fileToSave = e.currentTarget.files.item(0)
+            const fileToSave = e.currentTarget.files.item(0)
             if (fileToSave !== null) {
                 updateParent(fileToSave)
                 setFile(fileToSave)
@@ -29,7 +30,8 @@ export default function ImageSelector({updateParent, buttonText}:{buttonText?:st
     }
     return <div className={"imageSelector picLeft"}>
         {file !== undefined && <div className={"preview"}> {/* TODO: FIX SIZE!*/}
-            <img className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>
+            <Image className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>{/* TODO: if not working, switch back*/}
+            {/*<img className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>*/}
         </div>}
         <div className={"centerH"}>
             <button className={"basicButtonSmall"} onClick={() => {

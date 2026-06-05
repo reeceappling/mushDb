@@ -121,28 +121,28 @@ export function LiquidEntriesGroup({
                                        blacklist
                                    }: GroupProps<Liquid>) {
     const handleFormChangeName = (index: number, liq: string) => {
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data[index].data.name = liq
         updateParent(data)
     }
     const handleFormChangePct = (index: number, val: number) => {
         // TODO: HANDLE NON-NUMBERS!!!
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data[index].data.pct = val
         updateParent(data)
     }
     const addFields = (e: React.MouseEvent) => {
         e.preventDefault()
-        let data = [...(initialEntries || []), {data: {pct: 0.0, name: ''}, disabled: false}]
+        const data = [...(initialEntries || []), {data: {pct: 0.0, name: ''}, disabled: false}]
         updateParent(data)
     }
     const removeFields = (index: number) => {
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data.splice(index, 1) // TODO: THIS WONT WORK PROPERLY WITH INDEX
         updateParent(data)
     }
     const disableField = (index: number) => {
-        let data = [...(initialEntries || [])]
+        const data = [...(initialEntries || [])]
         data[index].disabled = !data[index].disabled
         updateParent(data)
     }

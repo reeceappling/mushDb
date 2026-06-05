@@ -2,12 +2,9 @@ import React from "react";
 import PageWrapper from "@/app/components/clientGeneric";
 import TestSlider from "@/app/testpage/testClient";// TODO: del?
 import {TransfersOutDisplay} from "@/app/components/transferClient";
-import {TopPageHeaderLevel} from "@/app/components/Constants";
-import PlateDisplay from "@/app/components/plateClient";
-import {TestPlateOk} from "@/app/components/plateServer"; // TODO: del?
-import {Closeable, TestNewAgarBatch, TestNewPlate} from "@/app/testpage/client";
-import ProjectDisplay from "@/app/components/projectClient";
-import {TestProjectOk, TestProjectOk2} from "@/app/components/projectServer";// TODO: del?
+// TODO: del?
+import {Closeable} from "@/app/testpage/client";
+// TODO: del?
 import {DisplayFormWrapper} from "@/app/components/common";
 
 export default async function Page({

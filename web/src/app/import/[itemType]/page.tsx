@@ -3,7 +3,6 @@ import PageWrapper from "@/app/components/clientGeneric";
 import React, {Suspense} from "react";
 import {cookies} from "next/headers";
 import {ImportArea} from "@/app/import/[itemType]/client";
-import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
 import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 export default async function Page({
                                        params,

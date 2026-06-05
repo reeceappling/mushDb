@@ -20,8 +20,7 @@ import {
     FlexedArea,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey, RequiredKey, Subform,
+    OptionalArrayOfType, RequiredKey, Subform,
 } from "@/app/components/common";
 import {
     AgarRecipeArea,
@@ -47,34 +46,34 @@ export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['color', 'string'],
         ['pcRun', 'string'],
         ['agarRecipe', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Agar Recipe assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Plate assertion failure: required key ' + key + ' was not valid');
         }
     }
 
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
@@ -202,7 +201,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             setErr("recipe must be selected")
             return
         }
-        let body: any = {
+        const body: any = {
             color: color,
             pcRun: pcRun._id,
             recipe: recipe._id,

@@ -5,7 +5,6 @@ import {cookies} from "next/headers";
 import {BaseExternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import ListDisplay from "@/app/list/[itemType]/client";
-import {SessionProvider} from "@/app/components/formSubcomponents/sessionContext/session";
 import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export default async function Page({

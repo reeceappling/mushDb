@@ -3,7 +3,6 @@
 import {JSX, useContext, useEffect, useState} from "react";
 import {Liquid} from "./liquids";
 import EntryLinkForId, {
-    EntryLinkWrapper,
     EntryLinkIdWrapper
 } from "@/app/components/formSubcomponents/entryLink";
 import {AllEntries, Data, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
@@ -34,6 +33,7 @@ import {DepthContext, DepthProvider} from "./depthContext/depth";
 import {DowelType} from "@/app/components/plugsServer";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import Image from "next/image";
 
 // export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
 //     return <div className={"hoverClickable"} onClick={(e) => {
@@ -72,7 +72,7 @@ export function LiquidEntryForNew({currentValue, updateParent}: {
 }) {
     const [err, setErr] = useState<string | undefined>()
     const handleFormChangePct = (val: number) => {
-        let data = {...currentValue};
+        const data = {...currentValue};
         data.pct = val
         updateParent(data)
     }
@@ -102,12 +102,12 @@ export function NutrientEntryForNew({currentValue, updateParent}: {
     const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
     const handleFormChangeAmt = (val: number) => {
-        let data = {...currentValue};
+        const data = {...currentValue};
         data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
-        let data = {...currentValue};
+        const data = {...currentValue};
         data.unit = val
         updateParent(data)
     }
@@ -146,12 +146,12 @@ export function SugarEntryForNew({currentValue, updateParent}: {
     const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
     const handleFormChangeAmt = (val: number) => {
-        let data = {...currentValue};
+        const data = {...currentValue};
         data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
-        let data = {...currentValue};
+        const data = {...currentValue};
         data.unit = val
         updateParent(data)
     }
@@ -190,12 +190,12 @@ export function AdditiveEntryForNew({currentValue, updateParent}: {
     const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
     const handleFormChangeAmt = (val: number) => {
-        let data = {...currentValue};
+        const data = {...currentValue};
         data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
-        let data = {...currentValue};
+        const data = {...currentValue};
         data.unit = val
         updateParent(data)
     }
@@ -234,12 +234,12 @@ export function DowelEntryForNew({currentValue, updateParent}: {
     const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
     const handleFormChangeRadius = (val: number) => {
-        let data = structuredClone(currentValue);
+        const data = structuredClone(currentValue);
         data.size = val
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
-        let data = structuredClone(currentValue);
+        const data = structuredClone(currentValue);
         data.units = val
         updateParent(data)
     }
@@ -433,14 +433,14 @@ export const PicsDisplay = (
                 {/* TODO: REMOVE CURRENT FROM INPUTS! DO INITIAL INSTEAD!*/
                 }
                 return <PixRowExisting key={i} initial={img} readonly={props.readonly} updateParent={a => {
-                    let upd = structuredClone(existing)
+                    const upd = structuredClone(existing)
                     upd[i] = a
                     updateExisting(upd)
                 }}/>
             })}
         </div>
         {!props.readonly && <PixRows initial={props.pix} updateParent={a => {
-            let upd = structuredClone(a)
+            const upd = structuredClone(a)
             updateNew(upd)
         }}/>}
 
@@ -477,11 +477,12 @@ export const PixRowExisting = (
     const leftArea = () => {
         return <div className={"picLeft" + disabledClass()}>
             {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
-            <img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>
+            <Image className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>
+            {/*<img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>*/}
             {!readonly &&
                 <button className={current.disabled ? "basicButtonSmall" : "removeButtonSmall"} onClick={(e) => {
                     e.stopPropagation();
-                    let upd = structuredClone(current)
+                    const upd = structuredClone(current)
                     upd.disabled = !current.disabled
                     update(upd)
                 }}>
@@ -494,7 +495,7 @@ export const PixRowExisting = (
             <DateArea readonly={true} when={initial.time}/>
             <NotesFormArea initial={initial.notes} readonly={readonly || false}
                            updateParent={(nts: AllEntries<Note>) => {
-                               let updated = structuredClone(current)
+                               const updated = structuredClone(current)
                                updated.data.notes = nts
                                update(updated)
                            }} removeHeader={true}/>
@@ -523,7 +524,8 @@ export function MostRecentImageDisplay(
     return <DepthProvider>
         <div className={"mriParent depthContainer depth" + depth}>
             <div>
-                <img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>
+                <Image className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>
+                {/*<img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>*/}
             </div>
             <div className={"mriInfoHolder"}>
                 <DateArea pre={(showHeader ? mostRecentImageHeader : undefined)} when={data.time} readonly={true}/>
@@ -749,7 +751,7 @@ export function DisposedDisplay(
         </NoSsr>
     }
     const dispose = () => {
-        let DisposalTime = Date.now()
+        const DisposalTime = Date.now()
         setDisposedOnParent && setDisposedOnParent(DisposalTime)
     }
     return <NoSsr>
@@ -906,7 +908,7 @@ export function AliasesArea( // TODO: OVERHAUL
         <TextBoxArea readonly={false} initialValues={(aliases || []).map((((a: string) => {
             return {data: a, disabled: false}
         })))} updateParent={(v) => {
-            let newVals = v.new.map((n) => {
+            const newVals = v.new.map((n) => {
                 return n.data
             })
             updateParent && updateParent(newVals)

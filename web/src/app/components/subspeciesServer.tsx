@@ -1,9 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {EntryPerms} from "@/app/components/perms";
 import {TestNotes} from "@/app/components/formSubcomponents/contaminations";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {SubspeciesSelector} from "@/app/components/subspeciesClient";
 
 export function TestSubspeciesOk(){
     return new SubspeciesData({
