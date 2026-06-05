@@ -29,7 +29,6 @@ export default [
       "@typescript-eslint/no-empty-object-type": "off",
       "react-hooks/rules-of-hooks": "off", // TODO: reenable
       "react-hooks/exhaustive-deps": "off", // TODO: reenable?
-      "react/display-name": "off", // TODO: reenable. Fix formListArea?
       "@typescript-eslint/no-unsafe-declaration-merging": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": "off",
