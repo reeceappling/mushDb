@@ -2,12 +2,7 @@
 
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import {
-    AllEntries,
-    Data,
-    OnViewCreatorQuadCol,
-    SplitAllEntries
-} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, Data, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumbersOnlyFromText} from "@/app/components/formSubcomponents/date";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
@@ -79,7 +74,7 @@ import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {SubstrateBatchArea, SubstrateBatchSelector} from "@/app/components/substrateBatchClient";
 import {SelectorFor} from "@/app/components/selector";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
@@ -128,7 +123,7 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl],
+        //['acl', IsValidAcl],
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -159,160 +154,160 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
             throw new Error('FruitingChamber assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
 export default function FruitingChamberDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertFruitingChamber(data)
-        const [initial, setInitial] = useState(data)
+    }: DisplayInput<FruitingChamberData>) {
+    const [initial, setInitial] = useState(data)
 
-        const existingNotes: Note[] = initial.notes || []
-        const initNotes: Data<Note>[] = existingNotes.map((n) => {
-            return {data: n, disabled: false}
-        })
-        // Basic objects
-        const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
-        const [disposed, setDisposed] = useState(initial.disposed)
-        const [sale, setSale] = useState(initial.sale)
-        const [notes, setNotes] = useState<AllEntries<Note>>({existing: initNotes, new: []})
-        const [acl, setAcl] = useState<ACL>(initial.acl)
-        const [writeTo, setWriteTo] = useState<string | undefined>()
+    const existingNotes: Note[] = initial.notes || []
+    const initNotes: Data<Note>[] = existingNotes.map((n) => {
+        return {data: n, disabled: false}
+    })
+    // Basic objects
+    const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
+    const [disposed, setDisposed] = useState(initial.disposed)
+    const [sale, setSale] = useState(initial.sale)
+    const [notes, setNotes] = useState<AllEntries<Note>>({existing: initNotes, new: []})
+    const [acl, setAcl] = useState<ACL>(initial.acl)
+    const [writeTo, setWriteTo] = useState<string | undefined>()
 
-        // Image-containing
-        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
-        const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
+    // Image-containing
+    const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+    const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+    const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
 
-        // Helper states
-        const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
-        const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: FruitingChamberData) => {
-            setInitial(updated)
-            setKnownFruitable(updated.knownFruitable)
-            setDisposed(updated.disposed)
-            setSale(updated.sale)
-            setNotes({existing: dataFor(updated.notes), new: []})
-            setAcl(updated.acl)
-            setPics(InitialPicsEntries(updated.pics))
-            setContams(InitialContamState(updated.contamination))
-            setFlushes(InitialPicsEntries(updated.flushes))
-            setTransfersOut(updated.transfersOut || [])
-            setErr(undefined)
-        }
-        const cookies = useContext(CookiesContext)
-        const fruitingChamberSubmit = () => {
-            const formData = new FormData()
-            const dataObj: any = {
-                knownFruitable: knownFruitable,
-                disposed: disposed,
-                sale: sale,
-                notes: notes,
-                writeTagTo: writeTo,
-                acl: MarshalAcl(acl),
-            }
-            try {
-                // Pics
-                const picsInfo = resolvePicsFormData(pics)
-                const newImages = picsInfo.images
-                dataObj.images = picsInfo.obj
-                // Contams
-                const contamsInfo = resolveContamsFormData(contams)
-                const newContams = contamsInfo.images
-                dataObj.contams = contamsInfo.obj
-                // Flushes
-                const flushesInfo = resolvePicsFormData(flushes)
-                const newFlushes = flushesInfo.images
-                dataObj.flushes = flushesInfo.obj
-                // Set data on form
-                setFormData(formData, dataObj)
-                setFormImages(formData, "newPic", newImages)
-                setFormImages(formData, "newContam", newContams)
-                setFormImages(formData, "newFlush", newFlushes)
-            } catch (caught: any) {
-                setErr(JSON.stringify(caught))
-                return
-            }
-
-            DoUpdateMultipartRequest("fruitingChamber",initial._id, formData, AssertFruitingChamber, allCookies(cookies))
-                .then(v=>{
-                    updateInitial(new FruitingChamberData(v))
-                })
-                .catch(e=>{
-                    setErr("failed to update initial: "+JSON.stringify(e))
-                })
-        }
-        const ovcs: OnViewCreatorQuadCol[] = [
-            OvcForNewFruit(data._id, "fruitingChamber", allCookies(cookies)),
-            WriteRfidOvcArea(initial._id),
-            // TODO: xfers? OvcForXfers(data._id, "fruit", ["plate","slant","jar","stasisTube"], "Clone/Transfer Fruit"), // TODO: ensure list correct //OVC for clone to plate? (transfer)
-            // TODO: spore swab directly from box? (should also create a fruit in the interim)
-            // TODO: spore print directly from box? (should also create a fruit in the interim)
-        ]
-        return (
-            <DisplayFormWrapper entryType={"fruitingChamber"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"Fruiting Chamber"} entryType={"fruitingChamber"}/>
-                <MostRecentImageDisplay data={initial.mostRecentImage}
-                                        headerLevel={headerLevel}/>{/* Most recent image! */}
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
-                <FlexedArea>
-                    <FlexedSinglesGroup>
-                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                    disposed={initial.disposed} readonly={readonly}/>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <SubstrateRecipeArea id={initial.recipe} headerLevel={headerLevel} readonly={true}/>
-                        <SubstrateBatchArea id={initial.substrateBatch} readonly={true}/>
-                        <div>{"Cups grain: " + data.cupsGrain}</div>
-                        <div>{"Substrate mixed with grain: " + (data.mixedSubstratePerGrain * data.cupsGrain)}</div>
-                        <div>{"Casing: " + (data.casingPerGrain * data.cupsGrain)}</div>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <GensFormDisplay gensSinceSpore={initial.genSpore}
-                                         gensSinceFruitOrSpore={initial.genFruitOrSpore}
-                                         headerLevel={headerLevel}/>{/* Gens since spore and spore/fruit*/}
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                        {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
-                        <InnocDisplay innoc={initial.innoc} openInNewTab={false}/>{/* Innoc */}
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType}
-                                       headerLevel={headerLevel}/>{/* Parent */}
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <KnownFruitableArea initial={knownFruitable} readonly={readonly} headerLevel={headerLevel}
-                                            doSelect={setKnownFruitable}/>{/* KnownFruitable */}
-                        <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
-                                  canCreateSale={true}/>{/* Sale */}
-                    </FlexedSinglesGroup>
-                </FlexedArea>
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"}
-                                     transfersOut={initial.transfersOut} allowNewTransferCreation={false}/>
-
-                <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
-                {/* Flushes */}<PicsDisplay pix={initial.flushes || []} readonly={readonly}
-                                            updateParent={setFlushes} addButtonText={"Create New Flush"}/>
-                <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
-                                readonly={readonly} headerLevel={headerLevel}/>{/* Contamination */}
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
-                </TogglableAreaWithDepth>
-                {readonly ? null :
-                    <button className={"bottomButton greenButton"} onClick={(e) => {
-                        e.stopPropagation();
-                        fruitingChamberSubmit()
-                    }}>{"Update"}</button>}
-            </DisplayFormWrapper>
-        )
-    } catch (err) {
-        return <div>{"ERROR: Fruiting Chamber data format incorrect: " + err}</div>
+    // Helper states
+    const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
+    const [err, setErr] = useState<string | undefined>()
+    const updateInitial = (updated: FruitingChamberData) => {
+        setInitial(updated)
+        setKnownFruitable(updated.knownFruitable)
+        setDisposed(updated.disposed)
+        setSale(updated.sale)
+        setNotes({existing: dataFor(updated.notes), new: []})
+        setAcl(updated.acl)
+        setPics(InitialPicsEntries(updated.pics))
+        setContams(InitialContamState(updated.contamination))
+        setFlushes(InitialPicsEntries(updated.flushes))
+        setTransfersOut(updated.transfersOut || [])
+        setErr(undefined)
     }
+    const cookies = useContext(CookiesContext)
+    const fruitingChamberSubmit = () => {
+        const formData = new FormData()
+        const dataObj: any = {
+            knownFruitable: knownFruitable,
+            disposed: disposed,
+            sale: sale,
+            notes: notes,
+            writeTagTo: writeTo,
+            acl: MarshalAcl(acl),
+        }
+        try {
+            // Pics
+            const picsInfo = resolvePicsFormData(pics)
+            const newImages = picsInfo.images
+            dataObj.images = picsInfo.obj
+            // Contams
+            const contamsInfo = resolveContamsFormData(contams)
+            const newContams = contamsInfo.images
+            dataObj.contams = contamsInfo.obj
+            // Flushes
+            const flushesInfo = resolvePicsFormData(flushes)
+            const newFlushes = flushesInfo.images
+            dataObj.flushes = flushesInfo.obj
+            // Set data on form
+            setFormData(formData, dataObj)
+            setFormImages(formData, "newPic", newImages)
+            setFormImages(formData, "newContam", newContams)
+            setFormImages(formData, "newFlush", newFlushes)
+        } catch (caught: any) {
+            setErr(JSON.stringify(caught))
+            return
+        }
+
+        DoUpdateMultipartRequest("fruitingChamber", initial._id, formData, AssertFruitingChamber, allCookies(cookies))
+            .then(v => {
+                updateInitial(new FruitingChamberData(v))
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+            })
+    }
+    const ovcs: OnViewCreatorQuadCol[] = [
+        OvcForNewFruit(data._id, "fruitingChamber", allCookies(cookies)),
+        WriteRfidOvcArea(initial._id),
+        // TODO: xfers? OvcForXfers(data._id, "fruit", ["plate","slant","jar","stasisTube"], "Clone/Transfer Fruit"), // TODO: ensure list correct //OVC for clone to plate? (transfer)
+        // TODO: spore swab directly from box? (should also create a fruit in the interim)
+        // TODO: spore print directly from box? (should also create a fruit in the interim)
+    ]
+    return (
+        <DisplayFormWrapper entryType={"fruitingChamber"}>
+            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ID id={data._id} txt={"Fruiting Chamber"} entryType={"fruitingChamber"}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage}
+                                    headerLevel={headerLevel}/>{/* Most recent image! */}
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <FlexedArea>
+                <FlexedSinglesGroup>
+                    <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
+                                                disposed={initial.disposed} readonly={readonly}/>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <SubstrateRecipeArea id={initial.recipe} headerLevel={headerLevel} readonly={true}/>
+                    <SubstrateBatchArea id={initial.substrateBatch} readonly={true}/>
+                    <div>{"Cups grain: " + data.cupsGrain}</div>
+                    <div>{"Substrate mixed with grain: " + (data.mixedSubstratePerGrain * data.cupsGrain)}</div>
+                    <div>{"Casing: " + (data.casingPerGrain * data.cupsGrain)}</div>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <GensFormDisplay gensSinceSpore={initial.genSpore}
+                                     gensSinceFruitOrSpore={initial.genFruitOrSpore}
+                                     headerLevel={headerLevel}/>{/* Gens since spore and spore/fruit*/}
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
+                    <InnocDisplay innoc={initial.innoc} openInNewTab={false}/>{/* Innoc */}
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}
+                                   headerLevel={headerLevel}/>{/* Parent */}
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <KnownFruitableArea initial={knownFruitable} readonly={readonly} headerLevel={headerLevel}
+                                        doSelect={setKnownFruitable}/>{/* KnownFruitable */}
+                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
+                              canCreateSale={true}/>{/* Sale */}
+                </FlexedSinglesGroup>
+            </FlexedArea>
+            <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"}
+                                 transfersOut={initial.transfersOut} allowNewTransferCreation={false}/>
+
+            <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
+            {/* Flushes */}<PicsDisplay pix={initial.flushes || []} readonly={readonly}
+                                        updateParent={setFlushes} addButtonText={"Create New Flush"}/>
+            <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
+                            readonly={readonly} headerLevel={headerLevel}/>{/* Contamination */}
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
+            </TogglableAreaWithDepth>
+            {readonly ? null :
+                <button className={"bottomButton greenButton"} onClick={(e) => {
+                    e.stopPropagation();
+                    fruitingChamberSubmit()
+                }}>{"Update"}</button>}
+        </DisplayFormWrapper>
+    )
 }
 
 export function VolumeSelector({initialVal, initialUnit, updateNumberOfCups}: {
@@ -403,10 +398,10 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("fruitingChamber", body, AssertFruitingChamber, allCookies(cookies))
-            .then(v=>{
+            .then(v => {
                 handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
@@ -548,12 +543,14 @@ export function FruitingChamberListPageTable({data, onClick, withLink}: ListPage
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: FruitingChamberData) => {
             return <EntryLinkWrapper
-                props={{entry:v, openInNewTab: true}}>
+                props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new FruitingChamberData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new FruitingChamberData(v)
+    }}/>
 }
 
 export function FruitingChamberSelectorTable({data, onClick}: ListPageItems<FruitingChamberData>) {

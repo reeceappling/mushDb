@@ -12,7 +12,7 @@ export async function GetTransferReasons():Promise<Map<string,string>>{
     })
 }
 
-export async function GetFilterSizes():Promise<Map<string,string>>{
+export async function GetFilterSizes():Promise<Map<string,string>>{ // TODO: validate working
     const resp = await fetch(BaseInternalUrl + "/options/bagFilterSizes") // TODO: validate internal works here. Do we need any headers?
     if (!resp.ok){
         throw new Error("response not ok: "+(await resp.text()))
@@ -43,27 +43,6 @@ export async function getOptionsResponse(variant: string):Promise<string[]> {
         throw new Error("getOptionsResponse does not support transferReasons. See TransferReasonSelector");
     }
     return jsn as string[]
-
-    // switch(variant){
-    //     case "additives":
-    //         return AdditivesList
-    //     case "antibiotics":
-    //         return AntibioticsList
-    //     case "colors":
-    //         return ["black","clear","blue"]
-    //     case "grains":
-    //         return GrainsList
-    //     case "liquids":
-    //         return LiquidsList
-    //     case "nutrients":
-    //         return NutrientsList
-    //     case "sugars":
-    //         return SugarsList
-    //     // case "transferReasons": // TODO: SPECIAL CASE, HANDLE ELSEWHERE
-    //     //     return convertObjectToStringMap(resJson) // Map<string, string>
-    //     default:
-    //         throw "invalid option variant name: "+variant
-    //}
 }
 
 // export async function getOptionsResponse(variant: string) {

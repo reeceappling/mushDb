@@ -294,7 +294,7 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 		AclField:                   allCanReadAcl(&user.Email), // TODO: or write?
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
 }
 
 // TODO: USE!

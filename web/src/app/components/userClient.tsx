@@ -63,10 +63,7 @@ export function AssertUser(input: any): asserts input is UserData {
 export default function UserDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-
-        AssertUser(data)
+    }: DisplayInput<UserData>) {
         const [initial, setInitial] = useState(data)
         const [err, setErr] = useState<string | undefined>()
         const [perms, setPerms] = useState<UserPerms>(initial.perms || {admin: true, projects: []}) // TODO: SETPERMS
@@ -112,9 +109,6 @@ export default function UserDisplay(
                 {/* TODO: unlikely to need: <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/> TODO: where to put?*/}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Transfer data format incorrect: " + err}</div>
-    }
 }
 
 // TODO: MOVE!

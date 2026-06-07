@@ -30,7 +30,13 @@ import {
 import {AliasesArea, ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
@@ -58,7 +64,7 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -76,6 +82,11 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
             throw new Error('SubRec assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 
 
@@ -84,9 +95,7 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
 export default function SubstrateRecipeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertSubstrateRecipe(data)
+    }: DisplayInput<SubstrateRecipeData>) {
         const [initial, setInitial] = useState(data)
 
         const [name, setName] = useState(initial.name)
@@ -168,9 +177,6 @@ export default function SubstrateRecipeDisplay(
                 }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Substrate Recipe data format incorrect: " + err}</div>
-    }
 }
 
 export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<SubstrateRecipeData> }) {

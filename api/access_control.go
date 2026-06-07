@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/goUtils/v2/utils/slices"
 )
@@ -281,7 +282,7 @@ func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWriteP
 	}
 	if userProjPerm == nil {
 		return newPerm(false)
-	}
+	} // TODO: validate ok
 	// False is can write on project items, but not project itself
 	// True is project admin
 	return newPerm(*userProjPerm == true)
@@ -301,8 +302,7 @@ func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permiss
 }
 
 // TODO: change to "admin/read/write" ?
-type ProjectPerms map[string]string // TODO: USE // map of email to perm. nil is readOnly, false is write but not edit the project, true is full control over project
-
+type ProjectPerms map[string]ProjectPerm // TODO: USE // map of email to perm. nil is readOnly, false is write but not edit the project, true is full control over project
 func (pp ProjectPerms) Equal(other ProjectPerms) bool {
 	if len(pp) != len(other) {
 		return false
@@ -316,6 +316,48 @@ func (pp ProjectPerms) Equal(other ProjectPerms) bool {
 		return false
 	}
 	return true
+}
+func (pp ProjectPerms) ForUser(email string) *ProjectPerm {
+	if perm, exists := pp[email]; exists {
+		userProjectPerm := perm
+		return &userProjectPerm
+	}
+	return nil
+}
+
+type ProjectPerm string // "read", "write", or "admin". Used as a pointer, where nil == no perm on project
+var (
+	// ProjectAdmin defines a ProjectPerm for a user that can write on entries for the specified project (if the project can write to the entry), as well as modify the project itself
+	ProjectAdmin ProjectPerm = "admin"
+	// ProjectWrite defines a ProjectPerm for a user that can write (and read) on entries for the specified project (if the project can write to the entry)
+	ProjectWrite ProjectPerm = "write"
+	// ProjectRead defines a ProjectPerm for a user that can read entries for the specified project
+	ProjectRead ProjectPerm = "read"
+	// ProjectNone *ProjectPerm = nil
+)
+
+func (pp *ProjectPerm) IsAdmin() bool {
+	return pp != nil && *pp == ProjectAdmin
+}
+func (pp *ProjectPerm) CanRead() bool {
+	return pp != nil
+}
+func (pp *ProjectPerm) CanWrite() bool {
+	return pp != nil && *pp != ProjectRead
+}
+func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) { // TODO: use
+	s := string(bs)
+	switch s {
+	case "admin":
+		*projPerm = ProjectAdmin
+	case "write":
+		*projPerm = ProjectWrite
+	case "read":
+		*projPerm = ProjectRead
+	default:
+		return fmt.Errorf("unknown project perm: %s, must be 'read', 'write', or 'admin'", s)
+	}
+	return nil
 }
 
 type UserPerms struct {

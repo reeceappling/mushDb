@@ -106,7 +106,7 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: 
 		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   acl,
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
 }
 
 type updateGrainBatchRequest struct {

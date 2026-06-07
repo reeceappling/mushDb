@@ -399,7 +399,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 
 type importStasisTubeRequest struct {
 	CreationDateField
-	SpeciesField // TODO: consider making optional? probs not...
+	SpeciesOptionalField // TODO: made optional
 	// Optional
 	SubspeciesOptionalField
 	KnownFruitableField
@@ -472,31 +472,43 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		pix = []PicWithNotes{*importedPic}
 	}
 
-	user, err := GetAuthInfo(r.Context()) // TODO: THIS until finalPerms.Users[user.Email] = true is used in many places. Make it its own func
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
+	innoculated := data.Species != nil
+	if !innoculated {
+		if data.Generation != nil {
+			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.SubSpecies != nil {
+			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.KnownFruitable != nil {
+			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		finalPerms = allCanWriteAcl().ACL
 	} else {
-		finalPerms = sp.DefaultAcl.Clone()
+		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		if err != nil {
+			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if subsp != nil {
+			finalPerms = subsp.DefaultAcl.Clone()
+		} else {
+			finalPerms = sp.DefaultAcl.Clone()
+		}
+		user, _ := GetAuthInfo(r.Context())
+		finalPerms.Users[user.Email] = true
 	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
 	ctx, db := Db(r)
 	coll := db.Collection(StasisTubeCollectionName)
 	toInsert := StasisTube{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
-		SpeciesOptionalField:    data.SpeciesField.AsOptional(),
+		SpeciesOptionalField:    data.SpeciesOptionalField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		GenerationsFields:       GenerationsFieldFor(gen),
 		PicsField:               PicsField{pix},

@@ -304,7 +304,7 @@ type importJarRequest struct {
 	// TODO: ALSO IMPORT WITH sizeCups
 	Recipe AlternateCollectionId // Jar Recipe
 	CreationDateField
-	SpeciesField
+	SpeciesOptionalField // Only empty when non-innoc'd TODO: new!
 	SubspeciesOptionalField
 	Generation *int
 	KnownFruitableField
@@ -343,24 +343,6 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	user, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
 	// TODO: Even if user cannot write, allow them to import???
 
@@ -405,6 +387,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		now := unixTimeForNow()
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
+
 	var gen *Generation = nil
 	if data.Generation != nil {
 		gen = (*Generation)(data.Generation)
@@ -413,18 +396,45 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
+
+	var finalPerms ACL
+	innoculated := data.Species != nil
+	if !innoculated {
+		if data.Generation != nil {
+			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.SubSpecies != nil {
+			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.KnownFruitable != nil {
+			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		finalPerms = allCanWriteAcl().ACL
+	} else {
+		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		if err != nil {
+			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if subsp != nil {
+			finalPerms = subsp.DefaultAcl.Clone()
+		} else {
+			finalPerms = sp.DefaultAcl.Clone()
+		}
+		user, _ := GetAuthInfo(r.Context())
+		finalPerms.Users[user.Email] = true
+	}
+
 	ctx, _ := Db(r)
-	//acl, err := data.PermsOnRequest.AclForUser(ctx, user) // TODO: USE THIS?
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&data.Recipe},
 		PcRunOptionalField:      PcRunOptionalField{}, // No pc runs on imports
 		CreationDateField:       CreationDateField{data.CreationDate},
-		SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
+		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		GenerationsFields: GenerationsFields{
 			GenSporeField:        GenSporeField{gen},

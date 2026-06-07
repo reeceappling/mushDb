@@ -11,6 +11,8 @@ import (
 	"github.com/reeceappling/mushDb/api/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"io"
 	"net/http"
 	"slices"
@@ -550,14 +552,83 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		dbErr(w, err2.Error(), http.StatusInternalServerError)
 		return
 	}
-	println("Writing update:", string(bsOut2))
+	println("Writing update:", string(bsOut2)) // TODO: del
 	_, err = w.Write(bsOut)
 	handleWriteErr(err, w)
 }
 
+func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Project, upd bson.D, err error, updateUsers func(mongo.SessionContext) (any, error)) {
+	if err != nil {
+		println("mod creation failure: " + err.Error())
+		dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(upd) == 0 {
+		dbErr(w, "no changes made", http.StatusBadRequest)
+		return
+	}
+
+	sessionOptions := options.Session() // TODO: change?
+	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
+	if err != nil {
+		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	wc := writeconcern.Majority() // TODO: ok?
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+	// Defers ending the session after the transaction is committed or ended
+	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		defer sess.EndSession(ctx)
+		// update the users (if needed)
+		if _, e := updateUsers(sessCtx); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to update users: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		// Update the project
+		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(ProjectsCollectionName)
+		bsonId := bsonFindFilter("_id", existing.DbId())
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
+		if err != nil {
+			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		var updated Project
+		err = coll.FindOne(ctx, bsonId).Decode(&updated)
+		if err != nil {
+			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		bsOut, err := json.Marshal(updated)
+		if err != nil {
+			dbErr(w, err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+
+		// Try to commit the txn
+		if e := sess.CommitTransaction(ctx); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		// TODO: move the write!
+		bsOut2, err2 := json.MarshalIndent(updated, "", " ") // TODO: delete later
+		if err2 != nil {
+			dbErr(w, err2.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		println("Writing update:", string(bsOut2)) // TODO: del
+		_, err = w.Write(bsOut)
+		handleWriteErr(err, w)
+
+		return nil, nil
+	}, txnOptions)
+	return
+}
+
 type importPlateRequest struct {
 	CreationDateField
-	SpeciesField
+	SpeciesOptionalField // TODO: made optional
 	SubspeciesOptionalField
 	KnownFruitableField
 	Generation *int `json:"generation,omitempty"`
@@ -640,26 +711,37 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	println("getting auth info")
-	user, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	println("getting speciest and subspecies")
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
+	innoculated := data.Species != nil
+	if !innoculated {
+		if data.Generation != nil {
+			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.SubSpecies != nil {
+			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.KnownFruitable != nil {
+			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		finalPerms = allCanWriteAcl().ACL
 	} else {
-		finalPerms = sp.DefaultAcl.Clone()
+		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		if err != nil {
+			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if subsp != nil {
+			finalPerms = subsp.DefaultAcl.Clone()
+		} else {
+			finalPerms = sp.DefaultAcl.Clone()
+		}
+		user, _ := GetAuthInfo(r.Context())
+		finalPerms.Users[user.Email] = true
 	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
 	ctx, db := Db(r)
 	coll := db.Collection(PlatesCollectionName)
@@ -671,7 +753,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		PourCoverageField:                   data.PourCoverageField,
 		WetAtCooledTimeField:                WetAtCooledTimeField{nil},
 		AgarOnOutsideAtPourTimeField:        AgarOnOutsideAtPourTimeField{nil},
-		SpeciesOptionalField:                data.SpeciesField.AsOptional(),
+		SpeciesOptionalField:                data.SpeciesOptionalField,
 		SubspeciesOptionalField:             data.SubspeciesOptionalField,
 		GenerationsFields:                   GenerationsFieldFor(gen),
 		PicsField:                           PicsField{pix},

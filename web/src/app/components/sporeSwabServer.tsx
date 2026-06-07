@@ -65,7 +65,7 @@ export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwabData>) { /
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
         createSelector:(selHdl: (onSelect: SporeSwabData) => void)=>{
-            return <SporeSwabSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+            return <SporeSwabSelector doSelect={(v)=>{
                 v && selHdl(v)
             }}/>
         },

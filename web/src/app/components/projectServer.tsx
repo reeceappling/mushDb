@@ -47,7 +47,7 @@ export interface ProjectData {
     completed?: number,
     notes?: Note[],
     lastUpdated: number,
-    perms?: Map<string, string>, // Map of userId to canWrite // TODO: consider changing from bool to "read/write/admin" if serialization of mapped undefineds gets weird...
+    perms?: Map<string, string>, // Map of userId to "read/write/admin"
 }
 export class ProjectData {
     // Accept a single object containing the fields
@@ -67,14 +67,14 @@ export class ProjectData {
     }
 }
 
-// Confirmed to be working without going to get data
+// Confirmed to be working without going to get data // TODO: delete if unused? Make closeable?
 export function ProjectSelector(sp: SelectorProps<ProjectData>){
     // TODO: FIX THIS?
     return <select className={"tailwindSelector"} onChange={e => { // TODO: DISABLE THIS RETURN!
-        // TODO: FIX NEXT LINE
+        e.stopPropagation() // TODO: ok?
         sp.doSelect(new ProjectData({_id: e.currentTarget.value, creationDate: 0, lastUpdated: 0, perms: new Map<string, string>()}))
     }}>
-        <option value={"A"}>{"A"}</option>
+        <option value={"A"}>{"A"}</option>{/* TODO: gross and change to realistic*/}
         <option value={"B"}>{"B"}</option>
         <option value={"C"}>{"C"}</option>
     </select>
@@ -95,5 +95,3 @@ export function ProjectSelector(sp: SelectorProps<ProjectData>){
     //     <NewProjectForm onCreate={sp.doSelect}/>
     // </RecentSelector>
 }
-
-export const ChannelTextNewProject = "newProject"

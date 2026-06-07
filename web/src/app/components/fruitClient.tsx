@@ -1,12 +1,7 @@
 'use client'
 
 import React, {JSX, useContext, useState} from "react";
-import {
-    IsValidNote,
-    NewEntryNotes,
-    Note,
-    NotesFormArea
-} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
     AllEntries,
@@ -24,7 +19,10 @@ import {
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     CreatedLinkFor,
-    DisplayFormWrapper, DoCreateRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest,
+    DisplayFormWrapper,
+    DoCreateRequest,
+    DoCreateRequestMultipart,
+    DoUpdateMultipartRequest,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -40,7 +38,8 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, RequiredKey,
+    OptionalSimpleKey,
+    RequiredKey,
     resolvePicsFormData,
     setFormData,
     setFormImages,
@@ -63,7 +62,7 @@ import {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponen
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwabData} from "@/app/components/sporeSwabServer";
@@ -106,7 +105,7 @@ export function AssertFruit(input: any): asserts input is FruitData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl],
+        //['acl', IsValidAcl],
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -135,160 +134,160 @@ export function AssertFruit(input: any): asserts input is FruitData {
             throw new Error('Bag assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
 export default function FruitDisplay(
     {
-        id, readonly, data, headerLevel, openSporesInNewTab, allowPrintCreation, isTopLevel
+        id, readonly, data, headerLevel, openSporesInNewTab, allowPrintCreation, isTopLevel // TODO: change to regular display????
     }: {
         id: string;
         readonly: boolean;
         isTopLevel: boolean;
-        data: any;
+        data: FruitData;
         headerLevel?: number;
         openSporesInNewTab?: boolean;
         allowPrintCreation?: boolean;
     }) {
-    try {
-        AssertFruit(data)
-        const [initial, setInitial] = useState(data)
+    const [initial, setInitial] = useState(data)
 
-        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [disposed, setDisposed] = useState(initial.disposed)
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+    const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+    const [disposed, setDisposed] = useState(initial.disposed)
+    const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+    // Helper states
+    const [transfersOut, setTransfersOut] = useState(data.transfersOut || [])
+    const [sporePrints, setSporePrints] = useState(data.prints || []) // TODO: use?
+    const [err, setErr] = useState<string | undefined>()
+    const [acl, setAcl] = useState<ACL>(initial.acl)
+    const updateInitial = (updated: FruitData) => {
+        setInitial(updated)
+        setPics(InitialPicsEntries(updated.pics))
+        setDisposed(updated.disposed)
+        setNotes(InitialNotesState(updated.notes))
         // Helper states
-        const [transfersOut, setTransfersOut] = useState(data.transfersOut || [])
-        const [sporePrints, setSporePrints] = useState(data.prints || []) // TODO: use?
-        const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL>(initial.acl)
-        const updateInitial = (updated: FruitData) => {
-            setInitial(updated)
-            setPics(InitialPicsEntries(updated.pics))
-            setDisposed(updated.disposed)
-            setNotes(InitialNotesState(updated.notes))
-            // Helper states
-            setTransfersOut(updated.transfersOut || [])
-            setSporePrints(updated.prints || [])
-            setAcl(updated.acl)
-            setErr(undefined)
-        }
-        // TODO: fix?
-        // const sporePrintsArea = () => {
-        //     return <div>
-        //         <div>{"Spore Prints: "}</div>
-        //         {(sporePrints.length === 0) &&
-        //             <div>{"None"}</div>}
-        //         {sporePrints.map(spid => {
-        //             const b58id = spid
-        //             return <div key={b58id}>
-        //                 <EntryLink props={{
-        //                     linkId: b58id,
-        //                     entryType: "sporePrint",
-        //                     openInNewTab: openSporesInNewTab
-        //                 }}>{spid}</EntryLink>
-        //             </div>
-        //         })}
-        //     </div>
-        // }
-        const cookies = useContext(CookiesContext)
-        const fruitSubmit = () => {
-            // disposed, notes, existing pics
-            const formData = new FormData()
-            const dataObj: any = {
-                notes: notes,
-                disposed: disposed,
-                acl: acl,
-            }
-            try {
-                // Pics
-                const picsInfo = resolvePicsFormData(pics)
-                const newImages = picsInfo.images
-                dataObj.images = picsInfo.obj
-                // Set data on form
-                setFormData(formData, dataObj)
-                //body.set("data", JSON.stringify(dataObj))
-                setFormImages(formData, "newPic", newImages)
-            } catch (caught: any) {
-                setErr(JSON.stringify(caught))
-                return
-            }
-
-            DoUpdateMultipartRequest("fruit",initial._id, formData, AssertFruit, allCookies(cookies))
-                .then(v=>{
-                    updateInitial(new FruitData(v))
-                })
-                .catch(e=>{
-                    setErr("failed to update initial: "+JSON.stringify(e))
-                })
-        }
-        const ovcs: OnViewCreatorQuadCol[] = [
-            // TODO: setTransfersOut on this as needed!
-            // TODO: OvcForXfers on others, or use TransfersOut???
-            // TODO: OvcForXfers(data._id, "fruit", ["plate", "slant", "jar", "stasisTube"], allCookies(cookies), AddToTransfers(setTransfersOut, transfersOut), "Clone/Transfer Fruit"), // TODO: ensure list correct// TODO: OVC for clone to plate (transfer)
-            {
-                txt: "Create Spore Swab",
-                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                    return <NewSporeSwabForm fruitIn={data} onCreate={(item: SporeSwabData) => {
-                        onCreate([{
-                            typeText: "Spore Swab",
-                            node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
-                        }], false)
-                    }}/>
-                },
-            },
-            {
-                txt: "Create Spore Print",
-                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                    return <NewSporePrintForm fruitIn={data}
-                                              onCreate={(item: SporePrintData) => {
-                                                  onCreate([{
-                                                      typeText: "Spore Print",
-                                                      node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
-                                                  }], false)
-                                              }}/>
-                },
-            },
-            WriteRfidOvcArea(initial._id),
-        ]
-        return (
-            <DisplayFormWrapper entryType={"fruit"}>
-                <ErrorDisplay err={err}/>
-                <ID txt={"Fruit"} id={data._id} entryType={"fruit"}/>
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
-                <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
-                <FlexedArea>
-                    <FlexedSinglesGroup>
-                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType}
-                                       headerLevel={headerLevel}/>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                    readonly={readonly} disposed={initial.disposed}
-                                                    setDisposedOnParent={setDisposed}/>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <GensFormDisplay gensSinceSpore={initial.genSpore} dontDisplayGensFruitOrSpore={true}
-                                         headerLevel={headerLevel}/>
-                    </FlexedSinglesGroup>
-                </FlexedArea>
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
-                                     allowNewTransferCreation={false}/>
-                <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
-                </TogglableAreaWithDepth>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
-                    e.stopPropagation();
-                    fruitSubmit()
-                }}>{"Update"}</button>}
-            </DisplayFormWrapper>
-        )
-    } catch (err) {
-        return <div>{"ERROR: Fruit data format incorrect: " + err}</div>
+        setTransfersOut(updated.transfersOut || [])
+        setSporePrints(updated.prints || [])
+        setAcl(updated.acl)
+        setErr(undefined)
     }
+    // TODO: fix?
+    // const sporePrintsArea = () => {
+    //     return <div>
+    //         <div>{"Spore Prints: "}</div>
+    //         {(sporePrints.length === 0) &&
+    //             <div>{"None"}</div>}
+    //         {sporePrints.map(spid => {
+    //             const b58id = spid
+    //             return <div key={b58id}>
+    //                 <EntryLink props={{
+    //                     linkId: b58id,
+    //                     entryType: "sporePrint",
+    //                     openInNewTab: openSporesInNewTab
+    //                 }}>{spid}</EntryLink>
+    //             </div>
+    //         })}
+    //     </div>
+    // }
+    const cookies = useContext(CookiesContext)
+    const fruitSubmit = () => {
+        // disposed, notes, existing pics
+        const formData = new FormData()
+        const dataObj: any = {
+            notes: notes,
+            disposed: disposed,
+            acl: acl,
+        }
+        try {
+            // Pics
+            const picsInfo = resolvePicsFormData(pics)
+            const newImages = picsInfo.images
+            dataObj.images = picsInfo.obj
+            // Set data on form
+            setFormData(formData, dataObj)
+            //body.set("data", JSON.stringify(dataObj))
+            setFormImages(formData, "newPic", newImages)
+        } catch (caught: any) {
+            setErr(JSON.stringify(caught))
+            return
+        }
+
+        DoUpdateMultipartRequest("fruit", initial._id, formData, AssertFruit, allCookies(cookies))
+            .then(v => {
+                updateInitial(new FruitData(v))
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+            })
+    }
+    const ovcs: OnViewCreatorQuadCol[] = [
+        // TODO: setTransfersOut on this as needed!
+        // TODO: OvcForXfers on others, or use TransfersOut???
+        // TODO: OvcForXfers(data._id, "fruit", ["plate", "slant", "jar", "stasisTube"], allCookies(cookies), AddToTransfers(setTransfersOut, transfersOut), "Clone/Transfer Fruit"), // TODO: ensure list correct// TODO: OVC for clone to plate (transfer)
+        {
+            txt: "Create Spore Swab",
+            newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                return <NewSporeSwabForm fruitIn={data} onCreate={(item: SporeSwabData) => {
+                    onCreate([{
+                        typeText: "Spore Swab",
+                        node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
+                    }], false)
+                }}/>
+            },
+        },
+        {
+            txt: "Create Spore Print",
+            newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                return <NewSporePrintForm fruitIn={data}
+                                          onCreate={(item: SporePrintData) => {
+                                              onCreate([{
+                                                  typeText: "Spore Print",
+                                                  node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
+                                              }], false)
+                                          }}/>
+            },
+        },
+        WriteRfidOvcArea(initial._id),
+    ]
+    return (
+        <DisplayFormWrapper entryType={"fruit"}>
+            <ErrorDisplay err={err}/>
+            <ID txt={"Fruit"} id={data._id} entryType={"fruit"}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
+            <FlexedArea>
+                <FlexedSinglesGroup>
+                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}
+                                   headerLevel={headerLevel}/>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
+                                                readonly={readonly} disposed={initial.disposed}
+                                                setDisposedOnParent={setDisposed}/>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <GensFormDisplay gensSinceSpore={initial.genSpore} dontDisplayGensFruitOrSpore={true}
+                                     headerLevel={headerLevel}/>
+                </FlexedSinglesGroup>
+            </FlexedArea>
+            <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
+                                 allowNewTransferCreation={false}/>
+            <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
+            </TogglableAreaWithDepth>
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
+                e.stopPropagation();
+                fruitSubmit()
+            }}>{"Update"}</button>}
+        </DisplayFormWrapper>
+    )
 }
 
 export function NewFruitForm(
@@ -338,7 +337,7 @@ export function NewFruitForm(
         setFormData(formData, dataObj)
         DoCreateRequestMultipart("fruit", formData, AssertFruit, allCookies(cookies))
             .then(onCreate)
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
@@ -405,7 +404,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         <ImageSelector updateParent={setImageFile}/>
         <NewEntryNotes setNotes={setNotes}/>
         {/* SUBMIT AREA */}
-        <button className={"bottomButton greenButton"} onClick={submitImportFruit} >{"Import"}</button>
+        <button className={"bottomButton greenButton"} onClick={submitImportFruit}>{"Import"}</button>
     </ImportEntryFormWrapper>
 }
 
@@ -440,8 +439,8 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
             .then(c => {
                 onCloneCreated(new FruitData(c))
             })
-            .catch(e=>{
-                setErr("failed to create/get new clone: "+JSON.stringify(e))
+            .catch(e => {
+                setErr("failed to create/get new clone: " + JSON.stringify(e))
             })
     }
     return <div>
@@ -480,25 +479,28 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
 
 export function FruitListPageTable({data, onClick, withLink}: ListPageItems<FruitData>) {
     let cols: ListTableColumn<FruitData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Harvest", (v)=>{
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Harvest", (v) => {
             return NumberToDateStr(v.creationDate)
         }),
-        NewColumn("Species", v=>v.species ),
-        NewColumn("Subspecies", (v)=>v.subspecies || ""),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Species", v => v.species),
+        NewColumn("Subspecies", (v) => v.subspecies || ""),
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: FruitData)=>{
-            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: FruitData) => {
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new FruitData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new FruitData(v)
+    }}/>
 }
+
 export function FruitSelectorTable({data, onClick}: ListPageItems<FruitData>) {
     return <FruitListPageTable data={data} onClick={onClick} withLink={true}/>
 }
@@ -509,7 +511,7 @@ export function FruitSelector(
     }: {
         doSelect: (val: FruitData | undefined) => void,
     }) {
-    const table = (items: FruitData[]):JSX.Element=>{
+    const table = (items: FruitData[]): JSX.Element => {
         return <FruitSelectorTable data={items} onClick={doSelect}/>
     }
 

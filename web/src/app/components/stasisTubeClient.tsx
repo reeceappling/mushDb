@@ -55,7 +55,7 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, IsValidAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
@@ -99,7 +99,7 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -129,6 +129,11 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
             throw new Error('StasisTube assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -144,15 +149,11 @@ export function StasisTubeImportDisplay() {
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
     const importEntry = () => {
-        const formData = new FormData()
-        if(species===undefined){
-            setErr("Species must be set!")
-            return
-        }
+        const formData = new FormData() // TODO: const ok?
         const dataObj: any = {
             creationDate:created,
-            species: species._id,
             // optional
+            species: species?._id,
             subspecies: subspecies?._id,
             knownFruitable: knownFruitable,
             generation: generation,
@@ -182,9 +183,7 @@ export function StasisTubeImportDisplay() {
 export default function StasisTubeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertStasisTube(data)
+    }: DisplayInput<StasisTubeData>) {
         const [initial, setInitial] = useState(data)
         const existingNotes: Note[] = initial.notes || []
         const initNotes: Data<Note>[] = existingNotes.map((n) => {
@@ -291,9 +290,6 @@ export default function StasisTubeDisplay(
                 }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: StasisTube data format incorrect: " + err}</div>
-    }
 }
 
 export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<StasisTubeData>, pcRunIn?: PcRunData}){

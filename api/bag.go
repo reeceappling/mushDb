@@ -358,7 +358,7 @@ type importBagRequest struct {
 	CreationDateField
 	SubstrateRecipeField
 	FilterSize string
-	SpeciesField
+	SpeciesOptionalField
 	SubspeciesOptionalField
 	Generation *int
 	KnownFruitableField
@@ -452,18 +452,19 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	var gen *Generation = nil
 	if data.Generation != nil {
 		gen = (*Generation)(data.Generation)
 	}
+
 	pix := []PicWithNotes{}
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
+	}
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	ctx := r.Context()
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
@@ -473,24 +474,38 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "substrate recipe retrieval error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
+	innoculated := data.Species != nil
+	if !innoculated {
+		if data.Generation != nil {
+			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.SubSpecies != nil {
+			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.KnownFruitable != nil {
+			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		finalPerms = allCanWriteAcl().ACL
 	} else {
-		finalPerms = sp.DefaultAcl.Clone()
+		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		if err != nil {
+			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if subsp != nil {
+			finalPerms = subsp.DefaultAcl.Clone()
+		} else {
+			finalPerms = sp.DefaultAcl.Clone()
+		}
+		user, _ := GetAuthInfo(r.Context())
+		finalPerms.Users[user.Email] = true
 	}
-	user, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
+
 	// Write
 	toInsert := &Bag{
 		MainCollectionIdField:   MainCollectionIdField{id},
@@ -501,7 +516,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		GenerationsFields:       GenerationsFieldFor(gen),
 		SealDate:                &data.CreationDate,
 		KnownFruitableField:     data.KnownFruitableField,
-		SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
+		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		PicsField:               PicsField{pix},
 		ContaminationsField:     ContaminationsField{},

@@ -36,7 +36,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {IsValidAcl, MarshalAcl} from "@/app/components/accessControlClient";
+import {IsValidAcl, MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -65,7 +65,7 @@ export function AssertWaterJar(input: any): asserts input is WaterJarData {
     }
     // complex optional keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -81,13 +81,18 @@ export function AssertWaterJar(input: any): asserts input is WaterJarData {
             throw new Error('WJ assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
 export default function WaterJarDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
+    }: DisplayInput<WaterJarData>) {
     const [initial, setInitial] = useState(data as WaterJarData)
     const [disposed, setDisposed] = useState<number | undefined>(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))

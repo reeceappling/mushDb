@@ -40,7 +40,13 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import {SaleArea} from "@/app/components/saleClient";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {SporePrintData, SporePrintSelectorCloseable} from "@/app/components/sporePrintServer";
 import {WaterJarData, WaterJarSelectorCloseable} from "@/app/components/waterJarServer";
@@ -83,7 +89,7 @@ export function AssertMss(input: any): asserts input is MssData {
 
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -101,6 +107,11 @@ export function AssertMss(input: any): asserts input is MssData {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -167,9 +178,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
 export default function MssDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertMss(data)
+    }: DisplayInput<MssData>) {
         const [initial, setInitial] = useState(data)
 
         const [sale, setSale] = useState(data.sale)
@@ -233,9 +242,6 @@ export default function MssDisplay(
                 mssSubmit()
             }}>{"Update"}</button>}
         </DisplayFormWrapper>
-    } catch (err) {
-        return <div>{"ERROR: MuliSpore Syringe data format incorrect: " + err}</div>
-    }
 }
 
 // this should only be used by the Spore Print Display Component

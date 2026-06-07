@@ -70,7 +70,7 @@ export function FormListArea<Type>(listGroup: (props: GroupProps<Type>) => JSX.E
         function FormListAreaAnonymous({initialValues, readonly, updateParent, headerLevel, headerLevelOffset}: AreaProps<Type>) {
             const [existing, setExisting] = useState(initialValues || [])
             const [newEntries, setNewEntries] = useState<Data<Type>[]>([])
-            const [blacklist, setBlacklist] = useState([...existing,...newEntries])
+            const [blacklist, setBlacklist] = useState([...existing,...newEntries]) // TODO; use blacklist?
             const updateInternal = (data: AllEntries<Type>) => {
                 updateParent && updateParent(data)
                 setBlacklist([...data.existing,...data.new])

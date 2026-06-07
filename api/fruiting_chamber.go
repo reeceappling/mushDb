@@ -260,7 +260,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 type importFruitingChamberRequest struct {
 	SubstrateRecipeField
 	CreationDateField
-	SpeciesField
+	SpeciesField   // FCs cannot be imported without species!
 	GrainCups      float64
 	SubstrateRatio float64 // TODO: used to be optional
 	CasingRatio    float64 // TODO: used to be optional

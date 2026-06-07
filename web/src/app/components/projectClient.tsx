@@ -21,7 +21,7 @@ import {ProjectData,} from "@/app/components/projectServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ProjectWithPerm} from "@/app/components/perms";
 import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector";
-import {IsStringMapToString} from "@/app/components/accessControlClient";
+import {IsStringMapToString, UnmarshalAclMapField} from "@/app/components/accessControlClient";
 import {HandleErr, UserSelector} from "@/app/components/userClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
@@ -29,6 +29,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ACL} from "@/app/components/accessControlServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -57,9 +58,11 @@ export function AssertProject(input: any): asserts input is ProjectData {
             throw new Error('Project assertion failure: optional key ' + key + ' was not valid');
         }
     }
+
     // complex required keys
+    input.perms = UnmarshalProjectPermsField(input) // TODO: is this optional????
     const complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        ['perms', IsStringMapToString], // TODO: THIS IS NOT WORKING PROPERLY!!! CHANGE TO STRING FORMAT!!!!
+        //['perms', IsStringMapToString], // TODO: THIS IS NOT WORKING PROPERLY!!! CHANGE TO STRING FORMAT!!!! (try above)
     ])
     for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
@@ -78,12 +81,25 @@ export function AssertProject(input: any): asserts input is ProjectData {
     return
 }
 
+export function UnmarshalProjectPermsField(input: any): Map<string,string> {
+   // TODO: needs to be able to throw!
+    if ('perms' in input && (input.perms !== undefined)) { // TODO: ensure works properly, we don't want perms getting messed up
+        const field = input.perms
+        if (typeof field !== 'object' || field === null) {
+            throw 'perms field must be an object'
+        }
+        // Exists, return populated map
+        return new Map<string, string>(Object.entries(field as Record<string, string>))
+    } else {
+        // Does not exist or is undefined, return an empty map
+        return new Map<string, string>()
+    }
+}
+
 export default function ProjectDisplay(
     {
         id, readonly, data, headerLevel
-    }: DisplayInput) {
-    try {
-        AssertProject(data)
+    }: DisplayInput<ProjectData>) {
         const [initial, setInitial] = useState(data)
         const initPerms = new Map<string, string>(Object.entries(data.perms || {}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
 
@@ -128,11 +144,12 @@ export default function ProjectDisplay(
             const body: any = {
                 notes: notes,
                 completed: completed,
-                perms: Object.fromEntries(perms), // TODO: ensure this is being done on any maps that are being marshalled!!!!!
+                perms: Object.fromEntries(perms), // TODO: ensure this works!
             }
             console.log("sending perms: " + JSON.stringify(Object.fromEntries(perms)))
 
 
+            // TODO: Separate project perms request?
             DoUpdateRequest("project",encodeURIComponent(data._id), body, AssertProject, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new ProjectData(v))
@@ -159,7 +176,7 @@ export default function ProjectDisplay(
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TestAndValidate todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
-                    <ProjectPermsArea perms={perms} setPerms={setPerms}
+                    <ProjectPermsArea perms={perms} setPerms={setPerms} /* TODO: ENSURE ADDING/CHANGING USERS MAKES A SEPARATE REQUEST TO THE SERVER!*/
                                       readonly={readonly}/> {/* TODO: HEAVILY TEST! Also ensure this is properly covered on the go side!*/}
                 </TestAndValidate>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
@@ -168,16 +185,12 @@ export default function ProjectDisplay(
                 }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Plate data format incorrect: " + err}</div>
-    }
 }
 
 export function NewProjectForm(
-    {handlers}: { handlers: NewEntryInput<ProjectData> }) { // TODO: add cookies?
+    {handlers}: { handlers: NewEntryInput<ProjectData> }) {
     const [name, setName] = useState<string | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
-    // TODO: load up user on server side into the userperms as write (unless blanket is write)
     const [err, setErr] = useState<string | undefined>(undefined)
     // TODO: handle isTopLevel
 
@@ -199,44 +212,32 @@ export function NewProjectForm(
                 setErr(JSON.stringify(e))
             })
     }
-    const handleChangeName = (event: ChangeEvent<HTMLInputElement>) => {
-        setName(event.target.value)
-    }
-    const updateNotes = (entries: AllEntries<Note>) => {
-        setNotes(entries.new.map((e) => {
-            return e.data
-        }))
-    }
-    const projectNameArea = () => {
-        return <div>
-            <InputTextInlineTitle label={"Project Name"} readonly={false} value={name || ""} onChange={setName} />
-        </div>
-    }
     return <NewEntryFormWrapper entryType={"project"}>
         <ErrorDisplay err={err}/>
-        {projectNameArea()}
+        <div>
+            <InputTextInlineTitle label={"Project Name"} readonly={false} value={name || ""} onChange={setName} />
+        </div>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"greenButton buttonFullWidth"} onClick={createProject}>{"Create Project"}</button>
     </NewEntryFormWrapper>
-
 }
 
-export function NumberToPerm(n?: number) {
-    if (n === undefined || n === 0) {
-        return undefined
-    }
-    return n === 2;
-}
-
-export function PermToNumber(p: boolean | undefined): number {
-    if (p === undefined) {
-        return 0
-    }
-    if (!p) {
-        return 1
-    }
-    return 2
-}
+// export function NumberToPerm(n?: number) {
+//     if (n === undefined || n === 0) {
+//         return undefined
+//     }
+//     return n === 2;
+// }
+//
+// export function PermToNumber(p: boolean | undefined): number {
+//     if (p === undefined) {
+//         return 0
+//     }
+//     if (!p) {
+//         return 1
+//     }
+//     return 2
+// }
 
 export function ReadWriteAdminSelector({readonly, onUpdate, value}: {
     value: string,
@@ -244,7 +245,7 @@ export function ReadWriteAdminSelector({readonly, onUpdate, value}: {
     onUpdate?: (valOut: string) => void
 }) {
     const strForVal = (str?: string) => {
-        return (value === "read") ? "can view" : (value === "admin" ? "is admin" : "can edit")
+        return (str === "read") ? "can view" : (str === "admin" ? "is admin" : "can edit")
     }
     if (readonly) {
         return <text>{strForVal(value)}</text>
@@ -260,6 +261,7 @@ export function ReadWriteAdminSelector({readonly, onUpdate, value}: {
                             if (s === "can view") {
                                 onUpdate && onUpdate("read")
                             }
+                            // TODO: what about the blank option???
                             return
                         }} disabled={false}/>
 }
@@ -279,8 +281,8 @@ export function ReadWriteSelector({readonly, onUpdate, value}: {
 }
 
 export function ProjectPermsArea({perms, setPerms, readonly}: {
-    perms?: Map<string, string>, // TODO: to string!
-    setPerms?: (pp: Map<string, string>) => void, // TODO: to string!
+    perms?: Map<string, string>,
+    setPerms?: (pp: Map<string, string>) => void,
     readonly: boolean,
 }) {
     const depth = useContext(DepthContext)
@@ -325,162 +327,7 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
     </DepthProvider>
 }
 
-// // TODO: FIX FOR NEW PROJECT PERMS!
-// export function ProjectPermsAreaOLD({originalPerms, setPerms, canEdit}: { // TODO: this whole thing?
-//     originalPerms?: ProjectPerms,
-//     setPerms?: (pp: ProjectPerms) => void,
-//     canEdit: boolean,
-// }) {
-//     const [fullPerms, setFullPerms] = useState<ProjectPerms>(originalPerms || {
-//         users: {ids: [], canWrite: []},
-//         blanket: 0
-//     })
-//     const [userToAdd, setUserToAdd] = useState<string>("")
-//     const [userToAddCanWrite, setUserToAddCanWrite] = useState<boolean>(false)
-//     const [err, setErr] = useState<string | undefined>()
-//     //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-//     if (!canEdit) {
-//         const blanketText = () => {
-//             switch (fullPerms.blanket) {
-//                 case 0:
-//                     return ""
-//                 case 1:
-//                     return "Read"
-//                 case 2:
-//                     return "Read, Write"
-//             }
-//             if (fullPerms.blanket === 0) {
-//                 return "No blanket permissions"
-//             }
-//         }
-//         const textForCanWrite = (canWrite: boolean) => {
-//             if (canWrite) {
-//                 return "Write"
-//             }
-//             return "Read"
-//         }
-//         return <div>
-//             <div>{"Blanket permissions: " + blanketText()}</div>
-//             <div>
-//                 <div>{"User permissions"}</div>
-//                 <table>
-//                     <tr>
-//                         <th>{"User"}</th>
-//                         <th>{"Permission"}</th>
-//                     </tr>
-//                     {fullPerms.users.ids.map((user, i) => {
-//                         return <tr key={i}>
-//                             <td>{user.val}</td>
-//                             <td>{textForCanWrite(fullPerms.users.canWrite[i])}</td>
-//                         </tr>
-//                     })}
-//                 </table>
-//             </div>
-//         </div>
-//     }
-//
-//
-//     const doUpdate = (newPerms?: ProjectPerms) => {
-//         let tempPerms = newPerms || {users: {ids: [], canWrite: []}, blanket: 0}
-//         if (newPerms) {
-//             tempPerms = newPerms
-//         }
-//         setFullPerms(tempPerms)
-//         if (!setPerms) {
-//             return
-//         }
-//         // remove unnecessary perms as needed
-//         if (tempPerms.blanket === 0) {
-//             setPerms(tempPerms)
-//             return
-//         }
-//         let toSet: ProjectPerms = {users: {ids: [], canWrite: []}, blanket: tempPerms.blanket}
-//         if (tempPerms.blanket === 1) {
-//             for (let i = 0; i < tempPerms.users.ids.length; i++) {
-//                 if (tempPerms.users.canWrite[i]) {
-//                     toSet.users.ids.push(tempPerms.users.ids[i])
-//                     toSet.users.canWrite.push(true)
-//                 }
-//             }
-//         }
-//         setPerms(toSet)
-//     }
-//
-//     const changeBlanket = (b?: boolean) => {
-//         let updated = {...fullPerms}
-//         updated.blanket = PermToNumber(b)
-//         doUpdate(updated)
-//     }
-//     const changeUser = (un: number) => {
-//         return (newBp?: boolean) => {
-//             let updated = {...fullPerms}
-//             if (newBp === undefined) {
-//                 // remove that user
-//                 const filterFunc = (_: any, index: number) => {
-//                     return index !== un
-//                 }
-//                 updated.users.ids = [...fullPerms.users.ids].filter(filterFunc);
-//                 updated.users.canWrite = [...fullPerms.users.canWrite].filter(filterFunc);
-//
-//             } else {
-//                 // Update that user
-//                 updated.users.canWrite[un] = newBp
-//             }
-//             doUpdate(updated)
-//         }
-//     }
-//     const addUserByEmailOrUsername = (val: string) => {
-//         if (setPerms) {
-//             fetch(BaseExternalUrl + "/db/userIdFor", { // TODO: handle on the go side
-//                 method: 'Get',
-//                 body: val,
-//                 headers: clientPostRequestHeaders,
-//             }).then(HandleTxtResponse).then((id) => {
-//                 let updated = {...fullPerms}
-//                 updated.users.ids.push({id: id, val: val})
-//                 updated.users.canWrite.push(userToAddCanWrite)
-//                 doUpdate(updated)
-//             }).catch((e: string) => {
-//                 setErr(e)
-//             })
-//         }
-//     }
-//     return <div>
-//         <div>
-//             {"Global Permission: "}<PermissionSelector onChange={changeBlanket}
-//                                                        canWrite={NumberToPerm(fullPerms.blanket)}/>
-//         </div>
-//         {/* TODO: REMOVE ALL UNNECESSARY USERS IF BLANKET CHANGE SHOULD*/}
-//         <div>
-//             <div>{/* Current Users */}
-//                 {fullPerms.users.ids.map((uid: UserIdPair, i: number) => {
-//                     return <div className={"projPermsAreaUser"} key={i}>
-//                         {uid.val + ": "}<PermissionSelector onChange={changeUser(i)}
-//                                                             canWrite={fullPerms.users.canWrite[i]}/>
-//                     </div>
-//                 })}
-//             </div>
-//             <div>
-//                 <ErrorDisplay err={err}/>
-//                 {/* Add new user by email */}
-//                 <Textbox readonly={false} label="New user email or username" value={userToAdd} fieldName={"FIXME"}
-//                          updateTextHandler={setUserToAdd}/>
-//                 <PermissionSelector onChange={b => {
-//                     b && setUserToAddCanWrite(b)
-//                 }} canWrite={userToAddCanWrite}
-//                                     dontShowBelow={fullPerms.blanket === 0 ? false : NumberToPerm(fullPerms.blanket)}/>
-//                 <button onClick={() => {
-//                     addUserByEmailOrUsername(userToAdd)
-//                 }}> {"ADD USER"}</button>
-//             </div>
-//         </div>
-//         <button onClick={() => {
-//             doUpdate(originalPerms || {users: {ids: [], canWrite: []}, blanket: 0})
-//         }}>{"Revert permission changes"}</button>
-//     </div>
-// }
-
-export async function GetMyProjects() {
+export async function GetMyProjects() { // TODO: use
     return await fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: ensure works like we want! We JUST want the user's perms on each project
         method: "GET",
         headers: clientPostRequestHeaders,
@@ -504,13 +351,14 @@ export async function GetSessionUserProjects(complete?:boolean): Promise<string[
         headers: clientPostRequestHeaders,
     }).then(HandleJsonResponse).then((projs) => {
         try {
-            return projs as string[]
+            return projs as string[] // TODO: ensure this return is correct?
         } catch (err) {
             throw err
         }
     })
 }
 
+// ProjectsSelector shows shows only projects that a user has associated with them
 export function ProjectsSelector(inp: {
     onSelect: (projName: string) => void
     blacklist?: string[]
@@ -527,25 +375,6 @@ export function ProjectsSelector(inp: {
         }).catch(e=>{
             HandleErr(e, setErr)
         })
-        // fetch(BaseExternalUrl + "/sessionUserProjects", { // TODO: ensure user has projects attached
-        //     // TODO: do we also want to pull the user's perms for each project?
-        //     method: "GET",
-        //     headers: clientPostRequestHeaders,
-        // }).then(HandleJsonResponse).then((projs) => {
-        //     try {
-        //         return projs as string[] // TODO: FIXME!
-        //     } catch (err) {
-        //         throw err
-        //     }
-        // }).then(projs => {
-        //     setProjects(projs)
-        //     setLoading(false)
-        //     setErr(undefined)
-        //     return
-        // }).catch(err => {
-        //     HandleErr(err, setErr)
-        //     return
-        // })
     }, [])
     if (loading) {
         return <div>{"Loading projects selector"}</div>
@@ -594,6 +423,7 @@ export function ProjectSelectorTable({data, onClick}: ListPageItems<ProjectData>
 }
 
 // TODO: distinguish from ProjectsSelector
+// ProjectSelector shows ALL projects, not just projects that a user has associated with them // TODO: is this ok?
 export function ProjectSelector(
     {
         doSelect,

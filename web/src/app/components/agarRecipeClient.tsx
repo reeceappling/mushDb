@@ -2,36 +2,46 @@
 
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import {
-    AddCreatedTriColFunction,
-    AllEntries,
-    OnViewCreatorQuadCol
-} from "@/app/components/formSubcomponents/shared";
+import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 import LiquidsArea, {
     IsValidLiquid,
     Liquid,
-    LiquidEntriesGroupForNew
+    LiquidEntriesGroupForNew,
+    LiquidsAreaReadOnly
 } from "@/app/components/formSubcomponents/liquids";
 import NutrientsArea, {
     IsValidNutrient,
-    Nutrient,
+    Nutrient, NutrientsAreaReadOnly,
     NutrientsEntriesGroupForNew,
 } from "@/app/components/formSubcomponents/nutrients";
 import SugarsArea, {
     IsValidSugar,
     Sugar,
     SugarEntriesGroupForNew,
+    SugarsAreaReadOnly,
 } from "@/app/components/formSubcomponents/sugars";
 import {
     CreatedLinkFor,
-    CreateNewEntryButton, dataFor, DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
+    CreateNewEntryButton,
+    dataFor,
+    DisplayFormWrapper,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ExistingDualSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
     IsString,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     RequiredArrayOfType,
     RequiredKey,
@@ -41,7 +51,7 @@ import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponen
 import {ErrorDisplay, InlineTitle, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import AdditivesArea, {
     Additive,
-    AdditiveEntriesGroupForNew,
+    AdditiveEntriesGroupForNew, AdditivesAreaReadOnly,
     IsValidAdditive
 } from "@/app/components/formSubcomponents/additives";
 import {
@@ -50,7 +60,7 @@ import {
     AntibioticsDisplay,
 } from "@/app/components/formSubcomponents/antibiotic";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
@@ -82,7 +92,7 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
 
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -119,6 +129,11 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
             throw new Error('AgarRecipe assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -126,109 +141,103 @@ export default function AgarRecipeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }:
-    DisplayInput
+    DisplayInput<AgarRecipeData>
 ) {
-    try {
-        AssertAgarRecipe(data)
-        const [initial, setInitial] = useState(data)
-        // Required
-        const [name, setName] = useState(data.name)
-        // Optional
-        const [isStandard, setIsStandard] = useState(data.standard)
-        const [notes, setNotes] = useState<AllEntries<Note>>({existing: dataFor(data.notes || []), new: []})
-        const [acl, setAcl] = useState<ACL>(data.acl)
-        const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: AgarRecipeData) => {
-            setInitial(updated)
-            setName(updated.name)
-            setIsStandard(updated.standard)
-            setNotes(InitialNotesState(updated.notes))
-            setAcl(updated.acl)
-            setErr(undefined)
-        }
-        const cookies = useContext(CookiesContext)
-
-        const agarRecipeSubmit = () => {
-            if (name === undefined || name === "") {
-                setErr("Name field must not be empty")
-                return
-            }
-            const body: any = {
-                name: name,
-                standard: isStandard,
-                notes: notes,
-                acl: MarshalAcl(acl),
-            }
-            DoUpdateRequest("agarRecipe",initial._id, body, AssertAgarRecipe, allCookies(cookies))
-                .then(v=>{
-                    updateInitial(new AgarRecipeData(v))
-                })
-                .catch(e=>{
-                    setErr("failed to update initial: "+JSON.stringify(e))
-                })
-        }
-        const ovcs: OnViewCreatorQuadCol[] = [
-            {
-                txt: "Create Batch From Recipe",
-                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewAgarBatchForm agarRecipeIn={data} handlers={{
-                        onCreate: (newItem: AgarBatchData) => {
-                            return onCreate([{
-                                typeText: "Agar Batch",
-                                node: <CreatedLinkFor linkId={newItem._id} typ={"agarBatch"}/>
-                            }], true) // TODO: true ok?
-                        },
-                        isTopLevel: false,
-                    }}/>
-                },
-            }
-        ]
-        return (
-            <DisplayFormWrapper entryType={"agarRecipe"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <TestAndValidate todos={["Put name at top????"]}>
-                    <ID id={data._id} txt={"Agar Recipe"} entryType={"agarRecipe"}/>
-                </TestAndValidate>
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
-                <FlexedArea>
-                    <FlexedSinglesGroup>
-                        <NameArea currentName={name} setName={setName}
-                                  readonly={readonly}/>{/*TODO: Allow changing??? Make this area longer!*/}
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
-                                      headerLevel={headerLevel}/>{/* TODO: upon change (only when clicked first), deletes users from ACL. FIX THAT*/}
-                        <div className={"inlineChildren"}>
-                            <div>{"Agar g/L: "}</div>
-                            <div>{initial.agar}</div>
-                        </div>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                    </FlexedSinglesGroup>
-                </FlexedArea>
-
-                <LiquidsArea initialValues={dataFor(initial.liquids)}
-                             readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
-                <NutrientsArea initialValues={dataFor(initial.nutrients)}
-                               readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
-                <SugarsArea initialValues={dataFor(initial.sugars)} readonly={true}/>{/* TODO: FIX AND REFORMAT THIS*/}
-                <AdditivesArea readonly={true}
-                               initialValues={dataFor(initial.additives)}/>{/* TODO: FIX AND REFORMAT THIS*/}
-                <AntibioticsDisplay antibiotics={initial.antibiotics}/>{/* TODO: FIX AND REFORMAT THIS*/}
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>{/* TODO: this is erroring when updating after creating a note, then erroring again when trying to click update with no changes because it says existing notes length is not the same!*/}
-                <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
-                </TogglableAreaWithDepth>
-                {readonly ? null :
-                    <button className={"bottomButton greenButton"} onClick={(e) => {
-                        e.stopPropagation();
-                        agarRecipeSubmit()
-                    }}>{"Update"}</button>}
-
-            </DisplayFormWrapper>
-        )
-    } catch (err) {
-        return <div>{"ERROR: Agar Recipe data format incorrect: " + err}</div>
+    const [initial, setInitial] = useState(data)
+    // Required
+    const [name, setName] = useState(data.name)
+    // Optional
+    const [isStandard, setIsStandard] = useState(data.standard)
+    const [notes, setNotes] = useState<AllEntries<Note>>({existing: dataFor(data.notes || []), new: []})
+    const [acl, setAcl] = useState<ACL>(data.acl)
+    const [err, setErr] = useState<string | undefined>()
+    const updateInitial = (updated: AgarRecipeData) => {
+        setInitial(updated)
+        setName(updated.name)
+        setIsStandard(updated.standard)
+        setNotes(InitialNotesState(updated.notes))
+        setAcl(updated.acl)
+        setErr(undefined)
     }
+    const cookies = useContext(CookiesContext)
+
+    const agarRecipeSubmit = () => {
+        if (name === undefined || name === "") {
+            setErr("Name field must not be empty")
+            return
+        }
+        const body: any = {
+            name: name,
+            standard: isStandard,
+            notes: notes,
+            acl: MarshalAcl(acl),
+        }
+        DoUpdateRequest("agarRecipe", initial._id, body, AssertAgarRecipe, allCookies(cookies))
+            .then(v => {
+                updateInitial(new AgarRecipeData(v))
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+            })
+    }
+    const ovcs: OnViewCreatorQuadCol[] = [
+        {
+            txt: "Create Batch From Recipe",
+            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                return <NewAgarBatchForm agarRecipeIn={data} handlers={{
+                    onCreate: (newItem: AgarBatchData) => {
+                        return onCreate([{
+                            typeText: "Agar Batch",
+                            node: <CreatedLinkFor linkId={newItem._id} typ={"agarBatch"}/>
+                        }], true) // TODO: true ok?
+                    },
+                    isTopLevel: false,
+                }}/>
+            },
+        }
+    ]
+    return (
+        <DisplayFormWrapper entryType={"agarRecipe"}>
+            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <TestAndValidate todos={["Put name at top????"]}>
+                <ID id={data._id} txt={"Agar Recipe"} entryType={"agarRecipe"}/>
+            </TestAndValidate>
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <FlexedArea>
+                <FlexedSinglesGroup>
+                    <NameArea currentName={name} setName={setName}
+                              readonly={readonly}/>{/*TODO: Make this area longer and move to the top!*/}
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
+                                  headerLevel={headerLevel}/>
+                    <div className={"inlineChildren"}>
+                        <div>{"Agar g/L: "}</div>
+                        <div>{initial.agar}</div>
+                    </div>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                </FlexedSinglesGroup>
+            </FlexedArea>
+
+            <LiquidsAreaReadOnly values={initial.liquids}/>
+            <NutrientsAreaReadOnly values={initial.nutrients}/>
+            <SugarsAreaReadOnly values={initial.sugars}/>
+            <AdditivesAreaReadOnly values={initial.additives}/>
+            <AntibioticsDisplay antibiotics={initial.antibiotics}/>
+            <NotesFormArea readonly={readonly} initial={initial.notes}
+                           updateParent={setNotes}/>{/* TODO: this is erroring when updating after creating a note, then erroring again when trying to click update with no changes because it says existing notes length is not the same!*/}
+            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+                <AclDisplay initial={acl} readonly={readonly}
+                            updateParent={setAcl}/>{/*TODO: agarRecipe 1 is not properly loading the initial acl!*/}
+            </TogglableAreaWithDepth>
+            {readonly ? null :
+                <button className={"bottomButton greenButton"} onClick={(e) => {
+                    e.stopPropagation();
+                    agarRecipeSubmit()
+                }}>{"Update"}</button>}
+
+        </DisplayFormWrapper>
+    )
 }
 
 export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarRecipeData> }) {
@@ -267,10 +276,10 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             notes: notes.length !== 0 ? notes : undefined,
         }
         DoCreateRequest("agarRecipe", body, AssertAgarRecipe, allCookies(cookies))
-            .then(v=>{
+            .then(v => {
                 handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
@@ -327,25 +336,25 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             </div>
             <div>
                 <div>{"Liquids: "}</div>
-                <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>
+                <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>{/* TODO: validate working properly*/}
             </div>
             <div>
                 <div>{"Nutrients: "}</div>
                 <NutrientsEntriesGroupForNew currentEntries={nutrients}
-                                             updateParent={setNutrients}/>
+                                             updateParent={setNutrients}/>{/* TODO: validate working properly*/}
             </div>
             <div>
                 <div>{"Sugars: "}</div>
-                <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
+                <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>{/* TODO: validate working properly*/}
             </div>
             <div>
                 <div>{"Additives: "}</div>
-                <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
+                <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>{/* TODO: validate working properly*/}
             </div>
             <div>
                 <div>{"Antibiotics: "}</div>
                 <AntibioticEntriesGroupForNew currentEntries={antibiotics}
-                                              updateParent={setAntibiotics}/>
+                                              updateParent={setAntibiotics}/>{/* TODO: validate working properly*/}
             </div>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
@@ -379,14 +388,15 @@ export function AgarRecipeSelector(
         doSelect: (val: AgarRecipeData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: AgarRecipeData[]):JSX.Element=>{
+    const table = (items: AgarRecipeData[]): JSX.Element => {
         return <AgarRecipeSelectorTable data={items} onClick={doSelect}
-                                          withLink={true}/>
+                                        withLink={true}/>
     }
 
-    return <ExistingDualSelector entryType={"agarRecipe"} entryTypes={"agarRecipes"} doSelect={doSelect} asserter={AssertAgarRecipe}
+    return <ExistingDualSelector entryType={"agarRecipe"} entryTypes={"agarRecipes"} doSelect={doSelect}
+                                 asserter={AssertAgarRecipe}
                                  table={table}>
-        {allowCreate && <NewAgarRecipeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+        {allowCreate && <NewAgarRecipeForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingDualSelector>
 }
 
@@ -436,12 +446,14 @@ export function AgarRecipeListPageTable({data, onClick, withLink}: ListPageItems
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: AgarRecipeData) => {
-            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new AgarRecipeData(v)}}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new AgarRecipeData(v)
+    }}/>
 }
 
 export function AgarRecipeSelectorTable({data, onClick, withLink}: ListPageItems<AgarRecipeData>) {
@@ -457,5 +469,7 @@ export function AgarRecipeSelectorTable({data, onClick, withLink}: ListPageItems
             return <ViewInNewTabButton entry={v}/>
         })]
     }
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new AgarRecipeData(v)}}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new AgarRecipeData(v)
+    }}/>
 }

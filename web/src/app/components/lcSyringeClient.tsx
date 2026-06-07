@@ -35,7 +35,13 @@ import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponen
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
@@ -78,7 +84,7 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
 
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -97,6 +103,11 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
             throw new Error('Lc syringe assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -156,12 +167,7 @@ export function LcSyringeImportDisplay() {
 export default function LcSyringeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertLcSyringe(data)
-    } catch (err) {
-        return <div>{"ERROR: Liquid Culture Syringe data format incorrect: " + JSON.stringify(err)}</div>
-    }
+    }: DisplayInput<LcSyringeData>) {
     const [transfersOut, setTransfersOut] = useState<string[]>(data.transfersOut || [])
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(data.confirmedClean)
     const [knownFruitable, setKnownFruitable] = useState(data.knownFruitable)

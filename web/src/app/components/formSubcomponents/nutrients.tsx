@@ -1,6 +1,6 @@
 // non-client
 
-import {AreaProps, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
+import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {useQuery} from "@tanstack/react-query";
 import {SelectorResetsOnSelectFor} from "@/app/components/selector";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
@@ -9,6 +9,7 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
 import {NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
+import {Sugar} from "@/app/components/formSubcomponents/sugars";
 
 interface NutrientsAreaProps {
     readonly: boolean,
@@ -76,6 +77,17 @@ export function NutrientTypeSelectorForNew( // TODO: USE THIS!!!!!
 // TODO: UPDATE TO BE LIKE SUGARS, USING GENERICS!!!!
 export default function NutrientsArea(props: AreaProps<Nutrient>){
     return FormListArea(NutrientEntriesGroup)(props)
+}
+export function NutrientsAreaReadOnly({values}: {values?:Nutrient[]}) {
+    if (!values || values.length===0){
+        return null
+    }
+    return <div>
+        {"Nutrients: "}
+        {values.map((v, i) => {
+            return <div key={v.nutrient}>{v.nutrient + " - " + v.amount + " " + v.unit}</div>
+        })}
+    </div>
 }
 
 export function NutrientsEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Nutrient[], updateParent: (l: Nutrient[])=>void}){

@@ -1,128 +1,187 @@
 'use client'
 
 import React from "react";
-import AgarBatchDisplay from "@/app/components/agarBatchClient";
+import AgarBatchDisplay, {AssertAgarBatch} from "@/app/components/agarBatchClient";
 import {TopPageHeaderLevel} from "@/app/components/Constants";
-import AgarRecipeDisplay from "@/app/components/agarRecipeClient";
-import BagDisplay from "@/app/components/bagClient";
-import FruitDisplay from "@/app/components/fruitClient";
-import FruitingChamberDisplay from "@/app/components/fruitingChamberClient";
-import JarDisplay from "@/app/components/jarClient";
-import JarRecipeDisplay from "@/app/components/jarRecipeClient";
-import LcDisplay from "@/app/components/lcClient";
-import LcRecipeDisplay from "@/app/components/lcRecipeClient";
-import LcSyringeDisplay from "@/app/components/lcSyringeClient";
-import MssDisplay from "@/app/components/mssClient";
-import PcRunDisplay from "@/app/components/pcRunClient";
-import PlateDisplay from "@/app/components/plateClient";
-import ProjectDisplay from "@/app/components/projectClient";
-import SaleDisplay from "@/app/components/saleClient";
-import SlantDisplay from "@/app/components/slantClient";
-import SpeciesDisplay from "@/app/components/speciesClient";
-import SporePrintDisplay from "@/app/components/sporePrintClient";
-import StasisTubeDisplay from "@/app/components/stasisTubeClient";
-import SubspeciesDisplay from "@/app/components/subspeciesClient";
-import SubstrateRecipeDisplay from "@/app/components/substrateRecipeClient";
-import SubstrateBatchDisplay from "@/app/components/substrateBatchClient";
-import TransferDisplay from "@/app/components/transferClient";
-import UserDisplay from "@/app/components/userClient";
-import WaterJarDisplay from "@/app/components/waterJarClient";
+import AgarRecipeDisplay, {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
+import BagDisplay, {AssertBag} from "@/app/components/bagClient";
+import FruitDisplay, {AssertFruit} from "@/app/components/fruitClient";
+import FruitingChamberDisplay, {AssertFruitingChamber} from "@/app/components/fruitingChamberClient";
+import JarDisplay, {AssertJar} from "@/app/components/jarClient";
+import JarRecipeDisplay, {AssertJarRecipe} from "@/app/components/jarRecipeClient";
+import LcDisplay, {AssertLc} from "@/app/components/lcClient";
+import LcRecipeDisplay, {AssertLcRecipe} from "@/app/components/lcRecipeClient";
+import LcSyringeDisplay, {AssertLcSyringe} from "@/app/components/lcSyringeClient";
+import MssDisplay, {AssertMss} from "@/app/components/mssClient";
+import PcRunDisplay, {AssertPcRun} from "@/app/components/pcRunClient";
+import PlateDisplay, {AssertPlate} from "@/app/components/plateClient";
+import ProjectDisplay, {AssertProject} from "@/app/components/projectClient";
+import SaleDisplay, {AssertSale} from "@/app/components/saleClient";
+import SlantDisplay, {AssertSlant} from "@/app/components/slantClient";
+import SpeciesDisplay, {AssertSpecies} from "@/app/components/speciesClient";
+import SporePrintDisplay, {AssertSporePrint} from "@/app/components/sporePrintClient";
+import StasisTubeDisplay, {AssertStasisTube} from "@/app/components/stasisTubeClient";
+import SubspeciesDisplay, {AssertSubspecies} from "@/app/components/subspeciesClient";
+import SubstrateRecipeDisplay, {AssertSubstrateRecipe} from "@/app/components/substrateRecipeClient";
+import SubstrateBatchDisplay, {AssertSubstrateBatch} from "@/app/components/substrateBatchClient";
+import TransferDisplay, {AssertTransfer} from "@/app/components/transferClient";
+import UserDisplay, {AssertUser} from "@/app/components/userClient";
+import WaterJarDisplay, {AssertWaterJar} from "@/app/components/waterJarClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import PlugsDisplay from "@/app/components/plugsClient";
-import GrainBatchDisplay from "@/app/components/grainBatchClient";
-import SporeSwabDisplay from "@/app/components/sporeSwabClient";
+import PlugsDisplay, {AssertPlugs} from "@/app/components/plugsClient";
+import GrainBatchDisplay, {AssertGrainBatch} from "@/app/components/grainBatchClient";
+import SporeSwabDisplay, {AssertSporeSwab} from "@/app/components/sporeSwabClient";
+import {PlateData} from "@/app/components/plateServer";
+import {MarshalAcl} from "@/app/components/accessControlClient";
+import {AgarBatchData} from "@/app/components/agarBatchServer";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
+import {BagData} from "@/app/components/bagServer";
+import {FruitData} from "@/app/components/fruitServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {GrainBatchData} from "@/app/components/grainBatchServer";
+import {JarData} from "@/app/components/jarServer";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
+import {LcData} from "@/app/components/lcServer";
+import {LcRecipeData} from "@/app/components/lcRecipeServer";
+import {LcSyringeData} from "@/app/components/lcSyringeServer";
+import {MssData} from "@/app/components/mssServer";
+import {PcRunData} from "@/app/components/pcRunServer";
+import {PlugsData} from "@/app/components/plugsServer";
+import {ProjectData} from "@/app/components/projectServer";
+import {SaleData} from "@/app/components/saleServer";
+import {SlantData} from "@/app/components/slantServer";
+import {SpeciesData} from "@/app/components/speciesServer";
+import {SporePrintData} from "@/app/components/sporePrintServer";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
+import {StasisTubeData} from "@/app/components/stasisTubeServer";
+import {SubspeciesData} from "@/app/components/subspeciesServer";
+import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
+import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
+import {TransferData} from "@/app/components/transferServer";
+import {UserData} from "@/app/components/userServer";
+import {WaterJarData} from "@/app/components/waterJarServer";
 
 export function MainViewArea({inpData, itemType}: { inpData: any, itemType: string}) {
     const id = decodeURI(inpData.idEncoded)
-    //try {
-        // TODO: EVERYTHING IN HERE IS LOADING TWICE???
+    try {
         switch (itemType) {
 
             case "agarBatch":
-                return <AgarBatchDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertAgarBatch(inpData)
+                return <AgarBatchDisplay data={new AgarBatchData(inpData)} readonly={false} id={id} isTopLevel={true}
                                          headerLevel={TopPageHeaderLevel}/>
             case "agarRecipe":
-                return <AgarRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertAgarRecipe(inpData)
+                return <AgarRecipeDisplay data={new AgarRecipeData(inpData)} readonly={false} id={id} isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel}/>
             case "bag":
-                return <BagDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertBag(inpData)
+                return <BagDisplay data={new BagData(inpData)} readonly={false} id={id} isTopLevel={true}
                                    headerLevel={TopPageHeaderLevel}/>
             case "fruit":
-                return <FruitDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertFruit(inpData)
+                return <FruitDisplay data={new FruitData(inpData)} readonly={false} id={id} isTopLevel={true}
                                      headerLevel={TopPageHeaderLevel} allowPrintCreation={true}/>
             case "fruitingChamber":
-                return <FruitingChamberDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertFruitingChamber(inpData)
+                return <FruitingChamberDisplay data={new FruitingChamberData(inpData)} readonly={false} id={id} isTopLevel={true}
                                                headerLevel={TopPageHeaderLevel}/>
             case "grainBatch":
-                return <GrainBatchDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertGrainBatch(inpData)
+                return <GrainBatchDisplay data={new GrainBatchData(inpData)} readonly={false} id={id} isTopLevel={true}
                                                headerLevel={TopPageHeaderLevel}/> // TODO: validate working
             case "jar":
-                return <JarDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertJar(inpData)
+                return <JarDisplay data={new JarData(inpData)} readonly={false} id={id} isTopLevel={true}
                                    headerLevel={TopPageHeaderLevel}/>
             case "jarRecipe":
-                return <JarRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertJarRecipe(inpData)
+                return <JarRecipeDisplay data={new JarRecipeData(inpData)} readonly={false} id={id} isTopLevel={true}
                                          headerLevel={TopPageHeaderLevel}/>
             case "lc":
-                return <LcDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertLc(inpData)
+                return <LcDisplay data={new LcData(inpData)} readonly={false} id={id} isTopLevel={true}
                                   headerLevel={TopPageHeaderLevel}/>
             case "lcRecipe":
-                return <LcRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertLcRecipe(inpData)
+                return <LcRecipeDisplay data={new LcRecipeData(inpData)} readonly={false} id={id} isTopLevel={true}
                                         headerLevel={TopPageHeaderLevel}/>
             case "lcSyringe":
-                return <LcSyringeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertLcSyringe(inpData)
+                return <LcSyringeDisplay data={new LcSyringeData(inpData)} readonly={false} id={id} isTopLevel={true}
                                          headerLevel={TopPageHeaderLevel}/>
             case "mss":
-                return <MssDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertMss(inpData)
+                return <MssDisplay data={new MssData(inpData)} readonly={false} id={id} isTopLevel={true}
                                    headerLevel={TopPageHeaderLevel}/>
             case "pcRun":
-                return <PcRunDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertPcRun(inpData)
+                return <PcRunDisplay data={new PcRunData(inpData)} readonly={false} id={id} isTopLevel={true}
                                      headerLevel={TopPageHeaderLevel}/>
             case "plate":
-                return <PlateDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertPlate(inpData)
+                return <PlateDisplay data={new PlateData(inpData)} readonly={false} id={id} isTopLevel={true} // TODO: if acl works here, then use new X for all!
                                      headerLevel={TopPageHeaderLevel}/>
             case "plugs":
-                return <PlugsDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertPlugs(inpData)
+                return <PlugsDisplay data={new PlugsData(inpData)} readonly={false} id={id} isTopLevel={true}
                                      headerLevel={TopPageHeaderLevel}/>
             case "project":
-                return <ProjectDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertProject(inpData) // TODO; validate working! maps may need to be fiddled with!
+                return <ProjectDisplay data={new ProjectData(inpData)} readonly={false} id={id} isTopLevel={true}
                                        headerLevel={TopPageHeaderLevel}/>
             case "sale":
-                return <SaleDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertSale(inpData)
+                return <SaleDisplay data={new SaleData(inpData)} readonly={false} id={id} isTopLevel={true}
                                     headerLevel={TopPageHeaderLevel}/>
             case "slant":
-                return <SlantDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertSlant(inpData)
+                return <SlantDisplay data={new SlantData(inpData)} readonly={false} id={id} isTopLevel={true}
                                      headerLevel={TopPageHeaderLevel}/>
             case "species":
-                return <SpeciesDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertSpecies(inpData)
+                return <SpeciesDisplay data={new SpeciesData(inpData)} readonly={false} id={id} isTopLevel={true}
                                        headerLevel={TopPageHeaderLevel}/>
             case "sporePrint":
-                return <SporePrintDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertSporePrint(inpData)
+                return <SporePrintDisplay data={new SporePrintData(inpData)} readonly={false} id={id} isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel}/>
             case "sporeSwab": // TODO: validate working
-                return <SporeSwabDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertSporeSwab(inpData)
+                return <SporeSwabDisplay data={new SporeSwabData(inpData)} readonly={false} id={id} isTopLevel={true}
                                          headerLevel={TopPageHeaderLevel} />
             case "stasisTube":
-                return <StasisTubeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertStasisTube(inpData)
+                return <StasisTubeDisplay data={new StasisTubeData(inpData)} readonly={false} id={id} isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel} />
             case "subspecies":
-                return <SubspeciesDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertSubspecies(inpData)
+                return <SubspeciesDisplay data={new SubspeciesData(inpData)} readonly={false} id={id} isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel} />
             case "substrateRecipe":
-                return <SubstrateRecipeDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertSubstrateRecipe(inpData)
+                return <SubstrateRecipeDisplay data={new SubstrateRecipeData(inpData)} readonly={false} id={id} isTopLevel={true}
                                                headerLevel={TopPageHeaderLevel} />
             case "substrateBatch":
-                return <SubstrateBatchDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertSubstrateBatch(inpData)
+                return <SubstrateBatchDisplay data={new SubstrateBatchData(inpData)} readonly={false} id={id} isTopLevel={true}
                                               headerLevel={TopPageHeaderLevel} />
             case "transfer":
-                return <TransferDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertTransfer(inpData)
+                return <TransferDisplay data={new TransferData(inpData)} readonly={false} id={id} isTopLevel={true}
                                         headerLevel={TopPageHeaderLevel} />
             case "user":
-                return <UserDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertUser(inpData) // TODO: maps may not be marshalling correctly
+                return <UserDisplay data={new UserData(inpData)} readonly={false} id={id} isTopLevel={true}
                                     headerLevel={TopPageHeaderLevel} />
             case "waterJar":
-                return <WaterJarDisplay data={inpData} readonly={false} id={id} isTopLevel={true}
+                AssertWaterJar(inpData)
+                return <WaterJarDisplay data={new WaterJarData(inpData)} readonly={false} id={id} isTopLevel={true}
                                         headerLevel={TopPageHeaderLevel} />
             default:
                 return <ErrorDisplay err={"Invalid view item type: " + itemType} headerLevel={TopPageHeaderLevel}/>
         }
+    } catch (e) {
+        return <ErrorDisplay err={"Asserter failure: " + JSON.stringify(e)}/>
+    }
 }

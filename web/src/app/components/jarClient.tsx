@@ -75,7 +75,13 @@ import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {JarSizeSelector} from "@/app/components/formSubcomponents/utils/volumeSelector";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {GrainBatchData, GrainBatchSelectorCloseable} from "@/app/components/grainBatchServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -126,7 +132,7 @@ export function AssertJar(input: any): asserts input is JarData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -156,6 +162,11 @@ export function AssertJar(input: any): asserts input is JarData {
             throw new Error('Jar assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -173,10 +184,6 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
     const cookies = useContext(CookiesContext)
     const importEntry = () => {
         const formData = new FormData()
-        if (species === undefined) {
-            setErr("Species must be set!")
-            return
-        }
         if (recipe === undefined) {
             setErr("Recipe must be set!")
             return
@@ -185,9 +192,8 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             creationDate: created,
             sizeCups: sizeCups,
             recipe: recipe._id,
-            species: species._id,
-            //perms: perms,
             // optional
+            species: species?._id,
             subspecies: subspecies?._id,
             knownFruitable: knownFruitable,
             generation: generation,
@@ -218,7 +224,7 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
         <SelectorWrapper current={recipe} title={"Jar Recipe"} nameFunc={(v: JarRecipeData) => v._id}>
             <JarRecipeSelector doSelect={setRecipe} allowCreate={true}/>
         </SelectorWrapper>
-        <ExistingSpeciesSelector doSelect={setSpecies}/>
+        <ExistingSpeciesSelector doSelect={setSpecies}/>{/*TODO: closeable?*/}
         <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
@@ -259,11 +265,7 @@ function cupsPer(unit: string) {
 export default function JarDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-
-
-    try {
-        AssertJar(data)
+    }: DisplayInput<JarData>) {
         const [initial, setInitial] = useState(data)
 
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
@@ -387,9 +389,6 @@ export default function JarDisplay(
             }}>{"Update"}</button>}
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
         </DisplayFormWrapper>
-    } catch (err) {
-        return <div>{"ERROR: Grain Jar data format incorrect: " + err}</div>
-    }
 }
 
 // NewJarForm is used from the recipe page. PcRun CAN be created from here?

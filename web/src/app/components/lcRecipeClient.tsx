@@ -9,17 +9,17 @@ import {LcRecipeData} from "@/app/components/lcRecipeServer";
 import LiquidsArea, {
     IsValidLiquid,
     Liquid,
-    LiquidEntriesGroupForNew
+    LiquidEntriesGroupForNew, LiquidsAreaReadOnly
 } from "@/app/components/formSubcomponents/liquids";
 import NutrientsArea, {
     IsValidNutrient,
-    Nutrient,
+    Nutrient, NutrientsAreaReadOnly,
     NutrientsEntriesGroupForNew
 } from "@/app/components/formSubcomponents/nutrients";
 import SugarsArea, {
     IsValidSugar,
     Sugar,
-    SugarEntriesGroupForNew
+    SugarEntriesGroupForNew, SugarsAreaReadOnly
 } from "@/app/components/formSubcomponents/sugars";
 import {
     CreatedLinkFor,
@@ -35,11 +35,17 @@ import {
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
     Additive,
-    AdditiveEntriesGroupForNew,
+    AdditiveEntriesGroupForNew, AdditivesAreaReadOnly,
     IsValidAdditive
 } from "@/app/components/formSubcomponents/additives";
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {NewLcForm} from "@/app/components/lcClient";
@@ -67,7 +73,7 @@ export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
 
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -97,15 +103,18 @@ export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
             throw new Error('LcRecipe assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
 export default function LcRecipeDisplay(
     {
         id, readonly, data, headerLevel
-    }: DisplayInput) {
-    try {
-        AssertLcRecipe(data)
+    }: DisplayInput<LcRecipeData>) {
         const [initial, setInitial] = useState(data)
 
         const [recName, setRecName] = useState(initial.name)
@@ -176,14 +185,10 @@ export default function LcRecipeDisplay(
                 </FlexedArea>
 
 
-                <LiquidsArea initialValues={dataFor(initial.liquids || [])} headerLevel={headerLevel}
-                             readonly={true}/>{/* TODO: viewOnlyArea*/}
-                <NutrientsArea initialValues={dataFor(initial.nutrients || [])} headerLevel={headerLevel}
-                               readonly={true}/>{/* TODO: viewOnlyArea*/}
-                <SugarsArea initialValues={dataFor(initial.sugars || [])} headerLevel={headerLevel}
-                            readonly={true}/>{/* TODO: viewOnlyArea*/}
-                <AdditivesArea initialValues={dataFor(initial.additives || [])} headerLevel={headerLevel}
-                               readonly={true}/>{/* TODO: viewOnlyArea*/}
+                <LiquidsAreaReadOnly values={initial.liquids}/>
+                <NutrientsAreaReadOnly values={initial.nutrients}/>
+                <SugarsAreaReadOnly values={initial.sugars}/>
+                <AdditivesAreaReadOnly values={initial.additives}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
 
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
@@ -195,9 +200,6 @@ export default function LcRecipeDisplay(
                 }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Liquid Culture Recipe data format incorrect: " + err}</div>
-    }
 }
 
 export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeData> }) {

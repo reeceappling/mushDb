@@ -39,7 +39,7 @@ import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/sub
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {
     AclDefaultAclDisplay, AclDisplay,
-    IsValidAcl, MarshalAcl
+    IsValidAcl, MarshalAcl, UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -68,8 +68,8 @@ export function AssertSpecies(input: any): asserts input is SpeciesData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl],
-        ['defaultAcl', IsValidAcl]
+        //['acl', IsValidAcl],
+        //['defaultAcl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -86,16 +86,23 @@ export function AssertSpecies(input: any): asserts input is SpeciesData {
             throw 'Species assertion failure: optional array key ' + key + ' was not valid'
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
+    // Unmarshal Default ACL
+    if (!('defaultAcl' in input)) {
+        throw 'Default Acl missing from input in asserter'
+    }
+    input.defaultAcl = UnmarshalAcl(input.defaultAcl)
     return
 }
 
 export default function SpeciesDisplay(
     {
         id, readonly, data, headerLevel
-    }: DisplayInput) {
-    try {
-
-        AssertSpecies(data)
+    }: DisplayInput<SpeciesData>) {
         const [initial, setInitial] = useState(data)
 
         const [substrate, setSubstrate] = useState<string | undefined>(data.standardSubstrate)
@@ -165,9 +172,6 @@ export default function SpeciesDisplay(
                 </button>
             </DisplayFormWrapper>
         )
-    } catch (err){
-        return <div>{"ERROR: Species data format incorrect: "+err}</div>
-    }
 }
 
 export function NewSpeciesForm(

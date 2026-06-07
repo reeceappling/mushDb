@@ -20,7 +20,7 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import { ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {
     AclDefaultAclDisplay,
-    IsValidAcl, MarshalAcl
+    IsValidAcl, MarshalAcl, UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -46,8 +46,8 @@ export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl],
-        ['defaultAcl', IsValidAcl]
+        // ['acl', IsValidAcl],
+        // ['defaultAcl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -64,15 +64,23 @@ export function AssertSubspecies(input: any): asserts input is SubspeciesData {
             throw new Error('Subspecies assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
+    // Unmarshal Default ACL
+    if (!('defaultAcl' in input)) {
+        throw 'Default Acl missing from input in asserter'
+    }
+    input.defaultAcl = UnmarshalAcl(input.defaultAcl)
     return
 }
 
 export default function SubspeciesDisplay(
     {
         id, readonly, data, headerLevel
-    }: DisplayInput) {
-    try {
-        AssertSubspecies(data)
+    }: DisplayInput<SubspeciesData>) {
         const [initial, setInitial] = useState(data)
 
         const [aliases, setAliases] = useState(data.aliases || [])
@@ -124,10 +132,6 @@ export default function SubspeciesDisplay(
                 }}>{"Update Subspecies"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Subspecies data format incorrect: " + err}</div>
-    }
-
 }
 
 export function NewSubspeciesForm({handlers, species}: {
@@ -229,6 +233,9 @@ export function ExistingSubSpeciesSelector(
                 setSelectorOpen(!selectorOpen)
             }}>{selectorOpen ? "Close subspecies selector" : (selected ? "Choose a different subspecies" : "Select a subspecies")}</button>
         </div>
+    }
+    if (!species){
+        return null
     }
     if (!selectable) {
         return null

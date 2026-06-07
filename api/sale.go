@@ -129,7 +129,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: USE PARENT PERMS?????
 		//PermsField:                 PermsField{nil}, // TODO: THIS!!!!!!!!!!!!!
 	}
-	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
+	finishCreateAlternateEntry(ctx, &toInsert, w, func() error { return nil })
 }
 
 type updateSaleRequest struct {

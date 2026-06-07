@@ -38,7 +38,7 @@ import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/coo
 import {
     AclDisplay,
     IsValidAcl, MarshalAcl,
-    TogglableAreaWithDepth
+    TogglableAreaWithDepth, UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import { ACL } from "./accessControlServer";
 
@@ -78,7 +78,7 @@ export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl],
+        //['acl', IsValidAcl],
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -95,15 +95,18 @@ export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
             throw new Error('Grain Batch assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
 export default function GrainBatchDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertGrainBatch(data)
+    }: DisplayInput<GrainBatchData>) {
         const [initial, setInitial] = useState(data)
 
         const [err, setErr] = useState<string | undefined>()
@@ -231,9 +234,6 @@ export default function GrainBatchDisplay(
                 submit()
             }}>{"Update"}</button>}
         </DisplayFormWrapper>
-    } catch (err) {
-        return <div>{"ERROR: Grain Batch data format incorrect: " + err}</div>
-    }
 }
 
 export function NewGrainBatchForm({handlers, recipe}: {

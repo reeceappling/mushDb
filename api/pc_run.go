@@ -88,7 +88,7 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 		AclField:                   allCanReadAcl(&user.Email), // TODO: ? acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
 }
 
 type updatePcRunRequest struct {

@@ -32,7 +32,13 @@ import {NewBagForm} from "@/app/components/bagClient";
 import {BagData} from "@/app/components/bagServer";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {NewFruitingChamberForm} from "@/app/components/fruitingChamberClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
@@ -58,7 +64,7 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -74,6 +80,11 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 
 
@@ -82,9 +93,7 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
 export default function SubstrateBatchDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertSubstrateBatch(data)
+    }: DisplayInput<SubstrateBatchData>) {
         const [initial, setInitial] = useState(data)
 
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
@@ -163,9 +172,6 @@ export default function SubstrateBatchDisplay(
                 }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Substrate Batch data format incorrect: " + err}</div>
-    }
 }
 
 export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rework this whole thing

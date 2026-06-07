@@ -190,7 +190,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:          finalAcl,
 		DefaultAcl:        finalAcl.ACL,
 	}
-	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
+	finishCreateAlternateEntry(ctx, &toInsert, w, func() error { return nil })
 }
 
 type updateSpeciesRequest struct {

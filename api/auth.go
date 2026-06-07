@@ -526,10 +526,8 @@ func customDenyHandler(err error) http.Handler {
 	})
 }
 
-func (serv *AuthService) AuthOrDenyMiddleware() func(http.Handler) http.Handler {
-	return func(nextHandler http.Handler) http.Handler {
-		return serv.necessaryFirstMiddleware(authSplitterMiddleware()(nextHandler, denyHandler, func(error) http.Handler { return denyHandler }))
-	}
+func (serv *AuthService) AuthOrDenyMiddleware(nextHandler http.Handler) http.Handler {
+	return serv.necessaryFirstMiddleware(authSplitterMiddleware()(nextHandler, denyHandler, func(error) http.Handler { return denyHandler }))
 }
 
 func (serv *AuthService) OnContext(ctx context.Context) context.Context {

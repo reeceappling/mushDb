@@ -7,6 +7,7 @@ import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSu
 import {LiquidEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import * as React from "react";
+import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
 
 export interface Liquid {
     name: string,
@@ -79,6 +80,17 @@ export function LiquidTypeSelector( // TODO: USE THIS!!!!!
 
 export default function LiquidsArea(props: AreaProps<Liquid>) {
     return FormListArea(LiquidEntriesGroup)(props)
+}
+export function LiquidsAreaReadOnly({values}: {values?:Liquid[]}) {
+    if (!values || values.length===0){
+        return null
+    }
+    return <div>
+        {"Liquids: "}
+        {values.map((v, i) => {
+            return <div key={v.name}>{v.name + " " + v.pct + " %"}</div>
+        })}
+    </div>
 }
 
 export function LiquidEntriesGroupForNew({currentEntries, updateParent}: {

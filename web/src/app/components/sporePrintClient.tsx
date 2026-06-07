@@ -58,7 +58,13 @@ import { ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewMssForm} from "@/app/components/mssClient";
 import {FruitData, FruitSelectorCloseable} from "@/app/components/fruitServer";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {MssData} from "@/app/components/mssServer";
@@ -109,7 +115,7 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -126,6 +132,11 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -180,10 +191,8 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
 export default function SporePrintDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertSporePrint(data)
-        const [initial, setInitial] = useState(data)
+    }: DisplayInput<SporePrintData>) {
+    const [initial, setInitial] = useState(data)
         const initNotes: Data<Note>[] = (data.notes || []).map((n)=>{
             return {data: n,disabled:false}
         })
@@ -309,9 +318,6 @@ export default function SporePrintDisplay(
                 submit()
             }}>{"Update"}</button>}
         </DisplayFormWrapper>
-    } catch (err) {
-        return <div>{"ERROR: Spore print data format incorrect: " + err}</div>
-    }
 }
 
 // Should only be accessible from a fruit's page

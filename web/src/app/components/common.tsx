@@ -152,13 +152,37 @@ export function OptionalKey(key: string, input: any, validateIfExists: (inp: any
     return (key in input) ? validateIfExists(input[key]) : true
 }
 
+export function OptionalKeyNew(key: string, input: any, validate: (inp: any) => void): void {
+    if (key in input && (!(input[key] === undefined || input[key] === null))) {
+        console.warn("key "+key+" was in input. Value is "+JSON.stringify(input[key])); // TODO: del
+        validate(input[key])
+        return
+    }
+    console.warn("key "+key+" was not in input"); // TODO: del
+    return
+}
+
 export function OptionalSimpleKey(key: string, input: any, expType: string): boolean {
     return OptionalKey(key, input, IsType(expType))
+}
+
+export function OptionalSimpleKeyNew(key: string, input: any, expType: string): void {
+    return OptionalKeyNew(key, input, IsTypeNew(expType))
 }
 
 export function IsType(finalType: string): (inpt: any) => boolean {
     return (inp: any) => {
         return typeof inp === finalType
+    }
+}
+
+export function IsTypeNew(finalType: string): (inpt: any) => void {
+    return (inp: any) => {
+        const typ = typeof inp
+        if (!(typ === finalType)) {
+            throw 'field type was not '+finalType+", was "+typ
+        }
+        return
     }
 }
 
@@ -473,24 +497,21 @@ export function ConfirmedCleanArea(
         headerLevel?: number
         onSelect?: (c?: boolean) => void
     }) {
+    if (readonly) {
+        return <div className={"inlineChildren"}>
+            <div>{"Confirmed Clean:"}</div>
+            <div>{(initial === undefined) ? "Unknown" : (initial ? "Yes" : "No")}</div>
+        </div>
+    }
     return <YesNoSelector pre={"Confirmed Clean:"} initial={initial} updateParent={onSelect}/>
-    // if (readonly) {
-    //     return <div className={"confirmedCleanArea"}>
-    //         <div>{"Confirmed Clean:"}</div>
-    //         <div>{(initial === undefined) ? "Unknown" : (initial ? "Yes" : "No")}</div>
-    //     </div>
-    // }
-    // return <div className={"confirmedCleanArea"}><ConfirmedCleanSelector initial={initial} updateParent={(v)=> {
-    //     onSelect && onSelect(v)
-    // }
-    // }/></div>
+
 
 }
 
-export type DisplayInput = {
+export type DisplayInput<T extends Entry> = {
     id: string;
     readonly: boolean;
-    data: any
+    data: T
     headerLevel?: number
     isTopLevel: boolean
 }
@@ -762,6 +783,21 @@ export function ImportResponseHandler<T extends Importable>(asserter: TypeAssert
             })
             .catch(ErrHandler(setErr))
     }
+}
+
+// TODO: use everywhere! validate working!
+export function DoImportRequest<T extends Importable>(body: any, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
+    fetch(importApiUrlFor(typeStr), {
+        method: "POST",
+        headers: clientPostRequestHeaders,
+        body: JSON.stringify(body)
+    })
+        .then(HandleJsonResponse)
+        .then(newItem => {
+            asserter(newItem)
+            redirect(viewUrlFor(typeStr, newItem._id))
+        })
+        .catch(ErrHandler(setErr));
 }
 
 export function MultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {

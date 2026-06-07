@@ -197,7 +197,7 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedFieldForNow(),
 		AclField:                   allCanReadAcl(&user.Email),
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
 }
 
 type updateSubstrateRecipeRequest struct {

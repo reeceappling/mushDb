@@ -8,6 +8,7 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
 import {RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
+import {Additive} from "@/app/components/formSubcomponents/additives";
 
 export interface Sugar {
     type: string,
@@ -83,6 +84,17 @@ export function SugarTypeSelector( // TODO: USE THIS!!!!!
 
 export default function SugarsArea(props: AreaProps<Sugar>) {
     return FormListArea(SugarEntriesGroup)(props)
+}
+export function SugarsAreaReadOnly({values}: {values?:Sugar[]}) {
+    if (!values || values.length===0){
+        return null
+    }
+    return <div>
+        {"Sugars: "}
+        {values.map((v, i) => {
+            return <div key={v.type}>{v.type + " - " + v.amount + " " + v.unit}</div>
+        })}
+    </div>
 }
 
 export function SugarEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Sugar[], updateParent: (l: Sugar[])=>void}){

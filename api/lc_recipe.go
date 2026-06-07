@@ -171,7 +171,7 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 		AclField:                   allCanWriteAcl(), // TODO: or read with user as owner?
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
 }
 
 type updateLcRecipeRequest struct {

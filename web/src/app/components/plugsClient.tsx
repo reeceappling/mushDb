@@ -3,18 +3,40 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
-    clientPostRequestHeaders, DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse, importApiUrlFor,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    clientPostRequestHeaders,
+    DisplayFormWrapper,
+    DisplayInput,
+    DoCreateRequest,
+    DoImportRequest,
+    DoUpdateRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    HandleJsonResponse,
+    importApiUrlFor,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalSimpleKey,
-    RequiredArrayOfType, RequiredKey,
+    RequiredArrayOfType,
+    RequiredKey,
     viewUrlFor,
 } from "@/app/components/common";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth,} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl,
+} from "@/app/components/accessControlClient";
 import {EntryLinkWrapper, EntryLinkIdWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {DowelType, PlugsData} from "@/app/components/plugsServer";
 import {PcRunData} from "@/app/components/pcRunServer";
@@ -84,7 +106,7 @@ export function AssertPlugs(input: any): asserts input is PlugsData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -106,6 +128,11 @@ export function AssertPlugs(input: any): asserts input is PlugsData {
             throw new Error('Plugs assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -142,8 +169,8 @@ export function AssertDowel(input: any): asserts input is DowelType {
 export default function PlugsDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    const [initial, setInitial] = useState(data as PlugsData)
+    }: DisplayInput<PlugsData>) {
+    const [initial, setInitial] = useState(data)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(data.knownFruitable)
     const [pcRun, setPcRun] = useState<string | undefined>(data.pcRun)
     const [sales, setSales] = useState<string[] | undefined>(data.sales)
@@ -257,31 +284,17 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const ImportEntry = () => {
-        if (species === undefined) {
-            setErr("Species must be set!")
-            return
-        }
         const body: any = {
             dowelTypes: dowelTypes,
             generation: gen,
             // optional
-            species: species._id, // Unused if non-inoculated
+            species: species?._id, // Unused if non-inoculated
             subspecies: subspecies?._id,
             knownFruitable: knownFruitable,
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(importApiUrlFor("plugs"), {
-            method: "POST",
-            headers: clientPostRequestHeaders,
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((newItem) => {
-                AssertPlugs(newItem)
-                redirect(viewUrlFor("plugs", newItem._id))
-            })
-            .catch(ErrHandler(setErr));
+        DoImportRequest("plugs", body, AssertPlugs, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"plugs"}>
 

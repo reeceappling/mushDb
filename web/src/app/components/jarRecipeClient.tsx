@@ -12,16 +12,16 @@ import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import NutrientsArea, {
     IsValidNutrient,
-    Nutrient,
+    Nutrient, NutrientsAreaReadOnly,
     NutrientsEntriesGroupForNew
 } from "@/app/components/formSubcomponents/nutrients";
 import SugarsArea, {
     IsValidSugar,
     Sugar,
-    SugarEntriesGroupForNew
+    SugarEntriesGroupForNew, SugarsAreaReadOnly
 } from "@/app/components/formSubcomponents/sugars";
 import {
-    CreatedLinkFor, DisplayFormWrapper,
+    CreatedLinkFor, dataFor, DisplayFormWrapper,
     DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingDualSelector, FlexedArea,
     FlexedSinglesGroup,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
@@ -32,13 +32,19 @@ import {
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import AdditivesArea, {
     Additive,
-    AdditiveEntriesGroupForNew,
+    AdditiveEntriesGroupForNew, AdditivesAreaReadOnly,
     IsValidAdditive
 } from "@/app/components/formSubcomponents/additives";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {Grain, GrainsSelector, IsValidGrain} from "@/app/components/formSubcomponents/grains";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {NewGrainBatchForm} from "@/app/components/grainBatchClient";
@@ -46,6 +52,7 @@ import {GrainBatchData} from "@/app/components/grainBatchServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {LiquidsAreaReadOnly} from "@/app/components/formSubcomponents/liquids";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -67,7 +74,7 @@ export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
 
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -99,6 +106,11 @@ export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
             throw new Error('Grain Jar Recipe assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -111,9 +123,7 @@ function dataFormatFor<T>(init: T[] | undefined): Data<T>[] {
 export default function JarRecipeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertJarRecipe(data)
+    }: DisplayInput<JarRecipeData>) {
         const [initial, setInitial] = useState(data)
         // grain non-changeable (base grain)
         // name non-changeable
@@ -189,12 +199,9 @@ export default function JarRecipeDisplay(
             </FlexedArea>
             {jarGrainsArea()}
 
-            <NutrientsArea initialValues={dataFormatFor(initial.nutrients)} headerLevel={headerLevel}
-                           readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
-            <SugarsArea initialValues={dataFormatFor(initial.sugars)} headerLevel={headerLevel}
-                        readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
-            <AdditivesArea initialValues={dataFormatFor(initial.additives)} headerLevel={headerLevel}
-                           readonly={true}/>{/* TODO: make a viewOnlyArea?*/}
+            <NutrientsAreaReadOnly values={initial.nutrients}/>
+            <SugarsAreaReadOnly values={initial.sugars}/>
+            <AdditivesAreaReadOnly values={initial.additives}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
@@ -205,9 +212,6 @@ export default function JarRecipeDisplay(
             }}>{"Update"}</button>}
 
         </DisplayFormWrapper>
-    } catch (err) {
-        return <div>{"ERROR: Jar Recipe data format incorrect: " + err}</div>
-    }
 }
 
 export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipeData> }) {

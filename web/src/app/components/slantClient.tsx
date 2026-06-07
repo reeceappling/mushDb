@@ -67,7 +67,13 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import { SaleArea} from "@/app/components/saleClient";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
@@ -111,7 +117,7 @@ export function AssertSlant(input: any): asserts input is SlantData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -141,6 +147,11 @@ export function AssertSlant(input: any): asserts input is SlantData {
             throw new Error('Slant assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -157,7 +168,6 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
     const cookies = useContext(CookiesContext)
     const ImportSlant = () => {
         const formData = new FormData()
-        // TODO: Validate kf, gen, not exist if species does not exist!
         formData.set('data', JSON.stringify({
             creationDate:created, // TODO: validate not in future or too far in the past (do on all imports)
             stickType: stickType,
@@ -191,9 +201,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
 export default function SlantDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertSlant(data)
+    }: DisplayInput<SlantData>) {
         const [initial, setInitial] = useState(data)
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
@@ -299,9 +307,6 @@ export default function SlantDisplay(
 
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Slant data format incorrect: " + err}</div>
-    }
 }
 
 export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<SlantData>, agarBatchIn?:AgarBatchData}){
@@ -318,6 +323,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
             setErr("An agar batch must be selected")
             return
         }
+        // agarBatches always are created with pcRuns, so there is no need to ensure the batch has a run beforehand...
         const body: any = {
             agarBatch: agarBatch,
             stickType: stickType,

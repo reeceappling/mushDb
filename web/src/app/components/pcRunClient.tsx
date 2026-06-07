@@ -19,7 +19,13 @@ import {
     OptionalArrayOfType, RequiredKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {NewWaterJarForm} from "@/app/components/waterJarClient";
 import {NewBagForm} from "@/app/components/bagClient";
@@ -55,7 +61,7 @@ export function AssertPcRun(input: any): asserts input is PcRunData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -71,15 +77,18 @@ export function AssertPcRun(input: any): asserts input is PcRunData {
             throw new Error('PcRun assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
 export default function PcRunDisplay(
     {
         id, readonly, data, headerLevel
-    }: DisplayInput) {
-    try {
-        AssertPcRun(data)
+    }: DisplayInput<PcRunData>) {
         const [initial, setInitial] = useState(data)
 
         const [notes, setNotes] = useState<AllEntries<Note>>({existing: dataFor(data.notes || []), new: []})
@@ -161,6 +170,8 @@ export default function PcRunDisplay(
                     }}/>
                 },
             },
+            // TODO: AREA TO ADD ITEMS TO PC? Such as Slants, AgarBatches?
+            //
             // TODO: {txt: "Create Plugs Jar", newCreationArea: (onCreate: AddCreatedFunction) => {
             //         return <NewPlugsForm pcRunInput={data._id} redirectOnCreate={false} onCreate={(newEntry: LcData)=>{
             //             onCreate([{typeText: "Plugs Jar", node: mainPageLinkFor(newEntry._id, "plugs")}]) // TODO: ensure typname is ok
@@ -228,10 +239,6 @@ export default function PcRunDisplay(
                 }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
-    } catch
-        (err) {
-        return <div>{"ERROR: PC Run data format incorrect: " + err}</div>
-    }
 }
 
 export function NewPcRunForm(

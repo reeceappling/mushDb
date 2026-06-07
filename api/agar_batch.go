@@ -164,5 +164,5 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 		AclField:                   allCanWriteAcl(), // TODO: or read?
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }

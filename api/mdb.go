@@ -642,175 +642,160 @@ type InMemoryCacheItem[T any] struct {
 //	}
 //}
 
-func GetPageForIdHandler() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		id := r.PathValue("id")
-		if id == "" {
-			http.Error(w, "no id provided", http.StatusBadRequest)
-			return
-		}
-		out := &idMapEntry{}
-		err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-			Database(dbName).
-			Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(out)
-		if err != nil {
-			http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		_, err = w.Write([]byte(fmt.Sprintf(`%s/%s`, out.EntryType, out.Id.AsBase58())))
-		handleWriteErr(err, w)
-	})
+var GetPageForIdHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "no id provided", http.StatusBadRequest)
+		return
+	}
+	out := &idMapEntry{}
+	err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+		Database(dbName).
+		Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(out)
+	if err != nil {
+		http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write([]byte(fmt.Sprintf(`%s/%s`, out.EntryType, out.Id.AsBase58())))
+	handleWriteErr(err, w)
 }
 
-func HandleCreate() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		resolvedPerms, err := GetResolvedUserPerms(r.Context())
-		if err != nil {
-			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
-			return
-		}
-		if resolvedPerms.isGuest() {
-			http.Error(w, "guest users cannot create entries", http.StatusForbidden)
-			return
-		}
-		endpt := r.PathValue("variant")
-		//switch endpt {
-		//case "agarBatch": createAgarBatchHandler(w,r)
-		//case "agarRecipe": createAgarRecipeHandler(w,r)
-		//case "bag": createBagHandler(w,r)
-		//}
-		handle, exists := map[string]http.HandlerFunc{
-			"agarBatch":  createAgarBatchHandler,
-			"agarRecipe": createAgarRecipeHandler,
-			"bag":        createBagHandler,
-			"lc":         createLiquidCultureHandler,
-			"lcSyringe":  createSyringeHandler,
-			//"plugs": createPlugsHandler, // TODO: FIX!
-			"lcRecipe":        createLcRecipeHandler,
-			"fruit":           createFruitHandler,
-			"fruitingChamber": createFruitingChamberHandler,
-			"jar":             createJarHandler,
-			"jarRecipe":       createJarRecipeHandler,
-			"mss":             createMssHandler,
-			"pcRun":           createPcRunHandler,
-			"plate":           createPlateHandler,
-			"plugs":           createPlugsHandler,
-			"project":         createProjectHandler,
-			"sale":            createSaleHandler,
-			"slant":           createSlantHandler,
-			"species":         createSpeciesHandler,
-			"sporePrint":      createSporePrintHandler,
-			"sporeSwab":       createSporeSwabHandler,
-			"stasisTube":      createStasisTubeHandler,
-			"subspecies":      createSubspeciesHandler,
-			"substrateRecipe": createSubstrateRecipeHandler,
-			"substrateBatch":  createSubstrateBatchHandler,
-			"transfer":        createTransferHandler,
-			//"user":"", // TODO: probably don't need
-			"waterJar": createWaterJarHandler,
-		}[endpt]
-		if !exists {
-			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
-			return
-		}
-		handle(w, r)
-		//GetPermsMiddleware(handler).ServeHTTP(w, r)
+var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	endpt := r.PathValue("variant")
+	handle, exists := map[string]http.HandlerFunc{
+		"agarBatch":       createAgarBatchHandler,
+		"agarRecipe":      createAgarRecipeHandler,
+		"bag":             createBagHandler,
+		"lc":              createLiquidCultureHandler,
+		"lcSyringe":       createSyringeHandler,
+		"lcRecipe":        createLcRecipeHandler,
+		"fruit":           createFruitHandler,
+		"fruitingChamber": createFruitingChamberHandler,
+		"jar":             createJarHandler,
+		"jarRecipe":       createJarRecipeHandler,
+		"mss":             createMssHandler,
+		"pcRun":           createPcRunHandler,
+		"plate":           createPlateHandler,
+		"plugs":           createPlugsHandler,
+		"project":         createProjectHandler,
+		"sale":            createSaleHandler,
+		"slant":           createSlantHandler,
+		"species":         createSpeciesHandler,
+		"sporePrint":      createSporePrintHandler,
+		"sporeSwab":       createSporeSwabHandler,
+		"stasisTube":      createStasisTubeHandler,
+		"subspecies":      createSubspeciesHandler,
+		"substrateRecipe": createSubstrateRecipeHandler,
+		"substrateBatch":  createSubstrateBatchHandler,
+		"transfer":        createTransferHandler,
+		//"user":"", // TODO: probably don't need
+		"waterJar": createWaterJarHandler,
+	}[endpt]
+	if !exists {
+		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
+		return
 	}
+	handle(w, r)
 }
 
 func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
+
 	return handler // TODO: replace with old GetPermsMiddleware once perms are reenabled
 }
-func ImportHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		resolvedPerms, err := GetResolvedUserPerms(r.Context())
+
+func DenyGuestMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resolvedPerms, err := GetAuthInfo(r.Context())
 		if err != nil {
 			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
 			return
 		}
 		if resolvedPerms.isGuest() {
-			http.Error(w, "guest users cannot import entries", http.StatusForbidden)
+			http.Error(w, "guest users cannot utilize this endpoint", http.StatusUnauthorized) // TODO: forbidden?
 			return
 		}
-		endpt := r.PathValue("endpt")
-		handler, exists := map[string]http.HandlerFunc{
-			"bag":             importBagHandler,
-			"lc":              importLiquidCultureHandler,
-			"lcSyringe":       importLcSyringeHandler,
-			"plugs":           importPlugsHandler,
-			"fruit":           importFruitHandler,
-			"fruitingChamber": importFruitingChamberHandler,
-			"jar":             importJarHandler,
-			"mss":             importMssHandler,
-			"plate":           importPlateHandler,
-			"slant":           importSlantHandler,
-			"sporePrint":      importSporePrintHandler,
-			"sporeSwab":       importSporeSwabHandler,
-			"stasisTube":      importStasisTubeHandler,
-			//"waterJar":      importWaterJarHandler, // TODO: import water jar handler?
+		handler.ServeHTTP(w, r)
+	})
 
-		}[endpt]
-		if !exists {
-			http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
-		}
-		GetPermsMiddleware(handler).ServeHTTP(w, r)
-	}
 }
 
-func UpdateById() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		println("hit updateById handler")
-		resolvedPerms, err := GetResolvedUserPerms(r.Context())
-		if err != nil {
-			println("failed to load permissions")
-			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
-			return
-		}
-		//bs, _ := json.Marshal(resolvedPerms)  // TODO; del
-		//println("resolved perms", string(bs)) // TODO: del
-		if resolvedPerms.isGuest() { // TODO: reenable
-			println("guest tried to edit")
-			http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
-			return
-		}
-		endpt := r.PathValue("endpt")
-		handler, exists := map[string]http.HandlerFunc{
-			"agarBatch":       updateAgarBatchHandler,
-			"agarRecipe":      updateAgarRecipeHandler,
-			"bag":             updateBagHandler,
-			"grainBatch":      updateGrainBatchHandler,
-			"lc":              updateLiquidCultureHandler,
-			"lcRecipe":        updateLcRecipeHandler,
-			"lcSyringe":       updateSyringeHandler,
-			"plugs":           updatePlugsHandler,
-			"fruit":           updateFruitHandler,
-			"fruitingChamber": updateFruitingChamberHandler,
-			"jar":             updateJarHandler,
-			"jarRecipe":       updateJarRecipeHandler,
-			"mss":             updateMssHandler,
-			"pcRun":           updatePcRunHandler,
-			"plate":           updatePlateHandler,
-			"plug":            updatePlugsHandler,
-			"project":         updateProjectHandler,
-			"sale":            updateSaleHandler,
-			"slant":           updateSlantHandler,
-			"species":         updateSpeciesHandler,
-			"sporePrint":      updateSporePrintHandler,
-			"sporeSwab":       updateSporeSwabHandler,
-			"stasisTube":      updateStasisTubeHandler,
-			"subspecies":      updateSubspeciesHandler,
-			"substrateRecipe": updateSubstrateRecipeHandler,
-			"substrateBatch":  updateSubstrateBatchHandler,
-			"transfer":        updateTransferHandler,
-			//"user":             updateUserHandler,
-			"waterJar": updateWaterJarHandler,
-		}[endpt]
-		if !exists {
-			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
-		}
-		GetPermsMiddleware(handler).ServeHTTP(w, r)
+var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	endpt := r.PathValue("endpt")
+	handler, exists := map[string]http.HandlerFunc{
+		"bag":             importBagHandler,
+		"lc":              importLiquidCultureHandler,
+		"lcSyringe":       importLcSyringeHandler,
+		"plugs":           importPlugsHandler,
+		"fruit":           importFruitHandler,
+		"fruitingChamber": importFruitingChamberHandler,
+		"jar":             importJarHandler,
+		"mss":             importMssHandler,
+		"plate":           importPlateHandler,
+		"slant":           importSlantHandler,
+		"sporePrint":      importSporePrintHandler,
+		"sporeSwab":       importSporeSwabHandler,
+		"stasisTube":      importStasisTubeHandler,
+		//"waterJar":      importWaterJarHandler, // TODO: import water jar handler?
+
+	}[endpt]
+	if !exists {
+		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
 	}
+	handler.ServeHTTP(w, r)
+}
+
+var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	println("hit updateById handler")
+	resolvedPerms, err := GetResolvedUserPerms(r.Context())
+	if err != nil {
+		println("failed to load permissions")
+		http.Error(w, "failed to load permissions", http.StatusInternalServerError)
+		return
+	}
+	//bs, _ := json.Marshal(resolvedPerms)  // TODO; del
+	//println("resolved perms", string(bs)) // TODO: del
+	if resolvedPerms.isGuest() { // TODO: reenable
+		println("guest tried to edit")
+		http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
+		return
+	}
+	endpt := r.PathValue("endpt")
+	handler, exists := map[string]http.HandlerFunc{
+		"agarBatch":       updateAgarBatchHandler,
+		"agarRecipe":      updateAgarRecipeHandler,
+		"bag":             updateBagHandler,
+		"grainBatch":      updateGrainBatchHandler,
+		"lc":              updateLiquidCultureHandler,
+		"lcRecipe":        updateLcRecipeHandler,
+		"lcSyringe":       updateSyringeHandler,
+		"plugs":           updatePlugsHandler,
+		"fruit":           updateFruitHandler,
+		"fruitingChamber": updateFruitingChamberHandler,
+		"jar":             updateJarHandler,
+		"jarRecipe":       updateJarRecipeHandler,
+		"mss":             updateMssHandler,
+		"pcRun":           updatePcRunHandler,
+		"plate":           updatePlateHandler,
+		"plug":            updatePlugsHandler,
+		"project":         updateProjectHandler,
+		"sale":            updateSaleHandler,
+		"slant":           updateSlantHandler,
+		"species":         updateSpeciesHandler,
+		"sporePrint":      updateSporePrintHandler,
+		"sporeSwab":       updateSporeSwabHandler,
+		"stasisTube":      updateStasisTubeHandler,
+		"subspecies":      updateSubspeciesHandler,
+		"substrateRecipe": updateSubstrateRecipeHandler,
+		"substrateBatch":  updateSubstrateBatchHandler,
+		"transfer":        updateTransferHandler,
+		//"user":             updateUserHandler,
+		"waterJar": updateWaterJarHandler,
+	}[endpt]
+	if !exists {
+		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
+	}
+	handler.ServeHTTP(w, r)
 }
 
 func dbErr(w http.ResponseWriter, txt string, status int) {

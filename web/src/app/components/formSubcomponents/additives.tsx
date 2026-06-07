@@ -77,8 +77,20 @@ export function AdditiveSelector(
                         }/>
 }
 
-export default function AdditivesArea(props: AreaProps<Additive>) {
+export default function AdditivesArea({props}: { props: AreaProps<Additive> }) {
     return FormListArea(AdditiveEntriesGroup)(props)
+}
+
+export function AdditivesAreaReadOnly({values}: {values?:Additive[]}) {
+    if (!values || values.length===0){
+        return null
+    }
+    return <div>
+        {"Additives: "}
+        {values.map((v, i) => {
+            return <div key={v.additive}>{v.additive + " - " + v.amount + " " + v.unit}</div>
+        })}
+    </div>
 }
 
 export function AdditiveEntriesGroupForNew({currentEntries, updateParent}: {

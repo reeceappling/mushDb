@@ -12,44 +12,42 @@ type Permissioned interface {
 	Permissions() ACL
 }
 
-func SessionUserProjectsHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		queryParams := r.URL.Query()
-		complete := queryParams.Get("complete")
-		var getAllProjectsCompleteArg *bool = nil
-		if complete != "" {
-			if complete == "true" {
-				getAllProjectsCompleteArg = utils.Pointer(true)
-			} else if complete == "false" {
-				getAllProjectsCompleteArg = utils.Pointer(false)
-			}
+var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	queryParams := r.URL.Query()
+	complete := queryParams.Get("complete")
+	var getAllProjectsCompleteArg *bool = nil
+	if complete != "" {
+		if complete == "true" {
+			getAllProjectsCompleteArg = utils.Pointer(true)
+		} else if complete == "false" {
+			getAllProjectsCompleteArg = utils.Pointer(false)
 		}
+	}
 
-		user, err := GetAuthInfo(r.Context())
+	user, err := GetAuthInfo(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	projectsToReturn := maps.Keys(user.projects)
+	if user.isAdmin() {
+		allProjects, err := GetAllProjects(r.Context(), getAllProjectsCompleteArg) // TODO: validate works as expected
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		projectsToReturn := maps.Keys(user.projects)
-		if user.isAdmin() {
-			allProjects, err := GetAllProjects(r.Context(), getAllProjectsCompleteArg) // TODO: validate works as expected
-			if err != nil {
-				http.Error(w, "failed to get all incomplete projects: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			projectsToReturn = sliceutils.Map(allProjects, func(proj Project) projectName {
-				return proj.Name
-			})
-		}
-		bs, err := json.Marshal(projectsToReturn)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to get all incomplete projects: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		println("sending projects list: ", string(bs))
-		_, err = w.Write(bs)
-		if err != nil {
-			handleWriteErr(err, w)
-		}
+		projectsToReturn = sliceutils.Map(allProjects, func(proj Project) projectName {
+			return proj.Name
+		})
+	}
+	bs, err := json.Marshal(projectsToReturn)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	println("sending projects list: ", string(bs))
+	_, err = w.Write(bs)
+	if err != nil {
+		handleWriteErr(err, w)
 	}
 }
 

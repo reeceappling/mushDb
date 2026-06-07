@@ -679,20 +679,6 @@ export function StringOptionsSelector({queryKey, variant, current, onSelect}: {
         queryFn: () => {
             return getOptionsResponse(variant)
         }
-        // queryFn: () => { // TODO: FIX THIS!
-        //     // TODO: delete lines before fetch for the real server
-        //     const map = new Map<string, string>();
-        //     map.set("fixme1-" + queryKey, "outgrew plate");
-        //     map.set("fixme2-dens" + queryKey, "parent was contaminated");
-        //     map.set("fixme3-dens" + queryKey, "transferring a specific sector");
-        //     return map;
-        //     // TODO: reenable
-        //     fetch(BaseInternalUrl + "/options/" + queryKey).then(HandleJsonResponse).then((resJson) => {
-        //         return ConvertObjectToStringMap(resJson)
-        //     }).catch((e) => {
-        //         throw e
-        //     })
-        // },
     })
     if (isPending || error !== null) {
         return <div>{isPending ? variant + " SELECTOR LOADING" : variant + " SELECTOR ERROR: " + error.message}</div>
@@ -706,16 +692,6 @@ export function StringOptionsSelector({queryKey, variant, current, onSelect}: {
                         }
                         }/>
 }
-
-// export function ConvertObjectToStringMap(obj: { [key: string]: string }): Map<string, string> {
-//     const map = new Map<string, any>();
-//     for (const key in obj) {
-//         if (Object.prototype.hasOwnProperty.call(obj, key)) {
-//             map.set(key, obj[key]);
-//         }
-//     }
-//     return map;
-// }
 
 export function SporePrintDensitySelector(
     {current, onSelect}: {

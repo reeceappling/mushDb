@@ -29,7 +29,13 @@ import {redirect} from "next/navigation";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SaleData} from "@/app/components/saleServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
@@ -55,7 +61,7 @@ export function AssertSale(input: any): asserts input is SaleData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -71,15 +77,18 @@ export function AssertSale(input: any): asserts input is SaleData {
             throw new Error('Sale assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
 export default function SaleDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertSale(data)
+    }: DisplayInput<SaleData>) {
         const [initial, setInitial] = useState(data)
         
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
@@ -91,16 +100,12 @@ export default function SaleDisplay(
             setAcl(updated.acl)
             setErr(undefined)
         }
-        ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
         // TODO: BE ABLE TO MODIFY SALES PERMS, USE WHOLE BODY
-        //,
-        //             perms: perms, // TODO: validate on insert
-        //         }
         const cookies = useContext(CookiesContext)
         const saleUpdateSubmit = () => {
             const body: any = {
                 notes:notes,
-                acl:MarshalAcl(acl), // TODO: ok?
+                acl:MarshalAcl(acl),
             }
             DoUpdateRequest("sale",data._id, body, AssertSale, allCookies(cookies))
                 .then(v=>{
@@ -130,15 +135,11 @@ export default function SaleDisplay(
                     e.stopPropagation();
                     saleUpdateSubmit()
                 }}>{"Update"}</button>}
-                {/* TODO: ?<OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>*/}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Sale data format incorrect: " + err}</div>
-    }
 }
 
-export function NewSaleForm(
+export function NewSaleForm( // TODO: overhaul! Need Id available?
     {
         headerLevel, onCreate
     }: {
@@ -156,7 +157,6 @@ export function NewSaleForm(
 
         const body = {
             notes: notes,
-            //acl: perms, // TODO: THIS! // TODO: NEED TO FIX SALES AS A WHOLE!
         }
         DoCreateRequest("sale", body, AssertSale, allCookies(cookies))
             .then(v=>{
@@ -183,7 +183,6 @@ export function SaleArea(
         canCreateSale: boolean
     }
 ){
-    // TODO: does saleArea need incremented depth? probably not
     const [open, setOpen] = useState(false)
     const saleCreated = (newsale: string)=>{
         setSale && setSale(newsale)
@@ -194,6 +193,7 @@ export function SaleArea(
             <TestAndValidate todos={["overhaul this for sales"]}>
             <div className={"saleArea"}>
                 <div className={"inline"}>{"Available to sell"}</div>
+                {/* TODO: ensure that mark as sold marks as disposed as well, except in cases where things can be multi-sold*/}
                 {!readonly && <button className={"basicButtonSmall inline"} onClick={()=>{setOpen(!open)}}>{open?"Close sale creation area":"Mark as sold"}</button> /* TODO: FIX ME SO THIS CREATES A NEW SALE!*/}
             </div>
             {open &&
@@ -220,7 +220,6 @@ export function SalesArea(
         setEntries?:(ps:string[])=>void
         offset?:number
     }) {
-    // TODO: does salesArea need incremented depth? probably not
     const [current, setCurrent] = useState(sales || [])
     const [creatorOpen, setCreatorOpen] = useState(false)
     const updateEntries=(items: string[])=>{
@@ -242,9 +241,8 @@ export function SalesArea(
     return <div>
             <div>{"Associated Sales: "}</div>
             {(sales || []).map(s=>{
-                const b58id = s
-                return <div key={b58id/* TODO: ensure ok*/}>
-                    <EntryLinkForId props={{displayId:b58id,linkId:b58id,entryType:"sale",openInNewTab:true}}/>
+                return <div key={s}>
+                    <EntryLinkForId props={{displayId:s,linkId:s,entryType:"sale",openInNewTab:true}}/>
                 </div>
             })}
             {(!readonly&&allowCreate) && addArea()}
@@ -274,21 +272,18 @@ export function SaleListPageTable({data, onClick, withLink}: ListPageItems<SaleD
 export function SaleSelectorTable({data, onClick}: ListPageItems<SaleData>) {
     return <SaleListPageTable data={data} onClick={onClick} withLink={true} />
 }
-// TODO: likely get rid of
-export function SaleSelector(
-    {
-        doSelect,
-        allowCreate
-    }: {
-        doSelect: (val: SaleData | undefined) => void,
-        allowCreate?: boolean
-    }) {
-    const table = (items: SaleData[]):JSX.Element=>{
-        return <SaleSelectorTable data={items} onClick={doSelect}/>
-    }
-
-    return <ExistingRecentSelector entryType={"sale"} entryTypes={"sales"} doSelect={doSelect} asserter={AssertSale}
-                                   table={table}>
-        {/* TODO: ???allowCreate && <NewSaleForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
-    </ExistingRecentSelector>
-}
+// // TODO: likely get rid of
+// export function SaleSelector(
+//     {
+//         doSelect,
+//     }: {
+//         doSelect: (val: SaleData | undefined) => void,
+//     }) {
+//     const table = (items: SaleData[]):JSX.Element=>{
+//         return <SaleSelectorTable data={items} onClick={doSelect}/>
+//     }
+//
+//     return <ExistingRecentSelector entryType={"sale"} entryTypes={"sales"} doSelect={doSelect} asserter={AssertSale}
+//                                    table={table}>
+//     </ExistingRecentSelector>
+// }

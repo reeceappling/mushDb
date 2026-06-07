@@ -321,20 +321,22 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// validate sub/species
-	if data.Species == nil {
+	var finalPerms ACL
+	innoculated := data.Species != nil
+	if !innoculated {
+		if data.Generation != nil {
+			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 		if data.SubSpecies != nil {
-			http.Error(w, "species must exist if subspecies does", http.StatusBadRequest)
+			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if data.KnownFruitable != nil {
-			http.Error(w, "knownFruitable must be nil for non-innoculated imports", http.StatusBadRequest)
+			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if data.Generation != nil {
-			http.Error(w, "generation must be nil for non-innoculated imports", http.StatusBadRequest)
-			return
-		}
+		finalPerms = allCanWriteAcl().ACL
 	} else {
 		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
 		if err != nil {
@@ -342,10 +344,12 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if subsp != nil {
-			toInsert.ACL = subsp.DefaultAcl.Clone()
+			finalPerms = subsp.DefaultAcl.Clone()
 		} else {
-			toInsert.ACL = sp.DefaultAcl.Clone()
+			finalPerms = sp.DefaultAcl.Clone()
 		}
+		user, _ := GetAuthInfo(r.Context())
+		finalPerms.Users[user.Email] = true
 	}
 	if err = data.Generation.validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

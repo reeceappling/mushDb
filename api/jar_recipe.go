@@ -220,7 +220,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 		AclField:                   allCanWriteAcl(),
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
 }
 
 type updateJarRecipeRequest struct {

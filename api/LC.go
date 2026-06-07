@@ -228,7 +228,7 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 type importLiquidCultureRequest struct {
 	CreationDateField
 	LcRecipeField
-	SpeciesField
+	SpeciesOptionalField // TODO: made optional
 	SubspeciesOptionalField
 	KnownFruitableField
 	Generation *int
@@ -333,24 +333,41 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	user, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
+	innoculated := data.Species != nil
+	if !innoculated {
+		if data.Generation != nil {
+			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.SubSpecies != nil {
+			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.KnownFruitable != nil {
+			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if data.ConfirmedClean != nil {
+			http.Error(w, "confirmedClean without species: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		finalPerms = allCanWriteAcl().ACL
 	} else {
-		finalPerms = sp.DefaultAcl.Clone()
+		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		if err != nil {
+			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if subsp != nil {
+			finalPerms = subsp.DefaultAcl.Clone()
+		} else {
+			finalPerms = sp.DefaultAcl.Clone()
+		}
+		user, _ := GetAuthInfo(r.Context())
+		finalPerms.Users[user.Email] = true
 	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
 	ctx, db := Db(r)
 	coll := db.Collection(LCCollectionName)
@@ -365,7 +382,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		//PcRunOptionalField:      PcRunOptionalField{},       // No pc runs on imports
 		LcRecipeField:           LcRecipeField{data.Recipe},
 		CreationDateField:       CreationDateField{data.CreationDate},
-		SpeciesOptionalField:    SpeciesOptionalField{&data.Species},
+		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		GenerationsFields: GenerationsFields{
 			GenSporeField:        GenSporeField{gen},

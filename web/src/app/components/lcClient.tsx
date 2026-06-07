@@ -75,7 +75,7 @@ import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
-import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, IsValidAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -124,7 +124,7 @@ export function AssertLc(input: any): asserts input is LcData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl],
+        //['acl', IsValidAcl],
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -154,6 +154,11 @@ export function AssertLc(input: any): asserts input is LcData {
             throw new Error('Lc assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -171,10 +176,6 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
     const cookies = useContext(CookiesContext)
     const ImportLc = () => {
         const formData = new FormData()
-        if (species === undefined) {
-            setErr("Species must be set!")
-            return
-        }
         if (recipe === undefined) {
             setErr("Recipe must be set!")
             return
@@ -182,8 +183,8 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
         const bodyObj: any = {
             creationDate: created,
             recipe: recipe._id,
-            species: species._id,
             // Optionals
+            species: species?._id,
             subspecies: subspecies?._id,
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
@@ -216,9 +217,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
 export default function LcDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertLc(data)
+    }: DisplayInput<LcData>) {
         const [initial, setInitial] = useState(data)
 
         const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(data.confirmedClean)
@@ -358,9 +357,6 @@ export default function LcDisplay(
                 }}>{"Update"}</button>
             </>}
         </DisplayFormWrapper>
-    } catch (err) {
-        return <div>{"ERROR: Liquid Culture data format incorrect: " + err}</div>
-    }
 }
 
 export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {

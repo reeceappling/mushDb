@@ -34,7 +34,13 @@ import {
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {FruitData} from "@/app/components/fruitServer";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {ACL} from "@/app/components/accessControlServer";
@@ -87,7 +93,7 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+        //['acl', IsValidAcl]
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -104,6 +110,11 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
             throw new Error('Swab assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -158,9 +169,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
 export default function SporeSwabDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-        AssertSporeSwab(data)
+    }: DisplayInput<SporeSwabData>) {
         const [initial, setInitial] = useState(data)
 
         const [sale, setSale] = useState(initial.sale)
@@ -224,9 +233,6 @@ export default function SporeSwabDisplay(
             <OnViewCreatorsTriColArea OnViewCreators={ovcs}
                                       readonly={readonly}/> {/*swab to agar and that's about it */}
         </DisplayFormWrapper>
-    } catch (err) {
-        return <div>{"ERROR: Spore swab data format incorrect: " + JSON.stringify(err)}</div>
-    }
 }
 
 // Should only be accessible from a fruit's page

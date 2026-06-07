@@ -73,7 +73,13 @@ import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    AssertACL,
+    IsValidAcl,
+    MarshalAcl,
+    TogglableAreaWithDepth, UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
 import Box from "@mui/material/Box";
@@ -124,7 +130,7 @@ export function AssertPlate(input: any): asserts input is PlateData {
     }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl],
+        //['acl', IsValidAcl],
     ])
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
@@ -154,6 +160,12 @@ export function AssertPlate(input: any): asserts input is PlateData {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -178,7 +190,7 @@ export function PourCoverageSelectorRequired({value, setPourCoverage}: {
 export default function PlateDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
+    }: DisplayInput<PlateData>) {
     const [initial, setInitial] = useState(data as PlateData)
 
     const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
@@ -303,6 +315,9 @@ export default function PlateDisplay(
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
+                {/* TODO: when user edits perms, it is adding the user to the perms as a writer. Ensure it does not do this anymore!*/}
+                {/* TODO: removing users is not autoupdating in the UI (the removed user is re-added on submit...). Make sure those changes are shown immediately...*/}
+
             </TogglableAreaWithDepth>
 
             {readonly || <button className={"bottomButton greenButton"} onClick={(e) => {
@@ -439,15 +454,11 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
     const ImportPlate = () => {
-        if (species === undefined) {
-            setErr("Species must be set!")
-            return
-        }
         const formData = new FormData()
         const dataObj: any = {
             creationDate: created,
-            species: species._id, // TODO: can this be optional? Importing existing uninnoculated plates?
             // Optionals
+            species: species?._id,
             subspecies: subspecies?._id,
             knownFruitable: knownFruitable,
             generation: generation,
@@ -486,9 +497,9 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
 }
 
 export function NewPlateForm(
-    {handlers}: { handlers: NewEntryInput<PlateData>, agarBatchIn?: AgarBatchData }
+    {handlers,agarBatchIn}: { handlers: NewEntryInput<PlateData>, agarBatchIn?: AgarBatchData }
 ) {
-    const [agarBatch, setAgarBatch] = useState<AgarBatchData | undefined>(undefined)
+    const [agarBatch, setAgarBatch] = useState<AgarBatchData | undefined>(agarBatchIn)
     const [condensationCoverageAtSealTime, setCondensationCoverageAtSealTime] = useState<number | undefined>(undefined)
     const [pourCoverage, setPourCoverage] = useState<number | undefined>(undefined)
     const [wetAtCooledTime, setWetAtCooledTime] = useState<boolean | undefined>(undefined)
@@ -523,7 +534,7 @@ export function NewPlateForm(
     }
     return <NewEntryFormWrapper entryType={"plate"}>
         <ErrorDisplay err={err}/>
-        <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/>{/* TODO: is true ok for both?*/}
+        {agarBatchIn === undefined && <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true/* TODO: is true ok for both?*/}/>}
         <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
         <CondensationCoverageSelector coverage={condensationCoverageAtSealTime}
                                       updateParent={setCondensationCoverageAtSealTime}/>
