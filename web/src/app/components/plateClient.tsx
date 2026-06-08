@@ -89,6 +89,7 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
@@ -231,8 +232,8 @@ export default function PlateDisplay(
             notes: notes,
             writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
-            pourCoverage: pourCoveragePct,
-            condensationCoverageAtSealTime: condensationCoveragePct,
+            pourCoverage: pourCoveragePct, // TODO: only allow setting if originally undefined
+            condensationCoverageAtSealTime: condensationCoveragePct,  // TODO: only allow setting if originally undefined
             wetAtCooledTime: wetAtCooledTime,
             agarOnOutsideAtPourTime: agarOnOutsideAtPourTime,
         }
@@ -295,9 +296,10 @@ export default function PlateDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     {/* TODO: SIZING ON ENTRY FIELDS*/}
-                    <PourCoverageFieldDisplay pourCoveragePct={pourCoveragePct} updateParent={setPourCoveragePct}/>
-                    <CondensationCoverageFieldDisplay coverage={condensationCoveragePct}
-                                                      updateParent={setCondensationCoveragePct}/>
+                    <PourCoverageFieldDisplay pourCoveragePct={pourCoveragePct} updateParent={setPourCoveragePct}/>{/* TODO: STATIC IF PRE-SET*/}
+                    {initial.condensationCoverageAtSealTime ? <div>{"Condensation Coverage: "+initial.condensationCoverageAtSealTime+"%"}</div>:
+                        <CondensationCoverageFieldDisplay coverage={condensationCoveragePct/* TODO: STATIC IF PRE-SET*/}
+                                                                                                                                                                                  updateParent={setCondensationCoveragePct}/>}
                     <YesNoSelector pre={"Wet at cooled time: "} initial={initial.wetAtCooledTime}
                                    updateParent={setWetAtCoolTime}/>
                     <YesNoSelector pre={"Agar on outside at pour time: "} initial={initial.agarOnOutsideAtPourTime}
@@ -516,7 +518,7 @@ export function NewPlateForm(
             return
         }
         const body: any = {
-            agarBatch: agarBatch,
+            agarBatch: agarBatch._id,
             condensationCoverageAtSealTime: condensationCoverageAtSealTime, // TODO: ensure ok on go side
             pourCoverage: pourCoverage, // TODO: ensure ok on go side
             wetAtCooledTime: wetAtCooledTime, // TODO: ensure ok on go side
@@ -532,19 +534,26 @@ export function NewPlateForm(
                 setErr(JSON.stringify(e))
             })
     }
+    const sliderClasses="mt-10 mb-10"//{/* TODO: ensure ok! Change from 10!*/}
     return <NewEntryFormWrapper entryType={"plate"}>
         <ErrorDisplay err={err}/>
         {agarBatchIn === undefined && <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true/* TODO: is true ok for both?*/}/>}
-        <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
-        <CondensationCoverageSelector coverage={condensationCoverageAtSealTime}
+        <div className={sliderClasses}>
+            <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
+        </div>
+        <div className={sliderClasses}>
+            <CondensationCoverageSelector coverage={condensationCoverageAtSealTime}
                                       updateParent={setCondensationCoverageAtSealTime}/>
+        </div>
         <YesNoSelector pre={"Wet at cooled time: "} initial={undefined} updateParent={setWetAtCooledTime}
                        className={"inlineChildren"}/>
         <YesNoSelector pre={"Agar on outside at pour time: "} initial={undefined}
                        updateParent={setAgarOnOutsideAtPourTime} className={"inlineChildren"}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"bottomButton"} onClick={createPlate}>{"Create"}</button>
+        <TestAndValidate todos={["style button"]}>
+            <button className={"bottomButton greenButton"} onClick={createPlate}>{"Create"}</button>
+        </TestAndValidate>
     </NewEntryFormWrapper>
 }
 

@@ -314,7 +314,7 @@ func main() {
 	http.Handle("/subspeciesFor/{variant}", rateLimitCtxInternalAuthMiddleware(rfid.ListSubspeciesHandler))
 	http.Handle("/sessionUserProjects", rateLimitCtxInternalAuthMiddleware(rfid.DenyGuestMiddleware(rfid.SessionUserProjectsHandler))) // TODO: DenyGuestMiddleware? Will guests only have public projects???
 	// Next endpt needs no authorization, but does have a rate limiter?? // TODO: rl?
-	http.Handle("/options/{optionsType}", rateLimiter(internalOnlyMiddleware(rfid.DenyGuestMiddleware(rfid.GetOptionsHandler)))) // TODO: DenyGuestMiddleware? Guests should not be changing anything...
+	http.Handle("/options/{optionsType}", rateLimiter(internalOnlyMiddleware(rfid.GetOptionsHandler))) // TODO: DenyGuestMiddleware? Guests should not be changing anything...
 
 	if err = srv.ListenAndServe(); err != nil {
 		panic("failed to listen and serve for http: " + err.Error())

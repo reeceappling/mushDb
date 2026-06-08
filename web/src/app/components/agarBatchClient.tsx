@@ -43,6 +43,7 @@ import {NewSlantForm} from "@/app/components/slantClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     if (typeof input !== 'object') {
@@ -139,7 +140,7 @@ export default function AgarBatchDisplay(
         },
         {
             // TODO: Slants are poured BEFORE PCing! The Agar batch will already have the PC Run on it though, so we shouldnt worry about it.
-            // TODO: also sticks should be boiled BEFORE going in the PC!
+            // TODO: also sticks should be BOILED BEFORE going in the PC!
             txt: "Create Slants (Before PC)",
             newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                 return <NewSlantForm agarBatchIn={data} handlers={{
@@ -154,10 +155,11 @@ export default function AgarBatchDisplay(
             },
         },
         {
-            txt: "Add to slant (irregular)", // TODO: THIS!
+            txt: "Add to slant (After PC, irregular)", // TODO: THIS!
             newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                 return <div>{"AREA NOT IMPLEMENTED YET"}</div>
             },
+            needsTesting: true,
         },
     ]
     return (
@@ -168,7 +170,7 @@ export default function AgarBatchDisplay(
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <DateArea data-cy-id={"LastUpdated"} pre={"Last Updated: "} when={initial.lastUpdated}
-                          readonly={true}/>{/* TODO: ensure this is now inline*/}
+                          readonly={true}/>
                 <div data-cy-id={"Color"}>{"Color: " + data.color}</div>
                 <PcRunArea data-cy-id={"Run"} binaryId={initial.pcRun} headerLevel={headerLevel}/>
                 <AgarRecipeArea data-cy-id={"Recipe"} agarRecipeBinId={initial.agarRecipe}/>
@@ -240,7 +242,9 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
                     creatorInPage={false}/>
             </Subform>
         }
-        <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
+        <TestAndValidate todos={["failing to load"]/* TODO: THIS!*/}>
+            <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
+        </TestAndValidate>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"bottomButton greenButton"} onClick={newAgarBatchSubmit}>{"Submit"}</button>
     </NewEntryFormWrapper>

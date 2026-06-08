@@ -325,7 +325,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
         }
         // agarBatches always are created with pcRuns, so there is no need to ensure the batch has a run beforehand...
         const body: any = {
-            agarBatch: agarBatch,
+            agarBatch: agarBatch._id,
             stickType: stickType,
             notes: notes,
             writeTagTo: writeTagTo,

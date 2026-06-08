@@ -364,6 +364,7 @@ func (id AlternateCollectionId) MarshalJSON() ([]byte, error) { // Turn to base5
 
 func (id *AlternateCollectionId) UnmarshalJSON(bs []byte) error { // Turn from base58 to server-type (binary)
 	var b58Str Base58Str
+	// TODO: FIX THIS!
 	if err := json.Unmarshal(bs, &b58Str); err != nil {
 		return err
 	}
@@ -670,7 +671,7 @@ var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		"lc":              createLiquidCultureHandler,
 		"lcSyringe":       createSyringeHandler,
 		"lcRecipe":        createLcRecipeHandler,
-		"fruit":           createFruitHandler,
+		"fruit":           createFruitHandler, // TODO: NOT WORKING PROPERLY!
 		"fruitingChamber": createFruitingChamberHandler,
 		"grainBatch":      createGrainBatchHandler,
 		"jar":             createJarHandler,

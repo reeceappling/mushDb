@@ -28,7 +28,8 @@ export function OvcForXfers(parentId: string, parentType: string, validTypesTo: 
                                             lastNode: <QuadColLastCol dstType={xfer.toType} id={xfer.to}/>
                                         }], false)
                                     }}/>
-        }
+        },
+        needsTesting: true,
     }
 }
 
@@ -76,7 +77,7 @@ function OvcQuadRow({item, key}: { item: CreatedLinkQuadCol, key: number }) {
 // TODO: MOVE
 function OvcTriRow(props: React.PropsWithChildren<{ item: CreatedLinkTriCol, key: number }>) {
     return <tr key={props.key}>
-        {/* TODO: styling for table data (non-first rows)*/}
+        {/* TODO: styling for table data (all rows)*/}
         <td>{props.item.typeText}</td>
         <td>{props.item.node}</td>
         {props.children}
@@ -216,15 +217,13 @@ export function OnViewCreatorsQuadColArea({OnViewCreators, readonly}: {
             {closeButton}
         </OvcCreatorBodyWrapper>
     }
-    return <TestAndValidate todos={["TEST THIS WHOLE THING!"]}>
-        <DepthProvider><OvcArea>
+     return <OvcArea>
             <OvcTopBar setActiveTab={setActiveTab} OnViewCreators={OnViewCreators} hasExtraCol={true}
                        activeTab={activeTab}/>
             <OvcLinksTableQuad created={created} tableHidden={createdTableHidden} toggleHidden={toggleHidden}/>
             {creatorBody()}
         </OvcArea>
-        </DepthProvider>
-    </TestAndValidate>
+        // </DepthProvider>
 }
 
 export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
@@ -266,14 +265,12 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
             {closeButton}
         </OvcCreatorBodyWrapper>
     }
-    return <TestAndValidate todos={["TEST THIS WHOLE THING!"]}>
-        <OvcArea>
+    return <OvcArea>
             <OvcTopBar setActiveTab={setActiveTab} OnViewCreators={OnViewCreators} hasExtraCol={false}
                        activeTab={activeTab}/>
             <OvcLinksTableTri created={created} tableHidden={createdTableHidden} toggleHidden={toggleHidden}/>
             {creatorBody()}
         </OvcArea>
-    </TestAndValidate>
 }
 
 function OnViewCreatorCloseButton({handleClose, activeTab}: { handleClose: () => void, activeTab?: string }) {
@@ -300,6 +297,11 @@ function OvcTopBar({activeTab, setActiveTab, OnViewCreators, hasExtraCol}: {
             const onClick = isActiveTab ? () => {
             } : () => {
                 setActiveTab(ovc.txt)
+            }
+            if (ovc.needsTesting === true){
+                return <TestAndValidate todos={["needs testing"]}>
+                    <div key={ovc.txt} className={classes} onClick={onClick}>{ovc.txt}</div>
+                </TestAndValidate>
             }
             return <div key={ovc.txt} className={classes} onClick={onClick}>{ovc.txt}</div>
         })}

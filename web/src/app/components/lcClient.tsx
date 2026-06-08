@@ -292,6 +292,7 @@ export default function LcDisplay(
                         }], false)
                     }}/>
                 },
+                needsTesting: true,
             },
             // TODO: sale?
             WriteRfidOvcArea(initial._id),

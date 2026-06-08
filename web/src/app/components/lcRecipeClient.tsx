@@ -160,6 +160,7 @@ export default function LcRecipeDisplay(
                         isTopLevel: false,
                     }}/>
                 },
+                needsTesting: true,
             }
         ]
         return (

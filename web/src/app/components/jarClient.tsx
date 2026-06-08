@@ -91,6 +91,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {WetnessDisplay} from "@/app/components/bagClient";
 import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -447,8 +448,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     const hasGrainBatch = grainBatchIn !== undefined || recipeIn !== undefined
     return <NewEntryFormWrapper entryType={"jar"}>
         <ErrorDisplay err={err}/>
-        {hasGrainBatch && <GrainBatchSelectorCloseable doSelect={setGrainBatch}
-                                                               allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}
+        {hasGrainBatch && <GrainBatchSelectorCloseable doSelect={setGrainBatch} allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}
         <JarSizeSelector onChange={(unit: string) => {
             setSizeCups(cupsPer(unit))
         }}/>

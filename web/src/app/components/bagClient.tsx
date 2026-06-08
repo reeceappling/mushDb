@@ -245,8 +245,8 @@ export default function BagDisplay(
             })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
-        OvcForNewFruit(initial._id, "bag", allCookies(cookies)), // TODO: test heavily
-        WriteRfidOvcArea(initial._id),
+        OvcForNewFruit(initial._id, "bag", allCookies(cookies)),
+        WriteRfidOvcArea(initial._id), // TODO: TEST!
     ]
     return (
         <DisplayFormWrapper entryType={"bag"}>

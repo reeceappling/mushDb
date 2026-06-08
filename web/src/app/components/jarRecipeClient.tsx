@@ -176,6 +176,7 @@ export default function JarRecipeDisplay(
                         isTopLevel: false,
                     }}/>
                 },
+                needsTesting: true,
             }
         ]
         return <DisplayFormWrapper entryType={"jarRecipe"}>

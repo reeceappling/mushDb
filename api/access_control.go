@@ -39,11 +39,10 @@ func allCanWriteAcl() AclField {
 }
 
 // ACL being nil means anyone authenticated can do anything (read/write)
-type ACL struct { // TODO: ALWAYS ENSURE REFERENCED AS A STRUCT AND NOT A POINTER!
-	Users    map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`       // bool is canWrite
-	Projects map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"` // bool is canWrite
-	// TODO: validate blanketPerm works as intended. It was changed from bool to *bool
-	BlanketPerm *bool `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // empty is private, false is public can read by default. True means public can write by default.
+type ACL struct { // ALWAYS REFERENCED AS A STRUCT AND NOT A POINTER!
+	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite
+	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite
+	BlanketPerm *bool                      `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // empty is private, false is public can read by default. True means public can write by default.
 }
 
 func (acl ACL) AsPermsOnRequest() PermsOnRequest {
@@ -65,17 +64,12 @@ func cloneMap[T comparable, U any](m map[T]U) map[T]U { // TODO: use wherever ne
 	return out
 }
 
-// TODO: USE THIS EVERYWHERE NEEDED!!!
 func (acl ACL) Clone() ACL {
-	//if acl == nil {
-	//	return nil
-	//}
 	return ACL{
 		Users:       cloneMap(acl.Users),
 		Projects:    cloneMap(acl.Projects),
 		BlanketPerm: acl.BlanketPerm,
 	}
-	//return &out
 }
 
 func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
@@ -116,17 +110,17 @@ func (acl ACL) simplified() ACL {
 		// If admin or default permission is no permission, return self
 		return acl
 	}
-	// If blanketPerm is read, then remove all users/projects that can only read
+	// If blanketPerm is read, then remove all users that can only read
 	for user, canWrite := range acl.Users {
 		if !canWrite {
 			delete(acl.Users, user)
 		}
 	}
-	for proj, canWrite := range acl.Projects {
-		if !canWrite {
-			delete(acl.Projects, proj)
-		}
-	}
+	//for proj, canWrite := range acl.Projects { // TODO: keep all projects!
+	//	if !canWrite {
+	//		delete(acl.Projects, proj)
+	//	}
+	//}
 	return acl
 }
 
@@ -164,8 +158,8 @@ func (acl ACL) userIdPermission(email string) *ReadWritePerm {
 }
 
 // TODO: ensure this works
-func (acl ACL) HighestPermFor(perms ResolvedUserPerms) *ReadWritePerm {
-	if perms.IsAdmin() || (acl.BlanketPerm != nil && *acl.BlanketPerm) {
+func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
+	if userPerms.IsAdmin() || (acl.BlanketPerm != nil && *acl.BlanketPerm) {
 		return RWPermWrite()
 	}
 	// Handle blanket perm
@@ -173,16 +167,16 @@ func (acl ACL) HighestPermFor(perms ResolvedUserPerms) *ReadWritePerm {
 	if acl.BlanketPerm != nil {
 		maxPerm = RWPermRead()
 	}
-	if perms.isGuest() {
+	if userPerms.isGuest() {
 		return maxPerm
 	}
 
-	maxPerm = acl.userIdPermission(perms.Email)
+	maxPerm = acl.userIdPermission(userPerms.Email)
 	if maxPerm != nil && *maxPerm == true {
 		return newPerm(true)
 	}
 	for proj, projCanWriteOnEntry := range acl.Projects {
-		if projPerm, exists := perms.projects[proj]; exists { // TODO: is projectPerm here ok
+		if projPerm, exists := userPerms.projects[proj]; exists { // TODO: is projectPerm here ok
 			userCanWriteOnProj := projPerm != nil
 			userPermForProjectAndEntry := userCanWriteOnProj && projCanWriteOnEntry
 			if userPermForProjectAndEntry {

@@ -189,7 +189,7 @@ export default function AgarRecipeDisplay(
                         return onCreate([{
                             typeText: "Agar Batch",
                             node: <CreatedLinkFor linkId={newItem._id} typ={"agarBatch"}/>
-                        }], true) // TODO: true ok?
+                        }], false) // TODO: true instead?
                     },
                     isTopLevel: false,
                 }}/>

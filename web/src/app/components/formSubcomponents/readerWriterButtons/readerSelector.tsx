@@ -168,6 +168,7 @@ export function WriteRfidOvcArea(id:string):OnViewCreatorQuadCol{
             handleTagWritten={(idWritten:string)=>{
                 onCreate([{typeText: "Wrote Tag", node: <text>{idWritten}</text>}], true)
             }}/>,
+        needsTesting: true,
     }
 }
 

@@ -138,6 +138,7 @@ export default function WaterJarDisplay(
                     }, isTopLevel: false,
                 }}/>
             },
+            needsTesting: true,
         },
         WriteRfidOvcArea(initial._id),
         // Stasis tubes must be PC'd with water in them, so we don't have a creator here

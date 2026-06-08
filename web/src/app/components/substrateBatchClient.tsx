@@ -132,6 +132,7 @@ export default function SubstrateBatchDisplay(
                         },
                     }}/>
                 },
+                needsTesting: true,
             },
             {
                 txt: "Create Fruiting Chamber",
@@ -145,6 +146,7 @@ export default function SubstrateBatchDisplay(
                         },
                     }}/>
                 },
+                needsTesting: true,
             }
         ]
         return (

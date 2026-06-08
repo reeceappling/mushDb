@@ -247,7 +247,7 @@ export function NewSporeSwabForm(
     // TODO: EITHER PRINT OR FRUIT!!!!!
 
     // TODO: THIS!
-    const [parent, setParent] = useState<string | undefined>()
+    const [parent, setParent] = useState<string | undefined>(printIn?._id || fruitIn?._id || undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
 
@@ -276,7 +276,7 @@ export function NewSporeSwabForm(
 
     return <NewEntryFormWrapper entryType={"sporeSwab"}>
         <ErrorDisplay err={err} headerLevel={headerLevel} offset={offset}/>
-        {/* TODO: PARENT SELECTOR IF NOT PROVIDED!*/}
+        {(printIn || fruitIn) && <div>{"TODO: PARENT SELECTOR"/* TODO: THIS! PARENT SELECTOR IF NOT PROVIDED*/}</div>}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>

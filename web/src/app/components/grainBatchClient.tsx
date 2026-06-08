@@ -191,7 +191,7 @@ export default function GrainBatchDisplay(
         ]
         return <DisplayFormWrapper entryType={"grainBatch"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID id={id} txt={"Grain Batch"} entryType={"grainBatch"}/>
+            <ID id={initial._id} txt={"Grain Batch"} entryType={"grainBatch"}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

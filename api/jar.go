@@ -125,10 +125,6 @@ func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection {
 	return ctx.Client().Database(dbName).Collection(GrainJarCollectionName)
 }
 
-func (j *GrainJar) Refresh(ctx mongo.SessionContext) error {
-	return j.Collection(ctx).FindOne(ctx, bsonFindFilter("_id", j.Id)).Decode(j)
-}
-
 func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err error) {
 	j = &GrainJar{}
 	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(j)
@@ -238,8 +234,7 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 }
 
 type createJarRequest struct {
-	// TODO: ALSO CREATE WITH sizeCups
-	SizeCups int `json:"sizeCups"` // TODO: IMPLEMENT ON GO SIDE
+	SizeCups int `json:"sizeCups"`
 	GrainBatchField
 	//WetnessField                           // TODO: maybe add late?
 	//BurstGrainsField                       // TODO: maybe add late?
@@ -265,6 +260,10 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx, _ := Db(r)
+	if data.SizeCups < 1 {
+		http.Error(w, fmt.Sprintf("size must be >0: was %d", data.SizeCups), http.StatusBadRequest)
+		return
+	}
 	batch, err := data.GrainBatchField.Get(ctx)
 	if err != nil {
 		http.Error(w, "failed to find grain batch: "+err.Error(), http.StatusBadRequest)
@@ -280,6 +279,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&batch.Recipe},
 		GrainBatchOptionalField: data.GrainBatchField.asOptional(),
+		SizeCups:                data.SizeCups,
 		PcRunOptionalField:      data.PcRunField.asOptional(),
 		BurstGrainsField:        BurstGrainsField{nil}, //      data.BurstGrainsField, // initially set to nil, can be updated later. TODO: set this optionally?
 		WetnessField:            WetnessField{nil},     //           data.WetnessField, // initially set to nil, can be updated later. TODO: set this optionally?
@@ -482,15 +482,15 @@ type resolvedUpdateJarRequest struct {
 
 func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
 	return NewMods(). // TODO: update more if needed
-				updateKnownFruitableIfNeeded(req, existing).
-				updateSaleIfNeeded(req.Sale, existing.Sale).
-				updateDisposedIfNeeded(req, existing).
-				updateNotesIfNeeded(req, existing).
-				updatePicsIfNeeded(req.Images, existing.Pics).
-				updateContamsIfNeeded(req.Contams, existing.Contaminations).
-				updatePermsIfNeeded(aclField.ACL, existing.ACL).
-				updateLastUpdatedIfNeeded().
-				Finalized()
+		updateKnownFruitableIfNeeded(req, existing).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {
@@ -531,11 +531,11 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 			out.Contams.New[i].Location = &finalLoc
 		}
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(GrainJarCollectionName)
+	ctx := r.Context()
 	// go get current
 	existing := &GrainJar{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(existing)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+		Collection(GrainJarCollectionName).FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

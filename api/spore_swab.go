@@ -162,6 +162,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 			return nil, errr
 		}
 		// Actually add the swab to their collection
+		// TODO: Add swab to transfers from fruit if from fruit, or to transfers from print if from print
 		return mongo.SessionFromContext(sessCtx).
 			Client().Database(dbName).
 			Collection(SporeSwabCollectionName).

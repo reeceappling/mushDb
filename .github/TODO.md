@@ -1,5 +1,6 @@
 # In Progress
 ## Actively Working On
+- [ ] Test OVCs below GrainBatch, as well as OVCs for transfers and RFID
 - [x] Spore print and below Go TODOs
   - [ ] User, project, and sale Go TODOs
 - [ ] Project, sale, user tsx TODOs

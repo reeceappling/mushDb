@@ -144,6 +144,7 @@ export default function SubstrateRecipeDisplay(
                         isTopLevel: false,
                     }}/>
                 },
+                needsTesting: true,
             },
         ]
         return (

@@ -162,7 +162,7 @@ func initializeSporePrints(ctx context.Context) error {
 }
 
 type createSporePrintRequest struct {
-	FruitId AlternateCollectionId `bson:"fruitId" json:"fruitId"`
+	FruitId MainCollectionId `bson:"fruitId" json:"fruitId"`
 	NotesField
 	Pics            []PicWithNotesLessLocation //"newPic-1"
 	WriteTagToField                            // TODO: make sure this is on the ts side!
@@ -180,7 +180,7 @@ func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
 }
 
 type resolvedCreateSporePrintRequest struct {
-	FruitId AlternateCollectionId `bson:"fruitId" json:"fruitId"`
+	FruitId MainCollectionId `bson:"fruitId" json:"fruitId"`
 	NotesField
 	PicsField
 }
@@ -283,9 +283,10 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		out.Pics[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	parent := Fruit{}
-	err = db.Collection(FruitsCollName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(&parent)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).
+		Database(dbName).Collection(FruitsCollName).
+		FindOne(ctx, bsonFindFilter("_id", data.FruitId)).Decode(&parent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -293,14 +294,13 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 
 	now := unixTimeForNow()
 	// TODO: writeTagTo?
-	spid := id
 	var mri *PicWithNotes = nil
 	if len(out.Pics) > 0 {
 		lastPic := out.Pics[len(out.Pics)-1]
 		mri = &lastPic
 	}
 	toInsert := SporePrint{
-		MainCollectionIdField:             MainCollectionIdField{spid},
+		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
 		CreationDateField:                 now.asCreationDate(),
 		SpeciesField:                      parent.SpeciesField,
@@ -318,7 +318,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			return nil, err
 		}
 		// Update fruit with new print id
-		err = parent.addSporePrint(sessCtx, spid)
+		err = parent.addSporePrint(sessCtx, id)
 		if err != nil {
 			return nil, errors.Join(errors.New("failed to add spore print to parent fruit"), err)
 		}

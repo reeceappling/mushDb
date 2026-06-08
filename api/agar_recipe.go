@@ -87,7 +87,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(AgarRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, true), // TODO: unique (last) may need to be true
+		newSimpleIndex("name", "name", false, false, true), // TODO: unique (last) may need to be true (do we want names to be unique or not?)
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("agar", "agar", true, false, false),
 		standardIndexModel,
@@ -104,7 +104,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	}
 	// Add built-in entries
 	builtinTime := RequiredTimeField{Time: ogTime}
-	basicEntryAcl := allCanReadAcl(nil) // TODO: ok?
+	basicEntryAcl := allCanReadAcl(nil) // TODO: should admins be able to add to these basic entries?
 	basicEntries := []*AgarRecipe{
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},

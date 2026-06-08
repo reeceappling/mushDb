@@ -344,15 +344,16 @@ export function NewFruitForm(
     return (
         <NewEntryFormWrapper entryType={"fruit"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <DateArea pre={"Harvest Date: "} readonly={false} updateParent={setHarvestDate}/>
+            {/* TODO: say harvest date is today?*/}
             <PicsDisplay pix={[]} updateParent={v => {
                 setPics(v.new)
             }} headerLevel={headerLevel} readonly={false}/>
             <NewEntryNotes setNotes={setNotes}/>
 
-            <input type="submit" value="Submit" onClick={newFruitSubmit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>
+            <button className={"greenButton"} onClick={e=>{
+                e.stopPropagation()
+                newFruitSubmit()
+            }}>{"Create Fruit"}</button>
         </NewEntryFormWrapper>
     )
 }

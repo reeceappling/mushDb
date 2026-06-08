@@ -131,6 +131,7 @@ export default function PcRunDisplay(
                         isTopLevel: false,
                     }}/>
                 },
+                needsTesting: true,
             },
             {
                 txt: "Create Bag",
@@ -142,6 +143,7 @@ export default function PcRunDisplay(
                         isTopLevel: false,
                     }}/>
                 },
+                needsTesting: true,
             },
             {
                 txt: "Create Grain Jar",
@@ -155,6 +157,7 @@ export default function PcRunDisplay(
                     }}
                     />
                 },
+                needsTesting: true,
             },
             {
                 txt: "Create Liquid Culture",
@@ -169,6 +172,7 @@ export default function PcRunDisplay(
                         isTopLevel: false,
                     }}/>
                 },
+                needsTesting: true,
             },
             // TODO: AREA TO ADD ITEMS TO PC? Such as Slants, AgarBatches?
             //

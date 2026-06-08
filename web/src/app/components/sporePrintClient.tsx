@@ -263,6 +263,7 @@ export default function SporePrintDisplay(
                         }], false)
                     }}/>
                 },
+                needsTesting: true,
             },
             {
                 txt: "Create MultiSpore Syringe",
@@ -277,6 +278,7 @@ export default function SporePrintDisplay(
                         }
                     }} />
                 },
+                needsTesting: true,
             },
             WriteRfidOvcArea(initial._id),
             // TODO: TRANSFERS SKIPPING SWABS/SYRINGES?! Probably not...
@@ -342,8 +344,8 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
             return
         }
         // if both pics and notes are empty, do nothing
-        if(pics.length===0){
-            setErr("Must at least contain one picture")
+        if(pics.length===0 && notes.length===0){
+            setErr("Must at least contain one picture or note")
             return
         }
         const formData = new FormData()
