@@ -542,7 +542,7 @@ func handleLoginMiddleware(viewHandler http.HandlerFunc) http.Handler {
 		case http.MethodGet:
 			viewHandler.ServeHTTP(w, r)
 		case http.MethodPost:
-			time.Sleep(1500 * time.Millisecond) // TODO: Make user wait for login, lower likelihood of attack
+			time.Sleep(1500 * time.Millisecond) // Make user wait for login, lower likelihood of attack
 			println("SHOULD NEVER BE HIT")
 		default:
 			http.Error(w, "Unsupported http request method: "+http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
@@ -584,7 +584,7 @@ func getSessionValue(session *sessions.Session, key string) (string, error) {
 }
 
 func adminLogin(w http.ResponseWriter, r *http.Request) {
-
+	// TODO: implement!
 }
 
 var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
@@ -600,13 +600,11 @@ var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err == nil {
 		println("authed, handling authentication") // TODO: del
-		// TODO: why does this and the callback both call Complete?
-		// TODO: do we only need one????
 		err = handleUserAuthedViaGoth(r.Context(), user, w, r)
 		if err != nil {
-			println("failed to handle user auth: " + err.Error())
-			//http.Error(w, err.Error(), http.StatusInternalServerError)
-
+			// TODO: println("failed to handle user auth: " + err.Error())
+			http.Error(w, "failed to handle user auth: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
 		w.Write([]byte("OK!"))
 		return
@@ -676,7 +674,7 @@ var authCallbackHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	println("hit callback")
 	// Clear cookies if needed
-	if len(r.CookiesNamed("_gothic_session")) > 1 {
+	if len(r.CookiesNamed("_gothic_session")) > 1 { // TODO: or >0?
 		c, _ := r.Cookie("_gothic_session")
 		c.MaxAge = -1
 		http.SetCookie(w, c)
@@ -723,7 +721,7 @@ var authCallbackHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	_, err = r.Cookie("_gothic_session")
 	if err != nil {
 		println("no cookie after auth", err.Error()) // TODO: ensure ok
-		//http.Error(w, "no cookie after auth", http.StatusInternalServerError)
+		//http.Error(w, "no cookie after auth", http.StatusInternalServerError) // TODO: fix?
 		//return
 	}
 	//http.SetCookie(w, c) // TODO: if this works do it everywhere
@@ -1015,10 +1013,7 @@ func getRfidHandler() http.Handler {
 
 // TODO: FIXME!!!!
 var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-	println("GETTING ITEM") // TODO: del
 	ctx := r.Context()
-	// TODO: ?????? id := strings.ReplaceAll(r.PathValue("id"), "_", " ") // TODO: replace all underscores with spaces, for things like "chicken of the woods"
-	//id := strings.ReplaceAll(r.PathValue("id"), "_", " ") // TODO: replace all underscores with spaces, for things like "chicken of the woods"
 	id, err := rfid.UrlDecodeString(r.PathValue("id"))
 	if err != nil {
 		println("failed to url decode string") // TODO; DEL
@@ -1029,27 +1024,53 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 
 	entryType := r.PathValue("variant")
 	var bytes []byte
+	println("getting " + entryType + " " + id) // TODO: DEL
 	switch entryType {
-	case "project", "species", "subspecies": // Items with possible spaces in names
+	case "project": // Items with possible spaces in names but abnormal perms
 		// TODO: ensure to convert id from url format to server format
-		println("getting " + entryType + " " + id) // TODO: DEL
-		out, err := rfid.GetAltCollectionItem[rfid.AltCollectionItem[string]](ctx, id, map[string]rfid.AltCollectionItem[string]{
-			"project":    &rfid.Project{},
-			"species":    &rfid.Species{},
-			"subspecies": &rfid.Subspecies{},
-		}[strings.ToLower(entryType)]) // TODO: validate works
+		out, err := rfid.GetAltCollectionItem[rfid.Project](ctx, id, rfid.Project{})
 		if err != nil {
 			println("err getting altCollType " + err.Error()) // TODO: DEL
+			http.Error(w, "failed to get project: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		// TODO: PERMS!
+		user, err := rfid.GetAuthInfo(ctx)
+		if err != nil {
+			http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if !user.IsAdmin() && out.Perms.ForUser(user.Email) == nil { // TODO: ensure ok
+			http.Error(w, "permission denied for project", http.StatusForbidden)
+			return
+		}
+
+		bytes, err = json.Marshal(out)
+		if err != nil {
+			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
+			return
+		}
+	case "species", "subspecies": // Items with possible spaces in names but which have normal perms
+		// TODO: ensure to convert id from url format to server format
+		out, err := rfid.GetAltCollectionItem[rfid.PermissionedAltCollectionItem[string]](ctx, id, map[string]rfid.PermissionedAltCollectionItem[string]{
+			"species":    &rfid.Species{},
+			"subspecies": &rfid.Subspecies{},
+		}[strings.ToLower(entryType)])
+		if err != nil {
 			http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// TODO: ENSURE USER HAS CORRECT PERMS
-		//authinfo, err := rfid.GetAuthInfo(ctx)
-		//if err != nil {
-		//	http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
-		println("marshalling bytes")
+		// PERMS!
+		user, err := rfid.GetAuthInfo(ctx)
+		if err != nil {
+			http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if out.Permissions().HighestPermFor(user) == nil { // TODO: validate working ok
+			http.Error(w, "permission denied for sp/subsp", http.StatusForbidden)
+			return
+		}
+
 		bytes, err = json.Marshal(out)
 		if err != nil {
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
@@ -1073,6 +1094,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		} // TODO: validate works
+		// TODO: any permissions? validate user is admin?
 		bytes, err = json.Marshal(out)
 		if err != nil {
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)

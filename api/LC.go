@@ -13,10 +13,10 @@ import (
 	"net/http"
 )
 
-// TODO: needed for transfers sometimes
-// TODO: needed to create lcSyringes
+// needed for
+// transfers sometimes, creating lcSyringes
 
-// TODO: new (PC is created first, so it can be referenced)
+// TODO: new (PC is created first, so it can be referenced)?
 
 type LiquidCulture struct {
 	MainCollectionIdField             `bson:"inline"`
@@ -48,7 +48,7 @@ func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
 func (l LiquidCulture) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    SpeciesOptionalField{l.Species},
-		SubspeciesOptionalField: SubspeciesOptionalField{l.SubSpecies},
+		SubspeciesOptionalField: SubspeciesOptionalField{l.Subspecies},
 		KnownFruitableField:     KnownFruitableField{l.KnownFruitable},
 		GenerationsFields:       l.GenerationsFields,
 	}, nil
@@ -69,7 +69,7 @@ func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer,
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
@@ -94,9 +94,9 @@ func initializeLCs(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(LCCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		creationDateIndexModel,
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		newSimpleIndex("recipe", "recipe", false, false, false),
-		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, true, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//newSimpleIndex("innoc", "innoc", false, true, false),
@@ -234,7 +234,6 @@ type importLiquidCultureRequest struct {
 	Generation *int
 	ConfirmedCleanField
 	WriteTagToField
-	//PermsOnRequest `json:"acl"` // TODO: REMOVED
 	// image as "img"
 }
 
@@ -341,7 +340,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if data.SubSpecies != nil {
+		if data.Subspecies != nil {
 			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -355,22 +354,14 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
 		if err != nil {
-			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if subsp != nil {
-			finalPerms = subsp.DefaultAcl.Clone()
-		} else {
-			finalPerms = sp.DefaultAcl.Clone()
-		}
-		user, _ := GetAuthInfo(r.Context())
-		finalPerms.Users[user.Email] = true
 	}
 
-	ctx, db := Db(r)
-	coll := db.Collection(LCCollectionName)
+	ctx, _ := Db(r)
 	// Validate
 	_, err = data.LcRecipeField.Get(ctx)
 	if err != nil && errors.Is(err, ErrMissingOptionalField) {
@@ -395,7 +386,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
 		AclField:             AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateLiquidCultureRequest struct {
@@ -509,5 +500,5 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, req.modsFor, &existing, req.PermsOnRequest)
 }

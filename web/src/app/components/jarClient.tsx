@@ -89,6 +89,8 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {WetnessDisplay} from "@/app/components/bagClient";
+import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -276,8 +278,8 @@ export default function JarDisplay(
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [acl, setAcl] = useState<ACL>(initial.acl)
         const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
-        // TODO: wetness (but can only be set once)
-        // TODO: burst grains (but can only be set once)
+        const [wetness, setWetness] = useState<number | undefined>(undefined)
+        const [burstGrains, setBurstGrains] = useState<number | undefined>(undefined)
 
         // Helper states
         const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
@@ -291,8 +293,8 @@ export default function JarDisplay(
             setPics(InitialPicsEntries(updated.pics))
             setContams(InitialContamState(updated.contamination))
             setAcl(updated.acl)
-            // TODO: wetness? (but can only be set once)
-            // TODO: burst grains? (but can only be set once)
+            setWetness(updated.wetness) // can only be set once
+            setBurstGrains(updated.burstGrains) // can only be set once
             setTransfersOut(updated.transfersOut || [])
             setErr(undefined)
         }
@@ -302,7 +304,7 @@ export default function JarDisplay(
             const dataObj: any = {
                 knownFruitable: knownFruitable,
                 disposed: disposed,
-                sale: sale,
+                sale: sale, // TODO: remove
                 //writeTagTo: writeTagTo, // TODO: remove!
                 acl: MarshalAcl(acl),
                 notes: notes,
@@ -318,7 +320,6 @@ export default function JarDisplay(
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
                 setFormData(formData, dataObj)
-                //body.set("data", JSON.stringify(dataObj))
                 setFormImages(formData, "newPic", newImages)
                 setFormImages(formData, "newContam", newContams)
             } catch (caught: any) {
@@ -372,6 +373,9 @@ export default function JarDisplay(
                                      headerLevel={headerLevel}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
+            {/*TODO: validate next 2 working*/}
+            {initial.wetness?<SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/> : <WetnessDisplay value={wetness} />}
+            {initial.burstGrains===undefined?<SliderOnlyIfUndefinedWithOpenButton defaultValue={0} onChange={setBurstGrains}/> : <WetnessDisplay text={"Burst Grains"} value={wetness} />}
 
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"jar"} transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly}/>
@@ -399,14 +403,14 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     pcRunIn?: PcRunData,
     grainBatchIn?: GrainBatchData
 }) {
-    const [creationDate, setCreationDate] = useState(Date.now()) // TODO: likely get rid of and set this on the serverside
-    const [grainBatch, setGrainBatch] = useState<GrainBatchData | undefined>(grainBatchIn) // TODO: use?
-    const [recipe, setRecipe] = useState<string | undefined>(recipeIn) // TODO: use?
+    //const [creationDate, setCreationDate] = useState(Date.now()) // set serverside
+    const [grainBatch, setGrainBatch] = useState<GrainBatchData | undefined>(grainBatchIn)
+    // const [recipe, setRecipe] = useState<string | undefined>(recipeIn) // Gotten from batch serverside
     const [sizeCups, setSizeCups] = useState<number>(4) // TODO: change initial state?
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
-    const [wetness, setWetness] = useState(0) // TODO: ensure ok
-    const [burstGrains, setBurstGrains] = useState(0) // TODO: ensure ok
+    // const [wetness, setWetness] = useState(0) // Set on update
+    // const [burstGrains, setBurstGrains] = useState(0) // Set on update
 
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>()
@@ -414,8 +418,8 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     const cookies = useContext(CookiesContext)
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
-        if (!recipe || !grainBatch) {
-            setErr("recipe and batch must exist!")
+        if (!grainBatch) {
+            setErr("batch must exist!")
             return
         }
         if (sizeCups < 1) {
@@ -424,9 +428,10 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
         }
         const body: any = {
             sizeCups: sizeCups,
-            batch: grainBatch?._id,
-            // wetness: wetness,  // TODO: maybe add late?
-            // burstGrains: burstGrains,  // TODO: maybe add late?
+            grainBatch: grainBatch._id,
+            // optional
+            // wetness: wetness,  // Added from update page
+            // burstGrains: burstGrains,  // Added from update page
             pcRun: pcRun?._id, // could this be optional or required?
             notes: notes || [],
             writeTagTo: writeTagTo,
@@ -440,7 +445,6 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
             })
     }
     const hasGrainBatch = grainBatchIn !== undefined || recipeIn !== undefined
-    //const hasRecipe = recipeIn !== undefined // TODO: ????
     return <NewEntryFormWrapper entryType={"jar"}>
         <ErrorDisplay err={err}/>
         {hasGrainBatch && <GrainBatchSelectorCloseable doSelect={setGrainBatch}
@@ -448,9 +452,6 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
         <JarSizeSelector onChange={(unit: string) => {
             setSizeCups(cupsPer(unit))
         }}/>
-        {/* TODO: set optional wetness! */}
-        {/* TODO: set optional burst grains! */}
-        {/* TODO: PC RUN IS NOT REQUIRED TO START, JARS MAY SIT BEFORE PC RUN!*/}
         {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>

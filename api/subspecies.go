@@ -11,7 +11,7 @@ import (
 )
 
 type SubspeciesOptionalField struct {
-	SubSpecies *string `bson:"subspecies,omitempty" json:"subspecies,omitempty"`
+	Subspecies *string `bson:"subspecies,omitempty" json:"subspecies,omitempty"`
 }
 
 type Subspecies struct {

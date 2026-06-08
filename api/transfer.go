@@ -90,12 +90,12 @@ func initializeTransfers(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(TransfersCollName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		creationDateIndexModel,
 		// TODO: ensure from index indexes all of the child ids
 		// TODO: newSimpleIndex("from", "from", true, false, false),
 		// TODO: newSimpleIndex("to", "to", true, false, false),
 		// TODO: newSimpleIndex("fromType", "fromType", false, false, false),
 		// TODO: newSimpleIndex("toType", "toType", false, false, false),
-		creationDateIndexModel,
 		// TODO: newSimpleIndex("reason", "reason", false, false, false),
 		//FromImage (no index)
 		//ToImage (no index)

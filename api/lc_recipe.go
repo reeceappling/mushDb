@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-// TODO: needed for lc, lcSyringe
+// needed for lc, lcSyringe
 
 type LcRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
@@ -134,7 +134,6 @@ type createLcRecipeRequest struct {
 	SugarsField
 	AdditivesField
 	NotesField
-	// TODO: perms ensure allCanRead + user write
 }
 
 func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -157,8 +156,7 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	); err != nil {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(LcRecipesCollectionName)
+	ctx := r.Context()
 	toInsert := LcRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		NameField:                  req.NameField,
@@ -169,9 +167,9 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AdditivesField:             req.AdditivesField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanWriteAcl(), // TODO: or read with user as owner?
+		AclField:                   allCanWriteAcl(), // TODO: or allCanRead + user write
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateLcRecipeRequest struct {

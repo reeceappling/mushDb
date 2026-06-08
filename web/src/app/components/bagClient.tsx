@@ -311,9 +311,9 @@ export default function BagDisplay(
     )
 }
 
-export function WetnessDisplay({value}: { value?: number }) {
+export function WetnessDisplay({value,text}: { value?: number, text?: string}) {
     return <TestAndValidate todos={["fix"]}>
-        <div>{"Wetness: " + (value ? value + "/10" : "unknown")}</div>
+        <div>{(text||"Wetness")+": " + (value ? value + "/10" : "unknown")}</div>
     </TestAndValidate>
 }
 

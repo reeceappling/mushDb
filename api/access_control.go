@@ -1,12 +1,10 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
-	"github.com/reeceappling/goUtils/v2/utils/slices"
 )
 
 type AclField struct { // Nil means allCanWrite
@@ -167,13 +165,13 @@ func (acl ACL) userIdPermission(email string) *ReadWritePerm {
 
 // TODO: ensure this works
 func (acl ACL) HighestPermFor(perms ResolvedUserPerms) *ReadWritePerm {
-	if perms.isAdmin() || (acl.BlanketPerm != nil && *acl.BlanketPerm) {
-		return newPerm(true)
+	if perms.IsAdmin() || (acl.BlanketPerm != nil && *acl.BlanketPerm) {
+		return RWPermWrite()
 	}
 	// Handle blanket perm
-	var maxPerm *ReadWritePerm = nil
+	var maxPerm = RWPermNothing()
 	if acl.BlanketPerm != nil {
-		maxPerm = newPerm(false)
+		maxPerm = RWPermRead()
 	}
 	if perms.isGuest() {
 		return maxPerm
@@ -183,27 +181,44 @@ func (acl ACL) HighestPermFor(perms ResolvedUserPerms) *ReadWritePerm {
 	if maxPerm != nil && *maxPerm == true {
 		return newPerm(true)
 	}
-	for proj, canWrite := range acl.Projects {
-		if projPerm, exists := perms.projects[proj]; exists {
-			userPermForProjectAndEntry := (projPerm != nil) && canWrite
+	for proj, projCanWriteOnEntry := range acl.Projects {
+		if projPerm, exists := perms.projects[proj]; exists { // TODO: is projectPerm here ok
+			userCanWriteOnProj := projPerm != nil
+			userPermForProjectAndEntry := userCanWriteOnProj && projCanWriteOnEntry
 			if userPermForProjectAndEntry {
-				return newPerm(projPerm != nil) // TODO: ensure ok
+				return RWPermWrite() //TODO: ?newPerm(projPerm != nil) // TODO: ensure ok
 			}
-			if maxPerm == nil {
-				maxPerm = newPerm(false) // TODO: ensure ok
-			}
-			maxPerm = maxPermsBetween(maxPerm, newPerm(projPerm != nil))
+			maxPerm = RWPermRead()
+			//if maxPerm == nil {
+			//	maxPerm = RWPermRead()
+			//}
+			// TODO: probably don't need: maxPerm = maxPermsBetween(maxPerm, newPerm(projPerm != nil)) // TODO: newPerm(projPerm != nil) or RWPermRead()
 		}
 	}
 	return maxPerm
 }
 
 type ReadWritePerm bool // must always be used as *ReadWritePerm! nil is cant do anything, false is read, true is write
+func RWPermWrite() *ReadWritePerm {
+	p := ReadWritePerm(true)
+	return &p
+}
+func RWPermRead() *ReadWritePerm {
+	p := ReadWritePerm(false)
+	return &p
+}
+func RWPermNothing() *ReadWritePerm {
+	return nil
+}
+func RWPermFor(inp *bool) *ReadWritePerm {
+	return (*ReadWritePerm)(inp)
+}
 func (rw *ReadWritePerm) Copy() *ReadWritePerm {
 	if rw == nil {
 		return nil
 	}
-	return utils.Pointer(ReadWritePerm(*rw == true))
+	out := *rw
+	return &out
 }
 func newPerm(canWrite bool) *ReadWritePerm {
 	out := ReadWritePerm(canWrite)
@@ -251,10 +266,21 @@ type Perm[T any] struct {
 	CanWrite bool `bson:"canWrite" json:"canWrite"`
 }
 
+type AccountType bool // always used as a ptr. nil is guest (never write), false is normal email, true is admin
+func (ad *AccountType) IsAdmin() bool {
+	return !ad.IsGuest() && bool(*ad)
+}
+func (ad *AccountType) IsGuest() bool {
+	return ad == nil
+}
+func (ad *AccountType) IsRegular() bool {
+	return !ad.IsGuest() && !bool(*ad)
+}
+
 type ResolvedUserPerms struct {
-	Email    string                `bson:"email" json:"email"`
-	admin    *bool                 // nil is guest (never write), false is normal email, true is admin
-	projects map[projectName]*bool // nil is readonly, false is canWrite, true is admin of project
+	Email       string                           `bson:"email" json:"email"`
+	accountType *AccountType                     // nil is guest (never write), false is normal email, true is admin
+	projects    map[projectName]*UserProjectPerm // nil is readonly, false is canWrite, true is admin of project
 }
 
 func (perms ResolvedUserPerms) HasPermissionToEdit(item Permissioned) bool {
@@ -262,30 +288,32 @@ func (perms ResolvedUserPerms) HasPermissionToEdit(item Permissioned) bool {
 	return userPerm != nil && bool(*userPerm)
 }
 
-func (perms ResolvedUserPerms) isAdmin() bool {
-	return perms.admin != nil && *perms.admin
+func (perms ResolvedUserPerms) IsAdmin() bool {
+	return perms.accountType.IsAdmin()
 }
 
 func (perms ResolvedUserPerms) isGuest() bool {
-	return perms.admin == nil
+	return perms.accountType.IsGuest()
+}
+func (perms ResolvedUserPerms) isRegular() bool {
+	return perms.accountType.IsRegular()
 }
 func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWritePerm {
-	if perms.admin == nil {
-		return nil // Guest, cant
+	if perms.accountType.IsGuest() {
+		return RWPermNothing()
 	}
-	if *perms.admin {
-		return newPerm(true)
+	if perms.IsAdmin() {
+		return RWPermWrite()
 	}
+	// For standard users, rely on the user's project perms
 	userProjPerm, exists := perms.projects[projName]
 	if !exists {
-		return nil
+		return RWPermNothing()
 	}
-	if userProjPerm == nil {
-		return newPerm(false)
-	} // TODO: validate ok
-	// False is can write on project items, but not project itself
 	// True is project admin
-	return newPerm(*userProjPerm == true)
+	// False is can write on project items, but not project itself
+	// Nil is can only read
+	return userProjPerm.RWPerm() // TODO: validate that nil==read is ok here!
 }
 
 func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permissioned) *ReadWritePerm {
@@ -301,8 +329,7 @@ func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permiss
 	return newPerm(out)
 }
 
-// TODO: change to "admin/read/write" ?
-type ProjectPerms map[string]ProjectPerm // TODO: USE // map of email to perm. nil is readOnly, false is write but not edit the project, true is full control over project
+type ProjectPerms map[string]ProjectPerm // map of email to perm where nil is readOnly, false is write but not edit the project, true is full control over project
 func (pp ProjectPerms) Equal(other ProjectPerms) bool {
 	if len(pp) != len(other) {
 		return false
@@ -319,8 +346,7 @@ func (pp ProjectPerms) Equal(other ProjectPerms) bool {
 }
 func (pp ProjectPerms) ForUser(email string) *ProjectPerm {
 	if perm, exists := pp[email]; exists {
-		userProjectPerm := perm
-		return &userProjectPerm
+		return &perm
 	}
 	return nil
 }
@@ -335,6 +361,23 @@ var (
 	ProjectRead ProjectPerm = "read"
 	// ProjectNone *ProjectPerm = nil
 )
+
+func (pp ProjectPerm) UserProjectPerm() *UserProjectPerm {
+	switch pp {
+	case ProjectAdmin:
+		return UserProjectAdmin()
+	case ProjectWrite:
+		return UserProjectWrite()
+	case ProjectRead:
+		return UserProjectRead()
+	default:
+		panic("invalid user project perm string: " + string(pp))
+	}
+}
+
+//func (pp ProjectPerm) ReadWritePerm() *ReadWritePerm { // TODO: error even possible here?
+//	return pp.UserProjectPerm().RWPerm()
+//}
 
 func (pp *ProjectPerm) IsAdmin() bool {
 	return pp != nil && *pp == ProjectAdmin
@@ -360,30 +403,37 @@ func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) { // TODO: use
 	return nil
 }
 
+// TODO: do we want to marshal this?
+//func (projPerm *ProjectPerm) MarshalJSON() (bs []byte, err error) { // TODO: use
+//	if projPerm == nil {
+//		return []byte("read"), nil // TODO: ensure ok
+//	}
+//	if *projPerm == ProjectAdmin {}
+//}
+
 type UserPerms struct {
 	Admin    *bool         `bson:"admin,omitempty" json:"admin,omitempty"` // nil == guest, false == regular email, true==Admin
 	Projects []projectName `bson:"projects,omitempty" json:"projects,omitempty"`
 }
 
-// TODO: use?
-func newAlwaysReadableAcl(ctx context.Context, thisUserPerms ResolvedUserPerms, usersThatCanEdit []string, projectsThatCanEdit []projectName) (AclField, error) {
-	return PermsOnRequest{
-		UserPerms: slices.MapToMap(usersThatCanEdit, func(i string) (string, bool) {
-			return i, true
-		}),
-		ProjectPerms: slices.MapToMap(projectsThatCanEdit, func(i projectName) (projectName, bool) {
-			return i, true
-		}),
-		BlanketPerm: utils.Pointer(false), // TODO: used to be *false...
-	}.AclForUser(ctx, thisUserPerms)
-}
-func alwaysWriteableAcl() AclField { // TODO: use?
-	return AclField{
-		ACL: ACL{
-			BlanketPerm: utils.Pointer(true),
-		},
-	}
-}
+//func newAlwaysReadableAcl(ctx context.Context, thisUserPerms ResolvedUserPerms, usersThatCanEdit []string, projectsThatCanEdit []projectName) (AclField, error) {
+//	return PermsOnRequest{
+//		UserPerms: slices.MapToMap(usersThatCanEdit, func(i string) (string, bool) {
+//			return i, true
+//		}),
+//		ProjectPerms: slices.MapToMap(projectsThatCanEdit, func(i projectName) (projectName, bool) {
+//			return i, true
+//		}),
+//		BlanketPerm: utils.Pointer(false), // TODO: used to be *false...
+//	}.AclForUser(ctx, thisUserPerms)
+//}
+//func alwaysWriteableAcl() AclField { // TODO: use?
+//	return AclField{
+//		ACL: ACL{
+//			BlanketPerm: utils.Pointer(true),
+//		},
+//	}
+//}
 
 var testAclStrings = []string{
 	"blanket read",

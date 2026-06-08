@@ -1,10 +1,10 @@
 package api
 
-// TODO: needed directly for:
-// TODO: AgarBatch, Bag, Jar, LC, Plugs, Slant, StasisTube, WaterJar
+// needed directly for:
+// AgarBatch, Bag, Jar, LC, Plugs, Slant, StasisTube, WaterJar
 
-// TODO: needed for but provided from another:
-// TODO:  Plate, MSS,
+// needed for but provided from another:
+// Plate, MSS,
 
 // TODO: ? includeStasisTubes, includeAgarBatches, includePlugsJar
 // TODO: newAgarBatch (on agar batch page)
@@ -22,8 +22,8 @@ import (
 
 type PCRun struct {
 	AlternateCollectionIdField `bson:"inline"`
-	CreationDateField          `bson:"inline"` //TODO: USED TO BE date, is now CreationDate
-	RunTimeMinutes             int             `bson:"runtimeMinutes" json:"runtimeMinutes"` // todo; used to just be runtime, also used to be string
+	CreationDateField          `bson:"inline"`
+	RunTimeMinutes             int `bson:"runtimeMinutes" json:"runtimeMinutes"`
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
@@ -35,7 +35,6 @@ func initializePCRun(ctx context.Context) error {
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		// TODO: newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
-		//RunTime (likely no index)    string                `bson:"runtime" json:"runtime"`
 		//Notes (no index unless tags)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
@@ -77,18 +76,16 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "runtime must be greater than 10 minutes", http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	ctx, db := Db(r)
-	coll := db.Collection(PcRunCollectionName)
-	user, _ := GetAuthInfo(ctx)
+	ctx := r.Context()
 	toInsert := PCRun{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		CreationDateField:          unixTimeForNow().asCreationDate(),
 		RunTimeMinutes:             req.RunTimeMinutes,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanReadAcl(&user.Email), // TODO: ? acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updatePcRunRequest struct {

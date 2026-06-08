@@ -140,11 +140,9 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid agar color!", http.StatusBadRequest)
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(AgarBatchCollectionName)
+	ctx := r.Context()
 	// Validate fields
 	_, err = req.PcRunField.Get(ctx)
-
 	if err != nil {
 		dbErr(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
 		return

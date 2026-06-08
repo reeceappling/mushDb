@@ -13,17 +13,17 @@ import (
 	"net/http"
 )
 
-// TODO: needed for creating fruits (unless fruits came from agar)
+// needed for creating fruits (unless fruits came from agar or bag)
 
 // TODO: HANDLE MULTIPLE GRAIN INPUTS FOR MONOTUBS (DO MONOTUBS LATER)
-type FruitingChamber struct { // TODO: SHOEBOX
+type FruitingChamber struct { // TODO: SHOEBOX vs monotub!
 	MainCollectionIdField             `bson:"inline"`
 	CreationDateField                 `bson:"inline"`
 	SubstrateRecipeField              `bson:"inline"`
 	SubstrateBatchOptionalField       `bson:"inline"`
-	CupsGrain                         float64 `bson:"cupsGrain" json:"cupsGrain"`                           // TODO: new! use!
-	MixedSubstratePerGrain            float64 `bson:"mixedSubstratePerGrain" json:"mixedSubstratePerGrain"` // for a 1:1:0.5 box this will be 1  // TODO: new! use!
-	CasingPerGrain                    float64 `bson:"casingPerGrain" json:"casingPerGrain"`                 // No casing==0, half casing per grain == 0.5 // TODO: new! use!
+	CupsGrain                         float64 `bson:"cupsGrain" json:"cupsGrain"`
+	MixedSubstratePerGrain            float64 `bson:"mixedSubstratePerGrain" json:"mixedSubstratePerGrain"` // for a 1:1:0.5 (1 part substrate, 1 part grain, 0.5 part casing) box this will be 1
+	CasingPerGrain                    float64 `bson:"casingPerGrain" json:"casingPerGrain"`                 // No casing==0, half casing per grain == 0.5
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	InnocField                        `bson:"inline"`
@@ -77,7 +77,7 @@ func (f FruitingChamber) generation() (sinceSpore *Generation, sinceSporeOrClone
 //	return nil
 //}
 
-// TODO: create box via jar instead
+// TODO: create box via jar instead? Probably want to do it that way...
 func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
@@ -98,7 +98,7 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 		withParent(utils.Pointer(from.DbId())). // TODO: will this work for mainCollectionId?
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
@@ -198,7 +198,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 }
 
 type createFruitingChamberRequest struct {
-	// TODO: removed: Recipe // substrate recipe // TODO: do not use this. Pull from batch
+	// TODO: removed: Recipe // substrate recipe (pull from batch)
 	SubstrateBatchField
 	ParentJar          MainCollectionId // Parent jar
 	GrainCups          float64
@@ -223,8 +223,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	// Validation // TODO: do validation in transaction?
-
+	// Validation
 	parentJar, err := LookupGrainJar(ctx, data.ParentJar)
 	if err != nil {
 		http.Error(w, "failed to resolve parent jar"+err.Error(), http.StatusBadRequest)
@@ -268,7 +267,7 @@ type importFruitingChamberRequest struct {
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	//PermsOnRequest `json:"acl"` // TODO: use spec/subspec
+	//PermsOnRequest `json:"acl"` // from spec/subspec
 	// image as "img"
 }
 
@@ -276,7 +275,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitingChamberRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: REDO THIS MULTIPART READER
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: REDO THIS MULTIPART READER? Old comment
 	defer r.Body.Close()
 	reader, err := r.MultipartReader()
 	if err != nil {
@@ -353,29 +352,15 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		pix = []PicWithNotes{*importedPic}
 	}
 	ctx := r.Context()
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
-	user, err := GetAuthInfo(r.Context())
+	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
 	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
 	toInsert := &FruitingChamber{
 		MainCollectionIdField:       MainCollectionIdField{id},
-		SubstrateRecipeField:        data.SubstrateRecipeField,
+		SubstrateRecipeField:        data.SubstrateRecipeField,        // TODO: allow unknown substrate recipe???
 		SubstrateBatchOptionalField: SubstrateBatchOptionalField{nil}, // Unknown for imports
 		CreationDateField:           CreationDateField{data.CreationDate},
 		CupsGrain:                   data.GrainCups,
@@ -403,7 +388,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishImportMainCollectionEntry(ctx, coll, toInsert, w)
+	finishImportMainCollectionEntry(ctx, toInsert, w)
 
 }
 
@@ -531,5 +516,5 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	//		return
 	//	}
 	//}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, data.PermsOnRequest)
 }

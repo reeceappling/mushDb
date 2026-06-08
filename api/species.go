@@ -11,7 +11,7 @@ import (
 	"net/url"
 )
 
-// TODO: required for all mainCollectionItems, as well as subspecies
+// required for all mainCollectionItems, as well as subspecies
 
 type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
@@ -128,7 +128,7 @@ func initializeSpecies(ctx context.Context) error {
 			AclField: allCanWriteAcl(),
 		},
 	}
-	return addBasicAltEntries(ctx, basicEntries...)
+	err = addBasicAltEntries(ctx, basicEntries...) // TODO: return here if we dont want test entries
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ type createSpeciesRequest struct {
 	NameField
 	ScientificName string `json:"scientificName"`
 	AliasesField
-	SubstrateRecipeField // TODO: tag used to be "sub" is now "recipe"
+	SubstrateRecipeField
 	NotesField
 	PermsOnRequest `json:"acl"` // TODO: USE!
 }
@@ -165,11 +165,10 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(SpeciesCollectionName)
+	ctx := r.Context()
 	// Validate
 	// TODO: Aliases?
-	err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bsonFindFilter("_id", req.Substrate)).Err()
+	_, err = req.SubstrateRecipeField.Get(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -180,7 +179,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to create final ACL: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	toInsert := Species{
+	toInsert := &Species{
 		NameIdField:       NameIdField{req.Name},
 		ScientificName:    req.ScientificName,
 		AliasesField:      req.AliasesField,
@@ -190,7 +189,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:          finalAcl,
 		DefaultAcl:        finalAcl.ACL,
 	}
-	finishCreateAlternateEntry(ctx, &toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateSpeciesRequest struct {
@@ -245,7 +244,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(SpeciesCollectionName)
 
 	// TODO: ensure next line works
-	existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically
+	existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically. Outside txn?
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if errors.Is(err, mongo.ErrNoDocuments) {

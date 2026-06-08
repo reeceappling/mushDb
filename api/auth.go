@@ -208,7 +208,7 @@ func (srv *AuthService) addGuestSessionIfNotExists(id SessionId) error {
 	if _, exists := srv.sessMap[id]; exists {
 		return errors.New("session with that ID already exists")
 	}
-	updatedSess := genericsessions.Session[ResolvedUserPerms]{Data: ResolvedUserPerms{Email: GuestEmail(), admin: nil}}.WithUpdatedExpiry(srv.ttl)
+	updatedSess := genericsessions.Session[ResolvedUserPerms]{Data: ResolvedUserPerms{Email: GuestEmail(), accountType: nil}}.WithUpdatedExpiry(srv.ttl)
 	*result = updatedSess
 	srv.sessMap[id] = updatedSess
 	return nil
@@ -480,6 +480,14 @@ func GetResolvedUserPerms(ctx context.Context) (ResolvedUserPerms, error) {
 // TODO; retire this
 func GetAuthInfo(ctx context.Context) (ResolvedUserPerms, error) {
 	return GetResolvedUserPerms(ctx)
+}
+func GetUserEmail(ctx context.Context) string {
+	user, _ := GetAuthInfo(ctx)
+	return user.Email
+}
+func GetUserEmailPtr(ctx context.Context) *string {
+	user, _ := GetAuthInfo(ctx)
+	return &user.Email
 }
 
 func SetAuthInfo(ctxIn context.Context, perms ResolvedUserPerms) context.Context {

@@ -16,9 +16,8 @@ import (
 	"time"
 )
 
-// TODO: required for
-// TODO: newSporeSwab, newSporePrint, clone(plate, slant)
-// TODO: newSporeSwab
+// required for
+// newSporeSwab, newSporePrint, clone(plate, slant)
 
 type Fruit struct { // KnownFruitable is always true for this, // creation date field is id
 	MainCollectionIdField   `bson:"inline"`
@@ -102,14 +101,13 @@ func initializeFruits(ctx context.Context) error {
 	coll := db.Collection(FruitsCollName)
 	err := createIndexes(ctx, coll,
 		[]mongo.IndexModel{
-			// TODO: creationDateIndexModel
-			newSimpleIndex("creationDate", "creationDate", false, false, false), // TODO: this is harvest date
+			creationDateIndexModel, // TODO: this is harvest date
 			newSimpleIndex("species", "species", false, false, false),
 			newSimpleIndex("subspecies", "subspecies", false, true, false),
 			//transfersOutIndexModel,
 			newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
 			newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
-			//TODO: newSimpleIndex("prints", "prints", false, true, false),
+			//newSimpleIndex("prints", "prints", false, true, false), // Prints shouldnt need indexing
 			//newSimpleIndex("genSpore", "genSpore", true, true, false),
 			//Pics (no index)
 			//newSimpleIndex("disposed", "disposed", false, true, false),
@@ -161,8 +159,8 @@ func (req createFruitRequest) reform() createFruitResolved {
 }
 
 type createFruitResolved struct {
-	MainCollectionParentField        // TODO: ensure required        // TODO: used to be ParentId
-	ParentType                string // TODO: swap out for normal parentType
+	MainCollectionParentField
+	ParentType string // TODO: swap out for normal parentType?
 	NotesField
 	PicsField // newPic-1
 }
@@ -289,11 +287,6 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
-	//newPics, _, _, err := getMultipartImages(r.Context(), "fruit", w, reader, b58Id)
-	//if err != nil {
-	//	// Already wrotw
-	//	return
-	//}
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS
 	out := data.reform()
@@ -308,15 +301,14 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	coll := db.Collection(FruitsCollName)
 	// go get current plate
 	existing := &Fruit{MainCollectionIdField: MainCollectionIdField{id}}
-	err = Refresh(ctx, db, existing)
+	err = Refresh(ctx, db, existing) // TODO: is this ok?
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, data.PermsOnRequest)
 }
 
 type importFruitRequest struct {
@@ -324,11 +316,10 @@ type importFruitRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	//PermsOnRequest `json:"acl"` // TODO: use parent perms
 	// image as "img"
 }
 
-func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?????
+func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
@@ -421,30 +412,15 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	// TODO: PERMS ON REQUEST INSTEAD?????
-	user, err := GetAuthInfo(r.Context())
+	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
 	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	// Add user to the acl as a writer (since they own this?)
-	finalPerms.Users[user.Email] = true
 
-	// TODO: Even if user cannot write, allow them to import???
+	// Even if user cannot write, allow them to import
 	now := unixTimeForNow()
 	ctx := r.Context()
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitsCollName)
 	toInsert := &Fruit{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       CreationDateField{unixTimeForNow()},
@@ -458,5 +434,5 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: REDO?
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, toInsert, w)
+	finishImportMainCollectionEntry(ctx, toInsert, w)
 }

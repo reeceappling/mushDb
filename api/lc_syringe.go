@@ -12,20 +12,15 @@ import (
 	"slices"
 )
 
-// TODO: needed for xfers
+// needed for
+// xfers
 
 // TODO: newFromLC
-
-// TODO: new are this, sporeSwab, plugs
-
-// Naming convention "{ParentLCID}-#" // TODO: ?????
-
-//func parseName() // TODO: ???
 
 type LcSyringe struct {
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either purchased (nil), LC, or LcSyringe
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: likely won't exist for pre-existing
+	MainCollectionOptionalParentField `bson:"inline"` // won't exist for imported
 	CreationDateField                 `bson:"inline"` // create or receive date
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -52,7 +47,7 @@ func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
 }
 
 //func (sw LcSyringe) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	// TODO: can this even happen?
+//	// TODO: can this even happen? // TODO: YES IT CAN! REVAMP!
 //	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 //	if err != nil {
@@ -101,8 +96,8 @@ func initializeSyringes(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcSyringeCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		creationDateIndexModel,
 		//newSimpleIndex("parent", "parent", false, true, false),
-		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//saleIndexModel,
@@ -112,7 +107,7 @@ func initializeSyringes(ctx context.Context) error {
 		//newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
 		//transfersOutIndexModel,
 		//newSimpleIndex("disposed", "disposed", false, true, false),
-		//// TODO: Projects?
+		projectsIndexModel, // TODO: ensure ok and add on many other collections
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -176,7 +171,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-		ConfirmedCleanField:               parent.ConfirmedCleanField, // TODO: is this ok?
+		ConfirmedCleanField:               parent.ConfirmedCleanField, // TODO: is this ok? Probably want to only keep if false, but otherwise do nil
 		KnownFruitableField:               parent.KnownFruitableField,
 		CreationDateField:                 now.asCreationDate(),
 		SpeciesField:                      SpeciesField{Species: *parent.Species},
@@ -269,9 +264,8 @@ func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58S
 }
 
 func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
-	//mainUpdateHandler[*LcSyringe](w, r, updateSyringeRequest{})
 	req := updateSyringeRequest{}
-	_, id, err := mainCollIdFromRequest(r, w) // TODO: use this everywhere
+	_, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}
@@ -291,7 +285,7 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.GetPermsOnRequest())
+	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.GetPermsOnRequest())
 }
 
 //// TODO: use and move!
@@ -316,14 +310,14 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 //		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 //		return
 //	}
-//	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.GetPermsOnRequest())
+//	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, out.GetPermsOnRequest())
 //}
 
-// TODO: MOVE
-type simpleUpdateHandler[T CollectionItem] interface {
-	baseItem() T
-	reform() reformedRequest[T]
-}
+//// TODO: MOVE
+//type simpleUpdateHandler[T CollectionItem] interface {
+//	baseItem() T
+//	reform() reformedRequest[T]
+//}
 
 // TODO: MOVE
 type reformedRequest[T CollectionItem] interface {
@@ -336,12 +330,11 @@ type importLcSyringeRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *Generation // TODO: HANDLE!
+	Generation *Generation
 	NotesField
 	// pic as "img"
 }
 
-// TODO: USE!!!
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLcSyringeRequest{}
 	id := NextMainCollectionId()
@@ -358,34 +351,26 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	if data.Generation != nil {
+		if *data.Generation < 1 {
+			http.Error(w, "generation cannot be <=0 for a non-spore import", http.StatusBadRequest)
+			return
+		}
+	}
 
-	user, err := GetAuthInfo(r.Context())
+	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
 	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
-	ctx, db := Db(r)
-	coll := db.Collection(LcSyringeCollectionName)
+	ctx := r.Context()
 	toInsert := LcSyringe{
 		MainCollectionIdField: MainCollectionIdField{Id: id},
 		CreationDateField:     data.CreationDateField,
 		GenerationsFields: GenerationsFields{
 			GenSporeField: GenSporeField{
-				GenSinceSpore: data.Generation, // TODO: ensure ok
+				GenSinceSpore: data.Generation,
 			},
 			GenSinceFruitOrSpore: data.Generation,
 		},
@@ -396,5 +381,5 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedFieldForNow(),
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

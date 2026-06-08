@@ -28,8 +28,8 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	projectsToReturn := maps.Keys(user.projects)
-	if user.isAdmin() {
+	var projectsToReturn []projectName
+	if user.IsAdmin() {
 		allProjects, err := GetAllProjects(r.Context(), getAllProjectsCompleteArg) // TODO: validate works as expected
 		if err != nil {
 			http.Error(w, "failed to get all incomplete projects: "+err.Error(), http.StatusInternalServerError)
@@ -38,6 +38,8 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 		projectsToReturn = sliceutils.Map(allProjects, func(proj Project) projectName {
 			return proj.Name
 		})
+	} else {
+		projectsToReturn = maps.Keys(user.projects)
 	}
 	bs, err := json.Marshal(projectsToReturn)
 	if err != nil {

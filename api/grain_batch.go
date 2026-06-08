@@ -12,10 +12,9 @@ import (
 
 // needed for grain jars
 
-// TODO: what about mixed-grain batches???? (covered through jarRecipe)
+// TODO: mixed-grain batches are covered through jarRecipe
 
-// const grainBatchesCollectionName = "grainBatches"
-type GrainBatch struct { // TODO: use this
+type GrainBatch struct {
 	AlternateCollectionIdField
 	SoakTimeHours     *int `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
 	BoilTimeMins      *int `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
@@ -25,6 +24,25 @@ type GrainBatch struct { // TODO: use this
 	NotesField
 	LastUpdatedField
 	AclField
+}
+
+type GrainBatchField struct {
+	GrainBatch AlternateCollectionId `bson:"grainBatch" json:"grainBatch"`
+}
+
+func (field GrainBatchField) Get(ctx context.Context) (out GrainBatch, err error) {
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainBatchCollectionName).FindOne(ctx, bson.M{
+		"_id": field.GrainBatch,
+	}).Decode(&out)
+	return out, err
+}
+
+func (field GrainBatchField) asOptional() GrainBatchOptionalField {
+	return GrainBatchOptionalField{&field.GrainBatch}
+}
+
+type GrainBatchOptionalField struct {
+	GrainBatch *AlternateCollectionId `bson:"grainBatch,omitempty" json:"grainBatch,omitempty"`
 }
 
 func initializeGrainBatches(ctx context.Context) error {
@@ -63,8 +81,7 @@ type createGrainBatchRequest struct {
 }
 
 // TODO: separate endpoints for updating soak, boil, and dry times
-// TODO: USE THIS!
-func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO THIS!
+func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -82,8 +99,7 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: 
 		return
 	}
 	id := newAlternateCollectionId()
-	ctx, db := Db(r)
-	coll := db.Collection(GrainBatchCollectionName)
+	ctx := r.Context()
 	// Validate fields
 	_, err = req.JarRecipeRequiredField.Get(ctx)
 	if err != nil {
@@ -91,7 +107,7 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: 
 		return
 	}
 	user, _ := GetAuthInfo(ctx)
-	acl, err := req.AclForUser(ctx, user)
+	acl, err := req.AclForUser(ctx, user) // TODO: is this ok? or do we want allCanRead?
 	if err != nil {
 		dbErr(w, "ACL creation failure: "+err.Error(), http.StatusBadRequest)
 		return
@@ -104,9 +120,9 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: 
 		JarRecipeRequiredField:     req.JarRecipeRequiredField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
-		AclField:                   acl,
+		AclField:                   acl, // TODO: allCanWrite???
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateGrainBatchRequest struct {

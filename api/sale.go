@@ -115,21 +115,19 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(SalesCollectionName)
+	ctx := r.Context()
 	// TODO: HOW TO HANDLE PERMS? FOR NOW, JUST DO ONLY USER?
 
 	now := unixTimeForNow()
 	id := newAlternateCollectionId()
-	toInsert := Sale{
+	toInsert := &Sale{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		CreationDateField:          unixTimeForNow().asCreationDate(),
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
 		// TODO: USE PARENT PERMS?????
-		//PermsField:                 PermsField{nil}, // TODO: THIS!!!!!!!!!!!!!
 	}
-	finishCreateAlternateEntry(ctx, &toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateSaleRequest struct {

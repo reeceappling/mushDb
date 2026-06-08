@@ -9,8 +9,6 @@ import (
 	"github.com/reeceappling/mushDb/api/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"io"
 	"net/http"
 	"slices"
@@ -23,7 +21,7 @@ type Slant struct {
 	MainCollectionIdField `bson:"inline"`
 	AgarBatchField        `bson:"inline"` // TODO: will be empty for preexisting
 	// TODO: account for stickType field
-	StickType                         *string `bson:"stickType,omitempty" json:"stickType,omitempty"` //If the slant includes a popsicle stick or tongue depressor // TODO: new! use!
+	StickType                         *slantStick `bson:"stickType,omitempty" json:"stickType,omitempty"` //If the slant includes a popsicle stick or tongue depressor // TODO: new! use!
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -31,7 +29,7 @@ type Slant struct {
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
 	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: binary serverside, b58 clientside? // TODO: can be from any MainCollection, or a fruit (alt) cloning/lcSyringe/sporeSwab
+	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`
 	KnownFruitableField               `bson:"inline"` // TODO: handle being yes if clone, among other yeses
@@ -50,12 +48,12 @@ func (s Slant) CanTransferTo(dst geneticSource) error {
 	return nil
 }
 
-type slantStick string // TODO: rename
+type slantStick string // TODO: rename // TODO: ALLOW TS TO VIEW STICK TYPES!
 var (
-	slantStickPopsicle        = "popsicle stick"
-	slantStickTongueDepressor = "tongue depressor"
-	slantStickCardboard       = "cardboard"
-	slantStickDowel           = "wooden dowel" // TODO: diff dowel types?
+	slantStickPopsicle        slantStick = "popsicle stick"
+	slantStickTongueDepressor slantStick = "tongue depressor"
+	slantStickCardboard       slantStick = "cardboard"
+	slantStickDowel           slantStick = "wooden dowel" // TODO: diff dowel types?
 )
 
 func (s Slant) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -99,7 +97,7 @@ func (s Slant) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
@@ -125,9 +123,9 @@ func initializeSlants(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(SlantsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		creationDateIndexModel,
 		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
 		//newSimpleIndex("stickType", "stickType", false, true, false),
-		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, true, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//newSimpleIndex("innoc", "innoc", false, true, false),
@@ -146,7 +144,6 @@ func initializeSlants(ctx context.Context) error {
 		//Notes (no index) (maybe later with tags?)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
-		// TODO: projectsIndexModel,
 	})
 	if err != nil {
 		return err
@@ -181,7 +178,7 @@ func initializeSlants(ctx context.Context) error {
 
 type createSlantRequest struct {
 	AgarBatch AlternateCollectionId `json:"agarBatch"`
-	StickType *string               `json:"stickType,omitempty"`
+	StickType *slantStick           `json:"stickType,omitempty"`
 	NotesField
 	WriteTagToField
 }
@@ -228,7 +225,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: MOVE
 func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
 	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		err := addToIdMapCollection(sessCtx, toInsert) // TODO: do this everywhere
+		err := addToIdMapCollection(sessCtx, toInsert)
 		if err != nil {
 			return nil, errors.Join(errors.New("failed to insert in map collection"), err)
 		}
@@ -255,10 +252,10 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 }
 
 var ErrTxnWriteFail = errors.New("failed to write in transaction")
-var ErrTxnPostWriteFail = errors.New("transaction failed post-write")
 
 // TODO: MOVE
-func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toInsert CollectionItem, w http.ResponseWriter) {
+func finishCreateAlternateEntry(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(toInsert.CollectionName())
 	_, err := coll.InsertOne(ctx, toInsert)
 	if err != nil {
 		http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
@@ -273,75 +270,9 @@ func finishCreateAlternateEntry(ctx context.Context, coll *mongo.Collection, toI
 		handleWriteErr(err, w)
 	}
 }
-func finishCreateProject(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter, inTxn func() error) {
-	sessionOptions := options.Session() // TODO: change?
-	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
-	if err != nil {
-		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	wc := writeconcern.Majority() // TODO: ok?
-	txnOptions := options.Transaction().SetWriteConcern(wc)
-	// Defers ending the session after the transaction is committed or ended
-	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
-		defer sess.EndSession(ctx)
-		// do the insert
-		_, err := mongo.SessionFromContext(sessCtx).Client().
-			Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
-		if err != nil {
-			http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
-			return nil, errors.Join(err, ErrTxnWriteFail) // TODO: ok?
-		}
-		// do the thing needed to be successful
-		if e := inTxn(); e != nil {
-			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
-			http.Error(w, "failed to do post-insert call: "+errTxn.Error(), http.StatusInternalServerError)
-			return nil, errTxn
-		}
-		if e := sess.CommitTransaction(ctx); e != nil {
-			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
-			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
-			return nil, errTxn
-		}
-		return nil, nil
-	}, txnOptions)
-	if err != nil {
-		return
-	}
-	bsOut, err := json.Marshal(toInsert)
-	if err != nil {
-		http.Error(w, "failed to marshal: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = w.Write(bsOut)
-	if err != nil {
-		handleWriteErr(err, w)
-		return
-	}
-}
 
 // TODO: MOVE
-func finishImportMainCollectionEntry(ctx context.Context, coll *mongo.Collection, toInsert MainCollectionItem, w http.ResponseWriter) {
-	//genetics, err := toInsert.GeneticInfoAsParent() // TODO: maybe switch this back?
-	//if err != nil {
-	//	http.Error(w, "failed to get genetic info: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//sp, subsp, err := genetics.GetSpeciesSubspecies(ctx)
-	//if err != nil {
-	//	http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	// Set ACL to default from parent species/subspecies // TODO: view how slant does it, the user should be able to add what they want
-	// Note: users can always import, but they may not be able to write afterwards if they do not meet the permissions...
-	//var acl = AclField{ACL: &ACL{}}
-	//if subsp != nil {
-	//	acl.ACL = subsp.DefaultAcl
-	//} else {
-	//	acl.ACL = sp.DefaultAcl
-	//}
-	//// TODO: add user to import!!!!!
-	//toInsert.SetPerms(acl)
+func finishImportMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
@@ -403,7 +334,8 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newPics, newContams, _, err := getMultipartImages(r.Context(), "slant", w, reader, b58Id) // TODO: SOME OTHER AREAS NEED TO DO THIS INSTEAD OF fullMultipartWithNoBreaks becaues rfid writer is in-between
+	newPics, newContams, _, err := getMultipartImages(r.Context(), "slant", w, reader, b58Id)
+	// TODO: SOME OTHER AREAS NEED TO DO THIS INSTEAD OF fullMultipartWithNoBreaks becaues rfid writer is in-between
 	if err != nil {
 		// Already wrotw
 		return
@@ -436,16 +368,16 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.PermsOnRequest)
 }
 
 type importSlantRequest struct {
-	CreationDateField            // TODO: was creationTime
-	StickType            *string `json:"stickType,omitempty"`
-	SpeciesOptionalField         // TODO: made optional
+	CreationDateField
+	StickType *slantStick `json:"stickType,omitempty"`
+	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *int
+	Generation *int // TODO: is this allowed to be a pointer?
 	// pic as "img"
 	WriteTagToField
 }
@@ -542,7 +474,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if data.SubSpecies != nil {
+		if data.Subspecies != nil {
 			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -552,22 +484,14 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
 		if err != nil {
-			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if subsp != nil {
-			finalPerms = subsp.DefaultAcl.Clone()
-		} else {
-			finalPerms = sp.DefaultAcl.Clone()
-		}
-		user, _ := GetAuthInfo(r.Context())
-		finalPerms.Users[user.Email] = true
 	}
 
-	ctx, db := Db(r)
-	coll := db.Collection(SlantsCollectionName)
+	ctx := r.Context()
 	toInsert := Slant{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		StickType:               data.StickType,
@@ -584,5 +508,5 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
 		AclField:             AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

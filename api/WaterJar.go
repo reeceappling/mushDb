@@ -23,7 +23,7 @@ type WaterJar struct {
 	NotesField            `bson:"inline"`
 	DisposedField         `bson:"inline"`
 	LastUpdatedField      `bson:"inline"`
-	AclField              `bson:"inline"` // TODO: NEW! USE EVERYWHERE!
+	AclField              `bson:"inline"`
 }
 
 func (wj WaterJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -92,7 +92,7 @@ func initializeWaterJars(ctx context.Context) error {
 		PcRunField:            PcRunField{exAltId},
 		NotesField:            NotesField{exampleNotes()},
 		LastUpdatedField:      LastUpdatedField{exampleTime},
-		// TODO: perms?
+		AclField:              allCanWriteAcl(),
 	}
 	println("binary water jar id initial:"+string(exWaterId[:]), len(exWaterId[:]))
 	println("created waterJar with id: " + exWaterId.AsBase58())
@@ -169,8 +169,7 @@ func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 	if err = ReadSimpleStructuredBody(r, w, &req); err != nil {
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(WaterJarsCollectionName)
+	ctx := r.Context()
 	existing, err := GetMainCollectionItem(r.Context(), id, &WaterJar{})
 	if err != nil {
 		stat := http.StatusInternalServerError
@@ -186,7 +185,5 @@ func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "mcItem was not WaterJar", http.StatusInternalServerError)
 		return
 	}
-	// TODO: fix next line
-	unnecessaryPerms := PermsOnRequest{BlanketPerm: utils.Pointer(true)}
-	finishMainCollItemUpdate(ctx, w, coll, req.modsFor, wj, unnecessaryPerms)
+	finishMainCollItemUpdate(ctx, w, req.modsFor, wj, req.PermsOnRequest)
 }

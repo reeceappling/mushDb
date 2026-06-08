@@ -87,7 +87,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(AgarRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false), // TODO: unique (last) may need to be true
+		newSimpleIndex("name", "name", false, false, true), // TODO: unique (last) may need to be true
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("agar", "agar", true, false, false),
 		standardIndexModel,
@@ -272,13 +272,7 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	ctx, db := Db(r)
-	coll := db.Collection(AgarRecipesCollectionName)
-	user, err := GetAuthInfo(ctx)
-	if err != nil || user.isGuest() {
-		http.Error(w, "only logged in users can create entries: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
+	ctx := r.Context()
 
 	toInsert := AgarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -292,9 +286,9 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AntibioticsField:           req.AntibioticsField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanReadAcl(&user.Email), // TODO: or write?
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)), // TODO: or write?
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 // TODO: USE!

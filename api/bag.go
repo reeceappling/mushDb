@@ -13,17 +13,15 @@ import (
 	"net/http"
 )
 
-// TODO: needed for creating fruits (unless from box or agar)
-
+// needed for creating fruits (unless from box or agar)
 // TODO: new (subs batch created first, then PC, so they can be referenced)
 
 type Bag struct {
-	MainCollectionIdField       `bson:"inline"`
-	SubstrateRecipeField        `bson:"inline"`
-	SubstrateBatchOptionalField `bson:"inline"`
-	PcRunOptionalField          `bson:"inline"` // this may not exist for pre-existing bags
-	//Size string // TODO: unsure what to do here
-	FilterSize                        string `bson:"filterSize" json:"filterSize"`
+	MainCollectionIdField             `bson:"inline"`
+	SubstrateRecipeField              `bson:"inline"`
+	SubstrateBatchOptionalField       `bson:"inline"`
+	PcRunOptionalField                `bson:"inline"` // this may not exist for pre-existing bags
+	FilterSize                        string          `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	SealDate                          *UnixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
@@ -55,7 +53,7 @@ func (b Bag) CanTransferTo(dst geneticSource) error {
 func (b Bag) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    SpeciesOptionalField{b.Species},
-		SubspeciesOptionalField: SubspeciesOptionalField{b.SubSpecies},
+		SubspeciesOptionalField: SubspeciesOptionalField{b.Subspecies},
 		KnownFruitableField:     KnownFruitableField{b.KnownFruitable},
 		GenerationsFields:       b.GenerationsFields,
 	}, nil
@@ -65,7 +63,6 @@ func (b Bag) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation
 	return b.GenSinceSpore, b.GenSinceFruitOrSpore
 }
 
-// TODO: create bag via substrate batch???
 func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
@@ -79,7 +76,7 @@ func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from gene
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
@@ -184,8 +181,7 @@ type createBagRequest struct {
 	SubstrateBatchField
 	WetnessField
 	PcRunField
-	FilterSize        string // TODO: ???? Also handle on ts side
-	CreationDateField        // TODO: make this on the spot instead (already handled in TSX)
+	FilterSize string
 	NotesField
 	WriteTagToField
 }
@@ -226,7 +222,12 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO: validate filter size
+	if _, exists := bagFilterSizes[data.FilterSize]; !exists {
+		http.Error(w, "filter size validation failure", http.StatusBadRequest)
+		return
+	}
 	// Denying guest edits is done in the upper handlers
+	now := unixTimeForNow()
 	toInsert := &Bag{
 		MainCollectionIdField:       MainCollectionIdField{id},
 		SubstrateRecipeField:        batch.SubstrateRecipeField,
@@ -234,9 +235,9 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		WetnessField:                data.WetnessField,
 		PcRunOptionalField:          PcRunOptionalField{&data.PcRun},
 		FilterSize:                  data.FilterSize,
-		CreationDateField:           data.CreationDateField,
+		CreationDateField:           CreationDateField{now},
 		NotesField:                  data.NotesField,
-		LastUpdatedField:            LastUpdatedFieldForNow(),
+		LastUpdatedField:            LastUpdatedField{now},
 		AclField:                    allCanWriteAcl(),
 	}
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
@@ -351,7 +352,7 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, data.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, data.PermsOnRequest)
 }
 
 type importBagRequest struct {
@@ -467,7 +468,6 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
 	// Validate
 	_, err = data.SubstrateRecipeField.Get(ctx)
 	if err != nil {
@@ -482,7 +482,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if data.SubSpecies != nil {
+		if data.Subspecies != nil {
 			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -492,18 +492,11 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
 		if err != nil {
-			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if subsp != nil {
-			finalPerms = subsp.DefaultAcl.Clone()
-		} else {
-			finalPerms = sp.DefaultAcl.Clone()
-		}
-		user, _ := GetAuthInfo(r.Context())
-		finalPerms.Users[user.Email] = true
 	}
 
 	// Write
@@ -528,5 +521,5 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 		AclField:                finalPerms.AsField(),
 	}
-	finishImportMainCollectionEntry(ctx, coll, toInsert, w)
+	finishImportMainCollectionEntry(ctx, toInsert, w)
 }

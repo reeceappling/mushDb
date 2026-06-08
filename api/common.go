@@ -69,7 +69,7 @@ var standardIndexModel = newSimpleIndex("standard", "standard", true, false, fal
 var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, false, false) // TODO: ensure actually indexes the correct thing! // TODO: this is a wildcard index!!!!
 var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
 var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false) // TODO: do we even need to use this?
-var creationDateIndexModel = newSimpleIndex("creationDate", "createDate", true, false, false)
+var creationDateIndexModel = newSimpleIndex("creationDate", "creationDate", true, false, false)
 var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false)
 
 var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false)
@@ -446,15 +446,15 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 }
 
 func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
-	user, err := GetAuthInfo(ctx)
+	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
 	if err != nil {
 		return nil, err
-	}
+	} // TODO: del if unneeded
 	results := []T{}
 	if numItems != nil {
 		results = make([]T, 0, *numItems)
 	} else {
-		if user.isAdmin() {
+		if user.IsAdmin() {
 			err = cursor.All(ctx, &results)
 			return results, err
 		}
@@ -805,8 +805,9 @@ func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T)
 	return CollectionFor(*item, db).FindOne(ctx, bson.D{{Key: "_id", Value: (*item).IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
 }
 
-func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
-	user, err := GetAuthInfo(ctx)
+func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
+	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(existing.CollectionName())
+	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -830,7 +831,7 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 }
 
 func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
-	user, err := GetAuthInfo(ctx)
+	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -854,7 +855,7 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 }
 
 func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
-	user, err := GetAuthInfo(ctx)
+	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return

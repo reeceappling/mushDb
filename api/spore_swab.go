@@ -102,12 +102,11 @@ type createSporeSwabRequest struct {
 	// TODO: DERIVE PARENT TYPE!
 	// SporePrintId MainCollectionId // TODO: make this just parentId, used to be SporePrintId. Ensure handled on ts side
 	NotesField
-	WriteTagToField // TODO: DO THIS!
+	WriteTagToField
 }
 
 // TODO: multi-swab creation request?
 
-// TODO: REALLY FLESH THIS OUT
 func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	data := createSporeSwabRequest{}
 	defer r.Body.Close()
@@ -145,17 +144,18 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := unixTimeForNow()
+	parentType := parentItem.SourceType() // TODO: ensure ok
 	out := SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.Parent},
-		ParentTypeField:                   ParentTypeField{utils.Pointer(parentItem.SourceType())}, // TODO: ensure ok
+		ParentTypeField:                   ParentTypeField{&parentType},
 		CreationDateField:                 now.asCreationDate(),
 		SpeciesField:                      SpeciesField{*parent.Species},
 		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
 		NotesField:                        NotesField{data.Notes},
 		LastUpdatedField:                  LastUpdatedField{now},
 		// Do not check permissions, just pass parent perms to child
-		AclField: AclField{parentItem.Permissions()}, // TODO: do not add user
+		AclField: AclField{parentItem.Permissions()}, // note: do NOT add user. They can be created by any non-guest, but not necessarily viewable by them...
 	}
 	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
 		if errr := addToIdMapCollection(sessCtx, &out); errr != nil {
@@ -226,7 +226,7 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.PermsOnRequest)
 }
 
 type importSporeSwabRequest struct {
@@ -258,27 +258,13 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 
-	user, err := GetAuthInfo(r.Context())
+	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
 	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
-	ctx, db := Db(r)
-	coll := db.Collection(SporeSwabCollectionName)
+	ctx := r.Context()
 	toInsert := SporeSwab{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
@@ -288,5 +274,5 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedFieldForNow(),
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

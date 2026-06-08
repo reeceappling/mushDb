@@ -11,12 +11,11 @@ import (
 	"net/http"
 )
 
-// TODO: needed for MSS-MSS transfers
-// TODO: needed for MSS-plate/slant transfers
+// TODO: needed for
+// MSS-MSS transfers, MSS-plate/slant transfers
 
 // TODO: newFromPCdwater ????
 // TODO: newFromSporePrint (typical but requires PC-d water to not be referenced)
-// TODO: add sterilizedWaterJar table and page
 
 type MSS struct {
 	// ALWAYS assume contaminated
@@ -107,7 +106,7 @@ func initializeMSS(ctx context.Context) error {
 	testItem := &MSS{
 		MainCollectionIdField:             MainCollectionIdField{testId},
 		CreationDateField:                 CreationDateField{exampleTime},
-		WaterJarOptionalField:             WaterJarOptionalField{WaterSource: &exWaterId}, // TODO: ok?
+		WaterJarOptionalField:             WaterJarOptionalField{WaterSource: &exWaterId},
 		SpeciesField:                      SpeciesField{testEntryStringId},
 		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
 		TransfersOutField:                 TransfersOutField{exAlts},
@@ -198,27 +197,13 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := GetAuthInfo(r.Context())
+	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
 	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms ACL
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
-	ctx, db := Db(r)
-	coll := db.Collection(MssCollectionName)
+	ctx := r.Context()
 	toInsert := MSS{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
@@ -228,7 +213,7 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateMssRequest struct {
@@ -288,5 +273,5 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	finishMainCollItemUpdate(ctx, w, coll, data.modsFor, &existing, data.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, data.modsFor, &existing, data.PermsOnRequest)
 }

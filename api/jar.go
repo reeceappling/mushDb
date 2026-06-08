@@ -21,11 +21,12 @@ import (
 // TODO: new (PC is created first, so it can be referenced)
 
 type GrainJar struct {
-	MainCollectionIdField `bson:"inline"`
-	SizeCups              int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
-	JarRecipeField        `bson:"inline"`
+	MainCollectionIdField   `bson:"inline"`
+	SizeCups                int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
+	JarRecipeField          `bson:"inline"`
+	GrainBatchOptionalField `bson:"inline"`
 	// TODO: multiple grain batches????
-	WetnessField                      `bson:"inline"` // TODO: HANDLE IN JAVASCRIPT
+	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
 	BurstGrainsField                  `bson:"inline"`
 	PcRunOptionalField                `bson:"inline"`
 	CreationDateField                 `bson:"inline"`
@@ -103,7 +104,7 @@ func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withKnownFruitable(parentInfo.KnownFruitable).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
@@ -147,10 +148,10 @@ func initializeJars(ctx context.Context) error {
 			creationDateIndexModel,
 			//newSimpleIndex("sizeCups", "sizeCups", true, false, false),
 			//newSimpleIndex("recipe", "recipe", false, true, false),
+			//newSimpleIndex("grainBatch", "grainBatch", false, true, false), // TODO: ????
 			//newSimpleIndex("wetness", "wetness", false, true, false),
 			//newSimpleIndex("burstGrains", "burstGrains", false, true, false),
-			newSimpleIndex("pcRun", "pcRun", false, true, false),
-			creationDateIndexModel,
+			newSimpleIndex("pcRun", "pcRun", false, true, false), // TODO: ????
 			newSimpleIndex("species", "species", false, true, false),
 			newSimpleIndex("subspecies", "subspecies", false, true, false),
 			//newSimpleIndex("innoc", "innoc", false, true, false),
@@ -239,7 +240,7 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 type createJarRequest struct {
 	// TODO: ALSO CREATE WITH sizeCups
 	SizeCups int `json:"sizeCups"` // TODO: IMPLEMENT ON GO SIDE
-	SubstrateBatchField
+	GrainBatchField
 	//WetnessField                           // TODO: maybe add late?
 	//BurstGrainsField                       // TODO: maybe add late?
 	PcRunField
@@ -264,34 +265,30 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx, _ := Db(r)
-	batch, err := data.SubstrateBatchField.Get(ctx)
+	batch, err := data.GrainBatchField.Get(ctx)
 	if err != nil {
-		http.Error(w, "failed to find batch: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to find grain batch: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	_, err = data.PcRunField.Get(ctx)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	now := unixTimeForNow()
-	pcrun := PcRunField{data.PcRun}
 	toInsert := GrainJar{
-		MainCollectionIdField: MainCollectionIdField{id},
-		JarRecipeField:        JarRecipeField{&batch.Substrate}, // TODO: if provided recipe, then just use that...
-		PcRunOptionalField:    pcrun.asOptional(),
-		BurstGrainsField:      BurstGrainsField{nil}, //      data.BurstGrainsField, // initially set to nil, can be updated later. TODO: set this optionally?
-		WetnessField:          WetnessField{nil},     //           data.WetnessField, // initially set to nil, can be updated later. TODO: set this optionally?
-		CreationDateField:     CreationDateField{now},
-		NotesField:            NotesField{data.Notes},
-		LastUpdatedField:      LastUpdatedField{now},
-		AclField:              allCanWriteAcl(),
+		MainCollectionIdField:   MainCollectionIdField{id},
+		JarRecipeField:          JarRecipeField{&batch.Recipe},
+		GrainBatchOptionalField: data.GrainBatchField.asOptional(),
+		PcRunOptionalField:      data.PcRunField.asOptional(),
+		BurstGrainsField:        BurstGrainsField{nil}, //      data.BurstGrainsField, // initially set to nil, can be updated later. TODO: set this optionally?
+		WetnessField:            WetnessField{nil},     //           data.WetnessField, // initially set to nil, can be updated later. TODO: set this optionally?
+		CreationDateField:       CreationDateField{now},
+		NotesField:              NotesField{data.Notes},
+		LastUpdatedField:        LastUpdatedField{now},
+		AclField:                allCanWriteAcl(),
 	}
-	_, err = pcrun.Get(ctx)
-	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	_, err = toInsert.JarRecipeField.Get(ctx)
-	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
@@ -304,12 +301,11 @@ type importJarRequest struct {
 	// TODO: ALSO IMPORT WITH sizeCups
 	Recipe AlternateCollectionId // Jar Recipe
 	CreationDateField
-	SpeciesOptionalField // Only empty when non-innoc'd TODO: new!
+	SpeciesOptionalField // Only empty when non-innoc'd
 	SubspeciesOptionalField
 	Generation *int
 	KnownFruitableField
 	WriteTagToField
-	//PermsOnRequest `json:"acl"` // TODO: maybe remove these perms and just use the default subspecies perms. Allow mods on edit page
 	// image as "img"
 }
 
@@ -343,8 +339,6 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	// TODO: Even if user cannot write, allow them to import???
 
 	// Try to get pic if exists
 	picsSaved := []string{}
@@ -404,7 +398,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if data.SubSpecies != nil {
+		if data.Subspecies != nil {
 			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -414,25 +408,19 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
 		if err != nil {
-			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if subsp != nil {
-			finalPerms = subsp.DefaultAcl.Clone()
-		} else {
-			finalPerms = sp.DefaultAcl.Clone()
-		}
-		user, _ := GetAuthInfo(r.Context())
-		finalPerms.Users[user.Email] = true
 	}
 
 	ctx, _ := Db(r)
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&data.Recipe},
-		PcRunOptionalField:      PcRunOptionalField{}, // No pc runs on imports
+		GrainBatchOptionalField: GrainBatchOptionalField{nil}, // Batch not provided for import
+		PcRunOptionalField:      PcRunOptionalField{},         // No pc runs on imports
 		CreationDateField:       CreationDateField{data.CreationDate},
 		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
@@ -444,7 +432,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
-		AclField:             AclField{finalPerms}, // TODO: acl from request instead???
+		AclField:             AclField{finalPerms},
 	}
 
 	_, err = toInsert.PcRunOptionalField.Get(ctx)
@@ -507,7 +495,7 @@ func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclFiel
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateJarRequest{}
-	defer r.Body.Close() // TODO: may not need?
+	defer r.Body.Close()
 	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
@@ -522,7 +510,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 
 	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "jar", &data, mainCollId.AsBase58())
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 
@@ -552,7 +540,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, out.PermsOnRequest)
 }
 
 func Db(r *http.Request) (context.Context, *mongo.Database) {

@@ -96,24 +96,17 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := newAlternateCollectionId()
 
-	ctx, db := Db(r)
-	coll := db.Collection(SubstrateRecipesCollectionName)
-	// all can read but only user can write perms
-	user, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
-		return
-	}
+	ctx := r.Context()
 	// Create entry to insert
-	toInsert := SubstrateBatch{
+	toInsert := &SubstrateBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		CreationDateField:          CreationDateField{CreationDate: unixTimeForNow()},
 		SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate},
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedFieldForNow(),
-		AclField:                   allCanReadAcl(&user.Email),
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, &toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateSubstrateBatchRequest struct {

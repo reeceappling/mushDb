@@ -1,7 +1,5 @@
 package api
 
-// TODO: JAR RECIPE BATCH (soaked? simmered/time?)
-
 import (
 	"context"
 	"encoding/json"
@@ -12,7 +10,7 @@ import (
 	"net/http"
 )
 
-// TODO: needed for grainJars
+// needed for grainJars
 
 const JarRecipesCollectionName = "jarRecipes"
 
@@ -206,8 +204,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(JarRecipesCollectionName)
+	ctx := r.Context()
 	toInsert := JarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
 		NameField:                  NameField{req.Name},
@@ -220,7 +217,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
 		AclField:                   allCanWriteAcl(),
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateJarRecipeRequest struct {

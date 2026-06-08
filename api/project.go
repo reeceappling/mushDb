@@ -9,6 +9,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"golang.org/x/exp/maps"
 	"io"
 	"net/http"
@@ -21,11 +22,11 @@ type projectName string
 type Project struct {
 	Name              projectName `bson:"_id" json:"_id"`
 	CreationDateField `bson:"inline"`
-	Completed         *UnixTime `bson:"completed,omitempty" json:"completed,omitempty"` // TODO: index?
+	Completed         *UnixTime `bson:"completed,omitempty" json:"completed,omitempty"`
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	Perms             ProjectPerms `bson:"perms" json:"perms"` // Map of email of user to permission on project
-	// TODO: make it so we can add/remove users from Projects
+	// TODO: make it so we can add/remove users from Projects (maybe one at a time?)
 }
 
 func (p Project) DbId() string {
@@ -152,16 +153,6 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx, _ := Db(r)
-	user, err := GetAuthInfo(ctx)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	// dont allow guests to create projects
-	if user.isGuest() { // TODO: is this needed?
-		http.Error(w, "guests cannot create new projects", http.StatusForbidden)
-		return
-	}
 
 	now := unixTimeForNow()
 	toInsert := Project{
@@ -170,21 +161,20 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:        req.NotesField,
 		LastUpdatedField:  LastUpdatedField{now},
 		Perms: ProjectPerms(map[string]ProjectPerm{
-			user.Email: ProjectAdmin,
+			GetUserEmail(ctx): ProjectAdmin,
 		}),
 	}
 	// TODO: try to add project to user!
 	finishCreateProject(ctx, toInsert, w, func() error {
-		// TODO: add project to the user session...
+		// TODO: add project to the user session, both in db and mem
 		return nil
-	})
+	}) // TODO: handle create project that is different
 }
 
 type updateProjectRequest struct {
 	Completed *UnixTime `json:"completed,omitempty"`
 	NotesUpdateField
 	Perms ProjectPerms `json:"perms"`
-	// TODO: update perms should update users too!
 }
 
 func (req updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
@@ -247,7 +237,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate user perms for this project
 	// Validate user is admin of project
 	existingUserPerm := existing.Perms[user.Email]
-	if !user.isAdmin() && (existingUserPerm != "admin") {
+	if !user.IsAdmin() && (existingUserPerm != "admin") {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
@@ -398,3 +388,120 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //	}
 //	return out, nil
 //}
+
+// TODO: MOVE!
+func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Project, upd bson.D, err error, updateUsers func(mongo.SessionContext) (any, error)) {
+	if err != nil {
+		println("mod creation failure: " + err.Error())
+		dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(upd) == 0 {
+		dbErr(w, "no changes made", http.StatusBadRequest)
+		return
+	}
+
+	sessionOptions := options.Session() // TODO: change?
+	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
+	if err != nil {
+		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	wc := writeconcern.Majority() // TODO: ok?
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+	// Defers ending the session after the transaction is committed or ended
+	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		defer sess.EndSession(ctx)
+		// update the users (if needed)
+		if _, e := updateUsers(sessCtx); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to update users: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		// Update the project
+		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(ProjectsCollectionName)
+		bsonId := bsonFindFilter("_id", existing.DbId())
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
+		if err != nil {
+			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		var updated Project
+		err = coll.FindOne(ctx, bsonId).Decode(&updated)
+		if err != nil {
+			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		bsOut, err := json.Marshal(updated)
+		if err != nil {
+			dbErr(w, err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+
+		// Try to commit the txn
+		if e := sess.CommitTransaction(ctx); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		// TODO: move the write!
+		bsOut2, err2 := json.MarshalIndent(updated, "", " ") // TODO: delete later
+		if err2 != nil {
+			dbErr(w, err2.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		println("Writing update:", string(bsOut2)) // TODO: del
+		_, err = w.Write(bsOut)
+		handleWriteErr(err, w)
+
+		return nil, nil
+	}, txnOptions)
+	return
+}
+
+func finishCreateProject(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter, inTxn func() error) {
+	sessionOptions := options.Session() // TODO: change?
+	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
+	if err != nil {
+		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	wc := writeconcern.Majority() // TODO: ok?
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+	// Defers ending the session after the transaction is committed or ended
+	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		defer sess.EndSession(ctx)
+		// do the insert
+		_, err := mongo.SessionFromContext(sessCtx).Client().
+			Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
+		if err != nil {
+			http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
+			return nil, errors.Join(err, ErrTxnWriteFail) // TODO: ok?
+		}
+		// do the thing needed to be successful // TODO: UPDATE THE USER!
+		if e := inTxn(); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to do post-insert call: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		if e := sess.CommitTransaction(ctx); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		return nil, nil
+	}, txnOptions)
+	if err != nil {
+		return
+	}
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		http.Error(w, "failed to marshal: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
+	if err != nil {
+		handleWriteErr(err, w)
+		return
+	}
+}

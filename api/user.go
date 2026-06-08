@@ -63,19 +63,43 @@ const testUserEmail = "nessapatch2408@gmail.com"
 
 // TODO: update user!!!
 
+type UserProjectPerm bool // Always referenced as a pointer, where true===admin, false===write, and nil===read
+func UserProjectAdmin() *UserProjectPerm {
+	return utils.Pointer(UserProjectPerm(true))
+}
+func UserProjectWrite() *UserProjectPerm {
+	return utils.Pointer(UserProjectPerm(false))
+}
+func UserProjectRead() *UserProjectPerm {
+	return nil
+}
+func (upp *UserProjectPerm) ProjectPerm() ProjectPerm {
+	if upp == nil {
+		return ProjectRead
+	}
+	if *upp {
+		return ProjectAdmin
+	}
+	return ProjectWrite
+}
+func (upp *UserProjectPerm) RWPerm() *ReadWritePerm {
+	if upp == nil {
+		return nil // User can only read
+	}
+	out := ReadWritePerm(*upp) // User can write or admin
+	return &out
+}
+
 func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	userIsAdmin := u.Perms.Admin
+	acctType := (*AccountType)(userIsAdmin)
 	out := ResolvedUserPerms{
-		Email: u.Email,
-		admin: userIsAdmin,
+		Email:       u.Email,
+		accountType: acctType,
 	}
-	// If guest or Admin, return early
-	if u.Perms.Admin == nil {
-		println("user is guest") // TODO; del
-		return out, nil
-	}
-	if *u.Perms.Admin {
-		println("user is Admin") // TODO; del
+	// If not regular user (is guest or admin), return early
+	if !acctType.IsRegular() {
+		println("user is guest or admin") // TODO; del
 		return out, nil
 	}
 
@@ -87,7 +111,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	if err != nil {
 		return out, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
 	}
-	userProjPerms := map[projectName]*bool{}
+	userProjPerms := map[projectName]*UserProjectPerm{}
 
 	for cursor.Next(context.TODO()) {
 		var project Project
@@ -98,16 +122,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 		if !exists {
 			return out, errors.New("user not on project")
 		} else {
-			switch perm {
-			case "admin":
-				userProjPerms[project.Name] = utils.Pointer(true)
-			case "write":
-				userProjPerms[project.Name] = utils.Pointer(false)
-			case "read":
-				userProjPerms[project.Name] = nil
-			default:
-				return out, errors.New("invalid user perm on project: " + perm)
-			}
+			userProjPerms[project.Name] = perm.UserProjectPerm()
 		}
 	}
 	if err = cursor.Err(); err != nil {

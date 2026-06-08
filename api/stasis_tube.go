@@ -85,7 +85,7 @@ func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
@@ -111,8 +111,8 @@ func initializeStasisTubes(ctx context.Context) error {
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	coll := db.Collection(StasisTubeCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		creationDateIndexModel,
+		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		newSimpleIndex("species", "species", false, true, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//newSimpleIndex("innoc", "innoc", false, true, false),
@@ -128,9 +128,9 @@ func initializeStasisTubes(ctx context.Context) error {
 		//disposedIndexModel,
 		// MostRecentImage
 		//Notes (no index) (maybe later with tags?)
+		// TODO: waterJar?
 		projectsIndexModel,
 		lastUpdatedIndexModel,
-		// TODO: projectsIndexModel,
 	})
 	if err != nil {
 		return err
@@ -158,7 +158,7 @@ func initializeStasisTubes(ctx context.Context) error {
 		MostRecentImageField:              MostRecentImageField{&exPics[0]},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          allCanWriteAcl(), // TODO: ok?
+		AclField:                          allCanWriteAcl(),
 	}
 	return addTestMainEntries(ctx, testItem)
 }
@@ -231,7 +231,7 @@ func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 
 type resolvedUpdateStasisTubeRequest struct {
 	KnownFruitableField
-	SaleField // TODO: validate exists
+	SaleField // TODO: validate exists?
 	DisposedField
 	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
@@ -390,16 +390,16 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	// Validation
 	if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
 		if err = db.Collection(SalesCollectionName).FindOne(ctx, bsonFindFilter("_id", out.Sale)).Err(); err != nil {
-			dbErr(w, "failed to find new sale entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed
+			dbErr(w, "failed to find new sale entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed? or get rid of the sale...
 			return
 		}
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.PermsOnRequest)
 }
 
 type importStasisTubeRequest struct {
 	CreationDateField
-	SpeciesOptionalField // TODO: made optional
+	SpeciesOptionalField
 	// Optional
 	SubspeciesOptionalField
 	KnownFruitableField
@@ -479,7 +479,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if data.SubSpecies != nil {
+		if data.Subspecies != nil {
 			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -489,22 +489,14 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
 		if err != nil {
-			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if subsp != nil {
-			finalPerms = subsp.DefaultAcl.Clone()
-		} else {
-			finalPerms = sp.DefaultAcl.Clone()
-		}
-		user, _ := GetAuthInfo(r.Context())
-		finalPerms.Users[user.Email] = true
 	}
 
-	ctx, db := Db(r)
-	coll := db.Collection(StasisTubeCollectionName)
+	ctx := r.Context()
 	toInsert := StasisTube{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
@@ -518,5 +510,5 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

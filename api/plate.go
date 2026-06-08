@@ -11,15 +11,13 @@ import (
 	"github.com/reeceappling/mushDb/api/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 	"io"
 	"net/http"
 	"slices"
 )
 
-// TODO: sometimes needed for transfers
-// TODO: needed for clones
+// sometimes needed for transfers
+// needed for clones
 
 type CondensationCoverageAtSealTimeField struct {
 	CondensationCoverageAtSealTime *int `bson:"condensationCoverageAtSealTime,omitempty" json:"condensationCoverageAtSealTime,omitempty"` // TODO: (0-100), HANDLE EVERYWHERE, NEW!
@@ -44,7 +42,7 @@ type hasPourCoverage interface {
 	pourCoverage() *int
 }
 type WetAtCooledTimeField struct {
-	WetAtCooledTime *bool `bson:"wetAtCooledTime,omitempty" json:"wetAtCooledTime,omitempty"` // WetAtCooledTime TODO: (nil==unknown or imported, false==known and not wet, true=known and wet), HANDLE EVERYWHERE, NEW!
+	WetAtCooledTime *bool `bson:"wetAtCooledTime,omitempty" json:"wetAtCooledTime,omitempty"` // WetAtCooledTime TODO: (nil==unknown or imported, false==known and not wet, true=known and wet)
 }
 
 func (f WetAtCooledTimeField) wetAtCool() *bool {
@@ -55,7 +53,7 @@ type hasWact interface {
 	wetAtCool() *bool
 }
 type AgarOnOutsideAtPourTimeField struct {
-	AgarOnOutsideAtPourTime *bool `bson:"agarOnOutsideAtPourTime,omitempty" json:"agarOnOutsideAtPourTime,omitempty"` // Only when mispours happen with plates above this one // TODO: HANDLE EVERYWHERE, NEW!
+	AgarOnOutsideAtPourTime *bool `bson:"agarOnOutsideAtPourTime,omitempty" json:"agarOnOutsideAtPourTime,omitempty"` // Only when mispours happen with plates above this one
 }
 
 func (f AgarOnOutsideAtPourTimeField) agarOutside() *bool {
@@ -69,7 +67,7 @@ type hasAgarOutside interface {
 type Plate struct {
 	MainCollectionIdField `bson:"inline"`
 	AgarBatchField        `bson:"inline"` // will be empty for preexisting
-	// TODO: do we want PC run on here too? and on others like it?
+	// TODO: do we want PC run on here too? and on others like it? (probably not due to data bloat)
 	CreationDateField                   `bson:"inline"`
 	CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
 	PourCoverageField                   `bson:"inline"` // Percentage of bottom surface area agar coverage
@@ -130,7 +128,7 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
@@ -241,7 +239,7 @@ func basicTestPlate() Plate {
 		},
 		TransfersOutField:                 TransfersOutField{exAlts},
 		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&testId}, // TODO: ok? // TODO: multiple?
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&testId},
 		PicsField:                         PicsField{exPics},
 		ContaminationsField:               ContaminationsField{exContams},
 		KnownFruitableField:               KnownFruitableField{exBool},
@@ -318,7 +316,7 @@ func testPlateFor(
 		},
 		TransfersOutField:                 TransfersOutField{xfersOut},
 		ParentTypeField:                   ParentTypeField{parentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{parent}, // TODO: ok? // TODO: multiple?
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{parent},
 		PicsField:                         PicsField{picsForItem},
 		ContaminationsField:               ContaminationsField{contams},
 		KnownFruitableField:               KnownFruitableField{knownFruitable},
@@ -384,7 +382,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:                          data.NotesField,
 		LastUpdatedField:                    LastUpdatedField{now},
 		// No Perms here for basic plates
-		AclField: allCanWriteAcl(), // TODO: ok?
+		AclField: allCanWriteAcl(),
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
@@ -517,7 +515,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, out.PermsOnRequest)
 }
 
 func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) {
@@ -557,78 +555,9 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 	handleWriteErr(err, w)
 }
 
-func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Project, upd bson.D, err error, updateUsers func(mongo.SessionContext) (any, error)) {
-	if err != nil {
-		println("mod creation failure: " + err.Error())
-		dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if len(upd) == 0 {
-		dbErr(w, "no changes made", http.StatusBadRequest)
-		return
-	}
-
-	sessionOptions := options.Session() // TODO: change?
-	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
-	if err != nil {
-		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	wc := writeconcern.Majority() // TODO: ok?
-	txnOptions := options.Transaction().SetWriteConcern(wc)
-	// Defers ending the session after the transaction is committed or ended
-	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
-		defer sess.EndSession(ctx)
-		// update the users (if needed)
-		if _, e := updateUsers(sessCtx); e != nil {
-			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
-			http.Error(w, "failed to update users: "+errTxn.Error(), http.StatusInternalServerError)
-			return nil, errTxn
-		}
-		// Update the project
-		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(ProjectsCollectionName)
-		bsonId := bsonFindFilter("_id", existing.DbId())
-		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-		if err != nil {
-			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-			return nil, err
-		}
-		var updated Project
-		err = coll.FindOne(ctx, bsonId).Decode(&updated)
-		if err != nil {
-			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
-			return nil, err
-		}
-		bsOut, err := json.Marshal(updated)
-		if err != nil {
-			dbErr(w, err.Error(), http.StatusInternalServerError)
-			return nil, err
-		}
-
-		// Try to commit the txn
-		if e := sess.CommitTransaction(ctx); e != nil {
-			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
-			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
-			return nil, errTxn
-		}
-		// TODO: move the write!
-		bsOut2, err2 := json.MarshalIndent(updated, "", " ") // TODO: delete later
-		if err2 != nil {
-			dbErr(w, err2.Error(), http.StatusInternalServerError)
-			return nil, err
-		}
-		println("Writing update:", string(bsOut2)) // TODO: del
-		_, err = w.Write(bsOut)
-		handleWriteErr(err, w)
-
-		return nil, nil
-	}, txnOptions)
-	return
-}
-
 type importPlateRequest struct {
 	CreationDateField
-	SpeciesOptionalField // TODO: made optional
+	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
 	Generation *int `json:"generation,omitempty"`
@@ -648,22 +577,13 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
-	// TODO: CONVERT TO newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "bag", &data, b58Id)
-	//	if err != nil {
-	//		// Already wrotw
-	//		return
-	//	}
-	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "email cannot write perms: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Try to get pic if exists
-	picsSaved := []string{} // TODO: do this streamlined with the multipart function
+	picsSaved := []string{}
 	defer func() {
 		if err != nil {
 			err = pics.DeleteFiles(r.Context(), picsSaved...)
@@ -713,13 +633,12 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var finalPerms ACL
-	innoculated := data.Species != nil
-	if !innoculated {
+	if data.Species == nil { // Not innoculated
 		if data.Generation != nil {
 			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if data.SubSpecies != nil {
+		if data.Subspecies != nil {
 			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -729,22 +648,14 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
 		if err != nil {
-			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if subsp != nil {
-			finalPerms = subsp.DefaultAcl.Clone()
-		} else {
-			finalPerms = sp.DefaultAcl.Clone()
-		}
-		user, _ := GetAuthInfo(r.Context())
-		finalPerms.Users[user.Email] = true
 	}
 
-	ctx, db := Db(r)
-	coll := db.Collection(PlatesCollectionName)
+	ctx := r.Context()
 
 	toInsert := Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
@@ -762,5 +673,21 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:                    LastUpdatedField{unixTimeForNow()},
 		AclField:                            AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
+}
+
+// TODO: MOVE!
+func ImportFinalPerms(ctx context.Context, spec string, subspec *string) (ACL, error) {
+	var finalPerms ACL
+	sp, subsp, err := getSpeciesAndSubspecies(ctx, spec, subspec)
+	if err != nil {
+		return ACL{}, errors.New("failed to get species or subspecies: " + err.Error())
+	}
+	if subsp != nil {
+		finalPerms = subsp.DefaultAcl.Clone()
+	} else {
+		finalPerms = sp.DefaultAcl.Clone()
+	}
+	finalPerms.Users[GetUserEmail(ctx)] = true
+	return finalPerms, nil
 }

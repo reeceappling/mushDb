@@ -64,7 +64,7 @@ func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fro
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
@@ -155,9 +155,9 @@ func initializePlugs(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlugsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		creationDateIndexModel,
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		creationDateIndexModel,
 		// TODO: combo dowel types index?
 		//newSimpleIndex("dowelTypes", "dowelTypes.wood", false, false, false),
 		//newSimpleIndex("dowelSizes", "dowelTypes.radius", false, false, false),
@@ -206,8 +206,8 @@ func initializePlugs(ctx context.Context) error {
 }
 
 type createPlugsRequest struct {
-	DowelTypes         []Dowel `bson:"dowelTypes" json:"dowelTypes"`
-	PcRunOptionalField         // OPTIONAL!
+	DowelTypes         []Dowel `json:"dowelTypes"`
+	PcRunOptionalField         // OPTIONAL! // TODO: Can be created before pc!?
 	NotesField
 	WriteTagToField
 }
@@ -256,21 +256,20 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 		NotesField:            NotesField{data.Notes},
 		LastUpdatedField:      LastUpdatedField{now},
 		// No Perms here for basic plugs
-		AclField: allCanWriteAcl(), // TODO: ok?
+		AclField: allCanWriteAcl(),
 	}
 
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
-// TODO: import plugs request!
-type importPlugsRequest struct { // TODO: USE THIS!
-	DowelTypes              []Dowel     `bson:"dowelTypes" json:"dowelTypes"` // TODO: ok?
-	Generation              *Generation `json:"generation"`                   // Nil so we can // TODO; ensure ok
-	SpeciesOptionalField    `bson:"inline"`                                   // TODO: ok?
-	SubspeciesOptionalField `bson:"inline"`                                   // TODO: ok?
-	KnownFruitableField     `bson:"inline"`                                   // TODO: ok?
-	NotesField              `bson:"inline"`                                   // TODO: ok?
-	WriteTagToField         `bson:"inline"`
+type importPlugsRequest struct {
+	DowelTypes []Dowel     `json:"dowelTypes"`
+	Generation *Generation `json:"generation"` // TODO: what to do about nil?
+	SpeciesOptionalField
+	SubspeciesOptionalField
+	KnownFruitableField
+	NotesField
+	WriteTagToField
 	// TODO: perms should follow species/subspec if exists, otherwise all can write
 }
 
@@ -290,6 +289,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := unixTimeForNow()
+	// TODO: perms from spec/subspec+user if innoculated, otherwise allCanWrite
 	toInsert := PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{id},
 		//ParentTypeField:                   ParentTypeField{},
@@ -302,7 +302,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		},
 		SpeciesOptionalField: SpeciesOptionalField{data.Species},
 		//TransfersOutField:       TransfersOutField{},
-		SubspeciesOptionalField: SubspeciesOptionalField{data.SubSpecies},
+		SubspeciesOptionalField: SubspeciesOptionalField{data.Subspecies},
 		//InnocField:              InnocField{},
 		KnownFruitableField: data.KnownFruitableField,
 		//PcRunOptionalField:      PcRunOptionalField{nil},
@@ -322,13 +322,12 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var finalPerms ACL
-	innoculated := data.Species != nil
-	if !innoculated {
+	if data.Species == nil {
 		if data.Generation != nil {
 			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if data.SubSpecies != nil {
+		if data.Subspecies != nil {
 			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -338,19 +337,13 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
+		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
 		if err != nil {
-			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if subsp != nil {
-			finalPerms = subsp.DefaultAcl.Clone()
-		} else {
-			finalPerms = sp.DefaultAcl.Clone()
-		}
-		user, _ := GetAuthInfo(r.Context())
-		finalPerms.Users[user.Email] = true
 	}
+	toInsert.ACL = finalPerms
 	if err = data.Generation.validate(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -367,8 +360,8 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: new sale?
 
 type updatePlugsRequest struct {
-	PcRunOptionalField  // Can only be set once!
-	KnownFruitableField // TODO: HANDLE IN GO! NEW!
+	PcRunOptionalField // Can only be set once!
+	KnownFruitableField
 	NotesUpdateField
 	DisposedField
 	PermsOnRequest `json:"acl"`
@@ -412,5 +405,5 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	finishMainCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, req.modsFor, existing, req.PermsOnRequest)
 }

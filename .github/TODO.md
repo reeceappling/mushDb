@@ -1,5 +1,7 @@
 # In Progress
 ## Actively Working On
+- [x] Spore print and below Go TODOs
+  - [ ] User, project, and sale Go TODOs
 - [ ] Project, sale, user tsx TODOs
 - [x] MSS and below, ensure api structs match up
 ## Passively Working On

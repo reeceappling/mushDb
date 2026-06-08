@@ -672,6 +672,7 @@ var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		"lcRecipe":        createLcRecipeHandler,
 		"fruit":           createFruitHandler,
 		"fruitingChamber": createFruitingChamberHandler,
+		"grainBatch":      createGrainBatchHandler,
 		"jar":             createJarHandler,
 		"jarRecipe":       createJarRecipeHandler,
 		"mss":             createMssHandler,
@@ -706,7 +707,7 @@ func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
 
 func DenyGuestMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resolvedPerms, err := GetAuthInfo(r.Context())
+		resolvedPerms, err := GetAuthInfo(r.Context()) // TODO: is err still needed here?
 		if err != nil {
 			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
 			return

@@ -102,7 +102,7 @@ func initializeSubstrates(ctx context.Context) error {
 	return addTestAltEntries(ctx, testItem)
 }
 
-type PermsOnRequest struct { // TODO: why not just make this an ACL
+type PermsOnRequest struct {
 	UserPerms    map[string]bool      `json:"users,omitempty"` // Bool is canEdit
 	ProjectPerms map[projectName]bool `json:"projects,omitempty"`
 	BlanketPerm  *bool                `json:"blanketPerm,omitempty"` // If true then these entries are publicly writeable, if false then publicly readable
@@ -185,9 +185,7 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	ctx, db := Db(r)
-	coll := db.Collection(SubstrateRecipesCollectionName)
-	user, _ := GetAuthInfo(ctx)
+	ctx := r.Context()
 	toInsert := SubstrateRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		NameField:                  req.NameField,
@@ -195,9 +193,9 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		StandardField:              req.StandardField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedFieldForNow(),
-		AclField:                   allCanReadAcl(&user.Email),
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w, func() error { return nil })
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateSubstrateRecipeRequest struct {
