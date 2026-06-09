@@ -393,7 +393,7 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
 	existing := &PlugsJar{}
 	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	coll := client.Database(dbName).Collection(PlugsCollectionName)
-	err = coll.FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(existing)
+	err = coll.FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

@@ -107,6 +107,7 @@ export default function GrainBatchDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<GrainBatchData>) {
+    // TODO: DISPLAY IS NOT WORKING FOR LONG IDS! ex: https://mush.appli.ng/view/grainBatch/5A44RFrtnHxcLTdoF
         const [initial, setInitial] = useState(data)
 
         const [err, setErr] = useState<string | undefined>()
@@ -173,7 +174,7 @@ export default function GrainBatchDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
-                txt: "Create Jars From Batch",
+                txt: "Create Jars From Batch", // TODO: creates either PC-d or un-pc'd jars!
                 // TODO: does this creation need a pcRun??? Can we do it before the run?
                 // TODO: can items be added when creating a PC run?
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
@@ -191,36 +192,36 @@ export default function GrainBatchDisplay(
         ]
         return <DisplayFormWrapper entryType={"grainBatch"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID id={initial._id} txt={"Grain Batch"} entryType={"grainBatch"}/>
+            <ID props={{id:data._id, txt:"Grain Batch", entryType:"grainBatch", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <JarRecipeArea recipeId={data.recipe}/>
                     <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
                     <div>
-                        {"Soak time (hrs): "}{initial.soakTimeHrs ?
-                        <NumericalArea value={soakTime ? soakTime.toString() : undefined}
+                        {"Soak time (hrs): "}{initial.soakTimeHrs ? <text>{initial.soakTimeHrs}</text> :
+                        <NumericalArea value={soakTime!==undefined ? soakTime.toString() : undefined}
                                        onChange={handleFormChangeSoak} label="SoakTimeHrs" min={0} step={1}
                                        errorMessage={'invalid amount'}
-                                       mode={"integer"} readonly={readonly}/> :
-                        ("" + initial.soakTimeHrs)}
+                                       mode={"integer"} readonly={readonly}/>
+                        }
 
                     </div>
                     <div>
-                        {"Boil time (mins): "}{initial.boilTimeMins ?
+                        {"Boil time (mins): "}{initial.boilTimeMins ? <text>{initial.boilTimeMins}</text> :
                         <NumericalArea value={boilTime ? boilTime.toString() : undefined}
                                        onChange={handleFormChangeBoil} label="BoilTimeMinutes" min={0} step={1}
                                        errorMessage={'invalid amount'}
-                                       mode={"integer"} readonly={readonly}/> :
-                        ("" + initial.boilTimeMins)}
+                                       mode={"integer"} readonly={readonly}/>}
                     </div>
                     <div>
-                        {"Dry time (hrs): "}{initial.dryTimeHours ?
+                        {"Dry time (hrs): "}{initial.dryTimeHours ? <text>{initial.dryTimeHours}</text> :
                         <NumericalArea value={dryTime ? dryTime.toString() : undefined}
                                        onChange={handleFormChangeDry} label="DryTimeHours" min={0} step={1}
                                        errorMessage={'invalid amount'}
-                                       mode={"integer"} readonly={readonly}/> :
-                        ("" + initial.dryTimeHours)}
+                                       mode={"integer"} readonly={readonly}/>}
                     </div>
                 </FlexedSinglesGroup>
             </FlexedArea>

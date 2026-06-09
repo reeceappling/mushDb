@@ -15,15 +15,15 @@ import (
 // TODO: mixed-grain batches are covered through jarRecipe
 
 type GrainBatch struct {
-	AlternateCollectionIdField
-	SoakTimeHours     *int `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
-	BoilTimeMins      *int `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
-	DryTimeHours      *int `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
-	CreationDateField      // Date of first hydration
-	JarRecipeRequiredField
-	NotesField
-	LastUpdatedField
-	AclField
+	AlternateCollectionIdField `bson:"inline"`
+	SoakTimeHours              *int            `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
+	BoilTimeMins               *int            `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
+	DryTimeHours               *int            `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
+	CreationDateField          `bson:"inline"` // Date of first hydration
+	JarRecipeRequiredField     `bson:"inline"`
+	NotesField                 `bson:"inline"`
+	LastUpdatedField           `bson:"inline"`
+	AclField                   `bson:"inline"`
 }
 
 type GrainBatchField struct {
@@ -31,10 +31,11 @@ type GrainBatchField struct {
 }
 
 func (field GrainBatchField) Get(ctx context.Context) (out GrainBatch, err error) {
+	var result GrainBatch
 	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainBatchCollectionName).FindOne(ctx, bson.M{
 		"_id": field.GrainBatch,
-	}).Decode(&out)
-	return out, err
+	}).Decode(&result)
+	return result, err
 }
 
 func (field GrainBatchField) asOptional() GrainBatchOptionalField {
@@ -175,5 +176,5 @@ func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, PermsOnRequest{})
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, PermsOnRequest{}) // TODO: fix perms!
 }

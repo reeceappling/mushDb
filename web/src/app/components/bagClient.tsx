@@ -251,7 +251,7 @@ export default function BagDisplay(
     return (
         <DisplayFormWrapper entryType={"bag"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID id={data._id} txt={"Bag"} entryType={"bag"}/>
+            <ID props={{id:data._id, txt:"Bag", entryType:"bag"}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
             <FlexedArea>

@@ -118,7 +118,8 @@ export default function SaleDisplay(
         return (
             <DisplayFormWrapper entryType={"sale"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel} />
-                <ID id={data._id} txt={"Sale"} entryType={"sale"}/>
+                <ID props={{id:data._id, txt:"Sale", entryType:"sale"}}/>
+
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <DateArea pre={"Sold on: "} when={initial.creationDate} readonly={true}/>

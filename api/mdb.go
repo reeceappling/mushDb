@@ -524,8 +524,8 @@ func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[str
 			}
 
 			// get these ids from the map collection???
-			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", newId)).Err()
-			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, bsonFindFilter("_id", newId)).Err()
+			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter("_id", newId)).Err()
+			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, BsonFindFilter("_id", newId)).Err()
 			if err != nil {
 				if errors.Is(err, mongo.ErrNoDocuments) {
 					found.Add(string(newId[:]))
@@ -564,7 +564,7 @@ func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
 func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T) ([]T, error) {
 	findBson := bson.D{{}}
 	if filterOutStandard {
-		findBson = bsonFindFilter("standard", false)
+		findBson = BsonFindFilter("standard", false)
 	}
 	sortField := "$natural"
 	if updated {
@@ -653,7 +653,7 @@ var GetPageForIdHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	out := &idMapEntry{}
 	err := ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
-		Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(out)
+		Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(out)
 	if err != nil {
 		http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
 		return

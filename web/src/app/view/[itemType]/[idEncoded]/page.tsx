@@ -32,14 +32,14 @@ export default async function Page({
                     // TODO: set Origin header to web? or should this be BaseExternalUrl?
                 },
             }).then((res) => {
+                console.log("got response "+JSON.stringify(res))
                 if (!res.ok) {
                     return res.text().then(txt => {
-                        throw new Error("response not ok: " + txt)
+                        throw new Error("response not ok: " + txt) // TODO: not working occasionally! FIGURE OUT!
                     }).catch(err => {
                         throw new Error("response not ok and failed to decode: "+JSON.stringify(err));
                     })
                 }
-                console.log("got response")
                 res.json().then((data) => {
                     console.log(data)
                     accept(data)

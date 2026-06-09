@@ -65,7 +65,7 @@ func TestCommon(t *testing.T) {
 	//			{Time: nowUnix, Note: "NEW NOTE 2"},
 	//			{Time: nowUnix, Note: "NEW NOTE 3"},
 	//		}
-	//		idBson := bsonFindFilter("_id", id)
+	//		idBson := BsonFindFilter("_id", id)
 	//		var resA, resB, resC Plate
 	//		ress := coll.FindOneAndUpdate(ctx, idBson, pushToArray("notes", noteToAdd))
 	//		assert.NoError(t, ress.Decode(&resA))

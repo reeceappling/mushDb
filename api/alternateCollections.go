@@ -45,9 +45,6 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 	}
 	if !doStandardToo {
 		bs, err = json.Marshal(latestEntries)
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		outObj := map[string][]T{"recent": latestEntries}
 		// TODO: do we want to also display repeats on standard entries?
@@ -62,14 +59,14 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 		// Standard is filtered out from latest already
 
 		bs, err = json.Marshal(outObj)
-		if err != nil {
-			return nil, err
-		}
-		tempBs, err := json.MarshalIndent(outObj, "", " ")
-		if err != nil {
-			return nil, err
-		}
-		println("list being returned: " + string(tempBs)) // TODO: del!
+		//if err != nil {
+		//	return nil, err
+		//}
+		//tempBs, err := json.MarshalIndent(outObj, "", " ")
+		//if err != nil {
+		//	return nil, err
+		//}
+		//println("list being returned: " + string(tempBs)) // TODO: del!
 	}
 	if err != nil {
 		return nil, err
@@ -203,7 +200,7 @@ var ListSubspeciesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http
 		http.Error(w, "got bad species name. "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	findBson := bsonFindFilter("species", spec)
+	findBson := BsonFindFilter("species", spec)
 	sortField := "$natural" // TODO: FIX to sort for name!
 	// TODO: pagination?
 	opts := options.Find().

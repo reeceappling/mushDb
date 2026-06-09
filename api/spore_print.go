@@ -286,7 +286,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	parent := Fruit{}
 	err = ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).Collection(FruitsCollName).
-		FindOne(ctx, bsonFindFilter("_id", data.FruitId)).Decode(&parent)
+		FindOne(ctx, BsonFindFilter("_id", data.FruitId)).Decode(&parent)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -438,7 +438,7 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(SporePrintCollectionName)
 	existing := SporePrint{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

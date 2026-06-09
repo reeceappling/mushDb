@@ -267,7 +267,7 @@ export default function SlantDisplay(
         return (
             <DisplayFormWrapper entryType={"slant"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"Slant"} entryType={"slant"} />
+                <ID props={{id:data._id, txt:"Slant", entryType:"slant"}}/>
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>

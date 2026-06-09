@@ -164,8 +164,7 @@ export default function AgarBatchDisplay(
     ]
     return (
         <DisplayFormWrapper entryType={"agarBatch"}>
-            <ID txt={"Agar Batch"} id={data._id} entryType={"agarBatch"} linkPage={false} allowOpenMainPage={false}
-                data-cy-id={"Id"}/>
+            <ID props={{id:data._id, txt:"Agar Batch", entryType:"agarBatch", linkPage:false, allowOpenMainPage:false}}/>
             <ErrorDisplay data-cy-id={"Error"} err={err} headerLevel={headerLevel}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>

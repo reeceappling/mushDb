@@ -271,7 +271,7 @@ export default function PlateDisplay(
     return (
         <DisplayFormWrapper entryType={"plate"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID txt={"Plate"} id={initial._id} entryType={"plate"} linkPage={false}/>
+            <ID props={{id:data._id, txt:"Plate", entryType:"plate", linkPage:false}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} showHeader={false}/>
             <FlexedArea>

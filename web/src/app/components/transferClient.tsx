@@ -170,7 +170,7 @@ export default function TransferDisplay(
         const b58idMain = initial._id
         return <DisplayFormWrapper entryType={"transfer"} id={"transferDisplay"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID id={b58idMain} txt={"Transfer"} entryType={"transfer"} allowOpenMainPage={false} linkPage={false}/>
+            <ID props={{id:initial._id, txt:"Transfer", entryType:"transfer", linkPage:false, allowOpenMainPage:false}}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <DateArea pre={"Created: "} when={initial.creationDate} readonly={true}/>
@@ -196,7 +196,7 @@ export default function TransferDisplay(
         </DisplayFormWrapper>
 }
 
-export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: {
+export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: { // TODO: use validTypesTo?
     idFrom: string,
     typeFrom: string,
     validTypesTo: string[],
@@ -293,7 +293,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: {
         </div>
         <div className={"newTransferRow5"}>
             <div className={"submitNewXfer"}>
-                <button className={"greenButtonSmall"} onClick={() => {
+                <button className={"buttonSmall greenButton"} onClick={() => { // TODO: ensure classes ok
                     submitNewTransfer()
                 }}>{"Submit"}</button>
             </div>

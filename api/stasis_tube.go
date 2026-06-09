@@ -382,14 +382,14 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(StasisTubeCollectionName)
 	// go get current stasisTube
 	existing := StasisTube{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Validation
 	if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-		if err = db.Collection(SalesCollectionName).FindOne(ctx, bsonFindFilter("_id", out.Sale)).Err(); err != nil {
+		if err = db.Collection(SalesCollectionName).FindOne(ctx, BsonFindFilter("_id", out.Sale)).Err(); err != nil {
 			dbErr(w, "failed to find new sale entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed? or get rid of the sale...
 			return
 		}

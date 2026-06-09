@@ -90,7 +90,7 @@ export default function UserDisplay(
 
             <DisplayFormWrapper entryType={"user"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"User"} entryType={"user"}/>
+                <ID props={{id:data._id, txt:"User", entryType:"user"}}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
                     </FlexedSinglesGroup>

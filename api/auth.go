@@ -264,7 +264,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 	var u User // TODO: get this from db
 	email = oauthUser.Email
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName)
-	userResult := coll.FindOne(ctx, bsonFindFilter("_id", email))
+	userResult := coll.FindOne(ctx, BsonFindFilter("_id", email))
 	raw, _ := userResult.Raw() // TODO; del
 	println(raw.String())      // TODO; del
 	err = userResult.Decode(&u)
@@ -299,7 +299,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 			return "", email, err
 		}
 		if adminEmail != "" && email == adminEmail {
-			if err = coll.FindOne(ctx, bsonFindFilter("_id", email)).Decode(&u); err != nil {
+			if err = coll.FindOne(ctx, BsonFindFilter("_id", email)).Decode(&u); err != nil {
 				println("failed to check Admin user")
 				return "", email, err
 			}

@@ -346,8 +346,9 @@ export default function JarDisplay(
         ]
         return <DisplayFormWrapper entryType={"jar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID id={data._id} txt={"Grain Jar"} entryType={"jar"}/>
+            <ID props={{id:data._id, txt:"Grain Jar", entryType:"jar"}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -392,12 +393,12 @@ export default function JarDisplay(
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
         </DisplayFormWrapper>
 }
 
 // NewJarForm is used from the recipe page. PcRun CAN be created from here?
-// TODO: NewJarForm is used from the recipe page. PcRun CAN be created from here?
+// TODO: NewJarForm is used from the grain batch page. PcRun CAN be created from here?
+// TODO: Can also be called from the jar recipe page, which will create a new batch as well
 export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     handlers: NewEntryInput<JarData>,
     recipeIn?: string,
@@ -407,7 +408,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     //const [creationDate, setCreationDate] = useState(Date.now()) // set serverside
     const [grainBatch, setGrainBatch] = useState<GrainBatchData | undefined>(grainBatchIn)
     // const [recipe, setRecipe] = useState<string | undefined>(recipeIn) // Gotten from batch serverside
-    const [sizeCups, setSizeCups] = useState<number>(4) // TODO: change initial state?
+    const [sizeCups, setSizeCups] = useState<number>(4) // 4 is pint!
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
     // const [wetness, setWetness] = useState(0) // Set on update
@@ -419,7 +420,7 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
     const cookies = useContext(CookiesContext)
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
-        if (!grainBatch) {
+        if (!grainBatch) { // TODO: if recipe exists but batch does not, then create batch AND jar
             setErr("batch must exist!")
             return
         }

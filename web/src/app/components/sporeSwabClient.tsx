@@ -207,7 +207,7 @@ export default function SporeSwabDisplay(
         ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID id={id} entryType={"sporeSwab"} txt={"Spore Swab"}/>
+            <ID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <TestAndValidate todos={["reformat these into groups"]}>

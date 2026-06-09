@@ -254,7 +254,8 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 var ErrTxnWriteFail = errors.New("failed to write in transaction")
 
 // TODO: MOVE
-func finishCreateAlternateEntry(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter) {
+// TODO: used to be: finishCreateAlternateEntry(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter) {
+func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) {
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(toInsert.CollectionName())
 	_, err := coll.InsertOne(ctx, toInsert)
 	if err != nil {
@@ -363,7 +364,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(SlantsCollectionName)
 	// go get current plate
 	existing := Slant{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

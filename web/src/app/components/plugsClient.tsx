@@ -215,7 +215,7 @@ export default function PlugsDisplay(
     return (
         <DisplayFormWrapper entryType={"plugs"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID txt={"Plugs Jar"} id={initial._id} entryType={"plugs"} linkPage={false}/>
+            <ID props={{id:data._id, txt:"Plugs Jar", entryType:"plugs", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

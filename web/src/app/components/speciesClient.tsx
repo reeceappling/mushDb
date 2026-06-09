@@ -142,7 +142,7 @@ export default function SpeciesDisplay(
         return (
             <DisplayFormWrapper entryType={"species"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel} />
-                <ID id={data._id} txt={"Species"} entryType={"species"}/>
+                <ID props={{id:data._id, txt:"Species", entryType:"species"}}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <div>{"Scientific Name: "+initial.scientificName}</div>
@@ -241,7 +241,7 @@ export function SpeciesInline({data, expandByDefault, onClick, showMainPageButto
     return <InlineEntry  onClick={onClick}>
         <InlineSubArea props={{}}>
             <TestAndValidate todos={["BOLD THIS SO THAT WE KNOW TO CLICK IT"]}>
-                <ID id={data._id} txt={"Species"} entryType={"species"} allowOpenMainPage={showMainPageButton} linkPage={idIsLink}/>
+                <ID props={{id:data._id, txt:"Species", entryType:"species", allowOpenMainPage:showMainPageButton, linkPage:idIsLink}}/>
             </TestAndValidate>
             <NameArea headerTxt={"Scientific Name: "} readonly={true} currentName={data.scientificName}/>
             <AliasesArea aliases={data.aliases} readonly={true} />

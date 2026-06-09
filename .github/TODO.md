@@ -10,6 +10,105 @@
 ## Waiting on something else
 
 # TODO
+- [ ] Entries
+  - [ ] Agar Batch
+    - [ ] Display page
+  - [ ] Agar Recipe
+    - [ ] Display page
+    - [ ] Create page
+  - [ ] Bag
+    - [ ] Display page
+    - [ ] Create page // TODO: done from substrate recipe, substrate batch, pcRun, OR self page?
+    - [ ] Import page
+  - [ ] Fruit
+    - [ ] Display page
+    - [ ] Create page // TODO: done from bag/box/plate/slant/Jar/LC(?)/Plugs(?) OR self page?
+    - [ ] Import page
+  - [ ] Fruiting Chamber
+    - [ ] Display page
+    - [ ] Create page // TODO: done from substrate recipe OR self page?
+    - [ ] Import page
+  - [x] Grain Batch
+    - [x] Display page
+    - [x] Create page // TODO: done from jarRecipe
+  - [ ] Jar
+    - [ ] Display page
+    - [ ] Create page // TODO: done from grainBatch OR jarRecipe OR pcRun OR self page?
+    - [ ] Import page
+  - [ ] Jar Recipe
+    - [ ] Display page
+    - [ ] Create page
+  - [ ] LC
+    - [ ] Display page
+    - [ ] Create page // TODO: done from lcRecipe OR pcRun OR self page?
+    - [ ] Import page
+  - [ ] LC Recipe
+    - [ ] Display page
+    - [ ] Create page
+  - [ ] LC Syringe
+    - [ ] Display page
+    - [ ] Create page // TODO: done from LC
+    - [ ] Import page
+  - [ ] MSS
+    - [ ] Display page
+    - [ ] Create page // TODO: done from sporePrint, MSS, OR waterJar OR self page (probably no self page)?
+    - [ ] Import page
+  - [ ] PC Run
+    - [ ] Display page
+    - [ ] Create page
+  - [ ] Plate
+    - [ ] Display page
+    - [ ] Create page // TODO: done from agarBatch, OR agarRecipe, OR pcrun OR self page (probably no self page)?
+    - [ ] Import page
+  - [ ] Plugs
+    - [ ] Display page
+    - [ ] Create page // TODO: MAKE THIS PAGE! OR DONE FROM PC RUN?
+    - [ ] Import page
+  - [ ] Project
+    - [ ] Display page
+    - [ ] Create page
+  - [ ] Sale
+    - [ ] Display page
+    - [ ] Create page // TODO: UNSURE WHERE DONE FROM
+  - [ ] Slant
+    - [ ] Display page
+    - [ ] Create page // TODO: done from agarBatch, OR agarRecipe, OR pcrun OR self page?
+    - [ ] Import page
+  - [ ] Species
+    - [ ] Display page
+    - [ ] Create page
+  - [ ] Spore Print
+    - [ ] Display page
+    - [ ] Create page // TODO: done from fruit OR box/bag (also creates intermediate fruit)
+    - [ ] Import page
+  - [ ] Spore Swab
+    - [ ] Display page
+    - [ ] Create page // TODO: done from fruit OR sporePrint?
+    - [ ] Import page
+  - [ ] Stasis Tube
+    - [ ] Display page
+    - [ ] Create page // TODO: done from pcRun OR waterJar OR self page?
+    - [ ] Import page
+  - [ ] Subspecies
+    - [ ] Display page
+    - [ ] Create page // TODO: done from species page! OR self page?
+  - [ ] Substrate Batch
+    - [ ] Display page
+    - [ ] Create page // TODO: done from substrateRecipe
+  - [ ] Substrate Recipe
+    - [ ] Display page
+    - [ ] Create page
+  - [ ] Transfer
+    - [ ] Display page
+    - [ ] Create page // TODO: done from each other mainCollectionEntry Type
+  - [ ] User
+    - [ ] Display page
+    - [ ] Create page // TODO: figure this out
+  - [ ] Water Jar
+    - [ ] Display page
+    - [ ] Create page // TODO: done from PcRun page.
+    - [ ] Import page
+  
 - [x] Ensure all imports return and properly utilize JSON
   - [ ] TEST TO VALIDATE
 - [ ] Ensure all updates return and properly utilize JSON

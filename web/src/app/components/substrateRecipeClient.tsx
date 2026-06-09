@@ -150,9 +150,7 @@ export default function SubstrateRecipeDisplay(
         return (
             <DisplayFormWrapper entryType={"substrateRecipe"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <TestAndValidate todos={["Put name at top????"]}>
-                    <ID id={data._id} txt={"Substrate Recipe"} entryType={"substrateRecipe"}/>
-                </TestAndValidate>
+                <ID props={{id:data._id, txt:"Substrate Recipe", entryType:"substrateRecipe"}}/>{/* TODO: name at top too*/}
                 <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>

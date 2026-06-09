@@ -298,7 +298,7 @@ export default function LcDisplay(
             WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"lc"}>
-            <ID txt={"Liquid Culture"} id={data._id} entryType={"lc"}/>
+            <ID props={{id:data._id, txt:"Liquid Culture", entryType:"lc", linkPage:false, allowOpenMainPage:false}}/>
             {readonly ||
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>}
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>

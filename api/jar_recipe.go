@@ -260,7 +260,7 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(JarRecipesCollectionName)
 	existing := JarRecipe{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

@@ -220,7 +220,7 @@ export default function MssDisplay(
         ]
         return <DisplayFormWrapper entryType={"mss"}>
             <ErrorDisplay err={err} headerLevel={headerLevel} />
-            <ID id={data._id} txt={"Multispore Syringe"} entryType={"mss"} />
+            <ID props={{id:data._id, txt:"Multispore Syringe", entryType:"mss"}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

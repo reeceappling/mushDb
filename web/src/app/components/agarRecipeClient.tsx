@@ -200,7 +200,7 @@ export default function AgarRecipeDisplay(
         <DisplayFormWrapper entryType={"agarRecipe"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <TestAndValidate todos={["Put name at top????"]}>
-                <ID id={data._id} txt={"Agar Recipe"} entryType={"agarRecipe"}/>
+                <ID props={{id:data._id, txt:"Agar Recipe", entryType:"agarRecipe"}}/>
             </TestAndValidate>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>

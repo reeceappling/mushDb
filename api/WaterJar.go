@@ -69,7 +69,7 @@ type WaterJarField struct {
 }
 
 func (field WaterJarField) Get(ctx context.Context) (out PCRun, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(WaterJarsCollectionName).FindOne(ctx, bsonFindFilter("_id", field.WaterSource)).Decode(&out)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(WaterJarsCollectionName).FindOne(ctx, BsonFindFilter("_id", field.WaterSource)).Decode(&out)
 	return out, err
 }
 

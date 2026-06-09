@@ -21,7 +21,7 @@ type Species struct {
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	AclField          `bson:"inline"`
-	DefaultAcl        ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // TODO; NEW!!! // Only used when importing!
+	DefaultAcl        ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // TODO: Only used when importing other entry types or creating a subspecies? // TODO: omitempty probably not?
 
 }
 
@@ -256,7 +256,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate substrate exists
 	if req.Substrate.AsBase58() != existing.StandardSubstrate.AsBase58() {
-		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, bsonFindFilter("_id", req.Substrate)).Err()
+		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, BsonFindFilter("_id", req.Substrate)).Err()
 		if err != nil {
 			dbErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -274,7 +274,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
 	sp := Species{}
 	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-	err := db.Collection(SpeciesCollectionName).FindOne(ctx, bsonFindFilter("_id", speciesName)).Decode(&sp)
+	err := db.Collection(SpeciesCollectionName).FindOne(ctx, BsonFindFilter("_id", speciesName)).Decode(&sp)
 	if err != nil {
 		return sp, nil, err
 	}
@@ -282,7 +282,7 @@ func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspecies
 		return sp, nil, nil
 	}
 	subsp := Subspecies{}
-	err = db.Collection(SubspeciesCollectionName).FindOne(ctx, bsonFindFilter("_id", *subspeciesName)).Decode(&subsp)
+	err = db.Collection(SubspeciesCollectionName).FindOne(ctx, BsonFindFilter("_id", *subspeciesName)).Decode(&subsp)
 	if err != nil {
 		return sp, nil, err
 	}

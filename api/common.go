@@ -438,7 +438,7 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
 		Database(dbName).
 		Collection(temp.CollectionName()).
-		Find(ctx, bsonFindFilter("standard", true)) // TODO: NOT WORKING PROPERLY?!!!!! (check again)
+		Find(ctx, BsonFindFilter("standard", true)) // TODO: NOT WORKING PROPERLY?!!!!! (check again)
 	if err != nil {
 		return nil, err
 	}
@@ -559,7 +559,7 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 	return notesWereModified(existing.Notes, updated.Notes)
 }
 
-func bsonFindFilter(key string, value any) bson.D {
+func BsonFindFilter(key string, value any) bson.D {
 	return bson.D{bson.E{Key: key, Value: value}}
 }
 

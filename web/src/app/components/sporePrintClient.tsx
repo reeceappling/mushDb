@@ -285,7 +285,7 @@ export default function SporePrintDisplay(
         ]
         return <DisplayFormWrapper entryType={"sporePrint"}>
             <ErrorDisplay err={err} headerLevel={headerLevel} />
-            <ID id={data._id} txt={"Spore Print"} entryType={"sporePrint"}/>
+            <ID props={{id:data._id, txt:"Spore Print", entryType:"sporePrint"}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <MostRecentImageDisplay data={data.mostRecentImage} headerLevel={headerLevel}/>
             <FlexedArea>

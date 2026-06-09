@@ -146,7 +146,7 @@ export default function WaterJarDisplay(
     return (
         <DisplayFormWrapper entryType={"waterJar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID txt={"Water Jar"} id={initial._id} entryType={"waterJar"} />
+            <ID props={{id:initial._id, txt:"Water Jar", entryType:"waterJar", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

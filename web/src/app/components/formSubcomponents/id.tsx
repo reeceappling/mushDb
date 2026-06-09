@@ -1,23 +1,28 @@
-import {useContext} from "react";
+import {ReactNode, useContext} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 import {OpenMainPage} from "@/app/components/formSubcomponents/commonClient";
 import {viewUrlFor} from "@/app/components/common";
 
-export default function ID({txt, id, entryType, linkPage, allowOpenMainPage}: {
-    id: string;
-    txt?: string
-    entryType: string
-    linkPage?: boolean
-    allowOpenMainPage?: boolean
+export default function ID({props, children}: {
+    props: {
+        id: string;
+        txt?: string
+        entryType: string
+        linkPage?: boolean
+        allowOpenMainPage?: boolean
+    },
+    children?: ReactNode,
+
 }) {
     const depth = useContext(DepthContext);
     const isTopLevel = (depth <= 1)// TODO: ensure ok (DOES NOT DO WHAT WE WANT FOR LIST PAGES)
     return <div className={"idComponent " + (isTopLevel ? "topLevelId" : "nonTopLevelId")}>
-        <div className={"idTxt"}>
-            {txt ? txt + ": " : ""}
-            {(linkPage && !isTopLevel) ? id : <IdPageLink id={id} entryType={entryType}/>}
+        <div className={"idTxt inlineChildren"}>
+            <div className={"mr-2"}>{props.txt ? props.txt + ": " : ""}</div>
+            <div>{children}</div>
+            <div className={"ml-2"}>{"("}{(props.linkPage && !isTopLevel) ? props.id : <IdPageLink id={props.id} entryType={props.entryType}/>}{")"}</div>
         </div>
-        {(allowOpenMainPage && !isTopLevel) && <OpenMainPage type={"lc"} linkId={id} redirect={false}/>/* TODO: redirect false ok?*/}
+        {(props.allowOpenMainPage && !isTopLevel) && <OpenMainPage type={"lc"} linkId={props.id} redirect={false}/>/* TODO: redirect false ok?*/}
     </div>
 }
 

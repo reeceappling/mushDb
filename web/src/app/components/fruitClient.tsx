@@ -256,7 +256,7 @@ export default function FruitDisplay(
     return (
         <DisplayFormWrapper entryType={"fruit"}>
             <ErrorDisplay err={err}/>
-            <ID txt={"Fruit"} id={data._id} entryType={"fruit"}/>
+            <ID props={{id:data._id, txt:"Fruit", entryType:"fruit", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
             <FlexedArea>

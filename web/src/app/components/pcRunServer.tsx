@@ -22,6 +22,7 @@ export function TestPcRunOk(){
 
 export interface PcRunData {
     _id: string
+    // TODO: LOCATION? Cooker?
     creationDate: number
     runtimeMinutes: number
     notes?: Note[]

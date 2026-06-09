@@ -196,7 +196,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	}
 	// TODO: NEXT LINE IS FAILING BECAUSE IT CANNOT UNMARSHAL A MAIN COLLECTION ITEM!
 	// parent is not a pointer because the interface's underlying types are each pointers
-	err = db.Collection(parent.CollectionName()).FindOne(ctx, bsonFindFilter("_id", data.ParentId)).Decode(parent)
+	err = db.Collection(parent.CollectionName()).FindOne(ctx, BsonFindFilter("_id", data.ParentId)).Decode(parent)
 	if err != nil {
 		http.Error(w, "failed to get parent: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -303,7 +303,7 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	existing := &Fruit{MainCollectionIdField: MainCollectionIdField{id}} // TODO: FAILING HERE!
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitsCollName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitsCollName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

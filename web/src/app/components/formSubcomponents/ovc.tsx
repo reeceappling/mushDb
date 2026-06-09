@@ -26,10 +26,9 @@ export function OvcForXfers(parentId: string, parentType: string, validTypesTo: 
                                             typeText: "Transfer",
                                             node: <CreatedLinkFor linkId={xfer._id} typ={"transfer"}/>,
                                             lastNode: <QuadColLastCol dstType={xfer.toType} id={xfer.to}/>
-                                        }], false)
+                                        }], false) // TODO: close after?
                                     }}/>
         },
-        needsTesting: true,
     }
 }
 

@@ -210,7 +210,7 @@ export default function LcSyringeDisplay(
     ]
     return <DisplayFormWrapper entryType={"lcSyringe"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
-        <ID id={data._id} txt={"Liquid Culture Syringe"} entryType={"lcSyringe"}/>
+        <ID props={{id:data._id, txt:"Liquid Culture Syringe", entryType:"lcSyringe"}}/>
         <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
         <FlexedArea>
             <FlexedSinglesGroup>

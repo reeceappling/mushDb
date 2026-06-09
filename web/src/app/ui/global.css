@@ -76,6 +76,9 @@ div {
 .hoverClickable {
     cursor: pointer;
 }
+.topLevelText {
+    font-size: 1.9em
+}
 .idComponent {
     /* TODO: this */
     &.topLevelId {

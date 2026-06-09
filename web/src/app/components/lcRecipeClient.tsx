@@ -167,7 +167,7 @@ export default function LcRecipeDisplay(
             <DisplayFormWrapper entryType={"lcRecipe"}>
                 <ErrorDisplay err={err}/>
                 <TestAndValidate todos={["Put name at top????"]}>
-                    <ID id={data._id} txt={"Liquid Culture Recipe"} entryType={"lcRecipe"}/>
+                    <ID props={{id:data._id, txt:"Liquid Culture Recipe", entryType:"lcRecipe"}}/>
                 </TestAndValidate>
                 <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>

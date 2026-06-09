@@ -57,7 +57,7 @@ func initializeProjects(ctx context.Context) error {
 	}
 	for _, testItem := range testProjects {
 		// If test item does not exist or does not match, then create/update it
-		_, errRep := coll.ReplaceOne(ctx, bsonFindFilter("_id", testItem.Name), testItem, options.Replace().SetUpsert(true))
+		_, errRep := coll.ReplaceOne(ctx, BsonFindFilter("_id", testItem.Name), testItem, options.Replace().SetUpsert(true))
 		err = errors.Join(errRep, err)
 		if err != nil {
 		}
@@ -251,7 +251,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		if !exists {
 			usersWithProjectAdded[u] = futurePerm
 			// validate new user exists
-			result := db.Collection(UserCollName).FindOne(ctx, bsonFindFilter("_id", u))
+			result := db.Collection(UserCollName).FindOne(ctx, BsonFindFilter("_id", u))
 			if err = result.Err(); err != nil {
 				dbErr(w, "user "+u+" does not exist. Invalid request", http.StatusBadRequest)
 				return
@@ -420,7 +420,7 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 		}
 		// Update the project
 		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(ProjectsCollectionName)
-		bsonId := bsonFindFilter("_id", existing.DbId())
+		bsonId := BsonFindFilter("_id", existing.DbId())
 		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 		if err != nil {
 			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)

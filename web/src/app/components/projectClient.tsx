@@ -162,7 +162,7 @@ export default function ProjectDisplay(
             <DisplayFormWrapper entryType={"project"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 {/* data._id on next line because project name can have spaces?*/}
-                <ID id={data._id} txt={"Project"} entryType={"project"}/>
+                <ID props={{id:data._id, txt:"Project", entryType:"project"}}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <DateArea pre={"Created: "} when={initial.creationDate} readonly={true}/>

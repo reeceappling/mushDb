@@ -7,19 +7,11 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 )
 
-type AclField struct { // Nil means allCanWrite
-	ACL ACL `bson:"acl,omitempty" json:"acl,omitempty"`
+type AclField struct {
+	ACL ACL `bson:"acl" json:"acl"` // TODO: removed omitempty
 }
 
 func (field AclField) Permissions() ACL {
-	return field.ACL
-}
-
-type DefaultAclField struct {
-	ACL ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"`
-}
-
-func (field DefaultAclField) DefaultPermissions() ACL {
 	return field.ACL
 }
 
@@ -40,8 +32,8 @@ func allCanWriteAcl() AclField {
 
 // ACL being nil means anyone authenticated can do anything (read/write)
 type ACL struct { // ALWAYS REFERENCED AS A STRUCT AND NOT A POINTER!
-	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite
-	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite
+	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite // TODO: omitempty ok?
+	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite // TODO: omitempty ok?
 	BlanketPerm *bool                      `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // empty is private, false is public can read by default. True means public can write by default.
 }
 

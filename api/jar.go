@@ -127,7 +127,7 @@ func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection {
 
 func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err error) {
 	j = &GrainJar{}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(j)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(j)
 	return j, err
 }
 
@@ -212,7 +212,7 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 	if res == nil {
 		return errors.New("result should not be nil")
 	}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", testId)).Decode(&existingEntry)
+	err = coll.FindOne(ctx, BsonFindFilter("_id", testId)).Decode(&existingEntry)
 	if err != nil {
 		return errors.New("not found at specified id. " + err.Error())
 	}
@@ -482,15 +482,15 @@ type resolvedUpdateJarRequest struct {
 
 func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
 	return NewMods(). // TODO: update more if needed
-		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
-		updateDisposedIfNeeded(req, existing).
-		updateNotesIfNeeded(req, existing).
-		updatePicsIfNeeded(req.Images, existing.Pics).
-		updateContamsIfNeeded(req.Contams, existing.Contaminations).
-		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateLastUpdatedIfNeeded().
-		Finalized()
+				updateKnownFruitableIfNeeded(req, existing).
+				updateSaleIfNeeded(req.Sale, existing.Sale).
+				updateDisposedIfNeeded(req, existing).
+				updateNotesIfNeeded(req, existing).
+				updatePicsIfNeeded(req.Images, existing.Pics).
+				updateContamsIfNeeded(req.Contams, existing.Contaminations).
+				updatePermsIfNeeded(aclField.ACL, existing.ACL).
+				updateLastUpdatedIfNeeded().
+				Finalized()
 }
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {
@@ -535,7 +535,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	// go get current
 	existing := &GrainJar{}
 	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
-		Collection(GrainJarCollectionName).FindOne(ctx, bsonFindFilter("_id", *mainCollId)).Decode(existing)
+		Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

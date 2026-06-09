@@ -57,7 +57,6 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 	//	out = [12]byte(idBytes)
 	//	return &out, nil
 	//}
-	println("ID BYTES NOT LENGTH 12! CONVERTING!")
 	realId, err := Base58Str(id).toAltCollectionId()
 	if err != nil {
 		return nil, err
@@ -69,7 +68,7 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 // Perms have not been checked yet
 func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out MainCollectionItem, err error) {
 	println("reading mcitem from " + resultItemType.CollectionName())
-	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(resultItemType.CollectionName()).FindOne(ctx, bsonFindFilter("_id", id))
+	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id))
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -92,7 +91,7 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 //	if err != nil {
 //		return out, err
 //	}
-//	err = db.Collection(out.CollectionName()).FindOne(ctx, bsonFindFilter("_id", id)).Decode(&out)
+//	err = db.Collection(out.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id)).Decode(&out)
 //	if err != nil {
 //		return nil, err // mongo.ErrNoDocuments if 404
 //	}
@@ -108,12 +107,10 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 //}
 
 func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id U, item T) (out T, err error) {
-	out = item
 	err = ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
-		Collection(item.CollectionName()).
-		FindOne(ctx, bsonFindFilter("_id", id)).Decode(out)
-	return out, err
+		Database(dbName).Collection(item.CollectionName()).
+		FindOne(ctx, BsonFindFilter("_id", id)).Decode(item)
+	return item, err
 }
 
 // TODO: used to be in txn!
@@ -121,7 +118,7 @@ func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdTyp
 	out = item
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(item.CollectionName()).
-		FindOne(ctx, bsonFindFilter("_id", id))
+		FindOne(ctx, BsonFindFilter("_id", id))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -150,7 +147,7 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 	out = Species{}
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(SpeciesCollectionName).
-		FindOne(ctx, bsonFindFilter("_id", name))
+		FindOne(ctx, BsonFindFilter("_id", name))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -180,7 +177,7 @@ func GetSubspeciesByNameInTxn(ctx context.Context, name string) (out Subspecies,
 	out = Subspecies{}
 	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
 		Collection(SubspeciesCollectionName).
-		FindOne(ctx, bsonFindFilter("_id", name))
+		FindOne(ctx, BsonFindFilter("_id", name))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -281,7 +278,6 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 		println("checking parts")
 		switch parts[0] {
 		case "newPic":
-			println("found a new pic!")
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
 			if errr != nil {
 				err = errr
@@ -291,10 +287,8 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newPics[num] = newFileNameWithPrefixPath
 		case "newContam":
-			//println("found a new contam!") // TODO: del
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "contam")
 			if errr != nil {
-				//println("failed to save a new contam", errr.Error()) // TODO: this
 				err = errr
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
 				return
@@ -302,12 +296,10 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newContams[num] = newFileNameWithPrefixPath
 		case "newFlush":
-			//println("found a new flush!") // TODO: del
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "flush")
 			if errr != nil {
-				println("failed to save a new flush picture", errr.Error())
-
 				err = errr
+				println("failed to save a new flush picture", errr.Error()) // TODO: del
 				http.Error(w, "failed to save new flush: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -351,7 +343,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 }
 
 // TODO: rename
-// TODO: only use when writeRFID is not between the two
+// TODO: only use when writeRFID is not between the two (on updates)
 func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, prefixPath string, data *T, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) { // TODO USE THIS ALL OVER THE PLACE
 	defer r.Body.Close()
 	reader, err := multipartReaderForRequest(r, w, data)

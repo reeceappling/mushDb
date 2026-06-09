@@ -1108,8 +1108,9 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 	// Cases which are alt colls with base58->binary ids
 	case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
 		// TODO: maybe de-urlencode here to account for named recipes?
-		altId, err := rfid.StandardizeAltCollectionId(id)
+		altId, err := rfid.StandardizeAltCollectionId(id) // TODO: not working for long-id grainBatches!
 		if err != nil {
+			println("failed to standardize alt coll id: " + err.Error()) // TODO: del
 			http.Error(w, "failed to standardize alt coll id: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -1122,29 +1123,72 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		//	temp := []byte(id)
 		//	altId = [12]byte(temp)
 		//}
-		baseItem, exists := map[string]rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]{
-			"agarBatch":       &rfid.AgarBatch{},
-			"agarRecipe":      &rfid.AgarRecipe{}, // TODO: handle recipe name?
-			"grainBatch":      &rfid.GrainBatch{},
-			"jarRecipe":       &rfid.JarRecipe{}, // TODO: handle recipe name?
-			"lcRecipe":        &rfid.LcRecipe{},  // TODO: handle recipe name?
-			"pcRun":           &rfid.PCRun{},
-			"sale":            &rfid.Sale{},
-			"substrateBatch":  &rfid.SubstrateBatch{},
-			"substrateRecipe": &rfid.SubstrateRecipe{}, // TODO: handle recipe name?
-			"transfer":        &rfid.Transfer{},
-		}[entryType]
-		if !exists {
+		//baseItem, exists := map[string]rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]{
+		//	"agarBatch":       &rfid.AgarBatch{},
+		//	"agarRecipe":      &rfid.AgarRecipe{}, // TODO: handle recipe name?
+		//	"grainBatch":      &rfid.GrainBatch{}, // TODO: occasionally not working for long ids!
+		//	"jarRecipe":       &rfid.JarRecipe{},  // TODO: handle recipe name?
+		//	"lcRecipe":        &rfid.LcRecipe{},   // TODO: handle recipe name?
+		//	"pcRun":           &rfid.PCRun{},
+		//	"sale":            &rfid.Sale{},
+		//	"substrateBatch":  &rfid.SubstrateBatch{},
+		//	"substrateRecipe": &rfid.SubstrateRecipe{}, // TODO: handle recipe name?
+		//	"transfer":        &rfid.Transfer{},
+		//}[entryType]
+		//if !exists {
+		//
+		//}
+		//ctx, db := rfid.Db(r)
+		var out rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]
+		switch entryType {
+		case "agarBatch":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarBatch{})
+			out, err = temp, errr
+		case "agarRecipe":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarRecipe{}) // TODO: handle recipe name?
+			out, err = temp, errr
+		case "grainBatch":
+			//var temp = &rfid.GrainBatch{}
+			//err = db.Collection(rfid.GrainBatchCollectionName).FindOne(ctx, rfid.BsonFindFilter("_id", *altId)).Decode(temp) // TODO: THIS IS A TEMP FIX FOR THE LONG ID ISSUE, REVERT TO USING GetAltCollectionItem WHEN FIXED
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.GrainBatch{}) // TODO: occasionally not working for long ids!
+			println("looking for: ", len(*altId), string((*altId)[:]))               // TODO: del!
+			out, err = temp, errr
+			//out = temp
+		case "jarRecipe":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.JarRecipe{}) // TODO: handle recipe name?
+			out, err = temp, errr
+		case "lcRecipe":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.LcRecipe{}) // TODO: handle recipe name?
+			out, err = temp, errr
+		case "pcRun":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.PCRun{})
+			out, err = temp, errr
+		case "sale":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Sale{})
+			out, err = temp, errr
+		case "substrateBatch":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateBatch{})
+			out, err = temp, errr
+		case "substrateRecipe":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateRecipe{}) // TODO: handle recipe name?
+			out, err = temp, errr
+		case "transfer":
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Transfer{})
+			out, err = temp, errr
+		default:
+			println("invalid entry type in getAnyCollHandler: " + entryType) // TODO: del
 			http.Error(w, "invalid entry type in getAnyCollHandler: "+entryType, http.StatusBadRequest)
+			return
 		}
-
-		out, err := rfid.GetAltCollectionItem(ctx, rfid.AlternateCollectionId(altId[:]), baseItem)
 		if err != nil {
+			println("failed to get alt collection itemType: " + err.Error()) // TODO: del
+			// TODO: THIS IS FAILING FOR grainBatch!
 			http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		authinfo, err := rfid.GetAuthInfo(ctx)
 		if err != nil {
+			println("Failed to get authinfo: " + err.Error()) // TODO: del
 			http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -1155,14 +1199,17 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		}
 		bytes, err = json.Marshal(out)
 		if err != nil {
+			println("failed to marshal itemType") // TODO: del
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
-		//tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
-		//if err != nil {
-		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
+		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		if err != nil {
+			println("failed to marshal itemType: " + err.Error()) // TODO: del
+			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		println("returning item: ", string(tempBs)) // TODO: THIS!
 	default: // Main collection ids
 		if mainCollItem, exists := map[string]rfid.MainCollectionItem{
 			"bag":             &rfid.Bag{}, // can only go to fruits

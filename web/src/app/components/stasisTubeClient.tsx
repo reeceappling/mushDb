@@ -255,7 +255,7 @@ export default function StasisTubeDisplay(
         return (
             <DisplayFormWrapper entryType={"stasisTube"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"Stasis Tube"} entryType={"stasisTube"}/>
+                <ID props={{id:data._id, txt:"Stasis Tube", entryType:"stasisTube"}}/>
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} />
                 <FlexedArea>

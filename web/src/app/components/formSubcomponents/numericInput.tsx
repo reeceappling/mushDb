@@ -68,6 +68,7 @@ export type TextInputOnlyProps = {
     placeholder?: string;
     /** Provide an error hint for the user*/
     errorMessage?: string;
+    onBlur?: () => void;
 };
 
 const patternMapping = {
@@ -391,6 +392,7 @@ export const InputText: FC<TextInputOnlyProps> = (
         },
         placeholder, // placeholder text
         errorMessage = 'error!',
+        onBlur,
     }) => {
     const id = useId();
     const handleChange = useCallback(
@@ -411,6 +413,7 @@ export const InputText: FC<TextInputOnlyProps> = (
                 className={numInputClassName}
                 placeholder={placeholder}
                 aria-describedby={`${id}-helper-text`}
+                onBlur={e=>{onBlur && onBlur()}} // TODO: ensure ok
             />
             <div
                 className={errClassName2}

@@ -224,7 +224,7 @@ export default function PcRunDisplay(
         return (
             <DisplayFormWrapper entryType={"pcRun"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"PC Run"} entryType={"pcRun"}/>
+                <ID props={{id:data._id, txt:"PC Run", entryType:"pcRun"}}/>
                 <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>

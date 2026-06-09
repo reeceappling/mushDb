@@ -116,7 +116,7 @@ export default function SubspeciesDisplay(
             <DisplayFormWrapper entryType={"subspecies"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <TestAndValidate todos={["Species up here too?"]}>
-                    <ID id={data._id} txt={"Subspecies"} entryType={"subspecies"} />
+                    <ID props={{id:data._id, txt:"Subspecies", entryType:"subspecies"}}/>
                 </TestAndValidate>
                 <FlexedArea>
                     <FlexedSinglesGroup>
