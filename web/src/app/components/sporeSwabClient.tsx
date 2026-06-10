@@ -211,7 +211,9 @@ export default function SporeSwabDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <TestAndValidate todos={["reformat these into groups"]}>
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType} />
+                        <TestAndValidate todos={["issues when initial.parent is undefined!"]}>
+                            <ParentDisplay parent={initial.parent} parentType={initial.parentType} />
+                        </TestAndValidate>
                         <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}
                                   headerLevel={headerLevel}/>
                         <DateArea pre={"Print Date: "} readonly={true} when={initial.creationDate}/>

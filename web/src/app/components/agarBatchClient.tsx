@@ -143,7 +143,7 @@ export default function AgarBatchDisplay(
             // TODO: also sticks should be BOILED BEFORE going in the PC!
             txt: "Create Slants (Before PC)",
             newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                return <NewSlantForm agarBatchIn={data} handlers={{
+                return <NewSlantForm agarBatchIn={initial} handlers={{
                     onCreate: (newItem: PlateData) => {
                         return onCreate([{
                             typeText: "Slant",

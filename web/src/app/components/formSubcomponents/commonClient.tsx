@@ -477,8 +477,8 @@ export const PixRowExisting = (
     const leftArea = () => {
         return <div className={"picLeft" + disabledClass()}>
             {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
-            <Image className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>
-            {/*<img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>*/}
+            {/*<Image className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>*/}
+            <img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>
             {!readonly &&
                 <button className={current.disabled ? "basicButtonSmall" : "removeButtonSmall"} onClick={(e) => {
                     e.stopPropagation();
@@ -524,8 +524,8 @@ export function MostRecentImageDisplay(
     return <DepthProvider>
         <div className={"mriParent depthContainer depth" + depth}>
             <div>
-                <Image className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>
-                {/*<img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>*/}
+                {/*<Image className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>*/}
+                <img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>
             </div>
             <div className={"mriInfoHolder"}>
                 <DateArea pre={(showHeader ? mostRecentImageHeader : undefined)} when={data.time} readonly={true}/>

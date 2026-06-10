@@ -182,12 +182,12 @@ export function ContamsRows({initial, updateParent, readonly}: {
             return <div key={i} className={"contentsOnly contamRow" + disabledClass}>
                 <div className={"picLeft" + disabledClass}>
                     {(ctm.data.location !== undefined) &&
-                        <Image className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
-                             src={ImageLocationFor(ctm.data.location)}
-                             alt={"existing contamination image " + i}/>
-                        // <img className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
+                        // <Image className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
                         //      src={ImageLocationFor(ctm.data.location)}
                         //      alt={"existing contamination image " + i}/>
+                        <img className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
+                             src={ImageLocationFor(ctm.data.location)}
+                             alt={"existing contamination image " + i}/>
                     }
                     {disableBtn}
                 </div>

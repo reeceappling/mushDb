@@ -800,6 +800,21 @@ export function DoImportRequest<T extends Importable>(body: any, typeStr: string
         .catch(ErrHandler(setErr));
 }
 
+export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void): Promise<T|undefined> {
+    return fetch(viewApiUrlFor(itemType, typeStr), {
+        method: "GET",
+        headers: clientPostRequestHeaders,
+    }).then(HandleJsonResponse)
+        .then(newItem => {
+            asserter(newItem)
+            return newItem
+        })
+        .catch(e=>{
+                ErrHandler(setErr)(e)
+            return undefined
+        });
+}
+
 export function MultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
     SendMultipartRequest(importApiUrlFor(typeStr), formData, cookies)
         .then(ImportResponseHandler(asserter,typeStr, setErr))

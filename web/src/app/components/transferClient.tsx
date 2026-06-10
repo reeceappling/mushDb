@@ -141,8 +141,8 @@ export default function TransferDisplay(
         }
         const imageArea = (alt: string, loc?: string) => {
             return <div className={"fromToImage"}>
-                {loc ? <Image src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"/* TODO: if not working, switch back*/}
-                {/*{loc ? <img src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"}*/}
+                {/*{loc ? <Image src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"/* TODO: if not working, switch back*!/*/}
+                {loc ? <img src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"}
             </div>
         }
         const fromToArea = () => {

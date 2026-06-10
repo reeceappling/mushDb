@@ -101,7 +101,7 @@ export default function ProjectDisplay(
         id, readonly, data, headerLevel
     }: DisplayInput<ProjectData>) {
         const [initial, setInitial] = useState(data)
-        const initPerms = new Map<string, string>(Object.entries(data.perms || {}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
+        const initPerms = new Map<string, string>(Object.entries(data.perms || {}) as [string, string][]) // TODO: validate ok
 
         const [completed, setCompleted] = useState(data.completed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
@@ -109,7 +109,7 @@ export default function ProjectDisplay(
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: ProjectData) => {
             setInitial(updated)
-            const ps = new Map<string, string>(Object.entries(updated.perms || {}) as [string, string][]) // TODO: IF THIS WORKS USE IT FOR UNMARSHALLING ALL PARMS!
+            const ps = new Map<string, string>(Object.entries(updated.perms || {}) as [string, string][]) // TODO: validate ok
 
             setCompleted(updated.completed)
             setNotes(InitialNotesState(updated.notes))

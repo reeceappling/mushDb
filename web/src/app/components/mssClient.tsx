@@ -4,7 +4,7 @@ import React, {JSX, useContext, useState} from "react";
 import {
     clientPostRequestHeaders,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector,
+    DisplayInput, DoCreateRequest, DoGetRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
@@ -19,6 +19,7 @@ import {
     OptionalSimpleKey, RequiredKey, viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
+    ReadRFIDButton,
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
@@ -56,6 +57,9 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {redirect} from "next/navigation";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import TestAndValidate from "@/app/components/testing/untested";
+import {AssertSporePrint} from "@/app/components/sporePrintClient";
+import {AssertWaterJar} from "@/app/components/waterJarClient";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -282,8 +286,20 @@ export function NewMssForm(
 
     return <NewEntryFormWrapper entryType={"mss"}>
         <ErrorDisplay err={err}/>
-        { sporePrintIn === undefined && <SporePrintSelectorCloseable  onSelect={setSporePrint}/>}
-        { waterJarIn === undefined && <WaterJarSelectorCloseable doSelect={setWaterJar} creatorInPage={false} allowCreation={false} />}
+        <TestAndValidate todos={["allow scans for Spore print or water jar selectors!"]}>
+            { sporePrintIn === undefined && <div>
+                <SporePrintSelectorCloseable  onSelect={setSporePrint}/>
+                <ReadRFIDButton handleTagRead={(tag)=>{
+                    DoGetRequest("sporePrint", tag, AssertSporePrint, setErr).then(setSporePrint) // TODO: test and ensure ok!
+                }} txt={"Or scan Spore Print RFID"}/>
+            </div>}
+        { waterJarIn === undefined && <div>
+            <WaterJarSelectorCloseable doSelect={setWaterJar} creatorInPage={false} allowCreation={false} />
+            <ReadRFIDButton handleTagRead={(tag)=>{
+                DoGetRequest("waterJar", tag, AssertWaterJar, setErr).then(setWaterJar) // TODO: test and ensure ok!
+            }} txt={"Or scan Water Jar RFID"}/>
+        </div>}
+        </TestAndValidate>
         <NewEntryNotes setNotes={setNotes} />
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>

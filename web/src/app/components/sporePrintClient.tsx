@@ -263,7 +263,6 @@ export default function SporePrintDisplay(
                         }], false)
                     }}/>
                 },
-                needsTesting: true,
             },
             {
                 txt: "Create MultiSpore Syringe",

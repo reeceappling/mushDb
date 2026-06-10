@@ -442,14 +442,18 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
         <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={false} creatorInPage={false}/>
         </SelectorWrapper>
+        <TestAndValidate todos={["NOT WORKING!"]}>
         <div className={"centerH medGapTop"}>
             {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize}
                                                  current={filterSize}/>{/* TODO: ensure working!*/}
         </div>
+        </TestAndValidate>
         <ExistingSpeciesSelector doSelect={setSpecies}/>
 
         {/* Optional fields*/}
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
+        <TestAndValidate todos={["what to do when a species has no subspecies?"]}>
+            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
+        </TestAndValidate>
         <GenerationInput updateParent={setGeneration}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
 

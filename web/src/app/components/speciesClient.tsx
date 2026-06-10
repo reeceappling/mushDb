@@ -284,28 +284,12 @@ export function ExistingSpeciesSelector(
     const cookies = useContext(CookiesContext)
     const [expandedAfterSelected, setExpandedAfterSelected] = useState<boolean>(false)
     const [isLoaded, setLoaded] = useState(false)
-    const [speciesList, setSpeciesList] = useState<SpeciesData[]>([]);
+    const [speciesList, setSpeciesList] = useState<SpeciesData[]>([]); // TODO: add subspecies to species data!!!!!
     const [selectorOpen, setSelectorOpen] = useState(false)
     // TODO: REFRESH WHEN NEEDED????
     const [selected, setSelected] = useState<SpeciesData | undefined>()
     const [err, setErr] = useState<string | undefined>(undefined)
-    ////const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
-    // const speciesFor: (s: string) => SpeciesData = (s: string) => { // TODO: DELETEME
-    //     return {
-    //         _id: s,
-    //         scientificName: s + "_scientific_name",
-    //         have: true,
-    //         standardSubstrate: 'substrate ID',
-    //         lastUpdated: 0,
-    //         //perms: {userPerms: {ids:[],canWrite:[]}, projectPerms: {ids:[],canWrite:[]}, blanketPerms: 2}
-    //     }
-    // }
     useEffect(() => {
-        //setSpeciesList([speciesFor('spec A'), speciesFor('spec B')]) // TODO: REMOVE
-        // setSelected(undefined)
-        // setLoaded(true) // TODO: REMOVE
-        // return // TODO: REMOVE
-
         fetch(BaseExternalUrl + "/db/list/species", { // TODO: simplify?
             method: "GET",
             headers: clientPostRequestHeaders,

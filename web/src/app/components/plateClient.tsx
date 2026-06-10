@@ -296,10 +296,11 @@ export default function PlateDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     {/* TODO: SIZING ON ENTRY FIELDS*/}
+                    <TestAndValidate todos={["ensure unset values for pour and condens work as expected"]}>
                     <PourCoverageFieldDisplay pourCoveragePct={pourCoveragePct} updateParent={setPourCoveragePct}/>{/* TODO: STATIC IF PRE-SET*/}
                     {initial.condensationCoverageAtSealTime ? <div>{"Condensation Coverage: "+initial.condensationCoverageAtSealTime+"%"}</div>:
-                        <CondensationCoverageFieldDisplay coverage={condensationCoveragePct/* TODO: STATIC IF PRE-SET*/}
-                                                                                                                                                                                  updateParent={setCondensationCoveragePct}/>}
+                        <CondensationCoverageFieldDisplay coverage={condensationCoveragePct/* TODO: STATIC IF PRE-SET*/} updateParent={setCondensationCoveragePct}/>}
+                    </TestAndValidate>
                     <YesNoSelector pre={"Wet at cooled time: "} initial={initial.wetAtCooledTime}
                                    updateParent={setWetAtCoolTime}/>
                     <YesNoSelector pre={"Agar on outside at pour time: "} initial={initial.agarOnOutsideAtPourTime}
@@ -551,9 +552,7 @@ export function NewPlateForm(
                        updateParent={setAgarOnOutsideAtPourTime} className={"inlineChildren"}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <TestAndValidate todos={["style button"]}>
-            <button className={"bottomButton greenButton"} onClick={createPlate}>{"Create"}</button>
-        </TestAndValidate>
+        <button className={"bottomButton greenButton"} onClick={createPlate}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
 

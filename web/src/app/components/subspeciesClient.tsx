@@ -197,7 +197,6 @@ export function ExistingSubSpeciesSelector(
         doSelect: (val: SubspeciesData | undefined) => void,
         headerLevel?: number
     }) {
-    const cookies = useContext(CookiesContext)
     const [isLoaded, setLoaded] = useState(false)
     const [selectable, setSelectable] = useState(false)
     const [selectorOpen, setSelectorOpen] = useState(false)

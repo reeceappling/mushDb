@@ -68,6 +68,7 @@ import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {NameModifiable} from "@/app/components/jarRecipeClient";
 
 export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     if (typeof input !== 'object') {
@@ -200,13 +201,14 @@ export default function AgarRecipeDisplay(
         <DisplayFormWrapper entryType={"agarRecipe"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <TestAndValidate todos={["Put name at top????"]}>
-                <ID props={{id:data._id, txt:"Agar Recipe", entryType:"agarRecipe"}}/>
+                <ID props={{id:data._id, txt:"Agar Recipe", entryType:"agarRecipe"}}>
+                    <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
+                </ID>
             </TestAndValidate>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
-                    <NameArea currentName={name} setName={setName}
-                              readonly={readonly}/>{/*TODO: Make this area longer and move to the top!*/}
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
@@ -215,7 +217,6 @@ export default function AgarRecipeDisplay(
                         <div>{"Agar g/L: "}</div>
                         <div>{initial.agar}</div>
                     </div>
-                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
 
@@ -335,20 +336,28 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                 </InlineTitle>
             </div>
             <div>
+                <TestAndValidate todos={["not working properly on the units, validate"]}>
                 <div>{"Liquids: "}</div>
+                </TestAndValidate>
                 <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>{/* TODO: validate working properly*/}
             </div>
             <div>
+                <TestAndValidate todos={["not working properly on the units, validate"]}>
                 <div>{"Nutrients: "}</div>
+                </TestAndValidate>
                 <NutrientsEntriesGroupForNew currentEntries={nutrients}
                                              updateParent={setNutrients}/>{/* TODO: validate working properly*/}
             </div>
             <div>
+                <TestAndValidate todos={["not working properly on the units, validate"]}>
                 <div>{"Sugars: "}</div>
+                </TestAndValidate>
                 <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>{/* TODO: validate working properly*/}
             </div>
             <div>
+                <TestAndValidate todos={["not working properly on the units, validate"]}>
                 <div>{"Additives: "}</div>
+                </TestAndValidate>
                 <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>{/* TODO: validate working properly*/}
             </div>
             <div>

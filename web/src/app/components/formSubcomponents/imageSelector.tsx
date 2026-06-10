@@ -30,8 +30,8 @@ export default function ImageSelector({updateParent, buttonText}:{buttonText?:st
     }
     return <div className={"imageSelector picLeft"}>
         {file !== undefined && <div className={"preview"}> {/* TODO: FIX SIZE!*/}
-            <Image className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>{/* TODO: if not working, switch back*/}
-            {/*<img className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>*/}
+            {/*<Image className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>/!* TODO: if not working, switch back*!/*/}
+            <img className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>
         </div>}
         <div className={"centerH"}>
             <button className={"basicButtonSmall"} onClick={() => {

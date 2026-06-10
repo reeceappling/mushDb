@@ -175,14 +175,14 @@ func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 
 type Contamination struct {
 	ContaminationLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Location                  *ImageLocation  `bson:"location,omitempty" json:"location,omitempty"`
+	Location                  *ImageLocation `bson:"location,omitempty" json:"location,omitempty"`
 }
 
 type ContaminationLessLocation struct {
 	PicWithNotesLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Confirmed                bool            `bson:"confirmed" json:"confirmed"`
-	Bacteria                 bool            `bson:"bacteria" json:"bacteria"`
-	Mold                     bool            `bson:"mold" json:"mold"`
+	Confirmed                bool `bson:"confirmed" json:"confirmed"`
+	Bacteria                 bool `bson:"bacteria" json:"bacteria"`
+	Mold                     bool `bson:"mold" json:"mold"`
 }
 
 func (c ContaminationLessLocation) asContamination(location *ImageLocation) Contamination {
@@ -1039,50 +1039,48 @@ func updatePointerIfNeededNew[T comparable](upd *Mods, fieldName string, future,
 
 var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	opt := r.PathValue("optionsType")
-	var toWrite any
 	switch strings.ToLower(opt) {
 	case "additives", "additive":
-		toWrite = additives
-		break
+		writeAsJson(w, additives)
+		return
 	case "antibiotics", "antibiotic":
-		toWrite = antibiotics
-		break
-	case "bagFilterSizes":
-		toWrite = bagFilterSizes
-		break
+		writeAsJson(w, antibiotics)
+		return
+	case "bagFilterSizes": // TODO: not working?
+		writeAsJson(w, bagFilterSizes)
+		return
 	case "colors", "color",
 		"colorants", "colorant":
-		toWrite = colorants
-		break
+		writeAsJson(w, colorants)
+		return
 	case "grains", "grain":
-		toWrite = grains
-		break
+		writeAsJson(w, grains)
+		return
 	case "liquids", "liquid",
 		"fluids", "fluid":
-		toWrite = fluids
-		break
+		writeAsJson(w, fluids)
+		return
 	case "nutrients", "nutrient":
-		toWrite = nutrients
-		break
+		writeAsJson(w, nutrients)
+		return
 	case "sporePrintColors", "sporePrintColor":
-		toWrite = sporePrintColors // TODO: Make this just strings???
-		break
+		writeAsJson(w, sporePrintColors) // TODO: Make this just strings???
+		return
 	case "sporePrintDensities", "sporePrintDensity":
-		toWrite = sporePrintDensities // TODO: Make this just strings???
-		break
+		writeAsJson(w, sporePrintDensities) // TODO: Make this just strings???
+		return
 	case "sugars", "sugar":
-		toWrite = sugars
-		break
+		writeAsJson(w, sugars)
+		return
 	case "transferreasons", "transferreason":
-		toWrite = transferReasons
-		break
+		writeAsJson(w, transferReasons)
+		return
 	case "woods", "wood":
-		toWrite = woods
-		break
+		writeAsJson(w, woods)
+		return
 		// TODO: any other cases???
 	default:
-		http.Error(w, fmt.Sprintf(`invalid option provided: "%s" is not one of [color,liquid,nutrient,sugar,grain,additive,transferReason]`, opt), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf(`invalid option provided: "%s" is not one of [bagFilterSizes, color,liquid,nutrient,sugar,grain,additive,transferReason]`, opt), http.StatusBadRequest)
 		return
 	}
-	writeAsJson(w, toWrite)
 }

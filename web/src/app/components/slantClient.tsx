@@ -79,6 +79,7 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -261,9 +262,11 @@ export default function SlantDisplay(
                     setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
+        // TODO: DIFFERENTIATE BETWEEN UNINNOCULATED AND INNOCULATED DISPLAY
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
         ]
+        const innoculated = initial.species // TODO: USE THIS!
         return (
             <DisplayFormWrapper entryType={"slant"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -341,7 +344,9 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
     return <NewEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err}/>
         <SlantStickSelector setStickType={setStickType}/>
-        <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel/* TODO: ok?*/}/>
+        <TestAndValidate todos={["ensure providing agarBatch makes selector disappear"]}>
+        {agarBatchIn===undefined && <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel/* TODO: ok?*/}/>}
+        </TestAndValidate>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createSlant} onSubmit={(e)=>{e.preventDefault();}}>{"Create"}</button>

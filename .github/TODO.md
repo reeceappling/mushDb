@@ -1,5 +1,7 @@
 # In Progress
 ## Actively Working On
+- [ ] Adding pics/flushes/contams images is not working when trying to view them after update
+  - [ ] Switch from <Image> back to <img>
 - [ ] Test OVCs below GrainBatch, as well as OVCs for transfers and RFID
 - [x] Spore print and below Go TODOs
   - [ ] User, project, and sale Go TODOs
@@ -10,104 +12,154 @@
 ## Waiting on something else
 
 # TODO
+- [ ] React Subcomponents
+  - [x] Notes
+    - [x] New Notes area
+    - [x] Existing/Update notes area
+  - [x] ACL (updates and displays)
+  - [ ] more!
 - [ ] Entries
   - [ ] Agar Batch
-    - [ ] Display page
+    - [x] Display page
+      - [x] Create Plates
+      - [x] Create Slant pre-PC run
+      - [ ] Create Slant post-PC run
+    - [x] List Page
   - [ ] Agar Recipe
-    - [ ] Display page
+    - [x] Display page
     - [ ] Create page
+      - [ ] Validate all working properly
+      - [ ] Nutrients/etc working properly
+    - [x] List Page
+      - [x] Clicks work
+      - [ ] Ensure text doesnt step all over each other on slim screens
   - [ ] Bag
     - [ ] Display page
     - [ ] Create page // TODO: done from substrate recipe, substrate batch, pcRun, OR self page?
     - [ ] Import page
+    - [x] List Page
   - [ ] Fruit
     - [ ] Display page
     - [ ] Create page // TODO: done from bag/box/plate/slant/Jar/LC(?)/Plugs(?) OR self page?
     - [ ] Import page
+    - [x] List Page
   - [ ] Fruiting Chamber
     - [ ] Display page
     - [ ] Create page // TODO: done from substrate recipe OR self page?
     - [ ] Import page
+    - [x] List Page
   - [x] Grain Batch
     - [x] Display page
     - [x] Create page // TODO: done from jarRecipe
+    - [x] List Page
   - [ ] Jar
     - [ ] Display page
     - [ ] Create page // TODO: done from grainBatch OR jarRecipe OR pcRun OR self page?
     - [ ] Import page
+    - [x] List Page
   - [ ] Jar Recipe
     - [ ] Display page
     - [ ] Create page
+    - [x] List Page
+      - [x] Standard
+      - [x] Recent
   - [ ] LC
     - [ ] Display page
     - [ ] Create page // TODO: done from lcRecipe OR pcRun OR self page?
     - [ ] Import page
+    - [x] List Page
   - [ ] LC Recipe
     - [ ] Display page
     - [ ] Create page
+    - [x] List Page
   - [ ] LC Syringe
     - [ ] Display page
     - [ ] Create page // TODO: done from LC
     - [ ] Import page
+    - [x] List Page
   - [ ] MSS
     - [ ] Display page
     - [ ] Create page // TODO: done from sporePrint, MSS, OR waterJar OR self page (probably no self page)?
     - [ ] Import page
+    - [x] List Page
   - [ ] PC Run
     - [ ] Display page
     - [ ] Create page
+    - [x] List Page
   - [ ] Plate
     - [ ] Display page
     - [ ] Create page // TODO: done from agarBatch, OR agarRecipe, OR pcrun OR self page (probably no self page)?
     - [ ] Import page
+    - [x] List Page
   - [ ] Plugs
     - [ ] Display page
     - [ ] Create page // TODO: MAKE THIS PAGE! OR DONE FROM PC RUN?
     - [ ] Import page
+    - [x] List Page
   - [ ] Project
     - [ ] Display page
     - [ ] Create page
+    - [ ] List Page
+      - [ ] Be able to filter projects by completeness
+      - [ ] Shows all projects a user should be able to see, including public projects
+      - [ ] Does not show projects that the user is not privy to
   - [ ] Sale
-    - [ ] Display page
+    - [x] Display page
     - [ ] Create page // TODO: UNSURE WHERE DONE FROM
+    - [x] List Page
   - [ ] Slant
     - [ ] Display page
     - [ ] Create page // TODO: done from agarBatch, OR agarRecipe, OR pcrun OR self page?
     - [ ] Import page
+    - [x] List Page
   - [ ] Species
     - [ ] Display page
     - [ ] Create page
+    - [x] List Page
   - [ ] Spore Print
     - [ ] Display page
     - [ ] Create page // TODO: done from fruit OR box/bag (also creates intermediate fruit)
     - [ ] Import page
+    - [x] List Page
   - [ ] Spore Swab
     - [ ] Display page
     - [ ] Create page // TODO: done from fruit OR sporePrint?
     - [ ] Import page
+    - [x] List Page
   - [ ] Stasis Tube
     - [ ] Display page
     - [ ] Create page // TODO: done from pcRun OR waterJar OR self page?
     - [ ] Import page
+    - [x] List Page
   - [ ] Subspecies
     - [ ] Display page
     - [ ] Create page // TODO: done from species page! OR self page?
+    - [ ] List Page
+      - [x] Clicks work
+      - [ ] Display species name then subspecies name!
   - [ ] Substrate Batch
     - [ ] Display page
     - [ ] Create page // TODO: done from substrateRecipe
+    - [x] List Page
   - [ ] Substrate Recipe
     - [ ] Display page
     - [ ] Create page
+    - [x] List Page
   - [ ] Transfer
     - [ ] Display page
     - [ ] Create page // TODO: done from each other mainCollectionEntry Type
+    - [ ] List Page
+      - [x] Clickable
+      - [ ] Ensure things are not stepping all over each other!
   - [ ] User
     - [ ] Display page
     - [ ] Create page // TODO: figure this out
+    - [ ] List Page?
   - [ ] Water Jar
     - [ ] Display page
     - [ ] Create page // TODO: done from PcRun page.
     - [ ] Import page
+    - [x] List Page
   
 - [x] Ensure all imports return and properly utilize JSON
   - [ ] TEST TO VALIDATE
