@@ -1,7 +1,7 @@
 # In Progress
 ## Actively Working On
 - [ ] Adding pics/flushes/contams images is not working when trying to view them after update
-  - [ ] Switch from <Image> back to <img>
+  - [x] Switch from <Image> back to <img>
 - [ ] Test OVCs below GrainBatch, as well as OVCs for transfers and RFID
 - [x] Spore print and below Go TODOs
   - [ ] User, project, and sale Go TODOs
@@ -34,17 +34,22 @@
       - [x] Clicks work
       - [ ] Ensure text doesnt step all over each other on slim screens
   - [ ] Bag
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Fix wetness area
+      - [ ] Preexisting users and projects which are not valid cause problems on update
     - [ ] Create page // TODO: done from substrate recipe, substrate batch, pcRun, OR self page?
     - [ ] Import page
     - [x] List Page
   - [ ] Fruit
-    - [ ] Display page
+    - [x] Display page
     - [ ] Create page // TODO: done from bag/box/plate/slant/Jar/LC(?)/Plugs(?) OR self page?
     - [ ] Import page
     - [x] List Page
   - [ ] Fruiting Chamber
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Dispose button
+      - [ ] Make sales also trigger disposal?
+      - [ ] Handle sale
     - [ ] Create page // TODO: done from substrate recipe OR self page?
     - [ ] Import page
     - [x] List Page
@@ -53,46 +58,63 @@
     - [x] Create page // TODO: done from jarRecipe
     - [x] List Page
   - [ ] Jar
-    - [ ] Display page
+    - [x] Display page
+      - [ ] fix wetness area
     - [ ] Create page // TODO: done from grainBatch OR jarRecipe OR pcRun OR self page?
     - [ ] Import page
     - [x] List Page
   - [ ] Jar Recipe
-    - [ ] Display page
+    - [x] Display page
     - [ ] Create page
     - [x] List Page
       - [x] Standard
       - [x] Recent
   - [ ] LC
-    - [ ] Display page
+    - [x] Display page
+      - [ ] test creating LC syringe, LC selector and reading rfid tag
     - [ ] Create page // TODO: done from lcRecipe OR pcRun OR self page?
     - [ ] Import page
     - [x] List Page
   - [ ] LC Recipe
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Move name to top as well
+      - [ ] create LC
+        - [x] fix pc run selector not showing up
+        - [x] default recipe to current
+        - [ ] fully test creating an LC from this page
     - [ ] Create page
     - [x] List Page
   - [ ] LC Syringe
-    - [ ] Display page
+    - [x] Display page
+      - [ ] KF validate working properly
+      - [ ] ConfirmedClean validate working properly
     - [ ] Create page // TODO: done from LC
     - [ ] Import page
     - [x] List Page
   - [ ] MSS
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Sell area, ensure working as we want, and that selling marks as disposed
     - [ ] Create page // TODO: done from sporePrint, MSS, OR waterJar OR self page (probably no self page)?
     - [ ] Import page
     - [x] List Page
   - [ ] PC Run
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Create LC is not inheriting PCRun and is not showing other selector
+      - [ ] Create GrainJar is not inheriting PCRun and is not showing other selector
+      - [ ] Create Bag wetness, filterSize, and selectors
+      - [ ] Create Batch ensure working as needed
     - [ ] Create page
     - [x] List Page
   - [ ] Plate
-    - [ ] Display page
+    - [x] Display page
+      - [ ] pour and condens cov
     - [ ] Create page // TODO: done from agarBatch, OR agarRecipe, OR pcrun OR self page (probably no self page)?
     - [ ] Import page
     - [x] List Page
   - [ ] Plugs
-    - [ ] Display page
+    - [x] Display page
+      - [ ] woods area displaying weird on slim screens
+      - [ ] sales area
     - [ ] Create page // TODO: MAKE THIS PAGE! OR DONE FROM PC RUN?
     - [ ] Import page
     - [x] List Page
@@ -108,45 +130,64 @@
     - [ ] Create page // TODO: UNSURE WHERE DONE FROM
     - [x] List Page
   - [ ] Slant
-    - [ ] Display page
+    - [x] Display page
     - [ ] Create page // TODO: done from agarBatch, OR agarRecipe, OR pcrun OR self page?
     - [ ] Import page
     - [x] List Page
   - [ ] Species
     - [ ] Display page
+      - [ ] Aliases
+      - [ ] Substrate
+      - [ ] ACLs
+      - [ ] Subspecies
     - [ ] Create page
     - [x] List Page
   - [ ] Spore Print
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Create MSS not working, failing to find current print
     - [ ] Create page // TODO: done from fruit OR box/bag (also creates intermediate fruit)
     - [ ] Import page
     - [x] List Page
   - [ ] Spore Swab
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Parent area
+      - [ ] Sales, do sale, mark as disposed when sold
+      - [ ] Disposal area
+      - [ ] Reformat groups
+      - [ ] Move write tag to top
     - [ ] Create page // TODO: done from fruit OR sporePrint?
     - [ ] Import page
     - [x] List Page
   - [ ] Stasis Tube
-    - [ ] Display page
+    - [x] Display page
     - [ ] Create page // TODO: done from pcRun OR waterJar OR self page?
     - [ ] Import page
     - [x] List Page
   - [ ] Subspecies
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Species at top
+      - [ ] Aliases
+      - [ ] ACLs
     - [ ] Create page // TODO: done from species page! OR self page?
     - [ ] List Page
       - [x] Clicks work
       - [ ] Display species name then subspecies name!
   - [ ] Substrate Batch
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Create bag validate
+      - [ ] Create FC validate
     - [ ] Create page // TODO: done from substrateRecipe
     - [x] List Page
   - [ ] Substrate Recipe
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Name at top
+      - [ ] Create Batch validate
+      - [ ] Aliases
     - [ ] Create page
     - [x] List Page
   - [ ] Transfer
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Fix "No toImage present" and "No fromImage present"
     - [ ] Create page // TODO: done from each other mainCollectionEntry Type
     - [ ] List Page
       - [x] Clickable
@@ -156,11 +197,15 @@
     - [ ] Create page // TODO: figure this out
     - [ ] List Page?
   - [ ] Water Jar
-    - [ ] Display page
+    - [x] Display page
+      - [ ] Disposal area
     - [ ] Create page // TODO: done from PcRun page.
     - [ ] Import page
     - [x] List Page
   
+
+
+
 - [x] Ensure all imports return and properly utilize JSON
   - [ ] TEST TO VALIDATE
 - [ ] Ensure all updates return and properly utilize JSON

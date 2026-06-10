@@ -401,9 +401,9 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
 
     return <NewEntryFormWrapper entryType={"lc"}>
         <ErrorDisplay err={err}/>
-        {lcRecipeIn !== undefined && <LcRecipeSelectorCloseable doSelect={setLcRecipe}
+        {lcRecipeIn === undefined && <LcRecipeSelectorCloseable doSelect={setLcRecipe}
                                                        allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>} {/* TODO: isTopLevel? disallow ok? */}{/* TODO: closeable or no? */}
-        {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
+        {pcRunIn === undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={true}/>} {/* TODO: isTopLevel? disallow ok? */}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

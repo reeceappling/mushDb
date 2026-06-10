@@ -241,9 +241,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
                     creatorInPage={false}/>
             </Subform>
         }
-        <TestAndValidate todos={["failing to load"]/* TODO: THIS!*/}>
-            <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
-        </TestAndValidate>
+        <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"bottomButton greenButton"} onClick={newAgarBatchSubmit}>{"Submit"}</button>
     </NewEntryFormWrapper>

@@ -570,8 +570,8 @@ export function AclDisplay(inp: {
     const depth = useContext(DepthContext)
     if (inp.readonly) {
         return <div>{/* TODO: TURN INTO A TABLE!!!!*/}
-            <TestAndValidate todos={["preloaded values arent sticking around when updating.... troubleshoot"]}>
-                <AclBlanketDisplay readonly={true} ACL={inp.initial} updateParent={()=>{}}/> {/* TODO: BLANKET SHOULD ONLY TAKE BLANKET???*/}
+            <TestAndValidate todos={["if users or projects do not exist on existing ACLs, problems are caused..."]}>
+                <AclBlanketDisplay readonly={true} ACL={inp.initial} updateParent={()=>{}}/>
                 <AclUsersDisplayInternal readonly={true} initial={inp.initial.users || new Map<string, boolean>()}/>
                 <AclProjectsDisplay readonly={true} initial={inp.initial.projects || new Map()} onUsernClick={() => {/* TODO: onClick?*/
                 }} updateParent={()=>{}}/>

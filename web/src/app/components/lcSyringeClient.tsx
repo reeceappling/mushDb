@@ -3,20 +3,38 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {LcData} from "@/app/components/lcServer";
+import {LcData, LcSelectorCloseable} from "@/app/components/lcServer";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     clientPostRequestHeaders,
     ConfirmedCleanArea,
-    ConfirmedCleanSelector, DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse, importApiUrlFor, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
+    ConfirmedCleanSelector,
+    DisplayFormWrapper,
+    DisplayInput,
+    DoCreateRequest,
+    DoGetRequest,
+    DoUpdateRequest,
+    ErrHandler,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    HandleJsonResponse,
+    importApiUrlFor,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey, RequiredKey, viewUrlFor,
+    OptionalSimpleKey,
+    RequiredKey,
+    viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
+    ReadRFIDButton,
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {redirect} from "next/navigation";
@@ -47,6 +65,7 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AssertLc} from "@/app/components/lcClient";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
     if (typeof input !== 'object') {
@@ -226,10 +245,12 @@ export default function LcSyringeDisplay(
                                  headerLevel={headerLevel}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
-                <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}
+                <TestAndValidate todos={["ensure both of these work as expected for updates"]}>
+                <KnownFruitableArea initial={initial.knownFruitable} doSelect={setKnownFruitable} readonly={readonly}
                                     headerLevel={headerLevel}/>
-                <ConfirmedCleanArea onSelect={setConfirmedClean} readonly={readonly} initial={confirmedClean}
+                <ConfirmedCleanArea onSelect={setConfirmedClean} readonly={readonly} initial={initial.confirmedClean}
                                     headerLevel={headerLevel}/>
+                </TestAndValidate>
             </FlexedSinglesGroup>
         </FlexedArea>
         <TransfersOutDisplay thisId={initial._id} thisEntryType={"plate"} transfersOut={transfersOut}
@@ -280,7 +301,7 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
         }
         const body: any = {
             writeTagTo: writeTagTo,
-            parent: parent,
+            parent: parent._id,
             notes: notes,
         }
         DoCreateRequest("lcSyringe", body, AssertLcSyringe, allCookies(cookies))
@@ -294,17 +315,18 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
     }
 
     return <NewEntryFormWrapper entryType={"lcSyringe"}>
-        <TestAndValidate todos={["fix and test this area"]}>
             <div>{txt}</div>
             {createdItemsDiv()}
             <ErrorDisplay err={err}/>
-            {!parent && <TestAndValidate todos={["SELECT LC RECIPE"]}>
-                <div>{"LC SElECTOR HERE"}</div>
-            </TestAndValidate>}
+        {!parent && <div>
+            <LcSelectorCloseable doSelect={setParent}/>
+            <ReadRFIDButton handleTagRead={(val)=>{
+                DoGetRequest("lc", val, AssertLc, setErr).then(setParent)
+            }} txt={"Or read parent LC's RFID tag"}/>
+        </div>}
             <NewEntryNotes setNotes={setNotes}/>
             <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
             <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
-        </TestAndValidate>
     </NewEntryFormWrapper>
 }
 

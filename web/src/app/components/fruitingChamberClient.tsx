@@ -285,7 +285,7 @@ export default function FruitingChamberDisplay(
                     <KnownFruitableArea initial={knownFruitable} readonly={readonly} headerLevel={headerLevel}
                                         doSelect={setKnownFruitable}/>{/* KnownFruitable */}
                     <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
-                              canCreateSale={true}/>{/* Sale */}
+                              canCreateSale={true}/>{/* Sale TODO: make sales also trigger disposed */}
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"}
@@ -297,7 +297,6 @@ export default function FruitingChamberDisplay(
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>{/* Contamination */}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-            <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>
