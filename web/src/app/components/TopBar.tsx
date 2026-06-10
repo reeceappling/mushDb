@@ -72,6 +72,7 @@ export function TopBarCreateMenu() {
             {menuItem("jarRecipe", "Jar Recipe")}
             {menuItem("lcRecipe", "LC Recipe")}
             {menuItem("pcRun", "PC Run")}{/* TODO: PC RUN??? */}
+            {menuItem("plugs", "Plugs")}
             {menuItem("project", "Project")}{/* TODO: maybe just create this in each form? */}
             {menuItem("species", "Species")}
             {menuItem("subspecies", "Subspecies")}

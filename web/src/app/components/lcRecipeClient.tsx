@@ -53,6 +53,7 @@ import {LcData} from "@/app/components/lcServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {NameModifiable} from "@/app/components/jarRecipeClient";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -160,31 +161,26 @@ export default function LcRecipeDisplay(
                         isTopLevel: false,
                     }}/>
                 },
-                needsTesting: true,
             }
         ]
         return (
             <DisplayFormWrapper entryType={"lcRecipe"}>
                 <ErrorDisplay err={err}/>
-                <TestAndValidate todos={["Put name at top????"]}>
-                    <ID props={{id:data._id, txt:"Liquid Culture Recipe", entryType:"lcRecipe"}}/>
-                </TestAndValidate>
+                <ID props={{id:data._id, txt:"Liquid Culture Recipe", entryType:"lcRecipe"}}>
+                        <NameModifiable initial={initial.name} readonly={readonly} updateParent={setRecName}/>
+                    </ID>
                 <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
-                        <TestAndValidate todos={["allow name changes?"]}>
-                            <NameArea currentName={data.name} readonly={readonly} headerLevel={headerLevel}
-                                      setName={setRecName}/>
-                        </TestAndValidate>
+                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
 
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
                         <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
                                       headerLevel={headerLevel}/>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+
                     </FlexedSinglesGroup>
                 </FlexedArea>
-
 
                 <LiquidsAreaReadOnly values={initial.liquids}/>
                 <NutrientsAreaReadOnly values={initial.nutrients}/>

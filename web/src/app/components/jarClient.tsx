@@ -446,14 +446,14 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
                 setErr(JSON.stringify(e))
             })
     }
-    const hasGrainBatch = grainBatchIn !== undefined || recipeIn !== undefined
+    const hasGrainBatch = grainBatchIn !== undefined || recipeIn !== undefined // TODO: handle recipeIn?
     return <NewEntryFormWrapper entryType={"jar"}>
         <ErrorDisplay err={err}/>
-        {hasGrainBatch && <GrainBatchSelectorCloseable doSelect={setGrainBatch} allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}
+        {grainBatchIn === undefined && <GrainBatchSelectorCloseable doSelect={setGrainBatch} allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}
         <JarSizeSelector onChange={(unit: string) => {
             setSizeCups(cupsPer(unit))
         }}/>
-        {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
+        {pcRunIn === undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

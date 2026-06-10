@@ -277,15 +277,13 @@ export function NewPcRunForm(
             {/* RunTime TODO: RETHINK THIS???*/}
             <div>
                 <div>{"RunTime (minutes):"}</div>
-                <input type="text" value={runTime} onChange={(e) => {
+                <input type="number" value={runTime} onChange={(e) => { // TODO: FIX ME FOR INPUT STYLING!
                     setRunTime(e.currentTarget.value)
                 }}/>
             </div>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
-            <input type="submit" value="Submit" onClick={newPcRunSubmit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>
+            <button className={"greenButton buttonFullWidth"} onClick={newPcRunSubmit} >{"Submit new PC Run"}</button>
         </NewEntryFormWrapper>
     )
 }

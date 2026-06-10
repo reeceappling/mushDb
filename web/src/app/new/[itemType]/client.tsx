@@ -57,12 +57,12 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
     }
     const newForm = () => {
         switch (itemType) {
-            case "agarBatch": // only from AgarRecipes page?
-                return <NewAgarBatchForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: AgarBatchData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "agarBatch")])
-                    }
-                }}/>
+            // case "agarBatch": // only from AgarRecipes page?
+            //     return <NewAgarBatchForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: AgarBatchData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "agarBatch")])
+            //         }
+            //     }}/>
             case "agarRecipe": // from self only
                 return <NewAgarRecipeForm handlers={{
                     isTopLevel: true, onCreate: (newEntry: AgarRecipeData) => {
@@ -70,31 +70,31 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                         setNewEntries([...newEntries,createdLinkFor(newEntry.name, newEntry._id, "agarRecipe")])
                     }
                 }}/>
-            case "bag": // only from the substrateBatch page?
-                return <NewBagForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: BagData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "bag")])
-                    }
-                }}/>
-            // Fruit is not available for new. Only made in bag/box pages
-            case "fruitingChamber": // from either lc, jar, or substrateBatch
-                return <NewFruitingChamberForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: FruitingChamberData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "fruitingChamber")])
-                    }
-                }}/>
-            case "grainBatch": // from either lc, jar, or substrateBatch
-                return <NewGrainBatchForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: GrainBatchData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "grainBatch")])
-                    }
-                }}/>
-            case "jar": // from jar recipe only (or pcRun?)
-                return <NewJarForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: JarData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "jar")])
-                    }
-                }}/>
+            // case "bag": // only from the substrateBatch page?
+            //     return <NewBagForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: BagData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "bag")])
+            //         }
+            //     }}/>
+            // // Fruit is not available for new. Only made in bag/box pages
+            // case "fruitingChamber": // from either lc, jar, or substrateBatch
+            //     return <NewFruitingChamberForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: FruitingChamberData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "fruitingChamber")])
+            //         }
+            //     }}/>
+            // case "grainBatch": // from either lc, jar, or substrateBatch
+            //     return <NewGrainBatchForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: GrainBatchData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "grainBatch")])
+            //         }
+            //     }}/>
+            // case "jar": // from jar recipe only (or pcRun?)
+            //     return <NewJarForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: JarData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "jar")])
+            //         }
+            //     }}/>
             case "jarRecipe": // from self only
                 return <NewJarRecipeForm handlers={{
                     isTopLevel: true, onCreate: (newEntry: JarRecipeData) => {
@@ -102,12 +102,12 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                         setNewEntries([...newEntries,createdLinkFor(newEntry.name, newEntry._id, "jarRecipe")])
                     }
                 }}/>
-            case "lc": // from lcRecipe
-                return <NewLcForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: LcData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "lc")])
-                    }
-                }}/>
+            // case "lc": // from lcRecipe
+            //     return <NewLcForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: LcData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "lc")])
+            //         }
+            //     }}/>
             case "lcRecipe": // from self only
                 return <NewLcRecipeForm handlers={{
                     isTopLevel: true, onCreate: (newEntry: LcRecipeData) => {
@@ -122,15 +122,15 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                         setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "pcRun")])
                     }
                 }}/>
-            case "plate": // from agarBatch only
-                // TODO: above newPlateForm (and all others), put links area for created items
-                return <NewPlateForm handlers={{
-                    isTopLevel: true,
-                    onCreate: (newEntry: PlateData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "plate")])
-                    }
-                }}/>
-            case "plugs": // TODO: validate
+            // case "plate": // from agarBatch only
+            //     // TODO: above newPlateForm (and all others), put links area for created items
+            //     return <NewPlateForm handlers={{
+            //         isTopLevel: true,
+            //         onCreate: (newEntry: PlateData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "plate")])
+            //         }
+            //     }}/>
+            case "plugs":
                 return <NewPlugsForm handlers={{
                     isTopLevel: true, onCreate: (newEntry: PlugsData) => {
                         setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "plugs")])
@@ -144,12 +144,12 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                 }}/> //TODO: REENABLE??? onCreate={pd => doRedirect(pd._id)}
             // case "sale": // TODO: from other pages only!
             //     return <NewSaleForm headerLevel={TopPageHeaderLevel} onCreate={sd => doRedirect(sd._id)}/>
-            case "slant": // from agarBatch only
-                return <NewSlantForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: SlantData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "slant")])
-                    }
-                }}/>
+            // case "slant": // from agarBatch only
+            //     return <NewSlantForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: SlantData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "slant")])
+            //         }
+            //     }}/>
             case "species": // from this page only
                 return <NewSpeciesForm handlers={{
                     isTopLevel: true, onCreate: (newEntry: SpeciesData) => {
@@ -161,12 +161,12 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
             //     return <NewSporePrintForm redirectOnCreate={true}/>
             // case "sporeSwab": // TODO: SporeSwab only from sporePrint page or new page
             //     return <NewSporeSwabForm redirectOnCreate={true}/>
-            case "stasisTube": // TODO: from where? pcRun?
-                return <NewStasisTubeForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: StasisTubeData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "stasisTube")])
-                    }
-                }}/>
+            // case "stasisTube": // TODO: from where? pcRun?
+            //     return <NewStasisTubeForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: StasisTubeData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "stasisTube")])
+            //         }
+            //     }}/>
             case "subspecies": // TODO: from species page or own page
                 // TODO: ERROR IF SPECIES NOT FOUND
                 return <NewSubspeciesForm handlers={{
@@ -182,12 +182,12 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                         setNewEntries([...newEntries,createdLinkFor(newEntry.name, newEntry._id, "substrateRecipe")])
                     }
                 }}/>
-            case "substrateBatch": // TODO: from recipe page only, or embedded?
-                return <NewSubstrateBatchForm handlers={{
-                    isTopLevel: true, onCreate: (newEntry: SubstrateBatchData) => {
-                        setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "substrateBatch")])
-                    }
-                }}/>
+            // case "substrateBatch": // TODO: from recipe page only, or embedded?
+            //     return <NewSubstrateBatchForm handlers={{
+            //         isTopLevel: true, onCreate: (newEntry: SubstrateBatchData) => {
+            //             setNewEntries([...newEntries,createdLinkFor(newEntry._id, newEntry._id, "substrateBatch")])
+            //         }
+            //     }}/>
             case "waterJar":
                 return <NewWaterJarForm handlers={{
                     isTopLevel: true, onCreate: (newEntry: WaterJarData) => {

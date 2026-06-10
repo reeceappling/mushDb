@@ -116,7 +116,7 @@ export const DisplayNumerical: FC<NumericInputProps> = ({
                                                             errorMessage = 'error!',
                                                         }) => {
     const id = useId();
-    const handleChange = useCallback( // TODO: ????
+    const handleChange = useCallback(
         (event: ChangeEvent<HTMLInputElement>) => {
             onChange(event.target.value);
         },
@@ -162,7 +162,7 @@ export const DisplayNumerical2: FC<NumericInputProps> = ({
     key
                                                          }) => {
     const id = useId();
-    const handleChange = useCallback( // TODO: ????
+    const handleChange = useCallback(
         (event: ChangeEvent<HTMLInputElement>) => {
             onChange(event.target.value);
         },
@@ -356,6 +356,7 @@ export const InputTextWithSmallTitle: FC<TextInputProps> = (
             className={labelClassAbsolute}
         >{label}</label>
         <InputText placeholder={placeholder} value={value} onChange={onChange} readonly={readonly} errorMessage={errorMessage}/>
+        {/* TODO: revert if not working <InputText placeholder={placeholder} value={value} onChange={onChange} readonly={readonly} errorMessage={errorMessage}/>*/}
     </div>
 };
 
@@ -370,7 +371,7 @@ export const InputTextInlineTitle: FC<TextInputProps> = (
         errorMessage = 'error!',
     }) => {
     const id = useId();
-    const handleChange = useCallback(
+    const handleChange = useCallback( // TODO: use?
         (event: ChangeEvent<HTMLInputElement>) => {
             onChange(event.target.value);
         },

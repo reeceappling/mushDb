@@ -365,17 +365,20 @@ export function NewPlugsForm(
             <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
         </div>
 
-
-        {pcRunIn ? <div>{"PC Run: "}
-                <EntryLinkIdWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
+        <div>
+            <div>{"PC Run: "}</div>
+            <div>
+            {pcRunIn ? <EntryLinkIdWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
                     {pcRunIn._id}
                 </EntryLinkIdWrapper>
+                : <PcRunSelector doSelect={setPcRun} allowCreate={true}/>
+            }
             </div>
-            : <PcRunSelector doSelect={setPcRun} allowCreate={true}/>
-        }
+        </div>
+
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"bottomButton"} onClick={createPlugs}>{"Create"}</button>
+        <button className={"greenButton buttonFullWidth"} onClick={createPlugs}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
 

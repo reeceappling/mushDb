@@ -158,7 +158,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	// Validate inputs and grab parent
 	parent := &LiquidCulture{}
-	err = db.Collection(LCCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(&parent)
+	err = db.Collection(LCCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(parent)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -189,7 +189,7 @@ type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField       // TODO: handle in react
+	KnownFruitableField                                         // TODO: handle in react
 	NotesUpdateField
 	PermsOnRequest `json:"acl"`
 }

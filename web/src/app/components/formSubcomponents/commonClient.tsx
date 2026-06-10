@@ -113,7 +113,8 @@ export function NutrientEntryForNew({currentValue, updateParent}: {
     }
     return <>
         <div className={"text-m"}>{currentValue.nutrient}</div>
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+        {/* TODO: ensure floating */}
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}
                                     errorMessage={err} value={currentValue.amount.toString()}
                                     onChange={(val?: string) => {
                                         try {
@@ -129,10 +130,11 @@ export function NutrientEntryForNew({currentValue, updateParent}: {
                                         }
                                     }}/>
         <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={currentValue.amount.toString()} onChange={(val?: string) => {
+                                 value={currentValue.unit.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
+                console.error(JSON.stringify(e))
                 setErrTxt(JSON.stringify(e))
             }
         }}/>
@@ -157,7 +159,8 @@ export function SugarEntryForNew({currentValue, updateParent}: {
     }
     return <>
         <div className={"text-m"}>{currentValue.type}</div>
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+        {/* TODO: ensure floating */}
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}
                                     errorMessage={err} value={currentValue.amount.toString()}
                                     onChange={(val?: string) => {
                                         try {
@@ -173,7 +176,7 @@ export function SugarEntryForNew({currentValue, updateParent}: {
                                         }
                                     }}/>
         <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={currentValue.amount.toString()} onChange={(val?: string) => {
+                                 value={currentValue.unit.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -201,7 +204,8 @@ export function AdditiveEntryForNew({currentValue, updateParent}: {
     }
     return <>
         <div className={"text-m"}>{currentValue.additive}</div>
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+        {/* TODO: ensure floating */}
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}
                                     errorMessage={err} value={currentValue.amount.toString()}
                                     onChange={(val?: string) => {
                                         try {
@@ -217,7 +221,7 @@ export function AdditiveEntryForNew({currentValue, updateParent}: {
                                         }
                                     }}/>
         <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={currentValue.amount.toString()} onChange={(val?: string) => {
+                                 value={currentValue.unit.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -245,7 +249,8 @@ export function DowelEntryForNew({currentValue, updateParent}: {
     }
     return <>
         <div className={"text-m"}>{currentValue.wood}</div>
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+        {/* TODO: ensure floating */}
+        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1000.0} readonly={false}
                                     errorMessage={err} value={currentValue.size.toString()}
                                     onChange={(val?: string) => {
                                         try {

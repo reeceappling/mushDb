@@ -65,7 +65,8 @@
     - [x] List Page
   - [ ] Jar Recipe
     - [x] Display page
-    - [ ] Create page
+    - [x] Create page
+      - [ ] Subforms?
     - [x] List Page
       - [x] Standard
       - [x] Recent
@@ -77,12 +78,12 @@
     - [x] List Page
   - [ ] LC Recipe
     - [x] Display page
-      - [ ] Move name to top as well
+      - [x] Move name to top as well
       - [ ] create LC
         - [x] fix pc run selector not showing up
         - [x] default recipe to current
         - [ ] fully test creating an LC from this page
-    - [ ] Create page
+    - [x] Create page
     - [x] List Page
   - [ ] LC Syringe
     - [x] Display page
@@ -99,7 +100,7 @@
     - [x] List Page
   - [ ] PC Run
     - [x] Display page
-      - [ ] Create LC is not inheriting PCRun and is not showing other selector
+      - [x] Create LC is not inheriting PCRun and is not showing other selector
       - [ ] Create GrainJar is not inheriting PCRun and is not showing other selector
       - [ ] Create Bag wetness, filterSize, and selectors
       - [ ] Create Batch ensure working as needed
@@ -116,6 +117,8 @@
       - [ ] woods area displaying weird on slim screens
       - [ ] sales area
     - [ ] Create page // TODO: MAKE THIS PAGE! OR DONE FROM PC RUN?
+      - [ ] Create PC run from within creator
+      - [ ] Validate all areas working properly
     - [ ] Import page
     - [x] List Page
   - [ ] Project

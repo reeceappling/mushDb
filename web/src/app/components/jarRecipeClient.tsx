@@ -51,7 +51,7 @@ import {
 } from "@/app/components/formSubcomponents/additives";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import {Grain, GrainsSelector, IsValidGrain} from "@/app/components/formSubcomponents/grains";
+import {Grain, GrainsEntriesGroupForNew, GrainsSelector, IsValidGrain} from "@/app/components/formSubcomponents/grains";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -298,7 +298,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
         }
         const body: any = {
             name: name,
-            grain: grains,
+            grains: grains,
             standard: isStandard,
             nutrients: nutrients,
             sugars: sugars,
@@ -332,12 +332,11 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
         <TestAndValidate todos={["TEST THIS"]}>
             {templateRecipeSelector()}
         </TestAndValidate>
-        <NameArea classNames={"inlineChildren"} readonly={false} setName={setName}/>
+        <NameArea currentName={name} classNames={"inlineChildren"} readonly={false} setName={setName}/>
 
-        <TestAndValidate todos={["ensure works like nutrientEntriesGroup"]}>
-            <div>{"Grains"}</div>
-            <GrainsSelector current={grains || []} onChange={setGrains}/>
-        </TestAndValidate>
+        {/* TODO: SUBFORMS!*/}
+        <div>{"Grains"}</div>
+        <GrainsEntriesGroupForNew currentEntries={grains || []} updateParent={setGrains}/>
         <StandardArea readonly={false} setStandard={setIsStandard}/>
         <div>{"Nutrients"}</div>
         <NutrientsEntriesGroupForNew currentEntries={nutrients} updateParent={setNutrients}/>

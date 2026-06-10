@@ -365,7 +365,6 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
     lcRecipeIn?: LcRecipeData,
     pcRunIn?: PcRunData
 }) {
-    const [creationDate, setCreationDate] = useState(Date.now())
     const [lcRecipe, setLcRecipe] = useState(lcRecipeIn)
     const [pcRun, setPcRun] = useState(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
@@ -379,14 +378,14 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             setErr("A recipe must be selected")
             return
         }
-        if (pcRun === undefined) {
+        if (pcRun === undefined) { // TODO: allow without PC run?
             setErr("A PC Run must be selected")
             return
         }
         const body: any = {
             //creationDate: creationDate, // made serverside
-            recipe: lcRecipe,
-            pcRun: pcRun,
+            recipe: lcRecipe._id,
+            pcRun: pcRun._id, // TODO: allow create without pc run?
             notes: notes,
             writeTagTo: writeTagTo,
         }
