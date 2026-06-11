@@ -244,9 +244,11 @@ export default function SporeSwabDisplay(
 
 // Should only be accessible from a fruit's page
 export function NewSporeSwabForm(
-    {printIn, fruitIn, headerLevel, offset, onCreate}: {
+    // TODO: can also be made from bag, box
+    {printIn, fruitIn, otherParentIn, headerLevel, offset, onCreate}: {
         printIn?: SporePrintData
         fruitIn?: FruitData
+        otherParentIn?: string
         headerLevel?: number
         offset?: number
         onCreate: (sp: SporeSwabData) => void
@@ -254,7 +256,7 @@ export function NewSporeSwabForm(
     // TODO: EITHER PRINT OR FRUIT!!!!!
 
     // TODO: THIS!
-    const [parent, setParent] = useState<string | undefined>(printIn?._id || fruitIn?._id || undefined)
+    const [parent, setParent] = useState<string | undefined>(printIn?._id || fruitIn?._id || otherParentIn || undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
 

@@ -16,7 +16,7 @@ import {
     NewPicWithNotesForm,
     PicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {TransfersOutDisplay} from "@/app/components/transferClient";
+import {NewTransferArea, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
@@ -75,6 +75,7 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {TransferData} from "@/app/components/transferServer";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -229,9 +230,18 @@ export default function FruitDisplay(
             })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
-        // TODO: setTransfersOut on this as needed!
-        // TODO: OvcForXfers on others, or use TransfersOut???
-        // TODO: OvcForXfers(data._id, "fruit", ["plate", "slant", "jar", "stasisTube"], allCookies(cookies), AddToTransfers(setTransfersOut, transfersOut), "Clone/Transfer Fruit"), // TODO: ensure list correct// TODO: OVC for clone to plate (transfer)
+        {
+            txt: "Clone Fruit", // TODO: ensure works as expected?
+            newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                return <NewTransferArea idFrom={data._id} typeFrom={"fruit"} validTypesTo={["plate","slant","jar","stasisTube","bag","fruitingChamber"/* TODO: ensure comprehensive list*/]} onCreated={(item: TransferData) => {
+                    setTransfersOut([...transfersOut, item._id]) // TODO: ok?
+                    onCreate([{
+                        typeText: "Transfer",
+                        node: <CreatedLinkFor linkId={item._id} typ={"transfer"}/>,
+                    }], false)
+                }}/>
+            },
+        },
         {
             txt: "Create Spore Swab",
             newCreationArea: (onCreate: AddCreatedQuadColFunction) => {

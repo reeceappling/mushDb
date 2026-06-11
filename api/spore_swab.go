@@ -107,7 +107,7 @@ type createSporeSwabRequest struct {
 
 // TODO: multi-swab creation request?
 
-func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
+func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: TEST ALL BRANCHES!
 	data := createSporeSwabRequest{}
 	defer r.Body.Close()
 	// Process text (or object)
@@ -157,31 +157,100 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		// Do not check permissions, just pass parent perms to child
 		AclField: AclField{parentItem.Permissions()}, // note: do NOT add user. They can be created by any non-guest, but not necessarily viewable by them...
 	}
-	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		if errr := addToIdMapCollection(sessCtx, &out); errr != nil {
-			return nil, errr
+
+	var swabOut *SporeSwab
+	_, er := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
+		var parentFruit *Fruit
+		switch parentItem.SourceType() {
+		case FruitSourceType: // Goes directly to swab
+			e := db.Collection(FruitsCollName).
+				FindOne(sessCtx, BsonFindFilter("_id", data.Parent)).
+				Decode(parentFruit)
+			if e != nil {
+				return nil, e
+			}
+		case SporePrintSourceType: // Goes directly to swab
+			var parentPrint *SporePrint
+			e := db.Collection(SporePrintCollectionName).
+				FindOne(sessCtx, BsonFindFilter("_id", data.Parent)).
+				Decode(parentFruit)
+			if e != nil {
+				return nil, e
+			}
+			idOut := NextMainCollectionId()
+			swab := SporeSwab{
+				MainCollectionIdField:             MainCollectionIdField{idOut},
+				MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.Parent},
+				ParentTypeField:                   ParentTypeField{utils.Pointer("sporePrint")},
+				CreationDateField:                 CreationDateField{now},
+				SpeciesField:                      SpeciesField{*parent.Species},
+				SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+				NotesField:                        NotesField{}, // TODO: ???
+				LastUpdatedField:                  LastUpdatedField{now},
+				AclField:                          parentPrint.AclField,
+			}
+			xfer := Transfer{
+				AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
+				From:                       parentPrint.Id,
+				To:                         idOut,
+				FromType:                   "sporePrint",
+				ToType:                     "sporeSwab",
+				CreationDateField:          CreationDateField{now},
+				Reason:                     xferReasonReady,
+				NotesField:                 NotesField{}, // TODO: FIX!
+				LastUpdatedField:           LastUpdatedField{now},
+				AclField:                   parentPrint.AclField,
+			}
+			err := addToIdMapCollection(sessCtx, &swab)
+			if err != nil {
+				return nil, err
+			}
+			// Update print with new swab id
+			// Update xfers out and lastUpdated on parent
+			upd, err := NewMods().Push("transfersOut", xfer.Id).withLastUpdated(now).Finalized()
+			if err != nil {
+				return nil, err
+			}
+			_, err = db.Collection(SporePrintCollectionName).UpdateByID(ctx, parentPrint.Id, upd)
+			if err != nil {
+				return nil, err
+			}
+			_, err = db.Collection(SporeSwabCollectionName).InsertOne(ctx, &swab)
+			if err != nil {
+				return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+			}
+			_, err = db.Collection(TransfersCollName).InsertOne(ctx, &xfer)
+			if err != nil {
+				return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+			}
+			return &swab, nil
+		case BagSourceType, FruitingChamberSourceType, PlateSourceType, PlugSourceType, LcSourceType, SlantSourceType: // TODO: creates intermediary fruit
+			// Create transfer. Add spore swab to spore print
+			parentFruit, err = FruitFromSourceInTxn(sessCtx, parentItem)
+			if err != nil {
+				return nil, err
+			}
+		default: // TODO: ERROR. MssSourceType, WaterJar, etc
+			return nil, errors.New("invalid source for new swab: " + parentItem.SourceType())
 		}
-		// Actually add the swab to their collection
-		// TODO: Add swab to transfers from fruit if from fruit, or to transfers from print if from print
-		return mongo.SessionFromContext(sessCtx).
-			Client().Database(dbName).
-			Collection(SporeSwabCollectionName).
-			InsertOne(ctx, out)
+		swabOut, err = swabFromFruitInTxn(sessCtx, parentFruit, out.NotesField)
+		if err != nil {
+			return nil, err
+		}
+		return nil, err
 	})
-	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
+	if er != nil {
+		http.Error(w, er.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	bsOut, err := json.Marshal(out)
+	bsOut, err := json.Marshal(swabOut)
 	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to marshal result: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = w.Write(bsOut)
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	handleWriteErr(err, w)
 }
 
 type updateSporeSwabRequest struct {
@@ -276,4 +345,38 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:                AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
+}
+
+func swabFromFruitInTxn(ctx mongo.SessionContext, parent *Fruit, notes NotesField) (*SporeSwab, error) {
+	id := NextMainCollectionId()
+	now := unixTimeForNow()
+	// TODO: writeTagTo?
+	toInsert := SporeSwab{
+		MainCollectionIdField:             MainCollectionIdField{id},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+		ParentTypeField:                   ParentTypeField{utils.Pointer("fruit")},
+		CreationDateField:                 now.asCreationDate(),
+		SpeciesField:                      parent.SpeciesField,
+		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
+		NotesField:                        notes,
+		LastUpdatedField:                  LastUpdatedField{now},
+		// Do not check permissions, just pass parent perms to child
+		AclField: parent.AclField,
+	}
+	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+	err := addToIdMapCollection(ctx, &toInsert)
+	if err != nil {
+		return nil, err
+	}
+	// Update fruit with new print id
+	//err = parent.addSporeSwab(ctx, id)
+	//if err != nil {
+	//	return nil, errors.Join(errors.New("failed to add spore print to parent fruit"), err)
+	//}
+	// TODO: add transfer to parent for swab! should swabs have their own field on fruits?
+	_, err = db.Collection(SporeSwabCollectionName).InsertOne(ctx, toInsert)
+	if err != nil {
+		return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+	}
+	return &toInsert, nil
 }

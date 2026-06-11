@@ -270,6 +270,9 @@ export default function SlantDisplay(
         // TODO: DIFFERENTIATE BETWEEN UNINNOCULATED AND INNOCULATED DISPLAY
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
+            // TODO: CREATE FRUIT
+            // TODO: spore print?
+            // TODO: spore swab?
         ]
         const innoculated = initial.species // TODO: USE THIS!
         return (

@@ -131,6 +131,8 @@ export default function SubstrateRecipeDisplay(
                 })
         }
         const ovcs: OnViewCreatorTriCol[] = [
+            // TODO: bag creation area!
+            // TODO: box creation area!
             {
                 txt: "Create Substrate Batch",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {

@@ -249,6 +249,8 @@ export default function FruitingChamberDisplay(
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         OvcForNewFruit(data._id, "fruitingChamber", allCookies(cookies)),
+        // TODO: create new print (creates intermediate fruit)
+        // TODO: create new swab (creates intermediate fruit)
         WriteRfidOvcArea(initial._id),
         // TODO: xfers? OvcForXfers(data._id, "fruit", ["plate","slant","jar","stasisTube"], "Clone/Transfer Fruit"), // TODO: ensure list correct //OVC for clone to plate? (transfer)
         // TODO: spore swab directly from box? (should also create a fruit in the interim)

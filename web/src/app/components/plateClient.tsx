@@ -271,6 +271,9 @@ export default function PlateDisplay(
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         WriteRfidOvcArea(initial._id),
+        // TODO: fruit?
+        // TODO: create spore print
+        // TODO: creat spore swab
     ]
     return (
         <DisplayFormWrapper entryType={"plate"}>

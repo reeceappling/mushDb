@@ -71,6 +71,7 @@ func (f Fruit) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 
 func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId) error {
 	// update fruit
+	// TODO: add lastUpdated!
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(FruitsCollName).UpdateByID(ctx, f.Id, pushToArrayInline("prints", printId))
 	if err != nil {
 		return err
@@ -435,4 +436,73 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:                AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, toInsert, w)
+}
+
+func FruitFromSourceInTxn(ctx mongo.SessionContext, parent geneticSource) (*Fruit, error) {
+	id := NextMainCollectionId()
+	now := unixTimeForNow()
+	genetics, err := parent.GeneticInfoAsParent()
+	if err != nil {
+		return nil, err
+	}
+	if genetics.Species == nil {
+		return nil, errors.New("parent not innoculated")
+	}
+	parentId := parent.DbId()
+	newFruit := &Fruit{
+		MainCollectionIdField:             MainCollectionIdField{id},
+		CreationDateField:                 CreationDateField{now},
+		SpeciesField:                      SpeciesField{*genetics.Species},
+		SubspeciesOptionalField:           SubspeciesOptionalField{genetics.Subspecies},
+		GenSporeField:                     GenSporeField{genetics.GenSinceSpore.Next()}, // TODO: next ok?
+		TransfersOutField:                 TransfersOutField{},
+		Prints:                            nil,
+		ParentTypeField:                   ParentTypeField{utils.Pointer(parent.SourceType())},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parentId},
+		PicsField:                         PicsField{}, // TODO: ????
+		DisposedField:                     DisposedField{},
+		MostRecentImageField:              MostRecentImageField{}, // TODO: ????
+		NotesField:                        NotesField{},           // TODO: ????
+		LastUpdatedField:                  LastUpdatedField{now},
+		AclField:                          parent.Permissions().AsField(),
+	}
+
+	// add fruit to ids collection and its own collection
+	err = createMainCollectionEntryInTxn(ctx, newFruit)
+	if err != nil {
+		return nil, err
+	}
+	xferId := newAlternateCollectionId()
+	xfer := Transfer{ // TODO: ptr?
+		AlternateCollectionIdField: AlternateCollectionIdField{xferId},
+		From:                       parentId,
+		To:                         id,
+		FromType:                   parent.SourceType(),
+		ToType:                     "fruit",
+		CreationDateField:          CreationDateField{now},
+		Reason:                     xferReasonColonized, // TODO: what here?
+		FromImage:                  nil,                 // TODO: ?????
+		ToImage:                    nil,                 // TODO: ?????
+		NotesField:                 NotesField{},        // TODO: ?????
+		LastUpdatedField:           LastUpdatedField{now},
+		AclField:                   parent.Permissions().AsField(),
+	}
+	// Add transfer
+	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+	_, err = db.Collection(TransfersCollName).InsertOne(ctx, xfer)
+	if err != nil {
+		return nil, err
+	}
+	// Add transfer to parent
+	parentUpd, err := NewMods().addTransferOut(xferId).withLastUpdated(now).Finalized()
+	if err != nil {
+		return nil, err
+	}
+	_, err = db.Collection(parent.CollectionName()).
+		UpdateByID(ctx, parent.DbId(), parentUpd)
+	if err != nil {
+		return nil, err
+	}
+	// Return the new fruit
+	return newFruit, nil
 }

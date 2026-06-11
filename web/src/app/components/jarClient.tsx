@@ -348,6 +348,8 @@ export default function JarDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             WriteRfidOvcArea(initial._id),
+            // TODO: create spore print
+            // TODO: creat spore swab
         ]
         return <DisplayFormWrapper entryType={"jar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>

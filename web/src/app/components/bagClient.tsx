@@ -250,6 +250,8 @@ export default function BagDisplay(
     }
     const ovcs: OnViewCreatorQuadCol[] = [
         OvcForNewFruit(initial._id, "bag", allCookies(cookies)),
+        // TODO: create spore print
+        // TODO: creat spore swab
         WriteRfidOvcArea(initial._id), // TODO: TEST!
     ]
     return (

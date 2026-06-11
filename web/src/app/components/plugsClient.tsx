@@ -209,8 +209,10 @@ export default function PlugsDisplay(
             })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
-        // TODO: any more?
         WriteRfidOvcArea(initial._id),
+        // TODO: fruit?
+        // TODO: create spore print
+        // TODO: creat spore swab
     ]
     return (
         <DisplayFormWrapper entryType={"plugs"}>

@@ -29,6 +29,7 @@ func (in InnocField) Innoculatable() bool {
 type transferReason string
 
 const xferReasonColonized transferReason = "colonized"
+const xferReasonReady transferReason = "ready"
 
 var transferReasons = map[transferReason]string{
 	"outgrew":           "outgrew plate",
@@ -36,6 +37,7 @@ var transferReasons = map[transferReason]string{
 	"sectoring":         "transferring a specific sector",
 	"age":               "sample is very old",
 	xferReasonColonized: "fully colonized",
+	xferReasonReady:     "ready",
 }
 
 var sporePrintColors = []SporePrintColor{

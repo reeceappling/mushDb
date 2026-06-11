@@ -162,7 +162,8 @@ func initializeSporePrints(ctx context.Context) error {
 }
 
 type createSporePrintRequest struct {
-	FruitId MainCollectionId `bson:"fruitId" json:"fruitId"`
+	ParentId   MainCollectionId `json:"parent"`
+	ParentType string           `json:"parentType"`
 	NotesField
 	Pics            []PicWithNotesLessLocation //"newPic-1"
 	WriteTagToField                            // TODO: make sure this is on the ts side!
@@ -171,7 +172,8 @@ type createSporePrintRequest struct {
 
 func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
 	return resolvedCreateSporePrintRequest{
-		FruitId:    upr.FruitId,
+		ParentId:   upr.ParentId,
+		ParentType: upr.ParentType,
 		NotesField: upr.NotesField,
 		PicsField: PicsField{slices.Map(upr.Pics, func(i PicWithNotesLessLocation) PicWithNotes {
 			return i.asPicWithNotes(nil)
@@ -180,7 +182,8 @@ func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
 }
 
 type resolvedCreateSporePrintRequest struct {
-	FruitId MainCollectionId `bson:"fruitId" json:"fruitId"`
+	ParentId   MainCollectionId `json:"parent"`
+	ParentType string           `json:"parentType"`
 	NotesField
 	PicsField
 }
@@ -283,20 +286,64 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		out.Pics[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
-	parent := Fruit{}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).Collection(FruitsCollName).
-		FindOne(ctx, BsonFindFilter("_id", data.FruitId)).Decode(&parent)
+	mcItem, err := MainCollItemForEntryType(data.ParentType)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to find main collection item", http.StatusBadRequest)
 		return
 	}
+	parent, err := GetMainCollectionItem(ctx, data.ParentId, mcItem)
+	if err != nil {
+		http.Error(w, "failed to get parent", http.StatusInternalServerError)
+		return
+	}
+	var printOut *SporePrint
+	_, er := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		var parentFruit *Fruit
+		switch parent.SourceType() {
+		case FruitSourceType: // TODO: directly to print
+			db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
+			e := db.Collection(FruitsCollName).
+				FindOne(sessCtx, BsonFindFilter("_id", data.ParentId)).
+				Decode(parentFruit)
+			if e != nil {
+				return nil, e
+			}
+		case MssSourceType, WaterJarsSourceType, StasisTubeSourceType, SporePrintSourceType, SporeSwabSourceType, LcSyringeSourceType: // TODO: any others? error here
+			return nil, errors.New("cannot create spore print directly from " + parent.SourceType())
+		default:
+			parentFruit, err = FruitFromSourceInTxn(sessCtx, parent)
+			if err != nil {
+				return nil, err
+			}
+		}
+		// TODO: ensure parent is already innoculated!
+		printOut, err = printFromFruitInTxn(sessCtx, parentFruit, out.PicsField, out.NotesField)
+		if err != nil {
+			return nil, err
+		}
+		// TODO: WRITE TAG TO!
+		return nil, err
+	})
+	if er != nil {
+		http.Error(w, er.Error(), http.StatusInternalServerError)
+		return
+	}
+	bsOut, err := json.Marshal(printOut)
+	if err != nil {
+		http.Error(w, "failed to marshal result: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
+	handleWriteErr(err, w)
+}
 
+func printFromFruitInTxn(ctx mongo.SessionContext, parent *Fruit, pics PicsField, notes NotesField) (*SporePrint, error) {
+	id := NextMainCollectionId()
 	now := unixTimeForNow()
 	// TODO: writeTagTo?
 	var mri *PicWithNotes = nil
-	if len(out.Pics) > 0 {
-		lastPic := out.Pics[len(out.Pics)-1]
+	if len(pics.Pics) > 0 {
+		lastPic := pics.Pics[len(pics.Pics)-1]
 		mri = &lastPic
 	}
 	toInsert := SporePrint{
@@ -305,43 +352,50 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		CreationDateField:                 now.asCreationDate(),
 		SpeciesField:                      parent.SpeciesField,
 		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-		PicsField:                         out.PicsField,
+		PicsField:                         pics,
 		MostRecentImageField:              MostRecentImageField{mri},
-		NotesField:                        NotesField{out.Notes},
+		NotesField:                        notes,
 		LastUpdatedField:                  LastUpdatedField{now},
 		// Do not check permissions, just pass parent perms to child
 		AclField: parent.AclField,
 	}
-	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		err := addToIdMapCollection(sessCtx, &toInsert)
-		if err != nil {
-			return nil, err
-		}
-		// Update fruit with new print id
-		err = parent.addSporePrint(sessCtx, id)
-		if err != nil {
-			return nil, errors.Join(errors.New("failed to add spore print to parent fruit"), err)
-		}
-		_, err = mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(SporePrintCollectionName).InsertOne(ctx, toInsert)
-		if err != nil {
-			return nil, errors.Join(errors.New("failed to insert new spore print"), err)
-		}
-		return nil, nil
-	})
+	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+	err := addToIdMapCollection(ctx, &toInsert)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
+	// Update fruit with new print id
+	err = parent.addSporePrint(ctx, id)
+	if err != nil {
+		return nil, errors.Join(errors.New("failed to add spore print to parent fruit"), err)
+	}
+	_, err = db.Collection(SporePrintCollectionName).InsertOne(ctx, toInsert)
+	if err != nil {
+		return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+	}
+	return &toInsert, nil
+}
 
-	bsOut, err := json.Marshal(toInsert)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+func MainCollItemForEntryType(entryType string) (MainCollectionItem, error) {
+	if mainCollItem, exists := map[string]MainCollectionItem{
+		"bag":             &Bag{}, // can only go to fruits
+		"fruit":           &Fruit{},
+		"fruitingChamber": &FruitingChamber{}, // can only go to fruits
+		"jar":             &GrainJar{},        // can go anywhere (in theory) except MSS
+		"lc":              &LiquidCulture{},   // can go anywhere (in theory) except MSS
+		"lcSyringe":       &LcSyringe{},
+		"mss":             &MSS{},   // generally only goes to plate
+		"plate":           &Plate{}, // can go anywhere (in theory) except MSS
+		"plugs":           &PlugsJar{},
+		"slant":           &Slant{}, // generally only goes to plate
+		"sporePrint":      &SporePrint{},
+		"sporeSwab":       &SporeSwab{},
+		"stasisTube":      &StasisTube{}, // generally only goes to plate
+		"waterJar":        &WaterJar{},
+	}[entryType]; exists {
+		return mainCollItem, nil
 	}
-	_, err = w.Write(bsOut)
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	return nil, errors.New("invalid entry type: " + entryType)
 }
 
 type updateSporePrintRequest struct {
