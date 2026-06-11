@@ -236,7 +236,9 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
     const [created, setCreated] = useState<CreatedLinkTriCol[]>([]);
     const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
     const addCreated = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => {
+        console.log("trying to add created link") // TODO: del
         setCreated(created.concat(newLinks)) // TODO: structuredClone not working here
+        console.log("trying to close after") // TODO: del
         if (closeAfter) {
             setActiveTab(undefined)
         }
@@ -245,6 +247,10 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
         setCreatedTableHidden(!createdTableHidden)
     }
     // TODO: Top level hidden instead of dynamic DOM to reduce client strain?
+
+    const closeButton = <OnViewCreatorCloseButton handleClose={() => {
+        setActiveTab(undefined)
+    }} activeTab={activeTab}/>
 
     const creatorBody = () => {
         if (activeTab === undefined) {
@@ -255,9 +261,7 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
             console.error("could not find ovc for " + activeTab + " in tab options")
             return <HiddenDiv/>
         }
-        const closeButton = <OnViewCreatorCloseButton handleClose={() => {
-            setActiveTab(undefined)
-        }} activeTab={activeTab}/>
+
         return <OvcCreatorBodyWrapper>
             {closeButton}
             {creator.newCreationArea(addCreated)}

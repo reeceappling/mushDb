@@ -17,11 +17,12 @@ type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
 	ScientificName    string          `bson:"scientificName" json:"scientificName"`
 	AliasesField      `bson:"inline"`
-	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate,omitempty" json:"standardSubstrate,omitempty"`
+	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate" json:"standardSubstrate"`
+	Subspecies        []string              `bson:"subspecies,omitempty" json:"subspecies,omitempty"`
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	AclField          `bson:"inline"`
-	DefaultAcl        ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // TODO: Only used when importing other entry types or creating a subspecies? // TODO: omitempty probably not?
+	DefaultAcl        ACL `bson:"defaultAcl" json:"defaultAcl"` // TODO: Only used when importing other entry types or creating a subspecies?
 
 }
 
@@ -34,6 +35,11 @@ var shiitakeNotes = NotesField{[]Note{
 	newNote(ogTime, "Best Agar: LMEA"),
 }}
 
+const (
+	TestSpeciesName  = "TestSpeciesName"
+	SpeciesNameBeech = "Beech"
+)
+
 func initializeSpecies(ctx context.Context) error {
 	// Indices
 	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SpeciesCollectionName)
@@ -41,6 +47,7 @@ func initializeSpecies(ctx context.Context) error {
 		newSimpleIndex("scientificName", "scientificName", false, false, true),
 		aliasesIndexModel,
 		newSimpleIndex("standardSubstrate", "standardSubstrate", false, true, false),
+		// Subspecies (no index)
 		//Notes (no index) (maybe later with tags?)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
@@ -57,12 +64,14 @@ func initializeSpecies(ctx context.Context) error {
 			ScientificName:    "Pleurotus Eryngii",
 			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
+			Subspecies:        nil,
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "Colonization conditions: FIXME"),
 				newNote(ogTime, "Fruiting conditions: Prefer higher humidity than pinks FIXME"),
 				newNote(ogTime, "Best Agar: LMEA"),
 			}},
-			AclField: allCanWriteAcl(),
+			AclField:   allCanWriteAcl(),
+			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
 		},
 
 		// Pink Oyster
@@ -71,12 +80,14 @@ func initializeSpecies(ctx context.Context) error {
 			ScientificName:    "Pleurotus Djamor",
 			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
+			Subspecies:        nil,
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "Colonization conditions: FIXME"),
 				newNote(ogTime, "Fruiting conditions: Prefer higher FAE than kings FIXME"),
 				newNote(ogTime, "Best Agar: LMEA"),
 			}},
-			AclField: allCanWriteAcl(),
+			AclField:   allCanWriteAcl(),
+			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
 		},
 		// Enoki
 		{
@@ -84,48 +95,56 @@ func initializeSpecies(ctx context.Context) error {
 			ScientificName:    "Flammulina filiformis",
 			AliasesField:      AliasesField{},
 			StandardSubstrate: woodPelletsId,
+			Subspecies:        nil,
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "Colonization conditions: FIXME"),
 				newNote(ogTime, "Fruiting conditions: Grow in a high-CO2 environment, with the only light being high-up in the enclosure to ensure they grow tall and thin, FAE==0, humidity=70+"),
 				newNote(ogTime, "Best Agar: LMEA"),
 			}},
-			AclField: allCanWriteAcl(),
+			AclField:   allCanWriteAcl(),
+			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
 		},
 		// Shiitake
 		{
 			NameIdField:       NameIdField{shiitakeName},
 			ScientificName:    shiitakeSciName,
-			AliasesField:      AliasesField{},
+			AliasesField:      AliasesField{}, // TODO: FIX!
 			StandardSubstrate: woodPelletsId,
+			Subspecies:        []string{}, // TODO: FIX!
 			NotesField:        shiitakeNotes,
 			AclField:          allCanWriteAcl(),
+			DefaultAcl:        allCanWriteAcl().ACL, // TODO: ensure this is right
 		},
 		// Maitake, Hen of the Woods
 		{
 			NameIdField:       NameIdField{"Maitake"},
 			ScientificName:    "Grifola frondosa",
 			AliasesField:      AliasesField{[]string{"hen of the woods"}},
+			Subspecies:        nil,
 			StandardSubstrate: woodPelletsId,
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "Colonization conditions: FIXME"),
 				newNote(ogTime, "Fruiting conditions: 50-70degF (64-66 is ideal). >90% humidity. Cold shock to begin fruiting"),
 				newNote(ogTime, "Best Agar: LMEA"),
 			}},
-			AclField: allCanWriteAcl(),
+			AclField:   allCanWriteAcl(),
+			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
 		},
 		// Beech
 		{
-			NameIdField:       NameIdField{"Beech"},
-			ScientificName:    "", // TODO: this
-			AliasesField:      AliasesField{[]string{"hen of the woods"}},
+			NameIdField:       NameIdField{SpeciesNameBeech},
+			ScientificName:    "Hypsizygus tessulatus",
+			AliasesField:      AliasesField{[]string{"Hypsizygus tessellatus", "Shimeji"}},
 			StandardSubstrate: woodPelletsId,
+			Subspecies:        []string{"White Beech", "Brown Beech"}, // TODO: ENSURE OK!
 			NotesField: NotesField{[]Note{
 				newNote(ogTime, "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin"),
 				newNote(ogTime, "50-60DegF, 80-90RH, FAE"),
 				newNote(ogTime, "Best Agar: LMEA"),
 				newNote(ogTime, "Can be white (patented) subspecies or brown"),
 			}},
-			AclField: allCanWriteAcl(),
+			AclField:   allCanWriteAcl(),
+			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
 		},
 	}
 	err = addBasicAltEntries(ctx, basicEntries...) // TODO: return here if we dont want test entries
@@ -134,9 +153,10 @@ func initializeSpecies(ctx context.Context) error {
 	}
 	// Add test entry
 	testItem := &Species{
-		NameIdField:       NameIdField{testEntryStringId},
+		NameIdField:       NameIdField{TestSpeciesName},
 		ScientificName:    "examplius speciesus",
 		AliasesField:      AliasesField{[]string{"testSpecies", "example species"}},
+		Subspecies:        []string{}, // TODO: ADD EXAMPLE SUBSPECIES!
 		StandardSubstrate: exAltId,
 		NotesField:        NotesField{exampleNotes()},
 		LastUpdatedField:  LastUpdatedField{exampleTime},
@@ -206,7 +226,7 @@ func (req updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (b
 		updateNotesIfNeeded(req, existing).
 		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateDefaultAclIfNeeded(req.DefaultAcl, existing.ACL).
+		updateDefaultAclIfNeeded(req.DefaultAcl, existing.DefaultAcl).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }

@@ -31,7 +31,7 @@ import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/coo
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
-        throw new Error('Input is not an object! Input is ' + typeof input);
+        throw 'Input is not an object! Input is ' + typeof input
     }
     // required simple keys
     const requiredSimpleKeys = new Map<string, string>([
@@ -41,19 +41,19 @@ export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     ])
     for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
-            throw new Error('Subspecies assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
+            throw 'Subspecies assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key])
         }
     }
-    // complex required keys
-    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        // ['acl', IsValidAcl],
-        // ['defaultAcl', IsValidAcl]
-    ])
-    for (const [key, validator] of complexRequiredKeys) {
-        if (!RequiredKey(key, input, validator)) {
-            throw new Error('Subspecies assertion failure: required key ' + key + ' was not valid: ');
-        }
-    }
+    // // complex required keys
+    // const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    //     // ['acl', IsValidAcl],
+    //     // ['defaultAcl', IsValidAcl]
+    // ])
+    // for (const [key, validator] of complexRequiredKeys) {
+    //     if (!RequiredKey(key, input, validator)) {
+    //         throw 'Subspecies assertion failure: required key ' + key + ' was not valid: '
+    //     }
+    // }
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
@@ -61,7 +61,7 @@ export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     ])
     for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
-            throw new Error('Subspecies assertion failure: optional array key ' + key + ' was not valid');
+            throw 'Subspecies assertion failure: optional array key ' + key + ' was not valid'
         }
     }
     // Unmarshal ACL
@@ -115,9 +115,8 @@ export default function SubspeciesDisplay(
         return (
             <DisplayFormWrapper entryType={"subspecies"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <TestAndValidate todos={["Species up here too?"]}>
-                    <ID props={{id:data._id, txt:"Subspecies", entryType:"subspecies"}}/>
-                </TestAndValidate>
+                <ID props={{id:data._id, txt:"Subspecies", entryType:"subspecies"}}/>
+                <ID props={{id:data.species, txt:"Species", entryType:"species"}}/> {/* TODO: link not working!*/}
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
@@ -156,16 +155,19 @@ export function NewSubspeciesForm({handlers, species}: {
         }
         const body: any = {
                 name: name,
-                species: selectedSpecies,
+                species: selectedSpecies._id,
                 aliases: aliases,
                 notes: notes,
                 // ACL/DefaultACL are initially inherited from parent species
             }
+        console.log("sending request to create subspecies") // TODO: del
         DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
             .then(v=>{
+                console.log("doing onCreate") // TODO: del
                 handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
             })
             .catch(e=>{
+                console.log("onCreate failed: "+JSON.stringify(e)) // TODO: del
                 setErr(JSON.stringify(e))
             })
     }

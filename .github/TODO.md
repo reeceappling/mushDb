@@ -28,8 +28,9 @@
   - [ ] Agar Recipe
     - [x] Display page
     - [ ] Create page
-      - [ ] Validate all working properly
-      - [ ] Nutrients/etc working properly
+      - [ ] nutes/sugar/etc consider doing x/Liter?
+      - [x] Validate all working properly
+      - [x] Nutrients/etc working properly
     - [x] List Page
       - [x] Clicks work
       - [ ] Ensure text doesnt step all over each other on slim screens
@@ -245,3 +246,8 @@
 
 # Complete
 - [x] Create TODO.md
+- [x] Add Subspecies to species (+tested)
+  - [x] Add subspecies on species on server side
+  - [x] Add subspecies on species on client side
+  - [x] Add subspecies to species when subspecies is created
+  - [x] Add subspecies to species in default items

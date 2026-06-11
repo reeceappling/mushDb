@@ -84,8 +84,9 @@ export function SendMultipartRequest(url: string, formData: FormData, cookies: s
 
 
 // TODO: USE THIS!
-export function MainCollectionInputOrRead({label, onIdSelected, copyText}: {
+export function MainCollectionInputOrRead({label, placeholder, onIdSelected, copyText}: {
     label?: string,
+    placeholder?: string,
     onIdSelected: (s: string) => void
     copyText?: string,
 }) {
@@ -97,8 +98,8 @@ export function MainCollectionInputOrRead({label, onIdSelected, copyText}: {
     }
     return <div>
         {/* INPUT FOR MAINCOLLECTIONID */}
-        <InputTextInlineTitle label={"ID TO:"} value={id} readonly={false} errorMessage={undefined/* TODO: ???*/}
-                              placeholder={"Destination"} onChange={(s) => updateId(s || "")}/>
+        <InputTextInlineTitle label={(label || "ID TO")+":"} value={id} readonly={false} errorMessage={undefined/* TODO: ???*/}
+                              placeholder={placeholder || "Destination"} onChange={(s) => updateId(s || "")}/>
         {/*<TextBox label={label || "Main Collection Id Input: "} value={id} fieldName={"mainCollIdInput"}*/}
         {/*         updateTextHandler={updateId} readonly={false}/>*/}
         {/* BUTTON TO READ MAIN COLL ID */}

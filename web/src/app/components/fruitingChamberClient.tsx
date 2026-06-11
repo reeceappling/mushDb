@@ -69,7 +69,11 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {SubstrateBatchArea, SubstrateBatchSelector} from "@/app/components/substrateBatchClient";
@@ -414,7 +418,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
     }
     const parentArea = () => {
         if (!parent) {
-            return <MainCollectionInputOrRead onIdSelected={setParentId}/>
+            return <MainCollectionInputOrRead label={"From Jar"} placeholder={"Jar ID"} onIdSelected={setParentId}/>
         }
         return <div>{parentId || "unknown parent"}</div> // TODO: FIX
     }
@@ -454,12 +458,12 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
     const [mixedSubRatio, setMixedSubRatio] = useState<number>(4) // TODO: set and initial?
     const [casingRatio, setCasingRatio] = useState<number>(2) // TODO: set and initial?
     // Non-required
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
-    const [generation, setGeneration] = useState<number | undefined>()
-    const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
-    const [imageFile, setImageFile] = useState<File | undefined>()
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
-    const [err, setErr] = useState<string | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
+    const [imageFile, setImageFile] = useState<File | undefined>(undefined)
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
+    const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
     const submitImportFruitingChamber = () => {
         const reqd = new Map<string, any>([
@@ -483,7 +487,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             casingRatio: casingRatio,
             //perms: perms, // From spec/subspec
             // optional
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             generation: generation,
             knownFruitable: knownFruitable,
             writeTagTo: writeTagTo,
@@ -501,7 +505,8 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={true}/>
         </SelectorWrapper>
         <DateArea pre={"Created on: "} readonly={false} when={Date.now()} updateParent={setCreationDate}/>
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
         <div className={"inlineChildren"}>
             <div>{"Grain volume: "}</div>
             <VolumeSelector initialVal={1} initialUnit={"quarts"} updateNumberOfCups={setGrainCups}/>
@@ -515,8 +520,8 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             <FloatInput initial={casingRatio} onChange={setCasingRatio}/>
         </div>
         {/* Optional fields*/}
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}
-                                    headerLevel={headerLevel}/>
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}*/}
+        {/*                            headerLevel={headerLevel}/>*/}
 
         <GenerationInput updateParent={setGeneration}/>
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>

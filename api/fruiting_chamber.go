@@ -200,7 +200,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 type createFruitingChamberRequest struct {
 	// TODO: removed: Recipe // substrate recipe (pull from batch)
 	SubstrateBatchField
-	ParentJar          MainCollectionId // Parent jar
+	//ParentJar          MainCollectionId // Parent jar // TODO: do we want this? // TODO: ALLOW USER TO INPUT PARENT AND CHAIN A TRANSFER CREATION AS WELL!
 	GrainCups          float64
 	MixedSubstrateCups float64
 	CasingCups         float64
@@ -224,11 +224,11 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	// Validation
-	parentJar, err := LookupGrainJar(ctx, data.ParentJar)
-	if err != nil {
-		http.Error(w, "failed to resolve parent jar"+err.Error(), http.StatusBadRequest)
-		return
-	}
+	//parentJar, err := LookupGrainJar(ctx, data.ParentJar)
+	//if err != nil {
+	//	http.Error(w, "failed to resolve parent jar"+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 
 	now := unixTimeForNow()
 	batch, err := data.SubstrateBatchField.Get(ctx)
@@ -241,6 +241,50 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	//innoc := Transfer{
+	//	AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
+	//	From:                       parentJar.Id,
+	//	To:                         id,
+	//	FromType:                   "jar", // TODO: allow different types? lcSyringe? spores?
+	//	ToType:                     "fruitingChamber",
+	//	CreationDateField:          CreationDateField{now},
+	//	Reason:                     xferReasonColonized,
+	//	NotesField: NotesField{[]Note{{
+	//		RequiredTimeField: RequiredTimeField{now},
+	//		Note:              "automated transfer created for new box",
+	//	}}},
+	//	LastUpdatedField: LastUpdatedField{now},
+	//	AclField:         parentJar.AclField,
+	//} // TODO: ADD INNOC!
+	//newTxn(ctx, func(sessCtx mongo.SessionContext)(any, error){
+	//	db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
+	//	db.Collection()
+	//})
+	//// TODO: handle parent! Add xfer to
+	//toInsert := FruitingChamber{
+	//	//SpeciesOptionalField:              parentJar.SpeciesOptionalField,
+	//	//SubspeciesOptionalField:           parentJar.SubspeciesOptionalField,
+	//	//MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.ParentJar},
+	//	//InnocField:                        InnocField{
+	//	//	// TODO: CREATE INNOC!
+	//	//}, // TODO: THIS!
+	//	//GenerationsFields: GenerationsFields{
+	//	//	GenSporeField:        GenSporeField{parentJar.GenSinceSpore.Next()},
+	//	//	GenSinceFruitOrSpore: parentJar.GenSinceFruitOrSpore.Next(),
+	//	//},
+	//	//ParentTypeField: ParentTypeField{&innoc.FromType},
+	//
+	//	//MainCollectionIdField:       MainCollectionIdField{id},
+	//	//SubstrateRecipeField:        batch.SubstrateRecipeField,
+	//	//SubstrateBatchOptionalField: data.SubstrateBatchField.asOptional(),
+	//	//CupsGrain:                   data.GrainCups,
+	//	//MixedSubstratePerGrain:      data.MixedSubstrateCups / data.GrainCups,
+	//	//CasingPerGrain:              data.CasingCups / data.GrainCups,
+	//	//CreationDateField:           CreationDateField{now},
+	//	//NotesField:                  NotesField{data.Notes},
+	//	//LastUpdatedField:            LastUpdatedField{now},
+	//	//AclField:                    parentJar.AclField, // TODO: what if parent does not exist? readonly for creator?
+	//}
 	toInsert := FruitingChamber{
 		MainCollectionIdField:       MainCollectionIdField{id},
 		SubstrateRecipeField:        batch.SubstrateRecipeField,
@@ -251,7 +295,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		CreationDateField:           CreationDateField{now},
 		NotesField:                  NotesField{data.Notes},
 		LastUpdatedField:            LastUpdatedField{now},
-		AclField:                    parentJar.AclField,
+		AclField:                    allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }

@@ -49,7 +49,11 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SaleArea} from "@/app/components/saleClient";
@@ -122,7 +126,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
     const [swabDate, setSwabDate] = useState<number>(Date.now())
     const [notes, setNotes] = useState<Note[]>([])
     const [species, setSpecies] = useState<SpeciesData | undefined>()
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>()
     const [image, setImage] = useState<File | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
@@ -137,7 +141,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
             creationDate: swabDate,
             species: species._id,
             // optional
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             notes: notes,
         }
         setFormData(formData, dataObj)
@@ -153,8 +157,9 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
     return <ImportEntryFormWrapper entryType={"sporeSwab"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <DateArea pre={"Swab Date: "} readonly={false} when={Date.now()} updateParent={setSwabDate}/>
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}
         <ImageSelector updateParent={setImage}/>
         <NoteEntriesGroup preexisting={false} readonly={false} updateParent={ns => {
             setNotes(ns.map(n => {

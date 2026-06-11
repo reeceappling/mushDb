@@ -28,11 +28,14 @@ func (in InnocField) Innoculatable() bool {
 
 type transferReason string
 
+const xferReasonColonized transferReason = "colonized"
+
 var transferReasons = map[transferReason]string{
-	"outgrew":      "outgrew plate",
-	"contaminated": "parent was contaminated",
-	"sectoring":    "transferring a specific sector",
-	"age":          "plate is veryold",
+	"outgrew":           "outgrew plate",
+	"contaminated":      "parent was contaminated",
+	"sectoring":         "transferring a specific sector",
+	"age":               "sample is very old",
+	xferReasonColonized: "fully colonized",
 }
 
 var sporePrintColors = []SporePrintColor{
@@ -311,7 +314,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedFieldForNow(),
 		AclField:                   AclField{ACL: parent.Permissions()}, //set child perms to the parent perms!
 	}
-	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) { // TODO: split this out into its own function for use in things like createFruitingChamber?
 		_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)
 		if err != nil {
 			return nil, err

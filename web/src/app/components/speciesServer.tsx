@@ -9,6 +9,7 @@ export function TestSpeciesOk() {
         scientificName: "(SCI_NAME_HERE)",
         aliases: ["(Alias 1)", "(Alias 2)"],
         standardSubstrate: "(SUBSTRATE ID)",
+        subspecies: ["Brown Beech", "White Beech"],
         notes: [{
             time: 123,
             note: "(NOTE 1)"
@@ -27,6 +28,7 @@ export interface SpeciesData {
     scientificName: string
     aliases?: string[]
     standardSubstrate: string
+    subspecies?: string[]
     notes?: Note[]
     lastUpdated: number
     acl: ACL

@@ -1046,7 +1046,7 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	case "antibiotics", "antibiotic":
 		writeAsJson(w, antibiotics)
 		return
-	case "bagFilterSizes": // TODO: not working?
+	case strings.ToLower("bagFilterSizes"):
 		writeAsJson(w, bagFilterSizes)
 		return
 	case "colors", "color",
@@ -1072,7 +1072,7 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	case "sugars", "sugar":
 		writeAsJson(w, sugars)
 		return
-	case "transferreasons", "transferreason":
+	case strings.ToLower("transferReasons"), strings.ToLower("transferReason"):
 		writeAsJson(w, transferReasons)
 		return
 	case "woods", "wood":

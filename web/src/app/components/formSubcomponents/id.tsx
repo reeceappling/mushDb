@@ -22,7 +22,7 @@ export default function ID({props, children}: {
             <div>{children}</div>
             <div className={"ml-2"}>{children!==undefined&&"("}{(props.linkPage && !isTopLevel) ? props.id : <IdPageLink id={props.id} entryType={props.entryType}/>}{children!==undefined&&")"}</div>
         </div>
-        {(props.allowOpenMainPage && !isTopLevel) && <OpenMainPage type={"lc"} linkId={props.id} redirect={false}/>/* TODO: redirect false ok?*/}
+        {(props.allowOpenMainPage && !isTopLevel) && <OpenMainPage type={props.entryType} linkId={props.id} redirect={false}/>/* TODO: redirect false ok?*/}
     </div>
 }
 

@@ -18,9 +18,11 @@ func (field AclField) Permissions() ACL {
 func allCanReadAcl(owner *string) AclField {
 	out := ACL{
 		BlanketPerm: utils.Pointer(false),
+		Users:       map[string]bool{},
+		Projects:    map[projectName]bool{},
 	}
 	if owner != nil {
-		out.Users[*owner] = true
+		out.Users = map[string]bool{*owner: true}
 	}
 	return AclField{ACL: out}
 }
@@ -103,10 +105,15 @@ func (acl ACL) simplified() ACL {
 		return acl
 	}
 	// If blanketPerm is read, then remove all users that can only read
-	for user, canWrite := range acl.Users {
-		if !canWrite {
-			delete(acl.Users, user)
+	if acl.Users != nil {
+		for user, canWrite := range acl.Users {
+			if !canWrite {
+				delete(acl.Users, user)
+			}
 		}
+	}
+	if len(acl.Users) == 0 {
+		acl.Users = nil
 	}
 	//for proj, canWrite := range acl.Projects { // TODO: keep all projects!
 	//	if !canWrite {
@@ -120,18 +127,31 @@ func (acl ACL) Equivalent(other ACL) bool {
 	if acl.BlanketPerm != other.BlanketPerm {
 		return false
 	}
-	for user, perm := range acl.Users {
-		otherPerm, exists := other.Users[user]
-		if !exists || otherPerm != perm {
+	if acl.Users == nil {
+		if other.Users != nil || len(other.Users) != 0 {
 			return false
 		}
-	}
-	for proj, perm := range acl.Projects {
-		otherPerm, exists := other.Projects[proj]
-		if !exists || otherPerm != perm {
-			return false
+	} else {
+		for user, perm := range acl.Users {
+			otherPerm, exists := other.Users[user]
+			if !exists || otherPerm != perm {
+				return false
+			}
 		}
 	}
+	if acl.Projects == nil {
+		if other.Projects != nil || len(other.Projects) != 0 {
+			return false
+		}
+	} else {
+		for proj, perm := range acl.Projects {
+			otherPerm, exists := other.Projects[proj]
+			if !exists || otherPerm != perm {
+				return false
+			}
+		}
+	}
+
 	return true
 }
 
@@ -143,8 +163,10 @@ func (acl ACL) userIdPermission(email string) *ReadWritePerm {
 	if acl.BlanketPerm != nil && *acl.BlanketPerm {
 		return newPerm(true)
 	}
-	if userPerm, exists := acl.Users[email]; exists {
-		return newPerm(userPerm)
+	if acl.Users != nil {
+		if userPerm, exists := acl.Users[email]; exists {
+			return newPerm(userPerm)
+		}
 	}
 	return (*ReadWritePerm)(acl.BlanketPerm)
 }

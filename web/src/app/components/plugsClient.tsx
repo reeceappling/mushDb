@@ -53,7 +53,7 @@ import {SpeciesData} from "./speciesServer";
 import {SubspeciesData} from "./subspeciesServer";
 import {redirect} from "next/navigation";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
+import {ExistingSpeciesSelector, ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
 import {WoodEntriesGroupForNew} from "@/app/components/formSubcomponents/plugs";
 import {SalesArea} from "@/app/components/saleClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
@@ -278,7 +278,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
     const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
     const [gen, setGen] = useState<number | undefined>(undefined)
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
@@ -289,7 +289,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
             generation: gen,
             // optional
             species: species?._id, // Unused if non-inoculated
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             knownFruitable: knownFruitable,
             notes: notes,
             writeTagTo: writeTagTo,
@@ -304,16 +304,17 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
             <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
         </div>
         <GenerationInput updateParent={setGen}/>
-        <div className={"centerH"}>
-            <ExistingSpeciesSelector initialSpecies={species?._id}
-                                     doSelect={(spec?: SpeciesData) => {
-                                         setSpecies(spec)
-                                         setSubspecies(undefined)
-                                     }}/>
-        </div>
-        {species !== undefined ? <div className={"centerH"}>
-            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
-        </div> : null}
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<div className={"centerH"}>*/}
+        {/*    <ExistingSpeciesSelector initialSpecies={species?._id}*/}
+        {/*                             doSelect={(spec?: SpeciesData) => {*/}
+        {/*                                 setSpecies(spec)*/}
+        {/*                                 setSubspecies(undefined)*/}
+        {/*                             }}/>*/}
+        {/*</div>*/}
+        {/*{species !== undefined ? <div className={"centerH"}>*/}
+        {/*    <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
+        {/*</div> : null}*/}
         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

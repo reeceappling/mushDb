@@ -72,7 +72,11 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {JarSizeSelector} from "@/app/components/formSubcomponents/utils/volumeSelector";
 import {
@@ -178,7 +182,7 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
     const [recipe, setRecipe] = useState<JarRecipeData | undefined>()
     const [sizeCups, setSizeCups] = useState<number>(4)
     const [species, setSpecies] = useState<SpeciesData | undefined>()
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
     const [generation, setGeneration] = useState<number | undefined>()
     const [imageFile, setImageFile] = useState<File | undefined>()
@@ -197,7 +201,7 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             recipe: recipe._id,
             // optional
             species: species?._id,
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             knownFruitable: knownFruitable,
             generation: generation,
             writeTagTo: writeTagTo,
@@ -227,8 +231,9 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
         <SelectorWrapper current={recipe} title={"Jar Recipe"} nameFunc={(v: JarRecipeData) => v._id}>
             <JarRecipeSelector doSelect={setRecipe} allowCreate={true}/>
         </SelectorWrapper>
-        <ExistingSpeciesSelector doSelect={setSpecies}/>{/*TODO: closeable?*/}
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies}/>/!*TODO: closeable?*!/*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>

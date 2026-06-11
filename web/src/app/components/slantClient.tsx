@@ -65,7 +65,11 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import { SaleArea} from "@/app/components/saleClient";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {
     AclDisplay,
@@ -160,7 +164,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
     const [created, setCreated] = useState<number>(Date.now())
     const [stickType, setStickType] = useState<string | undefined>(undefined)
     const [species, setSpecies] = useState<SpeciesData | undefined>()
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>()
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
     const [generation, setGeneration] = useState<number | undefined>()
     const [imageFile, setImageFile] = useState<File | undefined>()
@@ -174,7 +178,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
             stickType: stickType,
             // Optional
             species: species?._id,
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             knownFruitable: knownFruitable,
             generation: generation,
             writeTagTo: writeTagTo,
@@ -188,8 +192,9 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
     return <ImportEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
-        {species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>:null}
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
+        {/*{species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>:null}*/}
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>

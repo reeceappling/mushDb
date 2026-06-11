@@ -54,7 +54,11 @@ import {
     OnViewCreatorQuadCol
 } from "@/app/components/formSubcomponents/shared";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import { ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewMssForm} from "@/app/components/mssClient";
 import {FruitData, FruitSelectorCloseable} from "@/app/components/fruitServer";
@@ -146,7 +150,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
     const [density, setDensity] = useState<string | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
     const [species, setSpecies] = useState<SpeciesData | undefined>()
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>()
     const [image, setImage] = useState<File | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
@@ -163,7 +167,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
             density: density,
             species:species._id,
             // optional
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             notes:notes,
         }
         setFormData(formData, dataObj)
@@ -179,8 +183,9 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
             <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
             <SporePrintColorArea readonly={false} setColor={setColor} />
             <SporePrintDensityArea readonly={false} setDensity={setColor} />
-            <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
-            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>
+            <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+            {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
+            {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}
             <ImageSelector updateParent={setImage}/>
             <NewEntryNotes setNotes={setNotes} />
             <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>

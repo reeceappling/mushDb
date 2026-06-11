@@ -53,7 +53,11 @@ import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
@@ -140,7 +144,7 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
 export function StasisTubeImportDisplay() {
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
@@ -154,7 +158,7 @@ export function StasisTubeImportDisplay() {
             creationDate:created,
             // optional
             species: species?._id,
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             knownFruitable: knownFruitable,
             generation: generation,
             notes: notes,
@@ -169,8 +173,9 @@ export function StasisTubeImportDisplay() {
     return <ImportEntryFormWrapper entryType={"stasisTube"}>
         {err!=undefined && <div>{"Error: "+err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies}/>*/}{/* TODO: if works, then remove all of these from mainCollImports!*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
@@ -272,7 +277,7 @@ export default function StasisTubeDisplay(
 
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
-                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>{/* TODO: allow changing subspecies for mainCollectionItems at some point???*/}
                         <InnocDisplay innoc={initial.innoc} openInNewTab={false}/>
                         <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
                     </FlexedSinglesGroup>

@@ -71,7 +71,11 @@ import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBa
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {
     AclDisplay,
@@ -448,7 +452,7 @@ function OptionalSliderSelector({txt, label, initial, min, max, updateParent, de
 export function PlateImportDisplay({}: ImportDisplayInput) {
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(undefined)
     const [pourCoverage, setPourCoverage] = useState<number | undefined>(undefined)
@@ -462,7 +466,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             creationDate: created,
             // Optionals
             species: species?._id,
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             knownFruitable: knownFruitable,
             generation: generation,
             pourCoverage: pourCoverage, // TODO: ensure covered in go
@@ -477,15 +481,16 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
     return <ImportEntryFormWrapper entryType={"plate"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <div className={"centerH"}>
-            <ExistingSpeciesSelector initialSpecies={species?._id}
-                                     doSelect={(spec?: SpeciesData) => {
-                                         setSpecies(spec)
-                                         setSubspecies(undefined)}}/>
-        </div>
-        {species !== undefined ? <div className={"centerH"}>
-            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
-        </div> : null}
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<div className={"centerH"}>*/}
+        {/*    <ExistingSpeciesSelector initialSpecies={species?._id}*/}
+        {/*                             doSelect={(spec?: SpeciesData) => {*/}
+        {/*                                 setSpecies(spec)*/}
+        {/*                                 setSubspecies(undefined)}}/>*/}
+        {/*</div>*/}
+        {/*{species !== undefined ? <div className={"centerH"}>*/}
+        {/*    <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
+        {/*</div> : null}*/}
         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         {/* TODO: Test coverage slider */}

@@ -65,8 +65,8 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
             //     }}/>
             case "agarRecipe": // from self only
                 return <NewAgarRecipeForm handlers={{
+                    // TODO: redirect?
                     isTopLevel: true, onCreate: (newEntry: AgarRecipeData) => {
-                        // TODO: name ok here?
                         setNewEntries([...newEntries,createdLinkFor(newEntry.name, newEntry._id, "agarRecipe")])
                     }
                 }}/>

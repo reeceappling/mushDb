@@ -119,7 +119,7 @@ export default function SubstrateBatchDisplay(
                     setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
-        const onViewCreators: OnViewCreatorTriCol[] = [
+        const ovcs: OnViewCreatorTriCol[] = [
             {
                 txt: "Create Bag",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
@@ -153,7 +153,7 @@ export default function SubstrateBatchDisplay(
             <DisplayFormWrapper entryType={"substrateBatch"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID props={{id:data._id, txt:"Substrate Batch", entryType:"substrateBatch"}}/>
-                <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <DateArea pre={"Creation Date: "} when={initial.creationDate} readonly={true}/>

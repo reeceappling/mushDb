@@ -59,7 +59,11 @@ import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
@@ -361,7 +365,7 @@ export function NewFruitForm(
 export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE ONLY FOR FRUITS PURCHASED OR FOUND
     const [parentType, setParentType] = useState<string | undefined>(undefined) // TODO: ensure this is everywhere in ts and go. Also set parent type where needed
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
@@ -386,7 +390,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
             species: species._id,
             notes: notes,
             // optional
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             // TODO: RFID?
         }
         setFormData(formData, dataObj)
@@ -398,10 +402,11 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         {/* Required Fields */}
         {/* TODO: ParentType: FOR "store" OR "outside" ONLY!!!!! */}{/* TODO: THIS!*/}
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
-        {/* Optional fields*/}
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}
-                                    headerLevel={headerLevel}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
+        {/*/!* Optional fields*!/*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}*/}
+        {/*                            headerLevel={headerLevel}/>*/}
         <ImageSelector updateParent={setImageFile}/>
         <NewEntryNotes setNotes={setNotes}/>
         {/* SUBMIT AREA */}

@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 )
 
 type SubspeciesOptionalField struct {
@@ -21,8 +22,10 @@ type Subspecies struct {
 	NotesField       `bson:"inline"`
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
-	DefaultAcl       ACL `bson:"defaultAcl,omitempty" json:"defaultAcl,omitempty"` // Only used when importing mainCollectionItems
+	DefaultAcl       ACL `bson:"defaultAcl" json:"defaultAcl"` // Only used when importing mainCollectionItems
 }
+
+const TestSubspeciesName = "TestSubspecies"
 
 func initializeSubspecies(ctx context.Context) error {
 	// Indices
@@ -31,7 +34,7 @@ func initializeSubspecies(ctx context.Context) error {
 		newSimpleIndex("species", "species", false, false, false),
 		aliasesIndexModel,
 		//Notes (no index) (maybe later with tags?)
-		projectsIndexModel, // TODO: why are projects here?
+		//projectsIndexModel, // TODO: why are projects here? probably dont want this
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
@@ -43,21 +46,23 @@ func initializeSubspecies(ctx context.Context) error {
 		{
 			NameIdField:  NameIdField{"White Beech"},
 			SpeciesField: SpeciesField{"Beech"},
-			AliasesField: AliasesField{},
+			AliasesField: AliasesField{[]string{"Bunapi-shimeji"}},
 			NotesField: NotesField{Notes: []Note{
 				newNote(ogTime, "something to do with light, fixme"),
 			}},
-			AclField: allCanWriteAcl(),
+			AclField:   allCanWriteAcl(),
+			DefaultAcl: allCanWriteAcl().ACL,
 		},
 		// Brown Beech
 		{
 			NameIdField:  NameIdField{"Brown Beech"},
 			SpeciesField: SpeciesField{"Beech"},
-			AliasesField: AliasesField{},
+			AliasesField: AliasesField{[]string{"Buna-shimeji"}},
 			NotesField: NotesField{Notes: []Note{
 				newNote(ogTime, "something to do with light, fixme"),
 			}},
-			AclField: allCanWriteAcl(),
+			AclField:   allCanWriteAcl(),
+			DefaultAcl: allCanWriteAcl().ACL,
 		},
 	}
 	err = addBasicAltEntries(ctx, basicEntries...)
@@ -66,12 +71,13 @@ func initializeSubspecies(ctx context.Context) error {
 	}
 	// Add test entry
 	testItem := &Subspecies{
-		NameIdField:      NameIdField{testEntryStringId},
-		SpeciesField:     SpeciesField{testEntryStringId},
+		NameIdField:      NameIdField{TestSubspeciesName},
+		SpeciesField:     SpeciesField{TestSpeciesName},
 		AliasesField:     AliasesField{[]string{"testSubSpecies", "example subspecies"}},
 		NotesField:       NotesField{exampleNotes()},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		AclField:         allCanReadAcl(nil),
+		DefaultAcl:       allCanWriteAcl().ACL,
 	}
 	return addTestAltEntries(ctx, testItem)
 }
@@ -102,20 +108,59 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(SubspeciesCollectionName)
+	now := unixTimeForNow()
 	toInsert := Subspecies{
 		NameIdField:      NameIdField{req.Name},
 		SpeciesField:     req.SpeciesField,
 		AliasesField:     req.AliasesField, // TODO: ensure none exist elsewhere (should just work via mongo)
 		NotesField:       req.NotesField,
-		LastUpdatedField: LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField: LastUpdatedField{now},
 		AclField:         spec.AclField,   // Use parent perms
 		DefaultAcl:       spec.DefaultAcl, // use parent default acl
 	}
-	_, err = coll.InsertOne(ctx, toInsert)
+	// Create species update modifications
+	var tempSpecUpd *Mods
+	var speciesUpdate bson.D
+	if spec.Subspecies == nil {
+		tempSpecUpd = NewMods().Set("subspecies", []string{req.Name})
+	} else {
+		if slices.Contains(spec.Subspecies, req.Name) {
+			// Name already exists, do nothing
+			http.Error(w, "subspecies already exists on species", http.StatusBadRequest)
+			return
+		}
+		tempSpecUpd = NewMods().Push("subspecies", req.Name)
+	}
+	speciesUpdate, err = tempSpecUpd.withLastUpdated(now).Finalized()
 	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to create species update: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(speciesUpdate) == 0 {
+		http.Error(w, "no changes made to species, should be impossible!", http.StatusInternalServerError)
+		return
+	}
+	// Do DB stuff
+	_, err = newTxn(r.Context(), func(ctx mongo.SessionContext) (any, error) {
+		db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+		// Update species with subspecies
+
+		bsonId := BsonFindFilter("_id", spec.Name)
+		err = db.Collection(SpeciesCollectionName).FindOneAndUpdate(ctx, bsonId, speciesUpdate).Err()
+		if err != nil {
+			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		// Insert subspecies
+		if _, e := db.Collection(SubspeciesCollectionName).InsertOne(ctx, toInsert); e != nil {
+			dbErr(w, e.Error(), http.StatusInternalServerError)
+			return nil, e
+		}
+		return nil, nil
+	})
+	if err != nil {
+		// Already wrote in all cases except success
+		println("failed in txn: " + err.Error())
 		return
 	}
 	bsOut, err := json.Marshal(toInsert)
@@ -141,7 +186,7 @@ func (req updateSubspeciesRequest) modsFor(existing *Subspecies, aclField AclFie
 		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateDefaultAclIfNeeded(req.DefaultAcl, existing.ACL).
+		updateDefaultAclIfNeeded(req.DefaultAcl, existing.DefaultAcl).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }

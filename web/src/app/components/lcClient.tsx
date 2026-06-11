@@ -72,7 +72,11 @@ import {
 } from "@/app/components/formSubcomponents/shared";
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
 import {AclDisplay, IsValidAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
@@ -166,7 +170,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
     const [recipe, setRecipe] = useState<LcRecipeData | undefined>(undefined)
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(undefined)
@@ -185,7 +189,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
             recipe: recipe._id,
             // Optionals
             species: species?._id,
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             generation: generation,
@@ -202,9 +206,10 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
         <LcRecipeSelectorCloseable doSelect={setRecipe} txt={"Recipe"} creatorInPage={false/* TODO: ok?*/} allowCreation={true} />
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}
-                                                                    headerLevel={headerLevel}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}*/}
+        {/*                                                            headerLevel={headerLevel}/>*/}
         <ConfirmedCleanSelector updateParent={setConfirmedClean}/>
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
         <GenerationInput updateParent={setGeneration}/>

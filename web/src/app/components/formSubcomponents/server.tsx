@@ -17,9 +17,7 @@ export async function GetFilterSizes():Promise<Map<string,string>>{ // TODO: val
     if (!resp.ok){
         throw new Error("response not ok: "+(await resp.text()))
     }
-    return resp.json().then(resJson=>{
-        return convertObjectToStringMap(resJson)
-    })
+    return resp.json().then(convertObjectToStringMap)
 }
 
 function convertObjectToStringMap(obj: { [key: string]: string }): Map<string, string> {

@@ -43,7 +43,7 @@ import {
 import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {GetTransferReasons} from "@/app/components/formSubcomponents/server";
+import {GetFilterSizes, GetTransferReasons} from "@/app/components/formSubcomponents/server";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import Image from "next/image";
 // TODO: list not working

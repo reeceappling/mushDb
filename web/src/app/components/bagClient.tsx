@@ -68,7 +68,11 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {SubstrateBatchArea} from "@/app/components/substrateBatchClient";
 import WetnessSlider from "@/app/components/formSubcomponents/utils/slider";
@@ -387,9 +391,10 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             {/* Write tag area */}
             <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>
             {/* SUBMIT AREA */}
-            <input type="submit" value="Submit" className={"bottomButton"} onClick={newBagSubmit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>
+            <button className={"greenButton buttonFullWidth"} onClick={e=>{
+                e.stopPropagation()
+                newBagSubmit()
+            }}>{"Create New Bag"}</button>
         </NewEntryFormWrapper>
     )
 }
@@ -401,7 +406,7 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
     const [recipe, setRecipe] = useState<SubstrateRecipeData | undefined>(undefined)
     const [filterSize, setFilterSize] = useState<string | undefined>(undefined)
     // Optional
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
@@ -426,7 +431,7 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
             filterSize: filterSize,
             // optional
             species: species?._id,
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             generation: generation,
             knownFruitable: knownFruitable,
             writeTagTo: writeTagTo,
@@ -448,12 +453,13 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
                                                  current={filterSize}/>{/* TODO: ensure working!*/}
         </div>
         </TestAndValidate>
-        <ExistingSpeciesSelector doSelect={setSpecies}/>
-
-        {/* Optional fields*/}
-        <TestAndValidate todos={["what to do when a species has no subspecies?"]}>
-            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
-        </TestAndValidate>
+        {/* Species required, subspecies optional*/}
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies}/>*/}
+        {/*<TestAndValidate todos={["what to do when a species has no subspecies?"]}>*/}
+        {/*    <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
+        {/*</TestAndValidate>*/}
+        {/* Other Optional fields*/}
         <GenerationInput updateParent={setGeneration}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
 

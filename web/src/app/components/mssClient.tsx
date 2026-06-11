@@ -51,7 +51,7 @@ import {
 import {ACL} from "@/app/components/accessControlServer";
 import {SporePrintData, SporePrintSelectorCloseable} from "@/app/components/sporePrintServer";
 import {WaterJarData, WaterJarSelectorCloseable} from "@/app/components/waterJarServer";
-import {SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {redirect} from "next/navigation";
@@ -123,7 +123,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
     const [createdDate, setCreatedDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>()
     // Non-required
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
 
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>() // TODO: do we want this?
@@ -151,7 +151,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
             creationDate: createdDate,
             species: species._id, // TODO: validate on insert
             // optional
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             notes: notes,
             writeTagTo: writeTagTo,
         }
@@ -171,8 +171,9 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         <ErrorDisplay err={err}/>
         {entriesCreatedDiv()}
         <DateArea readonly={false} pre={"Created: "} when={Date.now()} updateParent={setCreatedDate}/>
-        <SpeciesArea initial={species?._id} readonly={false} setSpecies={setSpecies}/>
-        <SubspeciesArea initialSub={subspecies?._id} currentSpecies={species?._id} readonly={false} setSubspecies={setSubspecies}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<SpeciesArea initial={species?._id} readonly={false} setSpecies={setSpecies}/>*/}
+        {/*<SubspeciesArea initialSub={subspecies?._id} currentSpecies={species?._id} readonly={false} setSubspecies={setSubspecies}/>*/}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={tryImport}>{"Submit"}</button>

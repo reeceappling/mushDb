@@ -200,11 +200,9 @@ export default function AgarRecipeDisplay(
     return (
         <DisplayFormWrapper entryType={"agarRecipe"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <TestAndValidate todos={["Put name at top????"]}>
                 <ID props={{id:data._id, txt:"Agar Recipe", entryType:"agarRecipe"}}>
                     <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
                 </ID>
-            </TestAndValidate>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -336,26 +334,24 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                 </InlineTitle>
             </div>
             <div>
-                <TestAndValidate todos={["not working properly on the units, validate"]}>
                 <div>{"Liquids: "}</div>
-                </TestAndValidate>
                 <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>{/* TODO: validate working properly*/}
             </div>
             <div>
-                <TestAndValidate todos={["not working properly on the units, validate"]}>
+                <TestAndValidate todos={["ensure for volume cases to do something like g/L or g/400mL"]}>
                 <div>{"Nutrients: "}</div>
                 </TestAndValidate>
                 <NutrientsEntriesGroupForNew currentEntries={nutrients}
                                              updateParent={setNutrients}/>{/* TODO: validate working properly*/}
             </div>
             <div>
-                <TestAndValidate todos={["not working properly on the units, validate"]}>
+                <TestAndValidate todos={["ensure for volume cases to do something like g/L or g/400mL"]}>
                 <div>{"Sugars: "}</div>
                 </TestAndValidate>
                 <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>{/* TODO: validate working properly*/}
             </div>
             <div>
-                <TestAndValidate todos={["not working properly on the units, validate"]}>
+                <TestAndValidate todos={["ensure for volume cases to do something like g/L or g/400mL"]}>
                 <div>{"Additives: "}</div>
                 </TestAndValidate>
                 <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>{/* TODO: validate working properly*/}

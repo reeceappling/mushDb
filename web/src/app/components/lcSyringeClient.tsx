@@ -46,7 +46,11 @@ import {
 import {SpeciesData} from "@/app/components/speciesServer";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import ID from "@/app/components/formSubcomponents/id";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {
+    ExistingSpeciesSelector,
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
@@ -131,10 +135,10 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
 }
 
 export function LcSyringeImportDisplay() {
-    const cookies = useContext(CookiesContext)
+    // const cookies = useContext(CookiesContext)
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(undefined)
@@ -149,7 +153,7 @@ export function LcSyringeImportDisplay() {
         const dataObj: any = {
             creationDate: created,
             species: species._id,
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             generation: generation,
@@ -172,8 +176,9 @@ export function LcSyringeImportDisplay() {
     return <ImportEntryFormWrapper entryType={"lcSyringe"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies}/>*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
         <ConfirmedCleanSelector updateParent={setConfirmedClean}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
