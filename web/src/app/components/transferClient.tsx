@@ -196,11 +196,12 @@ export default function TransferDisplay(
         </DisplayFormWrapper>
 }
 
-export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: { // TODO: use validTypesTo?
+export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, disposeAfter}: { // TODO: use validTypesTo?
     idFrom: string,
     typeFrom: string,
     validTypesTo: string[],
     onCreated: (xfer: TransferData) => void,
+    disposeAfter?: boolean, // nil is user choice (default false)
 }) {
     const [isOpen, setIsOpen] = useState(false)
 
@@ -209,6 +210,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: { /
     const [picTo, setPicTo] = useState<File | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
     const [reason, setReason] = useState<string | undefined>()
+    const [dispose, setDispose] = useState<boolean>(disposeAfter || false)
     const [err, setErr] = useState<string | undefined>()
 
     const cookies = useContext(CookiesContext)
@@ -233,6 +235,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: { /
             // optional
             fromType: typeFrom,
             notes: notes,
+            disposeParent: disposeAfter || dispose,
         }
         setFormData(formData, dataObj)
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
@@ -291,11 +294,17 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated}: { /
         <div className={"new-xfer-notes gapTop"}>
             <NewEntryNotes setNotes={setNotes}/>
         </div>
-        <div className={"newTransferRow5"}>
+        <div className={"newTransferRow5"}>{/*TODO: changed! handle styling!*/}
             <div className={"submitNewXfer"}>
                 <button className={"buttonSmall greenButton"} onClick={() => { // TODO: ensure classes ok
                     submitNewTransfer()
                 }}>{"Submit"}</button>
+            </div>
+            <div className={"inlineChildren"}>{/*TODO: new! handle styling!*/}
+                {disposeAfter ? <div></div> : <>
+                    <div>{"Dispose?"}</div>
+                    <input type="checkbox" checked={dispose} onChange={e=>{setDispose(!dispose)}}/>
+                </>}
             </div>
             <div className={"cancelNewXfer"}>
                 <button className={"basicButtonSmall"} onClick={toggleOpen}>{"Cancel"}</button>
@@ -430,6 +439,7 @@ export function TransfersOutDisplay( // TODO: likely overhaul
         allowNewTransferCreation,
         headerTxt,
         validTypesTo,
+        disposeAfter,
     }: {
         thisId: string,
         thisEntryType: string,
@@ -437,6 +447,7 @@ export function TransfersOutDisplay( // TODO: likely overhaul
         allowNewTransferCreation: boolean,
         headerTxt?: string,
         validTypesTo?: string[],
+        disposeAfter?: boolean, // undefined == let user select (default false), true is yes, false is no
     }) {
     const cookies = useContext(CookiesContext)
     const openInNewTab = false
@@ -496,7 +507,7 @@ export function TransfersOutDisplay( // TODO: likely overhaul
                         <NewTransferArea idFrom={thisId} typeFrom={thisEntryType} validTypesTo={validNewXferTypes}
                                          onCreated={(newXfer: TransferData) => {
                                              setNewXfers([...newXfers, newXfer._id])
-                                         }}/>}
+                                         }} disposeAfter={disposeAfter}/>}
                 </div>
             </div>
         </div>

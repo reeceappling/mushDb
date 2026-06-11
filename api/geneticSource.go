@@ -51,12 +51,18 @@ type geneticSource interface {
 	CanTransferTo(dst geneticSource) error
 	Innoculatable() bool
 	CollectionItem
+	Disposable
 	SetPerms(AclField) // MUST be a pointer reciever
 }
 
-func setTransferParent(ctx mongo.SessionContext, parent geneticSource, xfer Transfer) error {
+func setTransferParent(ctx mongo.SessionContext, parent geneticSource, xfer Transfer, dispose bool) error {
 	coll := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(parent.CollectionName())
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
+	now := unixTimeForNow() // TODO: is this ok?
+	mods := NewMods().addTransferOut(xfer.Id)
+	if dispose {
+		mods = mods.updateDisposedIfNeeded(DisposedField{Disposed: &now}, parent)
+	}
+	upd, err := mods.updateLastUpdatedIfNeeded().Finalized()
 	// TODO: if transfer has a fromPic on it, can we add it to the parent?
 	if err != nil {
 		return err

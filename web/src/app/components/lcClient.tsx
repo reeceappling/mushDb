@@ -345,7 +345,7 @@ export default function LcDisplay(
             </FlexedArea>
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
                                  transfersOut={initial.transfersOut}
-                                 allowNewTransferCreation={!readonly}/>
+                                 allowNewTransferCreation={!readonly}/>{/* TODO: validTypesTo*/}
             <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly}
                          headerLevel={headerLevel}/>{/* Pics */}
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}

@@ -1,5 +1,9 @@
 # In Progress
 ## Actively Working On
+- [ ] Test creating transfers out
+  - [ ] StasisTubes should always become disposed when transferred out
+  - [ ] Already-disposed items should not allow transfers
+  - [ ] Creating boxes should render the jar disposed
 - [ ] Adding pics/flushes/contams images is not working when trying to view them after update
   - [x] Switch from <Image> back to <img>
 - [ ] Test OVCs below GrainBatch, as well as OVCs for transfers and RFID

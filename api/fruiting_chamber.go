@@ -276,7 +276,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) { // T
 			}}},
 			LastUpdatedField: LastUpdatedField{now},
 			AclField:         parentJar.AclField,
-		})
+		}, true)
 		if e != nil {
 			return nil, e
 		}

@@ -136,6 +136,7 @@ type createTransferRequest struct {
 	// ToImage == 'picTo'
 	FromType *string `json:"fromType,omitempty"`
 	NotesField
+	DisposeParent bool `json:"disposeParent"` // TODO: new! handle on ts side!
 }
 
 type CtxKey string
@@ -314,7 +315,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:                   AclField{ACL: parent.Permissions()}, //set child perms to the parent perms!
 	}
 	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		return nil, createTransferInTxn(sessCtx, parent, child, xfer)
+		return nil, createTransferInTxn(sessCtx, parent, child, xfer, data.DisposeParent)
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -333,14 +334,14 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func createTransferInTxn(ctx mongo.SessionContext, parent, child geneticSource, xfer Transfer) error {
+func createTransferInTxn(ctx mongo.SessionContext, parent, child geneticSource, xfer Transfer, dispose bool) error {
 	db := mongo.SessionFromContext(ctx).
 		Client().Database(dbName)
 	_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)
 	if err != nil {
 		return err
 	}
-	if err = setTransferParent(ctx, parent, xfer); err != nil {
+	if err = setTransferParent(ctx, parent, xfer, dispose); err != nil {
 		return errors.Join(errors.New("failed to set transfer parent"), err)
 	}
 	if err = child.setTransferChild(ctx, xfer, parent); err != nil {

@@ -14,7 +14,7 @@ import {JSX, useState} from "react";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 
-export function OvcForXfers(parentId: string, parentType: string, validTypesTo: string[], cookies: string, addTransferOut?: (xfer: TransferData) => void, altTxt?: string): OnViewCreatorQuadCol {
+export function OvcForXfers(parentId: string, parentType: string, validTypesTo: string[], cookies: string, addTransferOut?: (xfer: TransferData) => void, disposeAfter?: boolean, altTxt?: string): OnViewCreatorQuadCol {
     return {
         txt: altTxt || "New Transfer",
         newCreationArea: (onCreate: AddCreatedQuadColFunction) => {

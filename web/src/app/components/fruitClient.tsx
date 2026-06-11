@@ -280,7 +280,7 @@ export default function FruitDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
-                                 allowNewTransferCreation={false}/>
+                                 allowNewTransferCreation={false}/>{/* TODO: validTypesTo*/}
             <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>

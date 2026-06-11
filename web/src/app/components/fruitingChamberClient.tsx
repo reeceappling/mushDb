@@ -293,7 +293,7 @@ export default function FruitingChamberDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"}
-                                 transfersOut={initial.transfersOut} allowNewTransferCreation={false}/>
+                                 transfersOut={initial.transfersOut} allowNewTransferCreation={false}/>{/* TODO: validTypesTo*/}
 
             <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
             {/* Flushes */}<PicsDisplay pix={initial.flushes || []} readonly={readonly}
