@@ -35,11 +35,11 @@
   - [ ] Agar Recipe
     - [x] Display page
     - [ ] Create page
-      - [ ] Create Plate // TODO: create?
-      - [ ] Create Slant // TODO: create?
       - [ ] nutes/sugar/etc consider doing x/Liter?
       - [x] Validate all working properly
       - [x] Nutrients/etc working properly
+      - [ ] Create Plate // TODO: create shortcuts like this MUCH LATER
+      - [ ] Create Slant // TODO: create shortcuts like this MUCH LATER
     - [x] List Page
       - [x] Clicks work
       - [ ] Ensure text doesnt step all over each other on slim screens
@@ -47,20 +47,20 @@
     - [x] Display page
       - [ ] Fix wetness area
       - [ ] Preexisting users and projects which are not valid cause problems on update
-      - [ ] New fruit area // TODO: MAKE
-      - [ ] Create SporePrint (Creates intermediate fruit) // TODO: CREATE?
-      - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: CREATE?
+      - [ ] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] Create SporePrint (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
+      - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page
     - [ ] Import page
     - [x] List Page
   - [ ] Fruit
     - [x] Display page
-      - [ ] Create MSS // TODO: CREATE?
-      - [ ] Create SporePrint // TODO: CREATE?
-      - [ ] Create SporeSwab // TODO: CREATE?
+      - [ ] Create SporePrint
+      - [ ] Create SporeSwab
       - [ ] Cloning area?
         - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] Create MSS // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: likely no self-page
     - [ ] Import page
     - [x] List Page
@@ -69,23 +69,23 @@
       - [ ] Dispose button
       - [ ] Make sales also trigger disposal?
       - [ ] Handle sale
-      - [ ] New fruit area // TODO: MAKE
-      - [ ] Create SporePrint (Creates intermediate fruit) // TODO: CREATE?
-      - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: CREATE?
+      - [ ] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] Create SporePrint (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
+      - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // self page?
     - [ ] Import page
     - [x] List Page
   - [x] Grain Batch
     - [x] Display page
-    - [x] Create page // TODO: done from jarRecipe
+    - [x] Create page
       - [ ] Create Jar // Create
     - [x] List Page
   - [ ] Jar
     - [x] Display page
       - [ ] fix wetness area
-      - [ ] New fruit area // TODO: MAKE
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: self page?
     - [ ] Import page
     - [x] List Page
@@ -100,8 +100,8 @@
   - [ ] LC
     - [x] Display page
       - [ ] test creating LC syringe, LC selector and reading rfid tag
-      - [ ] New fruit area // TODO: MAKE
       - [ ] Create transfer?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: self page?
     - [ ] Import page
     - [x] List Page
@@ -112,7 +112,7 @@
         - [x] fix pc run selector not showing up
         - [x] default recipe to current
         - [ ] fully test creating an LC from this page
-      - [ ] create LC Syringe // TODO: create?
+      - [ ] create LC Syringe // TODO: create shortcuts like this MUCH LATER
     - [x] Create page
     - [x] List Page
   - [ ] LC Syringe
@@ -126,8 +126,8 @@
   - [ ] MSS
     - [x] Display page
       - [ ] Sell area, ensure working as we want, and that selling marks as disposed
-      - [ ] Create MSS // TODO: CREATE
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] Create MSS // TODO: CREATE (unsure if we want mss-from-mss)
     - [ ] Create page // TODO: self page (probably no self page)?
     - [ ] Import page
     - [x] List Page
@@ -146,7 +146,7 @@
   - [ ] Plate
     - [x] Display page
       - [ ] pour and condens cov
-      - [ ] New fruit area // TODO: MAKE
+      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page (probably no self page)?
     - [ ] Import page
@@ -155,8 +155,8 @@
     - [x] Display page
       - [ ] woods area displaying weird on slim screens
       - [ ] sales area
-      - [ ] New fruit area // TODO: MAKE
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: MAKE THIS PAGE!
       - [ ] Create PC run from within creator
       - [ ] Validate all areas working properly
@@ -175,8 +175,8 @@
     - [x] List Page
   - [ ] Slant
     - [x] Display page
-      - [ ] New fruit area // TODO: MAKE
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: self page?
     - [ ] Import page
     - [x] List Page
@@ -255,17 +255,11 @@
       - [ ] Disposal area
       - [ ] Create MSS // TODO: CREATE
       - [ ] Create Stasis Tube // TODO: CREATE
-    - [ ] Create page // TODO: done from PcRun page.
+    - [ ] Create page // TODO: self page?
     - [ ] Import page
     - [x] List Page
   
-
-
-
-- [x] Ensure all imports return and properly utilize JSON
-  - [ ] TEST TO VALIDATE
-- [ ] Ensure all updates return and properly utilize JSON
-- [ ] Ensure all creates return and properly utilize JSON
+- [ ] Reenable full authentication flow then test!
 - [ ] Backend Testing
   - [ ] ADD MORE SUB-ITEMS HERE
 - [ ] Frontend Testing (Cypress?)
