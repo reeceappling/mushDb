@@ -225,15 +225,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: MOVE
 func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
 	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		err := addToIdMapCollection(sessCtx, toInsert)
-		if err != nil {
-			return nil, errors.Join(errors.New("failed to insert in map collection"), err)
-		}
-		_, err = mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
-		if err != nil {
-			return nil, errors.Join(errors.New("failed to insert main collection item"), err)
-		}
-		return nil, nil
+		return nil, createMainCollectionEntryInTxn(sessCtx, toInsert)
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -249,6 +241,18 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 	if err != nil {
 		handleWriteErr(err, w)
 	}
+}
+
+func createMainCollectionEntryInTxn(ctx mongo.SessionContext, toInsert MainCollectionItem) error {
+	err := addToIdMapCollection(ctx, toInsert)
+	if err != nil {
+		return errors.Join(errors.New("failed to insert in map collection"), err)
+	}
+	_, err = mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
+	if err != nil {
+		return errors.Join(errors.New("failed to insert main collection item"), err)
+	}
+	return nil
 }
 
 var ErrTxnWriteFail = errors.New("failed to write in transaction")

@@ -263,7 +263,6 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	parentId := data.From
 	childId := data.To
 	now := unixTimeForNow()
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
 	childMapEntry := idMapEntry{}
 	var fromType string
 	if data.FromType != nil {
@@ -273,7 +272,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		fromType, err = getEntryTypeForId(ctx, parentId)
 	}
 	// Get parent and child items
-	err = db.Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": childId}).Decode(&childMapEntry)
+	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": childId}).Decode(&childMapEntry)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			http.Error(w, "child not found in id db: "+err.Error(), http.StatusNotFound)
@@ -314,19 +313,8 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:           LastUpdatedFieldForNow(),
 		AclField:                   AclField{ACL: parent.Permissions()}, //set child perms to the parent perms!
 	}
-	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) { // TODO: split this out into its own function for use in things like createFruitingChamber?
-		_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)
-		if err != nil {
-			return nil, err
-		}
-
-		if err = setTransferParent(sessCtx, parent, xfer); err != nil {
-			return nil, errors.Join(errors.New("failed to set transfer parent"), err)
-		}
-		if err = child.setTransferChild(sessCtx, xfer, parent); err != nil {
-			return nil, errors.Join(errors.New("failed to set transfer child"), err)
-		}
-		return nil, nil
+	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		return nil, createTransferInTxn(sessCtx, parent, child, xfer)
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -343,6 +331,22 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		// Do not rollback here. Data made it in successfully
 		handleWriteErr(errWriting, w)
 	}
+}
+
+func createTransferInTxn(ctx mongo.SessionContext, parent, child geneticSource, xfer Transfer) error {
+	db := mongo.SessionFromContext(ctx).
+		Client().Database(dbName)
+	_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)
+	if err != nil {
+		return err
+	}
+	if err = setTransferParent(ctx, parent, xfer); err != nil {
+		return errors.Join(errors.New("failed to set transfer parent"), err)
+	}
+	if err = child.setTransferChild(ctx, xfer, parent); err != nil {
+		return errors.Join(errors.New("failed to set transfer child"), err)
+	}
+	return nil
 }
 
 type updateTransferRequest struct {

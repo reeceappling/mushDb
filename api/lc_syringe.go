@@ -189,7 +189,7 @@ type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField                                         // TODO: handle in react
+	KnownFruitableField       // TODO: handle in react
 	NotesUpdateField
 	PermsOnRequest `json:"acl"`
 }
