@@ -281,7 +281,7 @@ export default function FruitDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                readonly={readonly} disposed={initial.disposed}
+                                                readonly={readonly} initialDisposed={initial.disposed}
                                                 setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -463,7 +464,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		env.LogIfDev(r.Context(), "failed to standardize main collection id: "+err.Error())
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -472,7 +473,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		// Already wrotw
 		return
 	}
-	println("CONFIRMED CLEAN:", TernaryPtr(data.ConfirmedClean, "isClean", "isDirty", "empty"))
+	env.LogIfDev(r.Context(), "CONFIRMED CLEAN: "+TernaryPtr(data.ConfirmedClean, "isClean", "isDirty", "empty"))
 
 	// CHECK THAT ALL NEW PICS EXIST
 	// PROCESS ALL NEW PICS AND CONTAMS

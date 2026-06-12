@@ -717,28 +717,41 @@ export function SporePrintColorSelector(
 }
 
 export function DisposedDisplay(
-    {readonly, disposed, setDisposedOnParent}: {
+    {readonly, initial, setDisposedOnParent}: {
         readonly: boolean,
-        disposed?: number,
+        initial?: number, // TODO: switch these everywhere from disposed to initial.disposed
         setDisposedOnParent?: (n?: number) => void,
     }
 ) {
-    if (readonly || (disposed !== undefined)) {
+    const [dispose, setDispose] = useState(!!initial)
+    // useEffect(() => {
+    //     setDispose(!!disposed) // TODO: necessary? probably not
+    // }, [disposed]);
+    if (readonly || initial !== undefined) {
         return <NoSsr>
-            <div className={"disposedArea"}>
-                <div>{disposed ? "Disposed: " : "Not Yet Disposed"}</div>
-                {disposed && <div>{NumberToDate(new Date(disposed))}</div>}
+            <div className={"disposedArea"}>{/* TODO: reformat */}
+                <div>{"Disposed: "+(initial ? NumberToDate(new Date(initial)) : "Not Yet Disposed")}</div>
             </div>
         </NoSsr>
     }
-    const dispose = () => {
+    const disposeOnParent = () => {
         const DisposalTime = Date.now()
         setDisposedOnParent && setDisposedOnParent(DisposalTime)
     }
     return <NoSsr>
-        <div className={"disposedArea"}>
-            <div className={"areaHeader"}>{"Not Yet Disposed: "}</div>
-            <button className={"removeButton"} onClick={dispose}>{"Dispose"}</button>
+        <div className={"disposedArea inlineChildren"}>
+            <div>{"Disposed: "}</div>
+            <input type={"checkbox"} checked={dispose} onClick={e => {
+                e.stopPropagation()
+                let doDispose = !dispose
+                setDispose(doDispose)
+                if (doDispose) {
+                    disposeOnParent()
+                } else {
+                    setDisposedOnParent && setDisposedOnParent(undefined)
+                }
+
+            }}/>
         </div>
     </NoSsr>
 }

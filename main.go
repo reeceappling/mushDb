@@ -14,6 +14,7 @@ import (
 	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
 	rfid "github.com/reeceappling/mushDb/api"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
@@ -115,6 +116,10 @@ func main() {
 	log := logging.LoggerFactoryFor("mush-api-go") // TODO: ok name?
 	ctx = logging.SetLogger(ctx, log)
 	ctx = logging.SetSugaredLogger(ctx, log.Sugar())
+
+	// TODO: set environment!
+	//ctx = env.SetEnv(ctx, env.Prod)
+	ctx = env.SetEnv(ctx, env.Dev)
 
 	// Get non-db env vars
 	rfidRegistrySecret := os.Getenv("RFID_SECRET")
@@ -1211,27 +1216,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		}
 		println("returning item: ", string(tempBs)) // TODO: THIS!
 	default: // Main collection ids
-		mainCollItem, err := MainCollItemForEntryType(entryType)
+		mainCollItem, err := rfid.MainCollItemForEntryType(entryType)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		//if mainCollItem, exists := map[string]rfid.MainCollectionItem{
-		//	"bag":             &rfid.Bag{}, // can only go to fruits
-		//	"fruit":           &rfid.Fruit{},
-		//	"fruitingChamber": &rfid.FruitingChamber{}, // can only go to fruits
-		//	"jar":             &rfid.GrainJar{},        // can go anywhere (in theory) except MSS
-		//	"lc":              &rfid.LiquidCulture{},   // can go anywhere (in theory) except MSS
-		//	"lcSyringe":       &rfid.LcSyringe{},
-		//	"mss":             &rfid.MSS{},   // generally only goes to plate
-		//	"plate":           &rfid.Plate{}, // can go anywhere (in theory) except MSS
-		//	"plugs":           &rfid.PlugsJar{},
-		//	"slant":           &rfid.Slant{}, // generally only goes to plate
-		//	"sporePrint":      &rfid.SporePrint{},
-		//	"sporeSwab":       &rfid.SporeSwab{},
-		//	"stasisTube":      &rfid.StasisTube{}, // generally only goes to plate
-		//	"waterJar":        &rfid.WaterJar{},
-		//}[entryType]; exists {
 		// ensure id is in correct format
 		mainCollId, err := rfid.StandardizeMainCollectionId(id)
 		if err != nil {
@@ -1265,11 +1254,6 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		//tempBs, err = json.MarshalIndent(out, "", "  ") // TODO: del
-		//if err != nil {
-		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
 	}
 	_, err = w.Write(bytes)
 	if err != nil {

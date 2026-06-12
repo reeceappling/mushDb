@@ -46,7 +46,7 @@ export interface BagData {
     genSpore?: number
     genFruitOrSpore?: number
     sealDate?: number
-    wetness?: number // TODO: handle everywhere
+    wetness?: number
     knownFruitable?: boolean
     species?: string
     subspecies?: string

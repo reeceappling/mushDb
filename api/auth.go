@@ -11,6 +11,7 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/sessions/genericsessions"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -233,7 +234,7 @@ func (srv *AuthService) deleteGuestSession(id SessionId) {
 
 func (serv *AuthService) TryToReAuth(sessionKey SessionId) (genericsessions.Session[ResolvedUserPerms], error) {
 	if sessionKey == "" {
-		println("sessionKey is empty") // TODO; del
+		env.LogAlways("sessionKey is empty") // TODO: ok?
 		return genericsessions.Session[ResolvedUserPerms]{}, ErrBlankSessionKey
 	}
 	res := serv.GetSession(sessionKey, true) // TODO: needs update

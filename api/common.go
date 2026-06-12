@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -686,12 +687,12 @@ func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, er
 
 func handleWriteErr(err error, w http.ResponseWriter) {
 	if err != nil {
-		println("failed to write! " + err.Error()) // TODO: SOMETHING HERE!
+		env.LogAlways("failed to write! " + err.Error())
 	}
 }
 
 func handleFileDeleteErr(err error) {
-	println("failed to delete file! " + err.Error()) // TODO: SOMETHING HERE!
+	env.LogAlways("failed to delete file! " + err.Error())
 }
 
 var (

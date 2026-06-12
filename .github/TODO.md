@@ -34,24 +34,33 @@
     - [x] List Page
   - [ ] Agar Recipe
     - [x] Display page
+      - [ ] Create Plate // TODO: create shortcuts like this MUCH LATER
+        - [ ] OVC
+        - [ ] Go side
+      - [ ] Create Slant // TODO: create shortcuts like this MUCH LATER
+        - [ ] OVC
+        - [ ] Go side
     - [ ] Create page
-      - [ ] nutes/sugar/etc consider doing x/Liter?
       - [x] Validate all working properly
       - [x] Nutrients/etc working properly
-      - [ ] Create Plate // TODO: create shortcuts like this MUCH LATER
-      - [ ] Create Slant // TODO: create shortcuts like this MUCH LATER
+      - [ ] nutes/sugar/etc consider doing x/Liter? (should maybe put a x/L calculator?)
     - [x] List Page
       - [x] Clicks work
       - [ ] Ensure text doesnt step all over each other on slim screens
   - [ ] Bag
     - [x] Display page
-      - [ ] Fix wetness area
+      - [x] Fix wetness area
+      - [x] Ensure seal date added on transfer
       - [ ] Preexisting users and projects which are not valid cause problems on update
-      - [ ] New fruit area
+      - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
       - [ ] Create SporePrint (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
+        - [ ] OVC
+        - [ ] Go side
       - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
-    - [ ] Create page
+        - [ ] OVC
+        - [ ] Go side
+    - [x] Create page
     - [ ] Import page
     - [x] List Page
   - [ ] Fruit

@@ -195,6 +195,24 @@ export default function AgarRecipeDisplay(
                     isTopLevel: false,
                 }}/>
             },
+        },
+        {
+            txt: "Create Plate (+batch)",
+            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                return <TestAndValidate todos={["not implemented yet, should also create batch!", "Do MUCH later. Shortcut"]}>
+                    <div>{"Not yet implemented!"}</div>
+                </TestAndValidate>
+            },
+            needsTesting: true,
+        },
+        {
+            txt: "Create Slant (+batch)",
+            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                return <TestAndValidate todos={["not implemented yet, should also create batch!", "Do MUCH later. Shortcut"]}>
+                    <div>{"Not yet implemented!"}</div>
+                </TestAndValidate>
+            },
+            needsTesting: true,
         }
     ]
     return (
@@ -335,31 +353,25 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             </div>
             <div>
                 <div>{"Liquids: "}</div>
-                <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>{/* TODO: validate working properly*/}
+                <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>
             </div>
             <div>
-                <TestAndValidate todos={["ensure for volume cases to do something like g/L or g/400mL"]}>
                 <div>{"Nutrients: "}</div>
-                </TestAndValidate>
                 <NutrientsEntriesGroupForNew currentEntries={nutrients}
-                                             updateParent={setNutrients}/>{/* TODO: validate working properly*/}
+                                             updateParent={setNutrients}/>
             </div>
             <div>
-                <TestAndValidate todos={["ensure for volume cases to do something like g/L or g/400mL"]}>
                 <div>{"Sugars: "}</div>
-                </TestAndValidate>
-                <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>{/* TODO: validate working properly*/}
+                <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
             </div>
             <div>
-                <TestAndValidate todos={["ensure for volume cases to do something like g/L or g/400mL"]}>
                 <div>{"Additives: "}</div>
-                </TestAndValidate>
-                <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>{/* TODO: validate working properly*/}
+                <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
             </div>
             <div>
                 <div>{"Antibiotics: "}</div>
                 <AntibioticEntriesGroupForNew currentEntries={antibiotics}
-                                              updateParent={setAntibiotics}/>{/* TODO: validate working properly*/}
+                                              updateParent={setAntibiotics}/>
             </div>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}

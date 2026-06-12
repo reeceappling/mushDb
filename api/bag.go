@@ -247,6 +247,7 @@ type updateBagRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
+	WetnessField
 	NotesUpdateField
 	ImagesUpdateField  //"newPic-1"
 	ContamsUpdateField //"newContam-1"
@@ -258,6 +259,7 @@ func (upr updateBagRequest) reform() resolvedUpdateBagRequest {
 	return resolvedUpdateBagRequest{
 		KnownFruitableField: upr.KnownFruitableField,
 		SaleField:           upr.SaleField,
+		WetnessField:        upr.WetnessField,
 		DisposedField:       upr.DisposedField,
 		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
@@ -272,6 +274,7 @@ type resolvedUpdateBagRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
+	WetnessField
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams        SplitEntries[contamForm, Contamination]
 	Flushes        SplitEntries[picWithNotesForm, PicWithNotes]
@@ -282,6 +285,7 @@ func (req resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (b
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
 		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateWetnessIfNeeded(req.Wetness, existing.Wetness).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).

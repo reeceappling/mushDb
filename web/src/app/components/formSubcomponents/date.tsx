@@ -73,7 +73,7 @@ export default function DateArea(
     }
     if(readonly){
         if(when===undefined){ // WHEN MUST EXIST
-            return <div className={"dateHolder"}>{"date unknown"}</div>
+            return <div className={"dateHolder"}>{(pre||"")+"none"}</div>
         }
         return <NoSsr><div className={"dateHolder"}>
             {(pre !== "" && pre !== undefined) && <div className={"dateHeader"}>{pre}</div>}

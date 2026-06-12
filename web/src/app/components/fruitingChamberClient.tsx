@@ -266,7 +266,7 @@ export default function FruitingChamberDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                disposed={initial.disposed} readonly={readonly}/>
+                                                initialDisposed={initial.disposed} readonly={readonly}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SubstrateRecipeArea id={initial.recipe} headerLevel={headerLevel} readonly={true}/>

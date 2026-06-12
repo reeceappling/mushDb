@@ -239,7 +239,7 @@ export default function LcSyringeDisplay(
         <FlexedArea>
             <FlexedSinglesGroup>
                 <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                            disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
+                                            initialDisposed={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
                 <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>

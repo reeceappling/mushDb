@@ -16,10 +16,10 @@ export default function Centered({children}:{children:React.ReactNode}){
 }
 
 export function CreatedUpdatedDisposedArea(
-    {created, updated, disposed, readonly, setDisposedOnParent}: {
+    {created, updated, initialDisposed, readonly, setDisposedOnParent}: {
         created: number,
         updated: number,
-        disposed?: number,
+        initialDisposed?: number,
         readonly: boolean,
         setDisposedOnParent?: (n?: number) => void,
     }
@@ -27,6 +27,6 @@ export function CreatedUpdatedDisposedArea(
     return <>
         <DateArea pre={"Created: "} when={created} readonly={true}/>
         <DateArea pre={"Updated: "} when={updated} readonly={true}/>
-        <DisposedDisplay readonly={readonly} disposed={disposed} setDisposedOnParent={setDisposedOnParent}/>
+        <DisposedDisplay readonly={readonly} initial={initialDisposed} setDisposedOnParent={setDisposedOnParent}/>
     </>
 }

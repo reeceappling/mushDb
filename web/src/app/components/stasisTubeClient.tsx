@@ -265,7 +265,7 @@ export default function StasisTubeDisplay(
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} />
                 <FlexedArea>
                     <FlexedSinglesGroup>
-                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
+                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} initialDisposed={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
                         <PcRunArea binaryId={initial.pcRun} headerLevel={headerLevel}/>

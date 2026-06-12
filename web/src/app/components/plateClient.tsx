@@ -284,7 +284,7 @@ export default function PlateDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                disposed={disposed}
+                                                initialDisposed={initial.disposed}
                                                 readonly={readonly} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>

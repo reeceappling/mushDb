@@ -615,6 +615,9 @@ func (upd *Mods) updatePcRunIfNeeded(next, current pcRunOptional) *Mods {
 func (upd *Mods) updateKnownFruitableIfNeeded(future, existing hasKnownFruitableField) *Mods {
 	return updatePointerIfNeeded(upd, "knownFruitable", future.knownToBeFruitable(), existing.knownToBeFruitable())
 }
+func (upd *Mods) updateWetnessIfNeeded(future, existing *int) *Mods {
+	return updatePointerIfNeeded(upd, "wetness", future, existing) // TODO: ensure it can't unset!!!
+}
 func (upd *Mods) updateCondensationCoverageIfNeeded(future, existing hasCondensCov) *Mods {
 	exist, fut := existing.condensationCoverage(), future.condensationCoverage()
 	if exist != nil {

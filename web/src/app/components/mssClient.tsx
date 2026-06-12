@@ -229,7 +229,7 @@ export default function MssDisplay(
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
-                    <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
+                    <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} initialDisposed={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
                     <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel} canCreateSale={true}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>

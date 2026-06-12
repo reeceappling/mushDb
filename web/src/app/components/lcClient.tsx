@@ -312,7 +312,7 @@ export default function LcDisplay(
                 <FlexedSinglesGroup>
                     {/*3high,19wide fragmented*/}
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                disposed={disposed} setDisposedOnParent={setDisposed}
+                                                initialDisposed={initial.disposed} setDisposedOnParent={setDisposed}
                                                 readonly={readonly}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>

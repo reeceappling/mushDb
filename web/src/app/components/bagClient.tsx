@@ -2,7 +2,12 @@
 
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
+import {
+    AddCreatedTriColFunction,
+    AllEntries,
+    OnViewCreatorQuadCol,
+    SplitAllEntries
+} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {BagData} from "@/app/components/bagServer";
@@ -75,7 +80,7 @@ import {
 } from "@/app/components/speciesClient";
 import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {SubstrateBatchArea} from "@/app/components/substrateBatchClient";
-import WetnessSlider from "@/app/components/formSubcomponents/utils/slider";
+import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
 import {SubstrateBatchData, SubstrateBatchSelectorCloseable} from "@/app/components/substrateBatchServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
@@ -180,6 +185,7 @@ export default function BagDisplay(
     const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
     const [disposed, setDisposed] = useState(initial.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
+    const [wetness, setWetness] = useState(initial.wetness) // TODO: new! handle on go side!
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     // ItemsWithPics
     const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
@@ -195,6 +201,7 @@ export default function BagDisplay(
     }
     const updateInitial = (updated: BagData) => {
         setInitial(updated)
+        setWetness(updated.wetness)
         setKnownFruitable(updated.knownFruitable)
         setSale(updated.sale)
         setTransfersOut(updated.transfersOut || [])
@@ -210,6 +217,7 @@ export default function BagDisplay(
     const bagSubmit = () => {
         const formData = new FormData()
         const dataObj: any = {
+            wetness: wetness, // TODO: ok?
             knownFruitable: knownFruitable,
             sale: sale, // TODO: how/when should sales be made?
             disposed: disposed,
@@ -253,6 +261,24 @@ export default function BagDisplay(
         // TODO: create spore print
         // TODO: creat spore swab
         WriteRfidOvcArea(initial._id), // TODO: TEST!
+        {
+            txt: "Create Spore Print (+fruit)",
+            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
+                    <div>{"Not yet implemented!"}</div>
+                </TestAndValidate>
+            },
+            needsTesting: true,
+        },
+        {
+            txt: "Create Spore Swab (+fruit)",
+            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
+                    <div>{"Not yet implemented!"}</div>
+                </TestAndValidate>
+            },
+            needsTesting: true,
+        }
     ]
     return (
         <DisplayFormWrapper entryType={"bag"}>
@@ -269,9 +295,9 @@ export default function BagDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <DateArea pre={"PC Date: "} readonly={true} when={initial.creationDate}/>
-                    <DateArea pre={"Seal Date: "} readonly={true} when={initial.sealDate}/>
+                    <DateArea pre={"Seal Date: "} readonly={true} when={initial.sealDate}/> {/* TODO: FIXME! Add seal date when transferred in!*/}
                     <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                    <DisposedDisplay disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
+                    <DisposedDisplay initial={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <KnownFruitableArea initial={initial.knownFruitable} doSelect={setKnownFruitable}
@@ -283,11 +309,10 @@ export default function BagDisplay(
                 <FlexedSinglesGroup>
                     <GensFormDisplay gensSinceSpore={initial.genSpore}
                                      gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
-                    <WetnessDisplay value={initial.wetness}/>{/* TODO: FIX */}
+                    {initial.wetness ? <WetnessDisplay value={initial.wetness}/> : <SliderOnlyIfUndefinedWithOpenButton text={"Wetness"} defaultValue={5} onChange={setWetness}/>}{/* TODO: ensure default wetness ok?*/}
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    {/*TODO: THIS!<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                     <ParentDisplay parent={initial.parent} parentType={initial.parentType}
                                    headerLevel={headerLevel}/>
                     <InnocDisplay innoc={initial.innoc}/>
@@ -336,10 +361,10 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
 }) {
     // Required defined
     const [substrateBatch, setSubstrateBatch] = useState(substrateBatchIn)
-    const [wetness, setWetness] = useState<number | undefined>(undefined)
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [filterSize, setFilterSize] = useState<string | undefined>()
     // Optional
+    const [wetness, setWetness] = useState<number | undefined>(undefined) // TODO: allow to be undefined on go side
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
@@ -378,16 +403,17 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             <ErrorDisplay err={err}/>
             <div>{"Creating Bag: "}</div>
             {substrateBatchIn !== undefined &&
-                <SubstrateBatchSelectorCloseable txt={"Substrate Batch (FIXME)"} doSelect={setSubstrateBatch}
+                <SubstrateBatchSelectorCloseable txt={"Substrate Batch"} doSelect={setSubstrateBatch}
                                                  allowCreation={handlers.isTopLevel} creatorInPage={false}/>}
-            <WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {
-                setWetness(value)
-            }}/>
+            <SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/>
+            {/*<WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {*/}
+            {/*    setWetness(value)*/}
+            {/*}}/>*/}
             {pcRunIn === undefined && // TODO: Show pc run if already exists?
                 <PcRunSelectorCloseable doSelect={setPcRun} creatorInPage={true} allowCreation={true}/>}
             <div className={"centerH medGapTop"}>
                 {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize}
-                                                     current={filterSize}/>{/* TODO: ensure working!*/}
+                                                     current={filterSize}/>
             </div>
             <NewEntryNotes setNotes={setNotes}/>
             {/* Write tag area */}

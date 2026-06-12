@@ -295,8 +295,8 @@ export default function SporePrintDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <DateArea pre={"Print Date: "} readonly={true} when={data.creationDate}/>
-                    <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-                    <DisposedDisplay readonly={false} disposed={disposed} setDisposedOnParent={setDisposed}/>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                    <DisposedDisplay readonly={false} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>

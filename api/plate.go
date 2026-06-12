@@ -688,6 +688,14 @@ func ImportFinalPerms(ctx context.Context, spec string, subspec *string) (ACL, e
 	} else {
 		finalPerms = sp.DefaultAcl.Clone()
 	}
-	finalPerms.Users[GetUserEmail(ctx)] = true
+	userEmail := GetUserEmail(ctx)
+	if finalPerms.Users == nil {
+		finalPerms.Users = map[string]bool{
+			userEmail: true,
+		}
+	} else {
+		finalPerms.Users[userEmail] = true
+	}
+
 	return finalPerms, nil
 }

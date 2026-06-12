@@ -223,7 +223,7 @@ export default function SporeSwabDisplay(
                                   headerLevel={headerLevel}/>
                         <DateArea pre={"Print Date: "} readonly={true} when={initial.creationDate}/>
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                        <DisposedDisplay readonly={false} disposed={disposed} setDisposedOnParent={setDisposed}/>
+                        <DisposedDisplay readonly={false} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
                         <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
                        </TestAndValidate>
                 </FlexedSinglesGroup>

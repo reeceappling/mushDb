@@ -283,7 +283,7 @@ export default function SlantDisplay(
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
-                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} disposed={disposed}
+                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} initialDisposed={initial.disposed}
                                                     readonly={readonly} setDisposedOnParent={setDisposed}/>
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>

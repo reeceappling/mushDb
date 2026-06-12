@@ -151,7 +151,7 @@ export default function WaterJarDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} readonly={readonly}
-                                                disposed={initial.disposed} setDisposedOnParent={setDisposed}/>
+                                                initialDisposed={initial.disposed} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>

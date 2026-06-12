@@ -359,7 +359,7 @@ export default function JarDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                disposed={disposed} setDisposedOnParent={setDisposed}
+                                                initialDisposed={initial.disposed} setDisposedOnParent={setDisposed}
                                                 readonly={readonly}/>
                     {jarSizeArea()}
                 </FlexedSinglesGroup>
