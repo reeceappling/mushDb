@@ -141,7 +141,7 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                     isTopLevel: true, onCreate: (newEntry: ProjectData) => {
                         setNewEntries([...newEntries,createdLinkFor(newEntry._id, encodeURI(newEntry._id), "project")])
                     },
-                }}/> //TODO: REENABLE??? onCreate={pd => doRedirect(pd._id)}
+                }}/>
             // case "sale": // TODO: from other pages only!
             //     return <NewSaleForm headerLevel={TopPageHeaderLevel} onCreate={sd => doRedirect(sd._id)}/>
             // case "slant": // from agarBatch only

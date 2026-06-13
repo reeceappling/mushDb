@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -56,7 +57,7 @@ type WaterJarOptionalField struct {
 	WaterSource *MainCollectionId `bson:"waterSource,omitempty" json:"waterSource,omitempty"`
 }
 
-func (field WaterJarOptionalField) Get(ctx context.Context) (out PCRun, err error) {
+func (field WaterJarOptionalField) Get(ctx context.Context) (out WaterJar, err error) {
 	if field.WaterSource == nil {
 		err = ErrMissingOptionalField
 		return
@@ -68,14 +69,14 @@ type WaterJarField struct {
 	WaterSource MainCollectionId `bson:"waterSource" json:"waterSource"`
 }
 
-func (field WaterJarField) Get(ctx context.Context) (out PCRun, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(WaterJarsCollectionName).FindOne(ctx, BsonFindFilter("_id", field.WaterSource)).Decode(&out)
+func (field WaterJarField) Get(ctx context.Context) (out WaterJar, err error) {
+	err = DbFrom(ctx).Collection(WaterJarsCollectionName).FindOne(ctx, BsonFindFilter("_id", field.WaterSource)).Decode(&out)
 	return out, err
 }
 
 func initializeWaterJars(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(WaterJarsCollectionName)
+	coll := DbFrom(ctx).Collection(WaterJarsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		newSimpleIndex("pcRun", "pcRun", false, false, false),
@@ -120,7 +121,7 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		return
 	}
 	id := NextMainCollectionId()
-	ctx, _ := Db(r)
+	ctx, now := request.UnixTime(r.Context())
 	pcRun, err := req.PcRunField.Get(ctx)
 	if err != nil {
 		http.Error(w, "failed to get pc run: "+err.Error(), http.StatusInternalServerError)
@@ -133,7 +134,7 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		PcRunField:            req.PcRunField,
 		NotesField:            req.NotesField,
 		DisposedField:         DisposedField{nil},
-		LastUpdatedField:      LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:      LastUpdatedField{now},
 		AclField:              allCanWriteAcl(),
 	}
 

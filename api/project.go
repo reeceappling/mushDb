@@ -6,6 +6,8 @@ import (
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/request"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -22,7 +24,7 @@ type projectName string
 type Project struct {
 	Name              projectName `bson:"_id" json:"_id"`
 	CreationDateField `bson:"inline"`
-	Completed         *UnixTime `bson:"completed,omitempty" json:"completed,omitempty"`
+	Completed         *unix.Time `bson:"completed,omitempty" json:"completed,omitempty"`
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	Perms             ProjectPerms `bson:"perms" json:"perms"` // Map of email of user to permission on project
@@ -46,7 +48,7 @@ func (p Project) IdValue() any {
 
 func initializeProjects(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName)
+	coll := DbFrom(ctx).Collection(ProjectsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		//newSimpleIndex("completed", "creationDate", true, true, false), // TODO: ???
@@ -71,15 +73,17 @@ func GetAllProjects(ctx context.Context, complete *bool) ([]Project, error) {
 		return nil, err
 	}
 	if complete != nil {
+		var keepFilter func(*Project) bool
 		if *complete {
-			projs = sliceutils.FilterInPlace(projs, func(pr *Project) bool {
+			keepFilter = func(pr *Project) bool {
 				return pr.Completed != nil
-			})
+			}
 		} else {
-			projs = sliceutils.FilterInPlace(projs, func(pr *Project) bool {
+			keepFilter = func(pr *Project) bool {
 				return pr.Completed == nil
-			})
+			}
 		}
+		projs = sliceutils.FilterInPlace(projs, keepFilter)
 	}
 
 	return sliceutils.Map(projs, func(pr *Project) Project {
@@ -93,43 +97,48 @@ var testProjects = []Project{
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         nil,
 		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be admin"),
+			newNote(exampleTime, "test user should be admin. Admin user is admin"),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		Perms: map[string]ProjectPerm{
-			testUserEmail: ProjectAdmin,
+			testUserEmail:     ProjectAdmin,
+			testUserEmailSelf: ProjectAdmin,
 		},
 	}, {
 		Name:              "testProjectWrite",
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         &exampleTime,
 		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be able to write but not admin"),
+			newNote(exampleTime, "test user should be able to write but not admin. Admin user is admin"),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		Perms: map[string]ProjectPerm{
-			testUserEmail: ProjectWrite,
+			testUserEmail:     ProjectWrite,
+			testUserEmailSelf: ProjectAdmin,
 		},
 	}, {
 		Name:              "testProjectRead",
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         nil,
 		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be able to read"),
+			newNote(exampleTime, "test user should be able to read. Admin user is admin"),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
 		Perms: map[string]ProjectPerm{
-			testUserEmail: ProjectRead,
+			testUserEmail:     ProjectRead, // TODO: ensure to remove dots and plusses from (pre-@) emails? Maybe keep them because that's nicer as a service provider :)
+			testUserEmailSelf: ProjectAdmin,
 		},
 	}, {
 		Name:              "testProjectNone",
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         nil,
 		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should not be able to do anything"),
+			newNote(exampleTime, "test user should not be able to do anything. Admin user is admin"),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms:            nil,
+		Perms: map[string]ProjectPerm{
+			testUserEmailSelf: ProjectAdmin, // This is self and not test user because I want only my main email to be admin
+		},
 	},
 }
 
@@ -152,9 +161,8 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, _ := Db(r)
 
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := Project{
 		Name:              projectName(req.Name),
 		CreationDateField: CreationDateField{now},
@@ -172,7 +180,7 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateProjectRequest struct {
-	Completed *UnixTime `json:"completed,omitempty"`
+	Completed *unix.Time `json:"completed,omitempty"`
 	NotesUpdateField
 	Perms ProjectPerms `json:"perms"`
 }
@@ -299,7 +307,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //		if !auth.isAdmin() {
 //			filter = bson.M{"_id": bson.M{"$in": maps.Keys(auth.Opts.Projects)}}
 //		}
-//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
+//		cursor, err := DbFrom(ctx).Collection(ProjectsCollectionName).
 //			Find(ctx, filter) // TODO: ok?
 //		if err != nil {
 //			return nil, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
@@ -341,7 +349,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //		if unfinishedOnly {
 //			filter["completed"] = bson.M{"$exists": false}
 //		}
-//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
+//		cursor, err := DbFrom(ctx).Collection(ProjectsCollectionName).
 //			Find(ctx, filter) // TODO: ok?
 //		if err != nil {
 //			return nil, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)

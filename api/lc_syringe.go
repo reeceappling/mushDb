@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -48,7 +49,7 @@ func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
 
 //func (sw LcSyringe) setTransferParent(ctx context.Context, xfer Transfer) error {
 //	// TODO: can this even happen? // TODO: YES IT CAN! REVAMP!
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
+//	coll := DbFrom(ctx).Collection(sw.CollectionName())
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 //	if err != nil {
 //		return err
@@ -94,7 +95,7 @@ func (sw LcSyringe) id() []byte {
 
 func initializeSyringes(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcSyringeCollectionName)
+	coll := DbFrom(ctx).Collection(LcSyringeCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		//newSimpleIndex("parent", "parent", false, true, false),
@@ -118,7 +119,7 @@ func initializeSyringes(ctx context.Context) error {
 	testItem := &LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: exLCS},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exLC},
-		CreationDateField:                 exampleTime.asCreationDate(),
+		CreationDateField:                 CreationDateField{exampleTime},
 		SpeciesField:                      SpeciesField{testEntryStringId},
 		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
 		SaleField:                         SaleField{&exAltId},
@@ -167,13 +168,13 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "Parent LC must be innoculated", http.StatusInternalServerError)
 		return
 	}
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
 		ConfirmedCleanField:               parent.ConfirmedCleanField, // TODO: is this ok? Probably want to only keep if false, but otherwise do nil
 		KnownFruitableField:               parent.KnownFruitableField,
-		CreationDateField:                 now.asCreationDate(),
+		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      SpeciesField{Species: *parent.Species},
 		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
 		GenerationsFields:                 parent.GenerationsFields,
@@ -364,7 +365,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := LcSyringe{
 		MainCollectionIdField: MainCollectionIdField{Id: id},
 		CreationDateField:     data.CreationDateField,
@@ -378,7 +379,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:     data.KnownFruitableField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,
-		LastUpdatedField:        LastUpdatedFieldForNow(),
+		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)

@@ -31,7 +31,7 @@ import {
     ListPageItems,
     ListPageTable,
     ListTableColumn,
-    MultipartImportRequest,
+    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NewEntryInput,
@@ -289,7 +289,7 @@ export default function BagDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Substrate recipe: "}/>
-                    <SubstrateBatchArea id={data.substrateBatch} txt={"Substrate batch: "} readonly={true}/>
+                    <SubstrateBatchArea id={data.substrateBatch} txt={"Substrate batch: "}/>
                     <SubstrateRecipeArea id={initial.recipe} headerLevel={headerLevel} readonly={true}/>
                     {filterSizeArea(initial.filterSize)}
                 </FlexedSinglesGroup>
@@ -466,7 +466,9 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
         }
         setFormData(formData, dataObj)
         imageFile && formData.set("img", imageFile, "img")
-        MultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies))
+        // TODO: redirect not working.
+
     }
     return <ImportEntryFormWrapper entryType={"bag"}>
         {/* Required Fields */}
@@ -475,12 +477,12 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
         <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={false} creatorInPage={false}/>
         </SelectorWrapper>
-        <TestAndValidate todos={["NOT WORKING!"]}>
         <div className={"centerH medGapTop"}>
             {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize}
                                                  current={filterSize}/>{/* TODO: ensure working!*/}
         </div>
-        </TestAndValidate>
+        {/* TODO: WETNESS*/}
+        {/* TODO: NOTES*/}
         {/* Species required, subspecies optional*/}
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         {/*<ExistingSpeciesSelector doSelect={setSpecies}/>*/}
@@ -489,7 +491,9 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
         {/*</TestAndValidate>*/}
         {/* Other Optional fields*/}
         <GenerationInput updateParent={setGeneration}/>
-        <KnownFruitableArea doSelect={setKnownFruitable}/>
+        <TestAndValidate todos={["default to unknown?"]}>
+            <KnownFruitableArea doSelect={setKnownFruitable}/>
+        </TestAndValidate>
 
         <TopLevelImageSelector updateParent={setImageFile} buttonText={"Upload image"}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

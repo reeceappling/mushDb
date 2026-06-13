@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -42,7 +43,7 @@ const (
 
 func initializeSpecies(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SpeciesCollectionName)
+	coll := DbFrom(ctx).Collection(SpeciesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("scientificName", "scientificName", false, false, true),
 		aliasesIndexModel,
@@ -185,7 +186,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	// Validate
 	// TODO: Aliases?
 	_, err = req.SubstrateRecipeField.Get(ctx)
@@ -205,7 +206,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		AliasesField:      req.AliasesField,
 		StandardSubstrate: req.Substrate,
 		NotesField:        req.NotesField,
-		LastUpdatedField:  LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:  LastUpdatedField{now},
 		AclField:          finalAcl,
 		DefaultAcl:        finalAcl.ACL,
 	}
@@ -293,7 +294,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 
 func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
 	sp := Species{}
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	err := db.Collection(SpeciesCollectionName).FindOne(ctx, BsonFindFilter("_id", speciesName)).Decode(&sp)
 	if err != nil {
 		return sp, nil, err

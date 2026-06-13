@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -29,7 +30,7 @@ const TestSubspeciesName = "TestSubspecies"
 
 func initializeSubspecies(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubspeciesCollectionName)
+	coll := DbFrom(ctx).Collection(SubspeciesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("species", "species", false, false, false),
 		aliasesIndexModel,
@@ -108,7 +109,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := Subspecies{
 		NameIdField:      NameIdField{req.Name},
 		SpeciesField:     req.SpeciesField,
@@ -141,7 +142,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Do DB stuff
-	_, err = newTxn(r.Context(), func(ctx mongo.SessionContext) (any, error) {
+	_, err = newTxn(ctx, func(ctx mongo.SessionContext) (any, error) {
 		db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 		// Update species with subspecies
 

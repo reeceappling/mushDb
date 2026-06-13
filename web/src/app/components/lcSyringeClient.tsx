@@ -167,9 +167,10 @@ export function LcSyringeImportDisplay() {
             headers: clientPostRequestHeaders,
         })
             .then(HandleJsonResponse)
-            .then((newLcSyringe) => {
-                AssertLcSyringe(newLcSyringe)
-                redirect(viewUrlFor("lcSyringe", newLcSyringe._id))
+            .then((newItem) => {
+                AssertLcSyringe(newItem)
+                window.location.assign(viewUrlFor("lcSyringe", newItem._id))
+                // redirect(viewUrlFor("lcSyringe", newItem._id)) // TODO: del if working
             })
             .catch(ErrHandler(setErr));
     }

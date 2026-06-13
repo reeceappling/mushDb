@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -19,7 +20,7 @@ type SubstrateRecipeField struct {
 }
 
 func (field SubstrateRecipeField) Get(ctx context.Context) (out SubstrateRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PcRunCollectionName).FindOne(ctx, bson.M{
+	err = DbFrom(ctx).Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.M{
 		"_id": field.Substrate,
 	}).Decode(&out)
 	return out, err
@@ -37,7 +38,7 @@ type SubstrateRecipe struct {
 
 func initializeSubstrates(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateRecipesCollectionName)
+	coll := DbFrom(ctx).Collection(SubstrateRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, true),
 		standardIndexModel,
@@ -122,7 +123,7 @@ func (requestPerms PermsOnRequest) DefaultAcl() ACL {
 
 // TODO: use this everywhere needed?
 func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+	client := GetMongoClient(ctx)
 
 	// validate Projects
 	// TODO: count instead?
@@ -185,14 +186,14 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := SubstrateRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		NameField:                  req.NameField,
 		AliasesField:               req.AliasesField,
 		StandardField:              req.StandardField,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedFieldForNow(),
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)

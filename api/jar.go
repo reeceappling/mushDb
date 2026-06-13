@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -76,7 +77,7 @@ func (j GrainJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Gener
 }
 
 //func (j GrainJar) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName)
+//	coll := DbFrom(ctx).Collection(GrainJarCollectionName)
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 //	if err != nil {
 //		return err
@@ -127,7 +128,7 @@ func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection {
 
 func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err error) {
 	j = &GrainJar{}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(j)
+	err = DbFrom(ctx).Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(j)
 	return j, err
 }
 
@@ -137,7 +138,7 @@ func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err 
 //}
 
 func initializeJars(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(GrainJarCollectionName)
 	err := createIndexes(ctx, coll,
 		[]mongo.IndexModel{
@@ -274,7 +275,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&batch.Recipe},
@@ -298,8 +299,9 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importJarRequest struct {
-	// TODO: ALSO IMPORT WITH sizeCups
-	Recipe AlternateCollectionId // Jar Recipe
+	// TODO: ALSO IMPORT WITH sizeCups!
+	SizeCups int                   `json:"sizeCups"`
+	Recipe   AlternateCollectionId // Jar Recipe
 	CreationDateField
 	SpeciesOptionalField // Only empty when non-innoc'd
 	SubspeciesOptionalField
@@ -310,6 +312,7 @@ type importJarRequest struct {
 }
 
 func importJarHandler(w http.ResponseWriter, r *http.Request) {
+	println("attempting to import jar") // TODO: DELETE
 	data := importJarRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
@@ -322,7 +325,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	p1, err := reader.NextPart()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to get reader next part: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer p1.Close()
@@ -352,10 +355,11 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 	// Go to next part, if exists to get image
 	var importedPic *PicWithNotes = nil
+	ctx, now := request.UnixTime(r.Context())
 	p, err := reader.NextPart()
 	if err != nil {
 		if err != io.EOF {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "EOF on next part: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	} else {
@@ -378,7 +382,6 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTimeForNow()
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 
@@ -415,12 +418,14 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx, _ := Db(r)
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
+		SizeCups:                data.SizeCups,
 		JarRecipeField:          JarRecipeField{&data.Recipe},
 		GrainBatchOptionalField: GrainBatchOptionalField{nil}, // Batch not provided for import
-		PcRunOptionalField:      PcRunOptionalField{},         // No pc runs on imports
+		WetnessField:            WetnessField{},               // TODO: fix?
+		BurstGrainsField:        BurstGrainsField{},           // TODO: fix?
+		PcRunOptionalField:      PcRunOptionalField{nil},      // No pc runs on imports
 		CreationDateField:       CreationDateField{data.CreationDate},
 		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
@@ -431,7 +436,8 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		PicsField:            PicsField{pix},
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
-		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
+		NotesField:           NotesField{}, // TODO: fix?
+		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
 	}
 
@@ -445,7 +451,9 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
+	// TODO: used to be finishCreateMainCollectionEntry(ctx, &toInsert, w)
+	// TODO: finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateJarRequest struct {
@@ -534,7 +542,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	// go get current
 	existing := &GrainJar{}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+	err = DbFrom(ctx).
 		Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
@@ -545,5 +553,5 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 
 func Db(r *http.Request) (context.Context, *mongo.Database) {
 	ctx := r.Context()
-	return ctx, ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	return ctx, DbFrom(ctx)
 }

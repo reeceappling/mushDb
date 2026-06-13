@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"math"
 	"slices"
 	"time"
@@ -152,19 +153,19 @@ type ParentTypeField struct {
 }
 
 type CreationDateField struct {
-	CreationDate UnixTime `bson:"creationDate" json:"creationDate"`
+	CreationDate unix.Time `bson:"creationDate" json:"creationDate"`
 }
 
 type DisposedField struct {
-	Disposed *UnixTime `bson:"disposed,omitempty" json:"disposed,omitempty"`
+	Disposed *unix.Time `bson:"disposed,omitempty" json:"disposed,omitempty"`
 }
 
-func (df DisposedField) DisposalInfo() *UnixTime {
+func (df DisposedField) DisposalInfo() *unix.Time {
 	return df.Disposed
 }
 
 type Disposable interface {
-	DisposalInfo() *UnixTime
+	DisposalInfo() *unix.Time
 }
 
 type GenerationsFields struct {
@@ -184,11 +185,7 @@ type GenSporeField struct { // only used on fruit and embedded in GenerationsFie
 }
 
 type LastUpdatedField struct {
-	LastUpdated UnixTime `bson:"lastUpdated" json:"lastUpdated"`
-}
-
-func LastUpdatedFieldForNow() LastUpdatedField {
-	return LastUpdatedField{unixTimeForNow()}
+	LastUpdated unix.Time `bson:"lastUpdated" json:"lastUpdated"`
 }
 
 type NotesField struct {
@@ -205,7 +202,7 @@ func (field NotesField) GetNotes() []Note {
 func (field NotesField) withAllTimesSetTo(t time.Time) NotesField {
 	return NotesField{sliceutils.Map(field.Notes, func(n Note) Note {
 		return Note{
-			RequiredTimeField: newRequiredTimeField(unixTimeFor(t)),
+			RequiredTimeField: newRequiredTimeField(unix.TimeFor(t)),
 			Note:              n.Note,
 		}
 	})}

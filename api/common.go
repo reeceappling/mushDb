@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -89,7 +90,7 @@ func GetEnv(ctx context.Context) bool {
 
 //// TODO: searching in a specific index
 //func latestNUpdatedB(ctx context.Context) error { // TODO: fixMe
-//	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+//	db := DbFrom(ctx)
 //	//indx := // TODO: use correct index
 //	opts := options.Find().SetHint(
 //		mongo.IndexModel{Keys: bson.D{{"transfersOut", 1}}}, // TODO: ????????????
@@ -100,10 +101,10 @@ func GetEnv(ctx context.Context) bool {
 //	//coll.UpdateByID(ctx, bson.D{bson.E{Key: "_id": "someId"}}, ) // TODO: use this
 //}
 
-func withUpdateNow() primitive.E {
+func withUpdateNow() primitive.E { // TODO: FIXME!
 	return primitive.E{
 		Key:   "lastUpdated",
-		Value: unixTimeForNow(),
+		Value: unix.TimeForNow(), // TODO: FIXME!
 	}
 }
 
@@ -203,9 +204,9 @@ func simplePointerUpdate[T any](mods []bson.E, key string, ptr *T) []bson.E {
 	return out
 }
 
-func getItemLatestImage(item CollectionItem) (*ImageLocation, UnixTime) { // TODO: consider using?
+func getItemLatestImage(item CollectionItem) (*ImageLocation, unix.Time) { // TODO: consider using?
 	var loc *ImageLocation = nil
-	var latest UnixTime = 0
+	var latest unix.Time = 0
 	if itemWithPicsField, ok := item.(interface{ getLatestPicFromPicsField() *PicWithNotes }); ok {
 		if pwn := itemWithPicsField.getLatestPicFromPicsField(); pwn != nil {
 			loc = &pwn.Location
@@ -436,7 +437,7 @@ var ErrInvalidEntryType = errors.New("invalid entry type")
 //}
 
 func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T, err error) {
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+	cursor, err := GetMongoClient(ctx).
 		Database(dbName).
 		Collection(temp.CollectionName()).
 		Find(ctx, BsonFindFilter("standard", true)) // TODO: NOT WORKING PROPERLY?!!!!! (check again)
@@ -495,8 +496,8 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 }
 
 type picWithNotesForm struct {
-	Time UnixTime `json:"time"`
-	Img  string   `json:"img"`
+	Time unix.Time `json:"time"`
+	Img  string    `json:"img"`
 	NotesUpdateField
 }
 
@@ -508,10 +509,10 @@ func (pwn picWithNotesForm) convert() PicWithNotes {
 }
 
 type contamForm struct {
-	Time      UnixTime `json:"time"`
-	Confirmed bool     `json:"confirmed"`
-	Bacteria  bool     `json:"bacteria"`
-	Mold      bool     `json:"mold"`
+	Time      unix.Time `json:"time"`
+	Confirmed bool      `json:"confirmed"`
+	Bacteria  bool      `json:"bacteria"`
+	Mold      bool      `json:"mold"`
 	NotesUpdateField
 	Location *string `json:"location,omitempty"` // MAY OR MAY NOT EXIST ON RESPONSE
 }
@@ -699,7 +700,7 @@ var (
 	testEntryStringId    = "TestEntry"
 	exAltId              = altCollIdForint(0)
 	exFruitId            = mainCollIdForint(idTestFruit)
-	exampleTime          = unixTimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
+	exampleTime          = unix.TimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
 	exReqTimeField       = RequiredTimeField{exampleTime}
 	exampleSpecies       = "Beech"
 	exampleSubspecies    = utils.Pointer("Brown Beech")
@@ -748,8 +749,8 @@ var (
 	}
 	testAcl = ACL{
 		Users: map[string]bool{
-			exUserNoProjectRead:  false,
-			exUserNoProjectWrite: true,
+			testUserEmail:     false, // TODO: fix for correct user
+			testUserEmailSelf: true,
 		},
 		Projects: map[projectName]bool{
 			exProjRead:  false,
@@ -807,7 +808,7 @@ func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item T) 
 }
 
 func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(existing.CollectionName())
+	coll := DbFrom(ctx).Collection(existing.CollectionName())
 	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -893,4 +894,17 @@ func ReadSimpleStructuredBody[T any](r *http.Request, w http.ResponseWriter, req
 		return err
 	}
 	return nil
+}
+
+func MarshalAndReturn(ctx context.Context, w http.ResponseWriter, toReturn any) {
+	bs, err := json.Marshal(toReturn)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	env.LogIfDev(ctx, "sending response item: "+string(bs))
+	_, err = w.Write(bs)
+	if err != nil {
+		handleWriteErr(err, w)
+	}
 }

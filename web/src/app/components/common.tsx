@@ -780,7 +780,8 @@ export function ImportResponseHandler<T extends Importable>(asserter: TypeAssert
         HandleJsonResponse(res)
             .then(item=>{
                 asserter(item)
-                redirect(viewUrlFor(typeStr, item._id))
+                window.location.assign(viewUrlFor(typeStr, item._id))
+                // redirect(viewUrlFor(typeStr, item._id)) // TODO: del if working
             })
             .catch(ErrHandler(setErr))
     }
@@ -796,7 +797,8 @@ export function DoImportRequest<T extends Importable>(body: any, typeStr: string
         .then(HandleJsonResponse)
         .then(newItem => {
             asserter(newItem)
-            redirect(viewUrlFor(typeStr, newItem._id))
+            window.location.assign(viewUrlFor(typeStr, newItem._id))
+            // redirect(viewUrlFor(typeStr, newItem._id)) // TODO: del if working
         })
         .catch(ErrHandler(setErr));
 }
@@ -816,7 +818,7 @@ export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string,
         });
 }
 
-export function MultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
+export function DoMultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
     SendMultipartRequest(importApiUrlFor(typeStr), formData, cookies)
         .then(ImportResponseHandler(asserter,typeStr, setErr))
 }

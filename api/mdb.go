@@ -494,6 +494,10 @@ func GetMongoClient(ctx context.Context) *mongo.Client {
 	return val
 }
 
+func DbFrom(ctx context.Context) *mongo.Database {
+	return GetMongoClient(ctx).Database(dbName)
+}
+
 func chanWithPostSendHook[T any](out chan<- T, afterFinalSend func(T)) (inpC chan<- T) {
 	inp, out := make(chan T), make(chan T)
 	go func() {
@@ -508,7 +512,7 @@ func chanWithPostSendHook[T any](out chan<- T, afterFinalSend func(T)) (inpC cha
 }
 
 func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[string]) ([]MainCollectionId, utils.Set[string], error) {
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+	client := GetMongoClient(ctx)
 	out := make([]MainCollectionId, 0, n)
 	found := utils.Set[string]{}
 	for ctFound := 0; ctFound < n; {
@@ -551,8 +555,7 @@ func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
 	// TODO: pagination?
 	opts := options.Find().
 		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
+	cursor, err := DbFrom(ctx).
 		Collection(temp.CollectionName()).
 		Find(ctx, findBson, opts)
 	if err != nil {
@@ -575,8 +578,7 @@ func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresul
 		//SetLimit(int64(nresults)). // TODO: no limit because user can be unable to view some items
 		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
 	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
+	cursor, err := DbFrom(ctx).
 		Collection(temp.CollectionName()).
 		Find(ctx, findBson, opts)
 	if err != nil {
@@ -587,7 +589,7 @@ func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresul
 
 func FindItemTypeForId(ctx context.Context, id MainCollectionId) (MainCollectionItem, error) {
 	mapEntry := &idMapEntry{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": id}).Decode(mapEntry)
+	err := DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": id}).Decode(mapEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -651,8 +653,7 @@ var GetPageForIdHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 		return
 	}
 	out := &idMapEntry{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
+	err := DbFrom(ctx).
 		Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(out)
 	if err != nil {
 		http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
@@ -743,6 +744,7 @@ var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 	}[endpt]
 	if !exists {
 		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
+		return
 	}
 	handler.ServeHTTP(w, r)
 }

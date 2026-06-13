@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -70,7 +71,7 @@ func (s Slant) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 }
 
 //func (s Slant) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(s.CollectionName())
+//	coll := DbFrom(ctx).Collection(s.CollectionName())
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 //	if err != nil {
 //		return err
@@ -120,7 +121,7 @@ func (s Slant) id() []byte {
 }
 
 func initializeSlants(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(SlantsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
@@ -203,8 +204,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := unixTimeForNow()
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := &Slant{
 		MainCollectionIdField: MainCollectionIdField{id},
 		AgarBatchField:        AgarBatchField{&data.AgarBatch},
@@ -228,13 +228,13 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 		return nil, createMainCollectionEntryInTxn(sessCtx, toInsert)
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to create main collection entry in txn:"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	bsOut, err := json.Marshal(toInsert)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to marshal result: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = w.Write(bsOut)
@@ -260,7 +260,7 @@ var ErrTxnWriteFail = errors.New("failed to write in transaction")
 // TODO: MOVE
 // TODO: used to be: finishCreateAlternateEntry(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter) {
 func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) {
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(toInsert.CollectionName())
+	coll := DbFrom(ctx).Collection(toInsert.CollectionName())
 	_, err := coll.InsertOne(ctx, toInsert)
 	if err != nil {
 		http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
@@ -388,6 +388,7 @@ type importSlantRequest struct {
 }
 
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	data := importSlantRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
@@ -460,7 +461,6 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTimeForNow()
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
@@ -496,7 +496,6 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx := r.Context()
 	toInsert := Slant{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		StickType:               data.StickType,
@@ -510,7 +509,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		PicsField:            PicsField{pix},
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
-		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)

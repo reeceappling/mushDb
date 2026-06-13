@@ -24,7 +24,7 @@ import {
     ListPageTable,
     ExistingRecentSelector,
     CreatedLinkFor,
-    MultipartImportRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest
+    DoMultipartImportRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -175,7 +175,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
             formData.set("img",image,"img")
         }
 
-        MultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies))
     }
     //no parent because we couldn't possibly know it
         return <ImportEntryFormWrapper entryType={"sporePrint"}>
@@ -327,16 +327,19 @@ export default function SporePrintDisplay(
 }
 
 // Should only be accessible from a fruit's page
+// TODO: FIX THIS! We should be able to make spore prints firectly from fruit, or indirectly from many others!
 export function NewSporePrintForm( // TODO: currently do not like this one...
-    {fruitIn, headerLevel, offset, onCreate}: {
+    {fruitIn, headerLevel, offset, onCreate, parentTypeIn}: {
         fruitIn?: FruitData
         headerLevel?: number
         offset?: number
         onCreate:(sp: SporePrintData)=>void
+        parentTypeIn?:string
 }){
     const [fruit, setFruit] = useState<FruitData | undefined>(fruitIn)
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
+    const [parentType, setParentType] = useState<string | undefined>(parentTypeIn)
     // Spore prints don't have rfid tags, although they have MainCollectionIDs
     const [err, setErr] = useState<string | undefined>(undefined)
 
@@ -354,7 +357,8 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
         }
         const formData = new FormData()
         const dataObj:any = {
-            fruitId:fruit._id,
+            parentType: parentType,
+            parent:fruit._id,
             notes:notes,
             // optional pics also here
         }

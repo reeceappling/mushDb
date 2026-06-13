@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 	"os"
@@ -26,18 +27,6 @@ func init() {
 }
 
 type ImageLocation string
-type UnixTime int64 // unixMilli!
-
-func unixTimeFor(t time.Time) UnixTime {
-	return UnixTime(t.UnixMilli())
-}
-func unixTimeForNow() UnixTime {
-	return unixTimeFor(time.Now())
-}
-
-func (t UnixTime) asCreationDate() CreationDateField {
-	return CreationDateField{t}
-}
 
 var (
 	_ subdocWithImage = PicWithNotes{}
@@ -52,7 +41,7 @@ type subdocWithImage interface {
 // TODO: USE
 func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes { // TODO: use?
 	var out *PicWithNotes = nil
-	latestTime := UnixTime(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
+	latestTime := unix.Time(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
 	for _, subdoc := range possibleSubdocs {
 		pwn := subdoc.getPicWithNotes()
 		if pwn.Time > latestTime {
@@ -69,7 +58,7 @@ type PicsField struct {
 
 func (pics PicsField) getLatestPicFromPicsField() *PicWithNotes {
 	var out *PicWithNotes = nil
-	var latest UnixTime = 0
+	var latest unix.Time = 0
 	for _, pic := range pics.Pics {
 		if pic.Time > latest {
 			latest = pic.Time
@@ -92,7 +81,7 @@ type PicWithNotes struct {
 	Location                 ImageLocation `bson:"location" json:"location"`
 }
 
-func newPicWithNotes(tim UnixTime, notes []Note, location ImageLocation) PicWithNotes {
+func newPicWithNotes(tim unix.Time, notes []Note, location ImageLocation) PicWithNotes {
 	return PicWithNotes{
 		PicWithNotesLessLocation: newPicWithNotesLessLocation(tim, notes),
 		Location:                 location,
@@ -121,10 +110,10 @@ func (pwn PicWithNotes) withoutNotes() PicWithNotes {
 }
 
 type RequiredTimeField struct {
-	Time UnixTime `bson:"time" json:"time"`
+	Time unix.Time `bson:"time" json:"time"`
 }
 
-func newRequiredTimeField(t UnixTime) RequiredTimeField {
+func newRequiredTimeField(t unix.Time) RequiredTimeField {
 	return RequiredTimeField{t}
 }
 
@@ -133,7 +122,7 @@ type PicWithNotesLessLocation struct {
 	NotesField        `bson:"inline"`
 }
 
-func newPicWithNotesLessLocation(t UnixTime, notes []Note) PicWithNotesLessLocation {
+func newPicWithNotesLessLocation(t unix.Time, notes []Note) PicWithNotesLessLocation {
 	return PicWithNotesLessLocation{
 		RequiredTimeField: newRequiredTimeField(t),
 		NotesField:        NotesField{notes},
@@ -163,7 +152,7 @@ type ContaminationsField struct {
 
 func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 	var out *Contamination = nil
-	var latest UnixTime = 0
+	var latest unix.Time = 0
 	for _, contam := range contams.Contaminations {
 		if contam.Location != nil && contam.Time > latest {
 			latest = contam.Time
@@ -262,7 +251,7 @@ type Note struct {
 	Note              string `bson:"note" json:"note"`
 }
 
-func newNote(tim UnixTime, txt string) Note {
+func newNote(tim unix.Time, txt string) Note {
 	return Note{
 		RequiredTimeField: RequiredTimeField{tim},
 		Note:              txt,
@@ -679,7 +668,7 @@ func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {
 	return updatePointerIfNeeded(upd, "confirmedClean", future, existing)
 }
 
-func (upd *Mods) updateProjectCompletedIfNeeded(future, existing *UnixTime) *Mods {
+func (upd *Mods) updateProjectCompletedIfNeeded(future, existing *unix.Time) *Mods {
 	return updatePointerIfNeeded(upd, "completed", future, existing)
 }
 
@@ -705,7 +694,7 @@ func (upd *Mods) updateLastUpdatedIfNeeded() *Mods {
 	if upd.IsEmpty() {
 		return upd
 	}
-	return upd.Set("lastUpdated", unixTimeFor(time.Now()))
+	return upd.Set("lastUpdated", unix.TimeFor(time.Now()))
 }
 
 func (upd *Mods) updatePermsIfNeeded(next, current ACL) *Mods {
@@ -950,7 +939,7 @@ func (upd *Mods) withInnoc(xfer Transfer) *Mods {
 func (upd *Mods) withKnownFruitable(knownFruitable *bool) *Mods {
 	return setPointerIfNonNil(upd, "knownFruitable", knownFruitable)
 }
-func (upd *Mods) withLastUpdated(lastUpdatedTime UnixTime) *Mods {
+func (upd *Mods) withLastUpdated(lastUpdatedTime unix.Time) *Mods {
 	return upd.Set("lastUpdated", lastUpdatedTime)
 }
 func (upd *Mods) withMostRecentImage(parentType *PicWithNotes) *Mods {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -33,7 +34,7 @@ func (field AgarBatchField) Get(ctx context.Context) (out AgarBatch, err error) 
 	if field.AgarBatch == nil {
 		return out, ErrMissingOptionalField
 	}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{
+	err = DbFrom(ctx).Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{
 		"_id": *field.AgarBatch,
 	}).Decode(&out)
 	return out, err
@@ -87,7 +88,7 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 
 func initializeAgarBatches(ctx context.Context) error {
 	// Indices
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(AgarBatchCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("pcRun", "pcRun", false, true, false),
@@ -152,6 +153,7 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	ctx, now := request.UnixTime(ctx)
 	// create new batch
 	toInsert := &AgarBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -159,7 +161,7 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		AgarRecipeField:            req.AgarRecipeField,
 		Color:                      req.Color,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanWriteAcl(), // TODO: or read?
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)

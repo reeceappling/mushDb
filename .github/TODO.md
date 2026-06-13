@@ -19,6 +19,8 @@
 ## Waiting on something else
 
 # TODO
+- [ ] Redirect to login page if not logged in!
+- [ ] WriteMany for RFID! Allow subsequent writings... This may be complicated, so do it later...
 - [ ] React Subcomponents
   - [x] Notes
     - [x] New Notes area
@@ -54,73 +56,83 @@
       - [ ] Preexisting users and projects which are not valid cause problems on update
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] Create SporePrint (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
+      - [ ] Create SporePrint (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER // TODO: this should only be used for 1-offs because it creates a new fruit every time!
         - [ ] OVC
         - [ ] Go side
-      - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
+      - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER // TODO: this should only be used for 1-offs because it creates a new fruit every time!
         - [ ] OVC
         - [ ] Go side
     - [x] Create page
-    - [ ] Import page
+    - [x] Import page
+      - [x] Redirect not working
+      - [ ] Add wetness to import page?
+      - [ ] Add Notes to import page?
+      - [x] not finding the substrate recipe for standard recipes
     - [x] List Page
   - [ ] Fruit
     - [x] Display page
-      - [ ] Create SporePrint
-      - [ ] Create SporeSwab
-      - [ ] Cloning area?
+      - [x] Create SporePrint
+      - [x] Create SporeSwab
+      - [x] Cloning area?
         - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] Create MSS // TODO: create shortcuts like this MUCH LATER
-    - [ ] Create page // TODO: likely no self-page
-    - [ ] Import page
+    - [x] Create page (NONE!)
+    - [x] Import page
     - [x] List Page
   - [ ] Fruiting Chamber
     - [x] Display page
       - [ ] Dispose button
       - [ ] Make sales also trigger disposal?
       - [ ] Handle sale
-      - [ ] New fruit area
+      - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
       - [ ] Create SporePrint (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
       - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
-    - [ ] Create page // self page?
+    - [ ] Create page // self page? probably not
     - [ ] Import page
     - [x] List Page
   - [x] Grain Batch
     - [x] Display page
     - [x] Create page
       - [ ] Create Jar // Create
+        - [ ] Add wetness????
+        - [ ] Add burst grains???
+        - [ ] Allow PC to be optional???? Maybe not....
     - [x] List Page
   - [ ] Jar
     - [x] Display page
       - [ ] fix wetness area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
       - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
-    - [ ] Create page // TODO: self page?
-    - [ ] Import page
+    - [ ] Create page // TODO: self page? probably not
+    - [x] Import page
+      - [ ] Add wetness?
+      - [ ] Add burst grains?
+      - [ ] Add notes?
     - [x] List Page
   - [ ] Jar Recipe
     - [x] Display page
     - [x] Create page
       - [ ] Subforms?
-      - [ ] Create Jar // Create
+      - [ ] Create Jar // Create // TODO: creates intermediary grain batch? DO LATER!
     - [x] List Page
       - [x] Standard
       - [x] Recent
   - [ ] LC
     - [x] Display page
       - [ ] test creating LC syringe, LC selector and reading rfid tag
+        - [ ] LC selector and reading rfid tag
       - [ ] Create transfer?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
       - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
-    - [ ] Create page // TODO: self page?
-    - [ ] Import page
+    - [ ] Create page // TODO: self page? probably not
+    - [x] Import page
     - [x] List Page
   - [ ] LC Recipe
     - [x] Display page
       - [x] Move name to top as well
-      - [ ] create LC
+      - [x] create LC
         - [x] fix pc run selector not showing up
         - [x] default recipe to current
-        - [ ] fully test creating an LC from this page
+        - [x] fully test creating an LC from this page
       - [ ] create LC Syringe // TODO: create shortcuts like this MUCH LATER
     - [x] Create page
     - [x] List Page
@@ -129,8 +141,9 @@
       - [ ] KF validate working properly
       - [ ] ConfirmedClean validate working properly
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page?
-    - [ ] Import page
+    - [ ] Create page // TODO: self page? probably not
+    - [x] Import page
+      - [ ] Confirmed clean is not propagating properly, always showing up as unknown...
     - [x] List Page
   - [ ] MSS
     - [x] Display page
@@ -138,7 +151,7 @@
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
       - [ ] Create MSS // TODO: CREATE (unsure if we want mss-from-mss)
     - [ ] Create page // TODO: self page (probably no self page)?
-    - [ ] Import page
+    - [x] Import page
     - [x] List Page
   - [ ] PC Run
     - [x] Display page
@@ -151,6 +164,7 @@
       - [ ] Create Slant // TODO: create?
       - [ ] Create Stasis Tube // TODO: CREATE
     - [ ] Create page
+      - [ ] Runtime not styled correctly! FIX!
     - [x] List Page
   - [ ] Plate
     - [x] Display page
@@ -158,7 +172,8 @@
       - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page (probably no self page)?
-    - [ ] Import page
+    - [x] Import page
+      - [ ] Add Coverage sliders
     - [x] List Page
   - [ ] Plugs
     - [x] Display page
@@ -170,11 +185,13 @@
       - [ ] Create PC run from within creator
       - [ ] Validate all areas working properly
     - [ ] Import page
+      - [ ] Dowels say amount where it should be radius
+      - [ ] NOT WORKING WHEN SUBMITTING!
     - [x] List Page
   - [ ] Project
     - [ ] Display page
     - [ ] Create page
-    - [ ] List Page
+    - [x] List Page
       - [ ] Be able to filter projects by completeness
       - [ ] Shows all projects a user should be able to see, including public projects
       - [ ] Does not show projects that the user is not privy to
@@ -186,8 +203,8 @@
     - [x] Display page
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
       - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
-    - [ ] Create page // TODO: self page?
-    - [ ] Import page
+    - [ ] Create page // TODO: self page? probably not
+    - [x] Import page
     - [x] List Page
   - [ ] Species
     - [ ] Display page
@@ -216,13 +233,14 @@
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page? probably not
     - [ ] Import page
+      - [ ] Spore print colors and densities selectors not working!
     - [x] List Page
   - [ ] Stasis Tube
     - [x] Display page
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [ ] ensure transfer from stasis tube properly disposes
     - [ ] Create page // TODO: self page?
-    - [ ] Import page
+    - [x] Import page
     - [x] List Page
   - [ ] Subspecies
     - [x] Display page

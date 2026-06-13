@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -64,7 +65,7 @@ func (sw SporeSwab) id() []byte {
 
 func initializeSporeSwabs(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SporeSwabCollectionName)
+	coll := DbFrom(ctx).Collection(SporeSwabCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		//newSimpleIndex("parent", "parent", false, false, false),
 		// TODO: parentType?
@@ -85,7 +86,7 @@ func initializeSporeSwabs(ctx context.Context) error {
 	testItem := &SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{exSwabId},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
-		CreationDateField:                 exampleTime.asCreationDate(),
+		CreationDateField:                 CreationDateField{exampleTime},
 		SpeciesField:                      SpeciesField{testEntryStringId},
 		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
 		SaleField:                         SaleField{&exAltId},
@@ -122,7 +123,6 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := NextMainCollectionId()
 	ctx := r.Context()
 	parentItem, err := GetMainCollectionItemWithId(ctx, data.Parent)
 	if err != nil {
@@ -143,102 +143,52 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 		return
 	}
 
-	now := unixTimeForNow()
-	parentType := parentItem.SourceType() // TODO: ensure ok
-	out := SporeSwab{
-		MainCollectionIdField:             MainCollectionIdField{id},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.Parent},
-		ParentTypeField:                   ParentTypeField{&parentType},
-		CreationDateField:                 now.asCreationDate(),
-		SpeciesField:                      SpeciesField{*parent.Species},
-		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-		NotesField:                        NotesField{data.Notes},
-		LastUpdatedField:                  LastUpdatedField{now},
-		// Do not check permissions, just pass parent perms to child
-		AclField: AclField{parentItem.Permissions()}, // note: do NOT add user. They can be created by any non-guest, but not necessarily viewable by them...
-	}
-
+	ctx, _ = request.UnixTime(ctx)
+	var fr *Fruit
 	var swabOut *SporeSwab
 	_, er := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
-		var parentFruit *Fruit
+		var e error = nil
 		switch parentItem.SourceType() {
-		case FruitSourceType: // Goes directly to swab
-			e := db.Collection(FruitsCollName).
-				FindOne(sessCtx, BsonFindFilter("_id", data.Parent)).
-				Decode(parentFruit)
+		case FruitingChamberSourceType, BagSourceType, PlateSourceType, SlantSourceType, PlugSourceType, GrainJarSourceType:
+			fr, e = FruitFromSourceInTxn(sessCtx, parentItem)
 			if e != nil {
 				return nil, e
 			}
+			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField)
+			if e != nil {
+				return nil, e
+			}
+			// TODO: WRITE TAG TO!
+			return nil, e
+		case FruitSourceType:
+			var ok bool
+			fr, ok = parentItem.(*Fruit)
+			if !ok {
+				return nil, errors.New("fruit is not a Fruit?")
+			}
+			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField) // TODO: notes?
+			if e != nil {
+				return nil, e
+			}
+			// TODO: WRITE TAG TO!
+			return nil, e
 		case SporePrintSourceType: // Goes directly to swab
-			var parentPrint *SporePrint
-			e := db.Collection(SporePrintCollectionName).
-				FindOne(sessCtx, BsonFindFilter("_id", data.Parent)).
-				Decode(parentFruit)
+			parentPrint, ok := parentItem.(*SporePrint)
+			if !ok {
+				return nil, errors.New("print is not a print?")
+			}
+			swabOut, e = parentPrint.createSwabInTxn(sessCtx, data.NotesField, NotesField{}) // TODO: xferNotes
 			if e != nil {
 				return nil, e
 			}
-			idOut := NextMainCollectionId()
-			swab := SporeSwab{
-				MainCollectionIdField:             MainCollectionIdField{idOut},
-				MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.Parent},
-				ParentTypeField:                   ParentTypeField{utils.Pointer("sporePrint")},
-				CreationDateField:                 CreationDateField{now},
-				SpeciesField:                      SpeciesField{*parent.Species},
-				SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-				NotesField:                        NotesField{}, // TODO: ???
-				LastUpdatedField:                  LastUpdatedField{now},
-				AclField:                          parentPrint.AclField,
-			}
-			xfer := Transfer{
-				AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
-				From:                       parentPrint.Id,
-				To:                         idOut,
-				FromType:                   "sporePrint",
-				ToType:                     "sporeSwab",
-				CreationDateField:          CreationDateField{now},
-				Reason:                     xferReasonReady,
-				NotesField:                 NotesField{}, // TODO: FIX!
-				LastUpdatedField:           LastUpdatedField{now},
-				AclField:                   parentPrint.AclField,
-			}
-			err := addToIdMapCollection(sessCtx, &swab)
-			if err != nil {
-				return nil, err
-			}
-			// Update print with new swab id
-			// Update xfers out and lastUpdated on parent
-			upd, err := NewMods().Push("transfersOut", xfer.Id).withLastUpdated(now).Finalized()
-			if err != nil {
-				return nil, err
-			}
-			_, err = db.Collection(SporePrintCollectionName).UpdateByID(ctx, parentPrint.Id, upd)
-			if err != nil {
-				return nil, err
-			}
-			_, err = db.Collection(SporeSwabCollectionName).InsertOne(ctx, &swab)
-			if err != nil {
-				return nil, errors.Join(errors.New("failed to insert new spore print"), err)
-			}
-			_, err = db.Collection(TransfersCollName).InsertOne(ctx, &xfer)
-			if err != nil {
-				return nil, errors.Join(errors.New("failed to insert new spore print"), err)
-			}
-			return &swab, nil
-		case BagSourceType, FruitingChamberSourceType, PlateSourceType, PlugSourceType, LcSourceType, SlantSourceType: // TODO: creates intermediary fruit
-			// Create transfer. Add spore swab to spore print
-			parentFruit, err = FruitFromSourceInTxn(sessCtx, parentItem)
-			if err != nil {
-				return nil, err
-			}
-		default: // TODO: ERROR. MssSourceType, WaterJar, etc
-			return nil, errors.New("invalid source for new swab: " + parentItem.SourceType())
+			// TODO: WRITE TAG TO!
+			return nil, e
+		default:
+			e := errors.New("invalid source type: " + parentItem.SourceType())
+			http.Error(w, e.Error(), http.StatusBadRequest)
+			return nil, e
 		}
-		swabOut, err = swabFromFruitInTxn(sessCtx, parentFruit, out.NotesField)
-		if err != nil {
-			return nil, err
-		}
-		return nil, err
+		// TODO: WRITE TAG TO!
 	})
 	if er != nil {
 		http.Error(w, er.Error(), http.StatusInternalServerError)
@@ -334,14 +284,14 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := SporeSwab{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
 		SpeciesField:            data.SpeciesField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,
-		LastUpdatedField:        LastUpdatedFieldForNow(),
+		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
@@ -349,13 +299,13 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 
 func swabFromFruitInTxn(ctx mongo.SessionContext, parent *Fruit, notes NotesField) (*SporeSwab, error) {
 	id := NextMainCollectionId()
-	now := unixTimeForNow()
+	ctx, now := request.UnixTimeInTxn(ctx)
 	// TODO: writeTagTo?
 	toInsert := SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
 		ParentTypeField:                   ParentTypeField{utils.Pointer("fruit")},
-		CreationDateField:                 now.asCreationDate(),
+		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      parent.SpeciesField,
 		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
 		NotesField:                        notes,

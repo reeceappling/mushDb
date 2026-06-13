@@ -5,13 +5,12 @@ import (
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type User struct {
 	Email string    `bson:"_id" json:"_id"`
-	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: PROJECTS COME FROM PERMS
+	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: PROJECTS COME FROM PERMS! So even projects with only read perms can be associated with an item!
 	// All can view?
 }
 
@@ -25,7 +24,7 @@ func (u User) IdValue() any {
 
 func initializeUsers(ctx context.Context) error {
 	//Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName)
+	coll := DbFrom(ctx).Collection(UserCollName)
 	//err := createIndexes(ctx, coll, []mongo.IndexModel{
 	//	//newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
 	//	//newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
@@ -106,7 +105,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	// TODO: ensure all Projects are looped through
 
 	// Resolve project perms // TODO: MAKE SURE THIS WORKS
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
+	cursor, err := DbFrom(ctx).Collection(ProjectsCollectionName).
 		Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.Projects}}) // TODO: not sure I like this. Means that more projects will need to be on more users??
 	if err != nil {
 		return out, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)

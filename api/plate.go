@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -147,7 +149,7 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 }
 
 func initializePlates(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(PlatesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
@@ -278,7 +280,7 @@ func emptyTestPlate() Plate {
 func testPlateFor(
 	id MainCollectionId,
 	agarBatchId *AlternateCollectionId,
-	creationDate UnixTime,
+	creationDate unix.Time,
 	condensationCoverageAtSealTime,
 	pourCoverage *int,
 	wetAtCooledTime,
@@ -293,10 +295,10 @@ func testPlateFor(
 	contams []Contamination,
 	knownFruitable *bool,
 	sale *AlternateCollectionId,
-	disposed *UnixTime,
+	disposed *unix.Time,
 	mostRecentImage *PicWithNotes,
 	notes []Note,
-	lastUpdated UnixTime,
+	lastUpdated unix.Time,
 	acl ACL,
 ) Plate {
 	return Plate{
@@ -363,8 +365,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := unixTimeForNow()
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	agarBatchField := AgarBatchField{AgarBatch: &data.AgarBatch}
 	_, err = agarBatchField.Get(ctx)
 	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
@@ -506,7 +507,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	println("REQUEST BYTES: ", string(finalReqBs)) // TODO: del
 
 	ctx := r.Context()
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+	client := GetMongoClient(ctx)
 	coll := client.Database(dbName).Collection(PlatesCollectionName)
 	existing := &Plate{}
 	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(existing)
@@ -568,6 +569,7 @@ type importPlateRequest struct {
 
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	data := importPlateRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
@@ -577,7 +579,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		// Already written
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -586,7 +588,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	picsSaved := []string{}
 	defer func() {
 		if err != nil {
-			err = pics.DeleteFiles(r.Context(), picsSaved...)
+			err = pics.DeleteFiles(ctx, picsSaved...)
 			if err != nil {
 				handleFileDeleteErr(err)
 			}
@@ -613,14 +615,13 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SaveFile(r.Context(), fieldBytes, "plate", string(b58id), "img")
+		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "plate", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTimeForNow()
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
@@ -648,14 +649,12 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
+		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
 		if err != nil {
 			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
-
-	ctx := r.Context()
 
 	toInsert := Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
@@ -670,7 +669,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		PicsField:                           PicsField{pix},
 		KnownFruitableField:                 data.KnownFruitableField,
 		MostRecentImageField:                MostRecentImageField{importedPic},
-		LastUpdatedField:                    LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:                    LastUpdatedField{now},
 		AclField:                            AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
@@ -690,12 +689,9 @@ func ImportFinalPerms(ctx context.Context, spec string, subspec *string) (ACL, e
 	}
 	userEmail := GetUserEmail(ctx)
 	if finalPerms.Users == nil {
-		finalPerms.Users = map[string]bool{
-			userEmail: true,
-		}
-	} else {
-		finalPerms.Users[userEmail] = true
+		finalPerms.Users = map[string]bool{}
 	}
+	finalPerms.Users[userEmail] = true
 
 	return finalPerms, nil
 }

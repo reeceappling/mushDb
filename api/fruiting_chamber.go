@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -62,7 +63,7 @@ func (f FruitingChamber) generation() (sinceSpore *Generation, sinceSporeOrClone
 }
 
 //func (f FruitingChamber) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(FruitingChamberCollectionName)
+//	coll := DbFrom(ctx).Collection(FruitingChamberCollectionName)
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 //	if err != nil {
 //		return err
@@ -124,12 +125,12 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 //		GenSporeField:                     GenSporeField{f.GenSinceSpore.Next()},
 //		ParentTypeField:                   ParentTypeField{utils.Pointer(FruitingChamberSourceType)},
 //		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Email},
-//		LastUpdatedField:                  LastUpdatedField{unixTimeForNow()},
+//		LastUpdatedField:                  LastUpdatedField{now},
 //	}
 //}
 
 func initializeFruitingChamber(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(FruitingChamberCollectionName)
 	err := createIndexes(ctx, coll,
 		[]mongo.IndexModel{
@@ -230,7 +231,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) { // T
 		return
 	}
 
-	now := unixTimeForNow()
+	ctx, now :=request.UnixTime(ctx) // TODO: no more r.Context below
 	batch, err := data.SubstrateBatchField.Get(ctx)
 	if err != nil {
 		http.Error(w, "invalid substrate batch: "+err.Error(), http.StatusBadRequest)
@@ -347,6 +348,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 	// Go to next part, if exists to get image
 	var importedPic *PicWithNotes = nil
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	p, err := reader.NextPart()
 	if err != nil {
 		if err != io.EOF {
@@ -373,7 +375,6 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTimeForNow()
 
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
@@ -385,8 +386,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	ctx := r.Context()
-	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
+	finalPerms, err := ImportFinalPerms(ctx, data.Species, data.Subspecies)
 	if err != nil {
 		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -409,7 +409,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		PicsField:            PicsField{pix},
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
-		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             finalPerms.AsField(),
 	}
 	_, err = data.SubstrateRecipeField.Get(ctx)
@@ -533,7 +533,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 
 	coll := db.Collection(FruitingChamberCollectionName)
 	// go get current FC

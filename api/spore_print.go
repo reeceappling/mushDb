@@ -8,6 +8,7 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/goUtils/v2/utils/slices"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -70,6 +71,57 @@ func (sp SporePrint) Innoculatable() bool {
 func (sp SporePrint) CanTransferTo(dst geneticSource) error {
 	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
+func (sp SporePrint) createSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNotes NotesField) (*SporeSwab, error) {
+	ctx, now := request.UnixTimeInTxn(ctx)
+	idOut := NextMainCollectionId()
+	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+	swab := SporeSwab{
+		MainCollectionIdField:             MainCollectionIdField{idOut},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&sp.Id},
+		ParentTypeField:                   ParentTypeField{utils.Pointer("sporePrint")},
+		CreationDateField:                 CreationDateField{now},
+		SpeciesField:                      sp.SpeciesField,
+		SubspeciesOptionalField:           sp.SubspeciesOptionalField,
+		NotesField:                        swabNotes,
+		LastUpdatedField:                  LastUpdatedField{now},
+		AclField:                          sp.AclField,
+	}
+	xfer := Transfer{
+		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
+		From:                       sp.Id,
+		To:                         idOut,
+		FromType:                   "sporePrint",
+		ToType:                     "sporeSwab",
+		CreationDateField:          CreationDateField{now},
+		Reason:                     xferReasonReady,
+		NotesField:                 xferNotes,
+		LastUpdatedField:           LastUpdatedField{now},
+		AclField:                   sp.AclField,
+	}
+	err := addToIdMapCollection(ctx, &swab)
+	if err != nil {
+		return nil, err
+	}
+	// Update print with new swab id
+	// Update xfers out and lastUpdated on parent
+	upd, err := NewMods().Push("transfersOut", xfer.Id).withLastUpdated(now).Finalized()
+	if err != nil {
+		return nil, err
+	}
+	_, err = db.Collection(SporePrintCollectionName).UpdateByID(ctx, sp.Id, upd)
+	if err != nil {
+		return nil, err
+	}
+	_, err = db.Collection(SporeSwabCollectionName).InsertOne(ctx, &swab)
+	if err != nil {
+		return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+	}
+	_, err = db.Collection(TransfersCollName).InsertOne(ctx, &xfer)
+	if err != nil {
+		return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+	}
+	return &swab, nil
+}
 
 // TODO: createSporePrint should be its own endpoint which accepts a fruit. It can also be called from other spore print pages to do "chaining"
 func (sp SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
@@ -123,7 +175,7 @@ func (sp SporePrint) id() []byte {
 
 func initializeSporePrints(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SporePrintCollectionName)
+	coll := DbFrom(ctx).Collection(SporePrintCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel, // This is print date
 		//newSimpleIndex("parent", "parent", false, false, false),
@@ -146,7 +198,7 @@ func initializeSporePrints(ctx context.Context) error {
 	testItem := &SporePrint{
 		MainCollectionIdField:             MainCollectionIdField{exSporePrint},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exFruitId},
-		CreationDateField:                 exampleTime.asCreationDate(),
+		CreationDateField:                 CreationDateField{exampleTime},
 		SporePrintColorField:              SporePrintColorField{utils.Pointer(SpColorBlack)},
 		SporePrintDensityField:            SporePrintDensityField{utils.Pointer(SpDensityAvg)},
 		SpeciesField:                      SpeciesField{testEntryStringId},
@@ -163,7 +215,7 @@ func initializeSporePrints(ctx context.Context) error {
 
 type createSporePrintRequest struct {
 	ParentId   MainCollectionId `json:"parent"`
-	ParentType string           `json:"parentType"`
+	ParentType string           `json:"parentType"` // TODO: We will have to get parent anyways. No reason to add parentType...
 	NotesField
 	Pics            []PicWithNotesLessLocation //"newPic-1"
 	WriteTagToField                            // TODO: make sure this is on the ts side!
@@ -286,43 +338,38 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		out.Pics[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
-	mcItem, err := MainCollItemForEntryType(data.ParentType)
+	mcItem, err := GetMainCollectionItemWithId(ctx, data.ParentId)
 	if err != nil {
-		http.Error(w, "failed to find main collection item", http.StatusBadRequest)
+		http.Error(w, "failed to find main collection item via id", http.StatusBadRequest)
 		return
 	}
-	parent, err := GetMainCollectionItem(ctx, data.ParentId, mcItem)
-	if err != nil {
-		http.Error(w, "failed to get parent", http.StatusInternalServerError)
-		return
-	}
+	var fr *Fruit
 	var printOut *SporePrint
 	_, er := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		var parentFruit *Fruit
-		switch parent.SourceType() {
-		case FruitSourceType: // TODO: directly to print
-			db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
-			e := db.Collection(FruitsCollName).
-				FindOne(sessCtx, BsonFindFilter("_id", data.ParentId)).
-				Decode(parentFruit)
+		var e error = nil
+		switch mcItem.SourceType() {
+		case FruitingChamberSourceType, BagSourceType, PlateSourceType, SlantSourceType, PlugSourceType, GrainJarSourceType:
+			fr, e = FruitFromSourceInTxn(sessCtx, mcItem)
 			if e != nil {
 				return nil, e
 			}
-		case MssSourceType, WaterJarsSourceType, StasisTubeSourceType, SporePrintSourceType, SporeSwabSourceType, LcSyringeSourceType: // TODO: any others? error here
-			return nil, errors.New("cannot create spore print directly from " + parent.SourceType())
-		default:
-			parentFruit, err = FruitFromSourceInTxn(sessCtx, parent)
-			if err != nil {
-				return nil, err
+			break
+		case FruitSourceType:
+			var ok bool
+			fr, ok = mcItem.(*Fruit)
+			if !ok {
+				return nil, errors.New("fruit is not a Fruit?")
 			}
+			// TODO: DIRECT! continue!
+			break
+		default:
+			e := errors.New("invalid source type: " + mcItem.SourceType())
+			http.Error(w, e.Error(), http.StatusBadRequest)
+			return nil, e
 		}
-		// TODO: ensure parent is already innoculated!
-		printOut, err = printFromFruitInTxn(sessCtx, parentFruit, out.PicsField, out.NotesField)
-		if err != nil {
-			return nil, err
-		}
+		printOut, e = fr.createSporePrintInTxn(sessCtx, PicsField{}, NotesField{}) // TODO: pics and notes?
+		return nil, e
 		// TODO: WRITE TAG TO!
-		return nil, err
 	})
 	if er != nil {
 		http.Error(w, er.Error(), http.StatusInternalServerError)
@@ -339,7 +386,8 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 
 func printFromFruitInTxn(ctx mongo.SessionContext, parent *Fruit, pics PicsField, notes NotesField) (*SporePrint, error) {
 	id := NextMainCollectionId()
-	now := unixTimeForNow()
+	ctx, now := request.UnixTimeInTxn(ctx)
+
 	// TODO: writeTagTo?
 	var mri *PicWithNotes = nil
 	if len(pics.Pics) > 0 {
@@ -349,7 +397,7 @@ func printFromFruitInTxn(ctx mongo.SessionContext, parent *Fruit, pics PicsField
 	toInsert := SporePrint{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-		CreationDateField:                 now.asCreationDate(),
+		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      parent.SpeciesField,
 		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
 		PicsField:                         pics,
@@ -550,7 +598,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context())
 	// Go to next part, if exists to get image
 	var importedPic *PicWithNotes = nil
 	p, err := reader.NextPart()
@@ -599,8 +647,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx := r.Context()
-	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
+	finalPerms, err := ImportFinalPerms(ctx, data.Species, data.Subspecies)
 	if err != nil {
 		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -616,7 +663,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		PicsField:               PicsField{pix},
 		MostRecentImageField:    MostRecentImageField{importedPic},
 		NotesField:              data.NotesField,
-		LastUpdatedField:        LastUpdatedFieldForNow(),
+		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)

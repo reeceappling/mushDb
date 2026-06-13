@@ -32,7 +32,7 @@ import {
     ListPageItems,
     ListPageTable,
     ListTableColumn,
-    MultipartImportRequest,
+    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NumberToDateStr,
@@ -76,6 +76,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {TransferData} from "@/app/components/transferServer";
+import {SelectorFor} from "@/app/components/selector";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -256,7 +257,7 @@ export default function FruitDisplay(
         {
             txt: "Create Spore Print",
             newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                return <NewSporePrintForm fruitIn={data}
+                return <NewSporePrintForm fruitIn={data} parentTypeIn={"fruit"}
                                           onCreate={(item: SporePrintData) => {
                                               onCreate([{
                                                   typeText: "Spore Print",
@@ -380,13 +381,12 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
-    const submitImportFruit = () => { // TODO: rework so we only have the one image, and the one data set
+    const submitImportFruit = () => {
         if (parentType === undefined) {
             setErr("source area must be set!")
             return
         }
-        // TODO: FIX!
-        if (parentType !== "store" && parentType !== "outside") { // TODO: ENSURE OK ELSEWHERE
+        if (parentType !== "store" && parentType !== "outside" && parentType !== "online") {
             setErr("parentType must be store or outside!")
             return
         }
@@ -396,7 +396,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         }
         const formData = new FormData()
         const dataObj: any = {
-            parentType: parentType,
+            parentType: parentType, // "store" or "outside" or "online" TODO: or specify if online?
             species: species._id,
             notes: notes,
             // optional
@@ -406,11 +406,15 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         setFormData(formData, dataObj)
         imageFile && formData.set("img", imageFile, "img")
 
-        MultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"fruit"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         {/* Required Fields */}
+        <div className={"inlineChildren"}>
+            <div>{"Source: "}</div>
+            <SelectorFor options={["", "store", "outside"]} initial={""} updateParent={setParentType} disabled={false}/>
+        </div>
         {/* TODO: ParentType: FOR "store" OR "outside" ONLY!!!!! */}{/* TODO: THIS!*/}
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}

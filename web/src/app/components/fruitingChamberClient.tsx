@@ -29,7 +29,7 @@ import {
     ListPageTable,
     ListTableColumn,
     MainCollectionInputOrRead,
-    MultipartImportRequest,
+    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NewEntryInput,
@@ -270,7 +270,7 @@ export default function FruitingChamberDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SubstrateRecipeArea id={initial.recipe} headerLevel={headerLevel} readonly={true}/>
-                    <SubstrateBatchArea id={initial.substrateBatch} readonly={true}/>
+                    <SubstrateBatchArea id={initial.substrateBatch}/>
                     <div>{"Cups grain: " + data.cupsGrain}</div>
                     <div>{"Substrate mixed with grain: " + (data.mixedSubstratePerGrain * data.cupsGrain)}</div>
                     <div>{"Casing: " + (data.casingPerGrain * data.cupsGrain)}</div>
@@ -295,7 +295,7 @@ export default function FruitingChamberDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"}
-                                 transfersOut={initial.transfersOut} allowNewTransferCreation={false}/>{/* TODO: validTypesTo*/}
+                                 transfersOut={initial.transfersOut} allowNewTransferCreation={true}/>{/* TODO: validTypesTo, allowXferCreation?*/}
 
             <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
             {/* Flushes */}<PicsDisplay pix={initial.flushes || []} readonly={readonly}
@@ -412,7 +412,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
     }
     const batchArea = () => {
         if (substrateBatchIn) {
-            return <SubstrateBatchArea readonly={true} id={substrateBatchIn._id}/>
+            return <SubstrateBatchArea id={substrateBatchIn._id}/>
         }
         return <SubstrateBatchSelector doSelect={(sb => {
             setSubBatch(sb)
@@ -481,12 +481,12 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
         }
 
         const bodyObj: any = {
-            recipe: recipe,
+            recipe: recipe?._id,
             creationDate: creationDate,
             species: species?._id,
             grainCups: grainCups,
-            substrateRatio: mixedSubRatio,
-            casingRatio: casingRatio,
+            substrateRatio: mixedSubRatio, // Ratio of mixed substrate (substrate that was mixed) to grain volume // TODO: consider changing to volume mixed sub?
+            casingRatio: casingRatio, // Ratio of casing substrate to grain volume // TODO: consider changing to volume casing?
             //perms: perms, // From spec/subspec
             // optional
             subspecies: subspecies,
@@ -498,7 +498,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
         imageFile && formData.set("img", imageFile, "img")
         setFormData(formData, bodyObj)
 
-        MultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"fruitingChamber"}>
         <ErrorDisplay headerLevel={headerLevel} err={err}/>

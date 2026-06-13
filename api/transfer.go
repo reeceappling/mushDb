@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -93,7 +94,7 @@ func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) 
 
 func initializeTransfers(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(TransfersCollName)
+	coll := DbFrom(ctx).Collection(TransfersCollName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		// TODO: ensure from index indexes all of the child ids
@@ -262,10 +263,9 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	ctx := r.Context()
 	parentId := data.From
 	childId := data.To
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context())
 	childMapEntry := idMapEntry{}
 	var fromType string
 	if data.FromType != nil {
@@ -275,7 +275,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		fromType, err = getEntryTypeForId(ctx, parentId)
 	}
 	// Get parent and child items
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": childId}).Decode(&childMapEntry)
+	err = DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": childId}).Decode(&childMapEntry)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			http.Error(w, "child not found in id db: "+err.Error(), http.StatusNotFound)
@@ -313,7 +313,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		FromImage:                  (*ImageLocation)(fromPic),
 		ToImage:                    (*ImageLocation)(toPic),
 		NotesField:                 data.NotesField,
-		LastUpdatedField:           LastUpdatedFieldForNow(),
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   AclField{ACL: parent.Permissions()}, //set child perms to the parent perms!
 	}
 	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {

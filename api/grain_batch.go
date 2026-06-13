@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -32,7 +33,7 @@ type GrainBatchField struct {
 
 func (field GrainBatchField) Get(ctx context.Context) (out GrainBatch, err error) {
 	var result GrainBatch
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainBatchCollectionName).FindOne(ctx, bson.M{
+	err = DbFrom(ctx).Collection(GrainBatchCollectionName).FindOne(ctx, bson.M{
 		"_id": field.GrainBatch,
 	}).Decode(&result)
 	return result, err
@@ -48,7 +49,7 @@ type GrainBatchOptionalField struct {
 
 func initializeGrainBatches(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(GrainBatchCollectionName)
+	coll := DbFrom(ctx).Collection(GrainBatchCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		//newSimpleIndex("wetness", "wetness", false, true, false),
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
@@ -114,7 +115,7 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// create new batch
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := &GrainBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		CreationDateField:          CreationDateField{now},

@@ -14,7 +14,7 @@ import {
     ListPageItems,
     ListPageTable,
     ListTableColumn,
-    MultipartImportRequest,
+    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NewEntryInput,
@@ -206,12 +206,13 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             generation: generation,
             writeTagTo: writeTagTo,
         }
+        setFormData(formData, dataObj) // TODO: dhould this go first or last everywhere?
         if (imageFile !== undefined) {
             formData.set("img", imageFile, "img")
         }
-        writeTagTo && (dataObj.writeTagTo = writeTagTo)
 
-        MultipartImportRequest(formData, "jar", AssertJar, setErr, allCookies(cookies))
+
+        DoMultipartImportRequest(formData, "jar", AssertJar, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"jar"}>
         {err != undefined && <div>{"Error: " + err}</div>}
@@ -232,8 +233,6 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             <JarRecipeSelector doSelect={setRecipe} allowCreate={true}/>
         </SelectorWrapper>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<ExistingSpeciesSelector doSelect={setSpecies}/>/!*TODO: closeable?*!/*/}
-        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
@@ -383,8 +382,8 @@ export default function JarDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
             {/*TODO: validate next 2 working*/}
-            {initial.wetness?<SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/> : <WetnessDisplay value={wetness} />}
-            {initial.burstGrains===undefined?<SliderOnlyIfUndefinedWithOpenButton defaultValue={0} onChange={setBurstGrains}/> : <WetnessDisplay text={"Burst Grains"} value={wetness} />}
+            {initial.wetness===undefined?<SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/> : <WetnessDisplay value={wetness} />}
+            {initial.burstGrains===undefined?<SliderOnlyIfUndefinedWithOpenButton text={"Burst Grains"} defaultValue={0} onChange={setBurstGrains}/> : <WetnessDisplay text={"Burst Grains"} value={wetness} />}
 
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"jar"} transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly}/>

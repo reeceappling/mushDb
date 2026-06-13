@@ -14,6 +14,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -31,7 +32,7 @@ type PCRun struct {
 
 func initializePCRun(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PcRunCollectionName)
+	coll := DbFrom(ctx).Collection(PcRunCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		// TODO: newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
@@ -77,12 +78,13 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := newAlternateCollectionId()
 	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := PCRun{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		CreationDateField:          unixTimeForNow().asCreationDate(),
+		CreationDateField:          CreationDateField{now},
 		RunTimeMinutes:             req.RunTimeMinutes,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
@@ -139,7 +141,7 @@ type PcRunField struct {
 }
 
 func (field PcRunField) Get(ctx context.Context) (out PCRun, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PcRunCollectionName).FindOne(ctx, bson.M{
+	err = DbFrom(ctx).Collection(PcRunCollectionName).FindOne(ctx, bson.M{
 		"_id": field.PcRun,
 	}).Decode(&out)
 	return out, err

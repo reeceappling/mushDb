@@ -4,15 +4,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 	"testing"
 )
 
 func TestCommon(t *testing.T) {
 	ctx := ctxWithClient
 	require.NoError(t, Initialize(ctx))
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-	db := client.Database(dbName)
+	db := DbFrom(ctx)
 
 	t.Run("Default collections should exist", func(t *testing.T) {
 		colls, err := db.ListCollectionNames(ctx, bson.D{})

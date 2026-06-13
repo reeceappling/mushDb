@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -72,7 +73,7 @@ type Sale struct {
 
 func initializeSales(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SalesCollectionName)
+	coll := DbFrom(ctx).Collection(SalesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("saleDate", "creationDate", true, false, false),
 		//notes
@@ -85,7 +86,7 @@ func initializeSales(ctx context.Context) error {
 	// If test agar batch does not exist, then create it
 	testItem := &Sale{
 		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		CreationDateField:          exampleTime.asCreationDate(),
+		CreationDateField:          CreationDateField{exampleTime},
 		NotesField:                 NotesField{exampleNotes()},
 		LastUpdatedField:           LastUpdatedField{exampleTime},
 		AclField:                   allCanReadAcl(nil),
@@ -115,14 +116,13 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	ctx := r.Context()
 	// TODO: HOW TO HANDLE PERMS? FOR NOW, JUST DO ONLY USER?
 
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	id := newAlternateCollectionId()
 	toInsert := &Sale{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		CreationDateField:          unixTimeForNow().asCreationDate(),
+		CreationDateField:          CreationDateField{now},
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
 		// TODO: USE PARENT PERMS?????

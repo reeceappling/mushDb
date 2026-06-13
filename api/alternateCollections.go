@@ -206,8 +206,7 @@ var ListSubspeciesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http
 	opts := options.Find().
 		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
 	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
+	cursor, err := DbFrom(ctx).
 		Collection(SubspeciesCollectionName).
 		Find(ctx, findBson, opts)
 	if err != nil {
@@ -364,7 +363,7 @@ func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx conte
 		return err
 	}
 	// TODO: txn or no?
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
+	coll := DbFrom(ctx).Collection(testItems[0].CollectionName())
 	for _, item := range testItems {
 		switch id := item.IdValue().(type) {
 		case AlternateCollectionId:

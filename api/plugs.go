@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -136,7 +137,7 @@ const (
 
 //func (pl PlugsJar) setTransferParent(ctx context.Context, xfer Transfer) error {
 //	// TODO: can this even occur?
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pl.CollectionName())
+//	coll := DbFrom(ctx).Collection(pl.CollectionName())
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 //	if err != nil {
 //		return err
@@ -153,7 +154,7 @@ const (
 
 func initializePlugs(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlugsCollectionName)
+	coll := DbFrom(ctx).Collection(PlugsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
@@ -182,7 +183,7 @@ func initializePlugs(ctx context.Context) error {
 			utils.Pointer("plate"),
 		},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
-		CreationDateField:                 exampleTime.asCreationDate(),
+		CreationDateField:                 CreationDateField{exampleTime},
 		DowelTypes: []Dowel{
 			{
 				Radius: Radius{
@@ -247,7 +248,7 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 		return
 	}
 
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{id},
 		CreationDateField:     CreationDateField{now},
@@ -288,7 +289,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	// TODO: perms from spec/subspec+user if innoculated, otherwise allCanWrite
 	toInsert := PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{id},
@@ -391,9 +392,8 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	existing := &PlugsJar{}
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-	coll := client.Database(dbName).Collection(PlugsCollectionName)
-	err = coll.FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
+	db := DbFrom(ctx)
+	err = db.Collection(PlugsCollectionName).FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

@@ -8,6 +8,7 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -92,7 +93,7 @@ func (l LiquidCulture) id() []byte {
 }
 
 func initializeLCs(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(LCCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
@@ -200,8 +201,8 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	now := unixTimeForNow()
-	ctx, _ := Db(r)
+
+	ctx, now := request.UnixTime(r.Context())
 
 	_, err = data.LcRecipeField.Get(ctx)
 	if err != nil {
@@ -288,6 +289,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
+	ctx, now := request.UnixTime(r.Context()) // TODO: ensure r.Context is not used anymore
 	// Go to next part, if exists to get image
 	var importedPic *PicWithNotes = nil
 	p, err := reader.NextPart()
@@ -317,7 +319,6 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTimeForNow()
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
@@ -362,7 +363,6 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx, _ := Db(r)
 	// Validate
 	_, err = data.LcRecipeField.Get(ctx)
 	if err != nil && errors.Is(err, ErrMissingOptionalField) {
@@ -384,7 +384,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		ConfirmedCleanField:  data.ConfirmedCleanField,
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
-		LastUpdatedField:     LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)

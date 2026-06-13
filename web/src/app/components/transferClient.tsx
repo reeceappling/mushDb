@@ -449,7 +449,6 @@ export function TransfersOutDisplay( // TODO: likely overhaul
         validTypesTo?: string[],
         disposeAfter?: boolean, // undefined == let user select (default false), true is yes, false is no
     }) {
-    const cookies = useContext(CookiesContext)
     const openInNewTab = false
     if (!allowNewTransferCreation) {
         return <TransfersOutViewOnlyDisplay transfersOut={transfersOut} headerTxt={headerTxt}/>

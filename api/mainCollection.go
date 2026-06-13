@@ -60,7 +60,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 	_, txErr := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
 		defer wg.Done()
 		db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
-		_, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+		_, err := DbFrom(ctx).
 			Collection(idMapCollectionName).BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
 			return mongo.NewReplaceOneModel().SetReplacement(idMapEntry{
 				Id:        item.DbId(),

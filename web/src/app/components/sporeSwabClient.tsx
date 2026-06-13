@@ -12,7 +12,7 @@ import {
     IsString,
     ListPageItems,
     ListPageTable,
-    ListTableColumn, MultipartImportRequest,
+    ListTableColumn, DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NumberToDateStr,
@@ -151,7 +151,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
             formData.set("img", image, "img")
         }
 
-        MultipartImportRequest(formData, "sporeSwab", AssertSporeSwab, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "sporeSwab", AssertSporeSwab, setErr, allCookies(cookies))
     }
     //no parent because we couldn't possibly know it
     return <ImportEntryFormWrapper entryType={"sporeSwab"}>

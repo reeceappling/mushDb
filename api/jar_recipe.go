@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -23,7 +24,7 @@ type JarRecipeRequiredField struct {
 }
 
 func (field JarRecipeRequiredField) Get(ctx context.Context) (out JarRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName).
+	err = DbFrom(ctx).Collection(JarRecipesCollectionName).
 		FindOne(ctx, bson.M{"_id": field.Recipe}).Decode(&out)
 	return
 }
@@ -32,7 +33,7 @@ func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) 
 	if field.Recipe == nil {
 		return out, ErrMissingOptionalField
 	}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName).
+	err = DbFrom(ctx).Collection(JarRecipesCollectionName).
 		FindOne(ctx, bson.M{"_id": *field.Recipe}).Decode(&out)
 	return
 }
@@ -67,7 +68,7 @@ func (recipe JarRecipe) CollectionName() string {
 
 func initializeJarRecipes(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName)
+	coll := DbFrom(ctx).Collection(JarRecipesCollectionName)
 	err := createIndexes(ctx, coll,
 		[]mongo.IndexModel{
 			newSimpleIndex("name", "name", false, false, false),
@@ -184,6 +185,7 @@ func (req createJarRecipeRequest) ValidateGrains() error {
 }
 
 func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, now := request.UnixTime(r.Context())
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -204,7 +206,6 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx := r.Context()
 	toInsert := JarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
 		NameField:                  NameField{req.Name},
@@ -214,7 +215,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		SugarsField:                SugarsField{req.Sugars},
 		AdditivesField:             AdditivesField{req.Additives},
 		NotesField:                 NotesField{req.Notes},
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanWriteAcl(),
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)

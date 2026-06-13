@@ -236,44 +236,19 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
 }
 
 
-export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
+export const SubstrateBatchArea = ({id, txt}: {
     id?: string,
-    headerLevel?: number,
     txt?: string,
-    readonly: boolean,
-    onSelect?: (d?: SubstrateBatchData) => void
 }) => {
-    // TODO: FIX THIS WHOLE THING! Update id on prop id update! Store id internally!
-    const [open, setOpen] = useState(false)
-    const [val, setVal] = useState(id)
-    useEffect(() => {
-        setVal(id)
-    }, [id])
-    const updateId = (batch?: SubstrateBatchData) => {
-        setVal(batch?._id)
-        onSelect && onSelect(batch)
-    }
-    const linkArea = () => {
-        if (!val) {
-            return <div>{"unknown"}</div>
-        }
-        const tempLink = <EntryLinkForId
-            props={{displayId: val, linkId: val, entryType: "substrateBatch", openInNewTab: false/* TODO: ok?*/}}/>
-        if (readonly) {
-            return tempLink
-        }
-        return <>
-            {tempLink}
-            <button className={"basicButton"} onClick={() => {
-                setOpen(!open)
-            }}>{(open ? "Close Selector" : "Select a new substrate batch")}</button>
-        </>
-    }
     return <div>
-        <div>
-            {txt ? txt : "Substrate Batch: "}{linkArea()}
+        <div className={"inlineChildren"}>
+            <div>{txt ? txt : "Substrate Batch: "}</div>
+            {id ? <div>
+                <EntryLinkForId
+                    props={{displayId: id, linkId: id, entryType: "substrateBatch", openInNewTab: false/* TODO: ok?*/}}/>
+            </div> :
+                <div>{"unknown"}</div>}
         </div>
-        {open && <SubstrateBatchSelector doSelect={updateId}/>}{/* TODO: allow create?*/}
     </div>
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -30,7 +31,7 @@ type LcRecipeField struct {
 }
 
 func (field LcRecipeField) Get(ctx context.Context) (out LcRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcRecipesCollectionName).FindOne(ctx, bson.M{
+	err = DbFrom(ctx).Collection(LcRecipesCollectionName).FindOne(ctx, bson.M{
 		"_id": field.Recipe,
 	}).Decode(&out)
 	return out, err
@@ -38,7 +39,7 @@ func (field LcRecipeField) Get(ctx context.Context) (out LcRecipe, err error) {
 
 func initializeLcRecipes(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcRecipesCollectionName)
+	coll := DbFrom(ctx).Collection(LcRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, false),
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
@@ -138,6 +139,7 @@ type createLcRecipeRequest struct {
 
 func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	ctx, now := request.UnixTime(r.Context())
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -156,7 +158,6 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	); err != nil {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 	}
-	ctx := r.Context()
 	toInsert := LcRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		NameField:                  req.NameField,
@@ -166,7 +167,7 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		SugarsField:                req.SugarsField,
 		AdditivesField:             req.AdditivesField,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanWriteAcl(), // TODO: or allCanRead + user write
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)

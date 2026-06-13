@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -64,7 +65,7 @@ func (M MSS) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation
 }
 
 //func (M MSS) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(MssCollectionName)
+//	coll := DbFrom(ctx).Collection(MssCollectionName)
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 //	if err != nil {
 //		return err
@@ -84,7 +85,7 @@ func (M MSS) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from gene
 }
 
 func initializeMSS(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(MssCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
@@ -153,7 +154,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := &MSS{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		CreationDateField:                 CreationDateField{now},
@@ -178,6 +179,7 @@ type importMssRequest struct {
 }
 
 func importMssHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, now := request.UnixTime(r.Context())
 	data := importMssRequest{}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
@@ -203,14 +205,13 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
 	toInsert := MSS{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
 		SpeciesField:            data.SpeciesField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,
-		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)

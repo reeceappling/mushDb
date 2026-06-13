@@ -29,7 +29,7 @@ import {
     ListPageItems,
     ListPageTable,
     ListTableColumn,
-    MultipartImportRequest,
+    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NewEntryInput,
@@ -200,7 +200,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
             formData.set("img", imageFile, "img")
         }
 
-        MultipartImportRequest(formData, "lc", AssertLc, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "lc", AssertLc, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"lc"}>
         {err != undefined && <div>{"Error: " + err}</div>}

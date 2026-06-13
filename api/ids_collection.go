@@ -15,7 +15,7 @@ type idMapEntry struct {
 
 func initializeItemMapCollection(ctx context.Context) error { // TODO: USE!
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName)
+	coll := DbFrom(ctx).Collection(idMapCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("entryType", "entryType", false, false, false),
 	})
@@ -25,7 +25,7 @@ func initializeItemMapCollection(ctx context.Context) error { // TODO: USE!
 // TODO: USE
 func getEntryTypeForId(ctx context.Context, id MainCollectionId) (string, error) {
 	result := idMapEntry{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(&result)
+	err := DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(&result)
 	return result.EntryType, err
 }
 

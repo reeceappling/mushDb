@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -58,7 +59,7 @@ func (s StasisTube) generation() (sinceSpore *Generation, sinceSporeOrClone *Gen
 }
 
 //func (s StasisTube) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(s.CollectionName())
+//	coll := DbFrom(ctx).Collection(s.CollectionName())
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
 //	if err != nil {
 //		return err
@@ -108,7 +109,7 @@ func (s StasisTube) id() []byte {
 }
 
 func initializeStasisTubes(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(StasisTubeCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
@@ -189,8 +190,7 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	now := unixTimeForNow()
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := StasisTube{
 		MainCollectionIdField: MainCollectionIdField{id},
 		PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
@@ -411,6 +411,7 @@ type importStasisTubeRequest struct {
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importStasisTubeRequest{}
+	ctx, now := request.UnixTime(r.Context())
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
 	reader, err := multipartReaderForRequest(r, w, &data)
@@ -419,7 +420,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -460,7 +461,6 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTimeForNow()
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
@@ -496,7 +496,6 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx := r.Context()
 	toInsert := StasisTube{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
@@ -507,7 +506,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		KnownFruitableField:     data.KnownFruitableField,
 		MostRecentImageField:    MostRecentImageField{importedPic},
 		NotesField:              data.NotesField,
-		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)

@@ -42,6 +42,7 @@ import {JarData} from "@/app/components/jarServer";
 import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -255,19 +256,22 @@ export function NewPcRunForm(
     const cookies = useContext(CookiesContext)
     const newPcRunSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-
-        const body = {
-            //creationDate: date, // Handled serverside
-            runTimeMinutes: runTime,
-            notes: notes,
+        try {
+            const body = {
+                //creationDate: date, // Handled serverside
+                runTimeMinutes: Number(runTime),
+                notes: notes,
+            }
+            DoCreateRequest("pcRun", body, AssertPcRun, allCookies(cookies))
+                .then(v=>{
+                    handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
+        } catch(e){
+            setErr("invalid runtime string: "+runTime)
         }
-        DoCreateRequest("pcRun", body, AssertPcRun, allCookies(cookies))
-            .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
-            })
-            .catch(e=>{
-                setErr(JSON.stringify(e))
-            })
     }
     return (
         <NewEntryFormWrapper entryType={"pcRun"}>

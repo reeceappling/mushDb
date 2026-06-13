@@ -24,7 +24,6 @@ import {NoSsr} from "@mui/material";
 import {useQuery} from "@tanstack/react-query";
 import {dataFor, viewUrlFor} from "@/app/components/common";
 import {SelectorFor} from "@/app/components/selector";
-import {redirect} from "next/navigation";
 import TextBoxArea from "@/app/components/formSubcomponents/singleTextBoxArea";
 import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
 import {Sugar} from "@/app/components/formSubcomponents/sugars";
@@ -844,7 +843,7 @@ export function InputTextWithInlineTitle({currentContent, setContent, headerTxt,
 
 export function OpenMainPage(
     {
-        type, txt, linkId // TODO: MAKE SURE USING B58IDs (or underlined) HERE EVERYWHERE
+        type, txt, linkId, redirect // TODO: MAKE SURE USING B58IDs (or underlined) HERE EVERYWHERE
     }: {
         type: string
         redirect?: boolean
@@ -856,7 +855,8 @@ export function OpenMainPage(
         e.preventDefault()
         const url = viewUrlFor(type, linkId)
         if (redirect) {
-            redirect(url)
+            window.location.assign(url)
+            // redirect(url) // TODO: del if working
         } else {
             window.open(url, '_blank', 'noopener,noreferrer'); // TODO: ensure ok
         }

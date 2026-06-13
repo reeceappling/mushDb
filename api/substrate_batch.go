@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -24,7 +25,7 @@ type SubstrateBatch struct {
 
 func initializeSubstrateBatches(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateBatchCollectionName)
+	coll := DbFrom(ctx).Collection(SubstrateBatchCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		newSimpleIndex("recipe", "recipe", false, false, true),
@@ -96,14 +97,14 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := newAlternateCollectionId()
 
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	// Create entry to insert
 	toInsert := &SubstrateBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		CreationDateField:          CreationDateField{CreationDate: unixTimeForNow()},
+		CreationDateField:          CreationDateField{now},
 		SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate},
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedFieldForNow(),
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
@@ -160,7 +161,7 @@ type SubstrateBatchField struct {
 }
 
 func (field SubstrateBatchField) Get(ctx context.Context) (out SubstrateBatch, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateBatchCollectionName).FindOne(ctx, bson.M{
+	err = DbFrom(ctx).Collection(SubstrateBatchCollectionName).FindOne(ctx, bson.M{
 		"_id": field.SubstrateBatch,
 	}).Decode(&out)
 	return out, err

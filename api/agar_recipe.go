@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -84,7 +85,7 @@ const GrainWaterAgarName = "Grainwater Agar"
 const AntibioticAgarName = "Antibiotic Agar"
 
 func initializeAgarRecipes(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(AgarRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("name", "name", false, false, true), // TODO: unique (last) may need to be true (do we want names to be unique or not?)
@@ -272,7 +273,7 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 
 	toInsert := AgarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -285,7 +286,7 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AdditivesField:             req.AdditivesField,
 		AntibioticsField:           req.AntibioticsField,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)), // TODO: or write?
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
@@ -294,8 +295,7 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: USE!
 func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) { // TODO: USE ME
 	out := AgarRecipe{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
+	err := DbFrom(ctx).
 		Collection(AgarRecipesCollectionName).
 		FindOne(ctx, bson.M{"name": name}).
 		Decode(&out)
@@ -307,7 +307,7 @@ type AgarRecipeField struct {
 }
 
 func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(AgarRecipesCollectionName).FindOne(ctx, bson.M{
+	err = DbFrom(ctx).Collection(AgarRecipesCollectionName).FindOne(ctx, bson.M{
 		"_id": field.AgarRecipe,
 	}).Decode(&out)
 	return out, err

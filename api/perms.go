@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"golang.org/x/exp/maps"
@@ -24,13 +23,14 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 		}
 	}
 
-	user, err := GetAuthInfo(r.Context())
+	ctx := r.Context()
+	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	var projectsToReturn []projectName
 	if user.IsAdmin() {
-		allProjects, err := GetAllProjects(r.Context(), getAllProjectsCompleteArg) // TODO: validate works as expected
+		allProjects, err := GetAllProjects(ctx, getAllProjectsCompleteArg) // TODO: validate works as expected
 		if err != nil {
 			http.Error(w, "failed to get all incomplete projects: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -41,16 +41,7 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 	} else {
 		projectsToReturn = maps.Keys(user.projects)
 	}
-	bs, err := json.Marshal(projectsToReturn)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	println("sending projects list: ", string(bs))
-	_, err = w.Write(bs)
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	MarshalAndReturn(ctx, w, projectsToReturn)
 }
 
 // // TODO: HOLD ON TO USER AND GROUP PERMS IN A CACHE FOR A LITTLE BIT?
@@ -88,7 +79,7 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 //		}
 //		//GET ALL USERS FOR IDS (from db)
 //		results := make([]User, len(ssups.Ids))
-//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(UserCollName).
+//		cursor, err := DbFrom(ctx).Collection(UserCollName).
 //			Find(ctx, bson.M{"_id": bson.M{"$in": ssups.Ids}})
 //		if err != nil {
 //			return ClientSideUserPermsSubset{}, err

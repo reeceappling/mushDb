@@ -33,7 +33,7 @@ import {
     ListPageItems,
     ListPageTable,
     ListTableColumn,
-    MultipartImportRequest,
+    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NewEntryInput,
@@ -479,7 +479,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             formData.set("image", imageFile, "image")
         }
         setFormData(formData, dataObj)
-        MultipartImportRequest(formData, "plate", AssertPlate, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "plate", AssertPlate, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"plate"}>
         {err != undefined && <div>{"Error: " + err}</div>}

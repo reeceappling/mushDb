@@ -27,7 +27,7 @@ import {GenerationInput} from "@/app/components/formSubcomponents/generationInpu
 import {
     DisplayFormWrapper,
     DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, MultipartImportRequest, NewColumn, NewEntryFormWrapper,
+    ListPageItems, ListPageTable, ListTableColumn, DoMultipartImportRequest, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey, RequiredKey,
@@ -168,7 +168,7 @@ export function StasisTubeImportDisplay() {
             formData.set("image", imageFile, "imgFile")
         }
         setFormData(formData, dataObj)
-        MultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"stasisTube"}>
         {err!=undefined && <div>{"Error: "+err}</div>}

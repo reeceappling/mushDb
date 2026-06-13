@@ -93,7 +93,7 @@ func mainCollMap(name string) (item MainCollectionItem, exists bool) {
 }
 func initializeDb(ctx context.Context) error {
 	// Db will auto-create if it does not exist
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	collNames, err := db.ListCollectionNames(ctx, bson.D{})
 	if err != nil {
 		return err

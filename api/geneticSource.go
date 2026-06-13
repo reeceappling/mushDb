@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -57,7 +58,7 @@ type geneticSource interface {
 
 func setTransferParent(ctx mongo.SessionContext, parent geneticSource, xfer Transfer, dispose bool) error {
 	coll := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(parent.CollectionName())
-	now := unixTimeForNow() // TODO: is this ok?
+	ctx, now := request.UnixTimeInTxn(ctx)
 	mods := NewMods().addTransferOut(xfer.Id)
 	if dispose {
 		mods = mods.updateDisposedIfNeeded(DisposedField{Disposed: &now}, parent)

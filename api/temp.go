@@ -7,7 +7,6 @@ import (
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/pics"
-	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -68,7 +67,7 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 // Perms have not been checked yet
 func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out MainCollectionItem, err error) {
 	println("reading mcitem from " + resultItemType.CollectionName())
-	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id))
+	encodedResult := DbFrom(ctx).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id))
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -86,7 +85,7 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 }
 
 //func GetCollectionItemInTxn(ctx context.Context, id MainCollectionId, sourceType string) (out MainCollectionItem, err error) {
-//	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+//	db := DbFrom(ctx)
 //	out, err = typeForSource(sourceType) // TODO: this should be sourceType instead
 //	if err != nil {
 //		return out, err
@@ -107,8 +106,7 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 //}
 
 func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id U, item T) (out T, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).Collection(item.CollectionName()).
+	err = DbFrom(ctx).Collection(item.CollectionName()).
 		FindOne(ctx, BsonFindFilter("_id", id)).Decode(item)
 	return item, err
 }
@@ -116,7 +114,7 @@ func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx con
 // TODO: used to be in txn!
 func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id AlternateCollectionId, item T) (out T, err error) {
 	out = item
-	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+	encodedResult := DbFrom(ctx).
 		Collection(item.CollectionName()).
 		FindOne(ctx, BsonFindFilter("_id", id))
 	if encodedResult.Err() != nil {
@@ -145,7 +143,7 @@ func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdTyp
 
 func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err error) { // TODO: make sure this works as intended!
 	out = Species{}
-	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+	encodedResult := DbFrom(ctx).
 		Collection(SpeciesCollectionName).
 		FindOne(ctx, BsonFindFilter("_id", name))
 	if encodedResult.Err() != nil {
@@ -175,7 +173,7 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 
 func GetSubspeciesByNameInTxn(ctx context.Context, name string) (out Subspecies, err error) { // TODO: make sure this works as intended!
 	out = Subspecies{}
-	encodedResult := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).
+	encodedResult := DbFrom(ctx).
 		Collection(SubspeciesCollectionName).
 		FindOne(ctx, BsonFindFilter("_id", name))
 	if encodedResult.Err() != nil {

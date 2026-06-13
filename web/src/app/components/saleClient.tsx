@@ -161,7 +161,7 @@ export function NewSaleForm( // TODO: overhaul! Need Id available?
         }
         DoCreateRequest("sale", body, AssertSale, allCookies(cookies))
             .then(v=>{
-                onCreate ? onCreate(v) : redirect(viewUrlFor("sale", v._id))
+                onCreate ? onCreate(v) : window.location.assign(viewUrlFor("sale", v._id))/*redirect() TODO: ensure ok*/ // TODO: del if working
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))

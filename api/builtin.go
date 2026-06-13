@@ -1,6 +1,9 @@
 package api
 
-import "time"
+import (
+	"github.com/reeceappling/mushDb/api/request/unix"
+	"time"
+)
 
 const ( // MainCollection test ints
 	idTestPlate = iota // Blanket write
@@ -52,7 +55,7 @@ const (
 	idTestGrainBatch
 )
 
-var ogTime = unixTimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))
+var ogTime = unix.TimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))
 
 func builtInNote(note string) Note {
 	return Note{

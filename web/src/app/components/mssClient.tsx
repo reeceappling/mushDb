@@ -161,9 +161,10 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
             body: JSON.stringify(body)
         })
             .then(HandleJsonResponse)
-            .then(newItem => {
-                AssertMss(newItem)
-                redirect(viewUrlFor("mss", newItem._id))
+            .then(v => {
+                AssertMss(v)
+                window.location.assign(viewUrlFor("mss", v._id))
+                // redirect(viewUrlFor("mss", newItem._id)) // TODO: del if working
             })
             .catch(ErrHandler(setErr));
     }

@@ -31,7 +31,7 @@ import {
     FlexedSinglesGroup, ImportDisplayInput, ImportEntryFormWrapper, ListPageItems,
     ListPageTable,
     ListTableColumn,
-    MultipartImportRequest,
+    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NewEntryInput,
@@ -187,7 +187,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
             formData.set("image", imageFile, "imgFile")
         }
 
-        MultipartImportRequest(formData, "slant", AssertSlant, setErr, allCookies(cookies))
+        DoMultipartImportRequest(formData, "slant", AssertSlant, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>

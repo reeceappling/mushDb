@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -24,7 +26,7 @@ type Bag struct {
 	FilterSize                        string          `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *UnixTime       `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	SealDate                          *unix.Time      `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
 	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
 	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
 	SpeciesOptionalField              `bson:"inline"` // set on transfer in
@@ -99,7 +101,7 @@ func (b Bag) id() []byte {
 }
 
 func initializeBags(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(BagsCollectionName)
 	// Indices
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
@@ -227,7 +229,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Denying guest edits is done in the upper handlers
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(ctx)
 	toInsert := &Bag{
 		MainCollectionIdField:       MainCollectionIdField{id},
 		SubstrateRecipeField:        batch.SubstrateRecipeField,
@@ -301,7 +303,7 @@ const maxMultipartRequestSize = 32<<25 + 1024 //32<<20 + 1024 // TODO: is this m
 //func getBag(ctx context.Context, id MainCollectionId) (*Bag, error) {
 //	// go get current plate
 //	existing := &Bag{}
-//	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(existing)
+//	err := DbFrom(ctx).Collection(BagsCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(existing)
 //	return existing, err
 //}
 
@@ -349,7 +351,7 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		out.Flushes.New[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(BagsCollectionName)
+	coll := DbFrom(ctx).Collection(BagsCollectionName)
 	existing := &Bag{}
 	err = coll.FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
 	if err != nil {
@@ -398,6 +400,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	var importedPic *PicWithNotes = nil
 	dataProcessed := false
 	filesProcessed := 0
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	for { // TODO: FIX THIS MULTIPART READER? Unconfirmed that this even needs fixing as of 6/5/26
 		fileName := p.FileName()
 		defer p.Close()
@@ -412,14 +415,13 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 				// Already wrote
 				return
 			}
-			newFileNameWithPrefixPath, errr := pics.SaveFile(r.Context(), fieldBytes, "bag", string(b58id), "img")
+			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "bag", string(b58id), "img")
 			if errr != nil {
 				err = errr
 				http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-			now := unixTimeForNow()
 			importedPic = &PicWithNotes{
 				PicWithNotesLessLocation: newPicWithNotesLessLocation(now, []Note{}),
 				Location:                 ImageLocation(newFileNameWithPrefixPath),
@@ -466,16 +468,15 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	ctx := r.Context()
 	// Validate
 	_, err = data.SubstrateRecipeField.Get(ctx)
 	if err != nil {
-		dbErr(w, "substrate recipe retrieval error: "+err.Error(), http.StatusInternalServerError)
+		dbErr(w, "substrate recipe retrieval error for recipe "+string(data.Substrate.AsBase58())+": "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -522,7 +523,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		SaleField:               SaleField{},
 		DisposedField:           DisposedField{},
 		NotesField:              NotesField{},
-		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                finalPerms.AsField(),
 	}
 	finishImportMainCollectionEntry(ctx, toInsert, w)
