@@ -13,7 +13,6 @@ export default async function Page({
     const readers = await GetReaderWriterNames() // TODO: DO THIS ON SERVER
     const cookieStore = await cookies()
     const session = cookieStore.get('_gothic_session')
-    const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
     return <PageWrapper props={{pageType:"import",readers: readers}}>
         <Suspense fallback={<p>{"Loading..."}</p>}>
             <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}

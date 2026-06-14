@@ -15,6 +15,7 @@ import {SporeSwabImportDisplay} from "@/app/components/sporeSwabClient";
 import {StasisTubeImportDisplay} from "@/app/components/stasisTubeClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {PlugsImportDisplay} from "@/app/components/plugsClient";
+import {WaterJarImportDisplay} from "@/app/components/waterJarClient";
 
 export function ImportArea({itemType}: { itemType: string }) {
     switch (itemType) {
@@ -55,7 +56,8 @@ export function ImportArea({itemType}: { itemType: string }) {
         // Subspecies cannot be imported
         // SubstrateRecipe cannot be imported
         // Transfers cannot be imported
-        // WaterJars cannot be imported
+        case "waterJar":
+            return <WaterJarImportDisplay headerLevel={TopPageHeaderLevel}/>
         default:
             return <ErrorDisplay err={"Invalid import type: " + itemType} headerLevel={TopPageHeaderLevel}/>;
     }

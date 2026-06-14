@@ -7,11 +7,11 @@ import ID from "@/app/components/formSubcomponents/id";
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest,
+    DisplayInput, DoCreateRequest, DoImportRequest, DoMultipartImportRequest,
     DoUpdateRequest,
     ExistingRecentSelector,
     FlexedArea,
-    FlexedSinglesGroup,
+    FlexedSinglesGroup, ImportDisplayInput, ImportEntryFormWrapper,
     ListPageItems,
     ListPageTable,
     ListTableColumn,
@@ -37,6 +37,14 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {IsValidAcl, MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
+import {SpeciesData} from "@/app/components/speciesServer";
+import DateArea from "@/app/components/formSubcomponents/date";
+import {ExistingSpeciesSubspeciesSelector} from "@/app/components/speciesClient";
+import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
+import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
+import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
+import {AssertSlant, SlantStickSelector} from "@/app/components/slantClient";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -195,7 +203,7 @@ export function NewWaterJarForm(
         <SelectorWrapper title={"PC Run"} nameFunc={(v:PcRunData):string=>{
             return v._id
         }} current={pcRun}>
-            <PcRunSelectorCloseable doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>{/*TODO: handlers.isTopLevel vs just true*/}
+            <PcRunSelectorCloseable doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>
         </SelectorWrapper>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
@@ -203,7 +211,51 @@ export function NewWaterJarForm(
     </NewEntryFormWrapper>
 }
 
-// TODO: WATER JAR IMPORT?
+export function WaterJarImportDisplay({headerLevel}:ImportDisplayInput) { // TODO: DO THIS WHOLE THING!
+    const [created, setCreated] = useState<number>(Date.now())
+    // const [stickType, setStickType] = useState<string | undefined>(undefined)
+    // const [species, setSpecies] = useState<SpeciesData | undefined>()
+    // const [subspecies, setSubspecies] = useState<string | undefined>()
+    // const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
+    // const [generation, setGeneration] = useState<number | undefined>()
+    // const [imageFile, setImageFile] = useState<File | undefined>()
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
+    const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
+    const ImportWaterJar = () => {
+        const body = new FormData()
+        body.set('data', JSON.stringify({
+            // creationDate:created, // TODO: validate not in future or too far in the past (do on all imports)
+            // stickType: stickType,
+            // // Optional
+            // species: species?._id,
+            // subspecies: subspecies,
+            // knownFruitable: knownFruitable,
+            // generation: generation,
+            // writeTagTo: writeTagTo,
+        }))
+        // if(imageFile!==undefined){
+        //     formData.set("image", imageFile, "imgFile")
+        // }
+
+        DoImportRequest(body, "slant", AssertSlant, setErr, allCookies(cookies))
+    }
+    return <ImportEntryFormWrapper entryType={"slant"}>
+        <TestAndValidate todos={["DO THIS WHOLE IMPORT PAGE!"]}>
+        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
+        {/*<ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>*/}
+        {/*/!*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*!/*/}
+        {/*/!*{species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>:null}*!/*/}
+        {/*<KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>*/}
+        {/*<GenerationInput updateParent={setGeneration}/>*/}
+        {/*<ImageSelector updateParent={setImageFile}/>*/}
+        {/*<SlantStickSelector setStickType={setStickType}/>*/}
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
+        <button className={"greenButton"} onClick={ImportWaterJar}>{"Import Water Jar"}</button>
+        </TestAndValidate>
+    </ImportEntryFormWrapper>
+}
 
 export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<WaterJarData>) {
     let cols: ListTableColumn<WaterJarData>[] = [
