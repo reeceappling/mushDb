@@ -1032,10 +1032,10 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 	println("getting " + entryType + " " + id) // TODO: DEL
 	switch entryType {
 	case "project": // Items with possible spaces in names but abnormal perms
-		// TODO: ensure to convert id from url format to server format
-		out, err := rfid.GetAltCollectionItem[rfid.Project](ctx, id, rfid.Project{})
+		// TODO: ensure to convert id from url format to server format!!! ------ TODO: THIS!
+		out, err := rfid.GetAltCollectionItem[*rfid.Project](ctx, id, &rfid.Project{})
 		if err != nil {
-			println("err getting altCollType " + err.Error()) // TODO: DEL
+			println("err getting altCollType for id "+id, err.Error()) // TODO: DEL
 			http.Error(w, "failed to get project: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -1047,6 +1047,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		}
 		if !user.IsAdmin() && out.Perms.ForUser(user.Email) == nil { // TODO: ensure ok
 			http.Error(w, "permission denied for project", http.StatusForbidden)
+			return
+		}
+		projPermForUser := out.Perms.ForUser(user.Email) // TODO: ensure working fine!
+		if !projPermForUser.CanRead() {
+			http.Error(w, "permission denied to user for project", http.StatusForbidden)
 			return
 		}
 

@@ -42,14 +42,15 @@ export function WoodEntriesGroupForNew({currentEntries, updateParent}: {
     return <div>
         {currentEntries.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
             {currentEntries.map((n, i) => {
+                const keepOtherWoods = (existing: DowelType)=>existing.wood !== n.wood
                 return <div key={n.wood} className={"contentsOnly"}>
                     <DowelEntryForNew currentValue={n} updateParent={(updated: DowelType) => {
-                        updateParent([...(currentEntries || [])].map((existing) => {
+                        updateParent([...(currentEntries || [])].map((existing: DowelType)=>{
                             return existing.wood !== n.wood ? existing : updated
                         }))
                     }}/>
                     <RemoveButton txt={"Remove"} click={() => {
-                        updateParent([...(currentEntries || [])].filter((existing) => existing.wood !== n.wood))
+                        updateParent([...(currentEntries || [])].filter(keepOtherWoods))
                     }}/>
                 </div>
             })}

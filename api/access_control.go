@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"strings"
 )
 
 type AclField struct {
@@ -397,15 +398,19 @@ func (pp *ProjectPerm) CanWrite() bool {
 	return pp != nil && *pp != ProjectRead
 }
 func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) { // TODO: use
-	s := string(bs)
+	s := strings.Trim(string(bs), `"`)
 	switch s {
 	case "admin":
+		println("setting perm to admin") // TODO: del
 		*projPerm = ProjectAdmin
 	case "write":
+		println("setting perm to write") // TODO: del
 		*projPerm = ProjectWrite
 	case "read":
+		println("setting perm to read") // TODO: del
 		*projPerm = ProjectRead
 	default:
+		println(fmt.Sprintf("invalid project perm string: %s was not read, write, or admin ", s))
 		return fmt.Errorf("unknown project perm: %s, must be 'read', 'write', or 'admin'", s)
 	}
 	return nil

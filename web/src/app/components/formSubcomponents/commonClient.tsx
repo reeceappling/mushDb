@@ -249,7 +249,7 @@ export function DowelEntryForNew({currentValue, updateParent}: {
     return <>
         <div className={"text-m"}>{currentValue.wood}</div>
         {/* TODO: ensure floating */}
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1000.0} readonly={false}
+        <NumericalAreaWithAbsolutes label="Radius Magnitude" mode="floating" min={0.0} max={1000.0} readonly={false}
                                     errorMessage={err} value={currentValue.size.toString()}
                                     onChange={(val?: string) => {
                                         try {

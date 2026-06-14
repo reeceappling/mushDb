@@ -33,10 +33,15 @@ import {ACL} from "@/app/components/accessControlServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
-export function AssertProject(input: any): asserts input is ProjectData {
-    if (typeof input !== 'object') {
-        throw new Error('Input is not an object! Input is ' + typeof input);
+function requireObject(inp: any){
+    const typ = typeof inp
+    if (typ !== 'object') {
+        throw new Error('Input is not an object! Input is ' + typ);
     }
+}
+
+export function AssertProject(input: any): asserts input is ProjectData {
+    requireObject(input)
     // required simple keys
     const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
@@ -59,41 +64,47 @@ export function AssertProject(input: any): asserts input is ProjectData {
         }
     }
 
-    // complex required keys
-    input.perms = UnmarshalProjectPermsField(input) // TODO: is this optional????
-    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        //['perms', IsStringMapToString], // TODO: THIS IS NOT WORKING PROPERLY!!! CHANGE TO STRING FORMAT!!!! (try above)
-    ])
-    for (const [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Project assertion failure: required key ' + key + ' was not valid. was ' + JSON.stringify(input[key]));
-        }
-    }
+    // complex optional keys
+    // const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    //     //['perms', IsStringMapToString], // TODO: THIS IS NOT WORKING PROPERLY!!! CHANGE TO STRING FORMAT!!!! (try above)
+    // ])
+    // for (const [key, validator] of complexOptionalKeys) {
+    //     if (!OptionalKey(key, input, validator)) {
+    //         throw new Error('Project assertion failure: required key ' + key + ' was not valid. was ' + JSON.stringify(input[key]));
+    //     }
+    // }
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
     ])
     for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
-            throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
+            throw new Error('Project assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Complex optional keys (perms)
+    console.log("inp perms: "+JSON.stringify(Object.entries(input.perms))) // TODO: del
+    input.perms = UnmarshalProjectPermsField(input)
+    console.log("out perms: "+JSON.stringify(Object.entries(input.perms))) // TODO: del
     return
 }
 
 export function UnmarshalProjectPermsField(input: any): Map<string,string> {
    // TODO: needs to be able to throw!
+   //  if ((!('perms' in input)) || input.perms === undefined) {
+   //      // Does not exist or is undefined, return an empty map
+   //      return new Map<string, string>()
+   //  }
     if ('perms' in input && (input.perms !== undefined)) { // TODO: ensure works properly, we don't want perms getting messed up
         const field = input.perms
         if (typeof field !== 'object' || field === null) {
-            throw 'perms field must be an object'
+            throw 'perms field must be a non-null object'
         }
         // Exists, return populated map
         return new Map<string, string>(Object.entries(field as Record<string, string>))
-    } else {
-        // Does not exist or is undefined, return an empty map
-        return new Map<string, string>()
     }
+    // Does not exist or is undefined, return an empty map
+    return new Map<string, string>()
 }
 
 export default function ProjectDisplay(
@@ -101,31 +112,30 @@ export default function ProjectDisplay(
         id, readonly, data, headerLevel
     }: DisplayInput<ProjectData>) {
         const [initial, setInitial] = useState(data)
-        const initPerms = new Map<string, string>(Object.entries(data.perms || {}) as [string, string][]) // TODO: validate ok
+        const permsObjAsMap = (inp?: Map<string, string>):Map<string, string>=>{
+            if (inp===undefined || inp.size===0){
+                return new Map<string, string>();
+            }
+            return new Map<string, string>(inp.entries().toArray()) // TODO: revert if does not work! HAVE NOT TESTED!
+            // return new Map<string, string>(Object.entries(inp ? Object.fromEntries(inp) : {}) as [string, string][])
+        }
 
         const [completed, setCompleted] = useState(data.completed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [perms, setPerms] = useState<Map<string, string>>(initPerms)
+        const [perms, setPerms] = useState<Map<string, string>>(permsObjAsMap(data.perms) ) // TODO: validate ok
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: ProjectData) => {
             setInitial(updated)
-            const ps = new Map<string, string>(Object.entries(updated.perms || {}) as [string, string][]) // TODO: validate ok
 
             setCompleted(updated.completed)
             setNotes(InitialNotesState(updated.notes))
-            setPerms(ps)
+            setPerms(permsObjAsMap(updated.perms))
             setErr(undefined)
         }
         // TODO: users and entries for this!
         const completedArea = () => {
-            const handleCompletedClick = () => {
-                setCompleted(completed ? undefined : Date.now())
-            }
             if (readonly || initial.completed) {
-                let isComp = "In-Progress"
-                if (completed) {
-                    isComp = "Completed " + NumberToDate(new Date(completed))
-                }
+                const isComp = completed ? "Completed " + NumberToDate(new Date(completed)) : "In-Progress"
                 return <div>
                     <div>{isComp}</div>
                 </div>
@@ -134,19 +144,21 @@ export default function ProjectDisplay(
                 <div>{"Completed: "}</div>
                 <input type={"checkbox"} checked={!!completed} onChange={() => {
                     // TODO: ensure onChange does not need anything
-                }} onClick={handleCompletedClick} onSubmit={(e) => {
-                    e.preventDefault();
+                }} onClick={e=>{
+                    e.stopPropagation();
+                    setCompleted(completed ? undefined : Date.now())
                 }}/>
             </div>
         }
         const cookies = useContext(CookiesContext)
         const projectSubmit = () => {
+            const permsOut =  Object.fromEntries(perms)
             const body: any = {
                 notes: notes,
                 completed: completed,
-                perms: Object.fromEntries(perms), // TODO: ensure this works!
+                perms: permsOut, // TODO: ensure this works!
             }
-            console.log("sending perms: " + JSON.stringify(Object.fromEntries(perms)))
+            console.log("sending perms: " + JSON.stringify(permsOut))
 
 
             // TODO: Separate project perms request?
@@ -222,23 +234,6 @@ export function NewProjectForm(
     </NewEntryFormWrapper>
 }
 
-// export function NumberToPerm(n?: number) {
-//     if (n === undefined || n === 0) {
-//         return undefined
-//     }
-//     return n === 2;
-// }
-//
-// export function PermToNumber(p: boolean | undefined): number {
-//     if (p === undefined) {
-//         return 0
-//     }
-//     if (!p) {
-//         return 1
-//     }
-//     return 2
-// }
-
 export function ReadWriteAdminSelector({readonly, onUpdate, value}: {
     value: string,
     readonly: boolean,
@@ -285,41 +280,65 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
     setPerms?: (pp: Map<string, string>) => void,
     readonly: boolean,
 }) {
+    const [current, setCurrent] = useState(perms ? new Map<string, string>(perms) : new Map<string, string>())
+    useEffect(() => {
+        let temp = perms ? new Map<string, string>(perms) : new Map<string, string>()
+        setCurrent(temp)
+    }, [perms]);
     const depth = useContext(DepthContext)
-    if (readonly && !perms) {
+    if (readonly && !current) {
         return null
+    }
+    const existingUsersArea = ()=>{
+        if (current === undefined || current.size === 0) {
+            if (current === undefined){
+                console.log("perms was undefined") // TODO: del
+            } else {
+                console.log("perms size was 0") // TODO: del
+            }
+            return null
+        }
+        return <>{/* TODO: make this into a grid or table*/}
+            {[...current.entries()].map(p => {
+                return <>{/* TODO: NEEDS KEYS?*/}
+                    <div key={p[0] + "name"}>{p[0]}</div>
+                    <ReadWriteAdminSelector key={p[0] + "sel"} readonly={readonly} value={p[1]}
+                                        onUpdate={(b) => {
+                                            let updated = new Map<string, string>(current)
+                                            setPerms && setPerms(updated.set(p[0], b))
+                                        }}/>
+                    <RemoveButton key={p[0] + "remv"} click={() => {
+                        let updated = new Map<string, string>(current)
+                        updated.delete(p[0])
+                        setPerms && setPerms(updated)
+                        // let updated = new Map<string, string>(perms)
+                        // perms.entries().forEach(v => {
+                        //     if (v[0] !== p[0]) {
+                        //         updated.set(v[0], v[1])
+                        //     }
+                        // })
+                        // setPerms && setPerms(updated)
+                    }} txt={"Remove"}/>
+                </>
+        })}
+        </>
+
     }
     return <DepthProvider>
         <div className={"subForm depth" + depth}>
             <div className={"centerH text-lg mb-1"}>{"Permissions"}</div>
             <div className={"projectPermsUsers"}>
-                {/* TODO: make this into a grid or table*/}
-                {perms !== undefined && perms.size > 0 && [...perms.entries()].map((p) => { // TODO: how to handle the undefineds?
-                    return <>
-                        <div key={p[0] + "name"}>{p[0]}</div>
-                        <ReadWriteAdminSelector key={p[0] + "sel"} readonly={readonly} value={p[1]}
-                                                onUpdate={(b) => {
-                                                    setPerms && setPerms(new Map(perms).set(p[0], b))
-                                                }}/>
-                        <RemoveButton key={p[0] + "remv"} click={() => {
-                            const updated = new Map<string, string>()
-                            perms.entries().forEach(v => {
-                                if (v[0] !== p[0]) {
-                                    updated.set(v[0], v[1])
-                                }
-                            })
-                            setPerms && setPerms(updated)
-                        }} txt={"Remove"}/>
-                    </>
-                })}
+                {existingUsersArea()}
             </div>
 
             {/* AREA TO ADD USER */}
-            <div className={"inlineChildren"}>{"Add user: "}<UserSelector onSelect={(u) => {
-                const out = structuredClone(perms) || new Map<string, string>()
-                out.set(u._id, "read")
-                setPerms && setPerms(out)
-            }} blacklist={(perms !== undefined && perms.size > 0) ? [...perms.entries()].map(u => {
+            <div className={"inlineChildren"}>
+                <div>{"Add user: "}</div>
+                <UserSelector onSelect={(u) => {
+                    const out = new Map<string, string>(current)
+                    out.set(u._id, "read")
+                    setPerms && setPerms(out)
+                }} blacklist={(current !== undefined && current.size > 0) ? [...current.entries()].map(u => {
                 return u[0]
             }) : []}/>
             </div>

@@ -19,6 +19,13 @@
 ## Waiting on something else
 
 # TODO
+- [ ] Unit Tests
+  - [ ] Client-side
+    - [ ] Everything in here
+  - [ ] Server-side
+    - [ ] Everything in here
+- [ ] Integration testing
+  - [ ] Everything in here
 - [ ] Redirect to login page if not logged in!
 - [ ] WriteMany for RFID! Allow subsequent writings... This may be complicated, so do it later...
 - [ ] React Subcomponents
@@ -185,12 +192,15 @@
       - [ ] Create PC run from within creator
       - [ ] Validate all areas working properly
     - [ ] Import page
-      - [ ] Dowels say amount where it should be radius
+      - [x] Dowels say amount where it should be radius
       - [ ] NOT WORKING WHEN SUBMITTING!
     - [x] List Page
   - [ ] Project
-    - [ ] Display page
-    - [ ] Create page
+    - [x] Display page
+      - [x] Not properly showing initial user permissions
+      - [x] Perms are not updating visually when users are added or removed!
+      - [ ] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)
+    - [x] Create page
     - [x] List Page
       - [ ] Be able to filter projects by completeness
       - [ ] Shows all projects a user should be able to see, including public projects
@@ -222,6 +232,7 @@
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page? probably not
     - [ ] Import page
+      - [ ] Spore print colors and densities selectors not working!
     - [x] List Page
   - [ ] Spore Swab
     - [x] Display page
@@ -239,15 +250,15 @@
     - [x] Display page
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [ ] ensure transfer from stasis tube properly disposes
-    - [ ] Create page // TODO: self page?
+    - [ ] Create page // TODO: self page? UNSURE IF WE WANT OR NOT
     - [x] Import page
     - [x] List Page
   - [ ] Subspecies
     - [x] Display page
-      - [ ] Species at top
+      - [x] Species at top
       - [ ] Aliases
       - [ ] ACLs
-    - [ ] Create page // TODO: OR self page?
+    - [ ] Create page // TODO: OR self page? Probably only create from species page?
     - [ ] List Page
       - [x] Clicks work
       - [ ] Display species name then subspecies name!
@@ -259,18 +270,18 @@
     - [x] List Page
   - [ ] Substrate Recipe
     - [x] Display page
-      - [ ] Name at top
+      - [ ] Name at top (copy other recipe view pages)
       - [ ] Create Substrate Batch and validate
       - [ ] Aliases
-      - [ ] Bag creation area
-      - [ ] Box (FC) creation area
-    - [ ] Create page
+      - [ ] Bag creation area // TODO: this is a shortcut (creates batch as well), so we probably should only do this MUCH later
+      - [ ] Box (FC) creation area// TODO: this is a shortcut (creates batch as well), so we probably should only do this MUCH later
+    - [x] Create page
     - [x] List Page
   - [ ] Transfer
     - [x] Display page
       - [ ] Fix "No toImage present" and "No fromImage present"
-    - [ ] Create page // TODO: self page?
-    - [ ] List Page
+    - [ ] Create page // TODO: self page? NO TRANSFER CREATE PAGE! (?)
+    - [x] List Page
       - [x] Clickable
       - [ ] Ensure things are not stepping all over each other!
   - [ ] User
@@ -282,8 +293,9 @@
       - [ ] Disposal area
       - [ ] Create MSS // TODO: CREATE
       - [ ] Create Stasis Tube // TODO: CREATE
-    - [ ] Create page // TODO: self page?
-    - [ ] Import page
+    - [x] Create page // TODO: self page?
+      - [ ] PC run selector is double-nested...
+    - [ ] Import page (NEED TO DO THIS!!!!!)
     - [x] List Page
   
 - [ ] Reenable full authentication flow then test!
