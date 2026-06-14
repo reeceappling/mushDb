@@ -54,7 +54,6 @@ import {redirect} from "next/navigation";
 
 export const clientPostRequestHeaders = {
     credentials: 'include',
-    //'Cookie': cookies, // TODO: reenable if fails // TODO: see SendMultipartRequestNew
     'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
     'Content-type': "application/json",
     'Accept': "application/json", // TODO: ensure ok
@@ -62,7 +61,6 @@ export const clientPostRequestHeaders = {
 
 export const clientPostRequestHeadersMultipart = {
     credentials: 'include',
-    //'Cookie': cookies, // TODO: reenable if fails
     'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
     // 'Content-type': "multipart/form-data", // If this is set, it will not work (bounds not auto-calculated)
     'Accept': "application/json",
@@ -74,10 +72,7 @@ export function SendMultipartRequest(url: string, formData: FormData, cookies: s
         method: 'Post',
         body: formData,
         credentials: 'include',
-        //
-        headers: {...clientPostRequestHeadersMultipart,
-            //'Cookie': cookies, // TODO: ensure once auth reenabled, this still works without
-        },
+        headers: clientPostRequestHeadersMultipart,
     })
 }
 
@@ -155,11 +150,9 @@ export function OptionalKey(key: string, input: any, validateIfExists: (inp: any
 
 export function OptionalKeyNew(key: string, input: any, validate: (inp: any) => void): void {
     if (key in input && (!(input[key] === undefined || input[key] === null))) {
-        console.warn("key "+key+" was in input. Value is "+JSON.stringify(input[key])); // TODO: del
         validate(input[key])
         return
     }
-    console.warn("key "+key+" was not in input"); // TODO: del
     return
 }
 
@@ -198,16 +191,6 @@ export function OptionalArrayOfType(key: string, input: any, validateChildren: (
         return Array.isArray(chd) && CheckArrayType(chd, validateChildren)
     })
 }
-
-// TODO: delete if unneeded
-// export function OptionalMapOfType(key: string, input: any, validateChildren: (child: any) => boolean): boolean {
-//     if (typeof input !== 'object') {
-//         throw new Error('Input is not an object! Input is ' + typeof input);
-//     }
-//     return OptionalKey(key, input, (chd: any): boolean => {
-//         return CheckArrayType(chd, validateChildren)
-//     })
-// }
 
 export function ViewInNewTabButton<T extends Entry>({entry}: { entry:T}) {
     return <EntryLinkWrapper props={{entry:entry, openInNewTab: true}}>
@@ -455,28 +438,6 @@ export function ConfirmedCleanSelector(// TODO: validate works now via a test LC
     }) {
     return <TwoValuePlusUnknownSelector pre={"Confirmed Clean: "} updateParent={updateParent} initial={initial}
                                         trueStr={"clean"} falseStr={"contaminated"}/>
-
-    // const strForBool = (s?: boolean) => {
-    //     return ((s === undefined) ? "unknown" : (s ? "clean" : "contaminated"))
-    // }
-    // const [selected, setSelected] = useState<string>(strForBool(initial))
-    // const boolForStr = (s: string) => {
-    //     return ((s === "unknown") ? undefined : (s === "clean"))
-    // }
-    //
-    // const selectHandler = (e: SyntheticEvent<HTMLSelectElement, Event>) => {
-    //     let val = e.currentTarget.value
-    //     selProps.doSelect(boolForStr(val))
-    //     setSelected(val)
-    // }
-    // return <div className={"confirmedCleanSelector"}>{/* TODO: STYLING!!!!*/}
-    //     <div>{"Confirmed Clean: "}</div>
-    //     <select className={"tailwindSelector"} value={selected} onChange={selectHandler}>
-    //         <option value={"unknown"}>{"unknown"}</option>
-    //         <option value={"clean"}>{"clean"}</option>
-    //         <option value={"contaminated"}>{"contaminated"}</option>
-    //     </select>
-    // </div>
 }
 
 export function YesNoSelector({pre, updateParent, initial, className}: {
@@ -521,83 +482,83 @@ export type ImportDisplayInput = {
     headerLevel: number
 }
 
-export function DisposedContamArea( // TODO: THIS AND USE THIS WHEN NEEDED!!!
-    {
-        headerLevel, disposed, contams
-    }: {
-        disposed?: number
-        contams?: Contamination[]
-        headerLevel?: number
-    }) {
-    return <div>
-        <TestAndValidate todos={["DisposedContamArea NOT IMPLEMENTED!"]}>
-            {"DisposedContamArea NOT IMPLEMENTED!"}
-        </TestAndValidate>
-    </div> // TODO: THIS!
-}
-
-export function DisposedSaleContamArea(
-    {
-        contams, sale, disposed, headerLevel
-    }: {
-        contams?: Contamination[]
-        sale?: string
-        disposed?: number
-        headerLevel?: number
-    }) {
-    const sectionHeader = <div>{"Status: "}</div>
-    if (sale) {
-        const displayId = sale
-        return <div>
-            {sectionHeader}
-            <div>{"Sold in sale "}
-                <EntryLinkForId props={{
-                    displayId: displayId,
-                    linkId: displayId,
-                    entryType: "sale",
-                    openInNewTab: true
-                }}/>
-            </div>
-        </div>
-    }
-    const contamToUse: Contamination = {time: 0, confirmed: false, mold: false, bacteria: false, location: ""}
-    if (contams !== undefined && contams.length === 0) {
-        contamToUse.time = contams[contams.length - 1].time
-        for (let i = 0; i < contams.length; i++) {
-            if (!contamToUse.confirmed && contams[i].confirmed) {
-                contamToUse.confirmed = true
-            }
-            if (!contamToUse.mold && contams[i].mold) {
-                contamToUse.mold = true
-            }
-            if (!contamToUse.bacteria && contams[i].bacteria) {
-                contamToUse.bacteria = true
-            }
-            if (contams[i].location) {
-                contamToUse.location = contams[i].location
-            }
-        }
-    }
-    let contamLine: JSX.Element | null = null
-    if (contamToUse.mold || contamToUse.bacteria) {
-        let contamType = contamToUse.mold ? "mold" : "bacteria"
-        if (contamToUse.mold && contamToUse.bacteria) {
-            contamType = "mold, bacteria"
-        }
-        const lastContamPart = (" last cited " + NumberToDate(new Date(contamToUse.time)))
-        contamLine = <div>
-            <div>{(contamToUse.confirmed ? "Confirmed" : "Unconfirmed") + " contamination (" + contamType + ")" + lastContamPart}</div>
-        </div>
-    }
-    const disposedSection = <div>
-        {disposed ? "Disposed on " + NumberToDate(new Date(disposed)) : "Available"}{/* TODO: DIFFERENT STYLING BASED ON ANSWER?*/}
-    </div>
-    return <div>
-        <div>{sectionHeader}</div>
-        {contamLine}
-        {disposedSection}
-    </div>
-}
+// export function DisposedContamArea( // TODO: THIS AND USE THIS WHEN NEEDED!!!
+//     {
+//         headerLevel, disposed, contams
+//     }: {
+//         disposed?: number
+//         contams?: Contamination[]
+//         headerLevel?: number
+//     }) {
+//     return <div>
+//         <TestAndValidate todos={["DisposedContamArea NOT IMPLEMENTED!"]}>
+//             {"DisposedContamArea NOT IMPLEMENTED!"}
+//         </TestAndValidate>
+//     </div> // TODO: THIS!
+// }
+//
+// export function DisposedSaleContamArea(
+//     {
+//         contams, sale, disposed, headerLevel
+//     }: {
+//         contams?: Contamination[]
+//         sale?: string
+//         disposed?: number
+//         headerLevel?: number
+//     }) {
+//     const sectionHeader = <div>{"Status: "}</div>
+//     if (sale) {
+//         const displayId = sale
+//         return <div>
+//             {sectionHeader}
+//             <div>{"Sold in sale "}
+//                 <EntryLinkForId props={{
+//                     displayId: displayId,
+//                     linkId: displayId,
+//                     entryType: "sale",
+//                     openInNewTab: true
+//                 }}/>
+//             </div>
+//         </div>
+//     }
+//     const contamToUse: Contamination = {time: 0, confirmed: false, mold: false, bacteria: false, location: ""}
+//     if (contams !== undefined && contams.length === 0) {
+//         contamToUse.time = contams[contams.length - 1].time
+//         for (let i = 0; i < contams.length; i++) {
+//             if (!contamToUse.confirmed && contams[i].confirmed) {
+//                 contamToUse.confirmed = true
+//             }
+//             if (!contamToUse.mold && contams[i].mold) {
+//                 contamToUse.mold = true
+//             }
+//             if (!contamToUse.bacteria && contams[i].bacteria) {
+//                 contamToUse.bacteria = true
+//             }
+//             if (contams[i].location) {
+//                 contamToUse.location = contams[i].location
+//             }
+//         }
+//     }
+//     let contamLine: JSX.Element | null = null
+//     if (contamToUse.mold || contamToUse.bacteria) {
+//         let contamType = contamToUse.mold ? "mold" : "bacteria"
+//         if (contamToUse.mold && contamToUse.bacteria) {
+//             contamType = "mold, bacteria"
+//         }
+//         const lastContamPart = (" last cited " + NumberToDate(new Date(contamToUse.time)))
+//         contamLine = <div>
+//             <div>{(contamToUse.confirmed ? "Confirmed" : "Unconfirmed") + " contamination (" + contamType + ")" + lastContamPart}</div>
+//         </div>
+//     }
+//     const disposedSection = <div>
+//         {disposed ? "Disposed on " + NumberToDate(new Date(disposed)) : "Available"}{/* TODO: DIFFERENT STYLING BASED ON ANSWER?*/}
+//     </div>
+//     return <div>
+//         <div>{sectionHeader}</div>
+//         {contamLine}
+//         {disposedSection}
+//     </div>
+// }
 
 // TODO: del if unused
 // export function SaleAndDisposedArea({sale, disposed, headerLevel, readonly}: { // TODO: USE THIS WHERE NEEDED!!!!
@@ -611,32 +572,25 @@ export function DisposedSaleContamArea(
 //     }
 // }
 
-export interface NewEntryIdInput {
-    headerLevel?: number,
-    onCreate?: (id: string) => void
-    redirectOnCreate: boolean
-}
-
-
 export interface NewEntryInput<T> {
     isTopLevel: boolean
     onCreate?: (newItem: T) => void
 }
 
-// TODO: MOVE THIS
-export async function getTypeFor(id: string) { // TODO: ensure this works????
-    // TODO: USE EXAMPLE ITEMS FOR DEV ENVIRONMENT!
-    return await fetch(BaseExternalUrl + "/typeOf/" + id, {
-        method: "GET",
-        headers: clientPostRequestHeaders,
-    }).then(HandleTxtResponse)
-        .then((entryType) => {
-            return entryType
-        })
-        .catch((error) => {
-            throw error
-        });
-}
+// // TODO: MOVE THIS
+// export async function getTypeFor(id: string) { // TODO: ensure this works????
+//     // TODO: USE EXAMPLE ITEMS FOR DEV ENVIRONMENT!
+//     return await fetch(BaseExternalUrl + "/typeOf/" + id, {
+//         method: "GET",
+//         headers: clientPostRequestHeaders,
+//     }).then(HandleTxtResponse)
+//         .then((entryType) => {
+//             return entryType
+//         })
+//         .catch((error) => {
+//             throw error
+//         });
+// }
 
 export async function getPathFor(id: string) { // TODO: ensure this works????
     const resp = await fetch(BaseExternalUrl + "/db/pathFor/" + id, {
@@ -657,15 +611,14 @@ function apiUrl(subPath: string) {
     return BaseExternalUrl + "/db" + subPath
 }
 
-// TODO: use all of these all over the place!
 export function viewUrlFor(itemType: string, newId: string) {
     return webUrl("/view/" + itemType + "/" + newId)
 }
 
-export function viewApiUrlFor(itemType: string, id: string) { // TODO: use?
+export function viewApiUrlFor(itemType: string, id: string) {
     return apiUrl("/get/" + itemType + "/" + id)
 }
-export function getUrlFor(itemType: string, id: string) { // TODO: use?
+export function getUrlFor(itemType: string, id: string) {
     return viewApiUrlFor(itemType, id)
 }
 

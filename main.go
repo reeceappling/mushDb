@@ -1317,6 +1317,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	defer r.Body.Close()
 	readerName := shared.RfidReaderName(r.PathValue("readerName"))
 	if readerName == goodTestRfid {
+		// TODO: multiple? not just one id?
 		_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 		if err != nil {
 			println("failed to write internal result", err)

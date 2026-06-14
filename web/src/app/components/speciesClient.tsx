@@ -184,7 +184,7 @@ export default function SpeciesDisplay(
                     <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <TestAndValidate todos={["standardSubstrate is getting changed when it shouldnt (going to 1)"]}>
+                    <TestAndValidate todos={["make this changeable and test"]}>
                         <SubstrateRecipeArea txt={"Standard Substrate Recipe: "} id={substrate}
                                              headerLevel={headerLevel} readonly={false} onSelect={s => {
                             s && setSubstrate(s._id)

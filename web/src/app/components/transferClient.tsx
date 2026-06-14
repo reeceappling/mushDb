@@ -141,7 +141,6 @@ export default function TransferDisplay(
         }
         const imageArea = (alt: string, loc?: string) => {
             return <div className={"fromToImage"}>
-                {/*{loc ? <Image src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"/* TODO: if not working, switch back*!/*/}
                 {loc ? <img src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"}
             </div>
         }
@@ -296,9 +295,9 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, disp
         </div>
         <div className={"newTransferRow5"}>{/*TODO: changed! handle styling!*/}
             <div className={"submitNewXfer"}>
-                <button className={"buttonSmall greenButton"} onClick={() => { // TODO: ensure classes ok
+                <button className={"buttonSmall greenButton"} onClick={() => {
                     submitNewTransfer()
-                }}>{"Submit"}</button>
+                }}>{"Submit New Transfer"}</button>
             </div>
             <div className={"inlineChildren"}>{/*TODO: new! handle styling!*/}
                 {disposeAfter ? <div></div> : <>
@@ -313,123 +312,123 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, disp
     </NewEntryFormWrapper>
 }
 
-export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated}: {
-    idFrom: string,
-    typeFrom: string,
-    validTypesTo: string[],
-    onCreated: (xfer: TransferData) => void,
-}) {
-    const [isOpen, setIsOpen] = useState(false)
+// export function NewTransferAreaNew({idFrom, typeFrom, validTypesTo, onCreated}: {
+//     idFrom: string,
+//     typeFrom: string,
+//     validTypesTo: string[],
+//     onCreated: (xfer: TransferData) => void,
+// }) {
+//     const [isOpen, setIsOpen] = useState(false)
+//
+//     const [idTo, setIdTo] = useState<string | undefined>()
+//     const [picFrom, setPicFrom] = useState<File | undefined>()
+//     const [picTo, setPicTo] = useState<File | undefined>()
+//     const [notes, setNotes] = useState<Note[]>([])
+//     const [reason, setReason] = useState<string | undefined>()
+//     const [err, setErr] = useState<string | undefined>()
+//     const cookies = useContext(CookiesContext)
+//     const submitNewTransfer = () => {
+//         if (!idFrom || idFrom === "") {
+//             setErr("ID From cannot be blank!")
+//             return
+//         }
+//         if (!idTo || idTo === "") {
+//             setErr("ID To cannot be blank!")
+//             return
+//         }
+//         if (!reason || reason === "") {
+//             setErr("reason cannot be blank!")
+//             return
+//         }
+//         const formData = new FormData();
+//         const dataObj: any = {
+//             from: idFrom,
+//             to: idTo,
+//             reason: reason,
+//             // optional
+//             fromType: typeFrom,
+//             notes: notes,
+//         }
+//         setFormData(formData, dataObj)
+//         picFrom && formData.set('picFrom', picFrom, 'picFrom')
+//         picTo && formData.set('picTo', picTo, 'picTo')
+//         // Send request
+//         DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
+//             .then(v=>{
+//                 onCreated ? onCreated(v) : console.log("no onCreate provided")
+//             })
+//             .catch(e=>{
+//                 setErr(JSON.stringify(e))
+//             })
+//     }
+//     const toggleOpen = () => {
+//         setIsOpen(!isOpen)
+//     }
+//     if (!isOpen) {
+//         return <div>
+//             <button className={"buttonFullWidth greenButton"} onClick={toggleOpen}>{"Create New Transfer"}</button>
+//         </div>
+//     }
+//     const newTransferNotifArea = () => {
+//         return <div>
+//             <div>
+//                 <button className={"basicButton"}>{"Close Transfer Creator"}</button>
+//             </div>
+//         </div>
+//     }
+//     const xferImgArea = (txt: string, update: (f: File | undefined) => void, className: string) => {
+//         return <div className={className}>
+//             <div>{txt}</div>
+//             <div>
+//                 <ImageSelector updateParent={update}/>
+//             </div>
+//         </div>
+//     }
+//
+//     return <>
+//         {newTransferNotifArea()}
+//         <></>
+//         <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling? */}
+//             <ErrorDisplay err={err}/>
+//
+//             <div className={"newTransferRow3"}>
+//                 <div className={"reason-to"}>
+//                     <div>{"Transfer Reason: "}</div>
+//                     <TransferReasonSelector onSelect={setReason}/>
+//                 </div>
+//                 <div className={"id-to"}>
+//                     <MainCollectionInputOrRead onIdSelected={setIdTo} label={"ID TO: "}/>
+//                 </div>
+//             </div>
+//             <div className={"newTransferRow2"}>
+//                 {xferImgArea("Image from:", setPicFrom, "image-from")}
+//                 {xferImgArea("Image to:", setPicTo, "image-to")}
+//             </div>
+//             <div className={"new-xfer-notes gapTop"}>
+//                 <TestAndValidate todos={["notes should properly be populated"]}>
+//                     <NewEntryNotes setNotes={setNotes}/>
+//                 </TestAndValidate>
+//             </div>
+//             <div className={"newTransferRow5"}>
+//                 <div className={"submitNewXfer"}>
+//                     <button className={"greenButton buttonFullWidth"} onClick={(e) => {
+//                         e.stopPropagation();
+//                         submitNewTransfer()
+//                     }}>{"Submit"}</button>
+//                 </div>
+//                 <div className={"cancelNewXfer"}>
+//                     <button onClick={toggleOpen}>{"Cancel"}</button>
+//                 </div>
+//             </div>
+//         </NewEntryFormWrapper>
+//     </>
+// }
 
-    const [idTo, setIdTo] = useState<string | undefined>()
-    const [picFrom, setPicFrom] = useState<File | undefined>()
-    const [picTo, setPicTo] = useState<File | undefined>()
-    const [notes, setNotes] = useState<Note[]>([])
-    const [reason, setReason] = useState<string | undefined>()
-    const [err, setErr] = useState<string | undefined>()
-    const cookies = useContext(CookiesContext)
-    const submitNewTransfer = () => {
-        if (!idFrom || idFrom === "") {
-            setErr("ID From cannot be blank!")
-            return
-        }
-        if (!idTo || idTo === "") {
-            setErr("ID To cannot be blank!")
-            return
-        }
-        if (!reason || reason === "") {
-            setErr("reason cannot be blank!")
-            return
-        }
-        const formData = new FormData();
-        const dataObj: any = {
-            from: idFrom,
-            to: idTo,
-            reason: reason,
-            // optional
-            fromType: typeFrom,
-            notes: notes,
-        }
-        setFormData(formData, dataObj)
-        picFrom && formData.set('picFrom', picFrom, 'picFrom')
-        picTo && formData.set('picTo', picTo, 'picTo')
-        // Send request
-        DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
-            .then(v=>{
-                onCreated ? onCreated(v) : console.log("no onCreate provided")
-            })
-            .catch(e=>{
-                setErr(JSON.stringify(e))
-            })
-    }
-    const toggleOpen = () => {
-        setIsOpen(!isOpen)
-    }
-    if (!isOpen) {
-        return <div>
-            <button className={"buttonFullWidth greenButton"} onClick={toggleOpen}>{"Create New Transfer"}</button>
-        </div>
-    }
-    const newTransferNotifArea = () => {
-        return <div>
-            <div>
-                <button className={"basicButton"}>{"Close Transfer Creator"}</button>
-            </div>
-        </div>
-    }
-    const xferImgArea = (txt: string, update: (f: File | undefined) => void, className: string) => {
-        return <div className={className}>
-            <div>{txt}</div>
-            <div>
-                <ImageSelector updateParent={update}/>
-            </div>
-        </div>
-    }
-
-    return <>
-        {newTransferNotifArea()}
-        <></>
-        <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling? */}
-            <ErrorDisplay err={err}/>
-
-            <div className={"newTransferRow3"}>
-                <div className={"reason-to"}>
-                    <div>{"Transfer Reason: "}</div>
-                    <TransferReasonSelector onSelect={setReason}/>
-                </div>
-                <div className={"id-to"}>
-                    <MainCollectionInputOrRead onIdSelected={setIdTo} label={"ID TO: "}/>
-                </div>
-            </div>
-            <div className={"newTransferRow2"}>
-                {xferImgArea("Image from:", setPicFrom, "image-from")}
-                {xferImgArea("Image to:", setPicTo, "image-to")}
-            </div>
-            <div className={"new-xfer-notes gapTop"}>
-                <TestAndValidate todos={["notes should properly be populated"]}>
-                    <NewEntryNotes setNotes={setNotes}/>
-                </TestAndValidate>
-            </div>
-            <div className={"newTransferRow5"}>
-                <div className={"submitNewXfer"}>
-                    <button className={"greenButton buttonFullWidth"} onClick={(e) => {
-                        e.stopPropagation();
-                        submitNewTransfer()
-                    }}>{"Submit"}</button>
-                </div>
-                <div className={"cancelNewXfer"}>
-                    <button onClick={toggleOpen}>{"Cancel"}</button>
-                </div>
-            </div>
-        </NewEntryFormWrapper>
-    </>
-}
-
-export function AddToTransfers(set: (s: string[]) => void, current: string[]) {
-    return (newXfer: TransferData) => {
-        set([...current, newXfer._id])
-    }
-}
+// export function AddToTransfers(set: (s: string[]) => void, current: string[]) {
+//     return (newXfer: TransferData) => {
+//         set([...current, newXfer._id])
+//     }
+// }
 
 export function TransfersOutDisplay( // TODO: likely overhaul
     {
