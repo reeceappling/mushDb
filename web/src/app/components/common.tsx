@@ -824,18 +824,25 @@ export function ListPageTable<T extends Entry>({data, onClick, cols,className, n
     newClass: (inp: any)=>T,
     // TODO: give this a reload button????
 }){
+    //const [hidden, setHidden] = useState<boolean[]>(data.map(d=>false))
     const classes = cols.map(c=>{
         return "text-left"+(c.fit ? " fit" : "")
     })
     return <table className={"listPageTable"}>
         <tr className={"listPageTableRow headerRow"}>
             {cols.map((col,i)=>{
+                // if (hidden[i]) {
+                //     return null
+                // }
                 return <th className={classes[i]} key={i} >{col.key}</th>
             })}
         </tr>
         {data.map(newClass).map((item,i) => {
             return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
                 {cols.map((col,i)=>{
+                    // if (hidden[i]) {
+                    //     return null
+                    // }
                     return <td className={classes[i]} key={i}>{col.f(item)}</td>
                 })}
             </ListPageTableRow>
@@ -860,7 +867,7 @@ export function ExistingDualSelector<T>(props: React.PropsWithChildren<{
     const [data, setData] = React.useState<ListResult<T> | undefined>(undefined);
     useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
         try {
-            AssertDualListResult<T>(result, props.asserter) // TODO: unnecessary?
+            AssertDualListResult<T>(result, props.asserter)
             setData(result)
             setLoaded(true)
             return
@@ -917,7 +924,7 @@ export function ExistingRecentSelector<T extends Entry>(props: React.PropsWithCh
     const [data, setData] = React.useState<T[] | undefined>(undefined);
     useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
         try {
-            AssertArrayResult<T>(result, props.asserter) // TODO: unnecessary?
+            AssertArrayResult<T>(result, props.asserter)
             setLoaded(true)
             setData(result)
         } catch (e) {

@@ -538,38 +538,38 @@ export function MostRecentImageDisplay(
     </DepthProvider>
 }
 
-export const SpeciesArea = (
-    {
-        readonly, setSpecies, initial, headerLevel
-    }: {
-        readonly: boolean,
-        setSpecies?: (sp: SpeciesData | undefined) => void,
-        initial?: string,
-        headerLevel?: number,
-    }
-) => {
-    let spArea: JSX.Element | null = null
-    if (readonly) {
-        spArea = <div>{"unknown"}</div>
-        if (initial !== undefined) {
-            spArea = <EntryLinkForId props={{
-                linkId: initial.split(" ").join("_"), // TODO: FIX THIS! URLENCODE!
-                displayId: initial,
-                entryType: "species",
-                openInNewTab: false, // TODO: ok?
-            }}/>
-        }
-    } else {
-        // TODO: CSS
-        spArea = <ExistingSpeciesSelector doSelect={(s) => {
-            setSpecies && setSpecies(s)
-        }}/>
-    }
-    return <div className={"areaWrapper"}>
-        <div className={"areaHeader"}>{"Species:"}</div>
-        <div>{spArea}</div>
-    </div>
-}
+// export const SpeciesArea = (
+//     {
+//         readonly, setSpecies, initial, headerLevel
+//     }: {
+//         readonly: boolean,
+//         setSpecies?: (sp: SpeciesData | undefined) => void,
+//         initial?: string,
+//         headerLevel?: number,
+//     }
+// ) => {
+//     let spArea: JSX.Element | null = null
+//     if (readonly) {
+//         spArea = <div>{"unknown"}</div>
+//         if (initial !== undefined) {
+//             spArea = <EntryLinkForId props={{
+//                 linkId: initial.split(" ").join("_"), // TODO: FIX THIS! URLENCODE!
+//                 displayId: initial,
+//                 entryType: "species",
+//                 openInNewTab: false, // TODO: ok?
+//             }}/>
+//         }
+//     } else {
+//         // TODO: CSS
+//         spArea = <ExistingSpeciesSelector doSelect={(s) => {
+//             setSpecies && setSpecies(s)
+//         }}/>
+//     }
+//     return <div className={"areaWrapper"}>
+//         <div className={"areaHeader"}>{"Species:"}</div>
+//         <div>{spArea}</div>
+//     </div>
+// }
 
 // export function SpeciesFormArea({species}:{
 //     species?: string,
@@ -588,40 +588,40 @@ export const SpeciesArea = (
 //     </>
 // }
 
-export const SubspeciesArea = (
-    {
-        readonly, currentSpecies, initialSub, setSubspecies, headerLevel
-    }: {
-        readonly: boolean,
-        setSubspecies?: (sp: SubspeciesData | undefined) => void,
-        currentSpecies?: string,
-        initialSub?: string,
-        headerLevel?: number
-    }
-) => {
-    if (currentSpecies === undefined) {
-        return null
-    }
-    let spArea: JSX.Element | null = null
-    if (readonly) {
-        if (initialSub !== undefined) {
-            spArea = <EntryLinkForId props={{
-                displayId: initialSub,
-                linkId: initialSub.split(" ").join("_"), // TODO: FIX! URLENCODE!
-                entryType: "subspecies",
-                openInNewTab: false, // TODO: ok?
-            }}/>
-        }
-    } else {
-        spArea = <ExistingSubSpeciesSelector species={currentSpecies} doSelect={(s) => {
-            setSubspecies && setSubspecies(s)
-        }}/>
-    }
-    return <div className={"areaWrapper"}>
-        <div className={"areaHeader"}>{"Subspecies: "}</div>
-        <div>{spArea}</div>
-    </div>
-}
+// export const SubspeciesArea = (
+//     {
+//         readonly, currentSpecies, initialSub, setSubspecies, headerLevel
+//     }: {
+//         readonly: boolean,
+//         setSubspecies?: (sp: SubspeciesData | undefined) => void,
+//         currentSpecies?: string,
+//         initialSub?: string,
+//         headerLevel?: number
+//     }
+// ) => {
+//     if (currentSpecies === undefined) {
+//         return null
+//     }
+//     let spArea: JSX.Element | null = null
+//     if (readonly) {
+//         if (initialSub !== undefined) {
+//             spArea = <EntryLinkForId props={{
+//                 displayId: initialSub,
+//                 linkId: initialSub.split(" ").join("_"), // TODO: FIX! URLENCODE!
+//                 entryType: "subspecies",
+//                 openInNewTab: false, // TODO: ok?
+//             }}/>
+//         }
+//     } else {
+//         spArea = <ExistingSubSpeciesSelector species={currentSpecies} doSelect={(s) => {
+//             setSubspecies && setSubspecies(s)
+//         }}/>
+//     }
+//     return <div className={"areaWrapper"}>
+//         <div className={"areaHeader"}>{"Subspecies: "}</div>
+//         <div>{spArea}</div>
+//     </div>
+// }
 
 // export const SalesArea = ( // TODO: MOVE???? // TODO: onClick??????
 //     readonly: boolean,

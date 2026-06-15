@@ -24,7 +24,7 @@ import {
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {SpeciesData} from "@/app/components/speciesServer";
+import {SpeciesData, SpeciesSelectorCloseable} from "@/app/components/speciesServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
@@ -174,6 +174,7 @@ export function NewSubspeciesForm({handlers, species}: {
     return (
         <NewEntryFormWrapper entryType={"subspecies"}>
             <ErrorDisplay err={err}/>
+            {/*{species === undefined && <SpeciesSelectorCloseable doSelect={setSelectedSpecies} allowCreation={false} creatorInPage={false}/>}*/}
             {species === undefined && <ExistingSpeciesSelector initialSpecies={species} doSelect={s => {
                 setSelectedSpecies(s)
             }} />}

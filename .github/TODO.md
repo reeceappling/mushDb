@@ -23,6 +23,7 @@
 
 
 # TODO
+- [ ] ListPageTables allow hiding columns!
 - [ ] Entries
   - [ ] Agar Batch
     - [x] Display page
@@ -32,12 +33,6 @@
     - [x] List Page
   - [ ] Agar Recipe
     - [x] Display page
-      - [ ] Create Plate // TODO: create shortcuts like this MUCH LATER
-        - [ ] OVC
-        - [ ] Go side
-      - [ ] Create Slant // TODO: create shortcuts like this MUCH LATER
-        - [ ] OVC
-        - [ ] Go side
     - [ ] Create page
       - [x] Validate all working properly
       - [x] Nutrients/etc working properly
@@ -45,6 +40,7 @@
     - [x] List Page
       - [x] Clicks work
       - [ ] Ensure text doesnt step all over each other on slim screens
+        - [ ] Reformat on slim screens?]
   - [ ] Bag
     - [x] Display page
       - [x] Fix wetness area
@@ -52,12 +48,6 @@
       - [ ] Preexisting users and projects which are not valid cause problems on update
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] Create SporePrint (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER // TODO: this should only be used for 1-offs because it creates a new fruit every time!
-        - [ ] OVC
-        - [ ] Go side
-      - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER // TODO: this should only be used for 1-offs because it creates a new fruit every time!
-        - [ ] OVC
-        - [ ] Go side
     - [x] Create page
     - [x] Import page
       - [x] Redirect not working
@@ -81,8 +71,6 @@
       - [ ] Handle sale
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] Create SporePrint (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
-      - [ ] Create SporeSwab (Creates intermediate fruit) // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // self page? probably not
     - [ ] Import page
     - [x] List Page
@@ -98,7 +86,6 @@
     - [x] Display page
       - [ ] fix wetness area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: self page? probably not
     - [x] Import page
       - [ ] Add wetness?
@@ -109,7 +96,6 @@
     - [x] Display page
     - [x] Create page
       - [ ] Subforms?
-      - [ ] Create Jar // Create // TODO: creates intermediary grain batch? DO LATER!
     - [x] List Page
       - [x] Standard
       - [x] Recent
@@ -118,7 +104,6 @@
       - [ ] test creating LC syringe, LC selector and reading rfid tag
         - [ ] LC selector and reading rfid tag
       - [ ] Create transfer?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: self page? probably not
     - [x] Import page
     - [x] List Page
@@ -129,7 +114,6 @@
         - [x] fix pc run selector not showing up
         - [x] default recipe to current
         - [x] fully test creating an LC from this page
-      - [ ] create LC Syringe // TODO: create shortcuts like this MUCH LATER
     - [x] Create page
     - [x] List Page
   - [ ] LC Syringe
@@ -145,7 +129,6 @@
     - [x] Display page
       - [ ] Sell area, ensure working as we want, and that selling marks as disposed
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] Create MSS // TODO: CREATE (unsure if we want mss-from-mss)
     - [ ] Create page // TODO: self page (probably no self page)?
     - [x] Import page
     - [x] List Page
@@ -165,7 +148,6 @@
   - [ ] Plate
     - [x] Display page
       - [ ] pour and condens cov
-      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page (probably no self page)?
     - [x] Import page
@@ -176,7 +158,6 @@
       - [ ] woods area displaying weird on slim screens
       - [ ] sales area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: MAKE THIS PAGE!
       - [ ] Create PC run from within creator
       - [ ] Validate all areas working properly
@@ -201,7 +182,6 @@
   - [ ] Slant
     - [x] Display page
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] New fruit area // TODO: create shortcuts like this MUCH LATER
     - [ ] Create page // TODO: self page? probably not
     - [x] Import page
     - [x] List Page
@@ -262,8 +242,6 @@
       - [ ] Name at top (copy other recipe view pages)
       - [ ] Create Substrate Batch and validate
       - [ ] Aliases
-      - [ ] Bag creation area // TODO: this is a shortcut (creates batch as well), so we probably should only do this MUCH later
-      - [ ] Box (FC) creation area// TODO: this is a shortcut (creates batch as well), so we probably should only do this MUCH later
     - [x] Create page
     - [x] List Page
   - [ ] Transfer
@@ -287,6 +265,9 @@
       - [x] PC run selector is double-nested...
     - [ ] Import page (NEED TO DO THIS!!!!!)
     - [x] List Page
+
+
+
 - [ ] Unit Tests
   - [ ] Client-side
     - [ ] Everything in here
@@ -383,6 +364,50 @@
     - [x] Existing/Update notes area
   - [x] ACL (updates and displays)
   - [ ] more!
+
+- [ ] Much later (Creates intermediates)
+  - [ ] Agar Recipe
+    - [ ] Display page
+      - [ ] Create Plate (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
+        - [ ] OVC
+        - [ ] Go side
+      - [ ] Create Slant (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
+        - [ ] OVC
+        - [ ] Go side
+  - [ ] Bag
+    - [ ] Display page
+      - [ ] Create SporePrint (Creates fruit too) // TODO: this should only be used for 1-offs because it creates a new fruit every time!
+        - [ ] OVC
+        - [ ] Go side
+      - [ ] Create SporeSwab (Creates fruit too) // TODO: this should only be used for 1-offs because it creates a new fruit every time!
+        - [ ] OVC
+        - [ ] Go side
+  - [ ] Fruiting Chamber
+    - [ ] Display page
+      - [ ] Create SporePrint (Creates intermediate fruit)
+      - [ ] Create SporeSwab (Creates intermediate fruit)
+  - [ ] Jar
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Jar Recipe
+    - [ ] Create page
+      - [ ] Create Jar (Creates grain batch too, unsure if we want this because the batch will need to be useable for other jars)
+  - [ ] LC
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Plate
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Plugs
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Slant
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Substrate Recipe
+    - [ ] Display page
+      - [ ] Bag creation area (creates batch as well)
+      - [ ] FruitingChamber (FC/Box) creation area (creates batch as well)
 
   
 - [ ] Reenable full authentication flow then test!

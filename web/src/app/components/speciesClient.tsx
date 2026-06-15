@@ -4,7 +4,6 @@ import {
     IsValidNote,
     NewEntryNotes,
     Note,
-    NotesAreaInline,
     NotesFormArea
 } from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
@@ -29,11 +28,6 @@ import {
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
-    InlineEntry,
-    InlineExpansionArea,
-    InlineExpansionButton,
-    InlineProps,
-    InlineSubArea,
     IsString,
     ListPageItems,
     ListPageTable,
@@ -268,37 +262,37 @@ export function NewSpeciesForm(
 }
 
 
-// TODO: get rid of?
-export function SpeciesInline({
-                                  data,
-                                  expandByDefault,
-                                  onClick,
-                                  showMainPageButton,
-                                  idIsLink
-                              }: InlineProps<SpeciesData>) {
-    const [expanded, setExpanded] = useState(expandByDefault)
-    return <InlineEntry onClick={onClick}>
-        <InlineSubArea props={{}}>
-            <TestAndValidate todos={["BOLD THIS SO THAT WE KNOW TO CLICK IT"]}>
-                <ID props={{
-                    id: data._id,
-                    txt: "Species",
-                    entryType: "species",
-                    allowOpenMainPage: showMainPageButton,
-                    linkPage: idIsLink
-                }}/>
-            </TestAndValidate>
-            <NameArea headerTxt={"Scientific Name: "} readonly={true} currentName={data.scientificName}/>
-            <AliasesArea aliases={data.aliases} readonly={true}/>
-            <SubstrateRecipeArea id={data.standardSubstrate} readonly={true}/>
-        </InlineSubArea>
-        <InlineExpansionArea props={{expanded: expanded}}>
-            <NotesAreaInline notes={data.notes} offset={-1}/>
-            <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-        </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-                                                     expanded={expanded}/>
-    </InlineEntry>
-}
+// // TODO: get rid of?
+// export function SpeciesInline({
+//                                   data,
+//                                   expandByDefault,
+//                                   onClick,
+//                                   showMainPageButton,
+//                                   idIsLink
+//                               }: InlineProps<SpeciesData>) {
+//     const [expanded, setExpanded] = useState(expandByDefault)
+//     return <InlineEntry onClick={onClick}>
+//         <InlineSubArea props={{}}>
+//             <TestAndValidate todos={["BOLD THIS SO THAT WE KNOW TO CLICK IT"]}>
+//                 <ID props={{
+//                     id: data._id,
+//                     txt: "Species",
+//                     entryType: "species",
+//                     allowOpenMainPage: showMainPageButton,
+//                     linkPage: idIsLink
+//                 }}/>
+//             </TestAndValidate>
+//             <NameArea headerTxt={"Scientific Name: "} readonly={true} currentName={data.scientificName}/>
+//             <AliasesArea aliases={data.aliases} readonly={true}/>
+//             <SubstrateRecipeArea id={data.standardSubstrate} readonly={true}/>
+//         </InlineSubArea>
+//         <InlineExpansionArea props={{expanded: expanded}}>
+//             <NotesAreaInline notes={data.notes} offset={-1}/>
+//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
+//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
+//                                                      expanded={expanded}/>
+//     </InlineEntry>
+// }
 
 export function SpeciesSubspeciesArea({species, subspecies}: {
     subspecies?: string,
@@ -326,8 +320,8 @@ export function ExistingSpeciesSelector(
         headerLevel?: number,
         initialSpecies?: string,
     }) {
-    const cookies = useContext(CookiesContext)
-    const [expandedAfterSelected, setExpandedAfterSelected] = useState<boolean>(false)
+    //const cookies = useContext(CookiesContext)
+    //const [expandedAfterSelected, setExpandedAfterSelected] = useState<boolean>(false)
     const [isLoaded, setLoaded] = useState(false)
     const [speciesList, setSpeciesList] = useState<SpeciesData[]>([]); // TODO: add subspecies to species data!!!!!
     const [selectorOpen, setSelectorOpen] = useState(false)
@@ -392,21 +386,22 @@ export function ExistingSpeciesSelector(
         return <div>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <div>
-                {"Currently Selected species: "/* TODO: OVERHAUL*/}{expandedAfterSelected ?
-                <div><SpeciesInline data={selected} headerLevel={headerLevel}/>
-                    <button className={"basicButtonSmall"} onClick={() => {
-                        setExpandedAfterSelected(false)
-                    }}>Show ID only
-                    </button>
-                </div> : <div>{selected._id}
-                    <button className={"basicButtonSmall"} onClick={() => {
-                        setExpandedAfterSelected(true)
-                    }}>Show More
-                    </button>
-                </div>}
+                {"Currently Selected species: "/* TODO: OVERHAUL*/}
+                <div>{selected._id}</div>
+                {/*{expandedAfterSelected ?*/}
+                {/*<div>*/}
+                {/*    <SpeciesInline data={selected} headerLevel={headerLevel}/>/!* TODO: GET RID OF?*!/*/}
+                {/*    <button className={"basicButtonSmall"} onClick={() => {*/}
+                {/*        setExpandedAfterSelected(false)*/}
+                {/*    }}>{"Show ID only"}</button>*/}
+                {/*</div> : <div>{selected._id}*/}
+                {/*    <button className={"basicButtonSmall"} onClick={() => {*/}
+                {/*        setExpandedAfterSelected(true)*/}
+                {/*    }}>{"Show More"}</button>*/}
+                {/*</div>}*/}
                 <button className={"basicButtonSmall"} onClick={() => {
                     setSelectorOpen(true)
-                    setExpandedAfterSelected(false)
+                    //setExpandedAfterSelected(false)
                 }}>{"Choose a different species"}</button>
             </div>
         </div>
