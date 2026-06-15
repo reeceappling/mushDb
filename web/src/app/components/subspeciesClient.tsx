@@ -160,15 +160,14 @@ export function NewSubspeciesForm({handlers, species}: {
                 notes: notes,
                 // ACL/DefaultACL are initially inherited from parent species
             }
-        console.log("sending request to create subspecies") // TODO: del
         DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
             .then(v=>{
-                console.log("doing onCreate") // TODO: del
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                const newSubspecies = new SubspeciesData(v)
+                handlers.onCreate ? handlers.onCreate(newSubspecies) : console.log("no onCreate provided")
             })
             .catch(e=>{
-                console.log("onCreate failed: "+JSON.stringify(e)) // TODO: del
-                setErr(JSON.stringify(e))
+                console.error("onCreate failed: "+JSON.stringify(e)) // TODO: del
+                setErr("onCreate failed: "+JSON.stringify(e))
             })
     }
     return (

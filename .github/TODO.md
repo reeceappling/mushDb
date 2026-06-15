@@ -219,16 +219,18 @@
     - [x] Display page
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [ ] ensure transfer from stasis tube properly disposes
-    - [ ] Create page // TODO: self page? UNSURE IF WE WANT OR NOT
+    - [ ] Create page // TODO: self page! I think we want this?
     - [x] Import page
     - [x] List Page
   - [ ] Subspecies
     - [x] Display page
       - [x] Species at top
       - [ ] Aliases
+        - [ ] Cannot add aliases that already exist elsewhere?
       - [ ] ACLs
-    - [ ] Create page // TODO: OR self page? Probably only create from species page?
-    - [ ] List Page
+        - [ ] Validate both updating properly
+    - [x] Create page
+    - [x] List Page
       - [x] Clicks work
       - [x] Display species name then subspecies name!
   - [ ] Substrate Batch
