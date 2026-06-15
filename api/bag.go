@@ -23,20 +23,20 @@ type Bag struct {
 	SubstrateRecipeField              `bson:"inline"`
 	SubstrateBatchOptionalField       `bson:"inline"`
 	PcRunOptionalField                `bson:"inline"` // this may not exist for pre-existing bags
-	FilterSize                        string          `bson:"filterSize" json:"filterSize"`
+	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *unix.Time      `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
-	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
-	SpeciesOptionalField              `bson:"inline"` // set on transfer in
-	SubspeciesOptionalField           `bson:"inline"` // set on transfer in
-	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField                 `bson:"inline"` // Set on transfer out
-	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
-	ParentTypeField                   `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
-	PicsField                         `bson:"inline"` // Updated independently
-	ContaminationsField               `bson:"inline"` // Updated independently
+	SealDate                          *unix.Time `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                      `bson:"inline"`                                                  // Initial wetness (refer to scale on field struct)
+	KnownFruitableField               `bson:"inline"`                                                  // set on transfer in, or once fruited
+	SpeciesOptionalField              `bson:"inline"`                                                  // set on transfer in
+	SubspeciesOptionalField           `bson:"inline"`                                                  // set on transfer in
+	InnocField                        `bson:"inline"`                                                  // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                 `bson:"inline"`                                                  // Set on transfer out
+	MainCollectionOptionalParentField `bson:"inline"`                                                  // Set on transfer in
+	ParentTypeField                   `bson:"inline"`                                                  // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	PicsField                         `bson:"inline"`                                                  // Updated independently
+	ContaminationsField               `bson:"inline"`                                                  // Updated independently
 	MostRecentImageField              `bson:"inline"`
 	FlushesField                      `bson:"inline"` // Updated independently
 	SaleField                         `bson:"inline"`
@@ -54,9 +54,9 @@ func (b Bag) CanTransferTo(dst geneticSource) error {
 
 func (b Bag) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
-		SpeciesOptionalField:    SpeciesOptionalField{b.Species},
-		SubspeciesOptionalField: SubspeciesOptionalField{b.Subspecies},
-		KnownFruitableField:     KnownFruitableField{b.KnownFruitable},
+		SpeciesOptionalField:    b.SpeciesOptionalField,
+		SubspeciesOptionalField: b.SubspeciesOptionalField,
+		KnownFruitableField:     b.KnownFruitableField,
 		GenerationsFields:       b.GenerationsFields,
 	}, nil
 }
@@ -401,7 +401,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	dataProcessed := false
 	filesProcessed := 0
 	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
-	for { // TODO: FIX THIS MULTIPART READER? Unconfirmed that this even needs fixing as of 6/5/26
+	for {                                     // TODO: FIX THIS MULTIPART READER? Unconfirmed that this even needs fixing as of 6/5/26
 		fileName := p.FileName()
 		defer p.Close()
 		if isFile := fileName != ""; isFile {

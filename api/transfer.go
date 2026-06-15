@@ -139,7 +139,7 @@ type createTransferRequest struct {
 	// ToImage == 'picTo'
 	FromType *string `json:"fromType,omitempty"`
 	NotesField
-	DisposeParent bool `json:"disposeParent"` // TODO: new! handle on ts side!
+	DisposeParent bool `json:"disposeParent"`
 }
 
 type CtxKey string
@@ -294,6 +294,16 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	child, err = getGeneticItem(ctx, childMapEntry.EntryType, data.To)
 	if err != nil {
 		http.Error(w, "failed to get child item: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// TODO: ensure child is not innoculated? // TODO: make an Innoculated() method on geneticSource!
+	// ensure child is not disposed
+	if child.DisposalInfo() != nil {
+		http.Error(w, "cannot transfer to disposed entries", http.StatusBadRequest)
+		return
+	}
+	if parent.DisposalInfo() != nil {
+		http.Error(w, "cannot transfer from disposed entries", http.StatusBadRequest)
 		return
 	}
 	if err = parent.CanTransferTo(child); err != nil {
