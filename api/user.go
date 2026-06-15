@@ -37,7 +37,7 @@ func initializeUsers(ctx context.Context) error {
 	testUser := User{
 		Email: testUserEmail,
 		Perms: UserPerms{
-			Admin:    utils.Pointer(false),
+			Admin:    AcctTypeNormal(),
 			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
 		},
 	}
@@ -49,7 +49,7 @@ func initializeUsers(ctx context.Context) error {
 	testUserSelf := User{
 		Email: testUserEmailSelf,
 		Perms: UserPerms{
-			Admin:    utils.Pointer(false),
+			Admin:    AcctTypeNormal(),
 			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
 		},
 	}

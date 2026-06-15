@@ -17,7 +17,7 @@ import (
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
-	// CreationDate is assumed to be the same as on PcRun
+	// CreationDate is assumed to be the same as on PcRun // TODO: also exists in the id
 	PcRunField       `bson:"inline"`
 	AgarRecipeField  `bson:"inline"`
 	Color            Colorant `bson:"color" json:"color"`

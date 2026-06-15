@@ -20,7 +20,7 @@ type GrainBatch struct {
 	SoakTimeHours              *int            `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
 	BoilTimeMins               *int            `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
 	DryTimeHours               *int            `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
-	CreationDateField          `bson:"inline"` // Date of first hydration
+	CreationDateField          `bson:"inline"` // Date of first hydration // TODO: also exists in the id
 	JarRecipeRequiredField     `bson:"inline"`
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`

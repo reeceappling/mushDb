@@ -555,11 +555,11 @@ func FruitFromSourceInTxn(ctx mongo.SessionContext, parent geneticSource) (*Frui
 		To:                         id,
 		FromType:                   parent.SourceType(),
 		ToType:                     "fruit",
-		CreationDateField:          CreationDateField{now},
-		Reason:                     xferReasonColonized, // TODO: what here?
-		FromImage:                  nil,                 // TODO: ?????
-		ToImage:                    nil,                 // TODO: ?????
-		NotesField:                 NotesField{},        // TODO: ?????
+		CreationDateField:          CreationDateField{now}, // TODO: also exists in the id
+		Reason:                     xferReasonColonized,    // TODO: what here?
+		FromImage:                  nil,                    // TODO: ?????
+		ToImage:                    nil,                    // TODO: ?????
+		NotesField:                 NotesField{},           // TODO: ?????
 		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   parent.Permissions().AsField(),
 	}

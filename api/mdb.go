@@ -364,7 +364,6 @@ func (id AlternateCollectionId) MarshalJSON() ([]byte, error) { // Turn to base5
 
 func (id *AlternateCollectionId) UnmarshalJSON(bs []byte) error { // Turn from base58 to server-type (binary)
 	var b58Str Base58Str
-	// TODO: FIX THIS!
 	if err := json.Unmarshal(bs, &b58Str); err != nil {
 		return err
 	}
@@ -407,12 +406,6 @@ monoculture
 source (cutting, MSS, Transfer, LC, Grain, TODO:etc)
 */
 
-/*
-use DATABASE_NAME
-db.createCollection(name, options)
-autoIndexId	Boolean	(Optional) If true, automatically create index on _id field.s Default value is false.
-*/
-
 // TODO: auth mechanisms https://www.mongodb.com/docs/drivers/go/current/fundamentals/auth/
 func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPort int) (context.Context, *mongo.Client, error) {
 	hostAndPort := dbHostName
@@ -425,9 +418,6 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 	hostPortAndParams := fmt.Sprintf("%s/?authSource=admin&replicaSet=rs0", hostAndPort)
 	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostPortAndParams)
 	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
-
-	// TODO: SET UP INITIAL USER IF USER DOES NOT EXIST!
-	// TODO: THIS SHOULD BE DONE VIA: https://stackoverflow.com/questions/42912755/how-to-create-a-db-for-mongodb-container-on-start-up
 
 	println("trying to connect to database", usern, pass)
 	opts := options.Client().
@@ -545,16 +535,12 @@ func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[str
 	return out, found, nil
 }
 
-//func getLastNEntriesForType[T]() { // TODO: do this
-//
-//}
-
 func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
 	findBson := bson.D{{}}
 	sortField := "$natural"
 	// TODO: pagination?
 	opts := options.Find().
-		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
+		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural and that natural works with non-default ID types
 	cursor, err := DbFrom(ctx).
 		Collection(temp.CollectionName()).
 		Find(ctx, findBson, opts)
@@ -575,8 +561,8 @@ func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresul
 	}
 	// TODO: pagination?
 	opts := options.Find().
-		//SetLimit(int64(nresults)). // TODO: no limit because user can be unable to view some items
-		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
+		//SetLimit(int64(nresults)). // no limit because user can be unable to view some items
+		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural and that natural works with non-default IDs
 	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
 	cursor, err := DbFrom(ctx).
 		Collection(temp.CollectionName()).
@@ -672,7 +658,7 @@ var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		"lc":              createLiquidCultureHandler,
 		"lcSyringe":       createSyringeHandler,
 		"lcRecipe":        createLcRecipeHandler,
-		"fruit":           createFruitHandler, // TODO: NOT WORKING PROPERLY!
+		"fruit":           createFruitHandler,
 		"fruitingChamber": createFruitingChamberHandler,
 		"grainBatch":      createGrainBatchHandler,
 		"jar":             createJarHandler,

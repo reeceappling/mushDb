@@ -106,7 +106,7 @@ func initializeSubstrates(ctx context.Context) error {
 type PermsOnRequest struct {
 	UserPerms    map[string]bool      `json:"users,omitempty"` // Bool is canEdit
 	ProjectPerms map[projectName]bool `json:"projects,omitempty"`
-	BlanketPerm  *bool                `json:"blanketPerm,omitempty"` // If true then these entries are publicly writeable, if false then publicly readable
+	BlanketPerm  *ReadWritePerm       `json:"blanketPerm,omitempty"` // If true then these entries are publicly writeable, if false then publicly readable
 }
 
 func (requestPerms PermsOnRequest) GetPermsOnRequest() PermsOnRequest {

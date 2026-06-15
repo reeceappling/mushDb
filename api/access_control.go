@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"strings"
 )
 
@@ -18,7 +17,7 @@ func (field AclField) Permissions() ACL {
 
 func allCanReadAcl(owner *string) AclField {
 	out := ACL{
-		BlanketPerm: utils.Pointer(false),
+		BlanketPerm: RWPermRead(),
 		Users:       map[string]bool{},
 		Projects:    map[projectName]bool{},
 	}
@@ -29,7 +28,7 @@ func allCanReadAcl(owner *string) AclField {
 }
 func allCanWriteAcl() AclField {
 	return AclField{ACL: ACL{
-		BlanketPerm: utils.Pointer(true),
+		BlanketPerm: RWPermWrite(),
 	}}
 }
 
@@ -37,7 +36,7 @@ func allCanWriteAcl() AclField {
 type ACL struct { // ALWAYS REFERENCED AS A STRUCT AND NOT A POINTER!
 	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite // TODO: omitempty ok?
 	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite // TODO: omitempty ok?
-	BlanketPerm *bool                      `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // empty is private, false is public can read by default. True means public can write by default.
+	BlanketPerm *ReadWritePerm             `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // empty is private, false is public can read by default. True means public can write by default.
 }
 
 func (acl ACL) AsPermsOnRequest() PermsOnRequest {
@@ -89,7 +88,7 @@ func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
 	if !ok {
 		return errors.New("ACL blanketPerm must be a present boolean field v1")
 	}
-	*out.BlanketPerm, ok = blanketPermIfc.(bool)
+	*out.BlanketPerm, ok = blanketPermIfc.(ReadWritePerm)
 	if !ok {
 		return errors.New("ACL blanketPerm must be a present boolean field v2")
 	}
@@ -169,17 +168,17 @@ func (acl ACL) userIdPermission(email string) *ReadWritePerm {
 			return newPerm(userPerm)
 		}
 	}
-	return (*ReadWritePerm)(acl.BlanketPerm)
+	return acl.BlanketPerm
 }
 
 // TODO: ensure this works
 func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
-	if userPerms.IsAdmin() || (acl.BlanketPerm != nil && *acl.BlanketPerm) {
+	if userPerms.IsAdmin() || acl.BlanketPerm.CanWrite() {
 		return RWPermWrite()
 	}
 	// Handle blanket perm
 	var maxPerm = RWPermNothing()
-	if acl.BlanketPerm != nil {
+	if acl.BlanketPerm.CanRead() {
 		maxPerm = RWPermRead()
 	}
 	if userPerms.isGuest() {
@@ -187,8 +186,8 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	}
 
 	maxPerm = acl.userIdPermission(userPerms.Email)
-	if maxPerm != nil && *maxPerm == true {
-		return newPerm(true)
+	if maxPerm.CanWrite() {
+		return RWPermWrite()
 	}
 	for proj, projCanWriteOnEntry := range acl.Projects {
 		if projPerm, exists := userPerms.projects[proj]; exists { // TODO: is projectPerm here ok
@@ -219,9 +218,16 @@ func RWPermRead() *ReadWritePerm {
 func RWPermNothing() *ReadWritePerm {
 	return nil
 }
-func RWPermFor(inp *bool) *ReadWritePerm {
-	return (*ReadWritePerm)(inp)
+func (rw *ReadWritePerm) CanWrite() bool {
+	return rw != nil && *rw == true
 }
+func (rw *ReadWritePerm) CanRead() bool {
+	return rw != nil
+}
+
+//	func RWPermFor(inp *bool) *ReadWritePerm {
+//		return (*ReadWritePerm)(inp)
+//	}
 func (rw *ReadWritePerm) Copy() *ReadWritePerm {
 	if rw == nil {
 		return nil
@@ -233,9 +239,10 @@ func newPerm(canWrite bool) *ReadWritePerm {
 	out := ReadWritePerm(canWrite)
 	return &out
 }
-func noPerm() *ReadWritePerm {
-	return nil
-}
+
+//func noPerm() *ReadWritePerm {
+//	return nil
+//}
 
 func maxPermsBetween(ps ...*ReadWritePerm) *ReadWritePerm {
 	if len(ps) == 0 {
@@ -244,7 +251,8 @@ func maxPermsBetween(ps ...*ReadWritePerm) *ReadWritePerm {
 	var out *ReadWritePerm = nil
 	for _, perm := range ps {
 		if perm != nil {
-			if *perm {
+			if *perm == true {
+				// Return early because this is the highest possible permission
 				return newPerm(true) // can write
 			}
 			if out == nil {
@@ -275,15 +283,27 @@ type Perm[T any] struct {
 	CanWrite bool `bson:"canWrite" json:"canWrite"`
 }
 
-type AccountType bool // always used as a ptr. nil is guest (never write), false is normal email, true is admin
+// AccountType is always used as a pointer. // nil is guest (never write), true is admin, false is regular user
+type AccountType bool // always used as a ptr.
 func (ad *AccountType) IsAdmin() bool {
-	return !ad.IsGuest() && bool(*ad)
+	return bool(*ad)
 }
 func (ad *AccountType) IsGuest() bool {
 	return ad == nil
 }
 func (ad *AccountType) IsRegular() bool {
-	return !ad.IsGuest() && !bool(*ad)
+	return !ad.IsAdmin() && !ad.IsGuest() // TODO: consider switching order
+}
+func AcctTypeAdmin() *AccountType {
+	accType := AccountType(true)
+	return &accType
+}
+func AcctTypeNormal() *AccountType {
+	accType := AccountType(false)
+	return &accType
+}
+func AcctTypeGuest() *AccountType {
+	return nil
 }
 
 type ResolvedUserPerms struct {
@@ -325,17 +345,25 @@ func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWriteP
 	return userProjPerm.RWPerm() // TODO: validate that nil==read is ok here!
 }
 
-func (perms ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permissioned) *ReadWritePerm {
-	out := true
+func (user ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permissioned) *ReadWritePerm {
+	var out ReadWritePerm = true
 	for _, item := range entryPermsets {
-		minPermsBetween()
-		thisPerm := item.Permissions().HighestPermFor(perms)
+		perm := item.Permissions()
+
+		thisPerm := perm.HighestPermFor(user)
 		if thisPerm == nil {
+			// At least one permission was nil. Return nil early
 			return nil
 		}
-		out = out && bool(*thisPerm)
+		// TODO: variation 1, test against variation 2
+		out = out && *thisPerm
+		// TODO: variation 2, test against variation 1
+		//if *thisPerm || !out  {
+		//	continue
+		//}
+		//out = false
 	}
-	return newPerm(out)
+	return &out
 }
 
 type ProjectPerms map[string]ProjectPerm // map of email to perm where nil is readOnly, false is write but not edit the project, true is full control over project
@@ -397,17 +425,15 @@ func (pp *ProjectPerm) CanRead() bool {
 func (pp *ProjectPerm) CanWrite() bool {
 	return pp != nil && *pp != ProjectRead
 }
-func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) { // TODO: use
+
+func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) {
 	s := strings.Trim(string(bs), `"`)
 	switch s {
 	case "admin":
-		println("setting perm to admin") // TODO: del
 		*projPerm = ProjectAdmin
 	case "write":
-		println("setting perm to write") // TODO: del
 		*projPerm = ProjectWrite
 	case "read":
-		println("setting perm to read") // TODO: del
 		*projPerm = ProjectRead
 	default:
 		println(fmt.Sprintf("invalid project perm string: %s was not read, write, or admin ", s))
@@ -416,38 +442,12 @@ func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) { // TODO: use
 	return nil
 }
 
-// TODO: do we want to marshal this?
-//func (projPerm *ProjectPerm) MarshalJSON() (bs []byte, err error) { // TODO: use
-//	if projPerm == nil {
-//		return []byte("read"), nil // TODO: ensure ok
-//	}
-//	if *projPerm == ProjectAdmin {}
-//}
-
 type UserPerms struct {
-	Admin    *bool         `bson:"admin,omitempty" json:"admin,omitempty"` // nil == guest, false == regular email, true==Admin
+	Admin    *AccountType  `bson:"admin,omitempty" json:"admin,omitempty"` // nil == guest, false == regular email, true==Admin
 	Projects []projectName `bson:"projects,omitempty" json:"projects,omitempty"`
 }
 
-//func newAlwaysReadableAcl(ctx context.Context, thisUserPerms ResolvedUserPerms, usersThatCanEdit []string, projectsThatCanEdit []projectName) (AclField, error) {
-//	return PermsOnRequest{
-//		UserPerms: slices.MapToMap(usersThatCanEdit, func(i string) (string, bool) {
-//			return i, true
-//		}),
-//		ProjectPerms: slices.MapToMap(projectsThatCanEdit, func(i projectName) (projectName, bool) {
-//			return i, true
-//		}),
-//		BlanketPerm: utils.Pointer(false), // TODO: used to be *false...
-//	}.AclForUser(ctx, thisUserPerms)
-//}
-//func alwaysWriteableAcl() AclField { // TODO: use?
-//	return AclField{
-//		ACL: ACL{
-//			BlanketPerm: utils.Pointer(true),
-//		},
-//	}
-//}
-
+// TODO: consider moving!
 var testAclStrings = []string{
 	"blanket read",
 	"Test user can write",
@@ -458,7 +458,7 @@ var testAclStrings = []string{
 	"Project without test user can write, so user cannot",
 }
 var testAcls = []ACL{{
-	BlanketPerm: utils.Pointer(false), // Blanket read
+	BlanketPerm: RWPermRead(), // Blanket read
 }, {
 	Users: map[string]bool{testUserEmail: true}, // Test user can write
 }, {

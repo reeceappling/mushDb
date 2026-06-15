@@ -5,15 +5,21 @@ import (
 	"encoding/json"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"time"
 )
 
 // required for: agarBatch
 
+func TimeFromId(id AlternateCollectionId) time.Time { // TODO: USE AND MOVE
+	return primitive.ObjectID(id).Timestamp()
+}
+
 type AgarRecipe struct {
-	AlternateCollectionIdField `bson:"inline"`
+	AlternateCollectionIdField `bson:"inline"` // CreationDate is embedded?
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
 	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L

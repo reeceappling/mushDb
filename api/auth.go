@@ -277,7 +277,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 		u = User{
 			Email: email,
 			Perms: UserPerms{
-				Admin:    nil,
+				Admin:    AcctTypeGuest(),
 				Projects: []projectName{},
 			},
 		}
@@ -288,7 +288,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 			u = User{
 				Email: email,
 				Perms: UserPerms{
-					Admin:    utils.Pointer(true),
+					Admin:    AcctTypeAdmin(),
 					Projects: []projectName{}, // TODO: ADD PROJECTS???
 				},
 			}
@@ -455,15 +455,15 @@ func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 				handleAuthErr(err).ServeHTTP(w, r)
 				return
 			}
-			println("Trying to reauth session ID " + sessionId)
+			println("Trying to reauth session ID " + sessionId) // TODO: del
 			sess, err := svc.TryToReAuth(sessionId)
 			if err != nil {
-				println("failed to reAuth", err.Error())
+				println("failed to reAuth", err.Error()) // TODO: del?
 				handleAuthErr(err).ServeHTTP(w, r)
 				return
 			}
 			// TODO: ensure session cookies persist!
-			println("Serving next success handler")
+			println("Serving next success handler") // TODO: del
 			onAuthed.ServeHTTP(w, r.WithContext(SetAuthInfo(r.Context(), sess.Data)))
 		})
 	}
@@ -471,7 +471,7 @@ func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 func GetResolvedUserPerms(ctx context.Context) (ResolvedUserPerms, error) {
 	usr, ok := ctx.Value(AuthPermsContextHeaderKey).(ResolvedUserPerms)
 	if !ok {
-		println("no auth info on context")
+		println("no auth info on context") // TODO: del
 		return ResolvedUserPerms{}, errors.New("no auth info on context")
 	}
 
@@ -543,34 +543,34 @@ func (serv *AuthService) OnContext(ctx context.Context) context.Context {
 	return context.WithValue(ctx, authServiceContextKey, serv)
 }
 
-// TODO: use
-func setSessionCookie(w http.ResponseWriter, r *http.Request, sessionId string, session genericsessions.Session[ResolvedUserPerms]) {
-	http.SetCookie(w, &http.Cookie{
-		Name:    AuthSessionCookieKey,
-		Value:   sessionId,
-		Quoted:  false,
-		Path:    r.URL.Path, // TODO: ok?
-		Domain:  r.URL.Host,
-		Expires: session.Expiry,
-		//RawExpires:  "",    // TODO: ????????????????
-		MaxAge:   0, // TODO: ????????????????
-		Secure:   true,
-		HttpOnly: false,
-		SameSite: http.SameSiteNoneMode, // TODO: ok?
-		//Partitioned: false,                // TODO: ????????????????
-		//Raw:         "",                   // TODO: ????????????????
-		//Unparsed:    nil,                  // TODO: ????????????????
-	})
-}
-
-// TODO: RENAME AND USE
-func GetSessionCookie(r *http.Request) (*http.Cookie, error) {
-	out, err := r.Cookie(AuthSessionCookieKey)
-	if err != nil {
-		return nil, errors.Join(http.ErrNoCookie, err)
-	}
-	return out, err
-}
+//// TODO: use
+//func setSessionCookie(w http.ResponseWriter, r *http.Request, sessionId string, session genericsessions.Session[ResolvedUserPerms]) {
+//	http.SetCookie(w, &http.Cookie{
+//		Name:    AuthSessionCookieKey,
+//		Value:   sessionId,
+//		Quoted:  false,
+//		Path:    r.URL.Path, // TODO: ok?
+//		Domain:  r.URL.Host,
+//		Expires: session.Expiry,
+//		//RawExpires:  "",    // TODO: ????????????????
+//		MaxAge:   0, // TODO: ????????????????
+//		Secure:   true,
+//		HttpOnly: false,
+//		SameSite: http.SameSiteNoneMode, // TODO: ok?
+//		//Partitioned: false,                // TODO: ????????????????
+//		//Raw:         "",                   // TODO: ????????????????
+//		//Unparsed:    nil,                  // TODO: ????????????????
+//	})
+//}
+//
+//// TODO: RENAME AND USE
+//func GetSessionCookie(r *http.Request) (*http.Cookie, error) {
+//	out, err := r.Cookie(AuthSessionCookieKey)
+//	if err != nil {
+//		return nil, errors.Join(http.ErrNoCookie, err)
+//	}
+//	return out, err
+//}
 
 const SessionIdKey = "SessionId"
 
