@@ -3,18 +3,14 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
-    clientPostRequestHeaders,
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
     DoImportRequest,
     DoUpdateRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
-    importApiUrlFor,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     ListPageItems,
@@ -28,11 +24,9 @@ import {
     OptionalSimpleKey,
     RequiredArrayOfType,
     RequiredKey,
-    viewUrlFor,
 } from "@/app/components/common";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl,
@@ -41,7 +35,6 @@ import {EntryLinkWrapper, EntryLinkIdWrapper} from "@/app/components/formSubcomp
 import {DowelType, PlugsData} from "@/app/components/plugsServer";
 import {PcRunData} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
-import {ExistingSubSpeciesSelector} from "./subspeciesClient";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "./formSubcomponents/readerWriterButtons/readerSelector";
 import {AllEntries, OnViewCreatorQuadCol} from "./formSubcomponents/shared";
 import {ACL} from "./accessControlServer";
@@ -50,10 +43,8 @@ import ID from "./formSubcomponents/id";
 import {PcRunArea, PcRunSelector} from "./pcRunClient";
 import {InnocDisplay, TransfersOutDisplay} from "./transferClient";
 import {SpeciesData} from "./speciesServer";
-import {SubspeciesData} from "./subspeciesServer";
-import {redirect} from "next/navigation";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
-import {ExistingSpeciesSelector, ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
+import { ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
 import {WoodEntriesGroupForNew} from "@/app/components/formSubcomponents/plugs";
 import {SalesArea} from "@/app/components/saleClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
@@ -387,15 +378,15 @@ export function NewPlugsForm(
 
 export function PlugsListPageTable({data, onClick, withLink}: ListPageItems<PlugsData>) {
     let cols: ListTableColumn<PlugsData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v) => v.species || ""),
-        NewColumn("Subspec", v => v.subspecies || ""),
+        }, true),
+        NewColumn("Spec", (v) => v.species || "", true),
+        NewColumn("Subspec", v => v.subspecies || "", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PlugsData) => {

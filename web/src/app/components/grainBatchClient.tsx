@@ -36,9 +36,8 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {
-    AclDisplay,
-    IsValidAcl, MarshalAcl,
-    TogglableAreaWithDepth, UnmarshalAcl
+    AclDisplay, MarshalAcl, UnmarshalAcl,
+    TogglableAreaWithDepth
 } from "@/app/components/accessControlClient";
 import { ACL } from "./accessControlServer";
 
@@ -281,10 +280,10 @@ export function NewGrainBatchForm({handlers, recipe}: {
 
 export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems<GrainBatchData>) {
     let cols: ListTableColumn<GrainBatchData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
+        }, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),

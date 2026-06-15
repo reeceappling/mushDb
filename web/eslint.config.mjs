@@ -32,6 +32,7 @@ export default [
       "@typescript-eslint/no-unsafe-declaration-merging": "off",
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": "off",
+      "@next/next/no-img-element": "off", // TODO: reenable and figure out?
       // "unused-imports/no-unused-vars": [
       //   "warn",
       //   {

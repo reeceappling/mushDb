@@ -63,17 +63,13 @@ import {
 import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import { SaleArea} from "@/app/components/saleClient";
 import {
-    ExistingSpeciesSelector,
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -374,15 +370,15 @@ export function SlantStickSelector(x: { setStickType: (s?: string) => void }){
 
 export function SlantListPageTable({data, onClick, withLink}: ListPageItems<SlantData>) {
     let cols: ListTableColumn<SlantData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
+        }, true),
+        NewColumn("Spec", (v)=>v.species||"", true),
+        NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SlantData)=>{

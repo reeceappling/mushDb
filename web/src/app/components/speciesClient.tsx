@@ -430,11 +430,16 @@ export function ExistingSpeciesSelector(
 
 export function SpeciesListPageTable({data, onClick, withLink}: ListPageItems<SpeciesData>) {
     let cols: ListTableColumn<SpeciesData>[] = [
-        NewColumn("Name", (v) => v._id),
-        NewColumn("Scientific", (v) => v.scientificName),
+        NewColumn("Name", (v) => v._id, true),
+        NewColumn("Scientific", (v) => v.scientificName, true), // TODO: wrap?
+        NewColumn("Aliases", (v) => <div>
+            {v.aliases && v.aliases.map((a, i) => {
+                return <div key={a + i}>{a}</div>
+            })}
+        </div>, true), // TODO: ok?
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SpeciesData) => {
@@ -480,7 +485,7 @@ export function SubspeciesForSpeciesArea(
     return <div>{/* TODO: depth? */}
         <div className={"text-md"/* TODO: OK? */}>{"Subspecies :"}</div>
         {subspecies.map((subsp, i) => {
-            return <div>
+            return <div key={subsp}>
                 <EntryLinkForId props={{
                     entryType: "subspecies",
                     linkId: encodeURI(subsp),

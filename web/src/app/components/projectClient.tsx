@@ -1,6 +1,6 @@
 'use client'
 
-import React, {ChangeEvent, JSX, useContext, useEffect, useState} from "react";
+import React, { JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -13,7 +13,6 @@ import {
     ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
     OptionalSimpleKey
 } from "@/app/components/common";
 import {ErrorDisplay, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
@@ -21,7 +20,6 @@ import {ProjectData,} from "@/app/components/projectServer";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ProjectWithPerm} from "@/app/components/perms";
 import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector";
-import {IsStringMapToString, UnmarshalAclMapField} from "@/app/components/accessControlClient";
 import {HandleErr, UserSelector} from "@/app/components/userClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
@@ -29,7 +27,6 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {ACL} from "@/app/components/accessControlServer";
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
@@ -282,7 +279,7 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
 }) {
     const [current, setCurrent] = useState(perms ? new Map<string, string>(perms) : new Map<string, string>())
     useEffect(() => {
-        let temp = perms ? new Map<string, string>(perms) : new Map<string, string>()
+        const temp = perms ? new Map<string, string>(perms) : new Map<string, string>()
         setCurrent(temp)
     }, [perms]);
     const depth = useContext(DepthContext)
@@ -304,11 +301,11 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
                     <div key={p[0] + "name"}>{p[0]}</div>
                     <ReadWriteAdminSelector key={p[0] + "sel"} readonly={readonly} value={p[1]}
                                         onUpdate={(b) => {
-                                            let updated = new Map<string, string>(current)
+                                            const updated = new Map<string, string>(current)
                                             setPerms && setPerms(updated.set(p[0], b))
                                         }}/>
                     <RemoveButton key={p[0] + "remv"} click={() => {
-                        let updated = new Map<string, string>(current)
+                        const updated = new Map<string, string>(current)
                         updated.delete(p[0])
                         setPerms && setPerms(updated)
                         // let updated = new Map<string, string>(perms)
@@ -416,13 +413,13 @@ export function ProjectsSelector(inp: {
 
 export function ProjectListPageTable({data, onClick, withLink}: ListPageItems<ProjectData>) {
     let cols: ListTableColumn<ProjectData>[] = [
-        NewColumn("Name", (v) => v._id),
+        NewColumn("Name", (v) => v._id, true),
         NewColumn("Completed", (v) => {
             return v.completed ? NumberToDateStr(v.completed) : ""
-        }),
+        }, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
+        }, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),

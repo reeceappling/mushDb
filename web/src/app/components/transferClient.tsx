@@ -32,10 +32,8 @@ import {
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {useQuery} from "@tanstack/react-query";
 import {SelectorFor} from "@/app/components/selector";
-import TestAndValidate from "@/app/components/testing/untested";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -43,9 +41,8 @@ import {
 import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {GetFilterSizes, GetTransferReasons} from "@/app/components/formSubcomponents/server";
+import { GetTransferReasons} from "@/app/components/formSubcomponents/server";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import Image from "next/image";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -141,15 +138,15 @@ export default function TransferDisplay(
         }
         const imageArea = (alt: string, loc?: string) => {
             return <div className={"fromToImage"}>
-                {loc ? <img src={ImageLocationFor(loc)} alt={"fromImage"}/> : "No " + alt + " present"}
+                {loc && <img src={ImageLocationFor(loc)} alt={alt}/>}
             </div>
         }
         const fromToArea = () => {
             return <div className={"fromToArea"}>
                 {fromToLink("From", initial.fromType, initial.from)}
                 {fromToLink("To", initial.toType, initial.to)}
-                {imageArea("fromImage", initial.fromImage)}
-                {imageArea("toImage", initial.toImage)}
+                {imageArea("source image", initial.fromImage)}
+                {imageArea("destination image", initial.toImage)}
             </div>
         }
         const cookies = useContext(CookiesContext)
@@ -577,24 +574,24 @@ export function TransferReasonSelector(
 
 export function TransferListPageTable({data, onClick, withLink}: ListPageItems<TransferData>) {
     let cols: ListTableColumn<TransferData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Date", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
+        }, true),
         NewColumn("Src", (v)=>{
             return <EntryLinkIdWrapper props={{linkId:v.from,entryType:v.fromType,openInNewTab:true}}>
                 <div>{v.from}</div>
             </EntryLinkIdWrapper>
-        }),
+        }, true),
         NewColumn("Dst", (v)=>{
             return <EntryLinkIdWrapper props={{linkId:v.to,entryType:v.toType,openInNewTab:true}}>
                 <div>{v.to}</div>
             </EntryLinkIdWrapper>
-        }),
+        }, true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }),
-        NewColumn("Reason", v=>v.reason),
+        }, true),
+        NewColumn("Reason", v=>v.reason), // TODO: fit? probably not
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: TransferData)=>{

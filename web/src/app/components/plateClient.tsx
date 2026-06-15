@@ -69,18 +69,13 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {
-    ExistingSpeciesSelector,
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {
     AclDisplay,
-    AssertACL,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth, UnmarshalAcl
 } from "@/app/components/accessControlClient";
@@ -566,15 +561,15 @@ export function NewPlateForm(
 
 export function PlateListPageTable({data, onClick, withLink}: ListPageItems<PlateData>) {
     let cols: ListTableColumn<PlateData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v) => v.species || ""),
-        NewColumn("Subspec", v => v.subspecies || ""),
+        }, true),
+        NewColumn("Spec", (v) => v.species || "", true),
+        NewColumn("Subspec", v => v.subspecies || "", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PlateData) => {

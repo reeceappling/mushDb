@@ -32,7 +32,6 @@ import PlugsDisplay, {AssertPlugs} from "@/app/components/plugsClient";
 import GrainBatchDisplay, {AssertGrainBatch} from "@/app/components/grainBatchClient";
 import SporeSwabDisplay, {AssertSporeSwab} from "@/app/components/sporeSwabClient";
 import {PlateData} from "@/app/components/plateServer";
-import {MarshalAcl} from "@/app/components/accessControlClient";
 import {AgarBatchData} from "@/app/components/agarBatchServer";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 import {BagData} from "@/app/components/bagServer";

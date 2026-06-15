@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useEffect, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -34,7 +34,6 @@ import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {NewFruitingChamberForm} from "@/app/components/fruitingChamberClient";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -254,14 +253,14 @@ export const SubstrateBatchArea = ({id, txt}: {
 
 export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageItems<SubstrateBatchData>) {
     let cols: ListTableColumn<SubstrateBatchData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Recipe", (v) => v.recipe),
+        }, true),
+        NewColumn("Recipe", (v) => v.recipe, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubstrateBatchData) => {

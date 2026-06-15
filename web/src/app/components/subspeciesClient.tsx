@@ -13,14 +13,14 @@ import {
     HandleJsonResponse,
     IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType, RequiredKey, Subform,
+    OptionalArrayOfType, Subform,
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import { ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {
     AclDefaultAclDisplay,
-    IsValidAcl, MarshalAcl, UnmarshalAcl
+    MarshalAcl, UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -285,11 +285,16 @@ export function ExistingSubSpeciesSelector(
 
 export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems<SubspeciesData>) {
     let cols: ListTableColumn<SubspeciesData>[] = [
-        NewColumn("Subspecies", (v)=>v._id),
-        NewColumn("Species", (v)=>v.species),
+        NewColumn("Species", (v)=>v.species, true),
+        NewColumn("Subspecies", (v)=>v._id, true),
+        NewColumn("Aliases", (v) => <div>
+            {v.aliases && v.aliases.map((a, i) => {
+                return <div key={a + i}>{a}</div>
+            })}
+        </div>, true), // TODO: ok?
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubspeciesData)=>{

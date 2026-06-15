@@ -1,7 +1,6 @@
 'use client'
 
 import {useState} from "react";
-import Image from "next/image";
 
 export function TopLevelImageSelector({updateParent, buttonText}:{buttonText?:string, updateParent: (f: File | undefined)=> void}) {
     return <div className={"centerH padContent topLevelImageSelector"}>

@@ -70,17 +70,14 @@ import ReaderWriterSelector, {
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {
-    ExistingSpeciesSelector,
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {SubstrateBatchArea} from "@/app/components/substrateBatchClient";
-import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
+import {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
 import {SubstrateBatchData, SubstrateBatchSelectorCloseable} from "@/app/components/substrateBatchServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
@@ -503,15 +500,15 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
 
 export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagData>) {
     let cols: ListTableColumn<BagData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
+        }, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
-        NewColumn("Species", (v) => v.species || ""),
-        NewColumn("Subspec.", (v) => v.subspecies || ""),
+        }, true),
+        NewColumn("Species", (v) => v.species || "", true),
+        NewColumn("Subspec.", (v) => v.subspecies || ""), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: BagData) => {

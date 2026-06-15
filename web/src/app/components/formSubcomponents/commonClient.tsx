@@ -32,7 +32,6 @@ import {DepthContext, DepthProvider} from "./depthContext/depth";
 import {DowelType} from "@/app/components/plugsServer";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
-import Image from "next/image";
 
 // export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
 //     return <div className={"hoverClickable"} onClick={(e) => {
@@ -742,7 +741,7 @@ export function DisposedDisplay(
             <div>{"Disposed: "}</div>
             <input type={"checkbox"} checked={dispose} onClick={e => {
                 e.stopPropagation()
-                let doDispose = !dispose
+                const doDispose = !dispose
                 setDispose(doDispose)
                 if (doDispose) {
                     disposeOnParent()

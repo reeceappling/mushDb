@@ -37,21 +37,17 @@ import ReaderWriterSelector, {
     ReadRFIDButton,
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
     GensFormDisplay,
     ParentDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {
-    ExistingSpeciesSelector,
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
@@ -59,7 +55,6 @@ import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponen
 import TestAndValidate from "@/app/components/testing/untested";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -338,16 +333,16 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
 
 export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<LcSyringeData>) {
     let cols: ListTableColumn<LcSyringeData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
-        NewColumn("Clean",v=>v.confirmedClean?(v.confirmedClean?"clean":"dirty"):"?"),
+        }, true),
+        NewColumn("Spec", (v)=>v.species||"", true),
+        NewColumn("Subspec", v=>v.subspecies||"", true),
+        NewColumn("Clean",v=>v.confirmedClean?(v.confirmedClean?"clean":"dirty"):"?", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcSyringeData)=>{

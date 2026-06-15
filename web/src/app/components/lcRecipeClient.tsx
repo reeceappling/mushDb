@@ -6,24 +6,23 @@ import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {LcRecipeData} from "@/app/components/lcRecipeServer";
-import LiquidsArea, {
+import {
     IsValidLiquid,
     Liquid,
     LiquidEntriesGroupForNew, LiquidsAreaReadOnly
 } from "@/app/components/formSubcomponents/liquids";
-import NutrientsArea, {
+import {
     IsValidNutrient,
     Nutrient, NutrientsAreaReadOnly,
     NutrientsEntriesGroupForNew
 } from "@/app/components/formSubcomponents/nutrients";
-import SugarsArea, {
+import {
     IsValidSugar,
     Sugar,
     SugarEntriesGroupForNew, SugarsAreaReadOnly
 } from "@/app/components/formSubcomponents/sugars";
 import {
     CreatedLinkFor,
-    dataFor,
     DisplayFormWrapper,
     DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
     ListPageItems, ListPageTable, ListTableColumn, NewColumn,
@@ -33,7 +32,7 @@ import {
     RequiredArrayOfType, RequiredKey,
 } from "@/app/components/common";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import AdditivesArea, {
+import {
     Additive,
     AdditiveEntriesGroupForNew, AdditivesAreaReadOnly,
     IsValidAdditive
@@ -41,7 +40,6 @@ import AdditivesArea, {
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -303,39 +301,39 @@ export function LcRecipeArea({lcRecipeId, headerLevel, offset}: {
 
 export function LcRecipeListPageTable({data, onClick, withLink}: ListPageItems<LcRecipeData>) {
     let cols: ListTableColumn<LcRecipeData>[] = [
-        NewColumn("ID", (v) => v._id),
-        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("ID", (v) => v._id, true),
+        NewColumn("Name", (v) => v.name, true), // TODO: shortname?
         NewColumn("Liquids", (v) => {
             return <div>
                 {v.liquids.map((l, i) => {
                     return <div key={l.name + i}>{l.name}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Nutrients", (v) => {
             return <div>
                 {v.nutrients && v.nutrients.map((v, i) => {
                     return <div key={v.nutrient + i}>{v.nutrient}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Sugars", (v) => {
             return <div>
                 {v.sugars && v.sugars.map((v, i) => {
                     return <div key={v.type + i}>{v.type}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Additives", (v) => {
             return <div>
                 {v.additives && v.additives.map((v, i) => {
                     return <div key={v.additive + i}>{v.additive}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        })
+        }) // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcRecipeData) => {

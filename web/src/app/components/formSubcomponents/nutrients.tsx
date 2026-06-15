@@ -1,6 +1,6 @@
 // non-client
 
-import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
+import {AreaProps, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {useQuery} from "@tanstack/react-query";
 import {SelectorResetsOnSelectFor} from "@/app/components/selector";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
@@ -9,7 +9,6 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
 import {NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
-import {Sugar} from "@/app/components/formSubcomponents/sugars";
 
 interface NutrientsAreaProps {
     readonly: boolean,

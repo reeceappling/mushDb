@@ -12,7 +12,6 @@ import {NewTransferArea} from "@/app/components/transferClient";
 import {CreatedLinkFor, Subform, viewUrlFor} from "@/app/components/common";
 import {JSX, useState} from "react";
 import TestAndValidate from "@/app/components/testing/untested";
-import {DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 
 export function OvcForXfers(parentId: string, parentType: string, validTypesTo: string[], cookies: string, addTransferOut?: (xfer: TransferData) => void, disposeAfter?: boolean, altTxt?: string): OnViewCreatorQuadCol {
     return {
@@ -302,7 +301,7 @@ function OvcTopBar({activeTab, setActiveTab, OnViewCreators, hasExtraCol}: {
                 setActiveTab(ovc.txt)
             }
             if (ovc.needsTesting === true){
-                return <TestAndValidate todos={["needs testing"]}>
+                return <TestAndValidate key={ovc.txt} todos={["needs testing"]}>
                     <div key={ovc.txt} className={classes} onClick={onClick}>{ovc.txt}</div>
                 </TestAndValidate>
             }

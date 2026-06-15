@@ -1,23 +1,23 @@
 'use client'
 
-import React, {JSX, useContext, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {AgarRecipeData} from "@/app/components/agarRecipeServer";
-import LiquidsArea, {
+import {
     IsValidLiquid,
     Liquid,
     LiquidEntriesGroupForNew,
     LiquidsAreaReadOnly
 } from "@/app/components/formSubcomponents/liquids";
-import NutrientsArea, {
+import {
     IsValidNutrient,
     Nutrient, NutrientsAreaReadOnly,
     NutrientsEntriesGroupForNew,
 } from "@/app/components/formSubcomponents/nutrients";
-import SugarsArea, {
+import {
     IsValidSugar,
     Sugar,
     SugarEntriesGroupForNew,
@@ -29,7 +29,7 @@ import {
     dataFor,
     DisplayFormWrapper,
     DisplayInput,
-    DoCreateRequest,
+    DoCreateRequest, DoGetRequest,
     DoUpdateRequest,
     ExistingDualSelector,
     FlexedArea,
@@ -44,12 +44,12 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     RequiredArrayOfType,
-    RequiredKey,
+    RequiredKey, viewApiUrlFor,
     ViewInNewTabButton
 } from "@/app/components/common";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {ErrorDisplay, InlineTitle, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import AdditivesArea, {
+import {
     Additive,
     AdditiveEntriesGroupForNew, AdditivesAreaReadOnly,
     IsValidAdditive
@@ -69,6 +69,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
+import {BaseExternalUrl} from "@/app/components/Constants";
 
 export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     if (typeof input !== 'object') {
@@ -384,15 +385,44 @@ export function agarPer400mL(agar: number) {
     return <div>{"(" + (agar * 2.0 / 5.0) + " g/400mL)"}</div>
 }
 
-export const AgarRecipeArea = ({agarRecipeBinId}: { agarRecipeBinId?: string }) => {
-    let linkArea: JSX.Element | null = <div>{"unknown"}</div>
-    if (agarRecipeBinId !== undefined) {
-        const displayId = agarRecipeBinId
-        linkArea = <EntryLinkForId props={{displayId: displayId, linkId: displayId, entryType: "agarRecipe"}}/> // TODO: DISPLAY NAME?
+// TODO: validate working! changed on 6/15/26
+export const AgarRecipeArea = ({agarRecipeBinId,agarRecipe}: { agarRecipeBinId?: string, agarRecipe?:AgarRecipeData }) => {
+    const [recipe, setRecipe] = useState<AgarRecipeData | undefined>(agarRecipe)
+    const firstArea = ()=>{
+        if (recipe || (!agarRecipe && !agarRecipeBinId)) {
+            return <div>{"Agar Recipe: "}</div>
+        }
+        return <div>{"Agar Recipe ID: "}</div>
+    }
+    const linkArea = ()=>{
+        if (recipe) {
+            return <EntryLinkForId props={{
+                displayId: recipe.name, // TODO: add id?
+                linkId: recipe._id,
+                entryType: "agarRecipe"
+            }}/>
+        }
+        if (agarRecipeBinId) {
+            return <>
+                <EntryLinkForId props={{
+                    displayId: agarRecipeBinId,
+                    linkId: agarRecipeBinId,
+                    entryType: "agarRecipe"
+                }}/>
+                <button className={"basicButtonSmall"} onClick={e=>{
+                    e.stopPropagation()
+                    // TODO: LOAD THE NAME! Validate works!
+                    DoGetRequest("agarRecipe", agarRecipeBinId, AssertAgarRecipe, (e)=>{
+                        console.error("failed to get agar recipe: "+JSON.stringify(e));
+                    }).then(setRecipe)
+                }}>{"Load Name"}</button>
+            </>
+        }
+        return <div>{"unknown"}</div>
     }
     return <div className={"agarRecipeArea"}>
-        <div>{"Agar Recipe ID: "}</div>
-        <div>{linkArea}</div>
+        <div>{firstArea()}</div>
+        <div>{linkArea()}</div>
     </div>
 }
 
@@ -419,46 +449,46 @@ export function AgarRecipeSelector(
 
 export function AgarRecipeListPageTable({data, onClick, withLink}: ListPageItems<AgarRecipeData>) {
     let cols: ListTableColumn<AgarRecipeData>[] = [
-        NewColumn("ID", (v) => v._id),
-        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("ID", (v) => v._id, true),
+        NewColumn("Name", (v) => v.name), // TODO: shortname? fit?
         NewColumn("Liquids", (v) => {
             return <div>
                 {v.liquids.map((l, i) => {
                     return <div key={l.name + i}>{l.name}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Nutrients", (v) => {
             return <div>
                 {v.nutrients && v.nutrients.map((v, i) => {
                     return <div key={v.nutrient + i}>{v.nutrient}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Sugars", (v) => {
             return <div>
                 {v.sugars && v.sugars.map((v, i) => {
                     return <div key={v.type + i}>{v.type}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Additives", (v) => {
             return <div>
                 {v.additives && v.additives.map((v, i) => {
                     return <div key={v.additive + i}>{v.additive}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Antibiotics", (v) => {
             return <div>
                 {v.antibiotics && v.antibiotics.map((v, i) => {
                     return <div key={i}>{v}</div>
                 })}
             </div>
-        }),
+        }), // TODO: fit?
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        })
+        }) // TODO: fit on last?
 
     ]
     if (withLink) {

@@ -18,22 +18,11 @@
 - [ ] README
 ## Waiting on something else
 
+# Changes made that need to be tested
+- [ ] AgarRecipeArea now has ability to load recipe name if only given id
+
+
 # TODO
-- [ ] Unit Tests
-  - [ ] Client-side
-    - [ ] Everything in here
-  - [ ] Server-side
-    - [ ] Everything in here
-- [ ] Integration testing
-  - [ ] Everything in here
-- [ ] Redirect to login page if not logged in!
-- [ ] WriteMany for RFID! Allow subsequent writings... This may be complicated, so do it later...
-- [ ] React Subcomponents
-  - [x] Notes
-    - [x] New Notes area
-    - [x] Existing/Update notes area
-  - [x] ACL (updates and displays)
-  - [ ] more!
 - [ ] Entries
   - [ ] Agar Batch
     - [x] Display page
@@ -261,7 +250,7 @@
     - [ ] Create page // TODO: OR self page? Probably only create from species page?
     - [ ] List Page
       - [x] Clicks work
-      - [ ] Display species name then subspecies name!
+      - [x] Display species name then subspecies name!
   - [ ] Substrate Batch
     - [x] Display page
       - [ ] Create bag validate
@@ -279,24 +268,122 @@
     - [x] List Page
   - [ ] Transfer
     - [x] Display page
-      - [ ] Fix "No toImage present" and "No fromImage present"
-    - [ ] Create page // TODO: self page? NO TRANSFER CREATE PAGE! (?)
+      - [x] Fix "No toImage present" and "No fromImage present"
+    - [x] Create page - No transfer creation page, transfers should only be created from display pages
     - [x] List Page
       - [x] Clickable
-      - [ ] Ensure things are not stepping all over each other!
+      - [x] Ensure things are not stepping all over each other!
+        - [ ] make text smaller for smaller screens?
   - [ ] User
     - [ ] Display page
     - [ ] Create page // TODO: figure this out
     - [ ] List Page?
   - [ ] Water Jar
     - [x] Display page
-      - [ ] Disposal area
+      - [x] Disposal area
       - [ ] Create MSS // TODO: CREATE
-      - [ ] Create Stasis Tube // TODO: CREATE
+      - [ ] Create Stasis Tube // TODO: CREATE? Should be PC-d with water in tubes?????
     - [x] Create page // TODO: self page?
-      - [ ] PC run selector is double-nested...
+      - [x] PC run selector is double-nested...
     - [ ] Import page (NEED TO DO THIS!!!!!)
     - [x] List Page
+- [ ] Unit Tests
+  - [ ] Client-side
+    - [ ] Everything in here
+  - [ ] Server-side
+    - [ ] Everything in here
+- [ ] Integration testing
+  - [ ] Everything in here
+- [ ] ListPageTable filters and sorts
+  - [ ] AgarBatch 
+    - [ ] sort by Created, Last Updated
+  - [ ] AgarRecipe
+    - [ ] sort by Created, Name, Last Updated
+    - [ ] add creation date?
+  - [ ] Bag 
+    - [ ] sort by Created, Last Updated
+    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+  - [ ] Fruit
+    - [ ] sort by Harvest Date, Last Updated
+    - [ ] filter by species, subspecies, externally sourced, disposed(availability)?
+  - [ ] FruitingChamber 
+    - [ ] sort by Creation Date, Last Updated
+    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+  - [ ] GrainBatch
+    - [ ] sort by Creation Date, Last Updated
+  - [ ] Jar
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+  - [ ] JarRecipe
+    - [ ] sort by Name, Last Updated
+    - [ ] add creation date?
+  - [ ] LC
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by clean, species, subspecies, innoculated, disposed(availability)?
+  - [ ] LCRecipe 
+    - [ ] sort by Name, Last Updated
+    - [ ] add creation date?
+  - [ ] LcSyringe
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by clean, species, subspecies, innoculated, disposed(availability)?
+  - [ ] MSS
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by clean, species, subspecies, disposed(availability)?
+  - [ ] PCRun
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by runtime?
+  - [ ] Plate
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+  - [ ] Plugs
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+  - [ ] Project
+    - [ ] sort by Created, Name, LastUpdated
+    - [ ] filter by completed?
+  - [ ] Sale
+    - [ ] sort by Created, LastUpdated
+  - [ ] Slant
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+  - [ ] Species
+    - [ ] sort by Name, Scientific Name
+    - [ ] sort by Created, LastUpdated
+      - [ ] Add creation date?
+  - [ ] SporePrint
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by species, subspecies, disposed(availability)?
+  - [ ] SporeSwab
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by species, subspecies, disposed(availability)?
+  - [ ] StasisTube
+    - [ ] sort by Created, LastUpdated
+    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+  - [ ] Species
+    - [ ] sort by Created, Name, LastUpdated?
+      - [ ] Add creation date?
+    - [ ] filter by species?
+  - [ ] SubstrateBatch
+    - [ ] sort by Created, Recipe, Last Updated
+    - [ ] filter by Recipe?
+  - [ ] SubstrateRecipe
+    - [ ] sort by Created, Name, Last Updated
+      - [ ] add creation date?
+  - [ ] Transfer
+    - [ ] sort by Created, Last Updated
+    - [ ] filter by Source, Reason?
+  - [ ] WaterJar
+    - [ ] sort by Created, Last Updated
+    - [ ] filter by Disposed?
+- [ ] Redirect to login page if not logged in!
+- [ ] WriteMany for RFID! Allow subsequent writings... This may be complicated, so do it later...
+- [ ] React Subcomponents
+  - [x] Notes
+    - [x] New Notes area
+    - [x] Existing/Update notes area
+  - [x] ACL (updates and displays)
+  - [ ] more!
+
   
 - [ ] Reenable full authentication flow then test!
 - [ ] Backend Testing

@@ -51,15 +51,12 @@ import {StasisTubeData} from "@/app/components/stasisTubeServer";
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {
-    ExistingSpeciesSelector,
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {AclDisplay, IsValidAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
+import {AclDisplay, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
@@ -335,15 +332,15 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
 
 export function StasisTubeListPageTable({data, onClick, withLink}: ListPageItems<StasisTubeData>) {
     let cols: ListTableColumn<StasisTubeData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
+        }, true),
+        NewColumn("Spec", (v)=>v.species||"", true),
+        NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: StasisTubeData)=>{

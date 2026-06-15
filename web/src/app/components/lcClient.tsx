@@ -61,7 +61,6 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {LcRecipeData, LcRecipeSelectorCloseable} from "@/app/components/lcRecipeServer";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
@@ -73,13 +72,11 @@ import {
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {
-    ExistingSpeciesSelector,
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
-import {AclDisplay, IsValidAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
+import {AclDisplay, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -417,16 +414,16 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
 
 export function LcListPageTable({data, onClick, withLink}: ListPageItems<LcData>) {
     let cols: ListTableColumn<LcData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v) => v.species || ""),
-        NewColumn("Subspec", v => v.subspecies || ""),
-        NewColumn("Clean", v => v.confirmedClean ? (v.confirmedClean ? "clean" : "dirty") : "?"),
+        }, true),
+        NewColumn("Spec", (v) => v.species || "", true),
+        NewColumn("Subspec", v => v.subspecies || "", true),
+        NewColumn("Clean", v => v.confirmedClean ? (v.confirmedClean ? "clean" : "dirty") : "?", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcData) => {

@@ -4,12 +4,11 @@ import {defaultHeaderLevel} from "@/app/components/formSubcomponents/utils/heade
 import * as React from "react";
 import {JSX, ReactNode, SetStateAction, SyntheticEvent, useContext, useEffect, useState} from "react";
 import {
-    Contamination,
     ContaminationForm,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {NumbersOnlyFromText, NumberToDate} from "@/app/components/formSubcomponents/date";
+import {NumbersOnlyFromText} from "@/app/components/formSubcomponents/date";
 import {Data, ListResult, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -50,7 +49,6 @@ import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {redirect} from "next/navigation";
 
 export const clientPostRequestHeaders = {
     credentials: 'include',
@@ -811,10 +809,11 @@ export function ListPageTableRow<T>(props: React.PropsWithChildren<{ data: T, on
 export interface ListTableColumn<T> {
     key: string
     f: (v:T)=>string
+    fit:boolean
 }
 
-export function NewColumn<T>(key:string,f:(v:T)=>any):ListTableColumn<T> {
-    return {key:key,f:f}
+export function NewColumn<T>(key:string,f:(v:T)=>any,fit?:boolean):ListTableColumn<T> {
+    return {key:key,f:f,fit:fit||false}
 }
 
 export function ListPageTable<T extends Entry>({data, onClick, cols,className, newClass}: {
@@ -825,16 +824,19 @@ export function ListPageTable<T extends Entry>({data, onClick, cols,className, n
     newClass: (inp: any)=>T,
     // TODO: give this a reload button????
 }){
+    const classes = cols.map(c=>{
+        return "text-left"+(c.fit ? " fit" : "")
+    })
     return <table className={"listPageTable"}>
         <tr className={"listPageTableRow headerRow"}>
             {cols.map((col,i)=>{
-                return <th className="text-left" key={i} >{col.key}</th>
+                return <th className={classes[i]} key={i} >{col.key}</th>
             })}
         </tr>
         {data.map(newClass).map((item,i) => {
             return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
                 {cols.map((col,i)=>{
-                    return <td className="text-left" key={i}>{col.f(item)}</td>
+                    return <td className={classes[i]} key={i}>{col.f(item)}</td>
                 })}
             </ListPageTableRow>
         })}

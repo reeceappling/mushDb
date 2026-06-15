@@ -21,7 +21,6 @@ import {
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -42,7 +41,6 @@ import {JarData} from "@/app/components/jarServer";
 import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -264,7 +262,8 @@ export function NewPcRunForm(
             }
             DoCreateRequest("pcRun", body, AssertPcRun, allCookies(cookies))
                 .then(v=>{
-                    handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                    const newRun = new PcRunData(v) // TODO: do this everywhere else needed
+                    handlers.onCreate ? handlers.onCreate(newRun) : console.log("no onCreate provided")
                 })
                 .catch(e=>{
                     setErr(JSON.stringify(e))
@@ -277,7 +276,6 @@ export function NewPcRunForm(
         <NewEntryFormWrapper entryType={"pcRun"}>
             <div>{"Creating a new PC Run"}</div>
             <ErrorDisplay err={err}/>
-            <DateArea pre={"Date : "} when={date} readonly={false} updateParent={setDate}/>
             {/* RunTime TODO: RETHINK THIS???*/}
             <div>
                 <div>{"RunTime (minutes):"}</div>
@@ -309,14 +307,14 @@ export function PcRunArea({binaryId, headerLevel, offset}: {
 
 export function PcRunListPageTable({data, onClick, withLink}: ListPageItems<PcRunData>) {
     let cols: ListTableColumn<PcRunData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Date", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Runtime Mins", (v) => v.runtimeMinutes),
+        }, true),
+        NewColumn("Runtime Mins", (v) => v.runtimeMinutes, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO; fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PcRunData) => {

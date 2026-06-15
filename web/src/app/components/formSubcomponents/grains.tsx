@@ -4,8 +4,6 @@ import {useQuery} from "@tanstack/react-query";
 import {SelectorFor} from "@/app/components/selector";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {
-    InputNumber4,
-    InputNumerical2, InputTextWithSmallTitle,
     NumericalArea,
     NumericalAreaWithAbsolutes
 } from "@/app/components/formSubcomponents/numericInput";
@@ -108,7 +106,7 @@ export function GrainsSelector({current, onChange}:{current: Grain[], onChange: 
                             return
                         }
                         const newNum = Number(s)
-                        let updated = structuredClone(current)
+                        const updated = structuredClone(current)
                         updated[idx].percentage = newNum
                         onChange(updated)
                     }}/>{/* TODO: ENSURE WORKS */}

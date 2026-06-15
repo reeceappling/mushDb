@@ -9,7 +9,6 @@ import {
     SplitAllEntries
 } from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
-import DateArea from "@/app/components/formSubcomponents/date";
 import {
     InitialPicsEntries,
     IsValidPicWithNotesIncoming,
@@ -57,14 +56,11 @@ import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
-    ExistingSpeciesSelector,
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
@@ -499,12 +495,12 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
 
 export function FruitListPageTable({data, onClick, withLink}: ListPageItems<FruitData>) {
     let cols: ListTableColumn<FruitData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Harvest", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Species", v => v.species),
-        NewColumn("Subspecies", (v) => v.subspecies || ""),
+        }, true),
+        NewColumn("Species", v => v.species, true),
+        NewColumn("Subspecies", (v) => v.subspecies || "", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),

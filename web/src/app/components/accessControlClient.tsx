@@ -1,18 +1,6 @@
 'use client'
 
-// TODO: areas with maps:
-/* ACL
-    project: perms?: Map<string, string>
-*/
-
-// TODO: grain batches list and display need fixing
-// TODO: plugs list and display need fixing
-// TODO: projects list and display need fixing
-// TODO: sporeSwab view not working. https://mush.appli.ng/view/sporeSwab/2g1j95Bw5gB
-// TODO: transfers list needs fixing. Display appears fine
-// TODO: users list needs fixing. Display needs changing?
-
-import {IsTypeNew, OptionalKey, OptionalKeyNew, OptionalSimpleKey, OptionalSimpleKeyNew} from "@/app/components/common";
+import { OptionalSimpleKeyNew} from "@/app/components/common";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {SelectorFor} from "@/app/components/selector";
@@ -23,87 +11,34 @@ import {useContext, useEffect, useState} from "react";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 
-export function AssertACL(input: any): asserts input is ACL { // TODO: FIX THIS!!!! NEEDS TO DO MAP STUFF PROPERLY!
-    if (typeof input !== 'object') {
-        throw new Error('Input is not an object! Input is ' + typeof input);
-    }
-
-    // optional simple keys
-    OptionalSimpleKeyNew('blanketPerm', input, 'boolean')
-    // maps
-    console.warn("user info ("+typeof input.users+"): "+JSON.stringify(input.users)) // TODO; del
-
-    // if ('users' in input && (input.users !== undefined)) {
-    //     if (typeof input.users !== 'object' || input.users === null) {
-    //         throw 'users field must be an object'
-    //     }
-    //     input.users = new Map<string, boolean>(Object.entries(input.users as Record<string, boolean>))
-    // } else {
-    //     console.warn("users did not exist in asserter!")
-    //     input.users = new Map<string, boolean>() // TODO: is this ok?
-    //     //input.users = undefined // TODO: is this ok?
-    // }
-    // if ('projects' in input && (input.projects !== undefined)) {
-    //     if (typeof input.projects !== 'object' || input.projects === null) {
-    //         throw 'projects field must be an object'
-    //     }
-    //     input.projects = new Map<string, boolean>(Object.entries(input.projects as Record<string, boolean>))
-    // } else {
-    //     input.projects = new Map<string, boolean>() // TODO: is this ok?
-    //     //input.users = undefined // TODO: is this ok?
-    // }
-    input.users = UnmarshalAclMapField(input, 'users')
-    input.projects = UnmarshalAclMapField(input, 'projects')
-
-
-    // // complex optional array keys
-    // const complexOptionalMapKeys = new Map<string, (v: any) => boolean>([
-    //     ['users', IsStringMapToBoolNew], // TODO: UNSURE IF WORKING
-    //     ['projects', IsStringMapToBoolNew], // TODO: UNSURE IF WORKING
-    //     // ['users', IsStringMapToBool], // TODO: UNSURE IF WORKING
-    //     // ['projects', IsStringMapToBool], // TODO: UNSURE IF WORKING
-    // ])
-    // for (const [key, validator] of complexOptionalMapKeys) {
-    //     OptionalKeyNew(key, input, validator)
-    //     // if (!OptionalKey(key, input, validator)) {
-    //     //     console.error("failed when validating maps!") // TODO: THIS!
-    //     //     throw new Error('ACL assertion failure: optional array key ' + key + ' was not valid: ' + JSON.stringify(input[key]));
-    //     // }
-    // }
-
-    // TODO: reenable????
-    // if (input.users !== null && input.users !== undefined) {
-    //     if (!(input.users instanceof Map)){
-    //         input.users = new Map<string, boolean>(Object.entries(input.users) as [string, boolean][]) // TODO: UNSURE IF WORKING
-    //     }
-    // } else {
-    //     input.users = new Map<string, boolean>(); // TODO: will this screw up null (full-write) ACLs?
-    // }
-    // if (input.projects !== null && input.projects !== undefined) {
-    //     if (!(input.projects instanceof Map)) {
-    //         input.projects = new Map<string, boolean>(Object.entries(input.projects) as [string, boolean][]) // TODO: UNSURE IF WORKING
-    //     }
-    // } else {
-    //     input.projects = new Map<string, boolean>(); // TODO: will this screw up null (full-write) ACLs?
-    // }
-
-
-    return
-}
-
-export function UnmarshalAclMapField(input: any, fieldName:string): Map<string,boolean> {
-    if (fieldName in input && (input[fieldName] !== undefined)) {
-        const field = input[fieldName]
-        if (typeof field !== 'object' || field === null) {
-            throw 'users field must be an object'
-        }
-        console.warn("setting map of entries!") // TODO: del
-        return new Map<string, boolean>(Object.entries(field as Record<string, boolean>))
-    } else {
-        console.warn(fieldName+" did not exist in asserter!") // TODO: del
-        return new Map<string, boolean>()
-    }
-}
+// Replaced by UnmarshalAcl
+// export function AssertACL(input: any): asserts input is ACL { // TODO: FIX THIS!!!! NEEDS TO DO MAP STUFF PROPERLY!
+//     if (typeof input !== 'object') {
+//         throw new Error('Input is not an object! Input is ' + typeof input);
+//     }
+//
+//     // optional simple keys
+//     OptionalSimpleKeyNew('blanketPerm', input, 'boolean')
+//     input.users = UnmarshalAclMapField(input, 'users')
+//     input.projects = UnmarshalAclMapField(input, 'projects')
+//
+//
+//     // // complex optional array keys
+//     // const complexOptionalMapKeys = new Map<string, (v: any) => boolean>([
+//     //     ['users', IsStringMapToBoolNew], // TODO: UNSURE IF WORKING
+//     //     ['projects', IsStringMapToBoolNew], // TODO: UNSURE IF WORKING
+//     //     // ['users', IsStringMapToBool], // TODO: UNSURE IF WORKING
+//     //     // ['projects', IsStringMapToBool], // TODO: UNSURE IF WORKING
+//     // ])
+//     // for (const [key, validator] of complexOptionalMapKeys) {
+//     //     OptionalKeyNew(key, input, validator)
+//     //     // if (!OptionalKey(key, input, validator)) {
+//     //     //     console.error("failed when validating maps!") // TODO: THIS!
+//     //     //     throw new Error('ACL assertion failure: optional array key ' + key + ' was not valid: ' + JSON.stringify(input[key]));
+//     //     // }
+//     // }
+//     return
+// }
 
 export function UnmarshalAcl(input: any): ACL {
     if (typeof input !== 'object') {
@@ -126,6 +61,18 @@ export function UnmarshalAcl(input: any): ACL {
     }
 }
 
+export function UnmarshalAclMapField(input: any, fieldName:string): Map<string,boolean> {
+    if (fieldName in input && (input[fieldName] !== undefined)) {
+        const field = input[fieldName]
+        if (typeof field !== 'object' || field === null) {
+            throw 'users field must be an object'
+        }
+        return new Map<string, boolean>(Object.entries(field as Record<string, boolean>))
+    } else {
+        return new Map<string, boolean>()
+    }
+}
+
 export function MarshalAcl(acl: ACL): any {
     if (acl === undefined) {
         return undefined
@@ -135,105 +82,24 @@ export function MarshalAcl(acl: ACL): any {
     }
 
     if (("users" in acl) && acl.users !== undefined && acl.users !== null && acl.users.size !== 0) {
-        // TODO: why is this occasionally coming back as an object and not a map????? FIX
         if (acl.users instanceof Map) {
             out.users = Object.fromEntries(acl.users)
-            console.log("It's a Map");
         } else {
             out.users = acl.users
         }
     }
     if (("projects" in acl) && acl.projects !== undefined && acl.projects !== null && acl.projects.size !== 0) {
-        // TODO: why is this occasionally coming back as an object and not a map????? FIX
         if (acl.projects instanceof Map) {
             out.projects = Object.fromEntries(acl.projects)
-            console.log("It's a Map");
         } else {
             out.projects = acl.projects
         }
 
     }
     return out
-
 }
 
-export function IsValidAcl(input: any): boolean {
-    try { // TODO: ensure ok
-        AssertACL(input) // TODO: may not properly replace the ACL
-        return true
-    } catch (error) {
-        console.error("acl invalid: "+JSON.stringify(error)) // TODO: del
-        return false
-    }
-}
-
-export function IsStringMapToString(data: any): data is Record<string, boolean | undefined> {
-    // 1. Check if the input is an object and not null.
-    if (typeof data !== 'object') {
-        return false;
-    }
-
-    // 2. Iterate over all keys of the object.
-    for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-            if (typeof data[key] !== 'string') {
-                return false;
-            }
-        }
-    }
-
-    // 3. If all values are booleans, it is a map of string to bool.
-    return true;
-}
-
-export function IsStringMapToBool(data: any): data is Record<string, boolean> {
-    // 1. Check if the input is an object and not null.
-    if (typeof data !== 'object' || data === null || data === undefined) {
-        return false;
-    }
-
-    // 2. Iterate over all keys of the object.
-    for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-            // In JavaScript, object keys are always strings.
-            // We only need to check the type of each value.
-            if (!(typeof data[key] === 'boolean')) {
-                // If any value is not a boolean, it fails the check.
-                return false;
-            }
-        }
-    }
-
-    // 3. If all values are booleans, it is a map of string to bool.
-    return true;
-}
-// export function IsOptionalStringMapToBool(data: any): data is Record<string, boolean> { // TODO: is record ok here?
-//
-// }
-export function IsStringMapToBoolNew(data: any): data is Record<string, boolean> {
-    // 1. Check if the input is an object and not null.
-    if (typeof data !== 'object' || data === null || data === undefined) {
-        throw "data was null, undefined, or not an object"
-    }
-
-    // 2. Iterate over all keys of the object.
-    for (const key in data) {
-        if (Object.prototype.hasOwnProperty.call(data, key)) {
-            // In JavaScript, object keys are always strings.
-            // We only need to check the type of each value.
-            const typ = typeof data[key]
-            if (!(typ === 'boolean')) {
-                // If any value is not a boolean, it fails the check.
-                throw "value waas not a bool, was "+typ
-            }
-        }
-    }
-
-    // 3. If all values are booleans, it is a map of string to bool.
-    return true
-}
-
-export function ProjectsDisplay({readonly, initial, onClick, updateParent, allowAddingCompletedProjects}: { // TODO: validate working properly
+export function ProjectsDisplay({readonly, initial, onClick, updateParent, allowAddingCompletedProjects}: {
     readonly: boolean,
     initial: Map<string, boolean>,
     onClick?: (proj: string) => void
@@ -246,10 +112,9 @@ export function ProjectsDisplay({readonly, initial, onClick, updateParent, allow
         }}>{proj[0]}</text>
     }
     if (readonly) {
-        if (initial.size === 0) {
+        if (initial===undefined || initial.size === 0) {
             return null
         }
-        // TODO: FIX THIS!?
         return <>{
             [...initial.entries()].map(values => {
                 return <div key={values[0]}>
@@ -265,7 +130,8 @@ export function ProjectsDisplay({readonly, initial, onClick, updateParent, allow
     },[initial])
 
     const update = (newPs: Map<string, boolean>) => {
-        setCurrent(newPs) // TODO: vs structuredClone(newPs)
+        // newPs must be a newly-created map!
+        setCurrent(newPs)
         updateParent && updateParent(newPs)
     }
     const addNewProject = (projName: string) => {
@@ -284,8 +150,7 @@ export function ProjectsDisplay({readonly, initial, onClick, updateParent, allow
     }
     return <div>
         <TestAndValidate>
-            {/* TODO: is this map iterator really the best way to do this?*/}
-            {current.size >0 && [...current.entries()].map(values => { // TODO: THE ENTRIES MAP HERE IS THE CURRENT PROBLEM
+            {current.size >0 && [...current.entries()].map(values => {
                 const projName = values[0]
                 const canWrite = values[1]
                 return <div key={projName}>
@@ -319,12 +184,11 @@ export function AclProjectsDisplay({readonly, initial, onUsernClick, updateParen
     return <ProjectsDisplay readonly={readonly}
                             allowAddingCompletedProjects={false/* TODO: ok?*/}
                             initial={initial}
-                            onClick={onUsernClick} updateParent={(projPerms) => {
+                            onClick={onUsernClick} updateParent={projPerms => {
         updateParent && updateParent(projPerms) // TODO: ensure clone not needed
     }}/>
 }
 
-// TODO: USE THIS! validate working properly!
 export function AclUsersDisplayInternal({readonly, initial, onClick, updateParent, blanket}: {
     readonly: boolean,
     initial: Map<string, boolean>,
@@ -333,11 +197,11 @@ export function AclUsersDisplayInternal({readonly, initial, onClick, updateParen
     blanket?: boolean
 }) {
     const userNameAreaFor = (val: [string, boolean]) => {
+        const usern = val[0]
         return <text onClick={(e) => {
-            // TODO: stopProp or prevDef?
-            // TODO: why val[0]?
-            onClick && onClick(val[0])
-        }}>{val[0]}</text>
+            e.stopPropagation()
+            onClick && onClick(usern)
+        }}>{usern}</text>
     }
     if (readonly) {
         // TODO: Should have incremented depth?
@@ -360,10 +224,10 @@ export function AclUsersDisplayInternal({readonly, initial, onClick, updateParen
     }
     const addNewUser = (uName: string) => {
         const defaultPerm = blanket || false
-        if (users.size === 0) {/// TODO: ensure ok
+        if (users===undefined || users.size === 0) {
             update(new Map<string, boolean>().set(uName, defaultPerm))
         } else {
-            update(new Map<string, boolean>(users).set(uName, defaultPerm)) // TODO: validate ok here and in projects
+            update(new Map<string, boolean>(users).set(uName, defaultPerm))
         }
         return
     }
@@ -404,7 +268,6 @@ export function AclBlanketDisplay(inp: {
     ACL: ACL,
     updateParent: (a?: boolean) => void
 }) {
-    // TODO: UPDATE TO STORE ACL LOCALLY, THEN UPDATE PARENT
     const [val, setVal] = useState(inp.ACL)
     useEffect(() => {
         setVal(inp.ACL)
@@ -415,7 +278,7 @@ export function AclBlanketDisplay(inp: {
             temp.blanketPerm = b
             setVal(temp)
         } else {
-            setVal({ // TODO: ensure works properly
+            setVal({
                 users: new Map<string, boolean>(),
                 projects: new Map<string, boolean>(),
                 blanketPerm: b
@@ -440,8 +303,8 @@ export function AclBlanketDisplay(inp: {
         }
     }
     return <SelectorFor initial={permToStr(inp.ACL)} options={["Private", "Publicly Viewable", "Publicly Editable"]}
-                        updateParent={(s) => {
-                            update(strToPerm(s)) //inp.updateParent(strToPerm(s)) // TODO: revert if broken
+                        updateParent={permStr => {
+                            update(strToPerm(permStr))
                         }} disabled={false}/>
 }
 
@@ -466,13 +329,13 @@ export function TogglableAreaWithDepth(props: React.PropsWithChildren<{
     </DepthProvider>
 }
 
-export function CloneAcl(acl: ACL): ACL { // TODO: use?
-    return {
-        blanketPerm: acl.blanketPerm,
-        users: (acl.users !== undefined && acl.users.size !== 0) ? new Map<string, boolean>(acl.users) : new Map<string, boolean>(),
-        projects: (acl.projects !== undefined && acl.projects.size !== 0) ? new Map<string, boolean>(acl.projects) : new Map<string, boolean>(),
-    }
-}
+// export function CloneAcl(acl: ACL): ACL { // TODO: use?
+//     return {
+//         blanketPerm: acl.blanketPerm,
+//         users: (acl.users !== undefined && acl.users.size !== 0) ? new Map<string, boolean>(acl.users) : new Map<string, boolean>(),
+//         projects: (acl.projects !== undefined && acl.projects.size !== 0) ? new Map<string, boolean>(acl.projects) : new Map<string, boolean>(),
+//     }
+// }
 
 
 export function AclDefaultAclDisplay(inp: {
@@ -523,6 +386,7 @@ export function AclDisplay(inp: {
     readonly: boolean,
     initial: ACL,
     updateParent: (acl: ACL) => void
+    // TODO: onUserClick???
 }) {
     const [current, setCurrent] = React.useState(inp.initial)
     useEffect(()=>{
@@ -531,16 +395,18 @@ export function AclDisplay(inp: {
             users: mapFor(inp.initial.users),
             projects: mapFor(inp.initial.projects),
         }
-        console.warn("current acl: "+JSON.stringify(temp)) // TODO: del!
-        console.warn("current acl 2: "+JSON.stringify(MarshalAcl(temp))) // TODO: del!
-        console.warn(JSON.stringify(temp))
         setCurrent(temp)
     },[inp.initial])
     const cloneCurrent = ()=>{
-        return structuredClone(current) // TODO: ensure ok
+        return {
+            blanketPerm: current.blanketPerm,
+            users: mapFor(current.users),
+            projects: mapFor(current.projects),
+        }
+        //return structuredClone(current) // TODO: ensure ok
     }
     const update = (updated: ACL)=>{
-        inp.updateParent(updated) // TODO: ensure ok
+        inp.updateParent(updated)
         setCurrent(updated)
     }
     const updateProjects = (updated: Map<string,boolean>)=>{
@@ -564,8 +430,7 @@ export function AclDisplay(inp: {
         if (inpMap === undefined || inpMap === null || inpMap.size === 0) {
             return new Map<string, boolean>()
         }
-        return new Map<string, boolean>(inpMap) // TODO: revert if no fix
-        // TODO: return structuredClone(inpMap)
+        return new Map<string, boolean>(inpMap)
     }
     const depth = useContext(DepthContext)
     if (inp.readonly) {
@@ -587,19 +452,19 @@ export function AclDisplay(inp: {
                                  onClick={() => {
                                      // TODO: this
                                  }} updateParent={updateUsers}/>
-        <AclProjectsDisplay readonly={false} initial={inp.initial.projects || new Map()} onUsernClick={() => {
+        <AclProjectsDisplay readonly={false} initial={inp.initial.projects || new Map()} onUsernClick={usern => {
             // TODO: this?
         }} updateParent={updateProjects}/>
     </div>
 }
 
-export function DefaultAclDisplay({readonly, initial, updateParent}: {
-    readonly: boolean,
-    initial: ACL,
-    updateParent: (acl: ACL) => void
-}) {
-    return <div>
-        {"Default Access Control List"}
-        <AclDisplay readonly={readonly} initial={initial} updateParent={updateParent}/>
-    </div>
-}
+// export function DefaultAclDisplay({readonly, initial, updateParent}: {
+//     readonly: boolean,
+//     initial: ACL,
+//     updateParent: (acl: ACL) => void
+// }) {
+//     return <div>
+//         {"Default Access Control List"}
+//         <AclDisplay readonly={readonly} initial={initial} updateParent={updateParent}/>
+//     </div>
+// }

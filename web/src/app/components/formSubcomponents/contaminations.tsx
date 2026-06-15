@@ -11,7 +11,6 @@ import {DepthContext} from "@/app/components/formSubcomponents/depthContext/dept
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
-import Image from "next/image";
 
 export const ExampleImageLocation: string = "test.jpg"
 

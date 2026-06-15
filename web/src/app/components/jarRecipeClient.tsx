@@ -51,7 +51,7 @@ import {
 } from "@/app/components/formSubcomponents/additives";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import {Grain, GrainsEntriesGroupForNew, GrainsSelector, IsValidGrain} from "@/app/components/formSubcomponents/grains";
+import {Grain, GrainsEntriesGroupForNew, IsValidGrain} from "@/app/components/formSubcomponents/grains";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -369,39 +369,39 @@ export const JarRecipeArea = ({recipeId}: { recipeId?: string, headerLevel?: num
 
 export function JarRecipeListPageTable({data, onClick, withLink}: ListPageItems<JarRecipeData>) {
     let cols: ListTableColumn<JarRecipeData>[] = [
-        NewColumn("ID", (v) => v._id),
-        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("ID", (v) => v._id, true),
+        NewColumn("Name", (v) => v.name, true), // TODO: shortname?
         NewColumn("Grains", (v) => {
             return <div>
                 {v.grains.map((g, i) => {
                     return <div key={g.grain + i}>{g.grain}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Nutrients", (v) => {
             return <div>
                 {v.nutrients && v.nutrients.map((v, i) => {
                     return <div key={v.nutrient + i}>{v.nutrient}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Sugars", (v) => {
             return <div>
                 {v.sugars && v.sugars.map((v, i) => {
                     return <div key={v.type + i}>{v.type}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Additives", (v) => {
             return <div>
                 {v.additives && v.additives.map((v, i) => {
                     return <div key={v.additive + i}>{v.additive}</div>
                 })}
             </div>
-        }),
+        }, true),
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        })
+        }) // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: JarRecipeData) => {

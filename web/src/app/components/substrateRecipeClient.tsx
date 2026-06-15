@@ -32,7 +32,6 @@ import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
 import TestAndValidate from "@/app/components/testing/untested";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -266,11 +265,11 @@ export function SubstrateRecipeArea({id, headerLevel, txt, readonly, onSelect}: 
 
 export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPageItems<SubstrateRecipeData>) {
     let cols: ListTableColumn<SubstrateRecipeData>[] = [
-        NewColumn("ID", (v) => v._id),
-        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("ID", (v) => v._id, true),
+        NewColumn("Name", (v) => v.name, true), // TODO: shortname?
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        })
+        }) // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubstrateRecipeData) => {

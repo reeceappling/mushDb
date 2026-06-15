@@ -43,7 +43,6 @@ import {NewSlantForm} from "@/app/components/slantClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     if (typeof input !== 'object') {
@@ -232,7 +231,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
                                         creatorInPage={handlers.isTopLevel}/>
             </Subform>
         }
-        {agarRecipeIn ? <AgarRecipeArea agarRecipeBinId={agarRecipeIn?._id}/> :
+        {agarRecipeIn ? <AgarRecipeArea agarRecipe={agarRecipeIn}/> :
             <Subform>
                 <AgarRecipeSelectorCloseable /* TODO: consider using subform on other closeables?*/
                     doSelect={setRecipe}
@@ -249,13 +248,13 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
 
 export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<AgarBatchData>) {
     let cols: ListTableColumn<AgarBatchData>[] = [
-        NewColumn("ID", (v) => v._id),
-        NewColumn("Color", (v) => v.color),
-        NewColumn("PC Run", (v) => v.pcRun),
-        NewColumn("Agar Recipe", (v) => v.agarRecipe),
+        NewColumn("ID", (v) => v._id, true),
+        NewColumn("Color", (v) => v.color, true),
+        NewColumn("PC Run", (v) => v.pcRun, true),
+        NewColumn("Agar Recipe", (v) => v.agarRecipe, true),
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit on last?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: AgarBatchData) => {

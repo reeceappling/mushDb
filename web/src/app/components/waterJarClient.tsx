@@ -7,7 +7,7 @@ import ID from "@/app/components/formSubcomponents/id";
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoImportRequest, DoMultipartImportRequest,
+    DisplayInput, DoCreateRequest, DoImportRequest,
     DoUpdateRequest,
     ExistingRecentSelector,
     FlexedArea,
@@ -36,14 +36,9 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {IsValidAcl, MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
-import {SpeciesData} from "@/app/components/speciesServer";
+import {MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {ExistingSpeciesSubspeciesSelector} from "@/app/components/speciesClient";
-import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
-import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
-import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {AssertSlant, SlantStickSelector} from "@/app/components/slantClient";
+import {AssertSlant} from "@/app/components/slantClient";
 import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
@@ -200,11 +195,11 @@ export function NewWaterJarForm(
     }
     return <NewEntryFormWrapper entryType={"waterJar"}>
         <ErrorDisplay err={err}/>
-        <SelectorWrapper title={"PC Run"} nameFunc={(v:PcRunData):string=>{
-            return v._id
-        }} current={pcRun}>
-            <PcRunSelectorCloseable doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>
-        </SelectorWrapper>
+        {/*<SelectorWrapper title={"PC Run"} nameFunc={(v:PcRunData):string=>{*/}
+        {/*    return v._id*/}
+        {/*}} current={pcRun}>*/}
+        <PcRunSelectorCloseable doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>
+        {/*</SelectorWrapper>*/}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton buttonFullWidth"} onClick={createJar}>{"Create"}</button>
@@ -259,17 +254,17 @@ export function WaterJarImportDisplay({headerLevel}:ImportDisplayInput) { // TOD
 
 export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<WaterJarData>) {
     let cols: ListTableColumn<WaterJarData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("PcRun", (v)=>v.pcRun),
+        }, true),
+        NewColumn("PcRun", (v)=>v.pcRun, true),
         NewColumn("Disposed", (v)=>{
             return v.disposed?NumberToDateStr(v.disposed):""
-        }),
+        }, true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: WaterJarData)=>{

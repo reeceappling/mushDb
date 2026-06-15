@@ -7,7 +7,6 @@ import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSu
 import {LiquidEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import * as React from "react";
-import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
 
 export interface Liquid {
     name: string,

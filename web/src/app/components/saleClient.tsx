@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useState} from "react";
+import React, { useContext, useState} from "react";
 import {
     IsValidNote,
     NewEntryNotes,
@@ -13,7 +13,6 @@ import {
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest, DoUpdateRequest,
-    ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     ListPageItems,
@@ -25,13 +24,11 @@ import {
     OptionalArrayOfType, RequiredKey,
     viewUrlFor
 } from "@/app/components/common";
-import {redirect} from "next/navigation";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SaleData} from "@/app/components/saleServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -252,13 +249,13 @@ export function SalesArea(
 
 export function SaleListPageTable({data, onClick, withLink}: ListPageItems<SaleData>) {
     let cols: ListTableColumn<SaleData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
+        }, true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SaleData)=>{

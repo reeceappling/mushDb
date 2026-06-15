@@ -8,7 +8,6 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
 import {RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
-import {Additive} from "@/app/components/formSubcomponents/additives";
 
 export interface Sugar {
     type: string,

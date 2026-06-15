@@ -25,8 +25,6 @@ import ReaderWriterSelector, {
 import {
     ErrorDisplay,
     ParentDisplay,
-    SpeciesArea,
-    SubspeciesArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
@@ -37,13 +35,11 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import {MssData} from "@/app/components/mssServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import {SaleArea} from "@/app/components/saleClient";
 import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {
     AclDisplay,
-    IsValidAcl,
     MarshalAcl,
     TogglableAreaWithDepth,
     UnmarshalAcl
@@ -54,7 +50,6 @@ import {WaterJarData, WaterJarSelectorCloseable} from "@/app/components/waterJar
 import {ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
-import {redirect} from "next/navigation";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -310,15 +305,15 @@ export function NewMssForm(
 
 export function MssListPageTable({data, onClick, withLink}: ListPageItems<MssData>) {
     let cols: ListTableColumn<MssData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
+        }, true),
+        NewColumn("Spec", (v)=>v.species||"", true),
+        NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }),
+        }), // TODO: fit?
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: MssData)=>{
