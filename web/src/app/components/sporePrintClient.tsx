@@ -178,7 +178,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
             <SporePrintColorArea readonly={false} setColor={setColor} />
-            <SporePrintDensityArea readonly={false} setDensity={setColor} />
+            <SporePrintDensityArea readonly={false} setDensity={setDensity} />
             <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
             {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
             {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}

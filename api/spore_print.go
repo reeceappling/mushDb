@@ -636,6 +636,7 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	// validate spore print color and density inputs
 	if data.Color != nil {
 		if !slices2.Contains(sporePrintColors, *data.Color) {
+			println("invalid spore print color: " + string(*data.Color)) // TODO: del
 			http.Error(w, "invalid spore print color: "+string(*data.Color), http.StatusBadRequest)
 			return
 		}

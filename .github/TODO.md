@@ -206,8 +206,8 @@
       - [ ] Create MSS not working, failing to find current print
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page? probably not
-    - [ ] Import page
-      - [ ] Spore print colors and densities selectors not working!
+    - [x] Import page
+      - [x] Spore print colors and densities selectors not working!
     - [x] List Page
   - [ ] Spore Swab
     - [x] Display page
@@ -218,12 +218,12 @@
       - [ ] Move write tag to top
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page? probably not
-    - [ ] Import page
-      - [ ] Spore print colors and densities selectors not working!
+    - [x] Import page
+      - [x] Spore print colors and densities selectors not working!
     - [x] List Page
   - [ ] Stasis Tube
     - [x] Display page
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [ ] ensure transfer from stasis tube properly disposes
     - [ ] Create page // TODO: self page! I think we want this?
     - [x] Import page

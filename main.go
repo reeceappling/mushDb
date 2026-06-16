@@ -318,6 +318,7 @@ func main() {
 	http.Handle("/db/images/{imageSubPath...}", rateLimitCtxInternalAuthMiddleware(getImageHandler)) // TODO: rate limiter ok here?
 	// Creation handlers
 	http.Handle("/db/create/{variant}", rateLimitCtxInternalAuthMiddleware(rfidMiddleware(rfid.DenyGuestMiddleware(rfid.CreateHandler))))
+	// TODO: chain spore print handler?
 	// update handlers
 	http.Handle("/db/update/{endpt}/{id}", rateLimitCtxInternalAuthMiddleware(rfid.DenyGuestMiddleware(rfid.UpdateHandler))) // TODO: no rfid?
 	// import handlers
