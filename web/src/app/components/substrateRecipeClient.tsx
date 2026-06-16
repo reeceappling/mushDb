@@ -29,7 +29,6 @@ import {
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
-import TestAndValidate from "@/app/components/testing/untested";
 import {
     AclDisplay,
     MarshalAcl,
@@ -41,6 +40,7 @@ import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {NameModifiable} from "@/app/components/jarRecipeClient";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -130,12 +130,12 @@ export default function SubstrateRecipeDisplay(
                 })
         }
         const ovcs: OnViewCreatorTriCol[] = [
-            // TODO: bag creation area!
-            // TODO: box creation area!
+            // TODO: bag creation area! (MAYBE MUCH LATER)
+            // TODO: box creation area! (MAYBE MUCH LATER)
             {
                 txt: "Create Substrate Batch",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewSubstrateBatchForm recipe={data} handlers={{
+                    return <NewSubstrateBatchForm recipe={data} handlers={{ // TODO: fix so it doesnt have an extra button
                         onCreate: (newItem: SubstrateBatchData) => {
                             return onCreate([{
                                 typeText: "Substrate Batch",
@@ -145,26 +145,24 @@ export default function SubstrateRecipeDisplay(
                         isTopLevel: false,
                     }}/>
                 },
-                needsTesting: true,
             },
         ]
         return (
             <DisplayFormWrapper entryType={"substrateRecipe"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID props={{id:data._id, txt:"Substrate Recipe", entryType:"substrateRecipe"}}/>{/* TODO: name at top too*/}
+                <ID props={{id:data._id, txt:"Substrate Recipe", entryType:"substrateRecipe"}}>
+                    <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
+                </ID>
                 <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
-                        <NameArea currentName={name} setName={setName} readonly={readonly} headerLevel={headerLevel}/>
-
+                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
                         <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
                                       headerLevel={headerLevel}/>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
-
                 <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
@@ -211,9 +209,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
             <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} readonly={false}
                       headerTxt={"Substrate Name: "}/>
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}/>
-            <TestAndValidate todos={["this whole thing"]}>{/* TODO: ensure NEW is not displayed*/}
-                <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases}/>
-            </TestAndValidate>
+            <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases}/>{/* TODO: ensure NEW is not displayed*/}
             <NewEntryNotes setNotes={setNotes}/>
 
             {/* SUBMIT AREA */}
@@ -269,7 +265,7 @@ export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPage
         NewColumn("Name", (v) => v.name, true), // TODO: shortname?
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }) // TODO: fit?
+        })
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubstrateRecipeData) => {

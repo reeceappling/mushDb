@@ -33,12 +33,12 @@ const xferReasonColonized transferReason = "colonized"
 const xferReasonReady transferReason = "ready"
 
 var transferReasons = map[transferReason]string{
-	"outgrew":           "outgrew plate",
+	"outgrew":           "outgrew plate", // TODO: is colonized just this?
 	"contaminated":      "parent was contaminated",
 	"sectoring":         "transferring a specific sector",
 	"age":               "sample is very old",
 	xferReasonColonized: "fully colonized",
-	xferReasonReady:     "ready",
+	xferReasonReady:     "ready", // TODO: ?????
 }
 
 var sporePrintColors = []SporePrintColor{
@@ -115,13 +115,13 @@ func initializeTransfers(ctx context.Context) error {
 	// If test agar batch does not exist, then create it
 	// TODO: also create many-to-one monotub test transfer
 	testItem := &Transfer{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		AlternateCollectionIdField: exAltId.asIdField(),
 		From:                       exPlate,
 		To:                         exJar,
 		FromType:                   "plate",
 		ToType:                     "jar",
 		CreationDateField:          CreationDateField{exampleTime},
-		Reason:                     "A_REASONABLE_TRANSFER_REASON",
+		Reason:                     xferReasonReady,
 		FromImage:                  (*ImageLocation)(&exPicLoc),
 		ToImage:                    (*ImageLocation)(&exPicLoc),
 		NotesField:                 NotesField{exampleNotes()},
@@ -144,7 +144,7 @@ type createTransferRequest struct {
 
 type CtxKey string
 
-const SessionCtxKey CtxKey = "mongoTxSession"
+const SessionCtxKey CtxKey = "mongoTxSession" // TODO: del if unneeded?
 
 func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error)) (any, error) {
 	sessionOptions := options.Session() // TODO: change?

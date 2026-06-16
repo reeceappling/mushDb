@@ -32,6 +32,7 @@ import {DepthContext, DepthProvider} from "./depthContext/depth";
 import {DowelType} from "@/app/components/plugsServer";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import TestAndValidate from "@/app/components/testing/untested";
 
 // export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
 //     return <div className={"hoverClickable"} onClick={(e) => {
@@ -285,7 +286,9 @@ export function ParentDisplay(
         return null
     }
     if (parentType === undefined) {
-        return <div>{"Error: PARENT TYPE UNDEFINED"}</div>
+        return <div><TestAndValidate todos={["FIXME"]}>
+            {"Parent: ADD LINK WITHOUT KNOWN TYPE HERE!"/* TODO: THIS!*/}
+        </TestAndValidate></div>
     }
     const txtFor = (typ: string, id: string) => {
         return typ + " " + id
@@ -897,14 +900,16 @@ export function AliasesArea( // TODO: OVERHAUL
         </div>
     }
     return <div>
-        <div>{"Aliases :"}</div>
+        <div>{"Aliases :"}</div> {/* TODO: DO NOT USE TextBoxArea in here! */}
         <TextBoxArea readonly={false} initialValues={(aliases || []).map((((a: string) => {
             return {data: a, disabled: false}
         })))} updateParent={(v) => {
             const newVals = v.new.map((n) => {
                 return n.data
             })
-            updateParent && updateParent(newVals)
+            setVals(newVals)
+            const final = [...v.existing.filter(v=>!v.disabled).map(v=>v.data), ...newVals]
+            updateParent && updateParent(final)
         }}/>
     </div>
 }

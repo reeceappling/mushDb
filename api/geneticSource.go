@@ -60,7 +60,8 @@ func setTransferParent(ctx mongo.SessionContext, parent geneticSource, xfer Tran
 	coll := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(parent.CollectionName())
 	ctx, now := request.UnixTimeInTxn(ctx)
 	mods := NewMods().addTransferOut(xfer.Id)
-	if dispose {
+	doDispose := dispose || parent.SourceType() == StasisTubeSourceType // TODO: Validate stasis tube source type ok here
+	if doDispose {
 		mods = mods.updateDisposedIfNeeded(DisposedField{Disposed: &now}, parent)
 	}
 	upd, err := mods.updateLastUpdatedIfNeeded().Finalized()

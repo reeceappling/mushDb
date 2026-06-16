@@ -30,7 +30,7 @@ type SubstrateRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
 	StandardField              `bson:"inline"`
-	AliasesField               `bson:"inline"` // must be unique everywhere
+	AliasesField               `bson:"inline"` // must be unique everywhere // TODO: probably get rid of? maybe not because of things like "SweetCorn and DrippyCorn"
 	NotesField                 `bson:"inline"` // ingredients in notes
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`

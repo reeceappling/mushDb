@@ -160,19 +160,20 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	// Validate inputs and grab parent
 	parent := &LiquidCulture{}
-	err = db.Collection(LCCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(parent)
+	err = db.Collection(LCCollectionName).FindOne(ctx, BsonFindFilter("_id", data.LC)).Decode(parent)
 	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
+		dbErr(w, "failed to get parent LC: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if parent.Species == nil {
 		dbErr(w, "Parent LC must be innoculated", http.StatusInternalServerError)
 		return
 	}
+	// TODO: CREATE PARENT TRANSFER? maybe not
 	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: id},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.LC},
 		ConfirmedCleanField:               parent.ConfirmedCleanField, // TODO: is this ok? Probably want to only keep if false, but otherwise do nil
 		KnownFruitableField:               parent.KnownFruitableField,
 		CreationDateField:                 CreationDateField{now},

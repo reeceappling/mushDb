@@ -301,7 +301,8 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 		if !errors.Is(err, mongo.ErrNoDocuments) {
 			return "", oauthUser.Email, errors.Join(errors.New("failed to get user. May exist?"), err)
 		}
-		if !UserWhitelist.Contains(email) {
+		adminEmail := os.Getenv("ADMIN_GMAIL")
+		if !UserWhitelist.Contains(email) && email != adminEmail {
 			return "", email, errors.New("user does not exist and is not on the account creation whitelist!")
 		}
 		u = User{
@@ -311,16 +312,13 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 				Projects: []projectName{},
 			},
 		}
-		adminEmail := os.Getenv("ADMIN_GMAIL")
+
 		if adminEmail != "" && email == adminEmail {
 			env.LogIfDev(ctx, "Admin user signed up!")
 			logging.GetLogger(ctx).Info("Admin user signed up with email " + adminEmail)
-			u = User{
-				Email: email,
-				Perms: UserPerms{
-					Admin:    AcctTypeAdmin(),
-					Projects: []projectName{}, // TODO: ADD PROJECTS???
-				},
+			u.Perms = UserPerms{
+				Admin:    AcctTypeAdmin(),
+				Projects: []projectName{}, // TODO: ADD PROJECTS???
 			}
 		}
 		_, err = coll.InsertOne(ctx, u)

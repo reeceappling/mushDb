@@ -18,7 +18,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalSimpleKey, RequiredKey,
-    setFormData
+    setFormData, DoImportRequest
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -132,7 +132,6 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
             setErr("A species must be selected")
             return
         }
-        const formData = new FormData()
         const dataObj: any = {
             creationDate: swabDate,
             species: species._id,
@@ -140,14 +139,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
             subspecies: subspecies,
             notes: notes,
         }
-        setFormData(formData, dataObj)
-        formData.set("data", JSON.stringify(dataObj))
-        // Img
-        if (image) {
-            formData.set("img", image, "img")
-        }
-
-        DoMultipartImportRequest(formData, "sporeSwab", AssertSporeSwab, setErr, allCookies(cookies))
+        DoImportRequest(dataObj, "sporeSwab", AssertSporeSwab, setErr, allCookies(cookies))
     }
     //no parent because we couldn't possibly know it
     return <ImportEntryFormWrapper entryType={"sporeSwab"}>
@@ -175,7 +167,7 @@ export default function SporeSwabDisplay(
 
         const [sale, setSale] = useState(initial.sale)
         const [disposed, setDisposed] = useState(initial.disposed)
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
         const [acl, setAcl] = useState<ACL>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: SporeSwabData) => {
@@ -209,6 +201,8 @@ export default function SporeSwabDisplay(
         return <DisplayFormWrapper entryType={"sporeSwab"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs}
+                                      readonly={readonly}/> {/*swab to agar and that's about it */}
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <TestAndValidate todos={["reformat these into groups"]}>
@@ -233,8 +227,6 @@ export default function SporeSwabDisplay(
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
-            <OnViewCreatorsTriColArea OnViewCreators={ovcs}
-                                      readonly={readonly}/> {/*swab to agar and that's about it */}
         </DisplayFormWrapper>
 }
 

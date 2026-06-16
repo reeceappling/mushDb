@@ -286,47 +286,13 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := SporeSwab{
-		MainCollectionIdField:   MainCollectionIdField{id},
+		MainCollectionIdField:   id.IdField(),
 		CreationDateField:       data.CreationDateField,
 		SpeciesField:            data.SpeciesField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,
 		LastUpdatedField:        LastUpdatedField{now},
-		AclField:                AclField{finalPerms},
+		AclField:                finalPerms.AsField(),
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
-}
-
-func swabFromFruitInTxn(ctx mongo.SessionContext, parent *Fruit, notes NotesField) (*SporeSwab, error) {
-	id := NextMainCollectionId()
-	ctx, now := request.UnixTimeInTxn(ctx)
-	// TODO: writeTagTo?
-	toInsert := SporeSwab{
-		MainCollectionIdField:             MainCollectionIdField{id},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-		ParentTypeField:                   ParentTypeField{utils.Pointer("fruit")},
-		CreationDateField:                 CreationDateField{now},
-		SpeciesField:                      parent.SpeciesField,
-		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-		NotesField:                        notes,
-		LastUpdatedField:                  LastUpdatedField{now},
-		// Do not check permissions, just pass parent perms to child
-		AclField: parent.AclField,
-	}
-	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
-	err := addToIdMapCollection(ctx, &toInsert)
-	if err != nil {
-		return nil, err
-	}
-	// Update fruit with new print id
-	//err = parent.addSporeSwab(ctx, id)
-	//if err != nil {
-	//	return nil, errors.Join(errors.New("failed to add spore print to parent fruit"), err)
-	//}
-	// TODO: add transfer to parent for swab! should swabs have their own field on fruits?
-	_, err = db.Collection(SporeSwabCollectionName).InsertOne(ctx, toInsert)
-	if err != nil {
-		return nil, errors.Join(errors.New("failed to insert new spore print"), err)
-	}
-	return &toInsert, nil
 }

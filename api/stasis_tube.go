@@ -22,7 +22,7 @@ import (
 
 type StasisTube struct { // TODO: instructions somewhere?
 	MainCollectionIdField             `bson:"inline"`
-	PcRunOptionalField                `bson:"inline"` // All tubes must go through the PC. probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
+	PcRunOptionalField                `bson:"inline"` // All tubes must go through the PC. probably won't exist for pre-existing tubes. (imports=="unknown") // TODO: new, also used to not be optional
 	WaterJarOptionalField             `bson:"inline"` // Only populated if the tubes are not PC'd with water inside // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`

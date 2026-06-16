@@ -122,7 +122,7 @@ export default function SubspeciesDisplay(
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
-                <AliasesArea aliases={aliases} readonly={readonly} headerLevel={headerLevel} updateParent={setAliases}/>
+                <AliasesArea aliases={initial.aliases} readonly={readonly} headerLevel={headerLevel} updateParent={setAliases}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <AclDefaultAclDisplay ACL={acl} defaultACL={defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl} readonly={readonly}/>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{

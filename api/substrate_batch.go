@@ -28,7 +28,7 @@ func initializeSubstrateBatches(ctx context.Context) error {
 	coll := DbFrom(ctx).Collection(SubstrateBatchCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
-		newSimpleIndex("recipe", "recipe", false, false, true),
+		newSimpleIndex("recipe", "recipe", false, false, false),
 		//Notes (no index unless tags)
 		projectsIndexModel,
 		lastUpdatedIndexModel,

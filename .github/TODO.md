@@ -33,8 +33,8 @@
   - [ ] Agar Batch
     - [x] Display page
       - [x] Create Plates
-      - [x] Create Slant pre-PC run
-      - [ ] Create Slant post-PC run
+      - [x] Create Slant poured pre-PC run
+      - [ ] Create Slant poured post-PC run?
     - [x] List Page
   - [ ] Agar Recipe
     - [x] Display page
@@ -57,11 +57,11 @@
     - [x] Create page
     - [x] Import page
       - [x] Redirect not working
-      - [ ] Add wetness to import page?
-      - [ ] Add Notes to import page?
+      - [ ] Add wetness to import page? MAYBE LATER
+      - [ ] Add Notes to import page? MAYBE LATER
       - [x] not finding the substrate recipe for standard recipes
     - [x] List Page
-  - [ ] Fruit
+  - [x] Fruit
     - [x] Display page
       - [x] Create SporePrint
       - [x] Create SporeSwab
@@ -73,7 +73,7 @@
   - [ ] Fruiting Chamber
     - [x] Display page
       - [ ] Dispose button
-      - [ ] Make sales also trigger disposal?
+      - [ ] Make sales also trigger disposal? (Do this on many entry types?)
       - [ ] Handle sale
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
@@ -83,7 +83,7 @@
   - [x] Grain Batch
     - [x] Display page
     - [x] Create page
-      - [ ] Create Jar // Create
+      - [x] Create Jar // Create
         - [ ] Add wetness????
         - [ ] Add burst grains???
         - [ ] Allow PC to be optional???? Maybe not....
@@ -91,8 +91,8 @@
   - [ ] Jar
     - [x] Display page
       - [ ] fix wetness area
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page? probably not
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [ ] Create page // TODO: self page? probably not (maybe do this later)
     - [x] Import page
       - [ ] Add wetness?
       - [ ] Add burst grains?
@@ -107,13 +107,14 @@
       - [x] Recent
   - [ ] LC
     - [x] Display page
-      - [ ] test creating LC syringe, LC selector and reading rfid tag
-        - [ ] LC selector and reading rfid tag
+      - [x] test creating LC syringe, LC selector and reading rfid tag
+        - [x] LC selector and reading rfid tag
       - [ ] Create transfer?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [ ] NOT WORKING WHEN TRANSFERRING TO GRAIN JAR!
     - [ ] Create page // TODO: self page? probably not
     - [x] Import page
     - [x] List Page
-  - [ ] LC Recipe
+  - [x] LC Recipe
     - [x] Display page
       - [x] Move name to top as well
       - [x] create LC
@@ -187,8 +188,8 @@
     - [x] List Page
   - [ ] Slant
     - [x] Display page
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page? probably not
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [ ] Create page // TODO: self page? probably not... Create from AgarBatch (maybe PCRun?)
     - [x] Import page
     - [x] List Page
   - [ ] Species
@@ -205,17 +206,19 @@
     - [x] Display page
       - [ ] Create MSS not working, failing to find current print
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page? probably not
+    - [ ] Create page // TODO: self page? probably not! do much later if needed!
     - [x] Import page
       - [x] Spore print colors and densities selectors not working!
     - [x] List Page
   - [ ] Spore Swab
     - [x] Display page
-      - [ ] Parent area
+      - [x] Parent area
+        - [ ] Link for when parentType is undefined but parentId is defined
       - [ ] Sales, do sale, mark as disposed when sold
       - [ ] Disposal area
+      - [ ] UPDATING NOTES NOT WORKING!
       - [ ] Reformat groups
-      - [ ] Move write tag to top
+      - [x] Move write tag to top
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page? probably not
     - [x] Import page
@@ -224,8 +227,8 @@
   - [ ] Stasis Tube
     - [x] Display page
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-        - [ ] ensure transfer from stasis tube properly disposes
-    - [ ] Create page // TODO: self page! I think we want this?
+        - [x] ensure transfer from stasis tube properly disposes
+    - [ ] Create page // TODO: self page! ONLY DO THIS IF WE WANT TO CREATE THE TUBES BEFORE PCing! (Probably not until later?)
     - [x] Import page
     - [x] List Page
   - [ ] Subspecies
@@ -233,6 +236,9 @@
       - [x] Species at top
       - [ ] Aliases
         - [ ] Cannot add aliases that already exist elsewhere?
+        - [ ] NOT WORKING TO ADD ALIASES!!!!
+        - [ ] DO NOT USE TextBoxArea in AliasesArea!
+        - [ ] Deleting is not updating the view on response!
       - [ ] ACLs
         - [ ] Validate both updating properly
     - [x] Create page
@@ -241,15 +247,17 @@
       - [x] Display species name then subspecies name!
   - [ ] Substrate Batch
     - [x] Display page
-      - [ ] Create bag validate
+      - [x] Create bag validate
       - [ ] Create FC validate
+        - [ ] NOT PROPERLY RETURNING ONCE CREATED!
     - [ ] Create page // TODO: self page? probably not
     - [x] List Page
   - [ ] Substrate Recipe
     - [x] Display page
-      - [ ] Name at top (copy other recipe view pages)
-      - [ ] Create Substrate Batch and validate
-      - [ ] Aliases
+      - [x] Name at top (copy other recipe view pages)
+      - [x] Create Substrate Batch and validate
+      - [x] Aliases
+        - [ ] Not moving to existing when updated
     - [x] Create page
     - [x] List Page
   - [ ] Transfer
@@ -267,8 +275,8 @@
   - [ ] Water Jar
     - [x] Display page
       - [x] Disposal area
-      - [ ] Create MSS // TODO: CREATE
-      - [ ] Create Stasis Tube // TODO: CREATE? Should be PC-d with water in tubes?????
+      - [x] Create MSS // TODO: CREATE
+      - [ ] Create Stasis Tube // TODO: CREATE? Should be PC-d with water in tubes????? PROBABLY DONT ALLOW THIS FROM HERE ---------
     - [x] Create page // TODO: self page?
       - [x] PC run selector is double-nested...
     - [ ] Import page (NEED TO DO THIS!!!!!)

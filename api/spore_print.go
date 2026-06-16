@@ -384,46 +384,6 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	handleWriteErr(err, w)
 }
 
-func printFromFruitInTxn(ctx mongo.SessionContext, parent *Fruit, pics PicsField, notes NotesField) (*SporePrint, error) {
-	id := NextMainCollectionId()
-	ctx, now := request.UnixTimeInTxn(ctx)
-
-	// TODO: writeTagTo?
-	var mri *PicWithNotes = nil
-	if len(pics.Pics) > 0 {
-		lastPic := pics.Pics[len(pics.Pics)-1]
-		mri = &lastPic
-	}
-	toInsert := SporePrint{
-		MainCollectionIdField:             MainCollectionIdField{id},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-		CreationDateField:                 CreationDateField{now},
-		SpeciesField:                      parent.SpeciesField,
-		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-		PicsField:                         pics,
-		MostRecentImageField:              MostRecentImageField{mri},
-		NotesField:                        notes,
-		LastUpdatedField:                  LastUpdatedField{now},
-		// Do not check permissions, just pass parent perms to child
-		AclField: parent.AclField,
-	}
-	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
-	err := addToIdMapCollection(ctx, &toInsert)
-	if err != nil {
-		return nil, err
-	}
-	// Update fruit with new print id
-	err = parent.addSporePrint(ctx, id)
-	if err != nil {
-		return nil, errors.Join(errors.New("failed to add spore print to parent fruit"), err)
-	}
-	_, err = db.Collection(SporePrintCollectionName).InsertOne(ctx, toInsert)
-	if err != nil {
-		return nil, errors.Join(errors.New("failed to insert new spore print"), err)
-	}
-	return &toInsert, nil
-}
-
 func MainCollItemForEntryType(entryType string) (MainCollectionItem, error) {
 	if mainCollItem, exists := map[string]MainCollectionItem{
 		"bag":             &Bag{}, // can only go to fruits

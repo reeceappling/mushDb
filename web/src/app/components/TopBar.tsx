@@ -340,6 +340,7 @@ export function TopBarImportMenu() {
             {menuItem("/import/plugs", "Plugs")}
             {menuItem("/import/slant", "Slant")}
             {menuItem("/import/sporePrint", "Spore Print")}
+            {menuItem("/import/sporeSwab", "Spore Swab")}
             {menuItem("/import/stasisTube", "Stasis Tube")}
             {menuItem("/import/waterJar", "Water Jar")}
         </Menu>

@@ -22,7 +22,7 @@ type MSS struct {
 	// ALWAYS assume contaminated
 	MainCollectionIdField   `bson:"inline"`
 	CreationDateField       `bson:"inline"`
-	WaterJarOptionalField   `bson:"inline"` // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS
+	WaterJarOptionalField   `bson:"inline"` // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS!
 	SpeciesField            `bson:"inline"`
 	SubspeciesOptionalField `bson:"inline"`
 	// NOTE: parentType is always either sporePrint or purchased
@@ -119,7 +119,7 @@ func initializeMSS(ctx context.Context) error {
 
 type createMssRequest struct {
 	WaterJarOptionalField // TODO: HANDLE THIS! Allow creation with or without
-	SporePrintId          AlternateCollectionId
+	SporePrintId          MainCollectionId
 	NotesField
 	WriteTagToField
 	// Uses parent perms, then email can modify if they have the perms for parent

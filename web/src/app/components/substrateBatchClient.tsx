@@ -179,7 +179,6 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     recipe?: SubstrateRecipeData
 }) {
     // TODO: do we want the formOpen button outside of the component?
-    const [formOpen, setFormOpen] = useState(false)
     const [selectedRecipe, setSelectedRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
@@ -203,19 +202,9 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
                 setErr(JSON.stringify(e))
             })
     }
-    if (!formOpen) {
-        return <div>
-            <button className={"basicButton"} onClick={() => {
-                setFormOpen(true)
-            }}>{"Create new batch"}</button>
-        </div>
-    }
     return (
         <NewEntryFormWrapper entryType={"substrateBatch"}>
             {/* button to open/close the creator*/}
-            <button className={"basicButton"} onClick={() => {
-                setFormOpen(false)
-            }}>{"Close batch creator"}</button>
             <ErrorDisplay err={err}/>
             <TestAndValidate todos={["ENSURE WORKS PROPERLY FOR BOTH EXISTING AND PICKING"]}>
                 {recipe === undefined ?
@@ -229,7 +218,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
             <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
-            }}>{"Update"}</button>
+            }}>{"Create new batch"}</button>
         </NewEntryFormWrapper>
     )
 }
