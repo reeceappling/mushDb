@@ -39,7 +39,12 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 			return proj.Name
 		})
 	} else {
-		projectsToReturn = maps.Keys(user.projects)
+		if user.projects != nil {
+			projectsToReturn = maps.Keys(user.projects)
+		} else {
+			projectsToReturn = []projectName{}
+		}
+
 	}
 	MarshalAndReturn(ctx, w, projectsToReturn)
 }

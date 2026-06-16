@@ -43,14 +43,12 @@ func (M MSS) CanTransferTo(dst geneticSource) error {
 	if dst.SourceType() != PlateSourceType {
 		return errors.New("mss transfers must go to plates")
 	}
-	if !dst.Innoculatable() {
-	}
 	return nil
 }
 
 func (M MSS) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
-		SpeciesOptionalField:    SpeciesOptionalField{&M.Species},
+		SpeciesOptionalField:    M.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: M.SubspeciesOptionalField,
 		KnownFruitableField:     KnownFruitableField{utils.Pointer(false)},
 		GenerationsFields: GenerationsFields{

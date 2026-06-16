@@ -297,9 +297,9 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO: ensure child is not innoculated? // TODO: make an Innoculated() method on geneticSource!
-	// ensure child is not disposed
-	if child.DisposalInfo() != nil {
-		http.Error(w, "cannot transfer to disposed entries", http.StatusBadRequest)
+	// ensure child is innoculatable and parent is not disposed
+	if !child.Innoculatable() {
+		http.Error(w, "child is not innoculatable", http.StatusBadRequest)
 		return
 	}
 	if parent.DisposalInfo() != nil {

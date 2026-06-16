@@ -287,7 +287,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        DoImportRequest("plugs", body, AssertPlugs, setErr, allCookies(cookies))
+        DoImportRequest(body, "plugs", AssertPlugs, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"plugs"}>
 

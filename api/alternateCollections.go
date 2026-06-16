@@ -73,21 +73,28 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 	}
 	return bs, nil
 }
-func ListUsernamesHandler(ctx context.Context) ([]byte, error) {
-	latestEntries, err := getAllEntries(ctx, &User{})
+func ListUsersHandler(ctx context.Context, removeGuests bool) ([]byte, error) {
+	findBson := bson.D{{}}
+	if removeGuests { // TODO: REMOVE ALL GUESTS FROM THE LIST
+		findBson = bson.D{{"perms", bson.M{"$ne": nil}}} // TODO; ensure works!
+	}
+	// TODO: pagination?
+	opts := options.Find().
+		//SetLimit(int64(nresults)). // no limit because user can be unable to view some items
+		SetSort(bson.D{{"_id", 1}}) // 1 = Ascending, -1 = Descending
+	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
+	cursor, err := DbFrom(ctx).
+		Collection(UserCollName).
+		Find(ctx, findBson, opts)
 	if err != nil {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			errTxt := "ERROR: listEntriesHandlerInternal found a non-ErrNoDocs: " + err.Error()
-			println(errTxt) // TODO: this
-			return nil, errors.New(errTxt)
-		}
-		latestEntries, err = []*User{}, nil
+		return nil, err
 	}
-	out := make([]string, len(latestEntries))
-	for i, entry := range latestEntries {
-		out[i] = entry.Email
+	results := []*User{}
+	err = cursor.All(ctx, &results)
+	if err != nil {
+		return nil, err
 	}
-	return json.Marshal(out)
+	return json.Marshal(results)
 }
 
 var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
@@ -179,8 +186,10 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 		"transfers", "xfers":
 		bs, err = listEntriesHandlerInternal[*Transfer](r.Context(), true, maxResults, doStandardToo, &Transfer{})
 	case "user", "users":
-		//bs, err = ListUsernamesHandler(r.Context()) // TODO: list usernames handler soemwhere else?
 		bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
+	case "nonguest", "nonguests":
+		bs, err = ListUsersHandler(r.Context(), true) // TODO: validate working!
+		//bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
 	case "waterjar", "waterjars", "water jar", "water jars", "sterilizedwater", "sterilizedwaterjar", "sterilewater", "sterilewaterjar":
 		bs, err = listEntriesHandlerInternal[*WaterJar](r.Context(), true, maxResults, doStandardToo, &WaterJar{})
 	default:

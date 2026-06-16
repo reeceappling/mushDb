@@ -70,6 +70,15 @@ func (s Slant) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return s.GenSinceSpore, s.GenSinceFruitOrSpore
 }
 
+func (s Slant) Innoculatable() bool {
+	return s.Species == nil &&
+		s.Subspecies == nil &&
+		s.Disposed == nil &&
+		s.Sale == nil &&
+		s.KnownFruitable == nil &&
+		s.Innoc == nil
+}
+
 //func (s Slant) setTransferParent(ctx context.Context, xfer Transfer) error {
 //	coll := DbFrom(ctx).Collection(s.CollectionName())
 //	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()

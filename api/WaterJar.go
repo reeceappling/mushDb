@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -46,11 +45,6 @@ func (wj WaterJar) CanTransferTo(dst geneticSource) error {
 func (wj WaterJar) Innoculatable() bool {
 	// WaterJar is not genetic, so it cannot be innoculated
 	return false
-}
-
-func (wj WaterJar) Permissions() ACL {
-	// Water jars always have full write perms
-	return ACL{Users: nil, Projects: nil, BlanketPerm: utils.Pointer(true)}
 }
 
 type WaterJarOptionalField struct {

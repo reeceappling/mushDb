@@ -233,7 +233,7 @@ export function WaterJarImportDisplay({headerLevel}:ImportDisplayInput) { // TOD
         //     formData.set("image", imageFile, "imgFile")
         // }
 
-        DoImportRequest(body, "slant", AssertSlant, setErr, allCookies(cookies))
+        DoImportRequest(body, "waterJar", AssertWaterJar, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
         <TestAndValidate todos={["DO THIS WHOLE IMPORT PAGE!"]}>

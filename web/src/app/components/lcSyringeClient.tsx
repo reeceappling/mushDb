@@ -254,7 +254,7 @@ export default function LcSyringeDisplay(
                 </TestAndValidate>
             </FlexedSinglesGroup>
         </FlexedArea>
-        <TransfersOutDisplay thisId={initial._id} thisEntryType={"plate"} transfersOut={transfersOut}
+        <TransfersOutDisplay thisId={initial._id} thisEntryType={"lcSyringe"} transfersOut={transfersOut}
                              allowNewTransferCreation={!readonly}/>
         <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
         <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>

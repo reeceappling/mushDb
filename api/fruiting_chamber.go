@@ -49,6 +49,15 @@ func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
 	// TODO: make transferrable to plate? box? bag?
 }
 
+func (f FruitingChamber) Innoculatable() bool {
+	return f.Species == nil &&
+		f.Subspecies == nil &&
+		f.Disposed == nil &&
+		f.Sale == nil &&
+		f.KnownFruitable == nil &&
+		f.Innoc == nil
+}
+
 func (f FruitingChamber) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    f.SpeciesOptionalField,
@@ -231,7 +240,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) { // T
 		return
 	}
 
-	ctx, now :=request.UnixTime(ctx) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(ctx) // TODO: no more r.Context below
 	batch, err := data.SubstrateBatchField.Get(ctx)
 	if err != nil {
 		http.Error(w, "invalid substrate batch: "+err.Error(), http.StatusBadRequest)

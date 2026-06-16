@@ -47,6 +47,15 @@ type Bag struct {
 	AclField         `bson:"inline"`
 }
 
+func (b Bag) Innoculatable() bool {
+	return b.Species == nil &&
+		b.Subspecies == nil &&
+		b.Disposed == nil &&
+		b.Sale == nil &&
+		b.KnownFruitable == nil &&
+		b.Innoc == nil
+}
+
 func (b Bag) CanTransferTo(dst geneticSource) error {
 	return errors.New("Bag cannot be transferred (unsure if this is ok)")
 	// TODO: make transferrable to plate? bag?

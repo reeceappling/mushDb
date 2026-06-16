@@ -189,18 +189,20 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	if maxPerm.CanWrite() {
 		return RWPermWrite()
 	}
-	for proj, projCanWriteOnEntry := range acl.Projects {
-		if projPerm, exists := userPerms.projects[proj]; exists { // TODO: is projectPerm here ok
-			userCanWriteOnProj := projPerm != nil
-			userPermForProjectAndEntry := userCanWriteOnProj && projCanWriteOnEntry
-			if userPermForProjectAndEntry {
-				return RWPermWrite() //TODO: ?newPerm(projPerm != nil) // TODO: ensure ok
+	if userPerms.projects != nil {
+		for proj, projCanWriteOnEntry := range acl.Projects {
+			if projPerm, exists := userPerms.projects[proj]; exists { // TODO: is projectPerm here ok
+				userCanWriteOnProj := projPerm != nil
+				userPermForProjectAndEntry := userCanWriteOnProj && projCanWriteOnEntry
+				if userPermForProjectAndEntry {
+					return RWPermWrite() //TODO: ?newPerm(projPerm != nil) // TODO: ensure ok
+				}
+				maxPerm = RWPermRead()
+				//if maxPerm == nil {
+				//	maxPerm = RWPermRead()
+				//}
+				// TODO: probably don't need: maxPerm = maxPermsBetween(maxPerm, newPerm(projPerm != nil)) // TODO: newPerm(projPerm != nil) or RWPermRead()
 			}
-			maxPerm = RWPermRead()
-			//if maxPerm == nil {
-			//	maxPerm = RWPermRead()
-			//}
-			// TODO: probably don't need: maxPerm = maxPermsBetween(maxPerm, newPerm(projPerm != nil)) // TODO: newPerm(projPerm != nil) or RWPermRead()
 		}
 	}
 	return maxPerm
@@ -286,13 +288,13 @@ type Perm[T any] struct {
 // AccountType is always used as a pointer. // nil is guest (never write), true is admin, false is regular user
 type AccountType bool // always used as a ptr.
 func (ad *AccountType) IsAdmin() bool {
-	return bool(*ad)
+	return ad != nil && bool(*ad)
 }
 func (ad *AccountType) IsGuest() bool {
 	return ad == nil
 }
 func (ad *AccountType) IsRegular() bool {
-	return !ad.IsAdmin() && !ad.IsGuest() // TODO: consider switching order
+	return ad != nil && !ad.IsAdmin()
 }
 func AcctTypeAdmin() *AccountType {
 	accType := AccountType(true)
@@ -335,9 +337,13 @@ func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWriteP
 		return RWPermWrite()
 	}
 	// For standard users, rely on the user's project perms
-	userProjPerm, exists := perms.projects[projName]
-	if !exists {
-		return RWPermNothing()
+	var userProjPerm *UserProjectPerm = nil
+	var exists bool
+	if perms.projects != nil {
+		userProjPerm, exists = perms.projects[projName]
+		if !exists {
+			return RWPermNothing()
+		}
 	}
 	// True is project admin
 	// False is can write on project items, but not project itself

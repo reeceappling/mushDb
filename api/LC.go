@@ -60,6 +60,14 @@ func (l LiquidCulture) generation() (sinceSpore *Generation, sinceSporeOrClone *
 	return l.GenSinceSpore, l.GenSinceFruitOrSpore
 }
 
+func (l LiquidCulture) Innoculatable() bool {
+	return l.Species == nil &&
+		l.Subspecies == nil &&
+		l.Disposed == nil &&
+		l.KnownFruitable == nil &&
+		l.Innoc == nil
+}
+
 func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {

@@ -23,6 +23,11 @@
 
 
 # TODO
+- [ ] /db/list/nonguests
+  - [ ] Make many typscript things request only nonguests
+- [ ] TS /whitelistUser
+  - [ ] Allow admin to add users to the account creation whitelist...
+  - [ ] persist the whitelist?
 - [ ] ListPageTables allow hiding columns!
 - [ ] Entries
   - [ ] Agar Batch
@@ -39,7 +44,7 @@
       - [ ] nutes/sugar/etc consider doing x/Liter? (should maybe put a x/L calculator?)
     - [x] List Page
       - [x] Clicks work
-      - [ ] Ensure text doesnt step all over each other on slim screens
+      - [x] Ensure text doesnt step all over each other on slim screens
         - [ ] Reformat on slim screens?]
   - [ ] Bag
     - [x] Display page
@@ -48,6 +53,7 @@
       - [ ] Preexisting users and projects which are not valid cause problems on update
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [ ] 4XX should show error in error area, not just console
     - [x] Create page
     - [x] Import page
       - [x] Redirect not working
@@ -60,7 +66,7 @@
       - [x] Create SporePrint
       - [x] Create SporeSwab
       - [x] Cloning area?
-        - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NONE!)
     - [x] Import page
     - [x] List Page
@@ -128,7 +134,7 @@
   - [ ] MSS
     - [x] Display page
       - [ ] Sell area, ensure working as we want, and that selling marks as disposed
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page (probably no self page)?
     - [x] Import page
     - [x] List Page
@@ -148,7 +154,7 @@
   - [ ] Plate
     - [x] Display page
       - [ ] pour and condens cov
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page (probably no self page)?
     - [x] Import page
       - [ ] Add Coverage sliders

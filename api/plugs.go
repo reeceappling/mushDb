@@ -86,6 +86,14 @@ func (pl PlugsJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Gene
 	return pl.GenSinceSpore, pl.GenSinceFruitOrSpore
 }
 
+func (pl PlugsJar) Innoculatable() bool {
+	return pl.Species == nil &&
+		pl.Subspecies == nil &&
+		pl.Disposed == nil &&
+		pl.KnownFruitable == nil &&
+		pl.Innoc == nil
+}
+
 type Dowel struct {
 	Radius `bson:"inline"`
 	Wood   Wood `bson:"wood" json:"wood"`

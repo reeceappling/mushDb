@@ -448,6 +448,7 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 }
 
 func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
+	defer cursor.Close(ctx)       // TODO; ensure ok
 	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
 	if err != nil {
 		return nil, err
@@ -745,7 +746,7 @@ var (
 			exProjRead:  false,
 			exProjWrite: true,
 		},
-		BlanketPerm: utils.Pointer(true),
+		BlanketPerm: RWPermWrite(),
 	}
 	testAcl = ACL{
 		Users: map[string]bool{
@@ -756,10 +757,10 @@ var (
 			exProjRead:  false,
 			exProjWrite: true,
 		},
-		BlanketPerm: utils.Pointer(false),
+		BlanketPerm: RWPermRead(),
 	}
 	exBool                     = utils.Pointer(true)
-	exPicLoc                   = "test.jpg" // TODO: make sure this exists
+	exPicLoc                   = "test.jpg" // Uses a picture from another site...
 	exPicWithNotesLessLocation = PicWithNotesLessLocation{
 		RequiredTimeField: exReqTimeField,
 		NotesField:        NotesField{exampleNotes()},
@@ -803,13 +804,14 @@ func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {
 func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection {
 	return db.Collection(item.CollectionName())
 }
-func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item T) error {
-	return CollectionFor(item, db).FindOne(ctx, bson.D{{Key: "_id", Value: item.IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
-}
+
+//func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item T) error {
+//	return CollectionFor(item, db).FindOne(ctx, bson.D{{Key: "_id", Value: item.IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
+//}
 
 func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
 	coll := DbFrom(ctx).Collection(existing.CollectionName())
-	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
+	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -833,7 +835,7 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 }
 
 func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
-	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
+	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -857,7 +859,7 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 }
 
 func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
-	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
+	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return

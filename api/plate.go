@@ -117,6 +117,15 @@ func (p Plate) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return p.GenSinceSpore, p.GenSinceFruitOrSpore
 }
 
+func (p Plate) Innoculatable() bool {
+	return p.Species == nil &&
+		p.Subspecies == nil &&
+		p.Disposed == nil &&
+		p.Sale == nil &&
+		p.KnownFruitable == nil &&
+		p.Innoc == nil
+}
+
 func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {

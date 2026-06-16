@@ -51,11 +51,25 @@ func (s StasisTube) CanTransferTo(dst geneticSource) error {
 }
 
 func (s StasisTube) GeneticInfoAsParent() (GeneticParentInfo, error) {
-	return GeneticParentInfo{}, nil
+	return GeneticParentInfo{
+		SpeciesOptionalField:    s.SpeciesOptionalField,
+		SubspeciesOptionalField: s.SubspeciesOptionalField,
+		KnownFruitableField:     s.KnownFruitableField,
+		GenerationsFields:       s.GenerationsFields,
+	}, nil
 }
 
 func (s StasisTube) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return s.GenSinceSpore, s.GenSinceFruitOrSpore
+}
+
+func (s StasisTube) Innoculatable() bool {
+	return s.Species == nil &&
+		s.Subspecies == nil &&
+		s.Disposed == nil &&
+		s.Sale == nil &&
+		s.KnownFruitable == nil &&
+		s.Innoc == nil
 }
 
 //func (s StasisTube) setTransferParent(ctx context.Context, xfer Transfer) error {

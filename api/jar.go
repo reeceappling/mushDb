@@ -54,9 +54,6 @@ type BurstGrainsField struct { // 0 is none, 10 is most or all
 }
 
 func (j GrainJar) CanTransferTo(dst geneticSource) error {
-	if j.Innoc == nil {
-		return errors.New("source not innoculated. Cannot transfer nothing")
-	}
 	if slices2.Contains([]string{FruitingChamberSourceType, FruitSourceType, LcSyringeSourceType, MssSourceType, SporePrintSourceType, SporeSwabSourceType}, dst.SourceType()) {
 		return errors.New("jar cannot transfer to " + dst.SourceType())
 	}
@@ -91,6 +88,15 @@ func (j GrainJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Gener
 //	}
 //	return nil
 //}
+
+func (j GrainJar) Innoculatable() bool {
+	return j.Species == nil &&
+		j.Subspecies == nil &&
+		j.Disposed == nil &&
+		j.Sale == nil &&
+		j.KnownFruitable == nil &&
+		j.Innoc == nil
+}
 
 func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)

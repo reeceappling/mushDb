@@ -73,6 +73,7 @@ func (sw LcSyringe) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: sw.SubspeciesOptionalField,
+		KnownFruitableField:     sw.KnownFruitableField,
 		GenerationsFields:       GenerationsFieldFor(utils.Pointer(Generation(0))),
 	}, nil
 }

@@ -276,11 +276,18 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		txColl := mongo.SessionFromContext(sessCtx).
 			Client().Database(dbName).
 			Collection(UserCollName)
+		authSvc := GetAuthService(sessCtx)
+		authSvc.Lock()         // TODO: ok?
+		defer authSvc.Unlock() // TODO: ok?
 		for u, _ := range usersWithProjectRemoved {
 			// remove project from each user that no longer has the project // TODO: VALIDATE WORKING PROPERLY
 			_, e := txColl.UpdateByID(sessCtx, u, bson.D{{"$unset", bson.D{{permKey, ""}}}}) // TODO: ensure ok
 			if e != nil {
 				return nil, e
+			}
+			// TODO: remove the project from the user in the session stuff!
+			if sessId, exists := authSvc.UserSessionMap[u]; exists {
+				delete(authSvc.sessMap[sessId].Data.projects, projName) // TODO: ensure ok!
 			}
 		}
 		// Add project with perm to user, or change the project perm  // TODO: VALIDATE WORKING PROPERLY
@@ -290,6 +297,11 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 				if e != nil {
 					return nil, e
 				}
+				// TODO: add the project to the user in the session stuff!
+				if sessId, exists := authSvc.UserSessionMap[u]; exists {
+					authSvc.sessMap[sessId].Data.projects[projName] = userPerm.UserProjectPerm()
+				}
+
 			}
 		}
 		return nil, nil

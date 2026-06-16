@@ -9,7 +9,8 @@ import (
 )
 
 type User struct {
-	Email string    `bson:"_id" json:"_id"`
+	Email string `bson:"_id" json:"_id"`
+	// TODO: can we make UserPerms.Admin not a pointer?
 	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: PROJECTS COME FROM PERMS! So even projects with only read perms can be associated with an item!
 	// All can view?
 }
@@ -90,8 +91,7 @@ func (upp *UserProjectPerm) RWPerm() *ReadWritePerm {
 }
 
 func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
-	userIsAdmin := u.Perms.Admin
-	acctType := (*AccountType)(userIsAdmin)
+	acctType := u.Perms.Admin
 	out := ResolvedUserPerms{
 		Email:       u.Email,
 		accountType: acctType,
@@ -102,7 +102,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 		return out, nil
 	}
 
-	// TODO: ensure all Projects are looped through
+	// TODO: ensure all Projects are looped through? Or just the user's projects?
 
 	// Resolve project perms // TODO: MAKE SURE THIS WORKS
 	cursor, err := DbFrom(ctx).Collection(ProjectsCollectionName).
@@ -112,14 +112,14 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	}
 	userProjPerms := map[projectName]*UserProjectPerm{}
 
-	for cursor.Next(context.TODO()) {
+	for cursor.Next(ctx) {
 		var project Project
 		if err = cursor.Decode(&project); err != nil {
 			return out, errors.Join(errors.New("cursor decode error for UserPerms project"), err)
 		}
 		perm, exists := project.Perms[u.Email]
 		if !exists {
-			return out, errors.New("user not on project")
+			return out, errors.New("user not on project when they should have been!")
 		} else {
 			userProjPerms[project.Name] = perm.UserProjectPerm()
 		}

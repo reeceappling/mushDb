@@ -340,7 +340,7 @@ export default function LcDisplay(
                     <PcRunArea binaryId={initial.pcRun}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
+            <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"lc"}
                                  transfersOut={initial.transfersOut}
                                  allowNewTransferCreation={!readonly}/>{/* TODO: validTypesTo*/}
             <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly}
