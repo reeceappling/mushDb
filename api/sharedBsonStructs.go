@@ -164,14 +164,14 @@ func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 
 type Contamination struct {
 	ContaminationLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Location                  *ImageLocation  `bson:"location,omitempty" json:"location,omitempty"`
+	Location                  *ImageLocation `bson:"location,omitempty" json:"location,omitempty"`
 }
 
 type ContaminationLessLocation struct {
 	PicWithNotesLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Confirmed                bool            `bson:"confirmed" json:"confirmed"`
-	Bacteria                 bool            `bson:"bacteria" json:"bacteria"`
-	Mold                     bool            `bson:"mold" json:"mold"`
+	Confirmed                bool `bson:"confirmed" json:"confirmed"`
+	Bacteria                 bool `bson:"bacteria" json:"bacteria"`
+	Mold                     bool `bson:"mold" json:"mold"`
 }
 
 func (c ContaminationLessLocation) asContamination(location *ImageLocation) Contamination {
@@ -1055,11 +1055,11 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	case "nutrients", "nutrient":
 		writeAsJson(w, nutrients)
 		return
-	case "sporePrintColors", "sporePrintColor":
-		writeAsJson(w, sporePrintColors) // TODO: Make this just strings???
+	case strings.ToLower("sporePrintColors"), strings.ToLower("sporePrintColor"): // TODO: validate works
+		writeAsJson(w, sporePrintColors)
 		return
-	case "sporePrintDensities", "sporePrintDensity":
-		writeAsJson(w, sporePrintDensities) // TODO: Make this just strings???
+	case strings.ToLower("sporePrintDensities"), strings.ToLower("sporePrintDensity"): // TODO: validate works
+		writeAsJson(w, sporePrintDensities)
 		return
 	case "sugars", "sugar":
 		writeAsJson(w, sugars)
