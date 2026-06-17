@@ -80,12 +80,12 @@
     - [x] List Page
   - [ ] Fruiting Chamber
     - [x] Display page
-      - [ ] Dispose button
+      - [x] Dispose button
       - [ ] Make sales also trigger disposal? (Do this on many entry types?)
       - [ ] Handle sale
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // self page? probably not
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [ ] Import page
     - [x] List Page
   - [x] Grain Batch
@@ -100,7 +100,7 @@
     - [x] Display page
       - [ ] fix wetness area
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page? probably not (maybe do this later)
+    - [ ] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) (MAYBE DO THIS LATER?)
     - [x] Import page
       - [ ] If no species, do not show many other fields!
       - [ ] Add wetness?
@@ -114,13 +114,13 @@
     - [x] List Page
       - [x] Standard
       - [x] Recent
-  - [ ] LC
+  - [x] LC
     - [x] Display page
       - [x] test creating LC syringe, LC selector and reading rfid tag
         - [x] LC selector and reading rfid tag
       - [x] Create transfer?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [x] NOT WORKING WHEN TRANSFERRING TO GRAIN JAR!
-    - [ ] Create page // TODO: self page? probably not (PROBABLY IGNORE FOR NOW)
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
     - [x] List Page
   - [x] LC Recipe
@@ -132,7 +132,7 @@
         - [x] fully test creating an LC from this page
     - [x] Create page
     - [x] List Page
-  - [ ] LC Syringe
+  - [x] LC Syringe
     - [x] Display page
       - [x] KF validate working properly
       - [x] ConfirmedClean validate working properly
@@ -195,7 +195,7 @@
     - [x] Display page
     - [ ] Create page // TODO: UNSURE WHERE DONE FROM
     - [x] List Page
-  - [ ] Slant
+  - [x] Slant
     - [x] Display page
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)// TODO: self page? probably not... Create from AgarBatch (maybe PCRun?)
@@ -269,7 +269,7 @@
         - [ ] Not moving to existing when updated
     - [x] Create page
     - [x] List Page
-  - [ ] Transfer
+  - [x] Transfer
     - [x] Display page
       - [x] Fix "No toImage present" and "No fromImage present"
     - [x] Create page - No transfer creation page, transfers should only be created from display pages
