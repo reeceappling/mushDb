@@ -22,7 +22,7 @@ import (
 
 type StasisTube struct { // TODO: instructions somewhere?
 	MainCollectionIdField             `bson:"inline"`
-	PcRunOptionalField                `bson:"inline"` // All tubes must go through the PC. probably won't exist for pre-existing tubes. (imports=="unknown") // TODO: new, also used to not be optional
+	PcRunField                        `bson:"inline"` // All tubes must go through the PC. Created with PC. (imports==default)
 	WaterJarOptionalField             `bson:"inline"` // Only populated if the tubes are not PC'd with water inside // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
@@ -63,13 +63,14 @@ func (s StasisTube) generation() (sinceSpore *Generation, sinceSporeOrClone *Gen
 	return s.GenSinceSpore, s.GenSinceFruitOrSpore
 }
 
-func (s StasisTube) Innoculatable() bool {
-	return s.Species == nil &&
-		s.Subspecies == nil &&
-		s.Disposed == nil &&
-		s.Sale == nil &&
-		s.KnownFruitable == nil &&
-		s.Innoc == nil
+func (s StasisTube) Innoculatable() error {
+	return errors.Join(
+		s.RequireNoSpecies(),
+		s.RequireNoSubspecies(),
+		s.RequireNotDisposed(),
+		s.RequireUnsold(),
+		s.RequireUnknownFruitable(),
+		s.RequireNoInnoculation())
 }
 
 //func (s StasisTube) setTransferParent(ctx context.Context, xfer Transfer) error {
@@ -207,14 +208,14 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := StasisTube{
 		MainCollectionIdField: MainCollectionIdField{id},
-		PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
+		PcRunField:            PcRunField{data.PcRun},
 		CreationDateField:     CreationDateField{now},
 		NotesField:            data.NotesField,
 		LastUpdatedField:      LastUpdatedField{now},
 		AclField:              allCanWriteAcl(), // Because initial stasis tubes are empty
 	}
 	// Validate
-	if _, err := toInsert.PcRunOptionalField.Get(ctx); err != nil && !errors.Is(err, ErrMissingOptionalField) {
+	if _, err := toInsert.PcRunField.Get(ctx); err != nil && !errors.Is(err, ErrMissingOptionalField) {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -417,7 +418,7 @@ type importStasisTubeRequest struct {
 	// Optional
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *int
+	Generation *Generation // TODO: make required for when innoculated!
 	// pic as "img"
 	NotesField
 	WriteTagToField
@@ -478,8 +479,19 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
-	if data.Generation != nil {
-		gen = (*Generation)(data.Generation)
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
+			return
+		}
+		gen = data.Generation
+	} else {
+		data.KnownFruitable = nil
+		data.Subspecies = nil
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {
@@ -489,18 +501,6 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	var finalPerms ACL
 	innoculated := data.Species != nil
 	if !innoculated {
-		if data.Generation != nil {
-			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.Subspecies != nil {
-			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.KnownFruitable != nil {
-			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
 		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
@@ -515,6 +515,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		CreationDateField:       data.CreationDateField,
 		SpeciesOptionalField:    data.SpeciesOptionalField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
+		PcRunField:              PcRunField{impPcRun}, // import pc run!
 		GenerationsFields:       GenerationsFieldFor(gen),
 		PicsField:               PicsField{pix},
 		KnownFruitableField:     data.KnownFruitableField,

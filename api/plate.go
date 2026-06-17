@@ -117,13 +117,14 @@ func (p Plate) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return p.GenSinceSpore, p.GenSinceFruitOrSpore
 }
 
-func (p Plate) Innoculatable() bool {
-	return p.Species == nil &&
-		p.Subspecies == nil &&
-		p.Disposed == nil &&
-		p.Sale == nil &&
-		p.KnownFruitable == nil &&
-		p.Innoc == nil
+func (p Plate) Innoculatable() error {
+	return errors.Join(
+		p.RequireNoSpecies(),
+		p.RequireNoSubspecies(),
+		p.RequireNotDisposed(),
+		p.RequireUnsold(),
+		p.RequireUnknownFruitable(),
+		p.RequireNoInnoculation())
 }
 
 func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
@@ -570,7 +571,7 @@ type importPlateRequest struct {
 	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *int `json:"generation,omitempty"`
+	Generation *Generation `json:"generation,omitempty"` // TODO: make required for when innoculated!
 	PourCoverageField
 	// pic as "img"
 	WriteTagToField
@@ -634,8 +635,19 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
-	if data.Generation != nil {
-		gen = (*Generation)(data.Generation)
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
+			return
+		}
+		gen = data.Generation
+	} else {
+		data.KnownFruitable = nil
+		data.Subspecies = nil
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {
@@ -644,18 +656,6 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 
 	var finalPerms ACL
 	if data.Species == nil { // Not innoculated
-		if data.Generation != nil {
-			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.Subspecies != nil {
-			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.KnownFruitable != nil {
-			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
 		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)

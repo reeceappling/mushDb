@@ -14,6 +14,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -30,6 +31,8 @@ type PCRun struct {
 	AclField                   `bson:"inline"`
 }
 
+var impPcRun = exAltId
+
 func initializePCRun(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(PcRunCollectionName)
@@ -44,13 +47,16 @@ func initializePCRun(ctx context.Context) error {
 		return err
 	}
 	// If test run does not exist, then create it
-	testItem := &PCRun{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+	testItem := &PCRun{ // TODO: this is a
+		AlternateCollectionIdField: impPcRun.asIdField(),
 		CreationDateField:          CreationDateField{exampleTime},
 		RunTimeMinutes:             60,
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(nil),
+		NotesField: NotesField{[]Note{{
+			RequiredTimeField: RequiredTimeField{exampleTime},
+			Note:              "PC Run specified for Imports, also utilized for testing and development",
+		}}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		AclField:         allCanReadAcl(nil),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
@@ -156,10 +162,17 @@ type PcRunOptionalField struct {
 }
 type pcRunOptional interface {
 	pcRunId() *AlternateCollectionId
+	HasPcRun() error
 }
 
 func (field PcRunOptionalField) pcRunId() *AlternateCollectionId {
 	return field.PcRun
+}
+func (field PcRunOptionalField) HasPcRun() error {
+	if field.PcRun == nil {
+		return errors.New("must have pc run")
+	}
+	return nil
 }
 
 func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) {

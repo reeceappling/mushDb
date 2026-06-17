@@ -160,6 +160,13 @@ type DisposedField struct {
 	Disposed *unix.Time `bson:"disposed,omitempty" json:"disposed,omitempty"`
 }
 
+func (s DisposedField) RequireNotDisposed() error {
+	if s.Disposed != nil {
+		return errors.New("cannot be disposed")
+	}
+	return nil
+}
+
 func (df DisposedField) DisposalInfo() *unix.Time {
 	return df.Disposed
 }
@@ -218,6 +225,13 @@ type PressureCookedTouchingWaterOptionalField struct {
 
 type KnownFruitableField struct {
 	KnownFruitable *bool `bson:"knownFruitable,omitempty" json:"knownFruitable,omitempty"` // set on transfer in, or once fruited
+}
+
+func (f KnownFruitableField) RequireUnknownFruitable() error {
+	if f.KnownFruitable != nil {
+		return errors.New("knownFruitable must be unpopulated")
+	}
+	return nil
 }
 
 func (kff KnownFruitableField) knownToBeFruitable() *bool {

@@ -36,8 +36,8 @@ type LcSyringe struct {
 	AclField                          `bson:"inline"`
 }
 
-func (lcs LcSyringe) Innoculatable() bool {
-	return false
+func (lcs LcSyringe) Innoculatable() error {
+	return errors.New("lcSyringes never innoculatable")
 }
 
 func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
@@ -223,8 +223,8 @@ type resolvedUpdateSyringeRequest struct {
 
 func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField AclField) (bson.D, error) {
 	mds := NewMods()
-	updatePointerIfNeeded(mds, "confirmedClean", req.ConfirmedClean, existing.ConfirmedClean)
-	return mds.updateSaleIfNeeded(req.Sale, existing.Sale).
+	return updatePointerIfNeeded(mds, "confirmedClean", req.ConfirmedClean, existing.ConfirmedClean).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateKnownFruitableIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
@@ -333,7 +333,8 @@ type importLcSyringeRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *Generation
+	ConfirmedCleanField
+	Generation Generation // TODO: make required!
 	NotesField
 	// pic as "img"
 }
@@ -354,11 +355,9 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if data.Generation != nil {
-		if *data.Generation < 1 {
-			http.Error(w, "generation cannot be <=0 for a non-spore import", http.StatusBadRequest)
-			return
-		}
+	if data.Generation < 1 {
+		http.Error(w, "generation cannot be <=0 for a non-spore import", http.StatusBadRequest)
+		return
 	}
 
 	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
@@ -373,11 +372,12 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		CreationDateField:     data.CreationDateField,
 		GenerationsFields: GenerationsFields{
 			GenSporeField: GenSporeField{
-				GenSinceSpore: data.Generation,
+				GenSinceSpore: &data.Generation,
 			},
-			GenSinceFruitOrSpore: data.Generation,
+			GenSinceFruitOrSpore: &data.Generation,
 		},
 		SpeciesField:            data.SpeciesField,
+		ConfirmedCleanField:     data.ConfirmedCleanField,
 		KnownFruitableField:     data.KnownFruitableField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,

@@ -23,9 +23,16 @@ type InnocField struct { // TODO: multi-innocs?
 	Innoc *AlternateCollectionId `bson:"innoc,omitempty" json:"innoc,omitempty"`
 }
 
-func (in InnocField) Innoculatable() bool {
-	return in.Innoc == nil
+func (f InnocField) RequireNoInnoculation() error {
+	if f.Innoc != nil {
+		return errors.New("must not be innoculated")
+	}
+	return nil
 }
+
+//func (in InnocField) Innoculatable() bool { // TODO: probably get rid of...
+//	return in.Innoc == nil
+//}
 
 type transferReason string
 
@@ -296,10 +303,9 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get child item: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// TODO: ensure child is not innoculated? // TODO: make an Innoculated() method on geneticSource!
 	// ensure child is innoculatable and parent is not disposed
-	if !child.Innoculatable() {
-		http.Error(w, "child is not innoculatable. Does it have a species, subspecies, disposal date, etc?", http.StatusBadRequest)
+	if err = child.Innoculatable(); err != nil { // TODO; rename?
+		http.Error(w, "child is not innoculatable. "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	if parent.DisposalInfo() != nil {

@@ -64,8 +64,8 @@ type SporePrintDensityField struct {
 	Density *SporePrintDensity `bson:"density,omitempty" json:"density,omitempty"`
 }
 
-func (sp SporePrint) Innoculatable() bool {
-	return false
+func (sp SporePrint) Innoculatable() error {
+	return errors.New("sporePrints not innoculatable")
 }
 
 func (sp SporePrint) CanTransferTo(dst geneticSource) error {

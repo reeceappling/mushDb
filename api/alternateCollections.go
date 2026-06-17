@@ -291,7 +291,9 @@ var ListSubspeciesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http
 //		//return GetPermsMiddleware(handler)
 //	}
 func HandleHttpWriteError(err error) {
-	println("http write errors are currently unhandled! Err: " + err.Error())
+	if err != nil {
+		println("http write errors are currently unhandled! Err: " + err.Error())
+	}
 }
 
 //

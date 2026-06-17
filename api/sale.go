@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -48,6 +49,13 @@ type createSaleRequestNew struct {
 
 type SaleField struct { // TODO: sales is multiple only for LC!
 	Sale *AlternateCollectionId `bson:"sale,omitempty" json:"sale,omitempty"`
+}
+
+func (f SaleField) RequireUnsold() error {
+	if f.Sale != nil {
+		return errors.New("must be unsold")
+	}
+	return nil
 }
 
 type SalesField struct { // TODO: sales is multiple only for plugs!

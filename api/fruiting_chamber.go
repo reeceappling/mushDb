@@ -49,13 +49,14 @@ func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
 	// TODO: make transferrable to plate? box? bag?
 }
 
-func (f FruitingChamber) Innoculatable() bool {
-	return f.Species == nil &&
-		f.Subspecies == nil &&
-		f.Disposed == nil &&
-		f.Sale == nil &&
-		f.KnownFruitable == nil &&
-		f.Innoc == nil
+func (f FruitingChamber) Innoculatable() error {
+	return errors.Join(
+		f.RequireNoSpecies(),
+		f.RequireNoSubspecies(),
+		f.RequireNotDisposed(),
+		f.RequireUnsold(),
+		f.RequireUnknownFruitable(),
+		f.RequireNoInnoculation())
 }
 
 func (f FruitingChamber) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -308,7 +309,7 @@ type importFruitingChamberRequest struct {
 	SubstrateRatio float64 // TODO: used to be optional
 	CasingRatio    float64 // TODO: used to be optional
 	SubspeciesOptionalField
-	Generation *int
+	Generation Generation // TODO: make required!
 	KnownFruitableField
 	WriteTagToField
 	//PermsOnRequest `json:"acl"` // from spec/subspec
@@ -387,10 +388,11 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
-	var gen *Generation = nil
-	if data.Generation != nil {
-		gen = (*Generation)(data.Generation)
+	if data.Generation < 1 {
+		http.Error(w, "generation must be positive", http.StatusBadRequest)
+		return
 	}
+	var gen = &data.Generation
 	pix := []PicWithNotes{}
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}

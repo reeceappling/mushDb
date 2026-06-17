@@ -31,8 +31,8 @@ type SporeSwab struct {
 	AclField                          `bson:"inline"`
 }
 
-func (sw SporeSwab) Innoculatable() bool {
-	return false
+func (sw SporeSwab) Innoculatable() error {
+	return errors.New("sporeSwabs are not innoculatable")
 }
 
 func (sw SporeSwab) CanTransferTo(dst geneticSource) error {
@@ -221,7 +221,18 @@ func (req updateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField
 }
 
 func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
-	data := updateSporeSwabRequest{}
+	defer r.Body.Close()
+	req := updateSporeSwabRequest{}
+	bs, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = json.Unmarshal(bs, &req)
+	if err != nil {
+		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
@@ -235,7 +246,6 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := *mainCollId
 
-	out := data
 	ctx, db := Db(r)
 	coll := db.Collection(SporeSwabCollectionName)
 
@@ -246,7 +256,7 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, req.modsFor, &existing, req.PermsOnRequest)
 }
 
 type importSporeSwabRequest struct {

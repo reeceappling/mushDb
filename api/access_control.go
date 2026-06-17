@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -314,6 +315,12 @@ type ResolvedUserPerms struct {
 	projects    map[projectName]*UserProjectPerm // nil is readonly, false is canWrite, true is admin of project
 }
 
+func (perms ResolvedUserPerms) GetUser(ctx context.Context) (*User, error) {
+	var usr = &User{}
+	email := perms.Email
+	err := DbFrom(ctx).Collection(UserCollName).FindOne(ctx, BsonFindFilter("_id", email)).Decode(usr)
+	return usr, err
+}
 func (perms ResolvedUserPerms) HasPermissionToEdit(item Permissioned) bool {
 	userPerm := item.Permissions().HighestPermFor(perms)
 	return userPerm != nil && bool(*userPerm)

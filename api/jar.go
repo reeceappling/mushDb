@@ -29,7 +29,7 @@ type GrainJar struct {
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
 	BurstGrainsField                  `bson:"inline"`
-	PcRunOptionalField                `bson:"inline"`
+	PcRunOptionalField                `bson:"inline"` // Imports default, can be created without a run!
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -89,13 +89,15 @@ func (j GrainJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Gener
 //	return nil
 //}
 
-func (j GrainJar) Innoculatable() bool {
-	return j.Species == nil &&
-		j.Subspecies == nil &&
-		j.Disposed == nil &&
-		j.Sale == nil &&
-		j.KnownFruitable == nil &&
-		j.Innoc == nil
+func (j GrainJar) Innoculatable() error {
+	return errors.Join(
+		j.RequireNoSpecies(),
+		j.RequireNoSubspecies(),
+		j.RequireNotDisposed(),
+		j.RequireUnsold(),
+		j.RequireUnknownFruitable(),
+		j.RequireNoInnoculation(),
+		j.HasPcRun())
 }
 
 func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
@@ -245,7 +247,7 @@ type createJarRequest struct {
 	GrainBatchField
 	//WetnessField                           // TODO: maybe add late?
 	//BurstGrainsField                       // TODO: maybe add late?
-	PcRunField
+	PcRunOptionalField // TODO: MAKE OPTIONAL
 	NotesField
 	WriteTagToField
 }
@@ -276,20 +278,23 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to find grain batch: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = data.PcRunField.Get(ctx)
+	_, err = data.PcRunOptionalField.Get(ctx)
 	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
-		return
+		if !errors.Is(err, ErrMissingOptionalField) {
+			dbErr(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
+
 	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&batch.Recipe},
 		GrainBatchOptionalField: data.GrainBatchField.asOptional(),
 		SizeCups:                data.SizeCups,
-		PcRunOptionalField:      data.PcRunField.asOptional(),
-		BurstGrainsField:        BurstGrainsField{nil}, //      data.BurstGrainsField, // initially set to nil, can be updated later. TODO: set this optionally?
-		WetnessField:            WetnessField{nil},     //           data.WetnessField, // initially set to nil, can be updated later. TODO: set this optionally?
+		PcRunOptionalField:      data.PcRunOptionalField, // can be nil, which is ok, means not PC'd yet.
+		BurstGrainsField:        BurstGrainsField{nil},   //      data.BurstGrainsField, // initially set to nil, can be updated later. TODO: set this optionally?
+		WetnessField:            WetnessField{nil},       //           data.WetnessField, // initially set to nil, can be updated later. TODO: set this optionally?
 		CreationDateField:       CreationDateField{now},
 		NotesField:              NotesField{data.Notes},
 		LastUpdatedField:        LastUpdatedField{now},
@@ -311,7 +316,7 @@ type importJarRequest struct {
 	CreationDateField
 	SpeciesOptionalField // Only empty when non-innoc'd
 	SubspeciesOptionalField
-	Generation *int
+	Generation *Generation // TODO: make required for when innoculated!
 	KnownFruitableField
 	WriteTagToField
 	// image as "img"
@@ -392,8 +397,19 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var gen *Generation = nil
-	if data.Generation != nil {
-		gen = (*Generation)(data.Generation)
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
+			return
+		}
+		gen = data.Generation
+	} else {
+		data.KnownFruitable = nil
+		data.Subspecies = nil
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {
@@ -403,18 +419,6 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	var finalPerms ACL
 	innoculated := data.Species != nil
 	if !innoculated {
-		if data.Generation != nil {
-			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.Subspecies != nil {
-			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.KnownFruitable != nil {
-			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
 		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
@@ -423,15 +427,14 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		SizeCups:                data.SizeCups,
 		JarRecipeField:          JarRecipeField{&data.Recipe},
-		GrainBatchOptionalField: GrainBatchOptionalField{nil}, // Batch not provided for import
-		WetnessField:            WetnessField{},               // TODO: fix?
-		BurstGrainsField:        BurstGrainsField{},           // TODO: fix?
-		PcRunOptionalField:      PcRunOptionalField{nil},      // No pc runs on imports
+		GrainBatchOptionalField: GrainBatchOptionalField{nil},  // Batch not provided for import
+		WetnessField:            WetnessField{},                // TODO: fix?
+		BurstGrainsField:        BurstGrainsField{},            // TODO: fix?
+		PcRunOptionalField:      PcRunOptionalField{&impPcRun}, // Default run on import
 		CreationDateField:       CreationDateField{data.CreationDate},
 		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
 		SubspeciesOptionalField: data.SubspeciesOptionalField,

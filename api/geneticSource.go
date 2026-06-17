@@ -50,7 +50,7 @@ type geneticSource interface {
 	generation() (sinceSpore *Generation, sinceSporeOrClone *Generation)
 	Permissioned
 	CanTransferTo(dst geneticSource) error
-	Innoculatable() bool
+	Innoculatable() error
 	CollectionItem
 	Disposable
 	SetPerms(AclField) // MUST be a pointer reciever

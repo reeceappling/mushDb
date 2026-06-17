@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"slices"
 )
 
 // needed for
@@ -22,7 +23,7 @@ import (
 
 type LiquidCulture struct {
 	MainCollectionIdField             `bson:"inline"`
-	PcRunOptionalField                `bson:"inline"` // likely won't exist for pre-existing or purchased
+	PcRunField                        `bson:"inline"` // default for purchased
 	LcRecipeField                     `bson:"inline"` // always exists (unless purchased)
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
@@ -44,7 +45,11 @@ type LiquidCulture struct {
 }
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
-	return errors.New("LiquidCulture cannot transfer this way. Must create a new lcSyringe")
+	canTransferTo := []string{GrainJarSourceType, PlateSourceType, SlantSourceType, StasisTubeSourceType, LcSourceType} // TODO: validate this encompasses all...
+	if !slices.Contains(canTransferTo, dst.SourceType()) {
+		return errors.New("LC cannot transfer to " + dst.SourceType())
+	}
+	return nil
 }
 
 func (l LiquidCulture) GeneticInfoAsParent() (GeneticParentInfo, error) {
@@ -60,12 +65,13 @@ func (l LiquidCulture) generation() (sinceSpore *Generation, sinceSporeOrClone *
 	return l.GenSinceSpore, l.GenSinceFruitOrSpore
 }
 
-func (l LiquidCulture) Innoculatable() bool {
-	return l.Species == nil &&
-		l.Subspecies == nil &&
-		l.Disposed == nil &&
-		l.KnownFruitable == nil &&
-		l.Innoc == nil
+func (l LiquidCulture) Innoculatable() error {
+	return errors.Join(
+		l.RequireNoSpecies(),
+		l.RequireNoSubspecies(),
+		l.RequireNotDisposed(),
+		l.RequireUnknownFruitable(),
+		l.RequireNoInnoculation())
 }
 
 func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
@@ -105,7 +111,7 @@ func initializeLCs(ctx context.Context) error {
 	coll := db.Collection(LCCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
-		newSimpleIndex("pcRun", "pcRun", false, true, false),
+		newSimpleIndex("pcRun", "pcRun", false, false, false),
 		newSimpleIndex("recipe", "recipe", false, false, false),
 		newSimpleIndex("species", "species", false, true, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
@@ -133,7 +139,7 @@ func initializeLCs(ctx context.Context) error {
 	testId := mainCollIdForint(idTestLC)
 	testItem := &LiquidCulture{
 		MainCollectionIdField:   MainCollectionIdField{testId},
-		PcRunOptionalField:      PcRunOptionalField{&exAltId},
+		PcRunField:              PcRunField{impPcRun},
 		LcRecipeField:           LcRecipeField{exAltId},
 		CreationDateField:       CreationDateField{exampleTime},
 		SpeciesOptionalField:    SpeciesOptionalField{&exampleSpecies},
@@ -158,7 +164,7 @@ func initializeLCs(ctx context.Context) error {
 	testId2 := mainCollIdForint(idTestLC2)
 	testItem2 := &LiquidCulture{
 		MainCollectionIdField:   MainCollectionIdField{testId2},
-		PcRunOptionalField:      PcRunOptionalField{nil},
+		PcRunField:              PcRunField{impPcRun},
 		LcRecipeField:           LcRecipeField{exAltId},
 		CreationDateField:       CreationDateField{exampleTime},
 		SpeciesOptionalField:    SpeciesOptionalField{nil},
@@ -220,15 +226,15 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := LiquidCulture{
 		MainCollectionIdField: MainCollectionIdField{id},
 		LcRecipeField:         data.LcRecipeField,
-		PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
+		PcRunField:            PcRunField{data.PcRun},
 		CreationDateField:     CreationDateField{now},
 		NotesField:            NotesField{data.Notes},
 		LastUpdatedField:      LastUpdatedField{now},
 		AclField:              allCanWriteAcl(),
 	}
 
-	_, err = toInsert.PcRunOptionalField.Get(ctx)
-	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
+	_, err = toInsert.PcRunField.Get(ctx)
+	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -241,7 +247,7 @@ type importLiquidCultureRequest struct {
 	SpeciesOptionalField // TODO: made optional
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *int
+	Generation *Generation // TODO: make required for when innoculated!
 	ConfirmedCleanField
 	WriteTagToField
 	// image as "img"
@@ -335,8 +341,20 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var gen *Generation = nil
-	if data.Generation != nil {
-		gen = (*Generation)(data.Generation)
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
+			return
+		}
+		gen = data.Generation
+	} else {
+		data.KnownFruitable = nil
+		data.Subspecies = nil
+		data.ConfirmedClean = nil
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {
@@ -346,22 +364,6 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	var finalPerms ACL
 	innoculated := data.Species != nil
 	if !innoculated {
-		if data.Generation != nil {
-			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.Subspecies != nil {
-			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.KnownFruitable != nil {
-			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.ConfirmedClean != nil {
-			http.Error(w, "confirmedClean without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
 		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
@@ -378,8 +380,8 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	toInsert := LiquidCulture{
-		MainCollectionIdField: MainCollectionIdField{id},
-		//PcRunOptionalField:      PcRunOptionalField{},       // No pc runs on imports
+		MainCollectionIdField:   MainCollectionIdField{id},
+		PcRunField:              PcRunField{impPcRun},
 		LcRecipeField:           LcRecipeField{data.Recipe},
 		CreationDateField:       CreationDateField{data.CreationDate},
 		SpeciesOptionalField:    SpeciesOptionalField{data.Species},

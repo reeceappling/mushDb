@@ -35,8 +35,8 @@ type MSS struct {
 	AclField                          `bson:"inline"`
 }
 
-func (M MSS) Innoculatable() bool {
-	return false // TODO: ensure ok
+func (M MSS) Innoculatable() error {
+	return errors.New("mss never innoculatable") // TODO: ensure ok
 }
 
 func (M MSS) CanTransferTo(dst geneticSource) error {

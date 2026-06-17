@@ -57,6 +57,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {TransfersOutDisplay} from "@/app/components/transferClient";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -166,10 +167,11 @@ export default function SporeSwabDisplay(
         const [initial, setInitial] = useState(data)
 
         const [sale, setSale] = useState(initial.sale)
-        const [disposed, setDisposed] = useState(initial.disposed)
+        const [disposed, setDisposed] = useState(data.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
         const [acl, setAcl] = useState<ACL>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
+        const [transfersOut, setTransfersOut] = useState(initial.transfersOut)
         const updateInitial = (updated: SporeSwabData) => {
             setInitial(updated)
             setSale(updated.sale)
@@ -177,6 +179,7 @@ export default function SporeSwabDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
             setErr(undefined)
+            setTransfersOut(updated.transfersOut)
         }
         const cookies = useContext(CookiesContext)
         const submit = () => {
@@ -195,29 +198,31 @@ export default function SporeSwabDisplay(
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            // TODO: probably get rid of? OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], allCookies(cookies)),
             WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
+            {/* TODO: AREA TO CREATE TRANSFER! */}
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
-            <OnViewCreatorsTriColArea OnViewCreators={ovcs}
-                                      readonly={readonly}/> {/*swab to agar and that's about it */}
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/> {/*swab to agar and that's about it */}
             <FlexedArea>
                 <FlexedSinglesGroup>
-                    <TestAndValidate todos={["reformat these into groups"]}>
-                        <TestAndValidate todos={["issues when initial.parent is undefined!"]}>
-                            <ParentDisplay parent={initial.parent} parentType={initial.parentType} />
-                        </TestAndValidate>
-                        <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}
-                                  headerLevel={headerLevel}/>
-                        <DateArea pre={"Print Date: "} readonly={true} when={initial.creationDate}/>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                        <DisposedDisplay readonly={false} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
-                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                       </TestAndValidate>
+                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    <TestAndValidate todos={["issues when initial.parent is undefined!"]}>
+                        <ParentDisplay parent={initial.parent} parentType={initial.parentType} />
+                    </TestAndValidate>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <DateArea pre={"Print Date: "} readonly={true} when={initial.creationDate}/>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                    <DisposedDisplay readonly={false} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
+                    <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}
+                              headerLevel={headerLevel}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
+            <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"sporeSwab"}
+                                 transfersOut={transfersOut}
+                                 allowNewTransferCreation={!readonly} validTypesTo={["plate", "slant"/* TODO: any others?*/]}/>
 
             <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>

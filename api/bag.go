@@ -22,8 +22,8 @@ type Bag struct {
 	MainCollectionIdField             `bson:"inline"`
 	SubstrateRecipeField              `bson:"inline"`
 	SubstrateBatchOptionalField       `bson:"inline"`
-	PcRunOptionalField                `bson:"inline"` // this may not exist for pre-existing bags
-	FilterSize                        string          `bson:"filterSize" json:"filterSize"`
+	PcRunField                        `bson:"inline"`
+	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	SealDate                          *unix.Time      `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
@@ -47,13 +47,14 @@ type Bag struct {
 	AclField         `bson:"inline"`
 }
 
-func (b Bag) Innoculatable() bool {
-	return b.Species == nil &&
-		b.Subspecies == nil &&
-		b.Disposed == nil &&
-		b.Sale == nil &&
-		b.KnownFruitable == nil &&
-		b.Innoc == nil
+func (b Bag) Innoculatable() error {
+	return errors.Join(
+		b.RequireNoSpecies(),
+		b.RequireNoSubspecies(),
+		b.RequireNotDisposed(),
+		b.RequireUnsold(),
+		b.RequireUnknownFruitable(),
+		b.RequireNoInnoculation())
 }
 
 func (b Bag) CanTransferTo(dst geneticSource) error {
@@ -150,7 +151,7 @@ func initializeBags(ctx context.Context) error {
 		MainCollectionIdField:       MainCollectionIdField{testId},
 		SubstrateRecipeField:        SubstrateRecipeField{exAltId},
 		SubstrateBatchOptionalField: SubstrateBatchOptionalField{SubstrateBatch: utils.Pointer(altCollIdForint(idWoodPellets))},
-		PcRunOptionalField:          PcRunOptionalField{&exAltId},
+		PcRunField:                  PcRunField{exAltId},
 		FilterSize:                  "5nm",
 		CreationDateField:           CreationDateField{exampleTime},
 		GenerationsFields: GenerationsFields{
@@ -191,7 +192,7 @@ var bagFilterSizes = map[string]string{
 type createBagRequest struct {
 	SubstrateBatchField
 	WetnessField
-	PcRunField
+	PcRunField // Bags cannot be created without a PC run.
 	FilterSize string
 	NotesField
 	WriteTagToField
@@ -244,7 +245,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		SubstrateRecipeField:        batch.SubstrateRecipeField,
 		SubstrateBatchOptionalField: data.SubstrateBatchField.asOptional(),
 		WetnessField:                data.WetnessField,
-		PcRunOptionalField:          PcRunOptionalField{&data.PcRun},
+		PcRunField:                  PcRunField{data.PcRun},
 		FilterSize:                  data.FilterSize,
 		CreationDateField:           CreationDateField{now},
 		NotesField:                  data.NotesField,
@@ -376,7 +377,7 @@ type importBagRequest struct {
 	FilterSize string
 	SpeciesOptionalField
 	SubspeciesOptionalField
-	Generation *int
+	Generation *Generation // TODO: make required when innoculated
 	KnownFruitableField
 	WriteTagToField
 	// image as "img"
@@ -463,14 +464,26 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+
 	if !dataProcessed {
 		err = errors.New("no non-image Data found on form request")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	var gen *Generation = nil
-	if data.Generation != nil {
-		gen = (*Generation)(data.Generation)
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
+			return
+		}
+		gen = data.Generation
+	} else {
+		data.KnownFruitable = nil
+		data.Subspecies = nil
 	}
 
 	pix := []PicWithNotes{}
@@ -492,18 +505,6 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	var finalPerms ACL
 	innoculated := data.Species != nil
 	if !innoculated {
-		if data.Generation != nil {
-			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.Subspecies != nil {
-			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.KnownFruitable != nil {
-			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 		finalPerms = allCanWriteAcl().ACL
 	} else {
 		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
@@ -517,7 +518,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := &Bag{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		SubstrateRecipeField:    data.SubstrateRecipeField,
-		PcRunOptionalField:      PcRunOptionalField{},
+		PcRunField:              PcRunField{impPcRun}, // imported id for pc run
 		FilterSize:              data.FilterSize,
 		CreationDateField:       data.CreationDateField,
 		GenerationsFields:       GenerationsFieldFor(gen),

@@ -22,6 +22,12 @@
 - [ ] AgarRecipeArea now has ability to load recipe name if only given id
 
 
+- Jar, 
+
+
+# Wishlist
+- [ ] Biometric authentication
+  - https://freedium-mirror.cfd/https://towardsdev.com/building-a-react-app-with-biometric-authentication-cc69d210a416
 # TODO
 - [ ] /db/list/nonguests
   - [ ] Make many typscript things request only nonguests
@@ -34,7 +40,9 @@
     - [x] Display page
       - [x] Create Plates
       - [x] Create Slant poured pre-PC run
-      - [ ] Create Slant poured post-PC run?
+      - [ ] Create Slant poured post-PC run? (PROBABLY NOT)
+        - [ ] Create Agar batch without PC Run
+        - [ ] Agar batch without PC Run properly does not populate PC Run on Slant
     - [x] List Page
   - [ ] Agar Recipe
     - [x] Display page
@@ -94,6 +102,7 @@
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page // TODO: self page? probably not (maybe do this later)
     - [x] Import page
+      - [ ] If no species, do not show many other fields!
       - [ ] Add wetness?
       - [ ] Add burst grains?
       - [ ] Add notes?
@@ -109,9 +118,9 @@
     - [x] Display page
       - [x] test creating LC syringe, LC selector and reading rfid tag
         - [x] LC selector and reading rfid tag
-      - [ ] Create transfer?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-        - [ ] NOT WORKING WHEN TRANSFERRING TO GRAIN JAR!
-    - [ ] Create page // TODO: self page? probably not
+      - [x] Create transfer?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [x] NOT WORKING WHEN TRANSFERRING TO GRAIN JAR!
+    - [ ] Create page // TODO: self page? probably not (PROBABLY IGNORE FOR NOW)
     - [x] Import page
     - [x] List Page
   - [x] LC Recipe
@@ -125,18 +134,18 @@
     - [x] List Page
   - [ ] LC Syringe
     - [x] Display page
-      - [ ] KF validate working properly
-      - [ ] ConfirmedClean validate working properly
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page? probably not
+      - [x] KF validate working properly
+      - [x] ConfirmedClean validate working properly
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
-      - [ ] Confirmed clean is not propagating properly, always showing up as unknown...
+      - [x] Confirmed clean is not propagating properly, always showing up as unknown...
     - [x] List Page
   - [ ] MSS
     - [x] Display page
       - [ ] Sell area, ensure working as we want, and that selling marks as disposed
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page (probably no self page)?
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
     - [x] List Page
   - [ ] PC Run
@@ -156,7 +165,7 @@
     - [x] Display page
       - [ ] pour and condens cov
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page (probably no self page)?
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
       - [ ] Add Coverage sliders
     - [x] List Page
@@ -189,7 +198,7 @@
   - [ ] Slant
     - [x] Display page
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page? probably not... Create from AgarBatch (maybe PCRun?)
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)// TODO: self page? probably not... Create from AgarBatch (maybe PCRun?)
     - [x] Import page
     - [x] List Page
   - [ ] Species
@@ -204,9 +213,9 @@
     - [x] List Page
   - [ ] Spore Print
     - [x] Display page
-      - [ ] Create MSS not working, failing to find current print
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page? probably not! do much later if needed!
+      - [x] Create MSS not working, failing to find current print
+      - [ ] Create transfer? PROBABLY NOT, ONLY MSS?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) only done from fruit, bag, box, plate?
     - [x] Import page
       - [x] Spore print colors and densities selectors not working!
     - [x] List Page
@@ -215,12 +224,12 @@
       - [x] Parent area
         - [ ] Link for when parentType is undefined but parentId is defined
       - [ ] Sales, do sale, mark as disposed when sold
-      - [ ] Disposal area
-      - [ ] UPDATING NOTES NOT WORKING!
-      - [ ] Reformat groups
+      - [x] Disposal area
+      - [x] UPDATING NOTES NOT WORKING!
+      - [x] Reformat groups
       - [x] Move write tag to top
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: self page? probably not
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
       - [x] Spore print colors and densities selectors not working!
     - [x] List Page
@@ -250,7 +259,7 @@
       - [x] Create bag validate
       - [ ] Create FC validate
         - [ ] NOT PROPERLY RETURNING ONCE CREATED!
-    - [ ] Create page // TODO: self page? probably not
+    - [ ] Create page (DO MUCH LATER! SHOULD CREATE RECIPE AS WELL!)
     - [x] List Page
   - [ ] Substrate Recipe
     - [x] Display page

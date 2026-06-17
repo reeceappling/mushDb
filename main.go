@@ -274,6 +274,11 @@ func main() {
 	http.Handle("/guestLogin", rateLimitCtxMiddleware(handleGuestLogin))
 	http.Handle("/auth/{provider}", CorsAuthMiddleware(rateLimitCtxMiddleware(authProviderHandler)))
 	http.Handle("/auth/{provider}/callback", CorsAuthMiddleware(rateLimitCtxMiddleware(authCallbackHandler)))
+	// Biometrics endpoints TODO: (maybe add biometric provider?)
+	//http.Handle("/biometrics/fingerprint/register-start", CorsAuthMiddleware(rateLimitCtxMiddleware(http.HandlerFunc(BeginFingerprintRegistration))))   // TODO: change middlewares and handler
+	//http.Handle("/biometrics/fingerprint/register-end", CorsAuthMiddleware(rateLimitCtxMiddleware(http.HandlerFunc(FinishFingerprintRegistration))))    // TODO: change middlewares and handler
+	//http.Handle("/biometrics/fingerprint/register-challenge", CorsAuthMiddleware(rateLimitCtxMiddleware(biometricFingerprintRegisterChallengeHandler))) // TODO: change middlewares and handler
+	//http.Handle("/biometrics/fingerprint/verify-challenge", CorsAuthMiddleware(rateLimitCtxMiddleware(biometricFingerprintVerifyChallengeHandler)))     // TODO: change middlewares and handler
 
 	// Proxied to react
 	// Generalized react endpoints
@@ -1585,3 +1590,206 @@ func enableCors(w *http.ResponseWriter, r *http.Request) {
 		Access-Control-Max-Age: Defines the preflight cache duration.
 	*/
 }
+
+//var (
+//	webAuthn *webauthn.WebAuthn
+//	_        PasskeyUser = &rfid.User{} // TODO: delete later
+//)
+//func init(){
+//	origin := "mush.appli.ng"
+//	wconfig := &webauthn.Config{
+//		RPDisplayName: "Go Webauthn",    // Display Name for your site  // TODO: fix
+//		RPID:          "mush.appli.ng",             // Generally the FQDN for your site    // TODO: fix
+//		RPOrigins:     []string{origin}, // The origin URLs allowed for WebAuthn    // TODO: fix?
+//	}
+//	var err error = nil
+//	if webAuthn, err = webauthn.New(wconfig); err != nil {
+//		fmt.Printf("[FATA] %s", err.Error())
+//		os.Exit(1)
+//	}
+//
+//}
+//
+//type PasskeyUser interface {
+//	webauthn.User
+//	AddCredential(*webauthn.Credential)
+//	UpdateCredential(*webauthn.Credential)
+//}
+//
+//type PasskeyStore interface {
+//	GetUser(userName string) PasskeyUser
+//	SaveUser(PasskeyUser)
+//	GetSession(token string) webauthn.SessionData
+//	SaveSession(token string, data webauthn.SessionData)
+//	DeleteSession(token string)
+//}
+//
+//func BeginFingerprintRegistration(w http.ResponseWriter, r *http.Request) {
+//	userPerms, err := rfid.GetAuthInfo(r.Context())
+//	if err != nil {
+//		http.Error(w, "failed to get user for request: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	user, err := userPerms.GetUser(r.Context())
+//	if err != nil {
+//		http.Error(w, "failed to get user for request: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	//authSvc := rfid.GetAuthService(r.Context())
+//
+//	options, session, err := webAuthn.BeginRegistration(user)
+//	if err != nil {
+//		msg := fmt.Sprintf("can't begin registration: %s", err.Error())
+//		http.Error(w, msg, http.StatusBadRequest)
+//		return
+//	}
+//
+//	// Make a session key and store the sessionData values
+//	t := uuid.New().String()
+//	datastore.SaveSession(t, *session) // TODO: save the session????
+//
+//	JSONResponse(w, t, options, http.StatusOK) // return the options generated with the session key
+//	// options.publicKey contain our registration options
+//}
+//
+//func FinishFingerprintRegistration(w http.ResponseWriter, r *http.Request) {
+//	// Get the session key from the header
+//	t := r.Header.Get("Session-Key")
+//	// Get the session data stored from the function above
+//	session := datastore.GetSession(t) // FIXME: cover invalid session
+//
+//	// In out example username == userID, but in real world it should be different   user := datastore.GetUser(string(session.UserID)) // Get the user
+//
+//	credential, err := webAuthn.FinishRegistration(user, session, r)
+//	if err != nil {
+//		msg := fmt.Sprintf("can't finish registration: %s", err.Error())
+//		l.Printf("[ERRO] %s", msg)
+//		JSONResponse(w, "", msg, http.StatusBadRequest)
+//
+//		return
+//	}
+//
+//	// If creation was successful, store the credential object
+//	user.AddCredential(credential)
+//	datastore.SaveUser(user)
+//	// Delete the session data
+//	datastore.DeleteSession(t)
+//
+//	l.Printf("[INFO] finish registration ----------------------/")
+//	JSONResponse(w, "", "Registration Success", http.StatusOK) // Handle next steps
+//}
+//
+//type challengePayload struct {
+//	Challenge string
+//	// TODO: any more?
+//}
+//
+//func generateRegistrationOptions(rpID string, rpName string, userName string) (payload challengePayload, err error) {
+//	// TODO: DO THIS!
+//}
+//
+//var biometricFingerprintRegisterChallengeHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+//	ctx := r.Context()
+//	options, sessionData, err := BeginRegistration
+//	config, err := configuration.Load([]string{"config.yaml"}, true, nil) // TODO: fix
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	authorizer := webauthn.New()
+//	//const { generateRegistrationOptions, verifyRegistrationResponse } = require('@simplewebauthn/server');
+//	rpId := "localhost"        // TODO: change!
+//	rpName := "My Application" // TODO: change!
+//	userName := "emailHere"    // TODO: change!
+//	payload, err := generateRegistrationOptions(rpId, rpName, userName)
+//	if err != nil {
+//		http.Error(w, "failed to generate registration options: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	bs, err := json.Marshal(payload)
+//	if err != nil {
+//		http.Error(w, "failed to marshal registration options: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	_, err = w.Write(bs)
+//	rfid.HandleHttpWriteError(err)
+//	//try {
+//	//	const challengePayload = await generateRegistrationOptions({
+//	//	rpID: 'localhost',
+//	//	rpName: 'My Application',
+//	//	userName: req.user.id,
+//	//});
+//	//	if (challengePayload) {
+//	//	res.json({ code: 200, data: challengePayload, status: 'success' });
+//	//} else {
+//	//	res.json({ code: 500, message: 'Something went wrong. Please contact your administrator.', status: 'error' });
+//	//}
+//	//} catch (err) {
+//	//	console.error(err);
+//	//	res.status(500).json({ message: 'Internal Server Error' });
+//	//}
+//	// TODO: OVERHAUL!
+//}
+//
+//type verifResp struct {
+//	RegistrationInfo RegistrationInfo
+//	Verified         bool
+//}
+//type RegistrationInfo struct {
+//	// TODO: fix!
+//}
+//
+//func verifyRegistrationResponse(expectedChallenge, expectedOrigin, expectedRPID string, response any /* TODO: what type?*/) (verifResp, error) {
+//	// TODO: this!
+//	return verifResp{}, errors.New("not implemented")
+//}
+//func saveFingerprint(userId string, registrationInfo RegistrationInfo) error {
+//	// TODO: this!
+//	return errors.New("not implemented")
+//}
+//
+//var biometricFingerprintVerifyChallengeHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+//	ctx := r.Context()
+//	expChallenge := ""      // req.body.challenge // TODO: fix
+//	expOrigin := ""         // TODO: fix
+//	expRPID := ""           // TODO: fix
+//	reqBodyCredential := "" // req.body.credential // TODO: fix!
+//	verificationResult, err := verifyRegistrationResponse(expChallenge, expOrigin, expRPID, reqBodyCredential)
+//	if err != nil {
+//		http.Error(w, "failed to verify registration response: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	user, err := rfid.GetAuthInfo(ctx) // TODO: ensure ok here...
+//	if err != nil {
+//		http.Error(w, "failed to get user info: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	// Save the fingerprint information to the database
+//	if err = saveFingerprint(user.Email, verificationResult.RegistrationInfo); err != nil {
+//		http.Error(w, "failed to save fingerprint: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	_, err = w.Write([]byte("Biometric Registration Successful!"))
+//	rfid.HandleHttpWriteError(err)
+//	// TODO: OVERHAUL!
+//	//const { generateRegistrationOptions, verifyRegistrationResponse } = require('@simplewebauthn/server');
+//	//try {
+//	//	const verificationResult = await verifyRegistrationResponse({
+//	//	expectedChallenge: req.body.challenge,
+//	//	expectedOrigin: 'https://myapp.example.com',
+//	//	expectedRPID: 'myapp.example.com',
+//	//	response: req.body.credential,
+//	//});
+//	//	if (verificationResult.verified) {
+//	//	// Save the fingerprint information to the database
+//	//	await saveFingerprint(req.user.id, verificationResult.registrationInfo);
+//	//	res.json({ code: 200, status: 'success', message: 'Biometric Registration Successful!' });
+//	//} else {
+//	//	res.json({ code: 500, message: 'Invalid user!', status: 'error' });
+//	//}
+//	//} catch (err) {
+//	//	console.error(err);
+//	//	res.status(500).json({ message: 'Internal Server Error' });
+//	//}
+//	// TODO: OVERHAUL!
+//}

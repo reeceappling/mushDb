@@ -30,7 +30,7 @@ type PlugsJar struct {
 	//PicsField                           `bson:"inline"` // TODO: pics?
 	//ContaminationsField                 `bson:"inline"` // TODO: contams?
 	KnownFruitableField `bson:"inline"`
-	PcRunOptionalField  `bson:"inline"` // TODO: used to be required, but not found for imports! created before innoculation
+	PcRunOptionalField  `bson:"inline"` // defaults on import, but can be created without a run!
 	SalesField          `bson:"inline"` // TODO: MULTIPLE!
 	DisposedField       `bson:"inline"` // Also changed once all pegs are sold/used?
 	NotesField          `bson:"inline"`
@@ -86,12 +86,19 @@ func (pl PlugsJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Gene
 	return pl.GenSinceSpore, pl.GenSinceFruitOrSpore
 }
 
-func (pl PlugsJar) Innoculatable() bool {
-	return pl.Species == nil &&
-		pl.Subspecies == nil &&
-		pl.Disposed == nil &&
-		pl.KnownFruitable == nil &&
-		pl.Innoc == nil
+func (pl PlugsJar) Innoculatable() error {
+	var soldErr error = nil
+	if pl.Sales != nil || len(pl.Sales) != 0 {
+		soldErr = errors.New("cannot innoculate sold plugs")
+	}
+	return errors.Join(
+		pl.RequireNoSpecies(),
+		pl.RequireNoSubspecies(),
+		pl.RequireNotDisposed(),
+		soldErr,
+		pl.RequireUnknownFruitable(),
+		pl.RequireNoInnoculation(),
+		pl.HasPcRun())
 }
 
 type Dowel struct {
@@ -216,7 +223,7 @@ func initializePlugs(ctx context.Context) error {
 
 type createPlugsRequest struct {
 	DowelTypes         []Dowel `json:"dowelTypes"`
-	PcRunOptionalField         // OPTIONAL! // TODO: Can be created before pc!?
+	PcRunOptionalField         // OPTIONAL! // TODO: Can be created before pc!
 	NotesField
 	WriteTagToField
 }
@@ -273,7 +280,7 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 
 type importPlugsRequest struct {
 	DowelTypes []Dowel     `json:"dowelTypes"`
-	Generation *Generation `json:"generation"` // TODO: what to do about nil?
+	Generation *Generation `json:"generation,omitempty"` // TODO: make required when innoculated!
 	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
@@ -297,17 +304,33 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	var gen *Generation = nil
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
+			return
+		}
+		gen = data.Generation
+	} else {
+		data.KnownFruitable = nil
+		data.Subspecies = nil
+	}
 	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	// TODO: perms from spec/subspec+user if innoculated, otherwise allCanWrite
 	toInsert := PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{id},
 		//ParentTypeField:                   ParentTypeField{},
 		//MainCollectionOptionalParentField: MainCollectionOptionalParentField{},
-		CreationDateField: CreationDateField{now},
-		DowelTypes:        data.DowelTypes,
+		PcRunOptionalField: PcRunOptionalField{&impPcRun}, // default for imports
+		CreationDateField:  CreationDateField{now},
+		DowelTypes:         data.DowelTypes,
 		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{data.Generation},
-			GenSinceFruitOrSpore: data.Generation,
+			GenSporeField:        GenSporeField{gen},
+			GenSinceFruitOrSpore: gen,
 		},
 		SpeciesOptionalField: SpeciesOptionalField{data.Species},
 		//TransfersOutField:       TransfersOutField{},
@@ -332,10 +355,6 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var finalPerms ACL
 	if data.Species == nil {
-		if data.Generation != nil {
-			http.Error(w, "generation without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 		if data.Subspecies != nil {
 			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
 			return

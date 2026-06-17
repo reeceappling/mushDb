@@ -8,6 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+//var _ webauthn.User = &User{}
+
 type User struct {
 	Email string `bson:"_id" json:"_id"`
 	// TODO: can we make UserPerms.Admin not a pointer?
@@ -22,6 +24,25 @@ func (u User) DbId() string {
 func (u User) IdValue() any {
 	return u.Email
 }
+
+//func (u User) WebAuthnID() []byte {
+//	panic("not implemented") // TODO: see webauthn.User
+//}
+//func (u User) WebAuthnName() string {
+//	panic("not implemented") // TODO: see webauthn.User
+//}
+//func (u User) WebAuthnDisplayName() string {
+//	panic("not implemented") // TODO: see webauthn.User
+//}
+//func (u User) WebAuthnCredentials() []webauthn.Credential {
+//	panic("not implemented") // TODO: see webauthn.User
+//}
+//func (u User) AddCredential(cred *webauthn.Credential) {
+//	panic("not implemented") // TODO: see PasskeyUser
+//}
+//func (u User) UpdateCredential(cred *webauthn.Credential) {
+//	panic("not implemented") // TODO: see PasskeyUser
+//}
 
 func initializeUsers(ctx context.Context) error {
 	//Indices

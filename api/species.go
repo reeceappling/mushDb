@@ -322,3 +322,13 @@ func (field SpeciesField) AsOptional() SpeciesOptionalField {
 type SpeciesOptionalField struct {
 	Species *string `bson:"species,omitempty" json:"species,omitempty"`
 }
+
+func (s SpeciesOptionalField) RequireNoSpecies() error {
+	if s.HasSpecies() {
+		return errors.New("species field should not be populated")
+	}
+	return nil
+}
+func (s SpeciesOptionalField) HasSpecies() bool {
+	return s.Species != nil
+}

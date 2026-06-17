@@ -44,8 +44,8 @@ func (f Fruit) CanTransferTo(dst geneticSource) error {
 	}
 	return nil
 }
-func (f Fruit) Innoculatable() bool {
-	return false
+func (f Fruit) Innoculatable() error {
+	return errors.New("fruits are not innoculatable")
 }
 
 func (f Fruit) GeneticInfoAsParent() (GeneticParentInfo, error) {

@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,6 +15,13 @@ import (
 
 type SubspeciesOptionalField struct {
 	Subspecies *string `bson:"subspecies,omitempty" json:"subspecies,omitempty"`
+}
+
+func (s SubspeciesOptionalField) RequireNoSubspecies() error {
+	if s.Subspecies != nil {
+		return errors.New("subspecies field should not be populated")
+	}
+	return nil
 }
 
 type Subspecies struct {

@@ -42,9 +42,9 @@ func (wj WaterJar) CanTransferTo(dst geneticSource) error {
 	return errors.New("WaterJar is not genetic, so it cannot transfer to anything")
 }
 
-func (wj WaterJar) Innoculatable() bool {
+func (wj WaterJar) Innoculatable() error {
 	// WaterJar is not genetic, so it cannot be innoculated
-	return false
+	return errors.New("water jars are never innoculatable")
 }
 
 type WaterJarOptionalField struct {

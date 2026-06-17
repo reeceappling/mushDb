@@ -580,17 +580,10 @@ func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 
 func (upd *Mods) updateDisposedIfNeeded(future, existing Disposable) *Mods {
 	exist, fut := existing.DisposalInfo(), future.DisposalInfo()
-	if exist != nil { // Only update if previously was not disposed, and now is
-		if fut == nil {
-			upd.err = errors.New("disposed cannot be unset") // TODO: are we sure?
-		} else {
-			if *exist != *fut {
-				upd.err = errors.New("disposed cannot be changed once set") // TODO: are we sure?
-			}
-		}
-		return upd
+	if exist == nil && fut != nil {
+		upd.Set("disposed", *fut)
 	}
-	return updatePointerIfNeeded(upd, "disposed", fut, exist)
+	return upd
 }
 
 func (upd *Mods) updatePcRunIfNeeded(next, current pcRunOptional) *Mods {
@@ -718,7 +711,6 @@ func (upd *Mods) updateNameIfNeeded(future, existing string) *Mods {
 
 func notesWereModified(existing []Note, updated AllEntries[Note]) (hasChanged bool) {
 	if len(updated.New) > 0 {
-		println("NOTES WERE ADDED") // TODO: del
 		return true
 	}
 	for i, finalExisting := range updated.Existing {
@@ -786,6 +778,7 @@ func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesFiel
 	if upd.err != nil {
 		return upd
 	}
+	println("updating notes if needed")
 	existing := existingIn.GetNotes()
 	updated := updatedIn.NoteChanges()
 	if len(updated.Existing) != len(existing) {
@@ -811,17 +804,17 @@ func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesFiel
 		return upd
 	}
 	if !notesWereModified(existing, updated) {
+		println("notes not found to be modified...") // TODO: del
+
 		return upd
 	}
-	finalNotes := make([]Note, 0, len(existing)+len(updated.New))
+	finalNotes := []Note{}
 	for _, final := range updated.Existing {
 		if !final.Disabled {
 			finalNotes = append(finalNotes, final.Data)
 		}
 	}
-	for _, final := range updated.New {
-		finalNotes = append(finalNotes, final.Data)
-	}
+	finalNotes = append(finalNotes, sliceutils.Map(updated.New, func(nt Data[Note]) Note { return nt.Data })...)
 	// Set notes
 	PrettyPrintJson("finalNotes", finalNotes) // TODO: delete later
 	return upd.Set("notes", finalNotes)       // TODO: ensure ok
