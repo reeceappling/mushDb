@@ -36,13 +36,10 @@
   - [ ] persist the whitelist?
 - [ ] ListPageTables allow hiding columns!
 - [ ] Entries
-  - [ ] Agar Batch
+  - [x] Agar Batch
     - [x] Display page
       - [x] Create Plates
       - [x] Create Slant poured pre-PC run
-      - [ ] Create Slant poured post-PC run? (PROBABLY NOT)
-        - [ ] Create Agar batch without PC Run
-        - [ ] Agar batch without PC Run properly does not populate PC Run on Slant
     - [x] List Page
   - [ ] Agar Recipe
     - [x] Display page
@@ -65,8 +62,6 @@
     - [x] Create page
     - [x] Import page
       - [x] Redirect not working
-      - [ ] Add wetness to import page? MAYBE LATER
-      - [ ] Add Notes to import page? MAYBE LATER
       - [x] not finding the substrate recipe for standard recipes
     - [x] List Page
   - [x] Fruit
@@ -94,13 +89,12 @@
       - [x] Create Jar // Create
         - [ ] Add wetness????
         - [ ] Add burst grains???
-        - [ ] Allow PC to be optional???? Maybe not....
+        - [ ] Allow PC to be optional???? Maybe not.... DECIDE
     - [x] List Page
   - [ ] Jar
     - [x] Display page
       - [ ] fix wetness area
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) (MAYBE DO THIS LATER?)
     - [x] Import page
       - [ ] If no species, do not show many other fields!
       - [ ] Add wetness?
@@ -237,7 +231,6 @@
     - [x] Display page
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [x] ensure transfer from stasis tube properly disposes
-    - [ ] Create page // TODO: self page! ONLY DO THIS IF WE WANT TO CREATE THE TUBES BEFORE PCing! (Probably not until later?)
     - [x] Import page
     - [x] List Page
   - [ ] Subspecies
@@ -259,7 +252,6 @@
       - [x] Create bag validate
       - [ ] Create FC validate
         - [ ] NOT PROPERLY RETURNING ONCE CREATED!
-    - [ ] Create page (DO MUCH LATER! SHOULD CREATE RECIPE AS WELL!)
     - [x] List Page
   - [ ] Substrate Recipe
     - [x] Display page
@@ -285,7 +277,6 @@
     - [x] Display page
       - [x] Disposal area
       - [x] Create MSS // TODO: CREATE
-      - [ ] Create Stasis Tube // TODO: CREATE? Should be PC-d with water in tubes????? PROBABLY DONT ALLOW THIS FROM HERE ---------
     - [x] Create page // TODO: self page?
       - [x] PC run selector is double-nested...
     - [ ] Import page (NEED TO DO THIS!!!!!)
@@ -300,87 +291,159 @@
     - [ ] Everything in here
 - [ ] Integration testing
   - [ ] Everything in here
-- [ ] ListPageTable filters and sorts
+- [ ] TODO Later (some create intermediates)
   - [ ] AgarBatch 
-    - [ ] sort by Created, Last Updated
+    - [ ] ListPageTable
+      - [ ] sort by Created, Last Updated
+    - [ ] Display Page
+      - [ ] Create Slant poured post-PC run? (PROBABLY NOT)
+        - [ ] Create Agar batch without PC Run
+        - [ ] Agar batch without PC Run  does not properly populate PC Run on Slant
   - [ ] AgarRecipe
-    - [ ] sort by Created, Name, Last Updated
-    - [ ] add creation date?
-  - [ ] Bag 
-    - [ ] sort by Created, Last Updated
-    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
-  - [ ] Fruit
-    - [ ] sort by Harvest Date, Last Updated
-    - [ ] filter by species, subspecies, externally sourced, disposed(availability)?
-  - [ ] FruitingChamber 
-    - [ ] sort by Creation Date, Last Updated
-    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
-  - [ ] GrainBatch
-    - [ ] sort by Creation Date, Last Updated
-  - [ ] Jar
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
-  - [ ] JarRecipe
-    - [ ] sort by Name, Last Updated
-    - [ ] add creation date?
-  - [ ] LC
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by clean, species, subspecies, innoculated, disposed(availability)?
-  - [ ] LCRecipe 
-    - [ ] sort by Name, Last Updated
-    - [ ] add creation date?
-  - [ ] LcSyringe
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by clean, species, subspecies, innoculated, disposed(availability)?
-  - [ ] MSS
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by clean, species, subspecies, disposed(availability)?
-  - [ ] PCRun
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by runtime?
-  - [ ] Plate
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
-  - [ ] Plugs
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
-  - [ ] Project
-    - [ ] sort by Created, Name, LastUpdated
-    - [ ] filter by completed?
-  - [ ] Sale
-    - [ ] sort by Created, LastUpdated
-  - [ ] Slant
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
-  - [ ] Species
-    - [ ] sort by Name, Scientific Name
-    - [ ] sort by Created, LastUpdated
-      - [ ] Add creation date?
-  - [ ] SporePrint
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by species, subspecies, disposed(availability)?
-  - [ ] SporeSwab
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by species, subspecies, disposed(availability)?
-  - [ ] StasisTube
-    - [ ] sort by Created, LastUpdated
-    - [ ] filter by species, subspecies, innoculated, disposed(availability)?
-  - [ ] Species
-    - [ ] sort by Created, Name, LastUpdated?
-      - [ ] Add creation date?
-    - [ ] filter by species?
-  - [ ] SubstrateBatch
-    - [ ] sort by Created, Recipe, Last Updated
-    - [ ] filter by Recipe?
-  - [ ] SubstrateRecipe
-    - [ ] sort by Created, Name, Last Updated
+    - [ ] ListPageTable
+      - [ ] sort by Created, Name, Last Updated
       - [ ] add creation date?
+    - [ ] Display page
+      - [ ] Create Plate (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
+        - [ ] OVC
+        - [ ] Go side
+      - [ ] Create Slant (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
+        - [ ] OVC
+        - [ ] Go side
+  - [ ] Bag
+    - [ ] ListPageTable
+      - [ ] sort by Created, Last Updated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Import page
+      - [ ] Add wetness to import page? MAYBE LATER
+      - [ ] Add Notes to import page? MAYBE LATER
+    - [ ] Display page
+      - [ ] Create SporePrint (Creates fruit too) // TODO: this should only be used for 1-offs because it creates a new fruit every time!
+        - [ ] OVC
+        - [ ] Go side
+      - [ ] Create SporeSwab (Creates fruit too) // TODO: this should only be used for 1-offs because it creates a new fruit every time!
+        - [ ] OVC
+        - [ ] Go side
+  - [ ] Fruit
+    - [ ] ListPageTable
+      - [ ] sort by Harvest Date, Last Updated
+      - [ ] filter by species, subspecies, externally sourced, disposed(availability)?
+  - [ ] FruitingChamber
+    - [ ] ListPageTable
+      - [ ] sort by Creation Date, Last Updated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] Create SporePrint (Creates intermediate fruit)
+      - [ ] Create SporeSwab (Creates intermediate fruit)
+  - [ ] GrainBatch
+    - [ ] ListPageTable
+      - [ ] sort by Creation Date, Last Updated
+  - [ ] Jar
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) (MAYBE DO THIS LATER?)
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] JarRecipe
+    - [ ] ListPageTable
+      - [ ] sort by Name, Last Updated
+      - [ ] add creation date?
+    - [ ] Create page
+      - [ ] Create Jar (Creates grain batch too, unsure if we want this because the batch will need to be useable for other jars)
+  - [ ] LC
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by clean, species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] LCRecipe
+    - [ ] ListPageTable
+      - [ ] sort by Name, Last Updated
+      - [ ] add creation date?
+  - [ ] LcSyringe
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by clean, species, subspecies, innoculated, disposed(availability)?
+  - [ ] MSS
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by clean, species, subspecies, disposed(availability)?
+  - [ ] PCRun
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by runtime?
+  - [ ] Plate
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Plugs
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Project
+    - [ ] ListPageTable
+      - [ ] sort by Created, Name, LastUpdated
+      - [ ] filter by completed?
+  - [ ] Sale
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+  - [ ] Slant
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Species
+    - [ ] ListPageTable
+      - [ ] sort by Name, Scientific Name
+      - [ ] sort by Created, LastUpdated
+        - [ ] Add creation date?
+  - [ ] SporePrint
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, disposed(availability)?
+  - [ ] SporeSwab
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, disposed(availability)?
+  - [ ] StasisTube
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Create page // TODO: self page! ONLY DO THIS IF WE WANT TO CREATE THE TUBES BEFORE PCing! (Probably not until later?)
+  - [ ] Species
+    - [ ] ListPageTable
+      - [ ] sort by Created, Name, LastUpdated?
+        - [ ] Add creation date?
+      - [ ] filter by species?
+  - [ ] SubstrateBatch
+    - [ ] ListPageTable
+      - [ ] sort by Created, Recipe, Last Updated
+      - [ ] filter by Recipe?
+    - [ ] Create page (DO MUCH LATER! SHOULD CREATE RECIPE AS WELL!)
+  - [ ] SubstrateRecipe
+    - [ ] ListPageTable
+      - [ ] sort by Created, Name, Last Updated
+        - [ ] add creation date?
+    - [ ] Display page
+      - [ ] Bag creation area (creates batch as well)
+      - [ ] FruitingChamber (FC/Box) creation area (creates batch as well)
   - [ ] Transfer
-    - [ ] sort by Created, Last Updated
-    - [ ] filter by Source, Reason?
+    - [ ] ListPageTable
+      - [ ] sort by Created, Last Updated
+      - [ ] filter by Source, Reason?
   - [ ] WaterJar
-    - [ ] sort by Created, Last Updated
-    - [ ] filter by Disposed?
+    - [ ] ListPageTable
+      - [ ] sort by Created, Last Updated
+      - [ ] filter by Disposed?
+    - [ ] Display page
+      - [ ] Create Stasis Tube // TODO: CREATE? Should be PC-d with water in tubes????? PROBABLY DONT ALLOW THIS FROM HERE ---------
+
 - [ ] Redirect to login page if not logged in!
 - [ ] WriteMany for RFID! Allow subsequent writings... This may be complicated, so do it later...
 - [ ] React Subcomponents
@@ -390,51 +453,8 @@
   - [x] ACL (updates and displays)
   - [ ] more!
 
-- [ ] Much later (Creates intermediates)
-  - [ ] Agar Recipe
-    - [ ] Display page
-      - [ ] Create Plate (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
-        - [ ] OVC
-        - [ ] Go side
-      - [ ] Create Slant (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
-        - [ ] OVC
-        - [ ] Go side
-  - [ ] Bag
-    - [ ] Display page
-      - [ ] Create SporePrint (Creates fruit too) // TODO: this should only be used for 1-offs because it creates a new fruit every time!
-        - [ ] OVC
-        - [ ] Go side
-      - [ ] Create SporeSwab (Creates fruit too) // TODO: this should only be used for 1-offs because it creates a new fruit every time!
-        - [ ] OVC
-        - [ ] Go side
-  - [ ] Fruiting Chamber
-    - [ ] Display page
-      - [ ] Create SporePrint (Creates intermediate fruit)
-      - [ ] Create SporeSwab (Creates intermediate fruit)
-  - [ ] Jar
-    - [ ] Display page
-      - [ ] New fruit area
-  - [ ] Jar Recipe
-    - [ ] Create page
-      - [ ] Create Jar (Creates grain batch too, unsure if we want this because the batch will need to be useable for other jars)
-  - [ ] LC
-    - [ ] Display page
-      - [ ] New fruit area
-  - [ ] Plate
-    - [ ] Display page
-      - [ ] New fruit area
-  - [ ] Plugs
-    - [ ] Display page
-      - [ ] New fruit area
-  - [ ] Slant
-    - [ ] Display page
-      - [ ] New fruit area
-  - [ ] Substrate Recipe
-    - [ ] Display page
-      - [ ] Bag creation area (creates batch as well)
-      - [ ] FruitingChamber (FC/Box) creation area (creates batch as well)
 
-  
+
 - [ ] Reenable full authentication flow then test!
 - [ ] Backend Testing
   - [ ] ADD MORE SUB-ITEMS HERE
