@@ -304,7 +304,16 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Validation
+	for i, d := range data.DowelTypes {
+		if err = d.validate(); err != nil {
+			errTxt := fmt.Sprintf("failed to validate dowel type for entry #%d", i)
+			http.Error(w, errTxt+": "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
 	var gen *Generation = nil
+	var finalAcl = allCanWriteAcl()
 	if data.Species != nil {
 		if data.Generation == nil {
 			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
@@ -315,12 +324,20 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		gen = data.Generation
+		//spec, err := data.SpeciesOptionalField.Get(ctx) // TODO: remove from everywhere if unused?
+		finalAcl.ACL, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
+		if err != nil {
+			http.Error(w, "failed to get species or subspecies information: "+err.Error(), http.StatusBadRequest)
+		}
 	} else {
 		data.KnownFruitable = nil
 		data.Subspecies = nil
 	}
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
-	// TODO: perms from spec/subspec+user if innoculated, otherwise allCanWrite
+	if err = data.Generation.validate(); err != nil {
+		http.Error(w, "generation validation failure: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{id},
 		//ParentTypeField:                   ParentTypeField{},
@@ -343,38 +360,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:       NotesField{data.Notes},
 		LastUpdatedField: LastUpdatedField{now},
 		// No Perms here for basic plugs
-		AclField: allCanWriteAcl(), // TODO: add user and use species/subspecies perms
-	}
-	for i, d := range data.DowelTypes {
-		if err = d.validate(); err != nil {
-			errTxt := fmt.Sprintf("failed to validate dowel type for entry #%d", i)
-			http.Error(w, errTxt+": "+err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
-
-	var finalPerms ACL
-	if data.Species == nil {
-		if data.Subspecies != nil {
-			http.Error(w, "subspecies without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if data.KnownFruitable != nil {
-			http.Error(w, "knownFruitable without species: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		finalPerms = allCanWriteAcl().ACL
-	} else {
-		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
-		if err != nil {
-			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-	toInsert.ACL = finalPerms
-	if err = data.Generation.validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		AclField: finalAcl,
 	}
 
 	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)

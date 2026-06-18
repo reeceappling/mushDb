@@ -177,7 +177,7 @@ export default function GrainBatchDisplay(
                 // TODO: does this creation need a pcRun??? Can we do it before the run?
                 // TODO: can items be added when creating a PC run?
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewJarForm grainBatchIn={initial} recipeIn={initial.recipe} handlers={{
+                    return <NewJarForm grainBatchIn={initial} handlers={{
                         onCreate: (newItem: JarData) => {
                             return onCreate([{
                                 typeText: "Grain Jar",

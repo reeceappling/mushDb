@@ -195,7 +195,6 @@ export const DisplayNumerical2: FC<NumericInputProps> = ({
         </>
     );
 };
-// TODO: the next one is the functional component we'll be using
 export const InputNumerical: FC<NumericInputProps> = (
     {
         readonly = false,

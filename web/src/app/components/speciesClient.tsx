@@ -51,7 +51,7 @@ import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {CreatedLinkTriCol, OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {NewSubspeciesForm} from "@/app/components/subspeciesClient";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SelectorFor} from "@/app/components/selector";
@@ -155,13 +155,15 @@ export default function SpeciesDisplay(
                 return <NewSubspeciesForm species={initial} handlers={{
                     onCreate: (v: SubspeciesData) => {
                         setSubspecies([...(subspecies || []), v._id])
-                        return onCreate([{
-                            typeText: "Subspecies",
-                            node: <CreatedLinkFor
-                                linkText={v._id}
-                                linkId={encodeURI(v._id)}
-                                typ={"subspecies"}/>
-                        }], true)
+                        const toAdd: CreatedLinkTriCol[] = []
+                        // const toAdd = [{
+                        //     typeText: "Subspecies",
+                        //     node: <CreatedLinkFor
+                        //         linkText={v._id}
+                        //         linkId={encodeURI(v._id)}
+                        //         typ={"subspecies"}/>
+                        // }]
+                        return onCreate(toAdd, true)
                     },
                     isTopLevel: false,
                 }}/>
@@ -186,7 +188,7 @@ export default function SpeciesDisplay(
                     </TestAndValidate>
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <AliasesArea aliases={aliases} readonly={readonly} updateParent={setAliases} headerLevel={headerLevel}/>
+            <AliasesArea initial={aliases} readonly={readonly} updateParent={setAliases}/>
             <SubspeciesForSpeciesArea subspecies={subspecies}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
@@ -250,7 +252,7 @@ export function NewSpeciesForm(
         <NameArea classNames={"inlineChildren"} currentName={sciName} headerTxt={"Scientific Name :"}
                   setName={setSciName}/>
         <ErrorDisplay err={err}/>
-        <AliasesArea aliases={aliases} updateParent={setAliases} readonly={false}/> {/* TODO: OVERHAUL */}
+        <AliasesArea initial={aliases} updateParent={setAliases} readonly={false}/> {/* TODO: OVERHAUL */}
         <SelectorWrapper current={sub} title={"Standard Substrate"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setSub} allowCreate={handlers.isTopLevel} creatorInPage={false}/>
         </SelectorWrapper>

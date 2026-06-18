@@ -332,3 +332,13 @@ func (s SpeciesOptionalField) RequireNoSpecies() error {
 func (s SpeciesOptionalField) HasSpecies() bool {
 	return s.Species != nil
 }
+func (s SpeciesOptionalField) Get(ctx context.Context) (*Species, error) {
+	var out *Species = nil
+	var err error = nil
+	if s.HasSpecies() {
+		err = DbFrom(ctx).Collection(SpeciesCollectionName).FindOne(ctx, BsonFindFilter("_id", *s.Species)).Decode(out)
+	} else {
+		err = ErrMissingOptionalField
+	}
+	return out, err
+}

@@ -343,13 +343,14 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := *mainCollId
 	b58Id := mainCollId.AsBase58()
-	reader, err := multipartReaderForRequest(r, w, &data)
+	ctx, db := Db(r)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
 	if err != nil {
 		// Already written
 		return
 	}
 
-	newPics, newContams, _, err := getMultipartImages(r.Context(), "slant", w, reader, b58Id)
+	newPics, newContams, _, err := getMultipartImages(ctx, "slant", w, reader, b58Id)
 	// TODO: SOME OTHER AREAS NEED TO DO THIS INSTEAD OF fullMultipartWithNoBreaks becaues rfid writer is in-between
 	if err != nil {
 		// Already wrotw
@@ -374,7 +375,6 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx, db := Db(r)
 	coll := db.Collection(SlantsCollectionName)
 	// go get current plate
 	existing := Slant{}

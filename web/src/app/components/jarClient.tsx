@@ -228,8 +228,11 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             <JarRecipeSelector doSelect={setRecipe} allowCreate={true}/>
         </SelectorWrapper>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        <KnownFruitableArea doSelect={setKnownFruitable}/>
-        <GenerationInput updateParent={setGeneration}/>
+        {species && <>
+            <KnownFruitableArea doSelect={setKnownFruitable}/>
+            <GenerationInput updateParent={setGeneration}/>
+        </>}
+
         <ImageSelector updateParent={setImageFile}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={importEntry}>{"Import"}</button>
@@ -302,10 +305,13 @@ export default function JarDisplay(
         const submit = () => {
             const formData = new FormData()
             const dataObj: any = {
+                // TODO: BURST GRAINS
                 knownFruitable: knownFruitable,
                 disposed: disposed,
                 sale: sale, // TODO: remove
                 //writeTagTo: writeTagTo, // TODO: remove!
+                wetness: wetness,// TODO: handle on go side
+                burstGrains: burstGrains, // TODO: handle on go side
                 acl: MarshalAcl(acl),
                 notes: notes,
             }
@@ -400,9 +406,8 @@ export default function JarDisplay(
 // NewJarForm is used from the recipe page. PcRun CAN be created from here?
 // TODO: NewJarForm is used from the grain batch page. PcRun CAN be created from here?
 // TODO: Can also be called from the jar recipe page, which will create a new batch as well
-export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
+export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
     handlers: NewEntryInput<JarData>,
-    recipeIn?: string,
     pcRunIn?: PcRunData,
     grainBatchIn?: GrainBatchData
 }) {
@@ -441,13 +446,13 @@ export function NewJarForm({handlers, recipeIn, pcRunIn, grainBatchIn}: {
         }
         DoCreateRequest("jar", body, AssertJar, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                const newJar = new JarData(v)
+                handlers.onCreate ? handlers.onCreate(newJar) : console.log("no onCreate provided")
             })
             .catch(e=>{
-                setErr(JSON.stringify(e))
+                setErr("failed on createJar post: "+JSON.stringify(e))
             })
     }
-    const hasGrainBatch = grainBatchIn !== undefined || recipeIn !== undefined // TODO: handle recipeIn?
     return <NewEntryFormWrapper entryType={"jar"}>
         <ErrorDisplay err={err}/>
         {grainBatchIn === undefined && <GrainBatchSelectorCloseable doSelect={setGrainBatch} allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}

@@ -163,7 +163,7 @@ export default function SubstrateRecipeDisplay(
                                       headerLevel={headerLevel}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
-                <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases} headerLevel={headerLevel}/>
+                <AliasesArea initial={aliases} readonly={false} updateParent={setAliases}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
                                         closeTxt={"minimize perms area"}>
@@ -209,7 +209,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
             <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} readonly={false}
                       headerTxt={"Substrate Name: "}/>
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}/>
-            <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases}/>{/* TODO: ensure NEW is not displayed*/}
+            <AliasesArea initial={aliases} readonly={false} updateParent={setAliases}/>{/* TODO: ensure NEW is not displayed*/}
             <NewEntryNotes setNotes={setNotes}/>
 
             {/* SUBMIT AREA */}

@@ -33,7 +33,7 @@ import {
 } from "@/app/components/accessControlClient";
 import {EntryLinkWrapper, EntryLinkIdWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {DowelType, PlugsData} from "@/app/components/plugsServer";
-import {PcRunData} from "@/app/components/pcRunServer";
+import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "./formSubcomponents/readerWriterButtons/readerSelector";
 import {AllEntries, OnViewCreatorQuadCol} from "./formSubcomponents/shared";
@@ -296,19 +296,12 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
             <div className={"text-lg"}>{"Dowels: "}</div>
             <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
         </div>
-        <GenerationInput updateParent={setGen}/>
+
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<div className={"centerH"}>*/}
-        {/*    <ExistingSpeciesSelector initialSpecies={species?._id}*/}
-        {/*                             doSelect={(spec?: SpeciesData) => {*/}
-        {/*                                 setSpecies(spec)*/}
-        {/*                                 setSubspecies(undefined)*/}
-        {/*                             }}/>*/}
-        {/*</div>*/}
-        {/*{species !== undefined ? <div className={"centerH"}>*/}
-        {/*    <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
-        {/*</div> : null}*/}
-        <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
+        {species && <>
+            <GenerationInput updateParent={setGen}/>
+            <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
+        </>}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={ImportEntry}>{"Import Plugs"}</button>
@@ -365,7 +358,7 @@ export function NewPlugsForm(
             {pcRunIn ? <EntryLinkIdWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
                     {pcRunIn._id}
                 </EntryLinkIdWrapper>
-                : <PcRunSelector doSelect={setPcRun} allowCreate={true}/>
+                : <PcRunSelectorCloseable doSelect={setPcRun} txt={"PC Run: "} creatorInPage={handlers.isTopLevel} allowCreation={handlers.isTopLevel}/>
             }
             </div>
         </div>

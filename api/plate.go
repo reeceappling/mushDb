@@ -573,6 +573,7 @@ type importPlateRequest struct {
 	KnownFruitableField
 	Generation *Generation `json:"generation,omitempty"` // TODO: make required for when innoculated!
 	PourCoverageField
+	CondensationCoverageAtSealTimeField
 	// pic as "img"
 	WriteTagToField
 }
@@ -584,7 +585,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
 	println("multipart reader if necessary")
-	reader, err := multipartReaderForRequest(r, w, &data)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
 	if err != nil {
 		// Already written
 		return
@@ -657,6 +658,8 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	var finalPerms ACL
 	if data.Species == nil { // Not innoculated
 		finalPerms = allCanWriteAcl().ACL
+		data.PourCoverage = nil
+		data.CondensationCoverageAtSealTime = nil
 	} else {
 		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
 		if err != nil {

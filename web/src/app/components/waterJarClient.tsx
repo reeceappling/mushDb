@@ -7,11 +7,15 @@ import ID from "@/app/components/formSubcomponents/id";
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoImportRequest,
+    DisplayInput,
+    DoCreateRequest,
+    DoImportRequest,
     DoUpdateRequest,
     ExistingRecentSelector,
     FlexedArea,
-    FlexedSinglesGroup, ImportDisplayInput, ImportEntryFormWrapper,
+    FlexedSinglesGroup,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
     ListPageItems,
     ListPageTable,
     ListTableColumn,
@@ -20,8 +24,8 @@ import {
     NewEntryInput,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey, RequiredKey,
-    SelectorWrapper,
+    OptionalSimpleKey,
+    RequiredKey,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -38,8 +42,6 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {AssertSlant} from "@/app/components/slantClient";
-import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -120,11 +122,11 @@ export default function WaterJarDisplay(
             disposed: disposed,
             acl: MarshalAcl(acl)
         }
-        DoUpdateRequest("waterJar",initial._id, body, AssertWaterJar, allCookies(cookies))
-            .then(v=>{
+        DoUpdateRequest("waterJar", initial._id, body, AssertWaterJar, allCookies(cookies))
+            .then(v => {
                 updateInitial(new WaterJarData(v))
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
@@ -149,16 +151,23 @@ export default function WaterJarDisplay(
     return (
         <DisplayFormWrapper entryType={"waterJar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID props={{id:initial._id, txt:"Water Jar", entryType:"waterJar", linkPage:false, allowOpenMainPage:false}}/>
+            <ID props={{
+                id: initial._id,
+                txt: "Water Jar",
+                entryType: "waterJar",
+                linkPage: false,
+                allowOpenMainPage: false
+            }}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
-                    <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} readonly={readonly}
+                    <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
+                                                readonly={readonly}
                                                 initialDisposed={initial.disposed} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-            {readonly || <button className={"bottomButton greenButton"} onClick={(e)=>{
+            {readonly || <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
@@ -186,10 +195,10 @@ export function NewWaterJarForm(
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("waterJar", body, AssertWaterJar, allCookies(cookies))
-            .then(v=>{
+            .then(v => {
                 handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
@@ -206,94 +215,77 @@ export function NewWaterJarForm(
     </NewEntryFormWrapper>
 }
 
-export function WaterJarImportDisplay({headerLevel}:ImportDisplayInput) { // TODO: DO THIS WHOLE THING!
+export function WaterJarImportDisplay({headerLevel}: ImportDisplayInput) {
     const [created, setCreated] = useState<number>(Date.now())
-    // const [stickType, setStickType] = useState<string | undefined>(undefined)
-    // const [species, setSpecies] = useState<SpeciesData | undefined>()
-    // const [subspecies, setSubspecies] = useState<string | undefined>()
-    // const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
-    // const [generation, setGeneration] = useState<number | undefined>()
-    // const [imageFile, setImageFile] = useState<File | undefined>()
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
     const ImportWaterJar = () => {
-        const body = new FormData()
-        body.set('data', JSON.stringify({
-            // creationDate:created, // TODO: validate not in future or too far in the past (do on all imports)
-            // stickType: stickType,
-            // // Optional
-            // species: species?._id,
-            // subspecies: subspecies,
-            // knownFruitable: knownFruitable,
-            // generation: generation,
-            // writeTagTo: writeTagTo,
-        }))
-        // if(imageFile!==undefined){
-        //     formData.set("image", imageFile, "imgFile")
-        // }
+        const body = {
+            creationDate: created,
+            notes: notes,
+            writeTagTo: writeTagTo,
+        }
 
         DoImportRequest(body, "waterJar", AssertWaterJar, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
-        <TestAndValidate todos={["DO THIS WHOLE IMPORT PAGE!"]}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        {/*<ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>*/}
-        {/*/!*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*!/*/}
-        {/*/!*{species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>:null}*!/*/}
-        {/*<KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>*/}
-        {/*<GenerationInput updateParent={setGeneration}/>*/}
-        {/*<ImageSelector updateParent={setImageFile}/>*/}
-        {/*<SlantStickSelector setStickType={setStickType}/>*/}
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={ImportWaterJar}>{"Import Water Jar"}</button>
-        </TestAndValidate>
     </ImportEntryFormWrapper>
 }
 
 export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<WaterJarData>) {
     let cols: ListTableColumn<WaterJarData>[] = [
-        NewColumn("ID", (v)=>v._id, true),
-        NewColumn("Created", (v)=>{
+        NewColumn("ID", (v) => v._id, true),
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
         }, true),
-        NewColumn("PcRun", (v)=>v.pcRun, true),
-        NewColumn("Disposed", (v)=>{
-            return v.disposed?NumberToDateStr(v.disposed):""
+        NewColumn("PcRun", (v) => v.pcRun, true),
+        NewColumn("Disposed", (v) => {
+            return v.disposed ? NumberToDateStr(v.disposed) : ""
         }, true),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }), // TODO: fit?
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: WaterJarData)=>{
-            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: WaterJarData) => {
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new WaterJarData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new WaterJarData(v)
+    }}/>
 }
+
 export function WaterJarSelectorTable({data, onClick}: ListPageItems<WaterJarData>) {
     const cols: ListTableColumn<WaterJarData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Created", (v)=>{
+        NewColumn("ID", (v) => v._id),
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
         }),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
-        NewColumn("Disposed", (v)=>{
-            return v.disposed?NumberToDateStr(v.disposed):""
+        NewColumn("Disposed", (v) => {
+            return v.disposed ? NumberToDateStr(v.disposed) : ""
         }),
-        NewColumn("Link", (v: WaterJarData)=>{
-            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
+        NewColumn("Link", (v: WaterJarData) => {
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })
     ]
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new WaterJarData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new WaterJarData(v)
+    }}/>
 }
 
 export function WaterJarSelector(
@@ -304,12 +296,13 @@ export function WaterJarSelector(
         doSelect: (val: WaterJarData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: WaterJarData[]):JSX.Element=>{
+    const table = (items: WaterJarData[]): JSX.Element => {
         return <WaterJarSelectorTable data={items} onClick={doSelect}/>
     }
 
-    return <ExistingRecentSelector entryType={"waterJar"} entryTypes={"waterJars"} doSelect={doSelect} asserter={AssertWaterJar}
+    return <ExistingRecentSelector entryType={"waterJar"} entryTypes={"waterJars"} doSelect={doSelect}
+                                   asserter={AssertWaterJar}
                                    table={table}>
-        {allowCreate && <NewWaterJarForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+        {allowCreate && <NewWaterJarForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

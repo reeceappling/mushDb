@@ -75,7 +75,7 @@ func mainCollMap(name string) (item MainCollectionItem, exists bool) {
 		return &MSS{}, true
 	case "plate":
 		return &Plate{}, true
-	case "plug":
+	case "plug", "plugs":
 		return &PlugsJar{}, true
 	case "slant":
 		return &Slant{}, true

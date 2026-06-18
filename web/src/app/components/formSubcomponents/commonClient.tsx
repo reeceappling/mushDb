@@ -15,7 +15,7 @@ import {
 import {PixRows} from "@/app/components/formSubcomponents/commonClient2";
 import {InputText, InputTextInlineTitle, InputTextWithSmallTitle, NumericalAreaWithAbsolutes} from "./numericInput";
 import DateArea, {NumberToDate} from "./date";
-import {Note, NotesAreaMostRecentImage, NotesFormArea} from "./notes";
+import {Note, NotesAreaMostRecentImage, NotesFormArea, SingleNoteV2} from "./notes";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -33,6 +33,7 @@ import {DowelType} from "@/app/components/plugsServer";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import TestAndValidate from "@/app/components/testing/untested";
+import * as React from "react";
 
 // export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
 //     return <div className={"hoverClickable"} onClick={(e) => {
@@ -872,44 +873,185 @@ export function OpenMainPage(
     </div>
 }
 
-export function AliasesArea( // TODO: OVERHAUL
+export function AliasesArea( // TODO: FULLY TEST! Creating and deleting one at the same time is not working!
     {
-        aliases, readonly, headerLevel, offset, updateParent
+        initial, readonly, updateParent
     }: {
-        aliases?: string[]
+        initial?: string[]
         readonly?: boolean
-        headerLevel?: number
-        offset?: number
         updateParent?: (s: string[]) => void
     }) {
-    const [vals, setVals] = useState<string[]>(aliases || [])
+    const [existing, setExisting] = useState<Data<string>[]>(initial ? initial.map(v=>{return {data:v,disabled:false}}) : [])
+    const [created, setCreated] = useState<Data<string>[]>([])
+    const [reloadCount, setReloadCount] = useState(0)
 
     useEffect(() => {
-        setVals(aliases || [])
-    }, [aliases])
+        const ex = initial ? initial.map(v=>{return {data:v,disabled:false}}) : []
+        setExisting(ex)
+        setCreated([])
+        setReloadCount(reloadCount+1)
+        deliverUpdatesToParent({existing:ex,new:[]})
+    }, [initial])
+    const currentClone = ()=>{
+        return {
+            existing:structuredClone(existing),
+            new: structuredClone(created)
+        }
+    }
+    const deliverUpdatesToParent = (updated:AllEntries<string>) => {
+        const existingToSend = updated.existing.filter(v=>!v.disabled).map(v=>v.data)
+        const newToSend = updated.new.filter(v=>{return !v.disabled&&v.data!==""}).map(v=>v.data)
+        updateParent && updateParent([...existingToSend, ...newToSend])
+    }
+    const updateExisting = (updated:Data<string>[])=>{
+        setExisting(updated)
+        const out = currentClone()
+        out.existing = updated
+        deliverUpdatesToParent(out)
+    }
+    const updateCreated = (updated:Data<string>[])=>{
+        setCreated(updated)
+        const out = currentClone()
+        out.new = updated
+        deliverUpdatesToParent(out)
+    }
     // TODO: keep aliases internally, and only return active ones to parent
     if (readonly) {
-        if (!aliases) {
+        if (!initial) {
             return null
         }
         return <div>
             <div>{"Aliases :"}</div>
-            {(aliases || []).map((a, i) => {
+            {(initial || []).map((a, i) => {
                 return <div key={i}>{a}</div>
             })}
         </div>
     }
+    const existingArea = () => {
+        if (!initial || initial.length <= 0) {
+            return null
+        }
+        return <>
+            {existing.map((v,i)=>{
+                return <div key={i} className={"existingAlias" + (v.disabled ? " disabled" : "")}>
+                    <SingleAlias initial={initial[i]} readonly={readonly||false} updateParent={v=>{
+                        const updated = structuredClone(existing)
+                        updated[i] = structuredClone(v)
+                        updateExisting(updated)
+                    }} startEditing={false}/>
+                    {readonly || <RemoveAliasButton disabled={v.disabled} click={() => {
+                        const updated = structuredClone(existing)
+                        updated[i].disabled = !v.disabled
+                        updateExisting(updated)
+                    }}/>}
+                </div>
+            })}
+        </>
+    }
     return <div>
-        <div>{"Aliases :"}</div> {/* TODO: DO NOT USE TextBoxArea in here! */}
-        <TextBoxArea readonly={false} initialValues={(aliases || []).map((((a: string) => {
-            return {data: a, disabled: false}
-        })))} updateParent={(v) => {
-            const newVals = v.new.map((n) => {
-                return n.data
-            })
-            setVals(newVals)
-            const final = [...v.existing.filter(v=>!v.disabled).map(v=>v.data), ...newVals]
-            updateParent && updateParent(final)
-        }}/>
+        <div>{"Aliases :"}</div>
+        {existingArea()}
+        <NewAliasesSubArea updateParent={updateCreated} readonly={readonly||false} count={reloadCount}/>
+    </div>
+}
+
+export function NewAliasesSubArea({count,readonly,updateParent}:{count:number,readonly:boolean,updateParent:(entries:Data<string>[]) => void}){
+    if (readonly) {
+        return null
+    }
+    const [aliases, setAliases] = useState<Data<string>[]>([])
+    useEffect(() => {
+        setAliases([]);
+    }, [count]);
+    const propagateUpdate = (updated:Data<string>[]) => {
+        setAliases(updated)
+        updateParent(structuredClone(updated).filter((item)=>{
+            return !item.disabled && item.data!==""
+        }))
+    }
+    const createNewAlias = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        //e.preventDefault()
+        e.stopPropagation();
+        // Do not update parent here. We don't want to propagate empty notes
+        setAliases([...structuredClone(aliases), {data: "",disabled: false}])
+    }
+    return <div>
+        {aliases.map((n, i) => {
+            if (n.disabled) {
+                return null
+            }
+            return <div key={i}>
+                <SingleAlias readonly={false} startEditing={true} updateParent={nd => {
+                    const updated = structuredClone(aliases)
+                    updated[i].data = structuredClone(nd.data)
+                    propagateUpdate(updated)
+                }}/>
+                <RemoveNewAliasButton click={() => {
+                    const updated = structuredClone(aliases)
+                    updated[i].disabled = true
+                    propagateUpdate(updated)
+                }}/>
+            </div>
+        })}
+        <div>
+            <button className={"basicButtonSmall"} onClick={createNewAlias}>{"Create New Alias"}</button>
+        </div>
+    </div>
+
+
+}
+function RemoveNewAliasButton({click}:{click:()=>void}){ // TODO: may need to be moved
+    return <RemoveAliasButton disabled={false} click={click}/>
+}
+function RemoveAliasButton({disabled,click}:{disabled:boolean,click:()=>void}){
+    return <RemoveToggle disabled={disabled} click={click} keptTxt={"Delete Alias"} removedTxt={"Don't Delete"} keptClass={"removeButtonSmall"} removedClass={"basicButtonSmall"}/>
+}
+export function SingleAlias(
+    {
+        initial,
+        readonly,
+        startEditing,
+        updateParent,
+    }: {
+        initial?: string
+        readonly:boolean
+        startEditing?: boolean
+        updateParent?: (n: Data<string>) => void
+    }) {
+    const [val, setVal] = useState<Data<string>>({data:initial||"",disabled:false})
+    const [started, setStarted] = useState(false)
+    const [editing, setEditing] = useState(startEditing ?? false)
+    useEffect(()=>{
+        setVal({data:initial||"",disabled:false})
+        if (!started){
+            setEditing(startEditing || false)
+            setStarted(true)
+        } else {
+            setEditing(false)
+        }
+    },[initial])
+    const handleChangeStr = (updated: Data<string>) => {
+        setVal(updated)
+        updateParent && updateParent(updated)
+    }
+    return <div className={"alias"}>{/* TODO: was className note*/}
+        {(!readonly && editing) ? <input name='txt' type="text" disabled={false}
+                                         autoComplete="off" value={val.data}
+                                         placeholder={"new alias"}
+                                         className={/* TODO: change className noteValue?*/"noteValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
+                                         onBlur={() => {
+                                             setEditing(false)
+                                         }}
+                                         onChange={(e)=>{
+                                             e.stopPropagation();
+                                             const updated = structuredClone(val);
+                                             updated.data = e.target.value
+                                             handleChangeStr(updated)
+                                         }}
+        /> : <>
+            <div>{val.data}</div><button className={"basicButtonSmall"} onClick={()=>{setEditing(!editing)}}>
+            {"Edit Alias"}
+        </button>
+        </>}
     </div>
 }

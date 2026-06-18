@@ -211,6 +211,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 type createFruitingChamberRequest struct {
 	// TODO: removed: Recipe // substrate recipe (pull from batch)
 	SubstrateBatchField
+	// TODO: do FCs only ever take jars? can any other parent types exist?
 	ParentJar          MainCollectionId // Parent jar // TODO: do we want this? // TODO: ALLOW USER TO INPUT PARENT AND CHAIN A TRANSFER CREATION AS WELL!
 	GrainCups          float64
 	MixedSubstrateCups float64
@@ -291,7 +292,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) { // T
 		if e != nil {
 			return nil, e
 		}
-		// TODO: if jar, user all of jar? call it disposed?
+		// TODO: if jar, use all of jar? call it disposed?
 		// TODO: handle disposal on transfer!?
 		return nil, e
 	})
@@ -299,6 +300,13 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) { // T
 		http.Error(w, "failed to create box: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	bs, err = json.Marshal(toInsert)
+	if err != nil {
+		http.Error(w, "failed to marshal result, but did create! "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bs)
+	handleWriteErr(err, w)
 }
 
 type importFruitingChamberRequest struct {

@@ -429,7 +429,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, now := request.UnixTime(r.Context())
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	reader, err := multipartReaderForRequest(r, w, &data)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
 	if err != nil {
 		// Already written
 		return
@@ -444,7 +444,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	picsSaved := []string{} // TODO: do streamlined
 	defer func() {
 		if err != nil {
-			err = pics.DeleteFiles(r.Context(), picsSaved...)
+			err = pics.DeleteFiles(ctx, picsSaved...)
 			if err != nil {
 				handleFileDeleteErr(err)
 			}

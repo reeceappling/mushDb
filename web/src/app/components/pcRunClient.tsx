@@ -18,7 +18,7 @@ import {
     NewEntryInput, NumberToDateStr,
     OptionalArrayOfType, RequiredKey
 } from "@/app/components/common";
-import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
+import {ErrorDisplay, InlineTitle} from "@/app/components/formSubcomponents/commonClient";
 import {
     AclDisplay,
     MarshalAcl,
@@ -41,6 +41,7 @@ import {JarData} from "@/app/components/jarServer";
 import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {InputNumber, InputNumberWithSmallTitle, InputNumerical} from "@/app/components/formSubcomponents/numericInput";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -246,8 +247,7 @@ export default function PcRunDisplay(
 
 export function NewPcRunForm(
     {handlers}: { handlers: NewEntryInput<PcRunData> }) {
-    const [date, setDate] = useState(Date.now())
-    const [runTime, setRunTime] = useState("")
+    const [runTime, setRunTime] = useState("60") // TODO: ok?
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
 
@@ -274,15 +274,18 @@ export function NewPcRunForm(
     }
     return (
         <NewEntryFormWrapper entryType={"pcRun"}>
-            <div>{"Creating a new PC Run"}</div>
+            <div>{"Creating a new PC Run"}</div>{/* TODO: create as header????*/}
             <ErrorDisplay err={err}/>
-            {/* RunTime TODO: RETHINK THIS???*/}
-            <div>
+            {/* RunTime TODO: RETHINK THIS??? do we want to put options for typical runtimes?*/}
+            <div className={"inlineChildren"}>
                 <div>{"RunTime (minutes):"}</div>
-                <input type="number" value={runTime} onChange={(e) => { // TODO: FIX ME FOR INPUT STYLING!
-                    setRunTime(e.currentTarget.value)
-                }}/>
+                <InputNumber value={runTime} readonly={false} min={30} max={600} step={5}
+                                  mode={"integer"} onChange={(s) => {s && setRunTime(s)}}/>
             </div>
+            {/*<div>*/}
+                <InputNumberWithSmallTitle label={"RunTime (minutes):"} value={runTime} readonly={false} min={30} max={600} step={5}
+                                                        mode={"integer"} onChange={(s) => {s && setRunTime(s)}}/>
+            {/*</div>*/}
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
             <button className={"greenButton buttonFullWidth"} onClick={newPcRunSubmit} >{"Submit new PC Run"}</button>

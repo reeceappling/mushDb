@@ -80,7 +80,7 @@ import {
     TogglableAreaWithDepth, UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
+import {InputNumber, InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
 import Box from "@mui/material/Box";
 import Slider from "@mui/material/Slider";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -299,7 +299,7 @@ export default function PlateDisplay(
                 <FlexedSinglesGroup>
                     {/* TODO: SIZING ON ENTRY FIELDS*/}
                     <TestAndValidate todos={["ensure unset values for pour and condens work as expected"]}>
-                    <PourCoverageFieldDisplay pourCoveragePct={pourCoveragePct} updateParent={setPourCoveragePct}/>{/* TODO: STATIC IF PRE-SET*/}
+                    <PourCoverageFieldDisplay initial={initial.pourCoverage} updateParent={setPourCoveragePct}/>
                     {initial.condensationCoverageAtSealTime ? <div>{"Condensation Coverage: "+initial.condensationCoverageAtSealTime+"%"}</div>:
                         <CondensationCoverageFieldDisplay coverage={condensationCoveragePct/* TODO: STATIC IF PRE-SET*/} updateParent={setCondensationCoveragePct}/>}
                     </TestAndValidate>
@@ -334,21 +334,40 @@ export default function PlateDisplay(
     )
 }
 
-function PourCoverageFieldDisplay({pourCoveragePct, updateParent}: {
-    pourCoveragePct?: number,
+function PourCoverageFieldDisplay({initial, updateParent}: {
+    initial?: number,
     updateParent?: (cov: number) => void
 }) {
     const header = "Pour Coverage: "
-    if (!pourCoveragePct) {
-        return <div>{header + (pourCoveragePct ? pourCoveragePct + "%" : "unknown")}</div>
+    const [pourCoverage, setPourCoverage] = useState(initial)
+    const [open, setOpen] = useState(false)
+    if (initial) {
+        return <div>{header+initial+"%"}</div>
     }
-    const [pourCoverage, setPourCoverage] = useState(pourCoveragePct)
-    return <div>{header}<InputNumberWithSmallTitle value={"" + pourCoverage} readonly={false} min={0} max={100} step={1}
+    if (!open) {
+        return <div className={"inlineChildren"}>
+            <div>{header}</div>
+            <button onClick={e=>{
+                e.stopPropagation()
+                setOpen(true)
+            }}>{"Set"}</button>
+        </div>
+    }
+    return <div className={"inlineChildren"}>
+        <div>{header}</div>
+        <div>
+            <InputNumber value={"" + pourCoverage} readonly={false} min={0} max={100} step={1}
                                                    mode={"integer"} onChange={(s) => {
-        const temp = Number(s)
-        updateParent ? updateParent(temp) : console.warn("pourCoverage has no updateParent prop")
-        setPourCoverage(temp)
-    }}/>{"%"}</div>
+            const temp = Number(s)
+            updateParent ? updateParent(temp) : console.warn("pourCoverage has no updateParent prop")
+            setPourCoverage(temp)}}/>{"%"}
+        </div>
+        <button onClick={e=>{
+            e.stopPropagation()
+            setOpen(false)
+            setPourCoverage(undefined)
+        }}>{"Unset"}</button>
+    </div>
 }
 
 function CondensationCoverageFieldDisplay({coverage, updateParent}: {
@@ -454,6 +473,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(undefined)
     const [pourCoverage, setPourCoverage] = useState<number | undefined>(undefined)
+    const [condensationCoverage, setCondensationCoverage] = useState<number | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
@@ -468,6 +488,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             knownFruitable: knownFruitable,
             generation: generation,
             pourCoverage: pourCoverage, // TODO: ensure covered in go
+            condensationCoverageAtSealTime: condensationCoverage,
             writeTagTo: writeTagTo,
         }
         if (imageFile !== undefined) {
@@ -480,25 +501,22 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<div className={"centerH"}>*/}
-        {/*    <ExistingSpeciesSelector initialSpecies={species?._id}*/}
-        {/*                             doSelect={(spec?: SpeciesData) => {*/}
-        {/*                                 setSpecies(spec)*/}
-        {/*                                 setSubspecies(undefined)}}/>*/}
-        {/*</div>*/}
-        {/*{species !== undefined ? <div className={"centerH"}>*/}
-        {/*    <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
-        {/*</div> : null}*/}
         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
-        {/* TODO: Test coverage slider */}
-        <PourCoverageSelectorRequired value={pourCoverage} setPourCoverage={setPourCoverage}/>
-        <div className={"centerH"}>
+        <div className={"inlineChildren"}>
+            <div>{"Pour Coverage: "}</div>
+            <div>
+                <PourCoverageSelectorRequired value={pourCoverage} setPourCoverage={setPourCoverage}/>
+            </div>
+        </div>
+
+        <CondensationCoverageSelector coverage={condensationCoverage} updateParent={setCondensationCoverage}/>
+        <div className={"centerH mt-2"}>
             <ImageSelector updateParent={setImageFile}/>
         </div>
 
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"bottomButton"} onClick={ImportPlate}>{"Import Plate"}</button>
+        <button className={"greenButton buttonFullWidth"} onClick={ImportPlate}>{"Import Plate"}</button>
     </ImportEntryFormWrapper>
 }
 

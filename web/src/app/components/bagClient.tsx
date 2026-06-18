@@ -487,10 +487,10 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
         {/*    <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
         {/*</TestAndValidate>*/}
         {/* Other Optional fields*/}
-        <GenerationInput updateParent={setGeneration}/>
-        <TestAndValidate todos={["default to unknown?"]}>
-            <KnownFruitableArea doSelect={setKnownFruitable}/>
-        </TestAndValidate>
+        {species && <><GenerationInput updateParent={setGeneration}/>
+            <TestAndValidate todos={["default to unknown?"]}>
+                <KnownFruitableArea doSelect={setKnownFruitable}/>
+            </TestAndValidate></>}
 
         <TopLevelImageSelector updateParent={setImageFile} buttonText={"Upload image"}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

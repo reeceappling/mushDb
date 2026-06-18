@@ -122,7 +122,7 @@ export default function SubspeciesDisplay(
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
-                <AliasesArea aliases={initial.aliases} readonly={readonly} headerLevel={headerLevel} updateParent={setAliases}/>
+                <AliasesArea initial={initial.aliases} readonly={readonly} updateParent={setAliases}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <AclDefaultAclDisplay ACL={acl} defaultACL={defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl} readonly={readonly}/>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
@@ -180,7 +180,7 @@ export function NewSubspeciesForm({handlers, species}: {
             {/* NAME (ID) */}
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"New Subspecies Name: "} setName={setName} readonly={false}/>
             {/* Aliases */}
-            <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases}/>
+            <AliasesArea initial={aliases} readonly={false} updateParent={setAliases}/>
             {/* Notes */}
             <NewEntryNotes setNotes={setNotes}/>
             <CreateNewEntryButton onSubmit={submitNewSubspecies}/>

@@ -43,14 +43,14 @@
     - [x] List Page
   - [ ] Agar Recipe
     - [x] Display page
-    - [ ] Create page
+    - [x] Create page
       - [x] Validate all working properly
       - [x] Nutrients/etc working properly
       - [ ] nutes/sugar/etc consider doing x/Liter? (should maybe put a x/L calculator?)
     - [x] List Page
       - [x] Clicks work
       - [x] Ensure text doesnt step all over each other on slim screens
-        - [ ] Reformat on slim screens?]
+        - [ ] Reformat on slim screens?
   - [ ] Bag
     - [x] Display page
       - [x] Fix wetness area
@@ -63,6 +63,7 @@
     - [x] Import page
       - [x] Redirect not working
       - [x] not finding the substrate recipe for standard recipes
+      - [x] Remove portions when species is not selected
     - [x] List Page
   - [x] Fruit
     - [x] Display page
@@ -82,26 +83,28 @@
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [ ] Import page
+      - [ ] Casing ratio is not allowing decimals easily...
+      - [x] Default generation is not properly being tracked as 1
+      - [ ] Generation 0 is not working properly, failing on post
     - [x] List Page
   - [x] Grain Batch
     - [x] Display page
     - [x] Create page
       - [x] Create Jar // Create
-        - [ ] Add wetness????
-        - [ ] Add burst grains???
-        - [ ] Allow PC to be optional???? Maybe not.... DECIDE
+        - [ ] Add wetness???? Consider only doing on update
+        - [ ] Add burst grains??? Consider only doing on update
+        - [x] Allow PC to be optional???? Maybe not.... DECIDE
     - [x] List Page
   - [ ] Jar
     - [x] Display page
-      - [ ] fix wetness area
+      - [ ] fix wetness and burst grains areas
+        - [ ] Validate typescript working
+        - [ ] Add both to the go side and confirm working
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Import page
-      - [ ] If no species, do not show many other fields!
-      - [ ] Add wetness?
-      - [ ] Add burst grains?
-      - [ ] Add notes?
+      - [x] If no species, do not show many other fields!
     - [x] List Page
-  - [ ] Jar Recipe
+  - [x] Jar Recipe
     - [x] Display page
     - [x] Create page
       - [ ] Subforms?
@@ -148,32 +151,36 @@
       - [ ] Create GrainJar is not inheriting PCRun and is not showing other selector
       - [ ] Create Bag wetness, filterSize, and selectors
       - [ ] Create Batch ensure working as needed
-      - [ ] Create Plate // TODO: create?
+      - [ ] Create Plate // TODO: intermediate batch // TODO: create?
       - [ ] Create Plugs // TODO: create?
-      - [ ] Create Slant // TODO: create?
+      - [ ] Create Slant // TODO: intermediate batch if does not already have a batch // TODO: create?
       - [ ] Create Stasis Tube // TODO: CREATE
-    - [ ] Create page
-      - [ ] Runtime not styled correctly! FIX!
+    - [x] Create page
+      - [x] Runtime not styled correctly
+      - [ ] Allow items to be added when creating a pc run???
     - [x] List Page
-  - [ ] Plate
+  - [x] Plate
     - [x] Display page
-      - [ ] pour and condens cov
+      - [x] pour and condens cov
+        - [ ] Validate condens coverage
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
-      - [ ] Add Coverage sliders
+      - [x] Add Coverage sliders
+        - [x] Ensure properly styled
     - [x] List Page
   - [ ] Plugs
     - [x] Display page
       - [ ] woods area displaying weird on slim screens
       - [ ] sales area
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page // TODO: MAKE THIS PAGE!
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [ ] Create page
       - [ ] Create PC run from within creator
-      - [ ] Validate all areas working properly
-    - [ ] Import page
+      - [x] Validate all areas working properly
+    - [x] Import page
       - [x] Dowels say amount where it should be radius
-      - [ ] NOT WORKING WHEN SUBMITTING!
+      - [x] For no species, remove gen, KF
+      - [x] NOT WORKING WHEN SUBMITTING!
     - [x] List Page
   - [ ] Project
     - [x] Display page
@@ -199,16 +206,17 @@
     - [ ] Display page
       - [ ] Aliases
       - [ ] Substrate
-      - [ ] ACLs
+        - [ ] Consider making changeable?
+      - [x] ACLs
       - [x] Subspecies viewer
       - [x] Subspecies creator
-        - [ ] Subspecies creator leave out the TriColTable?
-    - [ ] Create page
+        - [x] Subspecies creator leave out the TriColTable?
+    - [x] Create page
+      - [ ] Aliases not working
     - [x] List Page
-  - [ ] Spore Print
+  - [x] Spore Print
     - [x] Display page
       - [x] Create MSS not working, failing to find current print
-      - [ ] Create transfer? PROBABLY NOT, ONLY MSS?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) only done from fruit, bag, box, plate?
     - [x] Import page
       - [x] Spore print colors and densities selectors not working!
@@ -227,7 +235,7 @@
     - [x] Import page
       - [x] Spore print colors and densities selectors not working!
     - [x] List Page
-  - [ ] Stasis Tube
+  - [x] Stasis Tube
     - [x] Display page
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [x] ensure transfer from stasis tube properly disposes
@@ -237,28 +245,30 @@
     - [x] Display page
       - [x] Species at top
       - [ ] Aliases
+        - [ ] Creating and deleting one at the same time is not working
         - [ ] Cannot add aliases that already exist elsewhere?
         - [ ] NOT WORKING TO ADD ALIASES!!!!
-        - [ ] DO NOT USE TextBoxArea in AliasesArea!
+        - [x] DO NOT USE TextBoxArea in AliasesArea!
         - [ ] Deleting is not updating the view on response!
-      - [ ] ACLs
-        - [ ] Validate both updating properly
+      - [x] ACLs
+        - [x] Validate both updating properly
+        - [ ] When setting to "Publicly Editable", ensure the extra self-user is not added...
     - [x] Create page
     - [x] List Page
       - [x] Clicks work
       - [x] Display species name then subspecies name!
-  - [ ] Substrate Batch
+  - [x] Substrate Batch
     - [x] Display page
       - [x] Create bag validate
-      - [ ] Create FC validate
-        - [ ] NOT PROPERLY RETURNING ONCE CREATED!
+      - [x] Create FC validate
+        - [x] NOT PROPERLY RETURNING ONCE CREATED!
     - [x] List Page
   - [ ] Substrate Recipe
     - [x] Display page
       - [x] Name at top (copy other recipe view pages)
       - [x] Create Substrate Batch and validate
       - [x] Aliases
-        - [ ] Not moving to existing when updated
+        - [ ] Not moving new to existing once update response is received
     - [x] Create page
     - [x] List Page
   - [x] Transfer
@@ -273,13 +283,13 @@
     - [ ] Display page
     - [ ] Create page // TODO: figure this out
     - [ ] List Page?
-  - [ ] Water Jar
+  - [x] Water Jar
     - [x] Display page
       - [x] Disposal area
       - [x] Create MSS // TODO: CREATE
     - [x] Create page // TODO: self page?
       - [x] PC run selector is double-nested...
-    - [ ] Import page (NEED TO DO THIS!!!!!)
+    - [x] Import page
     - [x] List Page
 
 
@@ -345,6 +355,10 @@
     - [ ] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) (MAYBE DO THIS LATER?)
     - [ ] Display page
       - [ ] New fruit area
+    - [ ] Import page
+      - [ ] Add wetness?
+      - [ ] Add burst grains?
+      - [ ] Add notes? maybe just allow on update?
   - [ ] JarRecipe
     - [ ] ListPageTable
       - [ ] sort by Name, Last Updated
@@ -407,6 +421,8 @@
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
       - [ ] filter by species, subspecies, disposed(availability)?
+    - [ ] Display page
+      - [ ] Create transfer? PROBABLY NOT, ONLY MSS?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
   - [ ] SporeSwab
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated

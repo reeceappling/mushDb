@@ -19,7 +19,7 @@ Stasis tube (if filled with water later, probably not)
 type WaterJar struct {
 	MainCollectionIdField `bson:"inline"`
 	CreationDateField     `bson:"inline"` // From PcRun
-	PcRunField            `bson:"inline"` // Creation date assumed to be the same as pc run date
+	PcRunField            `bson:"inline"` // Creation date assumed to be the same as pc run date! PcRun for imports defaulted
 	NotesField            `bson:"inline"`
 	DisposedField         `bson:"inline"`
 	LastUpdatedField      `bson:"inline"`
@@ -138,6 +138,31 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		return
 	}
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
+}
+
+type importWaterJarRequest struct {
+	CreationDateField
+	NotesField
+	WriteTagToField // TODO: USE THIS!
+}
+
+func importWaterJarHandler(w http.ResponseWriter, r *http.Request) {
+	req := importWaterJarRequest{}
+	if err := ReadSimpleStructuredBody(r, w, &req); err != nil {
+		return
+	}
+	ctx := r.Context()
+	id := NextMainCollectionId()
+	ctx, now := request.UnixTime(r.Context())
+	toInsert := WaterJar{
+		MainCollectionIdField: MainCollectionIdField{id},
+		CreationDateField:     req.CreationDateField,
+		PcRunField:            PcRunField{impPcRun}, // import pc run!
+		NotesField:            NotesField{req.Notes},
+		LastUpdatedField:      LastUpdatedField{now},
+		AclField:              allCanWriteAcl(), // TODO: ok?
+	}
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateWaterJarRequest struct {

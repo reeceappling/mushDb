@@ -442,9 +442,10 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
             <NewEntryNotes setNotes={setNotes}/>
             <ReaderWriterSelector onSelect={setWriteTagTo}/>
             {/* SUBMIT AREA */}
-            <input type="submit" value="Submit" onClick={newFruitingChamberSubmit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>
+            <button className={"greenButton buttonFullWidth"} onClick={e=>{
+                e.stopPropagation()
+                newFruitingChamberSubmit()
+            }} />
         </NewEntryFormWrapper>
     )
 }
@@ -458,7 +459,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
     const [casingRatio, setCasingRatio] = useState<number>(2) // TODO: set and initial?
     // Non-required
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number>(1)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
@@ -522,7 +523,13 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
         {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}*/}
         {/*                            headerLevel={headerLevel}/>*/}
 
-        <GenerationInput updateParent={setGeneration}/>
+        <GenerationInput updateParent={g=>{
+            if (g!==undefined) {
+                setGeneration(g)
+            } else {
+                setErr("got undefined generation") // TODO: del?
+            }
+        }}/>
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
         <ImageSelector updateParent={setImageFile}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

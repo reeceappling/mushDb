@@ -44,11 +44,10 @@ export class PcRunData {
     }
 }
 
-// TODO: VALIDATE WORKS!
-export function PcRunSelectorCloseable(sp: SelectorProps<PcRunData>){ // TODO: likely overhaul
+export function PcRunSelectorCloseable(sp: SelectorProps<PcRunData>){
     return <CloseableSelector<PcRunData> props={{
         allowCreation: sp.allowCreation,
-        doSelect: sp.doSelect, // For selecting normally // TODO: ALLOW DESELECT/CLEAR!
+        doSelect: sp.doSelect, // For selecting normally
         closeTxt: "Close PcRun List",
         createTxt: "Create Pc Run",
         createEndpt: "pcRun",
@@ -65,4 +64,4 @@ export function PcRunSelectorCloseable(sp: SelectorProps<PcRunData>){ // TODO: l
     }}/>
 }
 
-const ChannelTextNewPcRun = "newPcRun"
+// const ChannelTextNewPcRun = "newPcRun"

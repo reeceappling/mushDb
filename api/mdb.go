@@ -725,8 +725,7 @@ var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		"sporePrint":      importSporePrintHandler,
 		"sporeSwab":       importSporeSwabHandler,
 		"stasisTube":      importStasisTubeHandler,
-		//"waterJar":      importWaterJarHandler, // TODO: import water jar handler?
-
+		"waterJar":        importWaterJarHandler,
 	}[endpt]
 	if !exists {
 		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
