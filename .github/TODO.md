@@ -79,8 +79,6 @@
   - [ ] Fruiting Chamber
     - [x] Display page
       - [x] Dispose button
-      - [ ] Make sales also trigger disposal? (Do this on many entry types?)
-      - [ ] Handle sale
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
@@ -140,9 +138,8 @@
     - [x] Import page
       - [x] Confirmed clean is not propagating properly, always showing up as unknown...
     - [x] List Page
-  - [ ] MSS
+  - [x] MSS
     - [x] Display page
-      - [ ] Sell area, ensure working as we want, and that selling marks as disposed
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
@@ -174,7 +171,6 @@
   - [ ] Plugs
     - [x] Display page
       - [ ] woods area displaying weird on slim screens
-      - [ ] sales area
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [ ] Create page
       - [ ] Create PC run from within creator
@@ -227,7 +223,6 @@
     - [x] Display page
       - [x] Parent area
         - [ ] Link for when parentType is undefined but parentId is defined
-      - [ ] Sales, do sale, mark as disposed when sold
       - [x] Disposal area
       - [x] UPDATING NOTES NOT WORKING!
       - [x] Reformat groups
@@ -347,6 +342,8 @@
     - [ ] Display page
       - [ ] Create SporePrint (Creates intermediate fruit)
       - [ ] Create SporeSwab (Creates intermediate fruit)
+      - [ ] Handle sale
+        - [ ] Make sales also trigger disposal? (Do this on many entry types?)
   - [ ] GrainBatch
     - [ ] ListPageTable
       - [ ] sort by Creation Date, Last Updated
@@ -385,6 +382,8 @@
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
       - [ ] filter by clean, species, subspecies, disposed(availability)?
+    - [ ] Display page
+      - [ ] Sell area, ensure working as we want, and that selling marks as disposed
   - [ ] PCRun
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
@@ -401,6 +400,7 @@
       - [ ] filter by species, subspecies, innoculated, disposed(availability)?
     - [ ] Display page
       - [ ] New fruit area
+      - [ ] sales area
   - [ ] Project
     - [ ] ListPageTable
       - [ ] sort by Created, Name, LastUpdated
@@ -429,6 +429,8 @@
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
       - [ ] filter by species, subspecies, disposed(availability)?
+    - [ ] Display page
+      - [ ] Sales, do sale, mark as disposed when sold
   - [ ] StasisTube
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
