@@ -152,7 +152,7 @@ func initializeBags(ctx context.Context) error {
 		SubstrateRecipeField:        SubstrateRecipeField{exAltId},
 		SubstrateBatchOptionalField: SubstrateBatchOptionalField{SubstrateBatch: utils.Pointer(altCollIdForint(idWoodPellets))},
 		PcRunField:                  PcRunField{exAltId},
-		FilterSize:                  "5nm",
+		FilterSize:                  "0.2 micron",
 		CreationDateField:           CreationDateField{exampleTime},
 		GenerationsFields: GenerationsFields{
 			GenSporeField:        GenSporeField{&exGenSinceSpore},

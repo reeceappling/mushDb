@@ -79,7 +79,7 @@ func initializeUsers(ctx context.Context) error {
 	return err
 }
 
-const testUserEmailSelf = "reeceappling@gmail.com" // TODO: or dot?
+const testUserEmailSelf = "reece.appling@gmail.com" // TODO: or dot?
 const testUserEmail = "nessapatch2408@gmail.com"
 
 // TODO: update user!!!

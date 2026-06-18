@@ -750,7 +750,7 @@ var (
 	}
 	testAcl = ACL{
 		Users: map[string]bool{
-			testUserEmail:     false, // TODO: fix for correct user
+			testUserEmail:     false, // TODO: fix for correct user! may be 2409?
 			testUserEmailSelf: true,
 		},
 		Projects: map[projectName]bool{

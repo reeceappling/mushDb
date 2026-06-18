@@ -35,6 +35,8 @@
   - [ ] Allow admin to add users to the account creation whitelist...
   - [ ] persist the whitelist?
 - [ ] ListPageTables allow hiding columns!
+
+
 - [ ] Entries
   - [x] Agar Batch
     - [x] Display page
@@ -55,7 +57,7 @@
     - [x] Display page
       - [x] Fix wetness area
       - [x] Ensure seal date added on transfer
-      - [ ] Preexisting users and projects which are not valid cause problems on update
+      - [x] Preexisting users and projects which are not valid cause problems on update
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [ ] 4XX should show error in error area, not just console
