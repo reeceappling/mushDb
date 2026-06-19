@@ -1,7 +1,8 @@
 // TODO: From: https://dev.to/morewings/lets-create-a-better-number-input-with-react-1j0m
 
-import type {ChangeEvent, FC, KeyboardEvent} from 'react';
+import {ChangeEvent, FC, KeyboardEvent, useEffect, useState} from 'react';
 import {useCallback, useId} from 'react';
+import * as React from "react";
 
 // List of available numeric modes
 export enum Modes {
@@ -22,9 +23,6 @@ export interface Labelled {
 }
 
 export interface NumericAreaProps extends ReadOnly, NumericInputProps {
-}
-
-export interface NumericAreaProps2 extends ReadOnly, NumericInputProps2 {
 }
 
 export interface NumericInputProps extends Labelled, NumericInputOnlyProps {
@@ -74,7 +72,7 @@ export type TextInputOnlyProps = {
 const patternMapping = {
     [Modes.natural]: '(?:0|[1-9]\\d*)',
     [Modes.integer]: '[+\\-]?(?:0|[1-9]\\d*)',
-    [Modes.floating]: '[+\\-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?',
+    [Modes.floating]: '[+\\-]?(?:0|[1-9]\\d*)(?:\\.\\d*)?',
     [Modes.scientific]: '[+\\-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+\\-]?\\d+)?',
 };
 
@@ -330,6 +328,35 @@ export const InputNumerical2: FC<NumericInputProps> = (
         </div>
     )
         ;
+};
+export function InputDecimal({initial,label,min,max,updateParent}:{initial:number,label:string,min?:number,max?:number,updateParent:(n:number)=>void}){
+    const [radiusDraft, setRadiusDraft] = useState(initial.toString())
+    const [err, setErr] = useState<string | undefined>(undefined)
+    useEffect(() => {
+        setRadiusDraft(initial.toString())
+    }, [initial])
+    return <NumericalAreaWithAbsolutes label={label} mode="floating" min={min||0.0} max={max||1000.0} readonly={false}
+                                       errorMessage={err} value={radiusDraft}
+                                       onChange={(val?: string) => {
+                                           const next = val ?? ""
+                                           setRadiusDraft(next)
+                                           // allow in-progress values like "1."
+                                           if (next === "" || next.endsWith(".")) {
+                                               setErr(undefined)
+                                               return
+                                           }
+                                           try {
+                                               const n = Number(val) // TODO: allow only numbers here
+                                               if (!Number.isNaN(n)) {
+                                                   val && updateParent(n)
+                                                   setErr(undefined)
+                                               } else {
+                                                   setErr("NaN decimal input")
+                                               }
+                                           } catch (e) {
+                                               setErr("failed to set decimal state: "+JSON.stringify(e))
+                                           }
+                                       }}/>
 };
 
 export const InputTextWithSmallTitle: FC<TextInputProps> = (

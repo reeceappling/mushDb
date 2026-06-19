@@ -61,6 +61,8 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {InputText} from "@/app/components/formSubcomponents/numericInput";
+import {Liquid} from "@/app/components/formSubcomponents/liquids";
+import {Antibiotic} from "@/app/components/formSubcomponents/antibiotic";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -257,6 +259,11 @@ export function NameModifiable({readonly, initial, updateParent}: {
 }
 
 export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipeData> }) {
+    const [defaultGrains, setDefaultGrains] = useState<Grain[]>([]);
+    const [defaultNutrients, setDefaultNutrients] = useState<Nutrient[]>([]);
+    const [defaultSugars, setDefaultSugars] = useState<Sugar[]>([]);
+    const [defaultAdditives, setDefaultAdditives] = useState<Additive[]>([]);
+
     const [name, setName] = useState<string | undefined>()
     const [grains, setGrains] = useState<Grain[]>()
     const [isStandard, setIsStandard] = useState(false)
@@ -267,6 +274,11 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
     const [err, setErr] = useState<string | undefined>()
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState<boolean>(false)
     const loadTemplate = (template: JarRecipeData) => {
+        setDefaultGrains(template.grains)
+        setDefaultNutrients(template.nutrients || [])
+        setDefaultSugars(template.sugars || [])
+        setDefaultAdditives(template.additives || [])
+
         setGrains(template.grains)
         setNutrients(template.nutrients || [])
         setSugars(template.sugars || [])
@@ -316,10 +328,9 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {
             return <JarRecipeSelector doSelect={(rec) => { // TODO: endpoint for getStandard?
-                if (rec === undefined) {
-                    return
+                if (rec) {
+                    loadTemplate(rec)
                 }
-                loadTemplate(rec)
             }} allowCreate={false}/>
         } else {
             return <button className={"basicButton"} onClick={() => {
@@ -329,21 +340,19 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
     }
     return <NewEntryFormWrapper entryType={"jarRecipe"}>
         <ErrorDisplay err={err}/>
-        <TestAndValidate todos={["TEST THIS"]}>
-            {templateRecipeSelector()}
-        </TestAndValidate>
+        {templateRecipeSelector()}
         <NameArea currentName={name} classNames={"inlineChildren"} readonly={false} setName={setName}/>
 
         {/* TODO: SUBFORMS!*/}
         <div>{"Grains"}</div>
-        <GrainsEntriesGroupForNew currentEntries={grains || []} updateParent={setGrains}/>
+        <GrainsEntriesGroupForNew initial={defaultGrains} updateParent={setGrains}/>
         <StandardArea readonly={false} setStandard={setIsStandard}/>
         <div>{"Nutrients"}</div>
-        <NutrientsEntriesGroupForNew currentEntries={nutrients} updateParent={setNutrients}/>
+        <NutrientsEntriesGroupForNew initial={defaultNutrients} updateParent={setNutrients}/>
         <div>{"Sugars"}</div>
-        <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
+        <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
         <div>{"Additives"}</div>
-        <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
+        <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"greenButton buttonFullWidth"} onClick={newJarRecipeSubmit}>{"Create Jar Recipe"}</button>
     </NewEntryFormWrapper>

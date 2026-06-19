@@ -259,6 +259,12 @@ export default function AgarRecipeDisplay(
 }
 
 export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarRecipeData> }) {
+    const [defaultLiquids, setDefaultLiquids] = useState<Liquid[]>([]);
+    const [defaultNutrients, setDefaultNutrients] = useState<Nutrient[]>([]);
+    const [defaultSugars, setDefaultSugars] = useState<Sugar[]>([]);
+    const [defaultAdditives, setDefaultAdditives] = useState<Additive[]>([]);
+    const [defaultAntibiotics, setDefaultAntibiotics] = useState<Antibiotic[]>([]);
+
     const [name, setName] = useState("")
     const [isStandard, setIsStandard] = useState(false)
     const [agar, setAgar] = useState(20)
@@ -307,6 +313,12 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                 if (rec === undefined) {
                     return
                 }
+                setDefaultLiquids(rec.liquids)
+                setDefaultNutrients(rec.nutrients || [])
+                setDefaultSugars(rec.sugars || [])
+                setDefaultAdditives(rec.additives || [])
+                setDefaultAntibiotics(rec.antibiotics || [])
+
                 setName(rec.name)
                 setIsStandard(rec.standard)
                 setAgar(rec.agar)
@@ -354,24 +366,24 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             </div>
             <div>
                 <div>{"Liquids: "}</div>
-                <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>
+                <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>
             </div>
             <div>
                 <div>{"Nutrients: "}</div>
-                <NutrientsEntriesGroupForNew currentEntries={nutrients}
+                <NutrientsEntriesGroupForNew initial={defaultNutrients}
                                              updateParent={setNutrients}/>
             </div>
             <div>
                 <div>{"Sugars: "}</div>
-                <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
+                <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
             </div>
             <div>
                 <div>{"Additives: "}</div>
-                <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
+                <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
             </div>
             <div>
                 <div>{"Antibiotics: "}</div>
-                <AntibioticEntriesGroupForNew currentEntries={antibiotics}
+                <AntibioticEntriesGroupForNew initial={defaultAntibiotics}
                                               updateParent={setAntibiotics}/>
             </div>
             <NewEntryNotes setNotes={setNotes}/>

@@ -36,7 +36,14 @@
   - [ ] persist the whitelist?
 - [ ] ListPageTables allow hiding columns!
 
-
+- [ ] Overhauled EntriesGroupsForNew, validate working
+  - [x] Grains
+  - [x] Nutrients
+  - [x] Sugars
+  - [x] Additives
+  - [x] Antibiotics
+  - [x] Woods
+  - [x] Liquids
 - [ ] Entries
   - [x] Agar Batch
     - [x] Display page
@@ -82,8 +89,8 @@
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
-    - [ ] Import page
-      - [ ] Casing ratio is not allowing decimals easily...
+    - [ ] Import page (WE ONLY WANT TO IMPORT ALREADY-INNOCULATED)
+      - [x] Casing ratio is not allowing decimals easily...
       - [x] Default generation is not properly being tracked as 1
       - [ ] Generation 0 is not working properly, failing on post
     - [x] List Page
@@ -108,6 +115,7 @@
     - [x] Display page
     - [x] Create page
       - [ ] Subforms?
+      - [ ] Template not working!
     - [x] List Page
       - [x] Standard
       - [x] Recent

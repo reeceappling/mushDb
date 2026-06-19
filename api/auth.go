@@ -295,9 +295,12 @@ var UserWhitelist = utils.Set[string]{}
 func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser goth.User) (sessionId SessionId, email string, err error) {
 	var u User
 	email = oauthUser.Email
+	adminEmail := os.Getenv("ADMIN_GMAIL")          // TODO: del!
+	println(adminEmail, email, adminEmail == email) // TODO: del
 	coll := DbFrom(ctx).Collection(UserCollName)
 	err = coll.FindOne(ctx, BsonFindFilter("_id", email)).Decode(&u)
 	if err != nil {
+		println("may attempt to create user?") // TODO: del
 		if !errors.Is(err, mongo.ErrNoDocuments) {
 			return "", oauthUser.Email, errors.Join(errors.New("failed to get user. May exist?"), err)
 		}
@@ -314,8 +317,8 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 		}
 
 		if adminEmail != "" && email == adminEmail {
-			env.LogIfDev(ctx, "Admin user signed up!")
-			logging.GetLogger(ctx).Info("Admin user signed up with email " + adminEmail)
+			println("Admin user signed up!") // TODO; del
+			logging.GetLogger(ctx).Info("Admin user signed up with email " + email)
 			u.Perms = UserPerms{
 				Admin:    AcctTypeAdmin(),
 				Projects: []projectName{}, // TODO: ADD PROJECTS???
@@ -326,6 +329,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 			return "", email, err
 		}
 		if adminEmail != "" && email == adminEmail {
+			println("checking admin user")                                                    // TODO; del
 			if err = coll.FindOne(ctx, BsonFindFilter("_id", email)).Decode(&u); err != nil { // TODO: remove?
 				println("failed to check Admin user")
 				return "", email, err
@@ -334,12 +338,16 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 				return "", email, errors.New("result does not show Admin")
 			}
 		}
-		env.LogIfDev(ctx, "user created, continuing")
+		println("user created, continuing") // TODO: del
 	}
 	if u.Perms.Admin == nil {
 		env.LogIfDev(ctx, "Admin on perms was nil when it should not have been!")
 	} else {
-		env.LogIfDev(ctx, "Admin on perms was correct!")
+		adm := "was not admin"
+		if *u.Perms.Admin {
+			adm = "was admin"
+		}
+		env.LogIfDev(ctx, "Admin on perms "+adm)
 	}
 	sessionId, _, err = serv.registerSessionAndResolvePerms(ctx, u)
 	return
@@ -359,8 +367,8 @@ func (serv *AuthService) SigninGuestUser() (sessionId SessionId, err error) {
 	sess := genericsessions.Session[ResolvedUserPerms]{
 		Data: ResolvedUserPerms{
 			Email:       email,
-			accountType: AcctTypeGuest(),
-			projects:    nil,
+			AccountType: AcctTypeGuest(),
+			Projects:    nil,
 		},
 		Expiry: time.Now().Add(serv.ttl),
 	}
@@ -388,16 +396,26 @@ func (serv *AuthService) registerSessionAndResolvePerms(ctx context.Context, usr
 		serv.deleteSession(sessId, usr.Email)
 	}
 	// Resolve auth info
+	at := func(ac *AccountType) string { // TODO: del
+		if ac == nil {
+			return "guest"
+		}
+		if *ac {
+			return "admin"
+		}
+		return "normalUser"
+	}
+	println("registering session with account type: " + at(usr.Perms.Admin)) // TODO: del
 	var resolvedPerms = ResolvedUserPerms{
 		Email:       usr.Email,
-		accountType: usr.Perms.Admin,
-		projects:    nil,
+		AccountType: usr.Perms.Admin,
+		Projects:    nil,
 	}
 	if usr.Perms.Admin.IsGuest() {
 		return serv.createSessionFor(ResolvedUserPerms{
 			Email:       usr.Email,
-			accountType: usr.Perms.Admin,
-			projects:    nil, // Guests have no projects
+			AccountType: nil,
+			Projects:    nil, // Guests have no projects
 		})
 	} else {
 		resolvedPerms, err = usr.ResolvePerms(ctx)

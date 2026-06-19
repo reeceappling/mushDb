@@ -552,8 +552,11 @@ func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
 
 func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T) ([]T, error) {
 	findBson := bson.D{{}}
+	println("getting latest from " + temp.CollectionName())
 	if filterOutStandard {
 		findBson = BsonFindFilter("standard", false)
+	} else {
+		println("trying to find ANY items") // TODO: ???
 	}
 	sortField := "$natural"
 	if updated {

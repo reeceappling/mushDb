@@ -71,7 +71,7 @@ func initializeUsers(ctx context.Context) error {
 	testUserSelf := User{
 		Email: testUserEmailSelf,
 		Perms: UserPerms{
-			Admin:    AcctTypeNormal(),
+			Admin:    AcctTypeAdmin(), // TODO: change back to normal as long as Email is not the admin email...
 			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
 		},
 	}
@@ -115,7 +115,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	acctType := u.Perms.Admin
 	out := ResolvedUserPerms{
 		Email:       u.Email,
-		accountType: acctType,
+		AccountType: acctType,
 	}
 	// If not regular user (is guest or admin), return early
 	if !acctType.IsRegular() {
@@ -148,6 +148,6 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	if err = cursor.Err(); err != nil {
 		return out, errors.Join(errors.New("mongo cursor error after UserPerms project iteration"), err)
 	}
-	out.projects = userProjPerms // TODO: ensure checking public projects as well???
+	out.Projects = userProjPerms // TODO: ensure checking public projects as well???
 	return out, nil
 }

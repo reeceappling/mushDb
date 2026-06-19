@@ -458,7 +458,7 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 		results = make([]T, 0, *numItems)
 	} else {
 		if user.IsAdmin() {
-			err = cursor.All(ctx, &results)
+			err = cursor.All(ctx, &results) // TODO: only results size???
 			return results, err
 		}
 	}
@@ -474,6 +474,7 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 			if ok {
 				// If user cannot read or write, do not add
 				if permedItem.Permissions().HighestPermFor(user) == nil {
+					println("skipping entry, user does not have permission!") // TODO: del
 					// Skip this entry
 					continue
 				}
@@ -483,8 +484,10 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 			continue
 		}
 		cursorClosed := cursor.ID() == 0
-		if cursorClosed && len(results) == 0 {
-			return results, mongo.ErrNoDocuments
+		if cursorClosed {
+			if len(results) == 0 {
+				return results, mongo.ErrNoDocuments
+			}
 		}
 		if err = cursor.Err(); err != nil {
 			return nil, err

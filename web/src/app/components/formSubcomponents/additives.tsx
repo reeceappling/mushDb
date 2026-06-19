@@ -9,6 +9,8 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AdditiveEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
+import {useEffect, useState} from "react";
+import {Sugar} from "@/app/components/formSubcomponents/sugars";
 
 export interface Additive {
     additive: string
@@ -77,10 +79,6 @@ export function AdditiveSelector(
                         }/>
 }
 
-export default function AdditivesArea({props}: { props: AreaProps<Additive> }) {
-    return FormListArea(AdditiveEntriesGroup)(props)
-}
-
 export function AdditivesAreaReadOnly({values}: {values?:Additive[]}) {
     if (!values || values.length===0){
         return null
@@ -93,139 +91,45 @@ export function AdditivesAreaReadOnly({values}: {values?:Additive[]}) {
     </div>
 }
 
-export function AdditiveEntriesGroupForNew({currentEntries, updateParent}: {
-    currentEntries: Additive[],
+export function AdditiveEntriesGroupForNew({initial, updateParent}: {
+    initial: Additive[],
     updateParent: (l: Additive[]) => void
 }) {
+    const [current, setCurrent] = useState<Additive[]>(initial);
+    useEffect(()=>{
+        setCurrent(initial)
+    },[initial])
     const handleSelect = (v: string) => {
-        const data = [...(currentEntries || []), {additive: v, amount: 0, unit: ""}];
-        updateParent(data)
+        const data = [...(current || []), {additive: v, amount: 0, unit: ""}];
+        setCurrent(data)
+    }
+    const doUpdate = (upd:Additive[]) => {
+        setCurrent(upd)
+        updateParent(upd)
     }
     return <div>
-        {currentEntries.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
-            {currentEntries.map((n, i) => {
+        {current.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
+            {current.map((n, i) => {
                 return <div key={n.additive} className={"contentsOnly"}>
-                    <AdditiveEntryForNew currentValue={n} updateParent={(updated: Additive) => {
-                        updateParent([...(currentEntries || [])].map((existing) => {
+                    <AdditiveEntryForNew initial={{
+                        additive:n.additive,
+                        amount: initial.length>i?initial[i].amount:1.0, // TODO: ok?
+                        unit: initial.length>i?initial[i].unit:"g", // TODO: ok?
+                    }} updateParent={(updated: Additive) => {
+                        doUpdate([...(current || [])].map((existing) => {
                             return existing.additive !== n.additive ? existing : updated
                         }))
                     }}/>
                     <RemoveButton txt={"Remove"} click={() => {
-                        updateParent([...(currentEntries || [])].filter((existing) => existing.additive !== n.additive))
+                        doUpdate([...(current || [])].filter((existing) => existing.additive !== n.additive))
                     }}/>
                 </div>
             })}
         </div>}
         <AdditiveTypeSelectorForNew onSelect={(val) => {
             val && handleSelect(val)
-        }} blacklist={currentEntries.map((v) => {
+        }} blacklist={current.map((v) => {
             return v.additive
         })}/>
-    </div>
-}
-
-export function AdditiveEntriesGroup({
-                                         initialEntries,
-                                         preexisting,
-                                         readonly,
-                                         updateParent,
-                                         blacklist
-                                     }: GroupProps<Additive>) {
-
-    const handleFormChangeAdditive = (index: number, ad: string) => {
-        const data = initialEntries ? [...initialEntries] : []
-        data[index].data.additive = ad
-        updateParent(data)
-    }
-    const handleFormChangeAmt = (index: number, val: number) => {
-        // TODO: HANDLE NON-NUMBERS!!!
-        const data = initialEntries ? [...initialEntries] : []
-        data[index].data.amount = val
-        updateParent(data)
-    }
-    const handleFormChangeUnit = (index: number, val: string) => {
-        const data = [...(initialEntries || [])]
-        data[index].data.unit = val
-        updateParent(data)
-    }
-    const addFields = (e: React.MouseEvent) => {
-        e.preventDefault()
-        const data = [...(initialEntries || []), {
-            data: {additive: "UNDEFINED", amount: 0.0, unit: 'UNDEFINED'},
-            disabled: false
-        }] // TODO: FIX DEFAULT
-        updateParent(data)
-    }
-    const removeFields = (index: number) => {
-        const data = [...(initialEntries || [])]
-        data.splice(index, 1);
-        updateParent(data)
-    }
-    const disableField = (name: string) => {
-        const data = [...(initialEntries || [])].map((v, i) => {
-            const val = v
-            if (val.data.additive === name) {
-                val.disabled = !val.disabled
-            }
-            return val
-        });
-        updateParent(data)
-    }
-    const groupClasses = () => {
-        let out = "additiveEntryGroup"
-        if (preexisting) {
-            out = "exists"
-        } else {
-            out = "new"
-        }
-        if (readonly) {
-            out += " readonly"
-        } else {
-            out += " editable"
-        }
-        return out
-    }
-    const entryClasses = (entry: Data<Additive>) => {
-        let out = "additiveEntry"
-        if (entry.disabled) {
-            out += " disabled"
-        } else {
-            out += " enabled"
-        }
-        return out
-    }
-    return <div className={groupClasses()}>
-        {initialEntries?.map((input, index) => {
-            if (readonly) {
-                return <div className={"readonly " + entryClasses(input)} key={index}>
-                    {input.data.amount.toString() + " " + input.data.unit + " of " + input.data.additive + (input.disabled ? " (disabled)" : "" /* TODO: remove? */)}
-                </div>
-            }
-            return <div className={"editable " + entryClasses(input)} key={index}>
-                {readonly ? input.data.additive :
-                    <TestAndValidate todos={["on delete, not properly changing"]}>
-                        <AdditiveSelector
-                            initial={input.data.additive} blacklist={blacklist?.map((ad) => {
-                            return ad.data.additive
-                        })} onSelect={(a) => {
-                            a && handleFormChangeAdditive(index, a)
-                        }}/>
-                        <NumericalArea label="Amount" mode="floating" min={0} readonly={readonly} errorMessage={"FIXME"}
-                                       value={input.data.amount.toString()} onChange={(val?: string) => {
-                            val && handleFormChangeAmt(index, Number(val))
-                        }}/>
-                        <TextBox label={"Unit"} readonly={readonly} value={input.data.unit} fieldName={"FIXME"}
-                                 updateTextHandler={(t) => {
-                                     handleFormChangeUnit(index, t)
-                                 }}/>
-                    </TestAndValidate>}
-                {readonly || <button className={"removeButton"} onClick={() => {
-                    (preexisting ? disableField(input.data.additive) : removeFields(index))
-                }}>
-                    {preexisting ? (input.disabled ? "enable" : "disable") : "remove"}
-                </button>}
-            </div>
-        })}
-        {preexisting ? null : <button className={"basicButton"} onClick={addFields}>{"Add More.."}</button>}
     </div>
 }

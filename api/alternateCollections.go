@@ -35,14 +35,16 @@ type ListResponse[T any] struct {
 }
 
 func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated bool, maxResults int, doStandardToo bool, temp T) (bs []byte, err error) {
-	latestEntries, err := getLastNEntries(ctx, true, maxResults, doStandardToo, temp)
+	latestEntries, err := getLastNEntries(ctx, updated, maxResults, doStandardToo, temp)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
 			println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
 			return nil, err
 		}
+		println("error getting entries: " + err.Error())
 		latestEntries, err = []T{}, nil
 	}
+	println(fmt.Sprintf("listEntriesHandlerInternal found %d entries", len(latestEntries)))
 	if !doStandardToo {
 		bs, err = json.Marshal(latestEntries)
 	} else {
@@ -54,9 +56,11 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 				println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
 				return nil, err
 			}
+			println("error getting std entries: " + err.Error()) // TODO: del
 			outObj["standard"], err = []T{}, nil
 		}
 		// Standard is filtered out from latest already
+		println(fmt.Sprintf("listEntriesHandlerInternal found %d std entries", len(outObj["standard"])))
 
 		bs, err = json.Marshal(outObj)
 		//if err != nil {

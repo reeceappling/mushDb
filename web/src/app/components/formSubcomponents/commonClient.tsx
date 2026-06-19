@@ -13,7 +13,13 @@ import {
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {PixRows} from "@/app/components/formSubcomponents/commonClient2";
-import {InputText, InputTextInlineTitle, InputTextWithSmallTitle, NumericalAreaWithAbsolutes} from "./numericInput";
+import {
+    InputDecimal,
+    InputText,
+    InputTextInlineTitle,
+    InputTextWithSmallTitle,
+    NumericalAreaWithAbsolutes
+} from "./numericInput";
 import DateArea, {NumberToDate} from "./date";
 import {Note, NotesAreaMostRecentImage, NotesFormArea, SingleNoteV2} from "./notes";
 import {SpeciesData} from "@/app/components/speciesServer";
@@ -66,71 +72,62 @@ export function RemoveButton({txt, click}: { click: () => void, txt: string }) {
 }
 
 
-export function LiquidEntryForNew({currentValue, updateParent}: {
-    currentValue: Liquid,
-    updateParent: (l: Liquid) => void
+export function LiquidEntryForNew({initial, updateParent}: {
+    initial: Liquid,
+    updateParent: (l: Liquid) => void,
 }) {
-    const [err, setErr] = useState<string | undefined>()
-    const handleFormChangePct = (val: number) => {
-        const data = {...currentValue};
-        data.pct = val
-        updateParent(data)
+    const [current, setCurrent] = useState<Liquid>(initial);
+    const handleFormChangePct = (pct: number) => {
+        updateParent({...structuredClone(current), pct: pct})
     }
+    useEffect(() => {
+        setCurrent(initial)
+    }, [initial]);
     return <>
-        <div className={"text-m"}>{currentValue.name}</div>
-        <NumericalAreaWithAbsolutes label="Percentage by volume" mode="floating" min={0.0} max={1.0} readonly={false}
-                                    errorMessage={err} value={currentValue.pct.toString()} onChange={(val?: string) => {
-            try {
-                const n = Number(val) // TODO: allow only numbers here
-                if (Number.isNaN(n)) {
-                    setErr("NaN input")
-                } else {
-                    val && handleFormChangePct(n)
-                    setErr(undefined)
-                }
-            } catch (e) {
-                setErr(JSON.stringify(e))
-            }
-        }}/>
+        <div className={"text-m"}>{current.name}</div>
+        <InputDecimal label={"Percentage by volume"} initial={initial.pct} updateParent={handleFormChangePct}  min={0.0} max={100}/>{/* TODO: min/max ok?*/}
     </>
 }
 
-export function NutrientEntryForNew({currentValue, updateParent}: {
-    currentValue: Nutrient,
+export function NutrientEntryForNew({initial, updateParent}: {
+    initial: Nutrient,
     updateParent: (l: Nutrient) => void
 }) {
-    const [err, setErr] = useState<string | undefined>()
+    const [current, setCurrent] = useState<Nutrient>(initial)
     const [errTxt, setErrTxt] = useState<string | undefined>()
+    useEffect(() => {
+        setCurrent(initial)
+    }, [initial]);
     const handleFormChangeAmt = (val: number) => {
-        const data = {...currentValue};
+        const data = {...current};
         data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
-        const data = {...currentValue};
+        const data = {...current};
         data.unit = val
         updateParent(data)
     }
     return <>
-        <div className={"text-m"}>{currentValue.nutrient}</div>
-        {/* TODO: ensure floating */}
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}
-                                    errorMessage={err} value={currentValue.amount.toString()}
-                                    onChange={(val?: string) => {
-                                        try {
-                                            const n = Number(val) // TODO: allow only numbers here
-                                            if (Number.isNaN(n)) {
-                                                setErr("NaN input")
-                                            } else {
-                                                val && handleFormChangeAmt(n)
-                                                setErr(undefined)
-                                            }
-                                        } catch (e) {
-                                            setErr(JSON.stringify(e))
-                                        }
-                                    }}/>
+        <div className={"text-m"}>{current.nutrient}</div>
+        <InputDecimal label={"Amount"} initial={initial.amount} updateParent={handleFormChangeAmt} min={0.0} max={1000.0}/>{/* TODO: min/max ok?*/}
+        {/*<NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}*/}
+        {/*                            errorMessage={err} value={currentValue.amount.toString()}*/}
+        {/*                            onChange={(val?: string) => {*/}
+        {/*                                try {*/}
+        {/*                                    const n = Number(val) // TODO: allow only numbers here*/}
+        {/*                                    if (Number.isNaN(n)) {*/}
+        {/*                                        setErr("NaN input")*/}
+        {/*                                    } else {*/}
+        {/*                                        val && handleFormChangeAmt(n)*/}
+        {/*                                        setErr(undefined)*/}
+        {/*                                    }*/}
+        {/*                                } catch (e) {*/}
+        {/*                                    setErr(JSON.stringify(e))*/}
+        {/*                                }*/}
+        {/*                            }}/>*/}
         <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={currentValue.unit.toString()} onChange={(val?: string) => {
+                                 value={current.unit.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -141,42 +138,45 @@ export function NutrientEntryForNew({currentValue, updateParent}: {
     </>
 }
 
-export function SugarEntryForNew({currentValue, updateParent}: {
-    currentValue: Sugar,
+export function SugarEntryForNew({initial, updateParent}: {
+    initial: Sugar,
     updateParent: (l: Sugar) => void
 }) {
-    const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
+    const [current, setCurrent] = useState<Sugar>(initial)
+    useEffect(() => {
+        setCurrent(initial)
+    }, [initial]);
     const handleFormChangeAmt = (val: number) => {
-        const data = {...currentValue};
+        const data = {...current};
         data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
-        const data = {...currentValue};
+        const data = {...current};
         data.unit = val
         updateParent(data)
     }
     return <>
-        <div className={"text-m"}>{currentValue.type}</div>
-        {/* TODO: ensure floating */}
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}
-                                    errorMessage={err} value={currentValue.amount.toString()}
-                                    onChange={(val?: string) => {
-                                        try {
-                                            const n = Number(val) // TODO: allow only numbers here
-                                            if (Number.isNaN(n)) {
-                                                setErr("NaN input")
-                                            } else {
-                                                val && handleFormChangeAmt(n)
-                                                setErr(undefined)
-                                            }
-                                        } catch (e) {
-                                            setErr(JSON.stringify(e))
-                                        }
-                                    }}/>
+        <div className={"text-m"}>{current.type}</div>
+        <InputDecimal label={"Amount"} initial={initial.amount} updateParent={handleFormChangeAmt}  min={0.0} max={1000.0}/>{/* TODO: min/max ok?*/}
+        {/*<NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}*/}
+        {/*                            errorMessage={err} value={current.amount.toString()}*/}
+        {/*                            onChange={(val?: string) => {*/}
+        {/*                                try {*/}
+        {/*                                    const n = Number(val) // TODO: allow only numbers here*/}
+        {/*                                    if (Number.isNaN(n)) {*/}
+        {/*                                        setErr("NaN input")*/}
+        {/*                                    } else {*/}
+        {/*                                        val && handleFormChangeAmt(n)*/}
+        {/*                                        setErr(undefined)*/}
+        {/*                                    }*/}
+        {/*                                } catch (e) {*/}
+        {/*                                    setErr(JSON.stringify(e))*/}
+        {/*                                }*/}
+        {/*                            }}/>*/}
         <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={currentValue.unit.toString()} onChange={(val?: string) => {
+                                 value={current.unit.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -186,42 +186,48 @@ export function SugarEntryForNew({currentValue, updateParent}: {
     </>
 }
 
-export function AdditiveEntryForNew({currentValue, updateParent}: {
-    currentValue: Additive,
+export function AdditiveEntryForNew({initial, updateParent}: {
+    initial: Additive,
     updateParent: (l: Additive) => void
 }) {
     const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
+    const [current, setCurrent] = useState<Additive>(initial)
+    useEffect(() => {
+        setCurrent(initial)
+    }, [initial]);
     const handleFormChangeAmt = (val: number) => {
-        const data = {...currentValue};
+        const data = {...current};
         data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
-        const data = {...currentValue};
+        const data = {...current};
         data.unit = val
         updateParent(data)
     }
     return <>
-        <div className={"text-m"}>{currentValue.additive}</div>
+        <div className={"text-m"}>{current.additive}</div>
         {/* TODO: ensure floating */}
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}
-                                    errorMessage={err} value={currentValue.amount.toString()}
-                                    onChange={(val?: string) => {
-                                        try {
-                                            const n = Number(val) // TODO: allow only numbers here
-                                            if (Number.isNaN(n)) {
-                                                setErr("NaN input")
-                                            } else {
-                                                val && handleFormChangeAmt(n)
-                                                setErr(undefined)
-                                            }
-                                        } catch (e) {
-                                            setErr(JSON.stringify(e))
-                                        }
-                                    }}/>
+        <InputDecimal label={"Amount"} initial={initial.amount} updateParent={handleFormChangeAmt}  min={0.0} max={1000.0}/>{/* TODO: min/max ok?*/}
+
+        {/*<NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}*/}
+        {/*                            errorMessage={err} value={currentValue.amount.toString()}*/}
+        {/*                            onChange={(val?: string) => {*/}
+        {/*                                try {*/}
+        {/*                                    const n = Number(val) // TODO: allow only numbers here*/}
+        {/*                                    if (Number.isNaN(n)) {*/}
+        {/*                                        setErr("NaN input")*/}
+        {/*                                    } else {*/}
+        {/*                                        val && handleFormChangeAmt(n)*/}
+        {/*                                        setErr(undefined)*/}
+        {/*                                    }*/}
+        {/*                                } catch (e) {*/}
+        {/*                                    setErr(JSON.stringify(e))*/}
+        {/*                                }*/}
+        {/*                            }}/>*/}
         <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={currentValue.unit.toString()} onChange={(val?: string) => {
+                                 value={current.unit.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -231,42 +237,59 @@ export function AdditiveEntryForNew({currentValue, updateParent}: {
     </>
 }
 
-export function DowelEntryForNew({currentValue, updateParent}: {
-    currentValue: DowelType,
+export function DowelEntryForNew({initial, updateParent}: {
+    initial: DowelType,
     updateParent: (l: DowelType) => void
 }) {
-    const [err, setErr] = useState<string | undefined>()
+    // TODO: const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
+    const [current, setCurrent] = useState<DowelType>(initial)
+    useEffect(() => {
+        setCurrent(initial)
+    }, [initial]);
+    // TODO: const [radiusDraft, setRadiusDraft] = useState(currentValue.size.toString())
+    // TODO: useEffect(() => {
+    //     setRadiusDraft(currentValue.size.toString())
+    // }, [currentValue.size])
     const handleFormChangeRadius = (val: number) => {
-        const data = structuredClone(currentValue);
-        data.size = val
-        updateParent(data)
+        updateParent({...structuredClone(current), size: val}) // TODO: switch back if not work
+        // const data = structuredClone(currentValue);
+        // data.size = val
+        // updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
-        const data = structuredClone(currentValue);
-        data.units = val
-        updateParent(data)
+        updateParent({...structuredClone(current), units: val}) // TODO: switch back if not work
+        // const data = structuredClone(currentValue);
+        // data.units = val
+        // updateParent(data)
     }
     return <>
-        <div className={"text-m"}>{currentValue.wood}</div>
-        {/* TODO: ensure floating */}
-        <NumericalAreaWithAbsolutes label="Radius Magnitude" mode="floating" min={0.0} max={1000.0} readonly={false}
-                                    errorMessage={err} value={currentValue.size.toString()}
-                                    onChange={(val?: string) => {
-                                        try {
-                                            const n = Number(val) // TODO: allow only numbers here
-                                            if (Number.isNaN(n)) {
-                                                setErr("NaN input")
-                                            } else {
-                                                val && handleFormChangeRadius(n)
-                                                setErr(undefined)
-                                            }
-                                        } catch (e) {
-                                            setErr(JSON.stringify(e))
-                                        }
-                                    }}/>
+        <div className={"text-m"}>{current.wood}</div>
+        <InputDecimal initial={0.25} updateParent={handleFormChangeRadius} label={"Radius Magnitude"} min={0.0} max={1000.0}/>
+        {/*<NumericalAreaWithAbsolutes label="Radius Magnitude" mode="floating" min={0.0} max={1000.0} readonly={false}*/}
+        {/*                            errorMessage={err} value={radiusDraft}*/}
+        {/*                            onChange={(val?: string) => {*/}
+        {/*                                const next = val ?? ""*/}
+        {/*                                setRadiusDraft(next) // TODO: do this on any other absolutes components...*/}
+        {/*                                // allow in-progress values like "1."*/}
+        {/*                                if (next === "" || next.endsWith(".")) {*/}
+        {/*                                    setErr(undefined)*/}
+        {/*                                    return*/}
+        {/*                                }*/}
+        {/*                                try {*/}
+        {/*                                    const n = Number(val) // TODO: allow only numbers here*/}
+        {/*                                    if (!Number.isNaN(n)) {*/}
+        {/*                                        val && handleFormChangeRadius(n)*/}
+        {/*                                        setErr(undefined)*/}
+        {/*                                    } else {*/}
+        {/*                                        setErr("NaN input")*/}
+        {/*                                    }*/}
+        {/*                                } catch (e) {*/}
+        {/*                                    setErr(JSON.stringify(e))*/}
+        {/*                                }*/}
+        {/*                            }}/>*/}
         <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={currentValue.units.toString()} onChange={(val?: string) => {
+                                 value={current.units.toString()} onChange={(val?: string) => {
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -1033,11 +1056,11 @@ export function SingleAlias(
         setVal(updated)
         updateParent && updateParent(updated)
     }
-    return <div className={"alias"}>{/* TODO: was className note*/}
+    return <div className={"alias"}>
         {(!readonly && editing) ? <input name='txt' type="text" disabled={false}
                                          autoComplete="off" value={val.data}
                                          placeholder={"new alias"}
-                                         className={/* TODO: change className noteValue?*/"noteValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
+                                         className={"aliasValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
                                          onBlur={() => {
                                              setEditing(false)
                                          }}

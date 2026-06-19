@@ -44,7 +44,7 @@ export function WoodEntriesGroupForNew({currentEntries, updateParent}: {
             {currentEntries.map((n, i) => {
                 const keepOtherWoods = (existing: DowelType)=>existing.wood !== n.wood
                 return <div key={n.wood} className={"contentsOnly"}>
-                    <DowelEntryForNew currentValue={n} updateParent={(updated: DowelType) => {
+                    <DowelEntryForNew initial={{wood:n.wood,size:0.25,units:"in"}} updateParent={(updated: DowelType) => {
                         updateParent([...(currentEntries || [])].map((existing: DowelType)=>{
                             return existing.wood !== n.wood ? existing : updated
                         }))

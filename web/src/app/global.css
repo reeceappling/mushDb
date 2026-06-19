@@ -621,6 +621,18 @@ a {
 .noteValue {
     margin-top: 1em; /*TODO:ENSURE_OK*/
 }
+.alias {
+    display: inline-block;
+
+    & > * {
+        display: inline-block;
+        margin: var(--smallSpace);
+    }
+}
+
+.aliasValue {
+    margin-top: 1em; /*TODO:ENSURE_OK*/
+}
 
 .inline {
     display: inline-block;

@@ -9,6 +9,8 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
 import {NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
+import {useEffect, useState} from "react";
+import {Grain} from "@/app/components/formSubcomponents/grains";
 
 interface NutrientsAreaProps {
     readonly: boolean,
@@ -89,27 +91,39 @@ export function NutrientsAreaReadOnly({values}: {values?:Nutrient[]}) {
     </div>
 }
 
-export function NutrientsEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Nutrient[], updateParent: (l: Nutrient[])=>void}){
+export function NutrientsEntriesGroupForNew({initial, updateParent}: {initial: Nutrient[], updateParent: (l: Nutrient[])=>void}){
+    const [current, setCurrent] = useState<Nutrient[]>(initial);
+    useEffect(()=>{
+        setCurrent(initial)
+    },[initial])
     const handleSelectNutrient = (v: string) => {
-        const data = [...(currentEntries || []), {nutrient: v, amount: 0, unit: ""}];
-        updateParent(data)
+        const data = [...(current || []), {nutrient: v, amount: 0, unit: ""}];
+        setCurrent(data)
+    }
+    const doUpdate = (upd:Nutrient[]) => {
+        setCurrent(upd)
+        updateParent(upd)
     }
     return <div>
-        {currentEntries.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
-        {currentEntries.map((n,i)=>{
+        {current.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
+        {current.map((n,i)=>{
             return <div key={n.nutrient} className={"contentsOnly"}>
-                <NutrientEntryForNew currentValue={n} updateParent={(updated: Nutrient) => {
-                    updateParent([...(currentEntries || [])].map((existing) => {
+                <NutrientEntryForNew initial={{
+                    nutrient: n.nutrient,
+                    amount: initial.length>i?initial[i].amount: 1.0, // TODO: ok?
+                    unit: initial.length>i?initial[i].unit:"g", // TODO: ok?
+                }} updateParent={(updated: Nutrient) => {
+                    doUpdate([...(current || [])].map((existing) => {
                         return existing.nutrient !== n.nutrient ? existing : updated
                     }))
                 }}/>
                 <RemoveButton txt={"Remove"} click={()=>{
-                    updateParent([...(currentEntries || [])].filter((existing) => existing.nutrient !== n.nutrient))
+                    doUpdate([...(current || [])].filter((existing) => existing.nutrient !== n.nutrient))
                 }} />
             </div>
         })}
         </div>}
-        <NutrientTypeSelectorForNew onSelect={(val)=>{val && handleSelectNutrient(val)}} blacklist={currentEntries.map((v)=>{return v.nutrient})} readonly={false} />
+        <NutrientTypeSelectorForNew onSelect={(val)=>{val && handleSelectNutrient(val)}} blacklist={current.map((v)=>{return v.nutrient})} readonly={false} />
     </div>
 }
 

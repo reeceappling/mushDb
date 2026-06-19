@@ -190,9 +190,9 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	if maxPerm.CanWrite() {
 		return RWPermWrite()
 	}
-	if userPerms.projects != nil {
+	if userPerms.Projects != nil {
 		for proj, projCanWriteOnEntry := range acl.Projects {
-			if projPerm, exists := userPerms.projects[proj]; exists { // TODO: is projectPerm here ok
+			if projPerm, exists := userPerms.Projects[proj]; exists { // TODO: is projectPerm here ok
 				userCanWriteOnProj := projPerm != nil
 				userPermForProjectAndEntry := userCanWriteOnProj && projCanWriteOnEntry
 				if userPermForProjectAndEntry {
@@ -311,8 +311,8 @@ func AcctTypeGuest() *AccountType {
 
 type ResolvedUserPerms struct {
 	Email       string                           `bson:"email" json:"email"`
-	accountType *AccountType                     // nil is guest (never write), false is normal email, true is admin
-	projects    map[projectName]*UserProjectPerm // nil is readonly, false is canWrite, true is admin of project
+	AccountType *AccountType                     `bson:"accountType" json:"accountType"`               // nil is guest (never write), false is normal email, true is admin
+	Projects    map[projectName]*UserProjectPerm `bson:"projects,omitempty" json:"projects,omitempty"` // nil is readonly, false is canWrite, true is admin of project
 }
 
 func (perms ResolvedUserPerms) GetUser(ctx context.Context) (*User, error) {
@@ -327,17 +327,17 @@ func (perms ResolvedUserPerms) HasPermissionToEdit(item Permissioned) bool {
 }
 
 func (perms ResolvedUserPerms) IsAdmin() bool {
-	return perms.accountType.IsAdmin()
+	return perms.AccountType.IsAdmin()
 }
 
 func (perms ResolvedUserPerms) isGuest() bool {
-	return perms.accountType.IsGuest()
+	return perms.AccountType.IsGuest()
 }
 func (perms ResolvedUserPerms) isRegular() bool {
-	return perms.accountType.IsRegular()
+	return perms.AccountType.IsRegular()
 }
 func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWritePerm {
-	if perms.accountType.IsGuest() {
+	if perms.AccountType.IsGuest() {
 		return RWPermNothing()
 	}
 	if perms.IsAdmin() {
@@ -346,8 +346,8 @@ func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWriteP
 	// For standard users, rely on the user's project perms
 	var userProjPerm *UserProjectPerm = nil
 	var exists bool
-	if perms.projects != nil {
-		userProjPerm, exists = perms.projects[projName]
+	if perms.Projects != nil {
+		userProjPerm, exists = perms.Projects[projName]
 		if !exists {
 			return RWPermNothing()
 		}

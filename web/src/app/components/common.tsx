@@ -20,7 +20,7 @@ import {
     AssertSubstrateRecipe,
 } from "@/app/components/substrateRecipeClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {InputNumber, InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
+import {InputNumber, InputTextInlineTitle, Modes} from "@/app/components/formSubcomponents/numericInput";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertAgarBatch} from "@/app/components/agarBatchClient";
 import {AssertBag} from "@/app/components/bagClient";
@@ -978,6 +978,22 @@ export function dataFor<Type>(vals?: Type[]): Data<Type>[] {
 }
 
 export function FloatInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
+    const [val, setVal] = useState<number>(initial || 0)
+    const updateNumber = (s: string) => {
+        const n = NumbersOnlyFromText(s)
+        setVal(n)
+        onChange(n)
+    }
+    return <div>
+        <TestAndValidate todos={["validate working properly"]}>
+            <InputNumber min={0} max={10000} onChange={s => {
+                s && updateNumber(s)
+            }} step={1} mode={Modes.floating} value={val.toString()} readonly={false}/>
+        </TestAndValidate>
+    </div>
+}
+
+export function DecimalInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
     const [val, setVal] = useState<number>(initial || 0)
     const updateNumber = (s: string) => {
         const n = NumbersOnlyFromText(s)

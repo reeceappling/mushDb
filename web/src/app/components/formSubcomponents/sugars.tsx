@@ -1,4 +1,4 @@
-import {ChangeEvent} from "react";
+import {ChangeEvent, useEffect, useState} from "react";
 import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector";
 import {useQuery} from "@tanstack/react-query";
@@ -8,6 +8,8 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
 import {RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
+import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
+import {Antibiotic} from "@/app/components/formSubcomponents/antibiotic";
 
 export interface Sugar {
     type: string,
@@ -96,27 +98,39 @@ export function SugarsAreaReadOnly({values}: {values?:Sugar[]}) {
     </div>
 }
 
-export function SugarEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Sugar[], updateParent: (l: Sugar[])=>void}){
+export function SugarEntriesGroupForNew({initial, updateParent}: {initial: Sugar[], updateParent: (l: Sugar[])=>void}){
+    const [current, setCurrent] = useState<Sugar[]>(initial);
+    useEffect(()=>{
+        setCurrent(initial)
+    },[initial])
     const handleSelect = (v: string) => {
-        const data = [...(currentEntries || []), {type: v, amount: 0, unit: ""}];
-        updateParent(data)
+        const data = [...(current || []), {type: v, amount: 0, unit: ""}];
+        setCurrent(data)
+    }
+    const doUpdate = (upd:Sugar[]) => {
+        setCurrent(upd)
+        updateParent(upd)
     }
     return <div>
-        {currentEntries.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
-            {currentEntries.map((n,i)=>{
+        {current.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
+            {current.map((n,i)=>{
             return <div key={n.type} className={"contentsOnly"}>
-                <SugarEntryForNew currentValue={n} updateParent={(updated: Sugar) => {
-                    updateParent([...(currentEntries || [])].map((existing) => {
+                <SugarEntryForNew initial={{
+                    type: n.type,
+                    amount: initial.length>i?initial[i].amount:1.0, // TODO: ok?
+                    unit: initial.length>i?initial[i].unit:"g", // TODO: ok?
+                }} updateParent={(updated: Sugar) => {
+                    doUpdate([...(current || [])].map((existing) => {
                         return existing.type !== n.type ? existing : updated
                     }))
                 }}/>
                 <RemoveButton txt={"Remove"} click={()=>{
-                    updateParent([...(currentEntries || [])].filter((existing) => existing.type !== n.type))
+                    doUpdate([...(current || [])].filter((existing) => existing.type !== n.type))
                 }} />
             </div>
         })}
         </div>}
-        <SugarTypeSelectorForNew onSelect={(val)=>{val && handleSelect(val)}} blacklist={currentEntries.map((v)=>{return v.type})} readonly={false} />
+        <SugarTypeSelectorForNew onSelect={(val)=>{val && handleSelect(val)}} blacklist={current.map((v)=>{return v.type})} readonly={false} />
     </div>
 }
 

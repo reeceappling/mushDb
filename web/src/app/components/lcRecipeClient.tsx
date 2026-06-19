@@ -52,6 +52,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
+import {Grain} from "@/app/components/formSubcomponents/grains";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -198,6 +199,11 @@ export default function LcRecipeDisplay(
 }
 
 export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeData> }) {
+    const [defaultLiquids, setDefaultLiquids] = useState<Liquid[]>([]);
+    const [defaultNutrients, setDefaultNutrients] = useState<Nutrient[]>([]);
+    const [defaultSugars, setDefaultSugars] = useState<Sugar[]>([]);
+    const [defaultAdditives, setDefaultAdditives] = useState<Additive[]>([]);
+
     const [name, setName] = useState("")
     const [isStandard, setIsStandard] = useState(false)
     const [liquids, setLiquids] = useState<Liquid[]>([])
@@ -208,6 +214,11 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
     const [err, setErr] = useState<string | undefined>(undefined)
     const [templateSelectorOpen, setTemplateSelectorOpen] = useState<boolean>(false)
     const loadTemplate = (template: LcRecipeData) => {
+        setDefaultLiquids(template.liquids)
+        setDefaultNutrients(template.nutrients || [])
+        setDefaultSugars(template.sugars || [])
+        setDefaultAdditives(template.additives || [])
+
         setLiquids(template.liquids)
         setNutrients(template.nutrients || [])
         setSugars(template.sugars || [])
@@ -256,21 +267,19 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
     return (
         <NewEntryFormWrapper entryType={"lcRecipe"}>
             <ErrorDisplay err={err}/>
-            <TestAndValidate todos={["TEST THIS"]}>
-                {templateRecipeSelector()}
-            </TestAndValidate>
+            {templateRecipeSelector()}
             <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} headerTxt={"Recipe name: "}
                       readonly={false}/>
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} headerTxt={"Standard recipe? "}
                           readonly={false}/>
             <div>{"Liquids"}</div>
-            <LiquidEntriesGroupForNew currentEntries={liquids} updateParent={setLiquids}/>
+            <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>
             <div>{"Nutrients"}</div>
-            <NutrientsEntriesGroupForNew currentEntries={nutrients} updateParent={setNutrients}/>
+            <NutrientsEntriesGroupForNew initial={defaultNutrients} updateParent={setNutrients}/>
             <div>{"Sugars"}</div>
-            <SugarEntriesGroupForNew currentEntries={sugars} updateParent={setSugars}/>
+            <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
             <div>{"Additives"}</div>
-            <AdditiveEntriesGroupForNew currentEntries={additives} updateParent={setAdditives}/>
+            <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
             <button className={"greenButton buttonFullWidth"} onClick={createEntry}>{"Create"}</button>

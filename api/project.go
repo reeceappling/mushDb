@@ -287,7 +287,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			// TODO: remove the project from the user in the session stuff!
 			if sessId, exists := authSvc.UserSessionMap[u]; exists {
-				delete(authSvc.sessMap[sessId].Data.projects, projName) // TODO: ensure ok!
+				delete(authSvc.sessMap[sessId].Data.Projects, projName) // TODO: ensure ok!
 			}
 		}
 		// Add project with perm to user, or change the project perm  // TODO: VALIDATE WORKING PROPERLY
@@ -299,7 +299,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				// TODO: add the project to the user in the session stuff!
 				if sessId, exists := authSvc.UserSessionMap[u]; exists {
-					authSvc.sessMap[sessId].Data.projects[projName] = userPerm.UserProjectPerm()
+					authSvc.sessMap[sessId].Data.Projects[projName] = userPerm.UserProjectPerm()
 				}
 
 			}

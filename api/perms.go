@@ -39,8 +39,8 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 			return proj.Name
 		})
 	} else {
-		if user.projects != nil {
-			projectsToReturn = maps.Keys(user.projects)
+		if user.Projects != nil {
+			projectsToReturn = maps.Keys(user.Projects)
 		} else {
 			projectsToReturn = []projectName{}
 		}

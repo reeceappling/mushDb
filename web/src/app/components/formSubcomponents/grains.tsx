@@ -9,7 +9,7 @@ import {
 } from "@/app/components/formSubcomponents/numericInput";
 import {RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
-import {useState} from "react";
+import {useEffect, useState} from "react";
 
 export const GrainsList: string[] = ["Oats", "Popcorn", "Wheat", "Rye", "Millett"]
 
@@ -41,27 +41,35 @@ export function GrainsTypeSelector( // TODO: USE THIS!!!!!
 
 }
 
-export function GrainsEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Grain[], updateParent: (l: Grain[])=>void}){
+export function GrainsEntriesGroupForNew({initial, updateParent}: {initial: Grain[], updateParent: (l: Grain[])=>void}){
+    const [current, setCurrent] = useState<Grain[]>(initial);
+    useEffect(()=>{
+        setCurrent(initial)
+    },[initial])
     const handleSelectGrain = (v: string) => {
-        const data = [...(currentEntries || []), {grain: v, percentage: 0}];
-        updateParent(data)
+        const data = [...(current || []), {grain: v, percentage: 0}];
+        setCurrent(data)
+    }
+    const doUpdate = (upd:Grain[]) => {
+        setCurrent(upd)
+        updateParent(upd)
     }
     return <div>
-        {currentEntries.length!==0 && <div className={"inputGrid inputGrid3 gap-8"}>
-            {currentEntries.map((v,i)=>{
+        {current.length!==0 && <div className={"inputGrid inputGrid3 gap-8"}>
+            {current.map((v,i)=>{
                 return <div key={v.grain} className={"contentsOnly"}>
                     <GrainEntryForNew currentValue={v} updateParent={(updated: Grain) => {
-                        updateParent([...(currentEntries || [])].map((existing) => {
+                        doUpdate([...(current || [])].map((existing) => {
                             return existing.grain !== v.grain ? existing : updated
                         }))
                     }}/>
                     <RemoveButton txt={"Remove"} click={()=>{
-                        updateParent([...(currentEntries || [])].filter((existing) => existing.grain !== v.grain))
+                        doUpdate([...(current || [])].filter((existing) => existing.grain !== v.grain))
                     }} />
                 </div>
             })}
         </div>}
-        <GrainsTypeSelector onSelect={v=>{v&&handleSelectGrain(v)}} blacklist={currentEntries.map((v)=>{return v.grain})} />
+        <GrainsTypeSelector onSelect={v=>{v&&handleSelectGrain(v)}} blacklist={current.map((v)=>{return v.grain})} />
     </div>
 }
 
@@ -77,11 +85,11 @@ export function GrainEntryForNew({currentValue, updateParent}: {
     }
     return <>
         <div className={"text-m"}>{currentValue.grain}</div>
-        <NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={1.0} readonly={false}
+        <NumericalAreaWithAbsolutes label="Percentage" mode="floating" min={0.0} max={1.0} readonly={false}
                                     errorMessage={err} value={currentValue.percentage.toString()}
                                     onChange={(val?: string) => {
                                         try {
-                                            const n = Number(val) // TODO: allow only numbers here
+                                            const n = Number(val)
                                             if (Number.isNaN(n)) {
                                                 setErr("NaN input")
                                             } else {
