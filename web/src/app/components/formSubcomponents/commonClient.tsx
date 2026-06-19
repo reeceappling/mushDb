@@ -873,7 +873,7 @@ export function OpenMainPage(
     </div>
 }
 
-export function AliasesArea( // TODO: FULLY TEST! Creating and deleting one at the same time is not working!
+export function AliasesArea(
     {
         initial, readonly, updateParent
     }: {
@@ -899,8 +899,9 @@ export function AliasesArea( // TODO: FULLY TEST! Creating and deleting one at t
         }
     }
     const deliverUpdatesToParent = (updated:AllEntries<string>) => {
-        const existingToSend = updated.existing.filter(v=>!v.disabled).map(v=>v.data)
-        const newToSend = updated.new.filter(v=>{return !v.disabled&&v.data!==""}).map(v=>v.data)
+        const v = structuredClone(updated)
+        const existingToSend = v.existing.filter(v=>!v.disabled).map(v=>v.data)
+        const newToSend = v.new.filter(v=>{return !v.disabled&&v.data!==""}).map(v=>v.data)
         updateParent && updateParent([...existingToSend, ...newToSend])
     }
     const updateExisting = (updated:Data<string>[])=>{
@@ -915,15 +916,14 @@ export function AliasesArea( // TODO: FULLY TEST! Creating and deleting one at t
         out.new = updated
         deliverUpdatesToParent(out)
     }
-    // TODO: keep aliases internally, and only return active ones to parent
     if (readonly) {
         if (!initial) {
             return null
         }
         return <div>
             <div>{"Aliases :"}</div>
-            {(initial || []).map((a, i) => {
-                return <div key={i}>{a}</div>
+            {existing.map((a, i) => {
+                return <div key={i+a.data}>{a.data}</div>
             })}
         </div>
     }
@@ -951,18 +951,18 @@ export function AliasesArea( // TODO: FULLY TEST! Creating and deleting one at t
     return <div>
         <div>{"Aliases :"}</div>
         {existingArea()}
-        <NewAliasesSubArea updateParent={updateCreated} readonly={readonly||false} count={reloadCount}/>
+        <NewAliasesSubArea count={reloadCount} updateParent={updateCreated} readonly={readonly||false}/>
     </div>
 }
 
 export function NewAliasesSubArea({count,readonly,updateParent}:{count:number,readonly:boolean,updateParent:(entries:Data<string>[]) => void}){
-    if (readonly) {
-        return null
-    }
     const [aliases, setAliases] = useState<Data<string>[]>([])
     useEffect(() => {
         setAliases([]);
     }, [count]);
+    if (readonly) {
+        return null
+    }
     const propagateUpdate = (updated:Data<string>[]) => {
         setAliases(updated)
         updateParent(structuredClone(updated).filter((item)=>{
@@ -970,7 +970,6 @@ export function NewAliasesSubArea({count,readonly,updateParent}:{count:number,re
         }))
     }
     const createNewAlias = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-        //e.preventDefault()
         e.stopPropagation();
         // Do not update parent here. We don't want to propagate empty notes
         setAliases([...structuredClone(aliases), {data: "",disabled: false}])
@@ -1000,7 +999,7 @@ export function NewAliasesSubArea({count,readonly,updateParent}:{count:number,re
 
 
 }
-function RemoveNewAliasButton({click}:{click:()=>void}){ // TODO: may need to be moved
+function RemoveNewAliasButton({click}:{click:()=>void}){
     return <RemoveAliasButton disabled={false} click={click}/>
 }
 function RemoveAliasButton({disabled,click}:{disabled:boolean,click:()=>void}){

@@ -52,6 +52,19 @@ services:
       - mushdb
     depends_on:
       - mushdb
+#  salesdb:
+#    image: postgres:16-alpine
+#    container_name: postgres_db
+#    restart: always
+#    environment:
+#      POSTGRES_USER: myuser # TODO: FIX!
+#      POSTGRES_PASSWORD: mysecretpassword # TODO: FIX!
+#      POSTGRES_DB: mydatabase # TODO: FIX!
+#    ports:
+#      - "5432:5432" # TODO: FIX!
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+
   mushdb: # fungi database container # TODO: different db container for dev vs prod...
     image: mongo:4.4
     restart: unless-stopped
@@ -117,7 +130,12 @@ volumes:
 #      type: none
 #      device: ${LOCAL_IMAGES_DIR:?error}
 #      o: bind
-
+  postgres_data:
+#    driver: local
+#    driver_opts:
+#      type: none
+#      device: ${LOCAL_POSTGRES_DIR:?error}
+#      o: bind
   mongodb-data:
 #    driver: local
 #    driver_opts:

@@ -66,56 +66,148 @@ func (field SalesField) AddSale() {
 	// TODO: IMPL AND USE
 }
 
-//type ItemSaleData struct {
-//	UndiscountedPrice float64
-//	DiscountedPrice   float64
-//}
-//
-//type Discount struct {
-//	// TODO: ???????
-//}
-
 /*
-To model sales and discounts effectively in a database, use a dedicated Product Pricing table with start and end timestamps.
-This prevents tampering with historical order data, tracks price changes over time, and allows you to apply either percentage-based or flat-rate currency discounts.
-1. The Core Data Model. Instead of modifying the base Product table whenever there is a sale, structure your tables as follows:
-	Product: Stores the core, static product details (Name, SKU, Base Price).
 
-2. Best Practices for Order HistoryStore Price Snapshot on the Order:
-	When a customer makes a purchase, hardcode the final calculated sale price into your Order_Line_Items table.
-	Do not look up the price live later, as base prices and discounts change over time.
-	Keep Promotions Separated: If you are running a multi-item promotion or using promo codes, create a Discounts or Promotions table.
-	Link this to the Order or Order_Line_Items table so you can track how much revenue a specific campaign or coupon generated.
+Products catalog table: defining products (which can have multiple serial numbers under one product)
+CREATE TABLE products ( // TODO: mark items in entries collections as not available for sale? not-sellable-yet, available, sold, returned?
+    id SERIAL PRIMARY KEY, -- product ID (SKU?)
+    sku VARCHAR(50) UNIQUE NOT NULL, -- (Stock Keeping Unit): A unique identifier for each product, often used in inventory management.
+    name VARCHAR(255) NOT NULL, -- The name of the product.
+	description TEXT, --  A detailed description of the product.
+    base_price DECIMAL(10, 2) NOT NULL,
+    is_serialized BOOLEAN DEFAULT FALSE NOT NULL,
+    -- unsure if needed! product_class_id INT REFERENCES product_classes(id) ON DELETE SET NULL -- MOST SPECIFIC CLASS?
+);
 
-Create tables:
-Product: Stores the core, static product details (Name, SKU, Base Price).
-Product_Pricing: Manages all price fluctuations. It includes:
-		price_id: id for this very specific price
-		product_id (Foreign Key to Product)
-		price (The new sale price or base price)
-		discount_id? which discount(s) this price is part of?
-		discount_type (e.g., 'PERCENTAGE', 'FLAT_AMOUNT')
-		discount_value (e.g., 10 for 10%)
-		valid_from (Timestamp for when the deal starts)
-		valid_until (Timestamp for when the deal ends)
-Order_Line_Items table, each line item for an order (multi-bundles show up as multiple line items, where each line item points to the same txn)
-	itemType, item id, order id, link to base product, final price after any discounts
-Promotions and/or discounts table.
-	HOW ARE RULES STORED IN HERE? How can we assert that only plates can be bought, or just 2 plates and a print?
-	valid_from (Timestamp for when the deal starts)
-	valid_until (Timestamp for when the deal ends)
+serialized_items catalog: Tracks the individual physical assets (WE PROBABLY DONT WANT THIS! COVERED BY THE ENTRIES TABLES)
+CREATE TABLE serialized_items (
+    id SERIAL PRIMARY KEY,
+    product_id INT REFERENCES products(id) ON DELETE CASCADE,
+    serial_number VARCHAR(100) UNIQUE NOT NULL,
+    status VARCHAR(50) DEFAULT 'in_stock'
+        CHECK (status IN ('in_stock', 'allocated', 'sold', 'returned'))
+);
+
+sales_orders table: Contains transaction headers
+CREATE TABLE sales_orders (
+    id SERIAL PRIMARY KEY,
+    sales_channel VARCHAR(20) NOT NULL CHECK (sales_channel IN ('pos', 'online')),
+    order_status VARCHAR(50) DEFAULT 'pending'
+        CHECK (order_status IN ('pending', 'processing', 'completed', 'cancelled')),
+    total_amount DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+order_line_items table: Contains individual items within a transaction
+CREATE TABLE order_line_items (
+    id SERIAL PRIMARY KEY,
+    sales_order_id INT REFERENCES sales_orders(id) ON DELETE CASCADE, -- (FK)
+    product_id INT REFERENCES products(id), -- (FK to products)
+    quantity INT NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(10, 2) NOT NULL -- Stores actual final price after promotions (Reflects promotional pricing or $0 for the free item)
+);
+
+order_line_serialized_items table: The bridge mapping specific physical serial numbers to the transaction.
+-- Keeps order lines flexible. Null initially for online orders before picking.
+CREATE TABLE order_line_serialized_items (
+    id SERIAL PRIMARY KEY,
+    order_line_item_id INT REFERENCES order_line_items(id) ON DELETE CASCADE, // TODO: is this just a replica of the line item field in each item?
+    // TODO: how to mark sales on returns?
+	serialized_item_id INT REFERENCES serialized_items(id) ON DELETE SET NULL,
+    -- UNSURE IF NEEDED! scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+Handling the "Mix and Match" Bundle Rules:
+	Because your bundles are pool-based ("Buy 2 of A, B, or C, get 1 of A, B, or C free"),
+	you should not hardcode bundles as fixed products. Instead, use a Rule-Based Engine Architecture.
+
+product_subclasses table: defines subclasses (plates will have subclasses commonPlate and rarePlate)
+	id (unique row id)
+	className (can have multiple rows)
+	subclass_name (subClassification)
+
+
+product_classes table: one row for each class a SKU falls into?  defines classes of products, eg: plates, rare plates, common plates, sporePrints, etc.
+CREATE TABLE product_classes (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+	product ID (SKU) (PRODUCTS SHOULD BE PLACED INTO THEIR MOST SPECIFIC CLASS?)
+);
+
+
+promotions table: Defines the overall promotional campaign (bundles)
+CREATE TABLE promotions (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL, -- (e.g., 'Mix & Match Triple Deal')
+    promo_type VARCHAR(50) NOT NULL CHECK (promo_type IN ('buy_x_get_y', 'bundle_set_price')), -- // Buy X get Y, or bundle_set_price (bundle with set price) // TODO: full-order discount? bundle-discount?
+    -- discount_type (e.g., '100_percent_off_cheapest', '50% off all')
+	set_price DECIMAL(10, 2), -- Only used if promo_type is 'bundle_set_price'
+    is_active BOOLEAN DEFAULT TRUE NOT NULL -- TODO: consider making an active timeframe
+	-- TODO: consider just putting condition_group_id here!
+	-- TODO: consider also putting reward id here?
+);
+
+promotion_condition_groups table: This table now simply lists the components that are allowed to fill up bucket #55.
+-- Each contains the rules for the entire promotion inputs (2A and 3B get a C free == 2A and 3B in this case)
+CREATE TABLE promotion_condition_groups (
+    id SERIAL PRIMARY KEY, -- TODO: this is the group id???
+    promotion_id INT REFERENCES promotions(id) ON DELETE CASCADE,
+    required_quantity INT DEFAULT 0 NOT NULL, -- Total required across 'any' strategy pools
+    selection_strategy VARCHAR(50) DEFAULT 'any'
+        CHECK (selection_strategy IN ('any', 'all'))
+        -- 'any' = Pool mix-and-match (Class A or Class B satisfies pool)
+        -- 'all' = Checklist style (Must meet every row's specific required_quantity)
+);
+
+-- Defines the item triggers (The "Buy" or the "Set" contents)
+promotion_conditions table: defines conditions required for a specific promotion
+-- For "Buy 2A, 1B, get 1C free" there will be 2 rows, one for 2xA 1xB
+-- EACH ROW IS A CONDITION! So for group ID of Plates and Prints, there'd be 2 rows - ID:GrpName:null:Plate, and ID:GrpName:null:Print
+CREATE TABLE promotion_conditions (
+    id SERIAL PRIMARY KEY,
+	promotion_id INT REFERENCES promotions(id) ON DELETE CASCADE,
+    condition_group_id INT REFERENCES promotion_condition_groups(id) ON DELETE CASCADE,
+	-- Make both nullable: a condition can look for a specific SKU OR a whole class
+    product_id INT REFERENCES products(id) ON DELETE CASCADE,
+    product_class_id INT REFERENCES product_classes(id) ON DELETE CASCADE,
+    required_quantity INT DEFAULT 1 NOT NULL, -- Used primarily when group strategy is 'all'
+    -- TODO: maybe not: is_scaling_factor BOOLEAN DEFAULT FALSE NOT NULL, -- True if reward scales with this item's count
+
+    -- Enforce that a condition row targets either a specific SKU or a Class, never both or neither
+    CONSTRAINT chk_condition_target CHECK (
+        (product_id IS NOT NULL AND product_class_id IS NULL) OR
+        (product_id IS NULL AND product_class_id IS NOT NULL)
+    )
+);
+////minimum_quantity_or_required_quantity String?
+
+promotion_rewards table: defines the rewards for a specific promotion
+-- Defines the resulting rewards (The "Get" contents - used only for buy_x_get_y)
+CREATE TABLE promotion_rewards (
+    id SERIAL PRIMARY KEY,
+    promotion_id INT REFERENCES promotions(id) ON DELETE CASCADE,
+	-- must contain ONLY 1 of the following 2!
+    product_id INT REFERENCES products(id) ON DELETE CASCADE,
+    product_class_id INT REFERENCES product_classes(id) ON DELETE CASCADE,
+
+    -- Quantity Strategies
+    reward_qty_strategy VARCHAR(50) DEFAULT 'fixed'
+        CHECK (reward_qty_strategy IN ('fixed', 'all_purchased_items', 'multiply_by_condition_qty')), -- TODO: remove the third?
+    fixed_quantity INT, -- Used only if strategy is 'fixed'
+    -- TODO: maybe not: matching_condition_class_id INT REFERENCES product_classes(id), -- Used if scaling by a specific class
+
+    -- Discount Evaluation
+    discount_type VARCHAR(50) NOT NULL CHECK (discount_type IN ('percent_off', 'fixed_price')),
+    discount_value DECIMAL(10, 2) NOT NULL,
+
+    -- Enforce that a reward targets either a specific SKU or an entire Class
+    CONSTRAINT chk_reward_target CHECK (
+        (product_id IS NOT NULL AND product_class_id IS NULL) OR
+        (product_id IS NULL AND product_class_id IS NOT NULL)
+    )
+);
 */
-
-//type EntryTypesSoldMap map[string]map[MainCollectionId]int // map of entryType to mainCollectionId to count
-
-//type SaleFileContent struct {
-//	PurchaseDate time.Time
-//	ShipDate     *time.Time
-//	SoldItems    EntryTypesSoldMap
-//	Discounts    []Discount
-//	TotalPrice   float64
-//	// TODO: how to account for
-//}
 
 type Sale struct { // TODO: THIS IS A LINE ITEM! SHOULD ONLY CONTAIN ONE ITEM! OR MAYBE A MULTIPLE OF THE SAME ITEM FOR THE CASE OF PLUGS??
 	AlternateCollectionIdField `bson:"inline"`

@@ -85,7 +85,7 @@ type Plate struct {
 	PicsField                           `bson:"inline"`
 	ContaminationsField                 `bson:"inline"`
 	KnownFruitableField                 `bson:"inline"`
-	SaleField                           `bson:"inline"`
+	SaleField                           `bson:"inline"` // TODO: how to set not sellable? not ready for sale? ready for sale? returned? sold? resold?
 	DisposedField                       `bson:"inline"`
 	MostRecentImageField                `bson:"inline"`
 	NotesField                          `bson:"inline"`

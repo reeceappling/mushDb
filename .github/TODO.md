@@ -202,7 +202,7 @@
     - [x] List Page
   - [ ] Species
     - [ ] Display page
-      - [ ] Aliases
+      - [x] Aliases
       - [ ] Substrate
         - [ ] Consider making changeable?
       - [x] ACLs
@@ -210,7 +210,7 @@
       - [x] Subspecies creator
         - [x] Subspecies creator leave out the TriColTable?
     - [x] Create page
-      - [ ] Aliases not working
+      - [x] Aliases not working
     - [x] List Page
   - [x] Spore Print
     - [x] Display page
@@ -241,12 +241,12 @@
   - [ ] Subspecies
     - [x] Display page
       - [x] Species at top
-      - [ ] Aliases
-        - [ ] Creating and deleting one at the same time is not working
+      - [x] Aliases
+        - [x] Creating and deleting one at the same time is not working
         - [ ] Cannot add aliases that already exist elsewhere?
-        - [ ] NOT WORKING TO ADD ALIASES!!!!
+        - [x] NOT WORKING TO ADD ALIASES!!!!
         - [x] DO NOT USE TextBoxArea in AliasesArea!
-        - [ ] Deleting is not updating the view on response!
+        - [x] Deleting is not updating the view on response!
       - [x] ACLs
         - [x] Validate both updating properly
         - [ ] When setting to "Publicly Editable", ensure the extra self-user is not added...
@@ -260,12 +260,12 @@
       - [x] Create FC validate
         - [x] NOT PROPERLY RETURNING ONCE CREATED!
     - [x] List Page
-  - [ ] Substrate Recipe
+  - [x] Substrate Recipe
     - [x] Display page
       - [x] Name at top (copy other recipe view pages)
       - [x] Create Substrate Batch and validate
       - [x] Aliases
-        - [ ] Not moving new to existing once update response is received
+        - [x] Not moving new to existing once update response is received
     - [x] Create page
     - [x] List Page
   - [x] Transfer

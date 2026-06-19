@@ -170,6 +170,10 @@ export default function SpeciesDisplay(
             },
         },
     ]
+    const updateAliases = (as: string[])=>{
+        console.log(JSON.stringify(as)) // TODO: del
+        setAliases(as)
+    }
     return (
         <DisplayFormWrapper entryType={"species"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -188,7 +192,7 @@ export default function SpeciesDisplay(
                     </TestAndValidate>
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <AliasesArea initial={aliases} readonly={readonly} updateParent={setAliases}/>
+            <AliasesArea initial={initial.aliases} readonly={readonly} updateParent={updateAliases}/>{/* TODO: initial as just aliases?*/}
             <SubspeciesForSpeciesArea subspecies={subspecies}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
@@ -252,7 +256,7 @@ export function NewSpeciesForm(
         <NameArea classNames={"inlineChildren"} currentName={sciName} headerTxt={"Scientific Name :"}
                   setName={setSciName}/>
         <ErrorDisplay err={err}/>
-        <AliasesArea initial={aliases} updateParent={setAliases} readonly={false}/> {/* TODO: OVERHAUL */}
+        <AliasesArea updateParent={setAliases} readonly={false}/> {/* TODO: initial as just aliases?*/}
         <SelectorWrapper current={sub} title={"Standard Substrate"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setSub} allowCreate={handlers.isTopLevel} creatorInPage={false}/>
         </SelectorWrapper>

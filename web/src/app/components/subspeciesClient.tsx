@@ -180,7 +180,7 @@ export function NewSubspeciesForm({handlers, species}: {
             {/* NAME (ID) */}
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"New Subspecies Name: "} setName={setName} readonly={false}/>
             {/* Aliases */}
-            <AliasesArea initial={aliases} readonly={false} updateParent={setAliases}/>
+            <AliasesArea readonly={false} updateParent={setAliases}/>
             {/* Notes */}
             <NewEntryNotes setNotes={setNotes}/>
             <CreateNewEntryButton onSubmit={submitNewSubspecies}/>
