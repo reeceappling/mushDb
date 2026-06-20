@@ -287,6 +287,14 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
     if (readonly && !current) {
         return null
     }
+    // const updatePerms = (upd: Map<string,Data<string>>)=>{
+    //     const toUpdateWith: Map<string, string> = new Map(
+    //         [...upd.entries()]
+    //             .filter(([k, v]) => !v.disabled)
+    //             .map(([k, v]) => [k, v.data])
+    //     );
+    //     setPerms && setPerms(toUpdateWith)
+    // }
     const existingUsersArea = ()=>{
         if (current === undefined || current.size === 0) {
             if (current === undefined){
