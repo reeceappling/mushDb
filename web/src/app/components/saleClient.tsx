@@ -179,32 +179,34 @@ export function SaleArea(
         canCreateSale: boolean
     }
 ){
-    const [open, setOpen] = useState(false)
-    const saleCreated = (newsale: string)=>{
-        setSale && setSale(newsale)
-        setOpen(false)
-    }
-    if (sale === undefined) {
-        return <div>
-            <TestAndValidate todos={["overhaul this for sales"]}>
-            <div className={"saleArea"}>
-                <div className={"inline"}>{"Available to sell"}</div>
-                {/* TODO: ensure that mark as sold marks as disposed as well, except in cases where things can be multi-sold*/}
-                {!readonly && <button className={"basicButtonSmall inline"} onClick={()=>{setOpen(!open)}}>{open?"Close sale creation area":"Mark as sold"}</button> /* TODO: FIX ME SO THIS CREATES A NEW SALE!*/}
-            </div>
-            {open &&
-                <NewSaleForm onCreate={s=>saleCreated(s._id)} />
-            }
-            </TestAndValidate>
-        </div>
-    }
-    const b58id = sale
-    return <div className={"areaWrapper"}>
-        <div className={"areaHeader"}>{"Sold: "}</div>
-        <div>
-            <EntryLinkForId props={{displayId: b58id, linkId: b58id, entryType:"sale", openInNewTab:true}}/>
-        </div>
-    </div>
+    return null  // TODO: REENABLE EVENTUALLY
+
+    // const [open, setOpen] = useState(false)
+    // const saleCreated = (newsale: string)=>{
+    //     setSale && setSale(newsale)
+    //     setOpen(false)
+    // }
+    // if (sale === undefined) {
+    //     return <div>
+    //         <TestAndValidate todos={["overhaul this for sales"]}>
+    //         <div className={"saleArea"}>
+    //             <div className={"inline"}>{"Available to sell"}</div>
+    //             {/* TODO: ensure that mark as sold marks as disposed as well, except in cases where things can be multi-sold*/}
+    //             {!readonly && <button className={"basicButtonSmall inline"} onClick={()=>{setOpen(!open)}}>{open?"Close sale creation area":"Mark as sold"}</button> /* TODO: FIX ME SO THIS CREATES A NEW SALE!*/}
+    //         </div>
+    //         {open &&
+    //             <NewSaleForm onCreate={s=>saleCreated(s._id)} />
+    //         }
+    //         </TestAndValidate>
+    //     </div>
+    // }
+    // const b58id = sale
+    // return <div className={"areaWrapper"}>
+    //     <div className={"areaHeader"}>{"Sold: "}</div>
+    //     <div>
+    //         <EntryLinkForId props={{displayId: b58id, linkId: b58id, entryType:"sale", openInNewTab:true}}/>
+    //     </div>
+    // </div>
 }
 
 export function SalesArea(
@@ -216,33 +218,34 @@ export function SalesArea(
         setEntries?:(ps:string[])=>void
         offset?:number
     }) {
-    const [current, setCurrent] = useState(sales || [])
-    const [creatorOpen, setCreatorOpen] = useState(false)
-    const updateEntries=(items: string[])=>{
-        setEntries && setEntries(items)
-        setCurrent(items)
-    }
-    const addArea = ()=>{
-        return <div>
-            <div>
-                <button className={"basicButton"} onClick={() => {
-                    setCreatorOpen(!creatorOpen)
-                }}>{creatorOpen ? "Close Sale Creator" : "Create a new Sale"}</button>
-            </div>
-            {creatorOpen && <NewSaleForm onCreate={(s)=>{
-                updateEntries([...current,s._id])}
-            }/> }
-        </div>
-    }
-    return <div>
-            <div>{"Associated Sales: "}</div>
-            {(sales || []).map(s=>{
-                return <div key={s}>
-                    <EntryLinkForId props={{displayId:s,linkId:s,entryType:"sale",openInNewTab:true}}/>
-                </div>
-            })}
-            {(!readonly&&allowCreate) && addArea()}
-        </div>
+    return null  // TODO: REENABLE EVENTUALLY
+    // const [current, setCurrent] = useState(sales || [])
+    // const [creatorOpen, setCreatorOpen] = useState(false)
+    // const updateEntries=(items: string[])=>{
+    //     setEntries && setEntries(items)
+    //     setCurrent(items)
+    // }
+    // const addArea = ()=>{
+    //     return <div>
+    //         <div>
+    //             <button className={"basicButton"} onClick={() => {
+    //                 setCreatorOpen(!creatorOpen)
+    //             }}>{creatorOpen ? "Close Sale Creator" : "Create a new Sale"}</button>
+    //         </div>
+    //         {creatorOpen && <NewSaleForm onCreate={(s)=>{
+    //             updateEntries([...current,s._id])}
+    //         }/> }
+    //     </div>
+    // }
+    // return <div>
+    //         <div>{"Associated Sales: "}</div>
+    //         {(sales || []).map(s=>{
+    //             return <div key={s}>
+    //                 <EntryLinkForId props={{displayId:s,linkId:s,entryType:"sale",openInNewTab:true}}/>
+    //             </div>
+    //         })}
+    //         {(!readonly&&allowCreate) && addArea()}
+    //     </div>
 }
 
 export function SaleListPageTable({data, onClick, withLink}: ListPageItems<SaleData>) {

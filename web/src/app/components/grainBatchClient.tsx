@@ -42,13 +42,9 @@ import {
 import { ACL } from "./accessControlServer";
 import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
 
-// TODO: GRAIN BATCHES LIST IS NOT WORKING!
-// TODO: ENSURE DISPLAY IS LOOKING GOOD
-// TODO: also plugs not working at all
 // TODO: list users also not working (all of this as of 5/7/26)
 
 export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
-    // TODO: FIX THIS WHOLE FUNC
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
@@ -107,7 +103,6 @@ export default function GrainBatchDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<GrainBatchData>) {
-    // TODO: DISPLAY IS NOT WORKING FOR LONG IDS! ex: https://mush.appli.ng/view/grainBatch/5A44RFrtnHxcLTdoF
         const [initial, setInitial] = useState(data)
 
         const [err, setErr] = useState<string | undefined>()

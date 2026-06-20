@@ -260,8 +260,7 @@ export default function FruitingChamberDisplay(
         <DisplayFormWrapper entryType={"fruitingChamber"}>
             <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Fruiting Chamber", entryType:"fruitingChamber"}}/>
-            <MostRecentImageDisplay data={initial.mostRecentImage}
-                                    headerLevel={headerLevel}/>{/* Most recent image! */}
+            <MostRecentImageDisplay data={initial.mostRecentImage}/>{/* Most recent image! */}
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

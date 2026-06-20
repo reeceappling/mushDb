@@ -205,7 +205,7 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             burstGrains: burstGrains,
             writeTagTo: writeTagTo,
         }
-        setFormData(formData, dataObj) // TODO: dhould this go first or last everywhere?
+        setFormData(formData, dataObj) // TODO: should this go first or last everywhere?
         if (imageFile !== undefined) {
             formData.set("img", imageFile, "img")
         }
@@ -310,11 +310,9 @@ export default function JarDisplay(
         const submit = () => {
             const formData = new FormData()
             const dataObj: any = {
-                // TODO: BURST GRAINS
                 knownFruitable: knownFruitable,
                 disposed: disposed,
                 sale: sale, // TODO: remove
-                //writeTagTo: writeTagTo, // TODO: remove!
                 wetness: wetness,
                 burstGrains: burstGrains,
                 acl: MarshalAcl(acl),
@@ -391,7 +389,6 @@ export default function JarDisplay(
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
                 </FlexedSinglesGroup>}
             </FlexedArea>
-            {/*TODO: validate next 2 working*/}
             {initial.wetness===undefined?<SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/> : <WetnessDisplay value={wetness} />}
             {initial.burstGrains===undefined?<SliderOnlyIfUndefinedWithOpenButton text={"Burst Grains"} defaultValue={0} onChange={setBurstGrains}/> : <WetnessDisplay text={"Burst Grains"} value={burstGrains} />}
 
@@ -488,7 +485,7 @@ export function JarListPageTable({data, onClick, withLink}: ListPageItems<JarDat
         NewColumn("Subspec", v => v.subspecies || "", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: JarData) => {
