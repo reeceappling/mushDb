@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"slices"
 )
 
 // needed for creating fruits (unless fruits came from agar or bag)
@@ -45,8 +46,10 @@ type FruitingChamber struct { // TODO: SHOEBOX vs monotub!
 }
 
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
-	return errors.New("fc cannot be transferred (unsure if this is ok)")
-	// TODO: make transferrable to plate? box? bag?
+	if !slices.Contains([]string{PlateSourceType /*BagSourceType, GrainJarSourceType*/}, dst.SourceType()) {
+		return errors.New("Fruiting chamber cannot transfer to " + dst.SourceType())
+	}
+	return nil
 }
 
 func (f FruitingChamber) Innoculatable() error {

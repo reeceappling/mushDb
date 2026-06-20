@@ -78,6 +78,8 @@ func initializeGrainBatches(ctx context.Context) error {
 
 type createGrainBatchRequest struct {
 	JarRecipeRequiredField
+	WetnessField
+	BurstGrainsField
 	NotesField
 	PermsOnRequest `json:"acl"` // Nil means allCanWrite
 }

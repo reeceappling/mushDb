@@ -230,7 +230,9 @@ export default function FruitDisplay(
         {
             txt: "Clone Fruit", // TODO: ensure works as expected?
             newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                return <NewTransferArea idFrom={data._id} typeFrom={"fruit"} validTypesTo={["plate","slant","jar","stasisTube","bag","fruitingChamber"/* TODO: ensure comprehensive list*/]} onCreated={(item: TransferData) => {
+                return <NewTransferArea idFrom={data._id} typeFrom={"fruit"}
+                /*validTypesTo={["plate","slant","jar","stasisTube","bag","fruitingChamber" TODO: ensure comprehensive list]}*/
+                                        onCreated={(item: TransferData) => {
                     setTransfersOut([...transfersOut, item._id]) // TODO: ok?
                     onCreate([{
                         typeText: "Transfer",

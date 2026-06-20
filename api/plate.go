@@ -671,7 +671,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
 		CreationDateField:                   data.CreationDateField,
-		CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{nil},
+		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField,
 		PourCoverageField:                   data.PourCoverageField,
 		WetAtCooledTimeField:                WetAtCooledTimeField{nil},
 		AgarOnOutsideAtPourTimeField:        AgarOnOutsideAtPourTimeField{nil},

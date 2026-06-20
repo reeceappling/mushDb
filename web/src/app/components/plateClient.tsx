@@ -210,6 +210,10 @@ export default function PlateDisplay(
     const [err, setErr] = useState<string | undefined>()
     const updateInitial = (updated: PlateData) => {
         setInitial(updated)
+        setPourCoveragePct(updated.pourCoverage)
+        setCondensationCoveragePct(updated.condensationCoverageAtSealTime)
+        setWetAtCoolTime(updated.wetAtCooledTime)
+        setAgarOnOutsideAtPourTime(updated.agarOnOutsideAtPourTime)
         setImages(InitialPicsEntries(updated.pics))
         setContams(InitialContamState(updated.contamination))
         setKnownFruitable(updated.knownFruitable)
@@ -487,7 +491,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             subspecies: subspecies,
             knownFruitable: knownFruitable,
             generation: generation,
-            pourCoverage: pourCoverage, // TODO: ensure covered in go
+            pourCoverage: pourCoverage,
             condensationCoverageAtSealTime: condensationCoverage,
             writeTagTo: writeTagTo,
         }
@@ -510,7 +514,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             </div>
         </div>
 
-        <CondensationCoverageSelector coverage={condensationCoverage} updateParent={setCondensationCoverage}/>
+        <CondensationCoverageSelector coverage={condensationCoverage} updateParent={setCondensationCoverage}/>{/* TODO: when unset, allow setting!*/}
         <div className={"centerH mt-2"}>
             <ImageSelector updateParent={setImageFile}/>
         </div>

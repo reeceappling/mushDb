@@ -180,6 +180,8 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
     const [generation, setGeneration] = useState<number | undefined>()
+    const [wetness, setWetness] = useState<number | undefined>()
+    const [burstGrains, setBurstGrains] = useState<number | undefined>()
     const [imageFile, setImageFile] = useState<File | undefined>()
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
@@ -199,6 +201,8 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             subspecies: subspecies,
             knownFruitable: knownFruitable,
             generation: generation,
+            wetness: wetness,
+            burstGrains: burstGrains,
             writeTagTo: writeTagTo,
         }
         setFormData(formData, dataObj) // TODO: dhould this go first or last everywhere?
@@ -232,6 +236,8 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             <KnownFruitableArea doSelect={setKnownFruitable}/>
             <GenerationInput updateParent={setGeneration}/>
         </>}
+        <SliderOnlyIfUndefinedWithOpenButton text={"(Optional) Wetness"}defaultValue={5} onChange={setWetness}/>
+        <SliderOnlyIfUndefinedWithOpenButton text={"(Optional) Burst Grains"} defaultValue={0} onChange={setBurstGrains}/>
 
         <ImageSelector updateParent={setImageFile}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
@@ -280,9 +286,8 @@ export default function JarDisplay(
         const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [acl, setAcl] = useState<ACL>(initial.acl)
-        const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
-        const [wetness, setWetness] = useState<number | undefined>(undefined)
-        const [burstGrains, setBurstGrains] = useState<number | undefined>(undefined)
+        const [wetness, setWetness] = useState<number | undefined>(initial.wetness)
+        const [burstGrains, setBurstGrains] = useState<number | undefined>(initial.burstGrains)
 
         // Helper states
         const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
@@ -310,8 +315,8 @@ export default function JarDisplay(
                 disposed: disposed,
                 sale: sale, // TODO: remove
                 //writeTagTo: writeTagTo, // TODO: remove!
-                wetness: wetness,// TODO: handle on go side
-                burstGrains: burstGrains, // TODO: handle on go side
+                wetness: wetness,
+                burstGrains: burstGrains,
                 acl: MarshalAcl(acl),
                 notes: notes,
             }
@@ -384,7 +389,7 @@ export default function JarDisplay(
             </FlexedArea>
             {/*TODO: validate next 2 working*/}
             {initial.wetness===undefined?<SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/> : <WetnessDisplay value={wetness} />}
-            {initial.burstGrains===undefined?<SliderOnlyIfUndefinedWithOpenButton text={"Burst Grains"} defaultValue={0} onChange={setBurstGrains}/> : <WetnessDisplay text={"Burst Grains"} value={wetness} />}
+            {initial.burstGrains===undefined?<SliderOnlyIfUndefinedWithOpenButton text={"Burst Grains"} defaultValue={0} onChange={setBurstGrains}/> : <WetnessDisplay text={"Burst Grains"} value={burstGrains} />}
 
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"jar"} transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly}/>
@@ -417,8 +422,8 @@ export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
     const [sizeCups, setSizeCups] = useState<number>(4) // 4 is pint!
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
-    // const [wetness, setWetness] = useState(0) // Set on update
-    // const [burstGrains, setBurstGrains] = useState(0) // Set on update
+    const [wetness, setWetness] = useState<number | undefined>(undefined) // Set on update
+    const [burstGrains, setBurstGrains] = useState<number | undefined>(undefined) // Set on update
 
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>()
@@ -438,8 +443,8 @@ export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
             sizeCups: sizeCups,
             grainBatch: grainBatch._id,
             // optional
-            // wetness: wetness,  // Added from update page
-            // burstGrains: burstGrains,  // Added from update page
+            wetness: wetness,
+            burstGrains: burstGrains,
             pcRun: pcRun?._id, // could this be optional or required?
             notes: notes || [],
             writeTagTo: writeTagTo,
@@ -461,6 +466,8 @@ export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
         }}/>
         {pcRunIn === undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={handlers.isTopLevel}/>}
+        <SliderOnlyIfUndefinedWithOpenButton text={"(Optional) Wetness"} defaultValue={5} onChange={setWetness}/>
+        <SliderOnlyIfUndefinedWithOpenButton text={"(Optional) Burst Grains"} defaultValue={0} onChange={setBurstGrains}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createJar}>{"Submit new Jar"}</button>

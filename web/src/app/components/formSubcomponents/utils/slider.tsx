@@ -63,14 +63,14 @@ export function SliderOnlyIfUndefinedWithOpenButton({defaultValue,onChange, text
         return <div>{(text||"Wetness")+": undefined"}<button className={"basicButtonSmall"} onClick={e=>{
             e.stopPropagation()
             setIsOpen(true)
-            onChange(defaultValue) // TODO: ok?
+            onChange(defaultValue)
         }}>{"Set value"}</button></div>
     }
     return <div>
         <WetnessSlider defaultValue={defaultValue} onChange={(e,v,t)=>{
         onChange(v)
     }} text={text}/>
-        <button onClick={e=>{
+        <button className={"basicButtonSmall"} onClick={e=>{
         e.stopPropagation()
         setIsOpen(false)
         onChange(undefined)

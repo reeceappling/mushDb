@@ -369,16 +369,16 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                 <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>
             </div>
             <div>
-                <div>{"Nutrients: "}</div>
+                <div>{"Nutrients (per Liter): "}</div>{/* TODO: per 400mL?*/}
                 <NutrientsEntriesGroupForNew initial={defaultNutrients}
                                              updateParent={setNutrients}/>
             </div>
             <div>
-                <div>{"Sugars: "}</div>
+                <div>{"Sugars (per Liter): "}</div>{/* TODO: per 400mL?*/}
                 <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
             </div>
             <div>
-                <div>{"Additives: "}</div>
+                <div>{"Additives (per Liter): "}</div>{/* TODO: per 400mL?*/}
                 <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
             </div>
             <div>

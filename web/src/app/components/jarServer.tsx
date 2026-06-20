@@ -44,9 +44,9 @@ export function TestJarOK(){
 
 export interface JarData {
     _id: string
-    recipe: string // TODO: may not exist for imported jars?
-    wetness?: number // TODO: handle everywhere
-    burstGrains?: number // TODO: handle everywhere
+    recipe: string
+    wetness?: number
+    burstGrains?: number
     sizeCups: number
     pcRun?: string
     creationDate: number

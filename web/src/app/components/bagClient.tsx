@@ -316,8 +316,8 @@ export default function BagDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
 
-            <TransfersOutDisplay validTypesTo={["plate"]} thisId={initial._id} thisEntryType={"bag"}
-                                 transfersOut={initial.transfersOut}
+            <TransfersOutDisplay thisId={initial._id} thisEntryType={"bag"} /*validTypesTo={["plate"]} TODO: on go side*/
+                                 transfersOut={initial.transfersOut} requireConfirmation={true/* TODO: ok?*/}
                                  allowNewTransferCreation={true}/>
             <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
             {/* Flushes */}

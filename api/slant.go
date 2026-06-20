@@ -247,6 +247,11 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 		http.Error(w, "failed to marshal result: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	bs, err := json.MarshalIndent(toInsert, "", "  ") // TODO; del
+	if err != nil {                                   // TODO; del
+		println(err.Error()) // TODO; del
+	} // TODO; del
+	println("imported: ", string(bs)) // TODO; del
 	_, err = w.Write(bsOut)
 	if err != nil {
 		handleWriteErr(err, w)

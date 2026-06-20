@@ -222,7 +222,8 @@ export default function SporeSwabDisplay(
             </FlexedArea>
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"sporeSwab"}
                                  transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly} validTypesTo={["plate", "slant"/* TODO: any others?*/]}/>
+                                 allowNewTransferCreation={!readonly}
+                /*validTypesTo={["plate", "slant"TODO: any others?]} TODO: on go side*//>
 
             <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>

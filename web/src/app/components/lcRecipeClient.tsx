@@ -53,6 +53,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
 import {Grain} from "@/app/components/formSubcomponents/grains";
+import {InputNumber2} from "@/app/components/formSubcomponents/numericInput";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -203,6 +204,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
     const [defaultNutrients, setDefaultNutrients] = useState<Nutrient[]>([]);
     const [defaultSugars, setDefaultSugars] = useState<Sugar[]>([]);
     const [defaultAdditives, setDefaultAdditives] = useState<Additive[]>([]);
+    //const [ml, setMl] = useState(400) // TODO: 1k?
 
     const [name, setName] = useState("")
     const [isStandard, setIsStandard] = useState(false)
@@ -272,6 +274,16 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
                       readonly={false}/>
             <StandardArea isStandard={isStandard} setStandard={setIsStandard} headerTxt={"Standard recipe? "}
                           readonly={false}/>
+            {/*<div>*/}
+            {/*    {"Optional Container volume:"}*/}
+            {/*    <InputNumber2 min={0} step={1} onChange={(val?: string) => {*/}
+            {/*        try {*/}
+            {/*            setMl(Number(val))*/}
+            {/*        }catch{*/}
+            {/*            setErr("invalid number: "+val)*/}
+            {/*        }*/}
+            {/*    }} placeholder={"milliliters"} mode={"integer"} max={1000} value={ml.toString()}/>*/}
+            {/*</div>*/}
             <div>{"Liquids"}</div>
             <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>
             <div>{"Nutrients"}</div>

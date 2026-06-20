@@ -291,7 +291,8 @@ export default function FruitingChamberDisplay(
                               canCreateSale={true}/>{/* Sale TODO: make sales also trigger disposed */}
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"}
+            <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"} requireConfirmation={true/* TODO: ok?*/}
+                            /*validTypesTo={["plate"]} TODO: on go side*/
                                  transfersOut={initial.transfersOut} allowNewTransferCreation={true}/>{/* TODO: validTypesTo, allowXferCreation?*/}
 
             <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}

@@ -28,7 +28,7 @@ type GrainJar struct {
 	GrainBatchOptionalField `bson:"inline"`
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
-	BurstGrainsField                  `bson:"inline"`
+	BurstGrainsField                  `bson:"inline"` // 0 is ideal, 1-2 is common, everything above that is oof
 	PcRunOptionalField                `bson:"inline"` // Imports default, can be created without a run!
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
@@ -245,8 +245,8 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 type createJarRequest struct {
 	SizeCups int `json:"sizeCups"`
 	GrainBatchField
-	//WetnessField                           // TODO: maybe add late?
-	//BurstGrainsField                       // TODO: maybe add late?
+	WetnessField
+	BurstGrainsField
 	PcRunOptionalField // TODO: MAKE OPTIONAL
 	NotesField
 	WriteTagToField
@@ -293,8 +293,8 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		GrainBatchOptionalField: data.GrainBatchField.asOptional(),
 		SizeCups:                data.SizeCups,
 		PcRunOptionalField:      data.PcRunOptionalField, // can be nil, which is ok, means not PC'd yet.
-		BurstGrainsField:        BurstGrainsField{nil},   //      data.BurstGrainsField, // initially set to nil, can be updated later. TODO: set this optionally?
-		WetnessField:            WetnessField{nil},       //           data.WetnessField, // initially set to nil, can be updated later. TODO: set this optionally?
+		BurstGrainsField:        data.BurstGrainsField,   //      data.BurstGrainsField, // can be updated later if not initially set
+		WetnessField:            data.WetnessField,       //           data.WetnessField, // can be updated later if not initially set
 		CreationDateField:       CreationDateField{now},
 		NotesField:              NotesField{data.Notes},
 		LastUpdatedField:        LastUpdatedField{now},
@@ -317,6 +317,8 @@ type importJarRequest struct {
 	SpeciesOptionalField // Only empty when non-innoc'd
 	SubspeciesOptionalField
 	Generation *Generation // TODO: make required for when innoculated!
+	WetnessField
+	BurstGrainsField
 	KnownFruitableField
 	WriteTagToField
 	// image as "img"
@@ -431,9 +433,9 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		MainCollectionIdField:   MainCollectionIdField{id},
 		SizeCups:                data.SizeCups,
 		JarRecipeField:          JarRecipeField{&data.Recipe},
-		GrainBatchOptionalField: GrainBatchOptionalField{nil},  // Batch not provided for import
-		WetnessField:            WetnessField{},                // TODO: fix?
-		BurstGrainsField:        BurstGrainsField{},            // TODO: fix?
+		GrainBatchOptionalField: GrainBatchOptionalField{nil}, // Batch not provided for import
+		WetnessField:            data.WetnessField,
+		BurstGrainsField:        data.BurstGrainsField,
 		PcRunOptionalField:      PcRunOptionalField{&impPcRun}, // Default run on import
 		CreationDateField:       CreationDateField{data.CreationDate},
 		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
@@ -461,8 +463,6 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
-	// TODO: used to be finishCreateMainCollectionEntry(ctx, &toInsert, w)
-	// TODO: finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateJarRequest struct {
@@ -472,7 +472,9 @@ type updateJarRequest struct {
 	SaleField
 	ImagesUpdateField  //"newPic-1"
 	ContamsUpdateField //"newContam-1"
-	PermsOnRequest     `json:"acl"`
+	WetnessField
+	BurstGrainsField
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updateJarRequest) reform() resolvedUpdateJarRequest {
@@ -480,6 +482,8 @@ func (upr updateJarRequest) reform() resolvedUpdateJarRequest {
 		KnownFruitableField: upr.KnownFruitableField,
 		SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
+		WetnessField:        upr.WetnessField,
+		BurstGrainsField:    upr.BurstGrainsField,
 		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
 		Contams:             contamUpdates(upr.Contams),
@@ -491,6 +495,8 @@ type resolvedUpdateJarRequest struct {
 	KnownFruitableField
 	SaleField
 	DisposedField
+	WetnessField
+	BurstGrainsField
 	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
@@ -504,6 +510,8 @@ func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclFiel
 				updateDisposedIfNeeded(req, existing).
 				updateNotesIfNeeded(req, existing).
 				updatePicsIfNeeded(req.Images, existing.Pics).
+				updateWetnessIfNeeded(req.Wetness, existing.Wetness).
+				updateBurstGrainsIfNeeded(req.BurstGrains, existing.BurstGrains).
 				updateContamsIfNeeded(req.Contams, existing.Contaminations).
 				updatePermsIfNeeded(aclField.ACL, existing.ACL).
 				updateLastUpdatedIfNeeded().

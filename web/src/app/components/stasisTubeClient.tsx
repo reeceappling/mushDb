@@ -279,7 +279,9 @@ export default function StasisTubeDisplay(
                         <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut} validTypesTo={["plate","stasisTube","jar"/* TODO: ANYMORE????*/]} disposeAfter={true} headerTxt={"Transfers"}/>
+                <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut}
+                    /*validTypesTo={["plate","stasisTube","jar"TODO: any others?]} TODO: on go side*/
+                                     disposeAfter={true} headerTxt={"Transfers"}/>
                 <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel} />{/* Pics */}
                 <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>

@@ -35,6 +35,7 @@
   - [ ] Allow admin to add users to the account creation whitelist...
   - [ ] persist the whitelist?
 - [ ] ListPageTables allow hiding columns!
+- [ ] Transfer creation, validTypesTo on the go side!
 
 - [ ] Overhauled EntriesGroupsForNew, validate working
   - [x] Grains
@@ -50,12 +51,11 @@
       - [x] Create Plates
       - [x] Create Slant poured pre-PC run
     - [x] List Page
-  - [ ] Agar Recipe
+  - [x] Agar Recipe
     - [x] Display page
     - [x] Create page
       - [x] Validate all working properly
       - [x] Nutrients/etc working properly
-      - [ ] nutes/sugar/etc consider doing x/Liter? (should maybe put a x/L calculator?)
     - [x] List Page
       - [x] Clicks work
       - [x] Ensure text doesnt step all over each other on slim screens
@@ -67,6 +67,7 @@
       - [x] Preexisting users and projects which are not valid cause problems on update
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [x] Allow xfers on go side (to plates only for now)
         - [ ] 4XX should show error in error area, not just console
     - [x] Create page
     - [x] Import page
@@ -88,34 +89,37 @@
       - [x] Dispose button
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [x] Allow xfers on go side (to plates only for now)
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [ ] Import page (WE ONLY WANT TO IMPORT ALREADY-INNOCULATED)
       - [x] Casing ratio is not allowing decimals easily...
       - [x] Default generation is not properly being tracked as 1
-      - [ ] Generation 0 is not working properly, failing on post
+      - [ ] Generation 0 is not working properly, failing on post (0-gen should not exist?)
     - [x] List Page
   - [x] Grain Batch
     - [x] Display page
     - [x] Create page
       - [x] Create Jar // Create
-        - [ ] Add wetness???? Consider only doing on update
-        - [ ] Add burst grains??? Consider only doing on update
-        - [x] Allow PC to be optional???? Maybe not.... DECIDE
+        - [x] Add wetness
+        - [x] Add burst grains
+        - [x] Allow PC to be optional
     - [x] List Page
-  - [ ] Jar
+  - [x] Jar
     - [x] Display page
-      - [ ] fix wetness and burst grains areas
-        - [ ] Validate typescript working
-        - [ ] Add both to the go side and confirm working
+      - [x] fix wetness and burst grains areas
+        - [x] Validate typescript working
+        - [x] Add both to the go side and confirm working
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Import page
       - [x] If no species, do not show many other fields!
+      - [x] Add wetness
+      - [x] Add burst grains
     - [x] List Page
   - [x] Jar Recipe
     - [x] Display page
     - [x] Create page
       - [ ] Subforms?
-      - [ ] Template not working!
+      - [x] Template not working!
     - [x] List Page
       - [x] Standard
       - [x] Recent
@@ -169,7 +173,7 @@
   - [x] Plate
     - [x] Display page
       - [x] pour and condens cov
-        - [ ] Validate condens coverage
+        - [ ] Validate condens coverage (when unset, allow setting)
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
@@ -212,7 +216,7 @@
     - [ ] Display page
       - [x] Aliases
       - [ ] Substrate
-        - [ ] Consider making changeable?
+        - [ ] Make this changeable!
       - [x] ACLs
       - [x] Subspecies viewer
       - [x] Subspecies creator
@@ -325,6 +329,8 @@
       - [ ] Create Slant (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
         - [ ] OVC
         - [ ] Go side
+    - [ ] Create page
+      - [ ] nutes/sugar/etc consider doing x/Liter? (should maybe put a x/L calculator?)
   - [ ] Bag
     - [ ] ListPageTable
       - [ ] sort by Created, Last Updated

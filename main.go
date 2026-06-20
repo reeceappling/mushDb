@@ -1060,6 +1060,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
+		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		if err != nil {
+			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "species", "subspecies": // Items with possible spaces in names but which have normal perms
 		out, err := rfid.GetAltCollectionItem[rfid.PermissionedAltCollectionItem[string]](ctx, id, map[string]rfid.PermissionedAltCollectionItem[string]{
 			"species":    &rfid.Species{},
@@ -1085,6 +1092,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
+		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		if err != nil {
+			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "user": // User (can have @)
 		decodedId, err := rfid.UrlDecodeString(id)
 		if err != nil {
@@ -1102,6 +1116,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
+		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		if err != nil {
+			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	// Cases which are alt colls with base58->binary ids
 	case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
 		// TODO: maybe de-urlencode here to account for named recipes?
@@ -1216,6 +1237,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		if err != nil {
+			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	}
 	_, err = w.Write(bytes)
 	if err != nil {

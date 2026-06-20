@@ -43,6 +43,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import { GetTransferReasons} from "@/app/components/formSubcomponents/server";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -192,12 +193,18 @@ export default function TransferDisplay(
         </DisplayFormWrapper>
 }
 
-export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, disposeAfter}: { // TODO: use validTypesTo?
+export function NewTransferArea({
+                                    idFrom,
+                                    typeFrom,
+                                    onCreated,
+                                    disposeAfter,
+                                    requireConfirmation,
+                                }: { // TODO: use validTypesTo?
     idFrom: string,
     typeFrom: string,
-    validTypesTo: string[],
     onCreated: (xfer: TransferData) => void,
     disposeAfter?: boolean, // nil is user choice (default false)
+    requireConfirmation?:boolean,
 }) {
     const [isOpen, setIsOpen] = useState(false)
 
@@ -210,19 +217,7 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, disp
     const [err, setErr] = useState<string | undefined>()
 
     const cookies = useContext(CookiesContext)
-    const submitNewTransfer = () => {
-        if (!idFrom || idFrom === "") {
-            setErr("ID From cannot be blank!")
-            return
-        }
-        if (!idTo || idTo === "") {
-            setErr("ID To cannot be blank!")
-            return
-        }
-        if (!reason || reason === "") {
-            setErr("reason cannot be blank!")
-            return
-        }
+    const finishSubmit = () => {
         const formData = new FormData();
         const dataObj: any = {
             from: idFrom,
@@ -243,6 +238,26 @@ export function NewTransferArea({idFrom, typeFrom, validTypesTo, onCreated, disp
             .catch(e=>{
                 setErr(JSON.stringify(e))
             })
+    }
+    const submitNewTransfer = () => {
+        if (!idFrom || idFrom === "") {
+            setErr("ID From cannot be blank!")
+            return
+        }
+        if (!idTo || idTo === "") {
+            setErr("ID To cannot be blank!")
+            return
+        }
+        if (!reason || reason === "") {
+            setErr("reason cannot be blank!")
+            return
+        }
+        if (requireConfirmation!==undefined && requireConfirmation){
+            ConfirmOrCancel({txt:"Transfers from "+typeFrom+" are abnormal, are you sure you want to do this?",onConfirm:finishSubmit}) // TODO: validate working
+        } else {
+            finishSubmit()
+        }
+
     }
     const toggleOpen = () => {
         setIsOpen(!isOpen)
@@ -434,23 +449,22 @@ export function TransfersOutDisplay( // TODO: likely overhaul
         transfersOut,
         allowNewTransferCreation,
         headerTxt,
-        validTypesTo,
         disposeAfter,
+        requireConfirmation,
     }: {
         thisId: string,
         thisEntryType: string,
         transfersOut?: string[],
         allowNewTransferCreation: boolean,
         headerTxt?: string,
-        validTypesTo?: string[],
         disposeAfter?: boolean, // undefined == let user select (default false), true is yes, false is no
+        requireConfirmation?: boolean,// TODO: require confirmation????
     }) {
     const openInNewTab = false
     if (!allowNewTransferCreation) {
         return <TransfersOutViewOnlyDisplay transfersOut={transfersOut} headerTxt={headerTxt}/>
     }
     const depth = useContext(DepthContext)
-    const validNewXferTypes = validTypesTo || ["bag", "jar", "lc", "plate", "slant", "stasisTube"]
     const [xfers, setXfers] = useState<string[]>(transfersOut || [])
     const [resultsHidden, setResultsHidden] = useState(false)
     const [newXfers, setNewXfers] = useState<string[]>([])
@@ -499,7 +513,8 @@ export function TransfersOutDisplay( // TODO: likely overhaul
 
                 <div id={"transferCreator"} className={"mt-2"}>{/* TODO: make button float to bottom???? */}
                     {allowNewTransferCreation &&
-                        <NewTransferArea idFrom={thisId} typeFrom={thisEntryType} validTypesTo={validNewXferTypes}
+                        <NewTransferArea idFrom={thisId} typeFrom={thisEntryType}
+                                         requireConfirmation={requireConfirmation}
                                          onCreated={(newXfer: TransferData) => {
                                              setNewXfers([...newXfers, newXfer._id])
                                          }} disposeAfter={disposeAfter}/>}

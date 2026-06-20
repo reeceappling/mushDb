@@ -598,7 +598,24 @@ func (upd *Mods) updateKnownFruitableIfNeeded(future, existing hasKnownFruitable
 	return updatePointerIfNeeded(upd, "knownFruitable", future.knownToBeFruitable(), existing.knownToBeFruitable())
 }
 func (upd *Mods) updateWetnessIfNeeded(future, existing *int) *Mods {
-	return updatePointerIfNeeded(upd, "wetness", future, existing) // TODO: ensure it can't unset!!!
+	if existing == nil && future != nil {
+		if *future < 0 || *future > 10 { // TODO: validate
+			upd.err = errors.New("wetness must be 1-10") // TODO: validate range ok
+			return upd
+		}
+		return upd.Set("wetness", *future)
+	}
+	return upd
+}
+func (upd *Mods) updateBurstGrainsIfNeeded(future, existing *int) *Mods {
+	if existing == nil && future != nil {
+		if *future < 0 || *future > 10 { // TODO: validate
+			upd.err = errors.New("burst grains must be 0-10") // TODO: validate range ok
+			return upd
+		}
+		return upd.Set("burstGrains", *future)
+	}
+	return upd
 }
 func (upd *Mods) updateCondensationCoverageIfNeeded(future, existing hasCondensCov) *Mods {
 	exist, fut := existing.condensationCoverage(), future.condensationCoverage()

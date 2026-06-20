@@ -13,6 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"slices"
 )
 
 // needed for creating fruits (unless from box or agar)
@@ -58,8 +59,10 @@ func (b Bag) Innoculatable() error {
 }
 
 func (b Bag) CanTransferTo(dst geneticSource) error {
-	return errors.New("Bag cannot be transferred (unsure if this is ok)")
-	// TODO: make transferrable to plate? bag?
+	if !slices.Contains([]string{PlateSourceType /*BagSourceType, GrainJarSourceType*/}, dst.SourceType()) {
+		return errors.New("Bag cannot transfer to " + dst.SourceType())
+	}
+	return nil
 }
 
 func (b Bag) GeneticInfoAsParent() (GeneticParentInfo, error) {

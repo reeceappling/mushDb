@@ -13,12 +13,12 @@ import {CreatedLinkFor, Subform, viewUrlFor} from "@/app/components/common";
 import {JSX, useState} from "react";
 import TestAndValidate from "@/app/components/testing/untested";
 
-export function OvcForXfers(parentId: string, parentType: string, validTypesTo: string[], cookies: string, addTransferOut?: (xfer: TransferData) => void, disposeAfter?: boolean, altTxt?: string): OnViewCreatorQuadCol {
+export function OvcForXfers(parentId: string, parentType: string, validTypesTo: string[], cookies: string, addTransferOut?: (xfer: TransferData) => void, disposeAfter?: boolean, altTxt?: string, requireConfirmation?: boolean): OnViewCreatorQuadCol {
     return {
         txt: altTxt || "New Transfer",
         newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-            return <NewTransferArea idFrom={parentId} typeFrom={parentType}
-                                    validTypesTo={validTypesTo}
+            return <NewTransferArea idFrom={parentId} typeFrom={parentType} requireConfirmation={requireConfirmation}
+                                    /*validTypesTo={validTypesTo}  TODO: ensure ok*/
                                     onCreated={(xfer: TransferData) => {
                                         addTransferOut && addTransferOut(xfer)
                                         onCreate([{
