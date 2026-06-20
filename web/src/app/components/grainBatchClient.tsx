@@ -191,7 +191,7 @@ export default function GrainBatchDisplay(
             }
         ]
         return <DisplayFormWrapper entryType={"grainBatch"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Grain Batch", entryType:"grainBatch", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>

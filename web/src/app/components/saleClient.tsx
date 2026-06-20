@@ -114,7 +114,7 @@ export default function SaleDisplay(
         }
         return (
             <DisplayFormWrapper entryType={"sale"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel} />
+                <ErrorDisplay err={err}/>
                 <ID props={{id:data._id, txt:"Sale", entryType:"sale"}}/>
 
                 <FlexedArea>

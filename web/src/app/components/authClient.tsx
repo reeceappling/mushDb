@@ -54,7 +54,7 @@ export default function AuthArea( // TODO: any depth?????
             {/* TODO: ERROR FOR FAILED LOGIN */}
             <div className={"fixCenterScreen"}></div>
             <div className={"centerH"}>
-                <ErrorDisplay err={err} headerLevel={1}/>{/* TODO: headerLevel ok? */}
+                <ErrorDisplay err={err}/>{/* TODO: headerLevel ok? */}
             </div>
             <div className="centerH">
                 {/* GOOGLE SIGN IN/UP*/}

@@ -166,7 +166,7 @@ export default function TransferDisplay(
         }
         const b58idMain = initial._id
         return <DisplayFormWrapper entryType={"transfer"} id={"transferDisplay"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{id:initial._id, txt:"Transfer", entryType:"transfer", linkPage:false, allowOpenMainPage:false}}/>
             <FlexedArea>
                 <FlexedSinglesGroup>

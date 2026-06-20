@@ -191,7 +191,7 @@ export default function JarRecipeDisplay(
         }
     ]
     return <DisplayFormWrapper entryType={"jarRecipe"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err} />
         <ID props={{
             id: data._id,
             txt: "Grain Jar Recipe",

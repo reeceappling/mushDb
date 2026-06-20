@@ -148,7 +148,7 @@ export default function SubstrateBatchDisplay(
         ]
         return (
             <DisplayFormWrapper entryType={"substrateBatch"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
+                <ErrorDisplay err={err}/>
                 <ID props={{id:data._id, txt:"Substrate Batch", entryType:"substrateBatch"}}/>
                 <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>

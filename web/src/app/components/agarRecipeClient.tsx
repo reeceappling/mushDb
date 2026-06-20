@@ -218,7 +218,7 @@ export default function AgarRecipeDisplay(
     ]
     return (
         <DisplayFormWrapper entryType={"agarRecipe"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
                 <ID props={{id:data._id, txt:"Agar Recipe", entryType:"agarRecipe"}}>
                     <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
                 </ID>

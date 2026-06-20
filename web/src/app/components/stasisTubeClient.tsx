@@ -262,16 +262,16 @@ export default function StasisTubeDisplay(
     }
         return (
             <DisplayFormWrapper entryType={"stasisTube"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
+                <ErrorDisplay err={err}/>
                 <ID props={{id:data._id, txt:"Stasis Tube", entryType:"stasisTube"}}/>
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
-                <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} />
+                <MostRecentImageDisplay data={initial.mostRecentImage}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} initialDisposed={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
-                        <PcRunArea binaryId={initial.pcRun} headerLevel={headerLevel}/>
+                        <PcRunArea binaryId={initial.pcRun}/>
                         {isInnoculated()&&<KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly} headerLevel={headerLevel}/>}
                         {isInnoculated()&&<SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>}
                     </FlexedSinglesGroup>

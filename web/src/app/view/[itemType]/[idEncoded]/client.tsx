@@ -178,7 +178,7 @@ export function MainViewArea({inpData, itemType}: { inpData: any, itemType: stri
                 return <WaterJarDisplay data={new WaterJarData(inpData)} readonly={false} id={id} isTopLevel={true}
                                         headerLevel={TopPageHeaderLevel} />
             default:
-                return <ErrorDisplay err={"Invalid view item type: " + itemType} headerLevel={TopPageHeaderLevel}/>
+                return <ErrorDisplay err={"Invalid view item type: " + itemType}/>
         }
     } catch (e) {
         return <ErrorDisplay err={"Asserter failure: " + JSON.stringify(e)}/>

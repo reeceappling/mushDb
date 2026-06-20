@@ -258,7 +258,7 @@ export default function FruitingChamberDisplay(
     }
     return (
         <DisplayFormWrapper entryType={"fruitingChamber"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Fruiting Chamber", entryType:"fruitingChamber"}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage}
                                     headerLevel={headerLevel}/>{/* Most recent image! */}
@@ -499,7 +499,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
         DoMultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"fruitingChamber"}>
-        <ErrorDisplay headerLevel={headerLevel} err={err}/>
+        <ErrorDisplay err={err}/>
         {/* Required Fields */}
         <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={true}/>

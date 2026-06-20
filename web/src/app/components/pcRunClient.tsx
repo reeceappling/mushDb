@@ -223,7 +223,7 @@ export default function PcRunDisplay(
         ]
         return (
             <DisplayFormWrapper entryType={"pcRun"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
+                <ErrorDisplay err={err}/>
                 <ID props={{id:data._id, txt:"PC Run", entryType:"pcRun"}}/>
                 <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>
                 <FlexedArea>
@@ -293,10 +293,8 @@ export function NewPcRunForm(
     )
 }
 
-export function PcRunArea({binaryId, headerLevel, offset}: {
+export function PcRunArea({binaryId}: {
     binaryId?: string,
-    headerLevel?: number
-    offset?: number
 }) {
     const linkArea: JSX.Element = <div>{(binaryId !== undefined) ?
         <EntryLinkForId props={{linkId: binaryId, entryType: "pcRun",openInNewTab:false}}/>:

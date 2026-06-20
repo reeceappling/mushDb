@@ -27,8 +27,6 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-// TODO: list page not working
-// TODO: ensure display page doing what we want
 
 function requireObject(inp: any){
     const typ = typeof inp
@@ -80,9 +78,9 @@ export function AssertProject(input: any): asserts input is ProjectData {
         }
     }
     // Complex optional keys (perms)
-    console.log("inp perms: "+JSON.stringify(Object.entries(input.perms))) // TODO: del
+    //console.log("inp perms: "+JSON.stringify(Object.entries(input.perms))) // TODO: del
     input.perms = UnmarshalProjectPermsField(input)
-    console.log("out perms: "+JSON.stringify(Object.entries(input.perms))) // TODO: del
+    //console.log("out perms: "+JSON.stringify(Object.entries(input.perms))) // TODO: del
     return
 }
 
@@ -119,7 +117,7 @@ export default function ProjectDisplay(
 
         const [completed, setCompleted] = useState(data.completed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [perms, setPerms] = useState<Map<string, string>>(permsObjAsMap(data.perms) ) // TODO: validate ok
+        const [perms, setPerms] = useState<Map<string, string>>(permsObjAsMap(data.perms) )
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: ProjectData) => {
             setInitial(updated)
@@ -153,7 +151,7 @@ export default function ProjectDisplay(
             const body: any = {
                 notes: notes,
                 completed: completed,
-                perms: permsOut, // TODO: ensure this works!
+                perms: permsOut,
             }
             console.log("sending perms: " + JSON.stringify(permsOut))
 
@@ -169,7 +167,7 @@ export default function ProjectDisplay(
         }
         return (
             <DisplayFormWrapper entryType={"project"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
+                <ErrorDisplay err={err}/>
                 {/* data._id on next line because project name can have spaces?*/}
                 <ID props={{id:data._id, txt:"Project", entryType:"project"}}/>
                 <FlexedArea>
@@ -185,7 +183,7 @@ export default function ProjectDisplay(
                 </FlexedArea>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TestAndValidate todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
-                    <ProjectPermsArea perms={perms} setPerms={setPerms} /* TODO: ENSURE ADDING/CHANGING USERS MAKES A SEPARATE REQUEST TO THE SERVER!*/
+                    <ProjectPermsArea perms={perms} setPerms={setPerms} /* TODO: ENSURE ADDING/CHANGING USERS MAKES A SEPARATE REQUEST TO THE SERVER?!*/
                                       readonly={readonly}/> {/* TODO: HEAVILY TEST! Also ensure this is properly covered on the go side!*/}
                 </TestAndValidate>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
@@ -201,7 +199,6 @@ export function NewProjectForm(
     const [name, setName] = useState<string | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
-    // TODO: handle isTopLevel
 
     const cookies = useContext(CookiesContext)
     const createProject = () => {
@@ -236,23 +233,27 @@ export function ReadWriteAdminSelector({readonly, onUpdate, value}: {
     readonly: boolean,
     onUpdate?: (valOut: string) => void
 }) {
-    const strForVal = (str?: string) => {
+    const strForVal = (str: string) => {
         return (str === "read") ? "can view" : (str === "admin" ? "is admin" : "can edit")
+    }
+    const valForStr = (str: string) => {
+        return (str === "can edit") ? "write" : (str === "is admin" ? "admin" : "read")
     }
     if (readonly) {
         return <text>{strForVal(value)}</text>
     }
     return <SelectorFor options={["can view", "can edit", "is admin"]} initial={strForVal(value)}
                         updateParent={s => {
-                            if (s === "is admin") {
-                                onUpdate && onUpdate("admin")
-                            }
-                            if (s === "can edit") {
-                                onUpdate && onUpdate("write")
-                            }
-                            if (s === "can view") {
-                                onUpdate && onUpdate("read")
-                            }
+                            // if (s === "is admin") {
+                            //     onUpdate && onUpdate("admin")
+                            // }
+                            // if (s === "can edit") {
+                            //     onUpdate && onUpdate("write")
+                            // }
+                            // if (s === "can view") {
+                            //     onUpdate && onUpdate("read")
+                            // }
+                            onUpdate && onUpdate(valForStr(s))
                             // TODO: what about the blank option???
                             return
                         }} disabled={false}/>
@@ -295,9 +296,9 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
             }
             return null
         }
-        return <>{/* TODO: make this into a grid or table*/}
+        return <>{/* TODO: make this into a grid or table?*/}
             {[...current.entries()].map(p => {
-                return <>{/* TODO: NEEDS KEYS?*/}
+                return <>
                     <div key={p[0] + "name"}>{p[0]}</div>
                     <ReadWriteAdminSelector key={p[0] + "sel"} readonly={readonly} value={p[1]}
                                         onUpdate={(b) => {
@@ -378,7 +379,7 @@ export async function GetSessionUserProjects(complete?:boolean): Promise<string[
 export function ProjectsSelector(inp: {
     onSelect: (projName: string) => void
     blacklist?: string[]
-    complete?: boolean // TODO: use?
+    complete?: boolean
 }) {
     const [loading, setLoading] = useState(true)
     const [projects, setProjects] = useState<string[]>([])

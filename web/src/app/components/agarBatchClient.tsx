@@ -164,13 +164,13 @@ export default function AgarBatchDisplay(
     return (
         <DisplayFormWrapper entryType={"agarBatch"}>
             <ID props={{id:data._id, txt:"Agar Batch", entryType:"agarBatch", linkPage:false, allowOpenMainPage:false}}/>
-            <ErrorDisplay data-cy-id={"Error"} err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay data-cy-id={"Error"} err={err}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <DateArea data-cy-id={"LastUpdated"} pre={"Last Updated: "} when={initial.lastUpdated}
                           readonly={true}/>
                 <div data-cy-id={"Color"}>{"Color: " + data.color}</div>
-                <PcRunArea data-cy-id={"Run"} binaryId={initial.pcRun} headerLevel={headerLevel}/>
+                <PcRunArea data-cy-id={"Run"} binaryId={initial.pcRun}/>
                 <AgarRecipeArea data-cy-id={"Recipe"} agarRecipeBinId={initial.agarRecipe}/>
             </FlexedArea>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>

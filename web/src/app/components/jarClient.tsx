@@ -363,9 +363,9 @@ export default function JarDisplay(
         return initial.species !== undefined
     }
         return <DisplayFormWrapper entryType={"jar"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Grain Jar", entryType:"jar"}}/>
-            <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -377,7 +377,7 @@ export default function JarDisplay(
                 <FlexedSinglesGroup>
                     {isInnoculated()&&<SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>}
                     <JarRecipeArea headerLevel={headerLevel} recipeId={initial.recipe}/>
-                    <PcRunArea binaryId={initial.pcRun} headerLevel={headerLevel}/>
+                    <PcRunArea binaryId={initial.pcRun}/>
 
                 </FlexedSinglesGroup>
                 {isInnoculated()&&<FlexedSinglesGroup>

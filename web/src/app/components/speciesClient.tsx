@@ -176,7 +176,7 @@ export default function SpeciesDisplay(
     }
     return (
         <DisplayFormWrapper entryType={"species"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{id: data._id, txt: "Species", entryType: "species"}}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -362,7 +362,7 @@ export function ExistingSpeciesSelector(
     // TODO: CLEAR SELECTION
     if (!selected && !selectorOpen) {
         return <div className={"centerHChildren gapTop"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <div>
                 <button className={"basicButton"} onClick={() => {
                     setSelectorOpen(true)
@@ -372,13 +372,13 @@ export function ExistingSpeciesSelector(
     }
     if (!isLoaded) {
         return <div className={"centerHChildren gapTop"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <div>{"loading species selector"}</div>
         </div>
     }
     if (speciesList.length == 0) {
         return <div className={"centerHChildren gapTop"}>
-            <ErrorDisplay err={"No Species Found on server"} headerLevel={headerLevel}/>
+            <ErrorDisplay err={"No Species Found on server"}/>
             {/* TODO: CREATE SPECIES BUTTON*/}
             <div>{"CREATE SPECIES LINK"}</div>
         </div>
@@ -387,7 +387,7 @@ export function ExistingSpeciesSelector(
 
     if (selected && !selectorOpen) {
         return <div>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <div>
                 {"Currently Selected species: "/* TODO: OVERHAUL*/}
                 <div>{selected._id}</div>

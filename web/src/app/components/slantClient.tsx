@@ -186,7 +186,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
         DoMultipartImportRequest(formData, "slant", AssertSlant, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err}/>
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
@@ -275,10 +275,10 @@ export default function SlantDisplay(
     }
     return (
             <DisplayFormWrapper entryType={"slant"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
+                <ErrorDisplay err={err}/>
                 <ID props={{id:data._id, txt:"Slant", entryType:"slant"}}/>
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
-                <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
+                <MostRecentImageDisplay data={initial.mostRecentImage}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} initialDisposed={initial.disposed}

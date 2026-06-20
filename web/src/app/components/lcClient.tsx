@@ -309,8 +309,8 @@ export default function LcDisplay(
             <ID props={{id:data._id, txt:"Liquid Culture", entryType:"lc", linkPage:false, allowOpenMainPage:false}}/>
             {readonly ||
                 <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>}
-            <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage}/>
+            <ErrorDisplay err={err} />
             <FlexedArea>
                 <FlexedSinglesGroup>
                     {/*3high,19wide fragmented*/}

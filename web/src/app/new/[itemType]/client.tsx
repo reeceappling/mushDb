@@ -176,8 +176,7 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                 }}/>
             // Transfers only made in other pages
             default:
-                return <ErrorDisplay err={"Invalid new item type in path: " + itemType}
-                                     headerLevel={TopPageHeaderLevel}/>
+                return <ErrorDisplay err={"Invalid new item type in path: " + itemType}/>
         }
     }
     return <div className={"fullPage"}>

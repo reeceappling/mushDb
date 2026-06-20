@@ -144,7 +144,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
     }
     //no parent because we couldn't possibly know it
     return <ImportEntryFormWrapper entryType={"sporeSwab"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err}/>
         <DateArea pre={"Swab Date: "} readonly={false} when={Date.now()} updateParent={setSwabDate}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
@@ -202,7 +202,7 @@ export default function SporeSwabDisplay(
         ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
             {/* TODO: AREA TO CREATE TRANSFER! */}
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/> {/*swab to agar and that's about it */}
             <FlexedArea>
@@ -275,7 +275,7 @@ export function NewSporeSwabForm(
     }
 
     return <NewEntryFormWrapper entryType={"sporeSwab"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel} offset={offset}/>
+        <ErrorDisplay err={err}/>
         {(printIn || fruitIn) && <div>{"TODO: PARENT SELECTOR"/* TODO: THIS! PARENT SELECTOR IF NOT PROVIDED*/}</div>}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>

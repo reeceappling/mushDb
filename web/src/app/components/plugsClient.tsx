@@ -186,7 +186,7 @@ export default function PlugsDisplay(
     const cookies = useContext(CookiesContext)
     const submit = () => {
         const body: any = {
-            pcRun: pcRun, // TODO: optional? can only be set once
+            pcRun: pcRun, // optional. can only be set once
             knownFruitable: knownFruitable,
             disposed: disposed,
             notes: notes,
@@ -214,7 +214,7 @@ export default function PlugsDisplay(
     }
     return (
         <DisplayFormWrapper entryType={"plugs"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Plugs Jar", entryType:"plugs", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
@@ -225,7 +225,7 @@ export default function PlugsDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     {isInnoculated()&&<SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>}
-                    <PcRunArea binaryId={pcRun}/> {/* TODO: ENSURE OK AND ALLOWS USER TO INPUT*/}
+                    <PcRunArea binaryId={pcRun}/>
                 </FlexedSinglesGroup>
                 {isInnoculated()&&<FlexedSinglesGroup>
                     <InnocDisplay innoc={initial.innoc}/>

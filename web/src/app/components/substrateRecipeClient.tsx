@@ -149,7 +149,7 @@ export default function SubstrateRecipeDisplay(
         ]
         return (
             <DisplayFormWrapper entryType={"substrateRecipe"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
+                <ErrorDisplay err={err}/>
                 <ID props={{id:data._id, txt:"Substrate Recipe", entryType:"substrateRecipe"}}>
                     <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
                 </ID>

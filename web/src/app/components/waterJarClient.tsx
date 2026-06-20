@@ -155,7 +155,7 @@ export default function WaterJarDisplay(
 
     return (
         <DisplayFormWrapper entryType={"waterJar"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{
                 id: initial._id,
                 txt: "Water Jar",
@@ -236,7 +236,7 @@ export function WaterJarImportDisplay({headerLevel}: ImportDisplayInput) {
         DoImportRequest(body, "waterJar", AssertWaterJar, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err}/>
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

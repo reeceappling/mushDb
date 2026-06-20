@@ -535,13 +535,10 @@ export const PixRowExisting = (
     </div>
 }
 
-// TODO: NEEDS MAJOR FIX!!!
-
 export function MostRecentImageDisplay(
-    {data, headerLevel, headerTxt, showHeader}: {
-        data?: PicWithNotesIncoming, // TODO: change to File or string?????
+    {data, headerTxt, showHeader}: {
+        data?: PicWithNotesIncoming,
         headerTxt?: string,
-        headerLevel?: number,
         showHeader?: boolean,
     }) {
     if (data === undefined) {
@@ -779,12 +776,10 @@ export function DisposedDisplay(
     </NoSsr>
 }
 
-export const ErrorDisplay = ({ // TODO: USE
-                                 err, headerLevel, offset, classNames
+export const ErrorDisplay = ({
+                                 err, classNames
                              }: {
     err?: string
-    headerLevel?: number // TODO: REMOVE
-    offset?: number // TODO: REMOVE?
     classNames?: string
 }) => {
     if (err === undefined) {

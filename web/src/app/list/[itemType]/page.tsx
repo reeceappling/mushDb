@@ -55,7 +55,7 @@ export default async function Page({
         </PageWrapper>
     } catch (e) {
         return <div className={"fullPage"}>
-            <ErrorDisplay err={"Error loading data: "+String(e)} headerLevel={TopPageHeaderLevel}/>
+            <ErrorDisplay err={"Error loading data: "+String(e)}/>
         </div>
     }
 }

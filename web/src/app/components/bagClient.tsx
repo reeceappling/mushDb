@@ -287,10 +287,10 @@ export default function BagDisplay(
     }
     return (
         <DisplayFormWrapper entryType={"bag"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Bag", entryType:"bag"}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
-            <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <PcRunArea binaryId={initial.pcRun}/>{/* TODO: ENSURE OK!*/}
@@ -472,7 +472,7 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
     }
     return <ImportEntryFormWrapper entryType={"bag"}>
         {/* Required Fields */}
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err}/>
         <DateArea pre={"Seal Date: "} when={Date.now()} updateParent={setSealDate}/>
         <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={false} creatorInPage={false}/>

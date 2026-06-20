@@ -114,7 +114,7 @@ export default function SubspeciesDisplay(
         }
         return (
             <DisplayFormWrapper entryType={"subspecies"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
+                <ErrorDisplay err={err}/>
                 <ID props={{id:data._id, txt:"Subspecies", entryType:"subspecies"}}/>
                 <ID props={{id:data.species, txt:"Species", entryType:"species"}}/> {/* TODO: link not working!*/}
                 <FlexedArea>
@@ -226,7 +226,7 @@ export function ExistingSubSpeciesSelector(
             .catch(ErrHandler(setErr));
     }, [species]);
     const errArea = () => {
-        return <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        return <ErrorDisplay err={err}/>
     }
     const toggleButton = () => {
         return <div>
@@ -249,13 +249,13 @@ export function ExistingSubSpeciesSelector(
     }
     if (!isLoaded) {
         return <div className={"centerHChildren gapTop gapBottom"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <div>{"loading subspecies selector"}</div>
         </div>
     }
     if (subspeciesList.length == 0) {
         return <div className={"centerHChildren gapTop gapBottom"}>
-            <ErrorDisplay err={"No Subspecies Found for species: " + (species && species)} headerLevel={headerLevel}/>
+            <ErrorDisplay err={"No Subspecies Found for species: " + (species && species)}/>
             <TestAndValidate todos={["do this"]}>
                 <div>{"CREATE SUBSPECIES LINK"}</div>
             </TestAndValidate>

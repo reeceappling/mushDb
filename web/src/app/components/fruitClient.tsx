@@ -276,7 +276,7 @@ export default function FruitDisplay(
             <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Fruit", entryType:"fruit", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
-            <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
@@ -378,7 +378,7 @@ export function NewFruitForm(
     }
     return (
         <NewEntryFormWrapper entryType={"fruit"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             {/* TODO: say harvest date is today?*/}
             <PicsDisplay pix={[]} updateParent={v => {
                 setPics(v.new)
@@ -429,7 +429,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         DoMultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"fruit"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err}/>
         {/* Required Fields */}
         <div className={"inlineChildren"}>
             <div>{"Source: "}</div>
@@ -484,7 +484,7 @@ export function CreateCloneArea( // TODO: this vs NewFruitForm
             })
     }
     return <div>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err} />
         <div>
             <div>{"Create Clone:"}</div>
             <div>

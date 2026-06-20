@@ -59,6 +59,6 @@ export function ImportArea({itemType}: { itemType: string }) {
         case "waterJar":
             return <WaterJarImportDisplay headerLevel={TopPageHeaderLevel}/>
         default:
-            return <ErrorDisplay err={"Invalid import type: " + itemType} headerLevel={TopPageHeaderLevel}/>;
+            return <ErrorDisplay err={"Invalid import type: " + itemType}/>;
     }
 }

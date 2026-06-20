@@ -176,7 +176,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
     }
     //no parent because we couldn't possibly know it
         return <ImportEntryFormWrapper entryType={"sporePrint"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
             <SporePrintColorArea readonly={false} setColor={setColor} />
             <SporePrintDensityArea readonly={false} setDensity={setDensity} />
@@ -289,10 +289,10 @@ export default function SporePrintDisplay(
     }
 
         return <DisplayFormWrapper entryType={"sporePrint"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel} />
+            <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Spore Print", entryType:"sporePrint"}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
-            <MostRecentImageDisplay data={data.mostRecentImage} headerLevel={headerLevel}/>
+            <MostRecentImageDisplay data={data.mostRecentImage}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <DateArea pre={"Print Date: "} readonly={true} when={data.creationDate}/>
@@ -391,7 +391,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
     }
 
     return <NewEntryFormWrapper entryType={"sporePrint"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel} offset={offset}/>
+        <ErrorDisplay err={err}/>
         {fruitIn === undefined && <FruitSelectorCloseable onSelect={setFruit}/>}
         <PicsDisplay pix={[]} readonly={false} updateParent={(ps)=>{setPics(ps.new)}} headerLevel={headerLevel} offset={offset}/>
         <NewEntryNotes setNotes={setNotes} />

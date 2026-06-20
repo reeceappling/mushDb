@@ -270,9 +270,9 @@ export default function ListDisplay({itemType, inpData}: { itemType: string, inp
                 }
                 }/>
             default:
-                return <ErrorDisplay err={"Unhandled list item type: " + itemType} headerLevel={TopPageHeaderLevel}/>
+                return <ErrorDisplay err={"Unhandled list item type: " + itemType}/>
         }
     } catch (error) {
-        return <ErrorDisplay err={JSON.stringify(error)} headerLevel={1}></ErrorDisplay>
+        return <ErrorDisplay err={JSON.stringify(error)}></ErrorDisplay>
     }
 }
