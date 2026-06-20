@@ -364,6 +364,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                     </div>
                 </InlineTitle>
             </div>
+            {/* TODO: liquids and below as flexbox?*/}
             <div>
                 <div>{"Liquids: "}</div>
                 <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>

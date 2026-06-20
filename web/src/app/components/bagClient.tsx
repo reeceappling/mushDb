@@ -89,6 +89,7 @@ import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/coo
 import {useQuery} from "@tanstack/react-query";
 import {GetFilterSizes} from "@/app/components/formSubcomponents/server";
 import {SelectorFor} from "@/app/components/selector";
+import {PcRunArea} from "@/app/components/pcRunClient";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -253,77 +254,81 @@ export default function BagDisplay(
                 setErr("failed to update initial: " + JSON.stringify(e))
             })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        OvcForNewFruit(initial._id, "bag", allCookies(cookies)),
-        // TODO: create spore print
-        // TODO: creat spore swab
-        WriteRfidOvcArea(initial._id), // TODO: TEST!
-        {
-            txt: "Create Spore Print (+fruit)",
-            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
-                    <div>{"Not yet implemented!"}</div>
-                </TestAndValidate>
-            },
-            needsTesting: true,
-        },
-        {
-            txt: "Create Spore Swab (+fruit)",
-            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
-                    <div>{"Not yet implemented!"}</div>
-                </TestAndValidate>
-            },
-            needsTesting: true,
-        }
-    ]
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
+    const ovcs:()=>OnViewCreatorQuadCol[] = ()=>{
+        const innoculated = isInnoculated()
+        const disp = initial.disposed !== undefined
+        return (!disp)?[
+            ...((innoculated)?[OvcForNewFruit(initial._id, "bag", allCookies(cookies))]:[]),
+            WriteRfidOvcArea(initial._id), // TODO: TEST!
+            ...((innoculated)?[
+                {
+                    txt: "Create Spore Print (+fruit)",
+                    newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                        return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
+                            <div>{"Not yet implemented!"}</div>
+                        </TestAndValidate>
+                    },
+                    needsTesting: true,
+                },
+                {
+                    txt: "Create Spore Swab (+fruit)",
+                    newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                        return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
+                            <div>{"Not yet implemented!"}</div>
+                        </TestAndValidate>
+                    },
+                    needsTesting: true,
+                }
+            ]:[])
+        ]:[]
+    }
     return (
         <DisplayFormWrapper entryType={"bag"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID props={{id:data._id, txt:"Bag", entryType:"bag"}}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
-                    <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Substrate recipe: "}/>
-                    <SubstrateBatchArea id={data.substrateBatch} txt={"Substrate batch: "}/>
-                    <SubstrateRecipeArea id={initial.recipe} headerLevel={headerLevel} readonly={true}/>
+                    <PcRunArea binaryId={initial.pcRun}/>{/* TODO: ENSURE OK!*/}
+                    <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Substrate recipe: "}/>{/* TODO: hover styling?*/}
+                    <SubstrateBatchArea id={data.substrateBatch} txt={"Substrate batch: "}/>{/* TODO: hover styling?*/}
                     {filterSizeArea(initial.filterSize)}
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <DateArea pre={"PC Date: "} readonly={true} when={initial.creationDate}/>
-                    <DateArea pre={"Seal Date: "} readonly={true} when={initial.sealDate}/> {/* TODO: FIXME! Add seal date when transferred in!*/}
-                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                    <DateArea pre={"Seal Date: "} readonly={true} when={initial.sealDate}/>
+                    <DateArea pre={"Last Updated: "} readonly={true} when={initial.lastUpdated}/>
                     <DisposedDisplay initial={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                {isInnoculated()&&<FlexedSinglesGroup>
                     <KnownFruitableArea initial={initial.knownFruitable} doSelect={setKnownFruitable}
                                         readonly={readonly}
                                         headerLevel={headerLevel}/>
-                    <SaleArea sale={initial.sale} setSale={setSale} readonly={readonly}
-                              headerLevel={headerLevel} canCreateSale={true}/>
-                </FlexedSinglesGroup>
+                    <SaleArea sale={initial.sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
+                </FlexedSinglesGroup>}
                 <FlexedSinglesGroup>
-                    <GensFormDisplay gensSinceSpore={initial.genSpore}
-                                     gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
-                    {initial.wetness ? <WetnessDisplay value={initial.wetness}/> : <SliderOnlyIfUndefinedWithOpenButton text={"Wetness"} defaultValue={5} onChange={setWetness}/>}{/* TODO: ensure default wetness ok?*/}
+                    {isInnoculated()&&<GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>}
+                    {initial.wetness ? <WetnessDisplay value={initial.wetness}/> : <SliderOnlyIfUndefinedWithOpenButton text={"Wetness"} defaultValue={5} onChange={setWetness}/>}
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                {isInnoculated()&&<FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}
-                                   headerLevel={headerLevel}/>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                     <InnocDisplay innoc={initial.innoc}/>
-                </FlexedSinglesGroup>
+                </FlexedSinglesGroup>}
             </FlexedArea>
 
-            <TransfersOutDisplay thisId={initial._id} thisEntryType={"bag"} /*validTypesTo={["plate"]} TODO: on go side*/
+            {isInnoculated()&&<TransfersOutDisplay thisId={initial._id} thisEntryType={"bag"} /*validTypesTo={["plate"]} TODO: on go side*/
                                  transfersOut={initial.transfersOut} requireConfirmation={true/* TODO: ok?*/}
-                                 allowNewTransferCreation={true}/>
+                                 allowNewTransferCreation={true}/>}
             <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
             {/* Flushes */}
-            <PicsDisplay pix={initial.flushes || []} readonly={readonly}
+            {isInnoculated()&&<PicsDisplay pix={initial.flushes || []} readonly={readonly}
                          updateParent={setFlushes} addButtonText={"Create New Flush"}
-                         sectionHeader={"Flushes: "}/>
+                         sectionHeader={"Flushes: "}/>}
 
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>
@@ -340,16 +345,14 @@ export default function BagDisplay(
 }
 
 export function WetnessDisplay({value,text}: { value?: number, text?: string}) {
-    return <TestAndValidate todos={["fix"]}>
-        <div>{(text||"Wetness")+": " + (value ? value + "/10" : "unknown")}</div>
-    </TestAndValidate>
+    return <div>{(text||"Wetness")+": " + (value ? value + "/10" : "unknown")}</div>
 }
 
-const filterSizeSelector = (setFilterSize: (f?: string) => void, filterSize?: string) => {
-    return <div className={"centerH medGapTop"}>
-        {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize} current={filterSize}/>{/* TODO: ensure working!*/}
-    </div>
-}
+// const filterSizeSelector = (setFilterSize: (f?: string) => void, filterSize?: string) => {
+//     return <div className={"centerH medGapTop"}>
+//         {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize} current={filterSize}/>{/* TODO: ensure working!*/}
+//     </div>
+// }
 
 export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     handlers: NewEntryInput<BagData>,
@@ -432,7 +435,7 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
     const [filterSize, setFilterSize] = useState<string | undefined>(undefined)
     // Optional
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)

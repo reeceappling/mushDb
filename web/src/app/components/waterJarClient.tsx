@@ -130,24 +130,29 @@ export default function WaterJarDisplay(
                 setErr(JSON.stringify(e))
             })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        // TODO: new stasis tube? probably not
-        {
-            txt: "New MultiSpore Syringe",
-            newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                return <NewMssForm waterJarIn={initial} handlers={{
-                    onCreate: (item: MssData) => {
-                        onCreate([{
-                            typeText: "MultiSpore Syringe",
-                            node: <CreatedLinkFor linkId={item._id} typ={"mss"}/>,
-                        }], false)
-                    }, isTopLevel: false,
-                }}/>
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            // TODO: new stasis tube? probably not
+            {
+                txt: "New MultiSpore Syringe",
+                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                    return <NewMssForm waterJarIn={initial} handlers={{
+                        onCreate: (item: MssData) => {
+                            onCreate([{
+                                typeText: "MultiSpore Syringe",
+                                node: <CreatedLinkFor linkId={item._id} typ={"mss"}/>,
+                            }], false)
+                        }, isTopLevel: false,
+                    }}/>
+                },
             },
-        },
-        WriteRfidOvcArea(initial._id),
-        // Stasis tubes must be PC'd with water in them, so we don't have a creator here
-    ]
+            WriteRfidOvcArea(initial._id),
+            // Stasis tubes must be PC'd with water in them, so we don't have a creator here
+
+        ]:[]
+    }
+
     return (
         <DisplayFormWrapper entryType={"waterJar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
@@ -158,7 +163,7 @@ export default function WaterJarDisplay(
                 linkPage: false,
                 allowOpenMainPage: false
             }}/>
-            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}

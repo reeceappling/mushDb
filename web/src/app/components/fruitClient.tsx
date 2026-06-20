@@ -41,7 +41,7 @@ import {
     RequiredKey,
     resolvePicsFormData,
     setFormData,
-    setFormImages,
+    setFormImages, Subform,
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -53,7 +53,7 @@ import {
 } from "@/app/components/formSubcomponents/commonClient";
 import {FruitData} from "@/app/components/fruitServer";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkIdWrapper, EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
@@ -73,6 +73,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {TransferData} from "@/app/components/transferServer";
 import {SelectorFor} from "@/app/components/selector";
+import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -163,7 +164,7 @@ export default function FruitDisplay(
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
     // Helper states
     const [transfersOut, setTransfersOut] = useState(data.transfersOut || [])
-    const [sporePrints, setSporePrints] = useState(data.prints || []) // TODO: use?
+    const [sporePrints, setSporePrints] = useState(data.prints) // TODO: use?
     const [err, setErr] = useState<string | undefined>()
     const [acl, setAcl] = useState<ACL>(initial.acl)
     const updateInitial = (updated: FruitData) => {
@@ -226,8 +227,9 @@ export default function FruitDisplay(
                 setErr("failed to update initial: " + JSON.stringify(e))
             })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        {
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=>{
+        const disp = initial.disposed !== undefined
+            return [...(!disp?[{
             txt: "Clone Fruit", // TODO: ensure works as expected?
             newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                 return <NewTransferArea idFrom={data._id} typeFrom={"fruit"}
@@ -257,6 +259,7 @@ export default function FruitDisplay(
             newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                 return <NewSporePrintForm fruitIn={data} parentTypeIn={"fruit"}
                                           onCreate={(item: SporePrintData) => {
+                                              setSporePrints([...(sporePrints || []), item._id])
                                               onCreate([{
                                                   typeText: "Spore Print",
                                                   node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
@@ -265,18 +268,19 @@ export default function FruitDisplay(
             },
         },
         WriteRfidOvcArea(initial._id),
-    ]
+        ]:[]),
+
+    ]}
     return (
         <DisplayFormWrapper entryType={"fruit"}>
             <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Fruit", entryType:"fruit", linkPage:false, allowOpenMainPage:false}}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}
-                                   headerLevel={headerLevel}/>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -284,12 +288,12 @@ export default function FruitDisplay(
                                                 setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <GensFormDisplay gensSinceSpore={initial.genSpore} dontDisplayGensFruitOrSpore={true}
-                                     headerLevel={headerLevel}/>
+                    <GensFormDisplay gensSinceSpore={initial.genSpore} dontDisplayGensFruitOrSpore={true}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
                                  allowNewTransferCreation={false}/>{/* TODO: validTypesTo*/}
+            <FruitPrintsDisplay prints={sporePrints}/>
             <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
@@ -301,6 +305,24 @@ export default function FruitDisplay(
             }}>{"Update"}</button>}
         </DisplayFormWrapper>
     )
+}
+
+function FruitPrintsDisplay({prints}:{prints?:string[]}){
+    if (!prints || prints.length === 0){
+        return null
+    }
+    return <Subform>
+        <div className={"text-lg areaHeader"}>{"Spore Prints:"}</div>{/* TODO: text-lg ok?*/}
+        <div className={"flex flex-row flex-wrap justify-around items-center gap-2"}>
+            {prints.map(id=><EntryLinkIdWrapper key={id} props={{
+                linkId: id,
+                entryType: "sporePrint",
+                openInNewTab: false,
+            }}>
+                <div className={"fruitPrint p-1"}>{id}</div>
+            </EntryLinkIdWrapper>)}
+        </div>
+    </Subform>
 }
 
 export function NewFruitForm(

@@ -187,7 +187,7 @@ type updateSubspeciesRequest struct {
 	NotesUpdateField
 	AliasesField
 	PermsOnRequest `json:"acl"`
-	DefaultAcl     PermsOnRequest // TODO: handle in TS! CHANGED TO POINTER!
+	DefaultAcl     PermsOnRequest
 }
 
 func (req updateSubspeciesRequest) modsFor(existing *Subspecies, aclField AclField) (bson.D, error) {

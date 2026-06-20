@@ -300,19 +300,18 @@ export function DowelEntryForNew({initial, updateParent}: {
 }
 
 export function ParentDisplay(
-    {parent, parentType, headerLevel}: {
+    {parent, parentType}: {
         parent?: string,
         parentType?: string,
-        headerLevel?: number,
     }
 ) {
     if (parent == undefined) {
         return null
     }
     if (parentType === undefined) {
-        return <div><TestAndValidate todos={["FIXME"]}>
-            {"Parent: ADD LINK WITHOUT KNOWN TYPE HERE!"/* TODO: THIS!*/}
-        </TestAndValidate></div>
+        return <div>
+            {"Parent: "+parent+" (unknown type, should never happen)"/* TODO: THIS!*/}
+        </div>
     }
     const txtFor = (typ: string, id: string) => {
         return typ + " " + id
@@ -399,12 +398,11 @@ export function GensInlineDisplay(
 }
 
 export function GensFormDisplay(
-    {gensSinceSpore, gensSinceFruitOrSpore, dontDisplayGensFruitOrSpore, headerLevel, offset}: {
+    {gensSinceSpore, gensSinceFruitOrSpore, dontDisplayGensFruitOrSpore}: {
         gensSinceSpore?: number,
         gensSinceFruitOrSpore?: number,
-        headerLevel?: number,
         dontDisplayGensFruitOrSpore?: boolean,
-        offset?: number,
+
     }
 ) {
     return <>

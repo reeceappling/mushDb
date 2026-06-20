@@ -566,7 +566,7 @@ export type ImportDisplayInput = {
 //     readonly: boolean
 // }) {
 //     if (sale) {
-//         return <SaleArea sale={sale} readonly={true} headerLevel={headerLevel} canCreateSale={false}/>
+//         return <SaleArea sale={sale} readonly={true} canCreateSale={false}/>
 //     }
 // }
 

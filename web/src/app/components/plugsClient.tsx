@@ -51,6 +51,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
@@ -199,17 +200,23 @@ export default function PlugsDisplay(
                 setErr(JSON.stringify(e))
             })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        WriteRfidOvcArea(initial._id),
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            WriteRfidOvcArea(initial._id),
+        ]:[]
+    }
         // TODO: fruit?
         // TODO: create spore print
         // TODO: creat spore swab
-    ]
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
     return (
         <DisplayFormWrapper entryType={"plugs"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID props={{id:data._id, txt:"Plugs Jar", entryType:"plugs", linkPage:false, allowOpenMainPage:false}}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -217,26 +224,28 @@ export default function PlugsDisplay(
                                                 readonly={readonly} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
+                    {isInnoculated()&&<SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>}
                     <PcRunArea binaryId={pcRun}/> {/* TODO: ENSURE OK AND ALLOWS USER TO INPUT*/}
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                {isInnoculated()&&<FlexedSinglesGroup>
                     <InnocDisplay innoc={initial.innoc}/>
-                    <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                     <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                </FlexedSinglesGroup>}
+                {isInnoculated()&&<FlexedSinglesGroup>
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
-                </FlexedSinglesGroup>
+                </FlexedSinglesGroup>}
             </FlexedArea>
             <div>
                 <div className={"text-lg"}>{"Dowel Types"}</div>
-                <DowelTypesTable data={initial.dowelTypes}/>
+                <TestAndValidate todos={["turn into table"]}>
+                    <DowelTypesTable data={initial.dowelTypes}/>
+                </TestAndValidate>
             </div>
-            <SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales}/>
-            <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plugs"}
+            {isInnoculated()&&<SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales}/>}
+            {isInnoculated()&&<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plugs"}
                                  transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly}/>
+                                 allowNewTransferCreation={!readonly}/>}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
@@ -365,7 +374,7 @@ export function NewPlugsForm(
 
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"greenButton buttonFullWidth"} onClick={createPlugs}>{"Create"}</button>
+        <button className={"greenButton bottomButton"} onClick={createPlugs}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
 

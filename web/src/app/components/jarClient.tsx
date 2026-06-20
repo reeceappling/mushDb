@@ -179,7 +179,7 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
     const [species, setSpecies] = useState<SpeciesData | undefined>()
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
-    const [generation, setGeneration] = useState<number | undefined>()
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [wetness, setWetness] = useState<number | undefined>()
     const [burstGrains, setBurstGrains] = useState<number | undefined>()
     const [imageFile, setImageFile] = useState<File | undefined>()
@@ -351,16 +351,22 @@ export default function JarDisplay(
                 {"Size: " + sizeFromNum(data.sizeCups)}
             </div>
         }
-        const ovcs: OnViewCreatorQuadCol[] = [
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
             WriteRfidOvcArea(initial._id),
-            // TODO: create spore print
-            // TODO: creat spore swab
-        ]
+            // TODO: create spore print (if innoculated)
+            // TODO: creat spore swab (if innoculated)
+        ] : []
+    }
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
         return <DisplayFormWrapper entryType={"jar"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID props={{id:data._id, txt:"Grain Jar", entryType:"jar"}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -369,30 +375,28 @@ export default function JarDisplay(
                     {jarSizeArea()}
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    {isInnoculated()&&<SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>}
                     <JarRecipeArea headerLevel={headerLevel} recipeId={initial.recipe}/>
                     <PcRunArea binaryId={initial.pcRun} headerLevel={headerLevel}/>
 
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
-                    <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
+                {isInnoculated()&&<FlexedSinglesGroup>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                     <InnocDisplay innoc={initial.innoc}/>
                     <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}
                                         headerLevel={headerLevel}/>
-                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
-                              canCreateSale={true}/>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
-                    <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}
-                                     headerLevel={headerLevel}/>
-                </FlexedSinglesGroup>
+                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
+                </FlexedSinglesGroup>}
+                {isInnoculated()&&<FlexedSinglesGroup>
+                    <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
+                </FlexedSinglesGroup>}
             </FlexedArea>
             {/*TODO: validate next 2 working*/}
             {initial.wetness===undefined?<SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/> : <WetnessDisplay value={wetness} />}
             {initial.burstGrains===undefined?<SliderOnlyIfUndefinedWithOpenButton text={"Burst Grains"} defaultValue={0} onChange={setBurstGrains}/> : <WetnessDisplay text={"Burst Grains"} value={burstGrains} />}
 
-            <TransfersOutDisplay thisId={initial._id} thisEntryType={"jar"} transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly}/>
+            {isInnoculated()&&<TransfersOutDisplay thisId={initial._id} thisEntryType={"jar"} transfersOut={transfersOut}
+                                 allowNewTransferCreation={!readonly}/>}
             <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>

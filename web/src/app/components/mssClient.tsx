@@ -216,21 +216,25 @@ export default function MssDisplay(
                     setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
-        const ovcs: OnViewCreatorQuadCol[] = [
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
             WriteRfidOvcArea(initial._id),
-        ]
+        ]:[]
+    }
+
         return <DisplayFormWrapper entryType={"mss"}>
             <ErrorDisplay err={err} headerLevel={headerLevel} />
             <ID props={{id:data._id, txt:"Multispore Syringe", entryType:"mss"}}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} initialDisposed={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
-                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel} canCreateSale={true}/>
+                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    <ParentDisplay parent={data.parent} parentType={"sporePrint"} headerLevel={headerLevel} />
+                    <ParentDisplay parent={data.parent} parentType={"sporePrint"}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={data._id} thisEntryType={"mss"} transfersOut={data.transfersOut} allowNewTransferCreation={!readonly}  /*validTypesTo={["plate","slant","jar","bag"]} TODO: on go side*//>

@@ -20,7 +20,6 @@ div {
             max-height: 50vh;
             max-width: 100%;
         }
-
     }
     & .fromToLink {
         & .xferEntryLink:hover {
@@ -93,5 +92,11 @@ div {
         align-self: end;
         margin-bottom: 0;
         margin-top: auto;
+    }
+}
+
+.fruitPrint {
+    &:hover {
+        color: var(--clr-success-1);
     }
 }

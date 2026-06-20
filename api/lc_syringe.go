@@ -41,7 +41,7 @@ func (lcs LcSyringe) Innoculatable() error {
 }
 
 func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
-	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType}, dst.SourceType()) {
+	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, FruitingChamberSourceType}, dst.SourceType()) {
 		return errors.New("lc syringe cannot transfer to " + dst.SourceType())
 	}
 	return nil
@@ -192,7 +192,7 @@ type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField       // TODO: handle in react
+	KnownFruitableField                                         // TODO: handle in react
 	NotesUpdateField
 	PermsOnRequest `json:"acl"`
 }

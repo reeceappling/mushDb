@@ -208,16 +208,13 @@ export default function SporeSwabDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    <TestAndValidate todos={["issues when initial.parent is undefined!"]}>
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType} />
-                    </TestAndValidate>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType} />
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <DateArea pre={"Print Date: "} readonly={true} when={initial.creationDate}/>
                     <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     <DisposedDisplay readonly={false} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
-                    <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}
-                              headerLevel={headerLevel}/>
+                    <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"sporeSwab"}

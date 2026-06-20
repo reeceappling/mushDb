@@ -69,6 +69,7 @@ func (sp SporePrint) Innoculatable() error {
 }
 
 func (sp SporePrint) CanTransferTo(dst geneticSource) error {
+	// TODO: allow transfer to plate????
 	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
 func (sp SporePrint) createSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNotes NotesField) (*SporeSwab, error) {

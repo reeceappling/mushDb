@@ -72,6 +72,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -250,7 +251,10 @@ export default function SporePrintDisplay(
                     setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
-        const ovcs: OnViewCreatorQuadCol[] = [
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+
+        return !disp ? [
             // TODO: test heavily for all
             // TODO: print transfer to agar?
             // TODO: Chain spore print (do not allow after too long) ---------------------------- TODO!!!!
@@ -278,15 +282,16 @@ export default function SporePrintDisplay(
                         }
                     }} />
                 },
-                needsTesting: true,
             },
             WriteRfidOvcArea(initial._id),
             // TODO: TRANSFERS SKIPPING SWABS/SYRINGES?! Probably not...
-        ]
+        ]:[]
+    }
+
         return <DisplayFormWrapper entryType={"sporePrint"}>
             <ErrorDisplay err={err} headerLevel={headerLevel} />
             <ID props={{id:data._id, txt:"Spore Print", entryType:"sporePrint"}}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <MostRecentImageDisplay data={data.mostRecentImage} headerLevel={headerLevel}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -306,7 +311,7 @@ export default function SporePrintDisplay(
                 <FlexedSinglesGroup>
                     <SporePrintColorArea readonly={true} color={data.color}/>
                     <SporePrintDensityArea readonly={true} density={data.density}/>
-                    <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale} headerLevel={headerLevel}/>
+                    <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
             {/* TODO: area where we can display all the child MSS of this print? */}
@@ -346,43 +351,43 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
             setErr("Fruit must be selected")
             return
         }
+        const doReq = ()=>{
+            const formData = new FormData()
+            const dataObj:any = {
+                parentType: parentType,
+                parent:fruit._id,
+                notes:notes,
+                // optional pics also here
+            }
+            // Pics
+            dataObj.pics = pics.map(p=>{return {time:p.time,notes:p.notes.new.map(n => {
+                    return n.data
+                })}})
+            // Perms
+            setFormData(formData, dataObj)
+            for (let i = 0; i < pics.length; i++) {
+                const toSend = pics[i]
+                if (toSend.img === undefined) {
+                    setErr("new image " + i + " is undefined")
+                    return
+                }
+                const fileName = "newPic" + "-" + i
+                formData.set(fileName, toSend.img, fileName)
+            }
+            DoCreateRequestMultipart("sporePrint", formData, AssertSporePrint, allCookies(cookies))
+                .then(v=>{
+                    onCreate ? onCreate(v) : console.log("no onCreate provided")
+                })
+                .catch(e=>{
+                    setErr(JSON.stringify(e))
+                })
+        }
         // if both pics and notes are empty, do nothing
         if(pics.length===0 && notes.length===0){
-            setErr("Must at least contain one picture or note")
-            return
+            ConfirmOrCancel({txt: "No notes or pictures, did you mean to do that?",onConfirm:doReq})
+        } else {
+            doReq()
         }
-        const formData = new FormData()
-        const dataObj:any = {
-            parentType: parentType,
-            parent:fruit._id,
-            notes:notes,
-            // optional pics also here
-        }
-        // Pics
-        dataObj.pics = pics.map(p=>{return {time:p.time,notes:p.notes.new.map(n => {
-                return n.data
-            })}})
-        // Perms
-        setFormData(formData, dataObj)
-        for (let i = 0; i < pics.length; i++) {
-            const toSend = pics[i]
-            if (toSend.img === undefined) {
-                setErr("new image " + i + " is undefined")
-                return
-            }
-            const fileName = "newPic" + "-" + i
-            formData.set(fileName, toSend.img, fileName)
-        }
-        DoCreateRequestMultipart("sporePrint", formData, AssertSporePrint, allCookies(cookies))
-            .then(v=>{
-                onCreate ? onCreate(v) : console.log("no onCreate provided")
-            })
-            .catch(e=>{
-                setErr(JSON.stringify(e))
-            })
-    }
-    if(fruitIn===undefined){
-        // TODO: FRUIT SELECTOR!?
     }
 
     return <NewEntryFormWrapper entryType={"sporePrint"}>

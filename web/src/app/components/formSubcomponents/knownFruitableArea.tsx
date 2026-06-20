@@ -28,7 +28,7 @@ export function KnownFruitableArea(
     return <div className={"knownFruitableArea"}>
         <div>{KFTxt}</div>
         <div>
-            <select className={"tailwindSelector ml-1"} value={knownFruitable || ""} onChange={onSelect}>
+            <select className={"tailwindSelector ml-1"} value={knownFruitable || ""} onChange={onSelect}>{/* TODO: default to unknown?*/}
                 {["", "true", "false", "unknown"].map((val, i) => {
                     return <option value={val} key={i}>{val}</option>
                 })}

@@ -59,7 +59,7 @@ func (b Bag) Innoculatable() error {
 }
 
 func (b Bag) CanTransferTo(dst geneticSource) error {
-	if !slices.Contains([]string{PlateSourceType /*BagSourceType, GrainJarSourceType*/}, dst.SourceType()) {
+	if !slices.Contains([]string{PlateSourceType, BagSourceType, FruitingChamberSourceType, GrainJarSourceType /*BagSourceType, GrainJarSourceType*/}, dst.SourceType()) {
 		return errors.New("Bag cannot transfer to " + dst.SourceType())
 	}
 	return nil

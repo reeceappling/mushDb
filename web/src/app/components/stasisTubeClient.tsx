@@ -143,7 +143,7 @@ export function StasisTubeImportDisplay() {
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
@@ -251,14 +251,20 @@ export default function StasisTubeDisplay(
                     setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
-        const ovcs: OnViewCreatorQuadCol[] = [
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
             WriteRfidOvcArea(initial._id),
-        ]
+        ]:[]
+    }
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
         return (
             <DisplayFormWrapper entryType={"stasisTube"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID props={{id:data._id, txt:"Stasis Tube", entryType:"stasisTube"}}/>
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} />
                 <FlexedArea>
                     <FlexedSinglesGroup>
@@ -266,22 +272,20 @@ export default function StasisTubeDisplay(
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
                         <PcRunArea binaryId={initial.pcRun} headerLevel={headerLevel}/>
-                        <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly} headerLevel={headerLevel}/>
-                        <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel} canCreateSale={true}/>
+                        {isInnoculated()&&<KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly} headerLevel={headerLevel}/>}
+                        {isInnoculated()&&<SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>}
                     </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore} headerLevel={headerLevel} />
-
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
+                    {isInnoculated()&&<FlexedSinglesGroup>
+                        <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
+                    </FlexedSinglesGroup>}
+                    {isInnoculated()&&<FlexedSinglesGroup>
                         <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>{/* TODO: allow changing subspecies for mainCollectionItems at some point???*/}
                         <InnocDisplay innoc={initial.innoc} openInNewTab={false}/>
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
-                    </FlexedSinglesGroup>
+                        <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
+                    </FlexedSinglesGroup>}
                 </FlexedArea>
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut}
-                    /*validTypesTo={["plate","stasisTube","jar"TODO: any others?]} TODO: on go side*/
-                                     disposeAfter={true} headerTxt={"Transfers"}/>
+                {isInnoculated()&&<TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut}
+                                     disposeAfter={true} headerTxt={"Transfers"}/>}
                 <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel} />{/* Pics */}
                 <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>

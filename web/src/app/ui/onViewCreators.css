@@ -33,16 +33,14 @@ div {
     gap: 10px; /* Adds space between boxes */
     & .ovcBarItem {
         flex: 1; /* Makes all boxes the same width */
+        justify-content: center; /* centers content horizontally */
+        text-align: center;
+        /* optional: align-items: center; */ /* if you also want vertical centering */
         /*border: 1px solid black;*/
         /*padding: 0px; TODO: ok?*/
         &:hover{
             background-color: var(--clr-info-1);
         }
-    }
-    & .ovcBarItem {
-        flex: 1; /* Makes all boxes the same width */
-        /*border: 1px solid black;*/
-        /*padding: 0px; TODO: ok?*/
     }
     &.ovcBarQuad {
         /* TODO: OnViewCreators*/
@@ -68,4 +66,8 @@ table.ovcLinksTable tbody > tr {
         /* TODO: this */
     }
     /* TODO: all others */
+}
+
+th.ovcCell {
+    text-align: center;
 }

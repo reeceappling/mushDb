@@ -268,17 +268,24 @@ export default function PlateDisplay(
                 setErr("Error in parsing updated plate: "+JSON.stringify(e))
             })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        WriteRfidOvcArea(initial._id),
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const innoculated = initial.species !== undefined
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            WriteRfidOvcArea(initial._id),
+        ]:[]
+    }
         // TODO: fruit?
         // TODO: create spore print
         // TODO: creat spore swab
-    ]
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
     return (
         <DisplayFormWrapper entryType={"plate"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID props={{id:data._id, txt:"Plate", entryType:"plate", linkPage:false}}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} showHeader={false}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -287,35 +294,32 @@ export default function PlateDisplay(
                                                 readonly={readonly} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
+                    {isInnoculated()&&<SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>}
                     <AgarBatchArea agarBatchId={initial.agarBatch} headerLevel={headerLevel}/>
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                {isInnoculated()&&<FlexedSinglesGroup>
                     <InnocDisplay innoc={initial.innoc}/>
-                    <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                     <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
-                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
-                              canCreateSale={true}/>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
+                </FlexedSinglesGroup>}
+                {isInnoculated()&&<FlexedSinglesGroup>
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
-                </FlexedSinglesGroup>
+                </FlexedSinglesGroup>}
                 <FlexedSinglesGroup>
                     {/* TODO: SIZING ON ENTRY FIELDS*/}
-                    <TestAndValidate todos={["ensure unset values for pour and condens work as expected"]}>
                     <PourCoverageFieldDisplay initial={initial.pourCoverage} updateParent={setPourCoveragePct}/>
-                    {initial.condensationCoverageAtSealTime ? <div>{"Condensation Coverage: "+initial.condensationCoverageAtSealTime+"%"}</div>:
-                        <CondensationCoverageFieldDisplay coverage={condensationCoveragePct/* TODO: STATIC IF PRE-SET*/} updateParent={setCondensationCoveragePct}/>}
-                    </TestAndValidate>
+                    {isInnoculated()?(initial.condensationCoverageAtSealTime ? <div>{"Condensation Coverage: "+initial.condensationCoverageAtSealTime+"%"}</div>:
+                        <CondensationCoverageFieldDisplay coverage={condensationCoveragePct/* TODO: STATIC IF PRE-SET*/} updateParent={setCondensationCoveragePct}/>):null}
                     <YesNoSelector pre={"Wet at cooled time: "} initial={initial.wetAtCooledTime}
                                    updateParent={setWetAtCoolTime}/>
                     <YesNoSelector pre={"Agar on outside at pour time: "} initial={initial.agarOnOutsideAtPourTime}
                                    updateParent={setAgarOnOutsideAtPourTime}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
+            {isInnoculated()&&<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
                                  transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly}/>{/* TODO: have this rely on dictation as well to figure out if we want it open on the screen*/}
+                                 allowNewTransferCreation={!readonly}/>}{/* TODO: have this rely on dictation as well to figure out if we want it open on the screen*/}
             <PicsDisplay pix={initial.pics || []} readonly={readonly}
                          headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
@@ -324,9 +328,7 @@ export default function PlateDisplay(
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
-                {/* TODO: when user edits perms, it is adding the user to the perms as a writer. Ensure it does not do this anymore!*/}
                 {/* TODO: removing users is not autoupdating in the UI (the removed user is re-added on submit...). Make sure those changes are shown immediately...*/}
-
             </TogglableAreaWithDepth>
 
             {readonly || <button className={"bottomButton greenButton"} onClick={(e) => {
@@ -380,7 +382,9 @@ function CondensationCoverageFieldDisplay({coverage, updateParent}: {
 }) {
     const header = "Condensation Coverage: "
     if (!coverage) {
-        return <div>{header + (coverage ? coverage + "%" : "unknown")}</div>
+        return <TestAndValidate todos={["allow setting if undefined"]}>
+            <div>{header + (coverage ? coverage + "%" : "unknown")}</div>
+        </TestAndValidate>
     }
     const [val, setVal] = useState(coverage)
     return <div>{header}<InputNumberWithSmallTitle value={"" + val} readonly={false} min={0} max={100} step={1}
@@ -475,7 +479,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [pourCoverage, setPourCoverage] = useState<number | undefined>(undefined)
     const [condensationCoverage, setCondensationCoverage] = useState<number | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)

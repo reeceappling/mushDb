@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
+	"slices"
 )
 
 // TODO: needed for
@@ -40,8 +41,8 @@ func (M MSS) Innoculatable() error {
 }
 
 func (M MSS) CanTransferTo(dst geneticSource) error {
-	if dst.SourceType() != PlateSourceType {
-		return errors.New("mss transfers must go to plates")
+	if !slices.Contains([]string{PlateSourceType, SlantSourceType /*TODO: MSS?*/, StasisTubeSourceType}, dst.SourceType()) {
+		return errors.New("mss transfers cannot go to " + dst.SourceType())
 	}
 	return nil
 }

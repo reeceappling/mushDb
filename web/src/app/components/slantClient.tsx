@@ -162,7 +162,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
     const [species, setSpecies] = useState<SpeciesData | undefined>()
     const [subspecies, setSubspecies] = useState<string | undefined>()
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
-    const [generation, setGeneration] = useState<number | undefined>()
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [imageFile, setImageFile] = useState<File | undefined>()
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
@@ -264,18 +264,20 @@ export default function SlantDisplay(
                 })
         }
         // TODO: DIFFERENTIATE BETWEEN UNINNOCULATED AND INNOCULATED DISPLAY
-        const ovcs: OnViewCreatorQuadCol[] = [
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
             WriteRfidOvcArea(initial._id),
-            // TODO: CREATE FRUIT
-            // TODO: spore print?
-            // TODO: spore swab?
-        ]
-        const innoculated = initial.species // TODO: USE THIS!
-        return (
+        ]:[]
+    }
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
+    return (
             <DisplayFormWrapper entryType={"slant"}>
                 <ErrorDisplay err={err} headerLevel={headerLevel}/>
                 <ID props={{id:data._id, txt:"Slant", entryType:"slant"}}/>
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
                 <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
@@ -283,35 +285,34 @@ export default function SlantDisplay(
                                                     readonly={readonly} setDisposedOnParent={setDisposed}/>
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
-                        <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
+                        {isInnoculated()&&<SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>}
                         <AgarBatchArea agarBatchId={initial.agarBatch} headerLevel={headerLevel}/>
                         <div>
                             {"Stick type:"+(initial.stickType || "none")}
                         </div>
                     </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
+                    {isInnoculated()&&<FlexedSinglesGroup>
                         <InnocDisplay innoc={initial.innoc}/>
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
+                        <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
-                        <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
-                                  canCreateSale={true}/>
-                    </FlexedSinglesGroup>
-                    <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
+                        <SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
+                    </FlexedSinglesGroup>}
+                    {isInnoculated()&&<FlexedSinglesGroup>
+                        <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
+                    </FlexedSinglesGroup>}
                 </FlexedArea>
 
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"slant"} transfersOut={transfersOut} allowNewTransferCreation={!readonly}/>
+                {isInnoculated()&&<TransfersOutDisplay thisId={initial._id} thisEntryType={"slant"} transfersOut={transfersOut} allowNewTransferCreation={!readonly}/>}
                 <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
                 <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                     <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
-                <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
                     slantSubmit()
                 }}>{"Update"}</button>}
-
             </DisplayFormWrapper>
         )
 }

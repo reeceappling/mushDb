@@ -136,7 +136,7 @@ export function LcSyringeImportDisplay() {
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
@@ -225,13 +225,16 @@ export default function LcSyringeDisplay(
                 setErr(JSON.stringify(e))
             })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        WriteRfidOvcArea(initial._id),
-    ]
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            WriteRfidOvcArea(initial._id),
+        ]:[]
+    }
     return <DisplayFormWrapper entryType={"lcSyringe"}>
         <ErrorDisplay err={err} headerLevel={headerLevel}/>
         <ID props={{id:data._id, txt:"Liquid Culture Syringe", entryType:"lcSyringe"}}/>
-        <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+        <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
         <FlexedArea>
             <FlexedSinglesGroup>
                 <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -239,19 +242,16 @@ export default function LcSyringeDisplay(
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
                 <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                <ParentDisplay parent={initial.parent} parentType={"lc"} headerLevel={headerLevel}/>
+                <ParentDisplay parent={initial.parent} parentType={"lc"}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
-                <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}
-                                 headerLevel={headerLevel}/>
+                <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
-                <TestAndValidate todos={["ensure both of these work as expected for updates"]}>
                 <KnownFruitableArea initial={initial.knownFruitable} doSelect={setKnownFruitable} readonly={readonly}
                                     headerLevel={headerLevel}/>
                 <ConfirmedCleanArea onSelect={setConfirmedClean} readonly={readonly} initial={initial.confirmedClean}
                                     headerLevel={headerLevel}/>
-                </TestAndValidate>
             </FlexedSinglesGroup>
         </FlexedArea>
         <TransfersOutDisplay thisId={initial._id} thisEntryType={"lcSyringe"} transfersOut={transfersOut}

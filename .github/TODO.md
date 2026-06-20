@@ -37,14 +37,6 @@
 - [ ] ListPageTables allow hiding columns!
 - [ ] Transfer creation, validTypesTo on the go side!
 
-- [ ] Overhauled EntriesGroupsForNew, validate working
-  - [x] Grains
-  - [x] Nutrients
-  - [x] Sugars
-  - [x] Additives
-  - [x] Antibiotics
-  - [x] Woods
-  - [x] Liquids
 - [ ] Entries
   - [x] Agar Batch
     - [x] Display page
@@ -60,15 +52,15 @@
       - [x] Clicks work
       - [x] Ensure text doesnt step all over each other on slim screens
         - [ ] Reformat on slim screens?
-  - [ ] Bag
+  - [x] Bag
     - [x] Display page
       - [x] Fix wetness area
       - [x] Ensure seal date added on transfer
       - [x] Preexisting users and projects which are not valid cause problems on update
       - [x] New fruit area
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [x] Allow xfers on go side (to plates only for now)
-        - [ ] 4XX should show error in error area, not just console
+        - [ ] 4XX should show error in error area, not just console ----------------------------------------------------
     - [x] Create page
     - [x] Import page
       - [x] Redirect not working
@@ -89,12 +81,14 @@
       - [x] Dispose button
       - [x] New fruit area
       - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [ ] Ensure user confirms before this happens
         - [x] Allow xfers on go side (to plates only for now)
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
-    - [ ] Import page (WE ONLY WANT TO IMPORT ALREADY-INNOCULATED)
+    - [x] Import page (WE ONLY WANT TO IMPORT ALREADY-INNOCULATED)
       - [x] Casing ratio is not allowing decimals easily...
       - [x] Default generation is not properly being tracked as 1
-      - [ ] Generation 0 is not working properly, failing on post (0-gen should not exist?)
+      - [x] Generation 0 is not working properly, failing on post (0-gen should not exist?)
+      - [ ] Ensure ratios are how we want to do this...
     - [x] List Page
   - [x] Grain Batch
     - [x] Display page
@@ -114,6 +108,7 @@
       - [x] If no species, do not show many other fields!
       - [x] Add wetness
       - [x] Add burst grains
+      - [ ] Create Jar Recipe from import page.
     - [x] List Page
   - [x] Jar Recipe
     - [x] Display page
@@ -144,6 +139,8 @@
   - [x] LC Syringe
     - [x] Display page
       - [x] KF validate working properly
+        - [ ] KF cannot be changed once set to true?
+        - [ ] ConfirmedClean can be unset?
       - [x] ConfirmedClean validate working properly
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
@@ -173,19 +170,22 @@
   - [x] Plate
     - [x] Display page
       - [x] pour and condens cov
-        - [ ] Validate condens coverage (when unset, allow setting)
+        - [ ] Validate condens coverage (when unset, allow setting) --------------------------------------------------------------------------------------------------------------------------
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
       - [x] Add Coverage sliders
         - [x] Ensure properly styled
+      - [ ] Pour coverage positioning
     - [x] List Page
-  - [ ] Plugs
+  - [x] Plugs
     - [x] Display page
-      - [ ] woods area displaying weird on slim screens
+      - [ ] woods area displaying weird on slim screens!
+      - [ ] Dowel types should be a table??? Maybe a grid?
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [ ] Create page
-      - [ ] Create PC run from within creator
+    - [x] Create page
+      - [x] Create PC run from within creator--------------------------------------------------------------------------------------------------------------------------
+        - [ ] Get rid of one of the entry boxes for runtime
       - [x] Validate all areas working properly
     - [x] Import page
       - [x] Dowels say amount where it should be radius
@@ -196,7 +196,7 @@
     - [x] Display page
       - [x] Not properly showing initial user permissions
       - [x] Perms are not updating visually when users are added or removed!
-      - [ ] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)
+      - [ ] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)-------------------------------------------------------------
     - [x] Create page
     - [x] List Page
       - [ ] Be able to filter projects by completeness
@@ -213,10 +213,10 @@
     - [x] Import page
     - [x] List Page
   - [ ] Species
-    - [ ] Display page
+    - [x] Display page
       - [x] Aliases
       - [ ] Substrate
-        - [ ] Make this changeable!
+        - [ ] Make this changeable!--------------------------------------------------------------------------------------------------------------------------
       - [x] ACLs
       - [x] Subspecies viewer
       - [x] Subspecies creator
@@ -227,14 +227,14 @@
   - [x] Spore Print
     - [x] Display page
       - [x] Create MSS not working, failing to find current print
+      - [ ] Chaining spore prints (probably just click the parent and then click to make another print...)-------------------------------------------------------------
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) only done from fruit, bag, box, plate?
     - [x] Import page
       - [x] Spore print colors and densities selectors not working!
     - [x] List Page
-  - [ ] Spore Swab
+  - [x] Spore Swab
     - [x] Display page
       - [x] Parent area
-        - [ ] Link for when parentType is undefined but parentId is defined
       - [x] Disposal area
       - [x] UPDATING NOTES NOT WORKING!
       - [x] Reformat groups
@@ -255,13 +255,13 @@
       - [x] Species at top
       - [x] Aliases
         - [x] Creating and deleting one at the same time is not working
-        - [ ] Cannot add aliases that already exist elsewhere?
+        - [ ] Cannot add aliases that already exist elsewhere?--------------------------------------------------------------------------------------------------------------------------
         - [x] NOT WORKING TO ADD ALIASES!!!!
         - [x] DO NOT USE TextBoxArea in AliasesArea!
         - [x] Deleting is not updating the view on response!
       - [x] ACLs
         - [x] Validate both updating properly
-        - [ ] When setting to "Publicly Editable", ensure the extra self-user is not added...
+        - [x] When setting to "Publicly Editable", ensure the extra self-user is not added...
     - [x] Create page
     - [x] List Page
       - [x] Clicks work
@@ -329,6 +329,7 @@
       - [ ] Create Slant (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
         - [ ] OVC
         - [ ] Go side
+      - [ ] liquids and below as flexbox?
     - [ ] Create page
       - [ ] nutes/sugar/etc consider doing x/Liter? (should maybe put a x/L calculator?)
   - [ ] Bag
@@ -445,6 +446,8 @@
       - [ ] filter by species, subspecies, disposed(availability)?
     - [ ] Display page
       - [ ] Sales, do sale, mark as disposed when sold
+      - [ ] Parent area
+        - [ ] Link for when parentType is undefined but parentId is defined (put a bandaid on it for now)
   - [ ] StasisTube
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
@@ -527,3 +530,11 @@
   - [x] Add subspecies on species on client side
   - [x] Add subspecies to species when subspecies is created
   - [x] Add subspecies to species in default items
+- [x] Overhauled EntriesGroupsForNew, validate working
+  - [x] Grains
+  - [x] Nutrients
+  - [x] Sugars
+  - [x] Additives
+  - [x] Antibiotics
+  - [x] Woods
+  - [x] Liquids

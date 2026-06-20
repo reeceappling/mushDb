@@ -533,8 +533,7 @@ export function TransfersOutViewOnlyDisplay(
         headerTxt?: string,
     }) {
     const depth = useContext(DepthContext)
-    const openInNewTab = false // TODO: ???
-    if (!transfersOut){
+    if (!transfersOut || transfersOut.length === 0) {
         return null
     }
     return <DepthProvider>

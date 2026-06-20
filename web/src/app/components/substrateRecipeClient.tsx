@@ -225,7 +225,6 @@ export function SubstrateRecipeArea({id, headerLevel, txt, readonly, onSelect}: 
     readonly: boolean,
     onSelect?: (d?: SubstrateRecipeData) => void
 }){
-    const [open, setOpen] = useState(false)
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (id !== undefined) {
         const b58id = id

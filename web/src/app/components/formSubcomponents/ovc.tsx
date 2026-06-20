@@ -18,7 +18,6 @@ export function OvcForXfers(parentId: string, parentType: string, validTypesTo: 
         txt: altTxt || "New Transfer",
         newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
             return <NewTransferArea idFrom={parentId} typeFrom={parentType} requireConfirmation={requireConfirmation}
-                                    /*validTypesTo={validTypesTo}  TODO: ensure ok*/
                                     onCreated={(xfer: TransferData) => {
                                         addTransferOut && addTransferOut(xfer)
                                         onCreate([{
@@ -31,7 +30,6 @@ export function OvcForXfers(parentId: string, parentType: string, validTypesTo: 
     }
 }
 
-// TODO: MOVE!
 export function OvcForNewFruit(parentId: string, parentType: string, cookies: string): OnViewCreatorQuadCol {
     return {
         txt: "Record New Fruit",
@@ -47,24 +45,19 @@ export function OvcForNewFruit(parentId: string, parentType: string, cookies: st
     }
 }
 
-// TODO: MOVE
 export type CreatedLinkTriCol = {
     typeText: string,
     node: JSX.Element,
 }
-// TODO: MOVE
 type CreatedLinkExtraCol = {
     lastNode?: JSX.Element,
 }
-// TODO: MOVE
 export type CreatedLinkQuadCol = CreatedLinkTriCol & CreatedLinkExtraCol
 
-// TODO: MOVE
 export function QuadColLastCol({dstType, id}: { dstType: string, id: string }) {
     return <div>{"To " + dstType + " "}<a href={viewUrlFor(dstType, id)}>{id}</a></div>
 }
 
-// TODO: MOVE
 function OvcQuadRow({item, key}: { item: CreatedLinkQuadCol, key: number }) {
     const emptyCell = "-" // TODO: ensure ok
     return <OvcTriRow item={item} key={key}>
@@ -72,7 +65,6 @@ function OvcQuadRow({item, key}: { item: CreatedLinkQuadCol, key: number }) {
     </OvcTriRow>
 }
 
-// TODO: MOVE
 function OvcTriRow(props: React.PropsWithChildren<{ item: CreatedLinkTriCol, key: number }>) {
     return <tr key={props.key}>
         {/* TODO: styling for table data (all rows)*/}
@@ -82,14 +74,12 @@ function OvcTriRow(props: React.PropsWithChildren<{ item: CreatedLinkTriCol, key
     </tr>
 }
 
-// TODO: MOVE
 function OvcTableHidden({empty, unhide}: { empty: boolean, unhide: () => void }) {
     return <div className={empty ? "hidden" : ""/*hide button if no entries*/} onClick={unhide}>
         {"Show Created Entries Table"}
     </div> // TODO: ensure hidden works
 }
 
-// TODO: MOVE
 function OvcLinksTableWrapper(props: React.PropsWithChildren<{
     created: CreatedLinkTriCol[],
     hidden: boolean,
@@ -100,7 +90,6 @@ function OvcLinksTableWrapper(props: React.PropsWithChildren<{
     }
     return <div>
         <div className={"areaHeader"}>{"Entries Created:"}</div>
-        {/* TODO: ok?*/}
         <table className={"ovcLinksTable"}>
             {props.children}
         </table>
@@ -108,23 +97,19 @@ function OvcLinksTableWrapper(props: React.PropsWithChildren<{
     </div>
 }
 
-// TODO: MOVE
 const OvcHideTableText = "Hide Table"
 
-// TODO: MOVE
 function OvcTableHeaders({headersTxt, setTableHidden}: { headersTxt: string[], setTableHidden: () => void }) {
     return <tr>
-        {/* TODO: styling for table headers*/}
         {headersTxt.map((txt, i) => {
             if (txt === OvcHideTableText) { //TODO: hide button styling and hover styling
-                return <th key={i} onClick={setTableHidden}>{OvcHideTableText}</th>
+                return <th key={i} className={"ovcCell"} onClick={setTableHidden}>{OvcHideTableText}</th>
             }
-            return <th key={i}>{txt}</th>
+            return <th className={"ovcCell"} key={i}>{txt}</th>
         })}
     </tr>
 }
 
-// TODO: MOVE
 function OvcLinksTableQuad(
     {created, tableHidden, toggleHidden}: {
         created: CreatedLinkQuadCol[],
@@ -141,7 +126,6 @@ function OvcLinksTableQuad(
     </OvcLinksTableWrapper>
 }
 
-// TODO: MOVE
 function OvcLinksTableTri(
     {created, tableHidden, toggleHidden}: {
         created: CreatedLinkTriCol[],
@@ -158,14 +142,12 @@ function OvcLinksTableTri(
     </OvcLinksTableWrapper>
 }
 
-// TODO: MOVE
 function OvcCreatorBodyWrapper(props: React.PropsWithChildren<{}>) {
     return <div className={"ovcCreatorBodyWrapper"}>{/* TODO: style ovcCreatorBodyWrapper*/}
         {props.children}
     </div>
 }
 
-// TODO: MOVE
 function OvcArea(props: React.PropsWithChildren<{}>) {
     return <Subform>
         <div className={"ovcArea depth"}>{/* TODO: style ovcArea*/}
@@ -174,13 +156,12 @@ function OvcArea(props: React.PropsWithChildren<{}>) {
     </Subform>
 }
 
-// TODO: MOVE!
 /* View lc/2Aui6ejTFsd for testing */
 export function OnViewCreatorsQuadColArea({OnViewCreators, readonly}: {
     OnViewCreators: OnViewCreatorQuadCol[],
     readonly: boolean
 }) {
-    if (readonly || !OnViewCreators) {
+    if (readonly || !OnViewCreators || OnViewCreators.length === 0) {
         return null
     }
     const [activeTab, setActiveTab] = useState<string | undefined>();
@@ -235,9 +216,7 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
     const [created, setCreated] = useState<CreatedLinkTriCol[]>([]);
     const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
     const addCreated = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => {
-        console.log("trying to add created link") // TODO: del
         setCreated(created.concat(newLinks)) // TODO: structuredClone not working here
-        console.log("trying to close after") // TODO: del
         if (closeAfter) {
             setActiveTab(undefined)
         }

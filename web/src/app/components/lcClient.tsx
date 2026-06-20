@@ -170,7 +170,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
@@ -282,27 +282,33 @@ export default function LcDisplay(
                     setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
-        const ovcs: OnViewCreatorQuadCol[] = [
-            {
+
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const innoculated = initial.species !== undefined
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            ...(innoculated?[{
                 txt: "New Liquid Culture Syringe",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                     return <NewLcSyringeForm txt={"Create New Liquid Culture Syringe"} parentLc={initial}
                                              onCreate={(lcs: LcSyringeData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
-                        onCreate([{
-                            typeText: "Liquid Culture Syringe",
-                            node: <CreatedLinkFor linkId={lcs._id} typ={"lcSyringe"}/>,
-                        }], false)
-                    }}/>
+                                                 onCreate([{
+                                                     typeText: "Liquid Culture Syringe",
+                                                     node: <CreatedLinkFor linkId={lcs._id} typ={"lcSyringe"}/>,
+                                                 }], false)
+                                             }}/>
                 },
-                needsTesting: true,
-            },
-            // TODO: sale?
+            }]:[]),
             WriteRfidOvcArea(initial._id),
-        ]
+        ] : []
+    }
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
         return <DisplayFormWrapper entryType={"lc"}>
             <ID props={{id:data._id, txt:"Liquid Culture", entryType:"lc", linkPage:false, allowOpenMainPage:false}}/>
             {readonly ||
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>}
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>}
             <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <FlexedArea>
@@ -312,37 +318,37 @@ export default function LcDisplay(
                                                 initialDisposed={initial.disposed} setDisposedOnParent={setDisposed}
                                                 readonly={readonly}/>
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                {isInnoculated()&&<FlexedSinglesGroup>
                     {/*1-2high (fragmented), extremely variable wide*/}
                     <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
                     {/*1high (13-25)wide */}
                     <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                </FlexedSinglesGroup>}
+                {isInnoculated()&&<FlexedSinglesGroup>
                     {/*3high 17-18 wide*/}
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                </FlexedSinglesGroup>}
+                {isInnoculated()&&<FlexedSinglesGroup>
                     {/*1high (19-25 wide)*/}
                     <ConfirmedCleanArea onSelect={setConfirmedClean} readonly={readonly}
                                         initial={initial.confirmedClean}/>
                     {/*1high (21-24 wide)*/}
                     <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
-                </FlexedSinglesGroup>
+                </FlexedSinglesGroup>}
 
 
                 <FlexedSinglesGroup>
                     {/*1high (18+altId)*/}
-                    <InnocDisplay innoc={initial.innoc}/>
+                    {isInnoculated()&&<InnocDisplay innoc={initial.innoc}/>}
                     {/*1high (26+altId)*/}
                     <LcRecipeArea lcRecipeId={initial.recipe}/>
                     {/*1high (10+(altId/7))*/}
                     <PcRunArea binaryId={initial.pcRun}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"lc"}
+            {isInnoculated()&&<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"lc"}
                                  transfersOut={initial.transfersOut}
-                                 allowNewTransferCreation={!readonly}/>{/* TODO: validTypesTo*/}
+                                 allowNewTransferCreation={!readonly}/>}
             <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly}
                          headerLevel={headerLevel}/>{/* Pics */}
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}

@@ -139,9 +139,8 @@ export default function SaleDisplay(
 
 export function NewSaleForm( // TODO: overhaul! Need Id available?
     {
-        headerLevel, onCreate
+        onCreate
     }: {
-        headerLevel?: number
         onCreate?: (s: SaleData)=>void
     }) {
     // id/lot, saleDate, lastUpdated are done on server
@@ -165,7 +164,7 @@ export function NewSaleForm( // TODO: overhaul! Need Id available?
             })
     }
     return <NewEntryFormWrapper entryType={"sale"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err}/>
         <NewEntryNotes setNotes={setNotes} />
         <button className={"greenButton"} onClick={createSale}>{"Create Sale"}</button>
     </NewEntryFormWrapper>
@@ -173,11 +172,10 @@ export function NewSaleForm( // TODO: overhaul! Need Id available?
 }
 
 export function SaleArea(
-    {readonly, headerLevel, sale, setSale, canCreateSale}:{
+    {readonly, sale, setSale, canCreateSale}:{
         readonly: boolean,
         sale?: string,
         setSale?: (s: string) => void,
-        headerLevel?: number,
         canCreateSale: boolean
     }
 ){
@@ -195,7 +193,7 @@ export function SaleArea(
                 {!readonly && <button className={"basicButtonSmall inline"} onClick={()=>{setOpen(!open)}}>{open?"Close sale creation area":"Mark as sold"}</button> /* TODO: FIX ME SO THIS CREATES A NEW SALE!*/}
             </div>
             {open &&
-                <NewSaleForm headerLevel={headerLevel} onCreate={s=>saleCreated(s._id)} />
+                <NewSaleForm onCreate={s=>saleCreated(s._id)} />
             }
             </TestAndValidate>
         </div>
@@ -231,7 +229,7 @@ export function SalesArea(
                     setCreatorOpen(!creatorOpen)
                 }}>{creatorOpen ? "Close Sale Creator" : "Create a new Sale"}</button>
             </div>
-            {creatorOpen && <NewSaleForm headerLevel={headerLevel} onCreate={(s)=>{
+            {creatorOpen && <NewSaleForm onCreate={(s)=>{
                 updateEntries([...current,s._id])}
             }/> }
         </div>

@@ -162,7 +162,10 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	if acl.Projects == nil {
 		acl.Projects = map[projectName]bool{}
 	}
-	acl.Users[perms.Email] = true
+	// If not blanket write, ensure the user who made the request can write
+	if !requestPerms.BlanketPerm.CanWrite() {
+		acl.Users[perms.Email] = true
+	}
 	return AclField{ACL: acl}, nil
 }
 

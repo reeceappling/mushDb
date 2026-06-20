@@ -144,7 +144,6 @@ export default function SubstrateBatchDisplay(
                         },
                     }}/>
                 },
-                needsTesting: true,
             }
         ]
         return (

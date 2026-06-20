@@ -46,7 +46,7 @@ type FruitingChamber struct { // TODO: SHOEBOX vs monotub!
 }
 
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
-	if !slices.Contains([]string{PlateSourceType /*BagSourceType, GrainJarSourceType*/}, dst.SourceType()) {
+	if !slices.Contains([]string{PlateSourceType, SlantSourceType, BagSourceType, FruitingChamberSourceType /*BagSourceType, GrainJarSourceType*/}, dst.SourceType()) {
 		return errors.New("Fruiting chamber cannot transfer to " + dst.SourceType())
 	}
 	return nil

@@ -45,7 +45,7 @@ type LiquidCulture struct {
 }
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
-	canTransferTo := []string{GrainJarSourceType, PlateSourceType, SlantSourceType, StasisTubeSourceType, LcSourceType} // TODO: validate this encompasses all...
+	canTransferTo := []string{GrainJarSourceType, PlateSourceType, SlantSourceType, StasisTubeSourceType, LcSourceType, BagSourceType} // TODO: validate this encompasses all...
 	if !slices.Contains(canTransferTo, dst.SourceType()) {
 		return errors.New("LC cannot transfer to " + dst.SourceType())
 	}

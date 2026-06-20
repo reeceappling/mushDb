@@ -42,7 +42,7 @@ import {
     resolvePicsFormData,
     SelectorWrapper,
     setFormData,
-    setFormImages,
+    setFormImages, DecimalInput,
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -244,22 +244,25 @@ export default function FruitingChamberDisplay(
                 setErr("failed to update initial: " + JSON.stringify(e))
             })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        OvcForNewFruit(data._id, "fruitingChamber", allCookies(cookies)),
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            OvcForNewFruit(data._id, "fruitingChamber", allCookies(cookies)),
+            WriteRfidOvcArea(initial._id)
+        ] : []
         // TODO: create new print (creates intermediate fruit)
         // TODO: create new swab (creates intermediate fruit)
-        WriteRfidOvcArea(initial._id),
         // TODO: xfers? OvcForXfers(data._id, "fruit", ["plate","slant","jar","stasisTube"], "Clone/Transfer Fruit"), // TODO: ensure list correct //OVC for clone to plate? (transfer)
         // TODO: spore swab directly from box? (should also create a fruit in the interim)
         // TODO: spore print directly from box? (should also create a fruit in the interim)
-    ]
+    }
     return (
         <DisplayFormWrapper entryType={"fruitingChamber"}>
             <ErrorDisplay err={err} headerLevel={headerLevel}/>
             <ID props={{id:data._id, txt:"Fruiting Chamber", entryType:"fruitingChamber"}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage}
                                     headerLevel={headerLevel}/>{/* Most recent image! */}
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -273,22 +276,18 @@ export default function FruitingChamberDisplay(
                     <div>{"Casing: " + (data.casingPerGrain * data.cupsGrain)}</div>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <GensFormDisplay gensSinceSpore={initial.genSpore}
-                                     gensSinceFruitOrSpore={initial.genFruitOrSpore}
-                                     headerLevel={headerLevel}/>{/* Gens since spore and spore/fruit*/}
+                    <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>{/* Gens since spore and spore/fruit*/}
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
                     {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
                     <InnocDisplay innoc={initial.innoc} openInNewTab={false}/>{/* Innoc */}
-                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}
-                                   headerLevel={headerLevel}/>{/* Parent */}
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>{/* Parent */}
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <KnownFruitableArea initial={knownFruitable} readonly={readonly} headerLevel={headerLevel}
                                         doSelect={setKnownFruitable}/>{/* KnownFruitable */}
-                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
-                              canCreateSale={true}/>{/* Sale TODO: make sales also trigger disposed */}
+                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>{/* Sale TODO: make sales also trigger disposed */}
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruitingChamber"} requireConfirmation={true/* TODO: ok?*/}
@@ -446,7 +445,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
             <button className={"greenButton buttonFullWidth"} onClick={e=>{
                 e.stopPropagation()
                 newFruitingChamberSubmit()
-            }} />
+            }} >{"Create"}</button>
         </NewEntryFormWrapper>
     )
 }
@@ -514,15 +513,13 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
         </div>
         <div className={"inlineChildren"}>
             <div>{"Mixed substrate ratio"}</div>
-            <FloatInput initial={mixedSubRatio} onChange={setMixedSubRatio}/>
+            <DecimalInput initial={mixedSubRatio} onChange={setMixedSubRatio}/>
         </div>
         <div className={"inlineChildren"}>
             <div>{"Casing ratio"}</div>
-            <FloatInput initial={casingRatio} onChange={setCasingRatio}/>
+            <DecimalInput initial={casingRatio} onChange={setCasingRatio}/>
         </div>
         {/* Optional fields*/}
-        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}*/}
-        {/*                            headerLevel={headerLevel}/>*/}
 
         <GenerationInput updateParent={g=>{
             if (g!==undefined) {
