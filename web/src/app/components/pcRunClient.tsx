@@ -274,7 +274,7 @@ export function NewPcRunForm(
     }
     return (
         <NewEntryFormWrapper entryType={"pcRun"}>
-            <div>{"Creating a new PC Run"}</div>{/* TODO: create as header????*/}
+            <div className={"areaHeader"}>{"Creating a new PC Run"}</div>{/* TODO: create as header????*/}
             <ErrorDisplay err={err}/>
             {/* RunTime TODO: RETHINK THIS??? do we want to put options for typical runtimes?*/}
             <div className={"inlineChildren"}>
@@ -283,8 +283,8 @@ export function NewPcRunForm(
                                   mode={"integer"} onChange={(s) => {s && setRunTime(s)}}/>
             </div>
             {/*<div>*/}
-                <InputNumberWithSmallTitle label={"RunTime (minutes):"} value={runTime} readonly={false} min={30} max={600} step={5}
-                                                        mode={"integer"} onChange={(s) => {s && setRunTime(s)}}/>
+            {/*    <InputNumberWithSmallTitle label={"RunTime (minutes):"} value={runTime} readonly={false} min={30} max={600} step={5}*/}
+            {/*                                            mode={"integer"} onChange={(s) => {s && setRunTime(s)}}/>*/}
             {/*</div>*/}
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
