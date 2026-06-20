@@ -184,12 +184,9 @@ export default function SpeciesDisplay(
                     <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <TestAndValidate todos={["make this changeable and test"]}>
-                        <SubstrateRecipeArea txt={"Standard Substrate Recipe: "} id={substrate}
-                                             headerLevel={headerLevel} readonly={false} onSelect={s => {
+                    <SubstrateRecipeArea txt={"Standard Substrate Recipe: "} id={substrate} readonly={false} onSelect={s => {
                             s && setSubstrate(s._id)
                         }}/>
-                    </TestAndValidate>
                 </FlexedSinglesGroup>
             </FlexedArea>
             <AliasesArea initial={initial.aliases} readonly={readonly} updateParent={updateAliases}/>{/* TODO: initial as just aliases?*/}

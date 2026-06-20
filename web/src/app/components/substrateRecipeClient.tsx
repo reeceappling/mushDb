@@ -5,7 +5,7 @@ import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
+import {SubstrateRecipeData, SubstrateRecipeSelectorCloseable} from "@/app/components/substrateRecipeServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     CreatedLinkFor,
@@ -218,21 +218,30 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     )
 }
 
-export function SubstrateRecipeArea({id, headerLevel, txt, readonly, onSelect}: { // TODO: OVERHAUL!!!!
+export function SubstrateRecipeArea({id, txt, readonly, onSelect}: { // TODO: OVERHAUL!!!!
     id?: string,
-    headerLevel?: number,
     txt?: string,
     readonly: boolean,
     onSelect?: (d?: SubstrateRecipeData) => void
 }){
+    const [val, setVal] = useState<string | undefined>(id)
+    const [open, setOpen] = React.useState(false)
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
-    if (id !== undefined) {
-        const b58id = id
+    if (open){
+        <SubstrateRecipeSelector doSelect={r=>{
+            if (r!==undefined){
+                onSelect && onSelect(r)
+                setVal(r._id)
+                setOpen(false)
+            }
+        }} allowCreate={false}/>
+    }
+    if (val !== undefined) {
         linkArea =
             <EntryLinkForId props={{
                 openInNewTab: false,
-                displayId: b58id,
-                linkId: b58id,
+                displayId: val,
+                linkId: val,
                 entryType: "substrateRecipe"
             }}/>
         //     { // TODO: where does this go?
@@ -255,6 +264,9 @@ export function SubstrateRecipeArea({id, headerLevel, txt, readonly, onSelect}: 
     }
     return <div>
         {txt ? txt : "Substrate Recipe: "}{linkArea}
+        {!readonly && <button className={"basicButtonSmall"} onClick={() => {
+            setOpen(true)
+    }}>{"Change"}</button>}
     </div>
 }
 

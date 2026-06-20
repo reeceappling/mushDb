@@ -269,7 +269,7 @@ export default function FruitingChamberDisplay(
                                                 initialDisposed={initial.disposed} readonly={readonly}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <SubstrateRecipeArea id={initial.recipe} headerLevel={headerLevel} readonly={true}/>
+                    <SubstrateRecipeArea id={initial.recipe} readonly={true}/>
                     <SubstrateBatchArea id={initial.substrateBatch}/>
                     <div>{"Cups grain: " + data.cupsGrain}</div>
                     <div>{"Substrate mixed with grain: " + (data.mixedSubstratePerGrain * data.cupsGrain)}</div>

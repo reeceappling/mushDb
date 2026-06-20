@@ -184,8 +184,8 @@
       - [ ] Dowel types should be a table??? Maybe a grid?
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page
-      - [x] Create PC run from within creator--------------------------------------------------------------------------------------------------------------------------
-        - [ ] Get rid of one of the entry boxes for runtime
+      - [x] Create PC run from within creator
+        - [x] Get rid of one of the entry boxes for runtime
       - [x] Validate all areas working properly
     - [x] Import page
       - [x] Dowels say amount where it should be radius
@@ -212,11 +212,11 @@
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)// TODO: self page? probably not... Create from AgarBatch (maybe PCRun?)
     - [x] Import page
     - [x] List Page
-  - [ ] Species
+  - [x] Species
     - [x] Display page
       - [x] Aliases
-      - [ ] Substrate
-        - [ ] Make this changeable!--------------------------------------------------------------------------------------------------------------------------
+      - [x] Substrate
+        - [x] Make this changeable
       - [x] ACLs
       - [x] Subspecies viewer
       - [x] Subspecies creator

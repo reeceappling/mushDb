@@ -275,8 +275,8 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate substrate exists
-	if req.Substrate.AsBase58() != existing.StandardSubstrate.AsBase58() {
+	// Validate substrate exists if changed
+	if existing.StandardSubstrate.AsBase58() != req.Substrate.AsBase58() {
 		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, BsonFindFilter("_id", req.Substrate)).Err()
 		if err != nil {
 			dbErr(w, err.Error(), http.StatusInternalServerError)
