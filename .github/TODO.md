@@ -196,13 +196,14 @@
       - [x] For no species, remove gen, KF
       - [x] NOT WORKING WHEN SUBMITTING!
     - [x] List Page
-  - [ ] Project
+  - [x] Project
     - [x] Display page
       - [x] Not properly showing initial user permissions
       - [x] Perms are not updating visually when users are added or removed!
       - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)-------------------------------------------------------------
         - [ ] Switch to table (already mostly done) 
-      - [ ] Removing yourself as admin causes reloading the page to fail!
+      - [x] Removing yourself as admin causes reloading the page to fail!
+        - [ ] Re-adding self as admin causes a go-side crash
     - [x] Create page
     - [x] List Page
       - [ ] Be able to filter projects by completeness

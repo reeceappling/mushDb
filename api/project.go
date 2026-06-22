@@ -277,17 +277,17 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 			Client().Database(dbName).
 			Collection(UserCollName)
 		authSvc := GetAuthService(sessCtx)
-		authSvc.Lock()         // TODO: ok?
-		defer authSvc.Unlock() // TODO: ok?
+		authSvc.Lock()
+		defer authSvc.Unlock()
 		for u, _ := range usersWithProjectRemoved {
 			// remove project from each user that no longer has the project // TODO: VALIDATE WORKING PROPERLY
 			_, e := txColl.UpdateByID(sessCtx, u, bson.D{{"$unset", bson.D{{permKey, ""}}}}) // TODO: ensure ok
 			if e != nil {
 				return nil, e
 			}
-			// TODO: remove the project from the user in the session stuff!
+			// remove the project from the user in the session stuff!
 			if sessId, exists := authSvc.UserSessionMap[u]; exists {
-				delete(authSvc.sessMap[sessId].Data.Projects, projName) // TODO: ensure ok!
+				delete(authSvc.sessMap[sessId].Data.Projects, projName)
 			}
 		}
 		// Add project with perm to user, or change the project perm  // TODO: VALIDATE WORKING PROPERLY
@@ -299,7 +299,14 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				// TODO: add the project to the user in the session stuff!
 				if sessId, exists := authSvc.UserSessionMap[u]; exists {
-					authSvc.sessMap[sessId].Data.Projects[projName] = userPerm.UserProjectPerm()
+					sess := authSvc.sessMap[sessId]
+					tempProjects := sess.Data.Projects
+					if tempProjects == nil {
+						tempProjects = map[projectName]*UserProjectPerm{}
+					}
+					tempProjects[projName] = userPerm.UserProjectPerm()
+					sess.Data.Projects = tempProjects
+					authSvc.sessMap[sessId] = sess
 				}
 
 			}
