@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
@@ -309,8 +309,8 @@ export default function PlateDisplay(
                 <FlexedSinglesGroup>
                     {/* TODO: SIZING ON ENTRY FIELDS*/}
                     <PourCoverageFieldDisplay initial={initial.pourCoverage} updateParent={setPourCoveragePct}/>
-                    {isInnoculated()?(initial.condensationCoverageAtSealTime ? <div>{"Condensation Coverage: "+initial.condensationCoverageAtSealTime+"%"}</div>:
-                        <CondensationCoverageFieldDisplay coverage={condensationCoveragePct/* TODO: STATIC IF PRE-SET*/} updateParent={setCondensationCoveragePct}/>):null}
+                    <div>{"Condensation Coverage at pour time: "+(initial.condensationCoverageAtPourTime?initial.condensationCoverageAtPourTime+"%":"unknown")}</div>
+                    {isInnoculated()&&<CondensationCoverageFieldDisplay initial={initial.condensationCoverageAtSealTime/* TODO: STATIC IF PRE-SET*/} updateParent={setCondensationCoveragePct}/>}
                     <YesNoSelector pre={"Wet at cooled time: "} initial={initial.wetAtCooledTime}
                                    updateParent={setWetAtCoolTime}/>
                     <YesNoSelector pre={"Agar on outside at pour time: "} initial={initial.agarOnOutsideAtPourTime}
@@ -368,7 +368,7 @@ function PourCoverageFieldDisplay({initial, updateParent}: {
             updateParent ? updateParent(temp) : console.warn("pourCoverage has no updateParent prop")
             setPourCoverage(temp)}}/>{"%"}
         </div>
-        <button onClick={e=>{
+        <button className={'basicButtonSmall'} onClick={e=>{
             e.stopPropagation()
             setOpen(false)
             setPourCoverage(undefined)
@@ -376,23 +376,43 @@ function PourCoverageFieldDisplay({initial, updateParent}: {
     </div>
 }
 
-function CondensationCoverageFieldDisplay({coverage, updateParent}: {
-    coverage?: number,
+function CondensationCoverageFieldDisplay({initial, updateParent}: { // TODO: validate working
+    initial?: number,
     updateParent?: (cov: number) => void
 }) {
     const header = "Condensation Coverage: "
-    if (!coverage) {
-        return <TestAndValidate todos={["allow setting if undefined"]}>
-            <div>{header + (coverage ? coverage + "%" : "unknown")}</div>
-        </TestAndValidate>
+    const [cov, setCov] = useState(initial)
+    const [open, setOpen] = useState(false)
+    useEffect(()=>{
+        setCov(initial)
+    },[initial])
+    if (initial) {
+        return <div>{header+initial+"%"}</div>
     }
-    const [val, setVal] = useState(coverage)
-    return <div>{header}<InputNumberWithSmallTitle value={"" + val} readonly={false} min={0} max={100} step={1}
-                                                   mode={"integer"} onChange={(s) => {
-        const temp = Number(s)
-        updateParent && updateParent(temp)
-        setVal(temp)
-    }}/>{"%"}</div>
+    if (!open) {
+        return <div className={"inlineChildren"}>
+            <div>{header}</div>
+            <button className={'basicButtonSmall'} onClick={e=>{
+                e.stopPropagation()
+                setOpen(true)
+            }}>{"Set"}</button>
+        </div>
+    }
+    return <div className={"inlineChildren"}>
+        <div>{header}</div>
+        <div>
+            <InputNumber value={"" + cov} readonly={false} min={0} max={100} step={1}
+                         mode={"integer"} onChange={(s) => {
+                const temp = Number(s)
+                updateParent ? updateParent(temp) : console.warn("condensationCoverage has no updateParent prop")
+                setCov(temp)}}/>{"%"}
+        </div>
+        <button onClick={e=>{
+            e.stopPropagation()
+            setOpen(false)
+            setCov(undefined)
+        }}>{"Unset"}</button>
+    </div>
 }
 
 // TODO: USE?
@@ -496,7 +516,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             knownFruitable: knownFruitable,
             generation: generation,
             pourCoverage: pourCoverage,
-            condensationCoverageAtSealTime: condensationCoverage,
+            condensationCoverageAtPourTime: condensationCoverage,
             writeTagTo: writeTagTo,
         }
         if (imageFile !== undefined) {
@@ -518,7 +538,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             </div>
         </div>
 
-        <CondensationCoverageSelector coverage={condensationCoverage} updateParent={setCondensationCoverage}/>{/* TODO: when unset, allow setting!*/}
+        <CondensationCoverageSelector coverage={condensationCoverage} updateParent={setCondensationCoverage}/>
         <div className={"centerH mt-2"}>
             <ImageSelector updateParent={setImageFile}/>
         </div>
@@ -532,7 +552,7 @@ export function NewPlateForm(
     {handlers,agarBatchIn}: { handlers: NewEntryInput<PlateData>, agarBatchIn?: AgarBatchData }
 ) {
     const [agarBatch, setAgarBatch] = useState<AgarBatchData | undefined>(agarBatchIn)
-    const [condensationCoverageAtSealTime, setCondensationCoverageAtSealTime] = useState<number | undefined>(undefined)
+    const [condensationCoverageAtPourTime, setCondensationCoverageAtPourTime] = useState<number | undefined>(undefined)
     const [pourCoverage, setPourCoverage] = useState<number | undefined>(undefined)
     const [wetAtCooledTime, setWetAtCooledTime] = useState<boolean | undefined>(undefined)
     const [agarOnOutsideAtPourTime, setAgarOnOutsideAtPourTime] = useState<boolean | undefined>(undefined)
@@ -549,7 +569,7 @@ export function NewPlateForm(
         }
         const body: any = {
             agarBatch: agarBatch._id,
-            condensationCoverageAtSealTime: condensationCoverageAtSealTime, // TODO: ensure ok on go side
+            condensationCoverageAtPourTime: condensationCoverageAtPourTime, // TODO: ensure ok on go side
             pourCoverage: pourCoverage, // TODO: ensure ok on go side
             wetAtCooledTime: wetAtCooledTime, // TODO: ensure ok on go side
             agarOnOutsideAtPourTime: agarOnOutsideAtPourTime, // TODO: ensure ok on go side
@@ -572,8 +592,8 @@ export function NewPlateForm(
             <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
         </div>
         <div className={sliderClasses}>
-            <CondensationCoverageSelector coverage={condensationCoverageAtSealTime}
-                                      updateParent={setCondensationCoverageAtSealTime}/>
+            <CondensationCoverageSelector coverage={condensationCoverageAtPourTime}
+                                      updateParent={setCondensationCoverageAtPourTime}/>
         </div>
         <YesNoSelector pre={"Wet at cooled time: "} initial={undefined} updateParent={setWetAtCooledTime}
                        className={"inlineChildren"}/>

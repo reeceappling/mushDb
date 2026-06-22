@@ -174,7 +174,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.LC},
-		ConfirmedCleanField:               parent.ConfirmedCleanField, // TODO: is this ok? Probably want to only keep if false, but otherwise do nil
+		ConfirmedCleanField:               parent.ConfirmedCleanField,
 		KnownFruitableField:               parent.KnownFruitableField,
 		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      SpeciesField{Species: *parent.Species},
@@ -192,7 +192,7 @@ type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField                                         // TODO: handle in react
+	KnownFruitableField       // TODO: handle in react
 	NotesUpdateField
 	PermsOnRequest `json:"acl"`
 }
@@ -288,6 +288,16 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	//_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error){
+	//	if req.ConfirmedClean != nil {
+	//		if existing.ConfirmedClean == nil || (*req.ConfirmedClean != *existing.ConfirmedClean){
+	//			// TODO: ALSO CHANGE PARENT!!!!!
+	//		}
+	//	}
+	//	return finishMainCollItemUpdateInTxn(sessCtx, w, out.modsFor, &existing, out.GetPermsOnRequest())
+	//})
+
 	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.GetPermsOnRequest())
 }
 

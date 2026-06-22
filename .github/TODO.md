@@ -36,6 +36,7 @@
   - [ ] persist the whitelist?
 - [ ] ListPageTables allow hiding columns!
 - [ ] Transfer creation, validTypesTo on the go side!
+- [ ] ListPageTable entries should actually be links!
 
 - [ ] Entries
   - [x] Agar Batch
@@ -60,7 +61,7 @@
       - [x] New fruit area
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [x] Allow xfers on go side (to plates only for now)
-        - [ ] 4XX should show error in error area, not just console ----------------------------------------------------
+        - [x] 4XX should show error in error area, not just console
     - [x] Create page
     - [x] Import page
       - [x] Redirect not working
@@ -76,11 +77,11 @@
     - [x] Create page (NONE!)
     - [x] Import page
     - [x] List Page
-  - [ ] Fruiting Chamber
+  - [x] Fruiting Chamber
     - [x] Display page
       - [x] Dispose button
       - [x] New fruit area
-      - [ ] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
         - [ ] Ensure user confirms before this happens
         - [x] Allow xfers on go side (to plates only for now)
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
@@ -108,7 +109,6 @@
       - [x] If no species, do not show many other fields!
       - [x] Add wetness
       - [x] Add burst grains
-      - [ ] Create Jar Recipe from import page.
     - [x] List Page
   - [x] Jar Recipe
     - [x] Display page
@@ -143,6 +143,7 @@
         - [ ] ConfirmedClean can be unset?
       - [x] ConfirmedClean validate working properly
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [ ] Set parent LC to clean from here?
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
       - [x] Confirmed clean is not propagating properly, always showing up as unknown...
@@ -170,7 +171,10 @@
   - [x] Plate
     - [x] Display page
       - [x] pour and condens cov
-        - [ ] Validate condens coverage (when unset, allow setting) --------------------------------------------------------------------------------------------------------------------------
+        - [x] Validate condens coverage (when unset, allow setting)
+      - [ ] Agar on outside at pour time
+        - [ ] If not set, do not show?
+        - [ ] If set, do not allow change?
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
@@ -181,7 +185,7 @@
   - [x] Plugs
     - [x] Display page
       - [ ] woods area displaying weird on slim screens!
-      - [ ] Dowel types should be a table??? Maybe a grid?
+      - [x] Dowel types should be a table??? Maybe a grid? ---------------------
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page
       - [x] Create PC run from within creator
@@ -196,7 +200,9 @@
     - [x] Display page
       - [x] Not properly showing initial user permissions
       - [x] Perms are not updating visually when users are added or removed!
-      - [ ] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)-------------------------------------------------------------
+      - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)-------------------------------------------------------------
+        - [ ] Switch to table (already mostly done) 
+      - [ ] Removing yourself as admin causes reloading the page to fail!
     - [x] Create page
     - [x] List Page
       - [ ] Be able to filter projects by completeness

@@ -74,7 +74,7 @@ var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", fals
 var creationDateIndexModel = newSimpleIndex("creationDate", "creationDate", true, false, false)
 var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false)
 
-var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false)
+var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false) // TODO: THIS DOES NOT ENFORCE UNIQUENESS!!!!!
 
 // TODO: USE!
 func SetEnv(ctx context.Context, isProd bool) context.Context {
@@ -835,6 +835,40 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 	upd, err := modsFor(existing, aclField)
 	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
 	return
+}
+
+func finishMainCollItemUpdateInTxn[T MainCollectionItem](ctx mongo.SessionContext, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) (T, error) {
+	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+	coll := db.Collection(existing.CollectionName())
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return existing, err
+	}
+	if user.isGuest() { // TODO: do we even need this here?
+		dbErr(w, "guests cannot edit", http.StatusForbidden)
+		return existing, err
+	}
+	if !user.HasPermissionToEdit(existing) {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return existing, err
+	}
+	aclField, err := reqPerms.AclForUser(ctx, user)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return existing, err
+	}
+	upd, err := modsFor(existing, aclField)
+	if err != nil {
+		dbErr(w, "err in modsFor: "+err.Error(), http.StatusInternalServerError)
+		return existing, err
+	}
+	err = handleUpdateModsInTxn(ctx, coll, existing, existing.DbId(), upd, err)
+	if err != nil {
+		dbErr(w, "failed to update: "+err.Error(), http.StatusInternalServerError)
+		return existing, err
+	}
+	return existing, err
 }
 
 func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {

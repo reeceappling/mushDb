@@ -43,6 +43,7 @@ export interface PlateData {
     _id: string
     agarBatch?: string
     creationDate: number
+    condensationCoverageAtPourTime?: number
     condensationCoverageAtSealTime?: number
     pourCoverage?: number
     wetAtCooledTime?: boolean

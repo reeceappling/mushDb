@@ -238,9 +238,7 @@ export default function PlugsDisplay(
             </FlexedArea>
             <div>
                 <div className={"text-lg"}>{"Dowel Types"}</div>
-                <TestAndValidate todos={["turn into table"]}>
-                    <DowelTypesTable data={initial.dowelTypes}/>
-                </TestAndValidate>
+                <DowelTypesTable data={initial.dowelTypes}/>
             </div>
             {isInnoculated()&&<SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales}/>}
             {isInnoculated()&&<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plugs"}

@@ -32,6 +32,17 @@ func (cc CondensationCoverageAtSealTimeField) condensationCoverage() *int {
 type hasCondensCov interface {
 	condensationCoverage() *int
 }
+type CondensationCoverageAtPourTimeField struct {
+	CondensationCoverageAtPourTime *int `bson:"condensationCoverageAtPourTime,omitempty" json:"condensationCoverageAtPourTime,omitempty"` // TODO: (0-100), HANDLE EVERYWHERE, NEW!
+}
+
+func (cc CondensationCoverageAtPourTimeField) condensationCoveragePourTime() *int {
+	return cc.CondensationCoverageAtPourTime
+}
+
+type hasCondensCovPourTime interface {
+	condensationCoveragePourTime() *int
+}
 type PourCoverageField struct {
 	PourCoverage *int `bson:"pourCoverage,omitempty" json:"pourCoverage,omitempty"` // PourCoverage (0-100) (or nil for imports)
 }
@@ -71,6 +82,7 @@ type Plate struct {
 	AgarBatchField        `bson:"inline"` // will be empty for preexisting
 	// TODO: do we want PC run on here too? and on others like it? (probably not due to data bloat)
 	CreationDateField                   `bson:"inline"`
+	CondensationCoverageAtPourTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
 	CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
 	PourCoverageField                   `bson:"inline"` // Percentage of bottom surface area agar coverage
 	WetAtCooledTimeField                `bson:"inline"` // Wet when initially cooled? True, false, or unknown
@@ -347,7 +359,7 @@ func EmptyTestPlateBinaryId() MainCollectionId {
 
 type createPlateRequest struct {
 	AgarBatch AlternateCollectionId `json:"agarBatch"`
-	CondensationCoverageAtSealTimeField
+	CondensationCoverageAtPourTimeField
 	PourCoverageField
 	WetAtCooledTimeField
 	AgarOnOutsideAtPourTimeField
@@ -386,7 +398,8 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		MainCollectionIdField:               MainCollectionIdField{id},
 		AgarBatchField:                      agarBatchField,
 		CreationDateField:                   CreationDateField{now},
-		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField,
+		CondensationCoverageAtPourTimeField: data.CondensationCoverageAtPourTimeField,
+		CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{nil},
 		PourCoverageField:                   data.PourCoverageField,
 		WetAtCooledTimeField:                data.WetAtCooledTimeField,
 		AgarOnOutsideAtPourTimeField:        data.AgarOnOutsideAtPourTimeField,
@@ -566,6 +579,26 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 	handleWriteErr(err, w)
 }
 
+func handleUpdateModsInTxn[T any, U MainCollectionId | AlternateCollectionId | string](ctx context.Context, coll *mongo.Collection, existing T, id U, upd bson.D, err error) error {
+	if err != nil {
+		return err
+	}
+	if len(upd) == 0 {
+		return errors.New("no changes made")
+	}
+	// write updates to db
+	bsonId := BsonFindFilter("_id", id)
+	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
+	if err != nil {
+		return err
+	}
+	err = coll.FindOne(ctx, bsonId).Decode(&existing)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type importPlateRequest struct {
 	CreationDateField
 	SpeciesOptionalField
@@ -573,7 +606,7 @@ type importPlateRequest struct {
 	KnownFruitableField
 	Generation *Generation `json:"generation,omitempty"` // TODO: make required for when innoculated!
 	PourCoverageField
-	CondensationCoverageAtSealTimeField
+	CondensationCoverageAtPourTimeField
 	// pic as "img"
 	WriteTagToField
 }
@@ -635,6 +668,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
+	var condensCovSealed *int = nil
 	var gen *Generation = nil
 	if data.Species != nil {
 		if data.Generation == nil {
@@ -646,6 +680,8 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		gen = data.Generation
+		// If innoculated, ensure seal and pour condensation coverage are the same
+		condensCovSealed = data.CondensationCoverageAtPourTime
 	} else {
 		data.KnownFruitable = nil
 		data.Subspecies = nil
@@ -659,7 +695,6 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	if data.Species == nil { // Not innoculated
 		finalPerms = allCanWriteAcl().ACL
 		data.PourCoverage = nil
-		data.CondensationCoverageAtSealTime = nil
 	} else {
 		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
 		if err != nil {
@@ -671,7 +706,8 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
 		CreationDateField:                   data.CreationDateField,
-		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField,
+		CondensationCoverageAtPourTimeField: data.CondensationCoverageAtPourTimeField,
+		CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{condensCovSealed},
 		PourCoverageField:                   data.PourCoverageField,
 		WetAtCooledTimeField:                WetAtCooledTimeField{nil},
 		AgarOnOutsideAtPourTimeField:        AgarOnOutsideAtPourTimeField{nil},

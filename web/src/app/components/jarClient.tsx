@@ -172,7 +172,7 @@ export function AssertJar(input: any): asserts input is JarData {
     return
 }
 
-export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
+export function JarImportDisplay({}: ImportDisplayInput) {
     const [created, setCreated] = useState<number>(Date.now())
     const [recipe, setRecipe] = useState<JarRecipeData | undefined>()
     const [sizeCups, setSizeCups] = useState<number>(4)
@@ -229,7 +229,7 @@ export function JarImportDisplay({headerLevel}: ImportDisplayInput) {
             }}/>
         </div>
         <SelectorWrapper current={recipe} title={"Jar Recipe"} nameFunc={(v: JarRecipeData) => v._id}>
-            <JarRecipeSelector doSelect={setRecipe} allowCreate={true}/>
+            <JarRecipeSelector doSelect={setRecipe} allowCreate={false}/>
         </SelectorWrapper>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         {species && <>

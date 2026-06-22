@@ -1036,23 +1036,28 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 	case "project": // Items with possible spaces in names but abnormal perms
 		out, err := rfid.GetAltCollectionItem[*rfid.Project](ctx, id, &rfid.Project{})
 		if err != nil {
+			env.LogIfDev(ctx, "failed to get project: "+err.Error())
 			http.Error(w, "failed to get project: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		// TODO: PERMS!
 		user, err := rfid.GetAuthInfo(ctx)
 		if err != nil {
+			env.LogIfDev(ctx, "Failed to get authinfo: "+err.Error())
 			http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if !user.IsAdmin() && out.Perms.ForUser(user.Email) == nil {
-			http.Error(w, "permission denied for project", http.StatusForbidden)
-			return
-		}
 		projPermForUser := out.Perms.ForUser(user.Email)
-		if !projPermForUser.CanRead() {
-			http.Error(w, "permission denied to user for project", http.StatusForbidden)
-			return
+		if !user.IsAdmin() {
+			if projPermForUser == nil {
+				env.LogIfDev(ctx, "permission denied for project")
+				http.Error(w, "permission denied for project", http.StatusForbidden)
+				return
+			}
+			if !projPermForUser.CanRead() {
+				http.Error(w, "perm denied to user for project", http.StatusForbidden)
+				return
+			}
 		}
 
 		bytes, err = json.Marshal(out)
@@ -1100,6 +1105,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		}
 		env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "user": // User (can have @)
+		// TODO: ensure admin?????
 		decodedId, err := rfid.UrlDecodeString(id)
 		if err != nil {
 			http.Error(w, "failed to decode user email: "+err.Error(), http.StatusInternalServerError)

@@ -214,8 +214,8 @@ export function NewTransferArea({
     const [notes, setNotes] = useState<Note[]>([])
     const [reason, setReason] = useState<string | undefined>()
     const [dispose, setDispose] = useState<boolean>(disposeAfter || false)
-    const [err, setErr] = useState<string | undefined>()
 
+    const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
     const finishSubmit = () => {
         const formData = new FormData();
@@ -236,7 +236,7 @@ export function NewTransferArea({
                 onCreated ? onCreated(v) : console.log("no onCreate provided")
             })
             .catch(e=>{
-                setErr(JSON.stringify(e))
+                setErr("failed to create transfer: "+JSON.stringify(e))
             })
     }
     const submitNewTransfer = () => {

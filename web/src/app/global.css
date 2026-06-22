@@ -492,15 +492,18 @@ a {
         vertical-align: top;
     }
 }
-.existingNote {
-    &.disabled{
+/*.existingNote, .projectUserRow {*/
+/*    &.disabled{*/
+/*        background-color: var(--clr-danger-2);*/
+/*    }*/
+/*}*/
+/*.picRow.disabled {*/
+/*    background-color: var(--clr-danger-2);*/
+/*}*/
+.disabled { /* TODO: which to use?*/
+    &.picRow, &.existingNote, &.projectUserRow {
         background-color: var(--clr-danger-2);
     }
-}
-.picRow.disabled {
-    background-color: var(--clr-danger-2);
-}
-.disabled { /* TODO: which to use?*/
     &.picLeft, &.picRight, &.inline, &.contamOverviewTable{
         background-color: var(--clr-danger-1);
     }

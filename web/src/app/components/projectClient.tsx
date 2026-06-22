@@ -1,17 +1,27 @@
 'use client'
 
-import React, { JSX, useContext, useEffect, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
-import {AllEntries} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {
     clientPostRequestHeaders,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
     HandleJsonResponse,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalSimpleKey
 } from "@/app/components/common";
@@ -28,7 +38,7 @@ import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericIn
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
-function requireObject(inp: any){
+function requireObject(inp: any) {
     const typ = typeof inp
     if (typ !== 'object') {
         throw new Error('Input is not an object! Input is ' + typ);
@@ -84,12 +94,12 @@ export function AssertProject(input: any): asserts input is ProjectData {
     return
 }
 
-export function UnmarshalProjectPermsField(input: any): Map<string,string> {
-   // TODO: needs to be able to throw!
-   //  if ((!('perms' in input)) || input.perms === undefined) {
-   //      // Does not exist or is undefined, return an empty map
-   //      return new Map<string, string>()
-   //  }
+export function UnmarshalProjectPermsField(input: any): Map<string, string> {
+    // TODO: needs to be able to throw!
+    //  if ((!('perms' in input)) || input.perms === undefined) {
+    //      // Does not exist or is undefined, return an empty map
+    //      return new Map<string, string>()
+    //  }
     if ('perms' in input && (input.perms !== undefined)) { // TODO: ensure works properly, we don't want perms getting messed up
         const field = input.perms
         if (typeof field !== 'object' || field === null) {
@@ -106,92 +116,93 @@ export default function ProjectDisplay(
     {
         id, readonly, data, headerLevel
     }: DisplayInput<ProjectData>) {
-        const [initial, setInitial] = useState(data)
-        const permsObjAsMap = (inp?: Map<string, string>):Map<string, string>=>{
-            if (inp===undefined || inp.size===0){
-                return new Map<string, string>();
-            }
-            return new Map<string, string>(inp.entries().toArray()) // TODO: revert if does not work! HAVE NOT TESTED!
-            // return new Map<string, string>(Object.entries(inp ? Object.fromEntries(inp) : {}) as [string, string][])
+    const [initial, setInitial] = useState(data)
+    const permsObjAsMap = (inp?: Map<string, string>): Map<string, string> => {
+        if (inp === undefined || inp.size === 0) {
+            return new Map<string, string>();
         }
+        return new Map<string, string>(inp.entries().toArray()) // TODO: revert if does not work! HAVE NOT TESTED!
+        // return new Map<string, string>(Object.entries(inp ? Object.fromEntries(inp) : {}) as [string, string][])
+    }
 
-        const [completed, setCompleted] = useState(data.completed)
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [perms, setPerms] = useState<Map<string, string>>(permsObjAsMap(data.perms) )
-        const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: ProjectData) => {
-            setInitial(updated)
+    const [completed, setCompleted] = useState(data.completed)
+    const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+    const [perms, setPerms] = useState<Map<string, string>>(permsObjAsMap(data.perms))
+    const [err, setErr] = useState<string | undefined>()
+    const updateInitial = (updated: ProjectData) => {
+        setInitial(updated)
 
-            setCompleted(updated.completed)
-            setNotes(InitialNotesState(updated.notes))
-            setPerms(permsObjAsMap(updated.perms))
-            setErr(undefined)
-        }
-        // TODO: users and entries for this!
-        const completedArea = () => {
-            if (readonly || initial.completed) {
-                const isComp = completed ? "Completed " + NumberToDate(new Date(completed)) : "In-Progress"
-                return <div>
-                    <div>{isComp}</div>
-                </div>
-            }
+        setCompleted(updated.completed)
+        setNotes(InitialNotesState(updated.notes))
+        setPerms(permsObjAsMap(updated.perms))
+        setErr(undefined)
+    }
+    // TODO: users and entries for this?!
+    const completedArea = () => {
+        if (readonly || initial.completed) {
+            const isComp = completed ? "Completed " + NumberToDate(new Date(completed)) : "In-Progress"
             return <div>
-                <div>{"Completed: "}</div>
-                <input type={"checkbox"} checked={!!completed} onChange={() => {
-                    // TODO: ensure onChange does not need anything
-                }} onClick={e=>{
-                    e.stopPropagation();
-                    setCompleted(completed ? undefined : Date.now())
-                }}/>
+                <div>{isComp}</div>
             </div>
         }
-        const cookies = useContext(CookiesContext)
-        const projectSubmit = () => {
-            const permsOut =  Object.fromEntries(perms)
-            const body: any = {
-                notes: notes,
-                completed: completed,
-                perms: permsOut,
-            }
-            console.log("sending perms: " + JSON.stringify(permsOut))
-
-
-            // TODO: Separate project perms request?
-            DoUpdateRequest("project",encodeURIComponent(data._id), body, AssertProject, allCookies(cookies))
-                .then(v=>{
-                    updateInitial(new ProjectData(v))
-                })
-                .catch(e=>{
-                    setErr("failed to update initial: "+JSON.stringify(e))
-                })
+        return <div>
+            <div>{"Completed: "}</div>
+            <input type={"checkbox"} checked={!!completed} onClick={e => {
+                e.stopPropagation();
+                setCompleted(completed ? undefined : Date.now())
+            }}/>
+        </div>
+    }
+    const cookies = useContext(CookiesContext)
+    const projectSubmit = () => {
+        const permsOut = Object.fromEntries(perms)
+        const body: any = {
+            notes: notes,
+            completed: completed,
+            perms: permsOut,
         }
-        return (
-            <DisplayFormWrapper entryType={"project"}>
-                <ErrorDisplay err={err}/>
-                {/* data._id on next line because project name can have spaces?*/}
-                <ID props={{id:data._id, txt:"Project", entryType:"project"}}/>
-                <FlexedArea>
-                    <FlexedSinglesGroup>
-                        <DateArea pre={"Created: "} when={initial.creationDate} readonly={true}/>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        {completedArea()}
-                    </FlexedSinglesGroup>
-                </FlexedArea>
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <TestAndValidate todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
-                    <ProjectPermsArea perms={perms} setPerms={setPerms} /* TODO: ENSURE ADDING/CHANGING USERS MAKES A SEPARATE REQUEST TO THE SERVER?!*/
-                                      readonly={readonly}/> {/* TODO: HEAVILY TEST! Also ensure this is properly covered on the go side!*/}
-                </TestAndValidate>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
-                    e.stopPropagation();
-                    projectSubmit()
-                }}>{"Update"}</button>}
-            </DisplayFormWrapper>
-        )
+        console.log("sending perms: " + JSON.stringify(permsOut)) // TODO: del?
+
+        DoUpdateRequest("project", encodeURIComponent(data._id), body, AssertProject, allCookies(cookies))
+            .then(v => {
+                updateInitial(new ProjectData(v))
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+            })
+    }
+    return (
+        <DisplayFormWrapper entryType={"project"}>
+            <ErrorDisplay err={err}/>
+            {/* data._id on next line because project name can have spaces?*/}
+            <ID props={{id: data._id, txt: "Project", entryType: "project"}}/>
+            <FlexedArea>
+                <FlexedSinglesGroup>
+                    <DateArea pre={"Created: "} when={initial.creationDate} readonly={true}/>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    {completedArea()}
+                </FlexedSinglesGroup>
+            </FlexedArea>
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            <TestAndValidate
+                todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
+                {/*<ProjectPermsArea perms={initial}*/}
+                {/*                  setPerms={setPerms} */}
+                {/*                  readonly={readonly}/>*/}
+                <ProjectPermsAreaNew initial={initial.perms}
+                                  setPerms={setPerms}
+                                  readonly={readonly}/>
+            </TestAndValidate>
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
+                e.stopPropagation();
+                projectSubmit()
+            }}>{"Update"}</button>}
+        </DisplayFormWrapper>
+    )
 }
 
 export function NewProjectForm(
@@ -211,17 +222,17 @@ export function NewProjectForm(
             notes: notes,
         }
         DoCreateRequest("project", body, AssertProject, allCookies(cookies))
-            .then(v=>{
+            .then(v => {
                 handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
     return <NewEntryFormWrapper entryType={"project"}>
         <ErrorDisplay err={err}/>
         <div>
-            <InputTextInlineTitle label={"Project Name"} readonly={false} value={name || ""} onChange={setName} />
+            <InputTextInlineTitle label={"Project Name"} readonly={false} value={name || ""} onChange={setName}/>
         </div>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"greenButton buttonFullWidth"} onClick={createProject}>{"Create Project"}</button>
@@ -244,15 +255,6 @@ export function ReadWriteAdminSelector({readonly, onUpdate, value}: {
     }
     return <SelectorFor options={["can view", "can edit", "is admin"]} initial={strForVal(value)}
                         updateParent={s => {
-                            // if (s === "is admin") {
-                            //     onUpdate && onUpdate("admin")
-                            // }
-                            // if (s === "can edit") {
-                            //     onUpdate && onUpdate("write")
-                            // }
-                            // if (s === "can view") {
-                            //     onUpdate && onUpdate("read")
-                            // }
                             onUpdate && onUpdate(valForStr(s))
                             // TODO: what about the blank option???
                             return
@@ -295,9 +297,9 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
     //     );
     //     setPerms && setPerms(toUpdateWith)
     // }
-    const existingUsersArea = ()=>{
+    const existingUsersArea = () => {
         if (current === undefined || current.size === 0) {
-            if (current === undefined){
+            if (current === undefined) {
                 console.log("perms was undefined") // TODO: del
             } else {
                 console.log("perms size was 0") // TODO: del
@@ -309,10 +311,10 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
                 return <>
                     <div key={p[0] + "name"}>{p[0]}</div>
                     <ReadWriteAdminSelector key={p[0] + "sel"} readonly={readonly} value={p[1]}
-                                        onUpdate={(b) => {
-                                            const updated = new Map<string, string>(current)
-                                            setPerms && setPerms(updated.set(p[0], b))
-                                        }}/>
+                                            onUpdate={(b) => {
+                                                const updated = new Map<string, string>(current)
+                                                setPerms && setPerms(updated.set(p[0], b))
+                                            }}/>
                     <RemoveButton key={p[0] + "remv"} click={() => {
                         const updated = new Map<string, string>(current)
                         updated.delete(p[0])
@@ -326,7 +328,7 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
                         // setPerms && setPerms(updated)
                     }} txt={"Remove"}/>
                 </>
-        })}
+            })}
         </>
 
     }
@@ -345,8 +347,187 @@ export function ProjectPermsArea({perms, setPerms, readonly}: {
                     out.set(u._id, "read")
                     setPerms && setPerms(out)
                 }} blacklist={(current !== undefined && current.size > 0) ? [...current.entries()].map(u => {
-                return u[0]
-            }) : []}/>
+                    return u[0]
+                }) : []}/>
+            </div>
+        </div>
+    </DepthProvider>
+}
+
+export function ProjectPermsAreaNew({initial, setPerms, readonly}: {
+    initial?: Map<string, string>,
+    setPerms?: (pp: Map<string, string>) => void,
+    readonly: boolean,
+}) {
+    // Current users are stored locally
+    const defaultState = (upd?: Map<string, string>): Map<string, Data<string>> => {
+        let out = new Map<string, Data<string>>()
+        if (upd ===undefined || upd.size === 0) {
+            return out
+        }
+        [...upd.entries()].forEach((up) => {
+            out.set(up[0], {data: up[1], disabled: false})
+        })
+        return out
+    }
+    const [existing, setExisting] = useState(defaultState(initial))
+    const [created, setCreated] = useState(new Map<string, string>())
+    useEffect(() => {
+        setExisting(defaultState(initial))
+        setCreated(new Map<string, string>())
+    }, [initial]);
+    const depth = useContext(DepthContext)
+    if (readonly && (!initial || initial.size === 0)) {
+        return null
+    }
+    // const updatePerms = (upd: Map<string, Data<string>>) => {
+    //     const toUpdateWith: Map<string, string> = new Map(
+    //         [...upd.entries()]
+    //             .filter(([k, v]) => !v.disabled)
+    //             .map(([k, v]) => [k, v.data])
+    //     );
+    //     setPerms && setPerms(toUpdateWith)
+    // }
+    const updateExisting = (newExisting: Map<string, Data<string>>) => {
+        setExisting(newExisting)
+        propagateUpdate(newExisting, created)
+    }
+    const updateNew = (newNew: Map<string, string>) => {
+        setCreated(newNew)
+        propagateUpdate(existing, newNew)
+    }
+    const propagateUpdate = (ex: Map<string, Data<string>>, nw: Map<string, string>) => {
+        let upd = new Map<string, string>()
+        // ex.entries().forEach(([k, v]) => {
+        //     if (!v.disabled) {
+        //         upd.set(k, v.data)
+        //     }
+        // })
+        // nw.entries().forEach(([k, v]) => {
+        //     upd.set(k, v)
+        // })
+        ex.forEach((v,k) => { // TODO: test ensure ok
+            if (!v.disabled) {
+                upd.set(k, v.data)
+            }
+        })
+        nw.forEach((v,k) => {
+            upd.set(k, v)
+        })
+        setPerms && setPerms(upd)
+
+    }
+    // const toUpdateWith: Map<string, string> = new Map(
+    //     [...upd.entries()]
+    //         .filter(([k, v]) => !v.disabled)
+    //         .map(([k, v]) => [k, v.data])
+    // );
+    // setPerms && setPerms(toUpdateWith)
+
+    const existingUsersArea = () => {
+        if (!existing || existing.size === 0) {
+            if (!existing) {
+                console.log("perms was undefined") // TODO: del
+            } else {
+                console.log("perms size was 0") // TODO: del
+            }
+            return null
+        }
+        return <>{/* TODO: make this into a grid or table?*/}
+            {[...existing.entries()].map(up => {
+                // return <tr className={(up[1].disabled?"disabled ":"")+"projectUserRow"} key={up[0] + "name"}> {/*TODO: use this?*/}
+                //     <td>{up[0]}</td>
+                //     <td><ReadWriteAdminSelector key={up[0] + "sel"} readonly={readonly} value={up[1].data}
+                //                                 onUpdate={(b) => {
+                //                                     const updated = new Map<string, Data<string>>(existing)
+                //                                     updated.set(up[0],  {data: b, disabled: false})
+                //                                     updateExisting(updated)
+                //                                 }}/></td>
+                //     <td><RemoveButton key={up[0] + "remv"} click={() => {
+                //         const updated = new Map<string, Data<string>>(existing)
+                //         updated.set(up[0], {...up[1], disabled: true})
+                //         updateExisting(updated)
+                //     }} txt={"Remove"}/></td>
+                // </tr>
+                return <>
+                    <div className={(up[1].disabled?"disabled ":"")+"projectUserRow"} key={up[0] + "name"}>{up[0]}</div>
+                    <ReadWriteAdminSelector key={up[1] + "sel"} readonly={readonly} value={up[1].data}
+                                            onUpdate={(b) => {
+                                                const updated = new Map<string, Data<string>>(existing)
+                                                updated.set(up[0],  {data: b, disabled: false})
+                                                updateExisting(updated)
+                                            }}/>
+                    <RemoveButton key={up[0] + "remv"} click={() => {
+                        const updated = new Map<string, Data<string>>(existing)
+                        updated.set(up[0], {...up[1], disabled: true})
+                        updateExisting(updated)
+                    }} txt={"Remove"}/>
+                </>
+            })}
+        </>
+
+    }
+    const newUsersArea = () => {
+        if (!created || created.size === 0) {
+            if (!created) {
+                console.log("perms was undefined") // TODO: del
+            } else {
+                console.log("perms size was 0") // TODO: del
+            }
+            return null
+        }
+        return <>{/* TODO: switch over to table and style it!*/}
+            {[...created.entries()].map((up) => {
+                // return <tr className={"projectUserRow"} key={up[0] + "name"}> {/*TODO: use this?*/}
+                //     <td>{up[0]}</td>
+                //     <td><ReadWriteAdminSelector key={up[0] + "sel"} readonly={readonly} value={up[1]}
+                //                                 onUpdate={(b) => {
+                //                                     const upd = new Map<string, string>(created)
+                //                                     upd.set(u, up[0])
+                //                                     updateNew(upd)
+                //                                 }}/></td>
+                //     <td> <RemoveButton key={up[0] + "remv"} click={() => {
+                //         const upd = new Map<string, string>(created)
+                //         upd.delete(up[0])
+                //         updateNew(upd)
+                //     }} txt={"Remove"}/></td>
+                // </tr>
+                return <>
+                    <div className={"projectUserRow"} key={up[0] + "name"}>{up[0]}</div>
+                    <ReadWriteAdminSelector key={up[0] + "sel"} readonly={readonly} value={up[1]}
+                                            onUpdate={(b) => {
+                                                const upd = new Map<string, string>(created)
+                                                upd.set(up[0], b)
+                                                updateNew(upd)
+                                            }}/>
+                    <RemoveButton key={up[0] + "remv"} click={() => {
+                        const upd = new Map<string, string>(created)
+                        upd.delete(up[0])
+                        updateNew(upd)
+                    }} txt={"Remove"}/>
+                </>
+            })}
+        </>
+
+    }
+    return <DepthProvider>
+        <div className={"subForm depth" + depth}>
+            <div className={"centerH text-lg mb-1"}>{"Permissions"}</div>
+            <div className={"projectPermsUsers"}>
+                {/*TODO: <table>*/}
+                {existingUsersArea()}
+                {newUsersArea()}
+                {/*TODO: </table>*/}
+            </div>
+
+            {/* AREA TO ADD USER */}
+            <div className={"inlineChildren"}>
+                <div>{"Add user: "}</div>
+                <UserSelector onSelect={(u) => {
+                    const upd = new Map<string, string>(created)
+                    upd.set(u._id, "read")
+                    updateNew(upd)
+                }} blacklist={[...existing.keys().toArray(), ...created.keys().toArray()]}/>
             </div>
         </div>
     </DepthProvider>
@@ -366,12 +547,12 @@ export async function GetMyProjects() { // TODO: use
 }
 
 // TODO: used to return Promise<ProjectWithPerm[]>
-export async function GetSessionUserProjects(complete?:boolean): Promise<string[]> {
+export async function GetSessionUserProjects(complete?: boolean): Promise<string[]> {
     let params = ""
     if (complete !== undefined) {
-        params = "?complete="+(complete?"true":"false")
+        params = "?complete=" + (complete ? "true" : "false")
     }
-    return fetch(BaseExternalUrl + "/sessionUserProjects"+params, { // TODO: ensure works like we want! We JUST want the user's perms on each project
+    return fetch(BaseExternalUrl + "/sessionUserProjects" + params, { // TODO: ensure works like we want! We JUST want the user's perms on each project
         method: "GET",
         headers: clientPostRequestHeaders,
     }).then(HandleJsonResponse).then((projs) => {
@@ -393,11 +574,11 @@ export function ProjectsSelector(inp: {
     const [projects, setProjects] = useState<string[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
     useEffect(() => {
-        GetSessionUserProjects(inp.complete).then(projNames=>{
+        GetSessionUserProjects(inp.complete).then(projNames => {
             setProjects(projNames)
             setErr(undefined)
             setLoading(false)
-        }).catch(e=>{
+        }).catch(e => {
             HandleErr(e, setErr)
         })
     }, [])
@@ -434,17 +615,19 @@ export function ProjectListPageTable({data, onClick, withLink}: ListPageItems<Pr
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: ProjectData)=>{
-            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: ProjectData) => {
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new ProjectData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new ProjectData(v)
+    }}/>
 }
 
 export function ProjectSelectorTable({data, onClick}: ListPageItems<ProjectData>) {
-    return <ProjectListPageTable data={data} onClick={onClick} withLink={true} />
+    return <ProjectListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
 // TODO: distinguish from ProjectsSelector
@@ -457,17 +640,18 @@ export function ProjectSelector(
         doSelect: (val: ProjectData | undefined) => void,
         allowCreate?: boolean
     }) {
-    const table = (items: ProjectData[]):JSX.Element=>{
+    const table = (items: ProjectData[]): JSX.Element => {
         return <ProjectSelectorTable data={items} onClick={doSelect}/>
     }
-    const creationArea = ()=>{
-        if(!allowCreate){
+    const creationArea = () => {
+        if (!allowCreate) {
             return null
         }
-        return <NewProjectForm handlers={{onCreate: doSelect,isTopLevel: false}}/>
+        return <NewProjectForm handlers={{onCreate: doSelect, isTopLevel: false}}/>
     }
 
-    return <ExistingRecentSelector entryType={"project"} entryTypes={"projects"} doSelect={doSelect} asserter={AssertProject} table={table}>
+    return <ExistingRecentSelector entryType={"project"} entryTypes={"projects"} doSelect={doSelect}
+                                   asserter={AssertProject} table={table}>
         {creationArea()}
     </ExistingRecentSelector>
 }
