@@ -39,22 +39,22 @@
 - [ ] ListPageTable entries should actually be links!
 
 - [ ] PERMISSIONS
-  - [ ] Entries 
-    - [ ] All TODOs found when searching for "var testAcls = []ACL"
+  - [x] Entries 
+    - [x] All TODOs found when searching for "var testAcls = []ACL"
       - [x] Create a way to login to the test accounts found when searching for "testUserEmailP^*" where ^=[W,R,N] and *=[A,B,C]
     - [x] Validate guests cannot see anything that is marked as private
     - [x] Validate guests cannot write anything
-    - [ ] Validate non-guest users cannot write anything that they have no permissions for
+    - [x] Validate non-guest users cannot write anything that they have no permissions for
   - [ ] Project
-    - [ ] User that is admin on project can
-      - [ ] Change the project
-      - [ ] Read the project
-    - [ ] User that has write on a project can
+    - [ ] User that is admin (true) on project can
+      - [ ] View the project page
+      - [ ] Change the project, including adding/removing users and changing their permissions
+    - [ ] User that has write (false) on a project can
+      - [ ] View the project page
       - [ ] Not change the project
-      - [ ] Read the project
-    - [ ] User that has read on a project can
+    - [ ] User that has read (nil) on a project can
+      - [ ] View the project page
       - [ ] Not change the project
-      - [ ] Read the project
 - [ ] Entries
   - [x] Agar Batch
     - [x] Display page
@@ -507,13 +507,13 @@
       - [ ] Create Stasis Tube // TODO: CREATE? Should be PC-d with water in tubes????? PROBABLY DONT ALLOW THIS FROM HERE ---------
 
 - [ ] Redirect to login page if not logged in!
-- [ ] WriteMany for RFID! Allow subsequent writings... This may be complicated, so do it later...
+- [ ] WriteMany for RFID?! Allow subsequent writings... This may be complicated, so do it later...
 - [ ] React Subcomponents
   - [x] Notes
     - [x] New Notes area
     - [x] Existing/Update notes area
   - [x] ACL (updates and displays)
-  - [ ] more!
+  - [ ] more! pull from TODOs in code....
 
 
 
