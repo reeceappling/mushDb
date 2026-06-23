@@ -80,9 +80,9 @@ type hasAgarOutside interface {
 type Plate struct {
 	MainCollectionIdField `bson:"inline"`
 	AgarBatchField        `bson:"inline"` // will be empty for preexisting
-	// TODO: do we want PC run on here too? and on others like it? (probably not due to data bloat)
+	// TODO: do we want PC run on here too? and on others like it? (probably not due to data bloat?)
 	CreationDateField                   `bson:"inline"`
-	CondensationCoverageAtPourTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
+	CondensationCoverageAtPourTimeField `bson:"inline"` // Percentage of condensation surface area coverage at pour time
 	CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
 	PourCoverageField                   `bson:"inline"` // Percentage of bottom surface area agar coverage
 	WetAtCooledTimeField                `bson:"inline"` // Wet when initially cooled? True, false, or unknown
@@ -92,7 +92,7 @@ type Plate struct {
 	InnocField                          `bson:"inline"`
 	GenerationsFields                   `bson:"inline"`
 	TransfersOutField                   `bson:"inline"`
-	ParentTypeField                     `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	ParentTypeField                     `bson:"inline"` // nil == imported, otherwise entryType, what happens with clones?! // TODO: INDEX????
 	MainCollectionOptionalParentField   `bson:"inline"`
 	PicsField                           `bson:"inline"`
 	ContaminationsField                 `bson:"inline"`
@@ -202,11 +202,12 @@ func initializePlates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	testPlateIds := []int{idTestPlateBlanketRead, idTestPlateUserWrite,
-		idTestPlateUserRead,
+	testPlateIds := []int{
+		idTestPlateBlanketWrite,
+		idTestPlateBlanketRead,
+		idTestPlateAdminOnly,
 		idTestPlateProjectWrite,
 		idTestPlateProjectRead,
-		idTestPlateUserWriteProjRead,
 		idTestPlateUserOutsideProject,
 	}
 	platesMade := map[Base58Str]string{}
@@ -235,6 +236,7 @@ func initializePlates(ctx context.Context) error {
 		default:
 			// Do nothing different
 		}
+		// Project-user + Project-entry permissions test plates
 		newTestPlate := testPlateFor(id, &exAltId, exampleTime, tempCoverage, tempCoverage, tempBool, tempBool,
 			&testEntryStringId, &testEntryStringId, &exAltId, &exGenSinceSpore, &exGenSinceFruitSpore, exAlts,
 			&exParentType, &testId, exPics, exContams, exBool, &exAltId, &exampleTime, &exPics[0], exampleNotes(),
@@ -272,6 +274,7 @@ func basicTestPlate() Plate {
 		MostRecentImageField:              MostRecentImageField{&exPics[0]},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		AclField:                          allCanWriteAcl(), // TODO: ok?
 	}
 }
 func emptyTestPlate() Plate {
@@ -297,6 +300,7 @@ func emptyTestPlate() Plate {
 		MostRecentImageField:              MostRecentImageField{},
 		NotesField:                        NotesField{},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		AclField:                          allCanWriteAcl(), // TODO: ok?
 	}
 }
 func testPlateFor(

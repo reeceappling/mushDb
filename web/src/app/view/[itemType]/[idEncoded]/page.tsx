@@ -22,29 +22,29 @@ export default async function Page({
 
     const getData: (a1: string, a2: string) => Promise<any> = async (itemTypeA: string, idEnc: string) => {
         return new Promise<React.JSX.Element>((accept, reject) => { // TODO: REIMPLEMENT!
-            fetch(BaseExternalUrl+"/db/get/"+itemTypeA+"/"+idEnc, {
+            fetch(BaseExternalUrl + "/db/get/" + itemTypeA + "/" + idEnc, {
                 method: 'Get',
                 credentials: 'include',
                 headers: {
                     'Accept': 'application/json',
                     //'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: ENSURE OK! maybe "*"?
-                    'Cookie': allCookies, // REQUIRED
+                    'Cookie': allCookies, // REQUIRED // TODO: can we drop this because we have included creds?
                     // TODO: set Origin header to web? or should this be BaseExternalUrl?
                 },
             }).then((res) => {
-                console.log("got response "+JSON.stringify(res))
+                console.log("got response " + JSON.stringify(res))
                 if (!res.ok) {
                     return res.text().then(txt => {
-                        throw new Error("response not ok: " + txt) // TODO: not working occasionally! FIGURE OUT!
+                        throw new Error("response not ok: " + txt + ". Status " + res.status)
                     }).catch(err => {
-                        throw new Error("response not ok and failed to decode: "+JSON.stringify(err));
+                        throw new Error("response not ok and failed to decode: " + JSON.stringify(err) + ". Status " + res.status)
                     })
                 }
                 res.json().then((data) => {
                     console.log(data)
                     accept(data)
                 }).catch(err1 => {
-                    console.log(data)
+                    console.log("failed to resolve json data from result, " + JSON.stringify(err1))
                     reject(err1)
                 })
             }).catch(err1 => {
@@ -52,14 +52,24 @@ export default async function Page({
             })
         })
     }
-    const data = await getData(itemType, idEncoded)
-    const readers = await GetReaderWriterNames()
-    return <PageWrapper props={{pageType: "view", readers: readers}}>
-        <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
+    try {
+        const data = await getData(itemType, idEncoded)
+        const readers = await GetReaderWriterNames()
+        return <PageWrapper props={{pageType: "view", readers: readers}}>
+            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
                 <div className={"fullPage"}>
                     <MainViewArea itemType={itemType} inpData={data}/>
                 </div>
-        </CookiesProvider>
-    </PageWrapper>
+            </CookiesProvider>
+        </PageWrapper>
+    } catch (e) {
+        return <PageWrapper props={{pageType: "view", readers: []}}>
+            <div className={"fullPage"}>
+                <div>{"Page not loaded. Nonexistent or unauthorized entry: "}</div> {/* TODO: STYLING*/}
+                <div>{JSON.stringify(e)/* TODO: CHANGE!*/}</div>
+            </div>
+        </PageWrapper>
+    }
+
 }
 

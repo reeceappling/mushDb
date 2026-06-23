@@ -38,6 +38,23 @@
 - [ ] Transfer creation, validTypesTo on the go side!
 - [ ] ListPageTable entries should actually be links!
 
+- [ ] PERMISSIONS
+  - [ ] Entries 
+    - [ ] All TODOs found when searching for "var testAcls = []ACL"
+      - [x] Create a way to login to the test accounts found when searching for "testUserEmailP^*" where ^=[W,R,N] and *=[A,B,C]
+    - [x] Validate guests cannot see anything that is marked as private
+    - [x] Validate guests cannot write anything
+    - [ ] Validate non-guest users cannot write anything that they have no permissions for
+  - [ ] Project
+    - [ ] User that is admin on project can
+      - [ ] Change the project
+      - [ ] Read the project
+    - [ ] User that has write on a project can
+      - [ ] Not change the project
+      - [ ] Read the project
+    - [ ] User that has read on a project can
+      - [ ] Not change the project
+      - [ ] Read the project
 - [ ] Entries
   - [x] Agar Batch
     - [x] Display page
@@ -143,7 +160,7 @@
         - [ ] ConfirmedClean can be unset?
       - [x] ConfirmedClean validate working properly
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] Set parent LC to clean from here?
+      - [ ] Set parent LC to clean from here once LcSyringe confirms it?
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
       - [x] Confirmed clean is not propagating properly, always showing up as unknown...
@@ -257,12 +274,13 @@
         - [x] ensure transfer from stasis tube properly disposes
     - [x] Import page
     - [x] List Page
-  - [ ] Subspecies
+  - [x] Subspecies
     - [x] Display page
       - [x] Species at top
       - [x] Aliases
         - [x] Creating and deleting one at the same time is not working
         - [ ] Cannot add aliases that already exist elsewhere?--------------------------------------------------------------------------------------------------------------------------
+          - [ ] Must create separate species, subspecies, subRec aliases collections to ensure this works properly :(
         - [x] NOT WORKING TO ADD ALIASES!!!!
         - [x] DO NOT USE TextBoxArea in AliasesArea!
         - [x] Deleting is not updating the view on response!

@@ -3,6 +3,8 @@
 import React, {useEffect, useState} from "react";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {CredentialResponse, GoogleLogin} from "@react-oauth/google";
+import {SelectorFor} from "@/app/components/selector";
+import {SelectorWrapper} from "@/app/components/common";
 
 // TODO: ADD LOGOUT BUTTON SOMEWHERE!
 export interface AuthAreaProps {
@@ -268,6 +270,7 @@ function SignUpArea({onSignup}:{onSignup:(sessId:string)=>void}) {
 }
 
 function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
+    const [testEmail, setTestEmail] = useState<string>("")
     // This function will be called upon a successful login
     const handleSuccess = (credentialResponse: CredentialResponse) => {
         // If you are using the authorization code flow, you will receive a code to be exchanged for an access token
@@ -292,23 +295,56 @@ function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
         //     });
     };
     const guestSignIn = ()=>{
-
-        fetch('/guestSignin', { // TODO: FIX THIS ENDPOINT
+        fetch('/guestLogin', {
             method: 'POST',
             headers: { // TODO: no auth headers?
                 'Content-Type': 'application/json',
             },
         })
-            .then(response => response.text())
-            .then(onLogin)
+            .then(response => response.text()) // TODO: what about errors?
+            .then(()=>{
+                location.assign("/") // TODO: ok?
+            })
+            //.then(onLogin)
             .catch(error => {
                 // Handle errors in communicating with your backend server
                 console.error('Error signing in as guest:', error);
             });
     }
+const testSignIn = ()=>{
+        if (testEmail ===""){
+            console.error("no test email provided!")
+            return
+        }
+
+        fetch('/testLogin/'+encodeURI(testEmail), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+            .then(response =>
+                response.text()/*{
+                if (!response.ok){
+                    throw "response not ok for testLogin"
+                }
+                if (response.status!==200){
+                    throw "response status "+response.status
+                }
+                }*/
+                )
+            .then(()=>{
+                location.assign("/") // TODO: ok?
+            })
+            //.then(onLogin)
+            .catch(error => {
+                // Handle errors in communicating with backend server
+                console.error('Error signing in as test user:', error);
+            });
+    }
 
     const handleError = () => {
-        console.error('Google login failed');
+        console.error('Login failed!');
     };
 
     return (
@@ -320,6 +356,30 @@ function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
                 useOneTap
             />
             <button className={"basicButtonSmall"} onClick={guestSignIn}>{"Continue as guest"}</button>
+            <div>
+                <div>{"Test user signin area"}</div>
+                <div className={"inlineChildren"}>
+                    <SelectorFor options={[
+                        "",
+                        "testProjAdminA@appli.ng",
+                        "testProjAdminB@appli.ng",
+                        "testProjAdminC@appli.ng",
+                        "testProjWriteA@appli.ng",
+                        "testProjWriteB@appli.ng",
+                        "testProjWriteC@appli.ng",
+                        "testProjReadA@appli.ng",
+                        "testProjReadB@appli.ng",
+                        "testProjReadC@appli.ng",
+                        "testProjNoneA@appli.ng",
+                        "testProjNoneB@appli.ng",
+                        "testProjNoneC@appli.ng",
+                    ]} initial={""} updateParent={setTestEmail} disabled={false}/>
+                    <button className={"basicButtonSmall"} onClick={e=>{
+                        e.stopPropagation()
+                        testSignIn()
+                    }}>{"Sign in with test user"}</button>
+                </div>
+            </div>
         </div>
     );
 }

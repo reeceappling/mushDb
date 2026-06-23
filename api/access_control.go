@@ -462,27 +462,107 @@ type UserPerms struct {
 
 // TODO: consider moving!
 var testAclStrings = []string{
+	"blanket write",
 	"blanket read",
-	"Test user can write",
-	"Test user can read",
-	"Test project can write (and so can test user)",
-	"Test project can read (and so can test user)",
-	"Test project can read but user can write",
-	"Project without test user can write, so user cannot",
+	"blanket private",
+	"Test project can write",
+	"Test project can read",
+	"Test entry without any projects",
 }
-var testAcls = []ACL{{
-	BlanketPerm: RWPermRead(), // Blanket read
-}, {
-	Users: map[string]bool{testUserEmail: true}, // Test user can write
-}, {
-	Users: map[string]bool{testUserEmail: false}, // Test user can read
-}, {
-	Projects: map[projectName]bool{testProjects[0].Name: true}, // Test project can write (and so can test user)
-}, {
-	Projects: map[projectName]bool{testProjects[0].Name: false}, // Test project can read (and so can test user)
-}, {
-	Users:    map[string]bool{testUserEmail: true}, // Test project can read but user can write
-	Projects: map[projectName]bool{testProjects[0].Name: false},
-}, {
-	Projects: map[projectName]bool{testProjects[3].Name: true}, // Project without test user can write, so user cannot
-}}
+var testAcls = []ACL{
+	{ // Blanket write: 4Wj8HxCMmcs
+		BlanketPerm: RWPermWrite(),
+		// admin can write
+		// testUserEmailPAA can write
+		// guest can read
+		// guest cannot write
+	},
+	{ // Blanket read: 31R5AgpvJDD
+		BlanketPerm: RWPermRead(),
+		// admin can write
+		// testUserEmailPAA can read CONFIRMED
+		// testUserEmailPAA cannot write CONFIRMED
+		// guest can read
+		// guest cannot write
+	},
+	{ // Blanket private: 4gRoJm1rNtP
+		BlanketPerm: RWPermNothing(),
+		// admin can write
+		// ensure testUserEmailPAA cannot read
+		// ensure guest cannot read
+	},
+	{ // Test project can write: 3B7kBVeQuUj
+		Users: map[string]bool{
+			testUserEmailPAA: true,  // User can write on entry, user can write for project, project can write == write
+			testUserEmailPAB: false, // User can read on entry, user can write for project, project can write  == write
+			//testUserEmailPAC: nil, // user not on entry     , user can write for project, project can write  == write
+			testUserEmailPWA: true,  // User can write on entry, user can write for project , project can write == write
+			testUserEmailPWB: false, // User can read on entry, user can write for project , project can write  == write
+			//testUserEmailPWC: nil, // user not on entry     , user can write for project , project can write  == write
+			testUserEmailPRA: true,  // User can write on entry, user can read for project , project can write == write
+			testUserEmailPRB: false, // User can read on entry, user can read for project , project can write  == read
+			//testUserEmailPRC: nil, // user not on entry     , user can read for project , project can write  == read
+			testUserEmailPNA: true,  // User can write on entry, user not on project       , project can write == write
+			testUserEmailPNB: false, // User can read on entry, user not on project       , project can write  == read
+			//testUserEmailPNC: nil, // user not on entry     , user not on project       , project can write  == NONE
+		},
+		Projects: map[projectName]bool{
+			testProjectsMap[TestProjectName].Name: true,
+		},
+		// admin can write
+		// testUserEmailPAA can write CONFIRMED
+		// testUserEmailPAB can write CONFIRMED
+		// testUserEmailPAC can write CONFIRMED
+		// testUserEmailPWA can write CONFIRMED
+		// testUserEmailPWB can write CONFIRMED
+		// testUserEmailPWC can write CONFIRMED
+		// testUserEmailPRA can write CONFIRMED
+		// testUserEmailPRB can read but cant write CONFIRMED
+		// testUserEmailPRC can read but cant write CONFIRMED
+		// testUserEmailPNA can write CONFIRMED
+		// testUserEmailPNB can read but cant write CONFIRMED
+		// testUserEmailPNC cannot read CONFIRMED
+		// guest cannot read CONFIRMED
+	}, { // Test project can read: 3LpRCJTuWkF
+		Users: map[string]bool{
+			testUserEmailPAA: true,  // User can write on entry, user can write for project, project can read == write
+			testUserEmailPAB: false, // User can read on entry, user can write for project, project can read  == read
+			//testUserEmailPAC: nil, // user not on entry     , user can write for project, project can read  == read
+			testUserEmailPWA: true,  // User can write on entry, user can write for project , project can read == write
+			testUserEmailPWB: false, // User can read on entry, user can write for project , project can read  == read
+			//testUserEmailPWC: nil, // user not on entry     , user can write for project , project can read  == read
+			testUserEmailPRA: true,  // User can write on entry, user can read for project , project can write == write
+			testUserEmailPRB: false, // User can read on entry, user can read for project , project can write  == read
+			//testUserEmailPRC: nil, // user not on entry     , user can read for project , project can write  == read
+			testUserEmailPNA: true,  // User can write on entry, user not on project       , project can read == write
+			testUserEmailPNB: false, // User can read on entry, user not on project       , project can read  == read
+			//testUserEmailPNC: nil, // user not on entry     , user not on project       , project can read  == NONE
+		},
+		Projects: map[projectName]bool{
+			testProjectsMap[TestProjectName].Name: false,
+		},
+		// admin can write
+		// testUserEmailPAA can write CONFIRMED
+		// testUserEmailPAB can read but cant write CONFIRMED
+		// testUserEmailPAC can read but cant write CONFIRMED
+		// testUserEmailPWA can write CONFIRMED
+		// testUserEmailPWB can read but cant write CONFIRMED
+		// testUserEmailPWC can read but cant write CONFIRMED
+		// testUserEmailPNA can write CONFIRMED
+		// testUserEmailPNB can read but cant write CONFIRMED
+		// testUserEmailPNC cannot read CONFIRMED
+		// guest cannot read CONFIRMED
+	}, { // Test entry without any projects: 3gDmDv6tjHH
+		Users: map[string]bool{
+			testUserEmailPAA: true,  // User can write on entry  == write
+			testUserEmailPAB: false, // User can read on entry  == read
+			//testUserEmailPNC: nil, // user not on entry       == None
+		},
+		Projects: map[projectName]bool{},
+		// admin can write
+		// testUserEmailPAA can write CONFIRMED
+		// testUserEmailPAB can read but not write CONFIRMED
+		// testUserEmailPNC cannot read CONFIRMED
+		// guest cannot read CONFIRMED
+	},
+}

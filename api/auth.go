@@ -381,6 +381,50 @@ func (serv *AuthService) SigninGuestUser() (sessionId SessionId, err error) {
 	serv.UserSessionMap[email] = id
 	return id, nil
 }
+func (serv *AuthService) SigninTestUser(email string) (sessionId SessionId, err error) {
+	if serv == nil {
+		return "", errors.New("nil auth service")
+	}
+	serv.Lock()
+	defer serv.Unlock()
+	var projsPerms map[projectName]*UserProjectPerm
+	switch email {
+	case testUserEmailPAA, testUserEmailPAB, testUserEmailPAC: // Can write (admin)
+		upp := UserProjectPerm(true)
+		projsPerms = map[projectName]*UserProjectPerm{
+			TestProjectName: &upp,
+		}
+	case testUserEmailPWA, testUserEmailPWB, testUserEmailPWC: // Can write
+		upp := UserProjectPerm(false)
+		projsPerms = map[projectName]*UserProjectPerm{
+			TestProjectName: &upp,
+		}
+	case testUserEmailPRA, testUserEmailPRB, testUserEmailPRC: // Can read
+		projsPerms = map[projectName]*UserProjectPerm{
+			TestProjectName: nil,
+		}
+	case testUserEmailPNA, testUserEmailPNB, testUserEmailPNC: // No specific projects for user
+		projsPerms = map[projectName]*UserProjectPerm{}
+	default:
+		return "", errors.New("invalid test user email")
+	}
+	sess := genericsessions.Session[ResolvedUserPerms]{
+		Data: ResolvedUserPerms{
+			Email:       email,
+			AccountType: AcctTypeNormal(),
+			Projects:    projsPerms,
+		},
+		Expiry: time.Now().Add(serv.ttl),
+	}
+
+	id, err := serv.newSessionIdForUserWithoutLock(email)
+	if err != nil {
+		return "", errors.Join(err, errors.New("session with that ID already exists"))
+	}
+	serv.sessMap[id] = sess
+	serv.UserSessionMap[email] = id
+	return id, nil
+}
 
 func generateSessionId() (SessionId, error) {
 	b := make([]byte, 32)

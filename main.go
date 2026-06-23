@@ -272,6 +272,7 @@ func main() {
 	http.Handle(loginPath /* /login */, CorsAuthMiddleware(rateLimitCtxMiddleware(handleLoginMiddleware(webProxyHandler))))
 	http.Handle("/logout", CorsAuthMiddleware(rateLimitCtxMiddleware(handleLogout))) // TODO: make logout button in ts!
 	http.Handle("/guestLogin", rateLimitCtxMiddleware(handleGuestLogin))
+	http.Handle("/testLogin/{emailEncoded}", rateLimitCtxMiddleware(handleTestLogin)) // TODO: remove later
 	http.Handle("/auth/{provider}", CorsAuthMiddleware(rateLimitCtxMiddleware(authProviderHandler)))
 	http.Handle("/auth/{provider}/callback", CorsAuthMiddleware(rateLimitCtxMiddleware(authCallbackHandler)))
 	// Biometrics endpoints TODO: (maybe add biometric provider?)
@@ -542,6 +543,40 @@ var handleGuestLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
 	if err != nil {
 		// TODO: delete guest session? If not already saved, then no?
+		//session.Options.MaxAge = -1 // delete session
+		err = errors.Join(errors.New("sessId storage fail"), err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err = gothic.Store.Save(r, w, session); err != nil {
+		http.Error(w, "failed so save session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	redirectToBasePage(r, w)
+}
+var handleTestLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	email, err := rfid.UrlDecodeString(r.PathValue("emailEncoded"))
+	if err != nil {
+		http.Error(w, "failed to decode email from request path: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	sessId, err := rfid.GetAuthService(ctx).SigninTestUser(email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	println("created new session id (" + string(sessId) + ") for test user: " + email)
+	session, err := gothic.Store.New(r, string(sessId))
+	if err != nil {
+		// TODO: delete test session?
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
+	if err != nil {
+		// TODO: delete test session? If not already saved, then no?
 		//session.Options.MaxAge = -1 // delete session
 		err = errors.Join(errors.New("sessId storage fail"), err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1047,6 +1082,16 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
+		var uats = "guest"      // TODO: del
+		uat := user.AccountType // TODO: del
+		if uat.IsAdmin() {      // TODO: del
+			uats = "Admin" // TODO: del
+		} else { // TODO: del
+			if uat.IsRegular() { // TODO: del
+				uats = "Regular user" // TODO: del
+			} // TODO: del
+		} // TODO: del
+		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		projPermForUser := out.Perms.ForUser(user.Email)
 		if !user.IsAdmin() {
 			if projPermForUser == nil {
@@ -1230,14 +1275,14 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		}
 		userPermOnEntry := out.Permissions().HighestPermFor(user)
 		if userPermOnEntry == nil {
-			http.Error(w, "item requested cannot be read by this user: "+err.Error(), http.StatusForbidden)
+			http.Error(w, "item requested cannot be read by this user", http.StatusForbidden)
 			return
 		}
 		can := "read"
 		if *userPermOnEntry == true {
 			can = "write"
 		}
-		env.LogIfDev(ctx, "user got item and can "+can) // TODO: del?
+		env.LogIfDev(ctx, "user "+user.Email+" got item and can "+can) // TODO: del?
 		bytes, err = json.Marshal(out)
 		if err != nil {
 			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)

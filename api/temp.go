@@ -40,12 +40,12 @@ func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 	//	out = MainCollectionId(idBytes)
 	//	return &out, nil
 	//}
-	println("ID BYTES NOT LENGTH 8! CONVERTING!")
+	println("ID BYTES NOT LENGTH 8! CONVERTING!") // TODO: del
 	realId, err := Base58Str(id).toMainCollectionId()
 	if err != nil {
 		return nil, err
 	}
-	println("CONVERTED", id, " TO", string(realId[:]))
+	println("CONVERTED", id, " TO", string(realId[:])) // TODO: del
 	return &realId, nil
 }
 

@@ -19,8 +19,6 @@ const ( // MainCollection test ints
 	idTestSwab
 	idTestPlug
 	idTestPlateBlanketRead
-	idTestPlateUserWrite
-	idTestPlateUserRead
 	idTestPlateProjectWrite
 	idTestPlateProjectRead
 	idTestPlateUserWriteProjRead
@@ -29,6 +27,8 @@ const ( // MainCollection test ints
 	idTestWaterJar
 	idTestPlateEmpty
 	idTestLC2
+	idTestPlateBlanketWrite
+	idTestPlateAdminOnly // No blanket permission, no users, no projects
 )
 
 const (

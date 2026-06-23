@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"github.com/reeceappling/mushDb/api/request"
@@ -91,6 +92,36 @@ func GetAllProjects(ctx context.Context, complete *bool) ([]Project, error) {
 	}), nil
 }
 
+const TestProjectName = "testProjectA"
+
+var testProjectsMap = map[projectName]Project{
+	TestProjectName: Project{
+		Name:              TestProjectName,
+		CreationDateField: CreationDateField{exampleTime},
+		Completed:         nil,
+		NotesField: NotesField{Notes: []Note{
+			newNote(exampleTime, "Admin user is admin"),
+			newNote(exampleTime, testUserEmail+" is admin"),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] can write`, testUserEmailPAA, testUserEmailPAB, testUserEmailPAC)),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] can read`, testUserEmailPWA, testUserEmailPWB, testUserEmailPWC)),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] excluded`, testUserEmailPNA, testUserEmailPNB, testUserEmailPNC)),
+		}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		Perms: map[string]ProjectPerm{
+			testUserEmail:     ProjectAdmin,
+			testUserEmailSelf: ProjectAdmin,
+			testUserEmailPAA:  ProjectWrite,
+			testUserEmailPAB:  ProjectWrite,
+			testUserEmailPAC:  ProjectWrite,
+			testUserEmailPWA:  ProjectRead,
+			testUserEmailPWB:  ProjectRead,
+			testUserEmailPWC:  ProjectRead,
+			//testUserEmailPNA:  ProjectNone,
+			//testUserEmailPNB:  ProjectNone,
+			//testUserEmailPNC:  ProjectNone,
+		}},
+}
+
 var testProjects = []Project{
 	{
 		Name:              "testProjectAdmin",
@@ -103,6 +134,14 @@ var testProjects = []Project{
 		Perms: map[string]ProjectPerm{
 			testUserEmail:     ProjectAdmin,
 			testUserEmailSelf: ProjectAdmin,
+			//testUserEmailPAA:  ProjectWrite,
+			//testUserEmailPAB:  ProjectWrite,
+			//testUserEmailPAC:  ProjectWrite,
+			//testUserEmailPWA:  ProjectRead,
+			//testUserEmailPWB:  ProjectRead,
+			//testUserEmailPWC:  ProjectRead,
+			////testUserEmailPNA:  ProjectNone,
+			////testUserEmailPNB:  ProjectNone,
 		},
 	}, {
 		Name:              "testProjectWrite",
@@ -140,6 +179,7 @@ var testProjects = []Project{
 			testUserEmailSelf: ProjectAdmin, // This is self and not test user because I want only my main email to be admin
 		},
 	},
+	testProjectsMap[TestProjectName],
 }
 
 type createProjectRequest struct {

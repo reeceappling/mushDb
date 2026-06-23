@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
@@ -68,6 +70,9 @@ func initializeUsers(ctx context.Context) error {
 		return err
 	}
 	// TODO: DELETE THIS AFTER TESTING!!!!
+	var testUsers []User
+
+	println("ADDING TEST USERS!")
 	testUserSelf := User{
 		Email: testUserEmailSelf,
 		Perms: UserPerms{
@@ -75,12 +80,67 @@ func initializeUsers(ctx context.Context) error {
 			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
 		},
 	}
-	_, err = coll.ReplaceOne(ctx, BsonFindFilter("_id", testUserSelf.Email), testUserSelf, options.Replace().SetUpsert(true))
+	testUsers = append(testUsers, testUserSelf)
+	//_, err = coll.ReplaceOne(ctx, BsonFindFilter("_id", testUserSelf.Email), testUserSelf, options.Replace().SetUpsert(true))
+	//if err != nil {
+	//	return err
+	//}
+	for email, onProject := range map[string]bool{
+		testUserEmailPAA: true,
+		testUserEmailPAB: true,
+		testUserEmailPAC: true,
+		testUserEmailPWA: true,
+		testUserEmailPWB: true,
+		testUserEmailPWC: true,
+		testUserEmailPNA: true,
+		testUserEmailPNB: true,
+		testUserEmailPNC: true,
+	} {
+		testUsr := User{
+			Email: email,
+			Perms: UserPerms{
+				Admin:    AcctTypeNormal(),
+				Projects: []projectName{},
+			},
+		}
+		if onProject {
+			testUsr.Perms.Projects = []projectName{TestProjectName}
+		}
+		testUsers = append(testUsers, testUsr)
+		//_, err = coll.ReplaceOne(ctx, BsonFindFilter("_id", email), testUsr, options.Replace().SetUpsert(true))
+		//if err != nil {
+		//	return err
+		//}
+		//coll.BulkWrite(ctx, options.BulkWrite())
+
+	}
+	models := sliceutils.Map(testUsers, func(u User) mongo.WriteModel { // TODO: validate working right!
+		return mongo.NewReplaceOneModel().
+			SetFilter(bson.M{"_id": u.Email}).
+			SetReplacement(u).
+			SetUpsert(true)
+	})
+	opts := options.BulkWrite().SetOrdered(false)
+	_, err = coll.BulkWrite(ctx, models, opts)
 	return err
 }
 
-const testUserEmailSelf = "reece.appling@gmail.com" // TODO: or dot?
-const testUserEmail = "nessapatch2408@gmail.com"
+const (
+	testUserEmailSelf = "reece.appling@gmail.com" // TODO: or dot?
+	testUserEmail     = "nessapatch2408@gmail.com"
+	testUserEmailPAA  = "testProjAdminA@appli.ng" // Admin on project
+	testUserEmailPWA  = "testProjWriteA@appli.ng" // Can write on project
+	testUserEmailPRA  = "testProjReadA@appli.ng"  // Can read on project
+	testUserEmailPNA  = "testProjNoneA@appli.ng"  // No project access
+	testUserEmailPAB  = "testProjAdminB@appli.ng" // Admin on project
+	testUserEmailPWB  = "testProjWriteB@appli.ng" // Can write on project
+	testUserEmailPRB  = "testProjReadB@appli.ng"  // Can read on project
+	testUserEmailPNB  = "testProjNoneB@appli.ng"  // No project access
+	testUserEmailPAC  = "testProjAdminC@appli.ng" // Admin on project
+	testUserEmailPWC  = "testProjWriteC@appli.ng" // Can write on project
+	testUserEmailPRC  = "testProjReadC@appli.ng"  // Can read on project
+	testUserEmailPNC  = "testProjNoneC@appli.ng"  // No project access
+)
 
 // TODO: update user!!!
 
@@ -140,7 +200,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 		}
 		perm, exists := project.Perms[u.Email]
 		if !exists {
-			return out, errors.New("user not on project when they should have been!")
+			return out, errors.New("user not on project when they should have been")
 		} else {
 			userProjPerms[project.Name] = perm.UserProjectPerm()
 		}
