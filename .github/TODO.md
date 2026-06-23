@@ -1,15 +1,7 @@
 # In Progress
 ## Actively Working On
-- [ ] Heavily test createSporeSwab
-- [ ] Heavily test createSporePrint
-- [ ] Test creating transfers out
-  - [ ] StasisTubes should always become disposed when transferred out
-  - [ ] Already-disposed items should not allow transfers
-  - [ ] Creating boxes should render the jar disposed
-- [ ] Figure out creating sales!
-- [ ] Adding pics/flushes/contams images is not working when trying to view them after update
+- [x] Adding pics/flushes/contams images is not working when trying to view them after update
   - [x] Switch from <Image> back to <img>
-- [ ] Test OVCs below GrainBatch, as well as OVCs for transfers and RFID
 - [x] Spore print and below Go TODOs
   - [ ] User, project, and sale Go TODOs
 - [ ] Project, sale, user tsx TODOs
@@ -19,11 +11,7 @@
 ## Waiting on something else
 
 # Changes made that need to be tested
-- [ ] AgarRecipeArea now has ability to load recipe name if only given id
-
-
-- Jar, 
-
+- [x] AgarRecipeArea now has ability to load recipe name if only given id
 
 # Wishlist
 - [ ] Biometric authentication
@@ -547,6 +535,13 @@
 - [ ] CORS
   - [ ] In go, fix and utilize enableCors function
   - [ ] https://blog.logrocket.com/using-cors-next-js-handle-cross-origin-requests/
+- [ ] Figure out creating sales!
+- [ ] Heavily test createSporeSwab
+- [ ] Heavily test createSporePrint
+- [ ] Test creating transfers out
+  - [ ] StasisTubes should always become disposed when transferred out
+  - [ ] Already-disposed items should not allow transfers
+  - [ ] Creating boxes should render the jar disposed
 
 # Complete
 - [x] Create TODO.md
