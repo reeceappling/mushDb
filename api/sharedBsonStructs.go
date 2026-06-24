@@ -596,9 +596,6 @@ func (upd *Mods) updatePcRunIfNeeded(next, current pcRunOptional) *Mods {
 
 func (upd *Mods) updateKnownFruitableIfNeeded(future, existing hasKnownFruitableField) *Mods {
 	ex := existing.knownToBeFruitable()
-	/* TODO: if ex != nil && *ex == true { // If already true, do not allow change
-		return upd
-	}*/
 	return updatePointerIfNeeded(upd, "knownFruitable", future.knownToBeFruitable(), ex)
 }
 func (upd *Mods) updateWetnessIfNeeded(future, existing *int) *Mods {

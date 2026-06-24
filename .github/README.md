@@ -129,6 +129,16 @@ TODO: THIS
 ### Webserver
 TODO: THIS
 
+### Checking lines of code
+Install cloc
+```bash
+  brew install cloc
+```
+Run cloc
+```bash
+cloc . --exclude-dir=node_modules,.github,.noCommit,.next --exclude-list-file=cypress.config.ts,eslint.config.mjs,next-env.d.ts,next.config.ts,package-lock.json,postcss.config.mjs,tailwind.config.ts,tsconfig.json,LICENSE,CODEOWNERS --exclude_ext=ico,svg,jpg,lock,png,env
+```
+
 # Misc. Repo Links
 - [Acknowledgements](ACKNOWLEDGEMENTS.md) Still a template
 - [Authors](AUTHORS.md)

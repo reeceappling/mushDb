@@ -11,7 +11,7 @@
 ## Waiting on something else
 
 # Changes made that need to be tested
-- [x] AgarRecipeArea now has ability to load recipe name if only given id
+
 
 # Wishlist
 - [ ] Biometric authentication
@@ -33,7 +33,7 @@
     - [x] Validate guests cannot see anything that is marked as private
     - [x] Validate guests cannot write anything
     - [x] Validate non-guest users cannot write anything that they have no permissions for
-  - [ ] Project
+  - [x] Project
     - [x] HANDLE NEW PRIVATE FIELD ON PROJECTS EVERYWHERE!
       - [x] Guest user can
         - [x] View the project page if it is publicly readable
@@ -154,11 +154,12 @@
   - [x] LC Syringe
     - [x] Display page
       - [x] KF validate working properly
-        - [ ] KF cannot be changed once set to true?
-        - [ ] ConfirmedClean can be unset?
+        - [ ] KF cannot be changed once set to true? ----------- Allow changing for now!
+        - [ ] ConfirmedClean can be unset? --------- Allow changing for now! We may not want to allow this later!
+      - [ ] Set parent LC to clean from here once LcSyringe confirms it? ------------------------------------------- TODO: THIS IF WE CONFIRM THIS IS WHAT IS PREFERRED!
+    - [x] Display page
       - [x] ConfirmedClean validate working properly
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] Set parent LC to clean from here once LcSyringe confirms it?
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
       - [x] Confirmed clean is not propagating properly, always showing up as unknown...
@@ -187,10 +188,10 @@
     - [x] Display page
       - [x] pour and condens cov
         - [x] Validate condens coverage (when unset, allow setting)
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
       - [ ] Agar on outside at pour time
         - [ ] If not set, do not show?
         - [ ] If set, do not allow change?
-      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page
       - [x] Add Coverage sliders
@@ -200,7 +201,8 @@
   - [x] Plugs
     - [x] Display page
       - [ ] woods area displaying weird on slim screens!
-      - [x] Dowel types should be a table??? Maybe a grid? ---------------------
+    - [x] Display page
+      - [x] Dowel types should be a table??? Maybe a grid?
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
     - [x] Create page
       - [x] Create PC run from within creator
@@ -213,13 +215,14 @@
     - [x] List Page
   - [x] Project
     - [x] Display page
+      - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)
+        - [ ] Switch to table (already mostly done)
+      - [x] Removing yourself as admin causes reloading the page to fail!
+        - [ ] Re-adding self as admin causes a go-side crash --------------------- (should be fixed, test!)
+    - [x] Create page
+    - [x] Display page
       - [x] Not properly showing initial user permissions
       - [x] Perms are not updating visually when users are added or removed!
-      - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)-------------------------------------------------------------
-        - [ ] Switch to table (already mostly done) 
-      - [x] Removing yourself as admin causes reloading the page to fail!
-        - [ ] Re-adding self as admin causes a go-side crash
-    - [x] Create page
     - [x] List Page
       - [ ] Be able to filter projects by completeness
       - [ ] Shows all projects a user should be able to see, including public projects
@@ -248,7 +251,8 @@
     - [x] List Page
   - [x] Spore Print
     - [x] Display page
-      - [x] Create MSS not working, failing to find current print
+      - [x] Create MSS not working, failing to find current print (fixed)
+    - [x] Display page
       - [ ] Chaining spore prints (probably just click the parent and then click to make another print...)-------------------------------------------------------------
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) only done from fruit, bag, box, plate?
     - [x] Import page
@@ -274,11 +278,12 @@
     - [x] List Page
   - [x] Subspecies
     - [x] Display page
+      - [x] Aliases
+        - [ ] Cannot add aliases that already exist elsewhere?--------------------------------------------------------------------------------------------------------------------------
+          - [ ] Must create separate species, subspecies, subRec aliases collections to ensure this works properly :(
       - [x] Species at top
       - [x] Aliases
         - [x] Creating and deleting one at the same time is not working
-        - [ ] Cannot add aliases that already exist elsewhere?--------------------------------------------------------------------------------------------------------------------------
-          - [ ] Must create separate species, subspecies, subRec aliases collections to ensure this works properly :(
         - [x] NOT WORKING TO ADD ALIASES!!!!
         - [x] DO NOT USE TextBoxArea in AliasesArea!
         - [x] Deleting is not updating the view on response!
@@ -568,3 +573,4 @@
   - [x] Antibiotics
   - [x] Woods
   - [x] Liquids
+- [x] AgarRecipeArea now has ability to load recipe name if only given id
