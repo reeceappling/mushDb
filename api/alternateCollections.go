@@ -34,8 +34,8 @@ type ListResponse[T any] struct {
 	Standard []T `json:"standard,omitempty"`
 }
 
-func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated bool, maxResults int, doStandardToo bool, temp T) (bs []byte, err error) {
-	latestEntries, err := getLastNEntries(ctx, updated, maxResults, doStandardToo, temp)
+func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated bool, maxResults int, doStandardToo bool, temp T, allowDisposed bool) (bs []byte, err error) {
+	latestEntries, err := getLastNEntries(ctx, updated, maxResults, doStandardToo, temp, allowDisposed)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
 			println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
@@ -63,14 +63,6 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 		println(fmt.Sprintf("listEntriesHandlerInternal found %d std entries", len(outObj["standard"])))
 
 		bs, err = json.Marshal(outObj)
-		//if err != nil {
-		//	return nil, err
-		//}
-		//tempBs, err := json.MarshalIndent(outObj, "", " ")
-		//if err != nil {
-		//	return nil, err
-		//}
-		//println("list being returned: " + string(tempBs)) // TODO: del!
 	}
 	if err != nil {
 		return nil, err
@@ -125,7 +117,8 @@ func ListUsersHandler(ctx context.Context, removeGuests bool) ([]byte, error) {
 
 var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	// TODO: DEPENDING ON VARIANT, EITHER DO LATEST OR LATEST AND STANDARD!!!!!
-
+	allowDisposed := true
+	allowDisposed = r.URL.Query().Get("hideDisposed") != "true"
 	var maxResults int = 10 // TODO: extend where needed?
 	requested := r.PathValue("variant")
 	doStandardToo := strings.Contains(requested, "Recipe") // "agarRecipe", "jarRecipe", "lcRecipe", "substrateRecipe"
@@ -145,80 +138,80 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 	switch strings.ToLower(requested) {
 	case "agarbatch", "agar batch",
 		"agarbatches", "agar batches":
-		bs, err = listEntriesHandlerInternal[*AgarBatch](r.Context(), true, maxResults, doStandardToo, &AgarBatch{})
+		bs, err = listEntriesHandlerInternal[*AgarBatch](r.Context(), true, maxResults, doStandardToo, &AgarBatch{}, allowDisposed)
 	case "agarrecipe", "agar recipe",
 		"agarrecipes", "agar recipes":
-		bs, err = listEntriesHandlerInternal[*AgarRecipe](r.Context(), true, maxResults, doStandardToo, &AgarRecipe{})
+		bs, err = listEntriesHandlerInternal[*AgarRecipe](r.Context(), true, maxResults, doStandardToo, &AgarRecipe{}, allowDisposed)
 	case "bag",
 		"bags":
-		bs, err = listEntriesHandlerInternal[*Bag](r.Context(), true, maxResults, doStandardToo, &Bag{})
+		bs, err = listEntriesHandlerInternal[*Bag](r.Context(), true, maxResults, doStandardToo, &Bag{}, allowDisposed)
 	case "fruit",
 		"fruits":
-		bs, err = listEntriesHandlerInternal[*Fruit](r.Context(), true, maxResults, doStandardToo, &Fruit{})
+		bs, err = listEntriesHandlerInternal[*Fruit](r.Context(), true, maxResults, doStandardToo, &Fruit{}, allowDisposed)
 	case "fruitingchamber", "box", "chamber", "fruiting chamber",
 		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
-		bs, err = listEntriesHandlerInternal[*FruitingChamber](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{})
+		bs, err = listEntriesHandlerInternal[*FruitingChamber](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{}, allowDisposed)
 	case "grainbatch", "grainbatches":
-		bs, err = listEntriesHandlerInternal[*GrainBatch](r.Context(), true, maxResults, doStandardToo, &GrainBatch{})
+		bs, err = listEntriesHandlerInternal[*GrainBatch](r.Context(), true, maxResults, doStandardToo, &GrainBatch{}, allowDisposed)
 	case "jar", "grainjar", "grain jar",
 		"jars", "grainjars", "grain jars":
-		bs, err = listEntriesHandlerInternal[*GrainJar](r.Context(), true, maxResults, doStandardToo, &GrainJar{})
+		bs, err = listEntriesHandlerInternal[*GrainJar](r.Context(), true, maxResults, doStandardToo, &GrainJar{}, allowDisposed)
 	case "jarrecipe", "jar recipe",
 		"jarrecipes", "jar recipes":
-		bs, err = listEntriesHandlerInternal[*JarRecipe](r.Context(), true, maxResults, doStandardToo, &JarRecipe{})
+		bs, err = listEntriesHandlerInternal[*JarRecipe](r.Context(), true, maxResults, doStandardToo, &JarRecipe{}, allowDisposed)
 	case "lc", "liquidculture", "liquid culture",
 		"lcs", "liquidcultures", "liquid cultures":
-		bs, err = listEntriesHandlerInternal[*LiquidCulture](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{})
+		bs, err = listEntriesHandlerInternal[*LiquidCulture](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{}, allowDisposed)
 	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
 		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
-		bs, err = listEntriesHandlerInternal[*LcRecipe](r.Context(), true, maxResults, doStandardToo, &LcRecipe{})
+		bs, err = listEntriesHandlerInternal[*LcRecipe](r.Context(), true, maxResults, doStandardToo, &LcRecipe{}, allowDisposed)
 	case "lcsyringe", "lcsyringes":
-		bs, err = listEntriesHandlerInternal[*LcSyringe](r.Context(), true, maxResults, doStandardToo, &LcSyringe{})
+		bs, err = listEntriesHandlerInternal[*LcSyringe](r.Context(), true, maxResults, doStandardToo, &LcSyringe{}, allowDisposed)
 	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
 		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
-		bs, err = listEntriesHandlerInternal[*MSS](r.Context(), true, maxResults, doStandardToo, &MSS{})
+		bs, err = listEntriesHandlerInternal[*MSS](r.Context(), true, maxResults, doStandardToo, &MSS{}, allowDisposed)
 	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
 		"pcruns", "pc runs", "pcRuns", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
-		bs, err = listEntriesHandlerInternal[*PCRun](r.Context(), true, maxResults, doStandardToo, &PCRun{})
+		bs, err = listEntriesHandlerInternal[*PCRun](r.Context(), true, maxResults, doStandardToo, &PCRun{}, allowDisposed)
 	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
 		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
-		bs, err = listEntriesHandlerInternal[*Plate](r.Context(), true, maxResults, doStandardToo, &Plate{})
+		bs, err = listEntriesHandlerInternal[*Plate](r.Context(), true, maxResults, doStandardToo, &Plate{}, allowDisposed)
 	case "plugs", "plug", "peg", "pegs":
-		bs, err = listEntriesHandlerInternal[*PlugsJar](r.Context(), true, maxResults, doStandardToo, &PlugsJar{})
+		bs, err = listEntriesHandlerInternal[*PlugsJar](r.Context(), true, maxResults, doStandardToo, &PlugsJar{}, allowDisposed)
 	case "project", "projects":
 		bs, err = listProjectsHandlerInternal(r.Context(), true) // TODO: true ok here? TEST HEAVILY!
-		//bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{})
+		//bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{}, allowDisposed)
 	case "sale", "sales":
-		bs, err = listEntriesHandlerInternal[*Sale](r.Context(), true, maxResults, doStandardToo, &Sale{})
+		bs, err = listEntriesHandlerInternal[*Sale](r.Context(), true, maxResults, doStandardToo, &Sale{}, allowDisposed)
 	case "slant", "slants":
-		bs, err = listEntriesHandlerInternal[*Slant](r.Context(), true, maxResults, doStandardToo, &Slant{})
+		bs, err = listEntriesHandlerInternal[*Slant](r.Context(), true, maxResults, doStandardToo, &Slant{}, allowDisposed)
 	case "species":
-		bs, err = listEntriesHandlerInternal[*Species](r.Context(), true, maxResults, doStandardToo, &Species{})
+		bs, err = listEntriesHandlerInternal[*Species](r.Context(), true, maxResults, doStandardToo, &Species{}, allowDisposed)
 	case "sporeprint", "spore print", "print",
 		"sporeprints", "spore prints", "prints":
-		bs, err = listEntriesHandlerInternal[*SporePrint](r.Context(), true, maxResults, doStandardToo, &SporePrint{})
+		bs, err = listEntriesHandlerInternal[*SporePrint](r.Context(), true, maxResults, doStandardToo, &SporePrint{}, allowDisposed)
 	case "sporeswab", "sporeswabs", "swab", "swabs":
-		bs, err = listEntriesHandlerInternal[*SporeSwab](r.Context(), true, maxResults, doStandardToo, &SporeSwab{})
+		bs, err = listEntriesHandlerInternal[*SporeSwab](r.Context(), true, maxResults, doStandardToo, &SporeSwab{}, allowDisposed)
 	case "stasistube", "stasis tube", "stasis", "tube",
 		"stasistubes", "stasis tubes", "tubes":
-		bs, err = listEntriesHandlerInternal[*StasisTube](r.Context(), true, maxResults, doStandardToo, &StasisTube{})
+		bs, err = listEntriesHandlerInternal[*StasisTube](r.Context(), true, maxResults, doStandardToo, &StasisTube{}, allowDisposed)
 	case "subspecies":
-		bs, err = listEntriesHandlerInternal[*Subspecies](r.Context(), true, maxResults, doStandardToo, &Subspecies{})
+		bs, err = listEntriesHandlerInternal[*Subspecies](r.Context(), true, maxResults, doStandardToo, &Subspecies{}, allowDisposed)
 	case "substrate", "substraterecipe", "substrate recipe",
 		"substrates", "substraterecipes", "substrate recipes":
-		bs, err = listEntriesHandlerInternal[*SubstrateRecipe](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{})
+		bs, err = listEntriesHandlerInternal[*SubstrateRecipe](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{}, allowDisposed)
 	case "substratebatch", "substratebatches":
-		bs, err = listEntriesHandlerInternal[*SubstrateBatch](r.Context(), true, maxResults, doStandardToo, &SubstrateBatch{})
+		bs, err = listEntriesHandlerInternal[*SubstrateBatch](r.Context(), true, maxResults, doStandardToo, &SubstrateBatch{}, allowDisposed)
 	case "transfer", "xfer",
 		"transfers", "xfers":
-		bs, err = listEntriesHandlerInternal[*Transfer](r.Context(), true, maxResults, doStandardToo, &Transfer{})
+		bs, err = listEntriesHandlerInternal[*Transfer](r.Context(), true, maxResults, doStandardToo, &Transfer{}, allowDisposed)
 	case "user", "users":
-		bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
+		bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{}, allowDisposed)
 	case "nonguest", "nonguests":
 		bs, err = ListUsersHandler(r.Context(), true) // TODO: validate working!
 		//bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
 	case "waterjar", "waterjars", "water jar", "water jars", "sterilizedwater", "sterilizedwaterjar", "sterilewater", "sterilewaterjar":
-		bs, err = listEntriesHandlerInternal[*WaterJar](r.Context(), true, maxResults, doStandardToo, &WaterJar{})
+		bs, err = listEntriesHandlerInternal[*WaterJar](r.Context(), true, maxResults, doStandardToo, &WaterJar{}, allowDisposed)
 	default:
 		http.Error(w, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name")).Error(), http.StatusBadRequest)
 	}
@@ -254,7 +247,7 @@ var ListSubspeciesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http
 		http.Error(w, "failed to list subspecies. "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	subspecs, err := getCollectionItemsFromCursor[Subspecies](ctx, cursor, nil)
+	subspecs, err := getCollectionItemsFromCursor[Subspecies](ctx, cursor, nil, true)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			_, err = w.Write([]byte("[]"))

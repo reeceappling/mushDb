@@ -60,7 +60,7 @@ export class FruitData {
     }
 }
 
-export function FruitSelectorCloseable({onSelect}:{onSelect: (val?: FruitData)=>void}) {
+export function FruitSelectorCloseable({onSelect, hideDisposed}:{onSelect: (val?: FruitData)=>void,hideDisposed?:boolean}) {
     const doSel = (val?: FruitData):void=>{
         if (!val){
             return
@@ -76,7 +76,7 @@ export function FruitSelectorCloseable({onSelect}:{onSelect: (val?: FruitData)=>
         //creatorInPage: sp.creatorInPage, // TODO: ok?
         //createEndpt: "fruit", // TODO: ok?
         createSelector:(selHdl: (onSelect: FruitData) => void)=>{
-            return <FruitSelector doSelect={(v)=>{
+            return <FruitSelector hideDisposed={hideDisposed} doSelect={(v)=>{
                 v && selHdl(v)
             }}/>
         },

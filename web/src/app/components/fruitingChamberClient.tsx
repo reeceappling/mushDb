@@ -570,10 +570,12 @@ export function FruitingChamberSelectorTable({data, onClick}: ListPageItems<Frui
 export function FruitingChamberSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: FruitingChamberData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: FruitingChamberData[]): JSX.Element => {
         return <FruitingChamberSelectorTable data={items} onClick={doSelect}/>
@@ -581,7 +583,7 @@ export function FruitingChamberSelector(
 
     return <ExistingRecentSelector entryType={"fruitingChamber"} entryTypes={"fruitingChambers"} doSelect={doSelect}
                                    asserter={AssertFruitingChamber}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewFruitingChamberForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

@@ -532,17 +532,19 @@ export function BagSelectorTable({data, onClick}: ListPageItems<BagData>) {
 export function BagSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: BagData | undefined) => void,
         allowCreate?: boolean
+        hideDisposed?:boolean
     }) {
     const table = (items: BagData[]): JSX.Element => {
         return <BagSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"bag"} entryTypes={"bags"} doSelect={doSelect} asserter={AssertBag}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewBagForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

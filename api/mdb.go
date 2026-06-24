@@ -547,10 +547,10 @@ func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
 	if err != nil {
 		return nil, err
 	}
-	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
+	return getCollectionItemsFromCursor[T](ctx, cursor, nil, true)
 }
 
-func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T) ([]T, error) {
+func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T, allowDisposed bool) ([]T, error) {
 	findBson := bson.D{{}}
 	println("getting latest from " + temp.CollectionName())
 	if filterOutStandard {
@@ -573,7 +573,7 @@ func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresul
 	if err != nil {
 		return nil, err
 	}
-	return getCollectionItemsFromCursor[T](ctx, cursor, &nresults)
+	return getCollectionItemsFromCursor[T](ctx, cursor, &nresults, allowDisposed)
 }
 
 func FindItemTypeForId(ctx context.Context, id MainCollectionId) (MainCollectionItem, error) {

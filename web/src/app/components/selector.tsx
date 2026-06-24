@@ -9,6 +9,7 @@ export interface SelectorProps<T> {
     headerLevel?: number
     creatorInPage?: boolean
     txt?: string
+    hideDisposed?: boolean
 }
 
 // TODO: MAKE SURE SELECTOR DISPLAY VALUES PROPERLY DISPLAYS BASE58S WHEN NEEDED

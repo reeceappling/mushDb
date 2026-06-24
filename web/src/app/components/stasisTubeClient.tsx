@@ -363,17 +363,19 @@ export function StasisTubeSelectorTable({data, onClick}: ListPageItems<StasisTub
 export function StasisTubeSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: StasisTubeData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: StasisTubeData[]):JSX.Element=>{
         return <StasisTubeSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"stasisTube"} entryTypes={"stasisTubes"} doSelect={doSelect} asserter={AssertStasisTube}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewStasisTubeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

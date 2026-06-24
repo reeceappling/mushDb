@@ -56,7 +56,7 @@ export class SporePrintData {
     }
 }
 
-export function SporePrintSelectorCloseable({onSelect}:{onSelect: (val?: SporePrintData)=>void}) {
+export function SporePrintSelectorCloseable({onSelect,hideDisposed}:{onSelect: (val?: SporePrintData)=>void,hideDisposed?:boolean}) {
     const doSel = (val?: SporePrintData):void=>{
         if (!val){
             return
@@ -72,7 +72,7 @@ export function SporePrintSelectorCloseable({onSelect}:{onSelect: (val?: SporePr
         //creatorInPage: sp.creatorInPage, // TODO: ok?
         //createEndpt: "fruit", // TODO: ok?
         createSelector:(selHdl: (onSelect: SporePrintData) => void)=>{
-            return <SporePrintSelector doSelect={(v)=>{
+            return <SporePrintSelector hideDisposed={hideDisposed} doSelect={(v)=>{
                 v && selHdl(v)
             }}/>
         },

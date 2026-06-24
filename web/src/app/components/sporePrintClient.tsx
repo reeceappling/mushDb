@@ -392,7 +392,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
 
     return <NewEntryFormWrapper entryType={"sporePrint"}>
         <ErrorDisplay err={err}/>
-        {fruitIn === undefined && <FruitSelectorCloseable onSelect={setFruit}/>}
+        {fruitIn === undefined && <FruitSelectorCloseable onSelect={setFruit} hideDisposed={true}/>}
         <PicsDisplay pix={[]} readonly={false} updateParent={(ps)=>{setPics(ps.new)}} headerLevel={headerLevel} offset={offset}/>
         <NewEntryNotes setNotes={setNotes} />
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
@@ -426,14 +426,16 @@ export function SporePrintSelectorTable({data, onClick}: ListPageItems<SporePrin
 export function SporePrintSelector(
     {
         doSelect,
+        hideDisposed = false
     }: {
         doSelect: (val: SporePrintData | undefined) => void,
+        hideDisposed?: boolean
     }) {
     const table = (items: SporePrintData[]):JSX.Element=>{
         return <SporePrintSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"sporePrint"} entryTypes={"sporePrints"} doSelect={doSelect} asserter={AssertSporePrint}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
     </ExistingRecentSelector>
 }

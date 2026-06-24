@@ -637,17 +637,19 @@ export function PlateSelectorTable({data, onClick}: ListPageItems<PlateData>) {
 export function PlateSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: PlateData | undefined) => void,
         allowCreate?: boolean
+        hideDisposed?:boolean
     }) {
     const table = (items: PlateData[]): JSX.Element => {
         return <PlateSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"plate"} entryTypes={"plates"} doSelect={doSelect} asserter={AssertPlate}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewPlateForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

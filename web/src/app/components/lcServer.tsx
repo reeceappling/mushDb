@@ -88,7 +88,7 @@ export function LcSelectorCloseable(sp: SelectorProps<LcData>) { // TODO: use
         //creatorInPage: sp.creatorInPage,// TODO: ???
         //createEndpt: "bag",// TODO: ???
         createSelector:(selHdl: (onSelect: LcData) => void)=>{
-            return <LcSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+            return <LcSelector allowCreate={sp.allowCreation} hideDisposed={sp.hideDisposed} doSelect={(v)=>{
                 v && selHdl(v)
             }}/>
         },

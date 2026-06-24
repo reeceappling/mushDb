@@ -84,7 +84,7 @@ export class FruitingChamberData {
     }
 }
 
-export function BagSelectorCloseable(sp: SelectorProps<FruitingChamberData>) { // TODO: use
+export function FruitingChamberSelectorCloseable(sp: SelectorProps<FruitingChamberData>) { // TODO: use
     const doSel = (val?: FruitingChamberData):void=>{
         if (!val){
             return

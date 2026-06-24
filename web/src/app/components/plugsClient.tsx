@@ -411,17 +411,19 @@ export function PlugsSelectorTable({data, onClick}: ListPageItems<PlugsData>) {
 export function PlugsSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: PlugsData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: PlugsData[]): JSX.Element => {
         return <PlugsSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"plugs"} entryTypes={"plugs"} doSelect={doSelect} asserter={AssertPlugs}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewPlugsForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

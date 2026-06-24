@@ -305,7 +305,7 @@ export function GrainBatchSelector(
         allowCreate
     }: {
         doSelect: (val: GrainBatchData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
     }) {
     const table = (items: GrainBatchData[]): JSX.Element => {
         return <GrainBatchSelectorTable data={items} onClick={doSelect}/>

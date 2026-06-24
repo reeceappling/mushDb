@@ -503,17 +503,19 @@ export function JarSelectorTable({data, onClick}: ListPageItems<JarData>) {
 export function JarSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: JarData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: JarData[]): JSX.Element => {
         return <JarSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"jar"} entryTypes={"jars"} doSelect={doSelect} asserter={AssertJar}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewJarForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

@@ -348,7 +348,7 @@ export function PcRunSelectorTable({data, onClick}: ListPageItems<PcRunData>) {
 export function PcRunSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
     }: {
         doSelect: (val: PcRunData | undefined) => void,
         allowCreate?: boolean

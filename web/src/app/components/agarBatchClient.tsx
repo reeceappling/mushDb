@@ -331,7 +331,7 @@ export function AgarBatchSelectorTable({data, onClick, withLink}: ListPageItems<
 export function AgarBatchSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
     }: {
         doSelect: (val: AgarBatchData | undefined) => void,
         allowCreate?: boolean

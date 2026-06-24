@@ -196,8 +196,8 @@ export function ViewInNewTabButton<T extends Entry>({entry}: { entry:T}) {
     </EntryLinkWrapper>
 }
 
-export function ListItemsRequest(entryType: string) {
-    return fetch(BaseExternalUrl + "/db/list/" + entryType, {
+export function ListItemsRequest(entryType: string, hideDisposed: boolean = false) {
+    return fetch(BaseExternalUrl + "/db/list/" + entryType+(hideDisposed?"?hideDisposed=true":""), { // TODO: ensure hiding disposed works!
         method: 'Get',
         credentials: 'include',
         headers: clientPostRequestHeaders,
@@ -917,12 +917,13 @@ export function ExistingRecentSelector<T extends Entry>(props: React.PropsWithCh
     table: (items: T[],onSelect: (v?: T)=>void) => JSX.Element,
     entryType:string,
     entryTypes:string,
-    asserter: (val: any)=>void
+    asserter: (val: any)=>void,
+    hideDisposed?: boolean,
 }>){
     const [err, setErr] = useState<string | undefined>(undefined)
     const [loaded, setLoaded] = React.useState(false);
     const [data, setData] = React.useState<T[] | undefined>(undefined);
-    useEffect(()=>{ListItemsRequest(props.entryTypes).then((result) => {
+    useEffect(()=>{ListItemsRequest(props.entryTypes, props.hideDisposed).then((result) => {
         try {
             AssertArrayResult<T>(result, props.asserter)
             setLoaded(true)

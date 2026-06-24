@@ -290,13 +290,13 @@ export function NewMssForm(
         <ErrorDisplay err={err}/>
         <TestAndValidate todos={["allow scans for Spore print or water jar selectors!"]}>
             { sporePrintIn === undefined && <div>
-                <SporePrintSelectorCloseable  onSelect={setSporePrint}/>
+                <SporePrintSelectorCloseable  onSelect={setSporePrint} hideDisposed={true}/>
                 <ReadRFIDButton handleTagRead={(tag)=>{
                     DoGetRequest("sporePrint", tag, AssertSporePrint, setErr).then(setSporePrint) // TODO: test and ensure ok!
                 }} txt={"Or scan Spore Print RFID"}/>
             </div>}
         { waterJarIn === undefined && <div>
-            <WaterJarSelectorCloseable doSelect={setWaterJar} creatorInPage={false} allowCreation={false} />
+            <WaterJarSelectorCloseable doSelect={setWaterJar} creatorInPage={false} allowCreation={false} hideDisposed={true}/>
             <ReadRFIDButton handleTagRead={(tag)=>{
                 DoGetRequest("waterJar", tag, AssertWaterJar, setErr).then(setWaterJar) // TODO: test and ensure ok!
             }} txt={"Or scan Water Jar RFID"}/>
@@ -336,17 +336,19 @@ export function MssSelectorTable({data, onClick}: ListPageItems<MssData>) {
 export function MssSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed = false
     }: {
         doSelect: (val: MssData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: MssData[]):JSX.Element=>{
         return <MssSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"mss"} entryTypes={"mss"} doSelect={doSelect} asserter={AssertMss}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewMssForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

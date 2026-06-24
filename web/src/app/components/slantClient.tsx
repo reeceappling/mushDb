@@ -396,17 +396,19 @@ export function SlantSelectorTable({data, onClick}: ListPageItems<SlantData>) {
 export function SlantSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: SlantData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: SlantData[]):JSX.Element=>{
         return <SlantSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"slant"} entryTypes={"slants"} doSelect={doSelect} asserter={AssertSlant}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewSlantForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

@@ -465,17 +465,19 @@ export function LcSelectorTable({data, onClick}: ListPageItems<LcData>) {
 export function LcSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: LcData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: LcData[]): JSX.Element => {
         return <LcSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"lc"} entryTypes={"lcs"} doSelect={doSelect} asserter={AssertLc}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewLcForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

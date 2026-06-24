@@ -21,6 +21,8 @@
   - [ ] Actually implement something that covers these backups
   - [ ] Validate that we can restore from a backup
 # TODO
+- [x] Ensure selectors allow filtering out disposed items (Confirmed working via NewMssForm)
+- [ ] ListPages ensure disposed items are properly marked?
 - [ ] /db/list/nonguests
   - [ ] Make many typscript things request only nonguests
 - [ ] TS /whitelistUser
@@ -339,6 +341,7 @@
 - [ ] Integration testing
   - [ ] Everything in here
 - [ ] TODO Later (some create intermediates)
+  - [ ] ADD DISPOSED TO ALL LISTPAGETABLES THAT COULD POSSIBLY WANT IT!
   - [ ] AgarBatch 
     - [ ] ListPageTable
       - [ ] sort by Created, Last Updated
@@ -521,7 +524,7 @@
     - [ ] Display page
       - [ ] Create Stasis Tube // TODO: CREATE? Should be PC-d with water in tubes????? PROBABLY DONT ALLOW THIS FROM HERE ---------
 
-- [ ] Redirect to login page if not logged in!
+- [ ] Redirect to login page if not logged in!?
 - [ ] WriteMany for RFID?! Allow subsequent writings... This may be complicated, so do it later...
 - [ ] React Subcomponents
   - [x] Notes
@@ -532,7 +535,10 @@
 
 
 
-- [ ] Reenable full authentication flow then test!
+- [x] Reenable full authentication flow then test!
+  - [ ] Ensure signup flow is working properly!
+    - [ ] Page to add user to whitelist?
+    - [ ] Page for user to sign up via the whitelist?
 - [ ] Backend Testing
   - [ ] ADD MORE SUB-ITEMS HERE
 - [ ] Frontend Testing (Cypress?)

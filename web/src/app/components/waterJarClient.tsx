@@ -293,10 +293,12 @@ export function WaterJarSelectorTable({data, onClick}: ListPageItems<WaterJarDat
 export function WaterJarSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: WaterJarData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: WaterJarData[]): JSX.Element => {
         return <WaterJarSelectorTable data={items} onClick={doSelect}/>
@@ -304,7 +306,7 @@ export function WaterJarSelector(
 
     return <ExistingRecentSelector entryType={"waterJar"} entryTypes={"waterJars"} doSelect={doSelect}
                                    asserter={AssertWaterJar}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewWaterJarForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

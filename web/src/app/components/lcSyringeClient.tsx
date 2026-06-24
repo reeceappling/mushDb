@@ -320,7 +320,7 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             {createdItemsDiv()}
             <ErrorDisplay err={err}/>
         {!parent && <div>
-            <LcSelectorCloseable doSelect={setParent}/>
+            <LcSelectorCloseable doSelect={setParent} hideDisposed={true}/>
             <ReadRFIDButton handleTagRead={(val)=>{
                 DoGetRequest("lc", val, AssertLc, setErr).then(setParent)
             }} txt={"Or read parent LC's RFID tag"}/>
@@ -360,13 +360,15 @@ export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringeD
 export function LcSyringeSelector(
     {
         doSelect,
+        hideDisposed = false
     }: {
-        doSelect: (val: LcSyringeData | undefined) => void,
+        doSelect: (val?: LcSyringeData) => void,
+        hideDisposed?: boolean
     }) {
     const table = (items: LcSyringeData[]):JSX.Element=>{
         return <LcSyringeSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"lcSyringe"} entryTypes={"lcSyringes"} doSelect={doSelect} asserter={AssertLcSyringe}
-                                   table={table}/>
+                                   table={table} hideDisposed={hideDisposed}/>
 }

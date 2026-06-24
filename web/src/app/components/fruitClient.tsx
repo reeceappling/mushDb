@@ -548,13 +548,15 @@ export function FruitSelectorTable({data, onClick}: ListPageItems<FruitData>) {
 export function FruitSelector(
     {
         doSelect,
+        hideDisposed = false
     }: {
         doSelect: (val: FruitData | undefined) => void,
+        hideDisposed?: boolean
     }) {
     const table = (items: FruitData[]): JSX.Element => {
         return <FruitSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"fruit"} entryTypes={"fruits"} doSelect={doSelect} asserter={AssertFruit}
-                                   table={table}/>
+                                   table={table} hideDisposed={hideDisposed}/>
 }

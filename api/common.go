@@ -444,10 +444,10 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 	if err != nil {
 		return nil, err
 	}
-	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
+	return getCollectionItemsFromCursor[T](ctx, cursor, nil, true)
 }
 
-func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
+func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int, allowDisposed bool) ([]T, error) {
 	defer cursor.Close(ctx)       // TODO; ensure ok
 	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
 	if err != nil {
@@ -475,6 +475,13 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 				// If user cannot read or write, do not add
 				if permedItem.Permissions().HighestPermFor(user) == nil {
 					println("skipping entry, user does not have permission!") // TODO: del
+					// Skip this entry
+					continue
+				}
+			}
+			if !allowDisposed {
+				disposableItem, ok := interface{}(result).(Disposable)
+				if ok && disposableItem.DisposalInfo() != nil {
 					// Skip this entry
 					continue
 				}

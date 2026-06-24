@@ -447,7 +447,7 @@ export const AgarRecipeArea = ({agarRecipeBinId,agarRecipe}: { agarRecipeBinId?:
 export function AgarRecipeSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
     }: {
         doSelect: (val: AgarRecipeData | undefined) => void,
         allowCreate?: boolean
