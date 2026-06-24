@@ -66,6 +66,9 @@ See /env/example.env for an example of the environment variables needed to run t
 - GOOGLE_CLIENT_ID: the google client ID used for oauth authentication for the webserver and api
 - GOOGLE_CLIENT_SECRET: the google client secret used for oauth authentication for the webserver and api
 - CF_TUNNEL_TOKEN: Cloudflare tunnel token used to run the cloudflare tunnel for the api. You can get this from the cloudflare dashboard when you create a tunnel, or by running `cloudflared tunnel create <tunnel-name>` in the terminal with cloudflared installed.
+- LOCAL_DB_DIR: the local directory where all db data will be stored
+- LOCAL_IMAGES_DIR: the local directory where all pictures will be stored which are uploaded by authenticated users
+
 
 #### Mongodb keys
 ensure [etc/mongodb.key](../etc/mongodb.key) exists. It is required to keep mongodb secure. If you don't have one, generate it with:
@@ -90,6 +93,30 @@ rm -rf bin/mushApi
 # Build the api binary
 go build -o bin/mushApi .
 ```
+You must also ensure the directories in which your pictures and database will be stored exist and have permissions for the docker user to read/write in them.
+For the db, I use 
+```txt
+LOCAL_IMAGES_DIR="/opt/mush/data/pictures"
+LOCAL_DB_DIR="/opt/mush/data/db"
+```
+So I have made sure that those two exist via
+```bash
+# Ensure dirs exist
+mkdir -p /opt/mush/data/pictures
+mkdir -p /opt/mush/data/db
+
+# File ownership and permissions
+# Ideally figure out the exact UID docker will be using, and set ownership and permissions JUST for that user...
+
+# Ownership
+chown -R $(id -u):$(id -g) /opt/mush/data/db
+chown -R $(id -u):$(id -g) /opt/mush/data/pictures
+
+# Read/write permissions for all users (Unsafe, but fine for testing and development).
+chmod -R a+rw /opt/mush/data/db
+chmod -R a+rw /opt/mush/data/pictures
+```
+
 #### With force recreate
 ```bash
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up --build --force-recreate
