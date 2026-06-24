@@ -592,3 +592,31 @@
   - [x] Woods
   - [x] Liquids
 - [x] AgarRecipeArea now has ability to load recipe name if only given id
+
+# Other
+## mongo backups
+### Option 1?
+https://www.google.com/search?client=safari&rls=en&q=mongodb+create+point-in-time+backup+on+a+single-node+instance+while+the+server+is+live&ie=UTF-8&oe=UTF-8
+### Option 2?
+#### Note: this is meant for replica sets, zipping and storing the current file may be easier?
+#!/bin/bash
+MONGO_URI="mongodb://username:password@localhost:27017/?replicaSet=rs0&readPreference=secondary"
+BACKUP_DIR="/var/backups/mongodb"
+DATE=$(date +%Y-%m-%d_%H%M%S)
+TARGET_ZIP="${BACKUP_DIR}/mongo_snap_${DATE}.tar.gz"
+
+mkdir -p "$BACKUP_DIR"
+
+#### Execute consistent full backup including current oplog
+mongodump --uri="$MONGO_URI" --oplog --archive="$TARGET_ZIP" --gzip
+
+#### Check success status
+if [ $? -eq 0 ]; then
+echo "Backup successfully captured at $DATE"
+else
+echo "Backup failed!" >&2
+exit 1
+fi
+#### Enforce a 7-day retention policy by removing old backups
+find /var/backups/mongodb/* -mtime +7 -exec rm -rf {} \;
+To schedule this script to execute nightly at midnight, add this entry via crontab -e:cron0 0 * * * /bin/bash /opt/mongo-backup.sh
