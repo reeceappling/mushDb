@@ -55,6 +55,7 @@ import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/coo
 import TestAndValidate from "@/app/components/testing/untested";
 import {AssertSporePrint} from "@/app/components/sporePrintClient";
 import {AssertWaterJar} from "@/app/components/waterJarClient";
+import {JarData} from "@/app/components/jarServer";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -278,7 +279,7 @@ export function NewMssForm(
 
         DoCreateRequest("mss", body, AssertMss, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new MssData(v)) : console.log("no onCreate provided")
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))

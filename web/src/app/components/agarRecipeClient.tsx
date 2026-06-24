@@ -44,7 +44,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     RequiredArrayOfType,
-    RequiredKey, viewApiUrlFor,
+    RequiredKey, Subform, viewApiUrlFor,
     ViewInNewTabButton
 } from "@/app/components/common";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -301,7 +301,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
         }
         DoCreateRequest("agarRecipe", body, AssertAgarRecipe, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new AgarRecipeData(v)) : console.log("no onCreate provided")
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
@@ -342,10 +342,13 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             <div>
                 {templateRecipeSelector()}
             </div>
-            <NameArea classNames={"inlineChildren"} titleClasses={"mr-2"} currentName={name || ""} setName={setName}
+            <Subform>
+                <NameArea classNames={"inlineChildren"} titleClasses={"mr-2"} currentName={name || ""} setName={setName}
                       headerTxt={"Recipe Name: "} readonly={false}/>
-            <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}
+                <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}
                           headerTxt={"Standard Recipe? "}/>
+            </Subform>
+            <Subform>
             <div className={"inlineChildren my-4"}>
                 <InlineTitle title={"Agar g/L: "} titleClasses={"mr-2"}>
                     <InputNumber readonly={false} value={"" + agar} min={0} max={100}
@@ -364,29 +367,30 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
                     </div>
                 </InlineTitle>
             </div>
+            </Subform>
             {/* TODO: liquids and below as flexbox?*/}
-            <div>
+            <Subform>
                 <div>{"Liquids: "}</div>
                 <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>
-            </div>
-            <div>
+            </Subform>
+            <Subform>
                 <div>{"Nutrients (per Liter): "}</div>{/* TODO: per 400mL?*/}
                 <NutrientsEntriesGroupForNew initial={defaultNutrients}
                                              updateParent={setNutrients}/>
-            </div>
-            <div>
+            </Subform>
+            <Subform>
                 <div>{"Sugars (per Liter): "}</div>{/* TODO: per 400mL?*/}
                 <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
-            </div>
-            <div>
+            </Subform>
+            <Subform>
                 <div>{"Additives (per Liter): "}</div>{/* TODO: per 400mL?*/}
                 <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
-            </div>
-            <div>
+            </Subform>
+            <Subform>
                 <div>{"Antibiotics: "}</div>
                 <AntibioticEntriesGroupForNew initial={defaultAntibiotics}
                                               updateParent={setAntibiotics}/>
-            </div>
+            </Subform>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
             <CreateNewEntryButton onSubmit={newAgarRecipeSubmit}/>

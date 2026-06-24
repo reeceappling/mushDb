@@ -77,6 +77,28 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 	}
 	return bs, nil
 }
+func listProjectsHandlerInternal(ctx context.Context, updated bool) (bs []byte, err error) {
+	sortField := "$natural"
+	if updated {
+		sortField = "lastUpdated"
+	}
+	// TODO: pagination?
+	opts := options.Find().
+		//SetLimit(int64(nresults)). // no limit because user can be unable to view some items
+		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural and that natural works with non-default IDs
+	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
+	cursor, err := DbFrom(ctx).
+		Collection(ProjectsCollectionName).
+		Find(ctx, bson.D{{}}, opts)
+	if err != nil {
+		return nil, err
+	}
+	projects, err := getUserProjectsFromCursor(ctx, cursor, nil)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(projects)
+}
 func ListUsersHandler(ctx context.Context, removeGuests bool) ([]byte, error) {
 	findBson := bson.D{{}}
 	if removeGuests { // TODO: REMOVE ALL GUESTS FROM THE LIST
@@ -164,7 +186,8 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 	case "plugs", "plug", "peg", "pegs":
 		bs, err = listEntriesHandlerInternal[*PlugsJar](r.Context(), true, maxResults, doStandardToo, &PlugsJar{})
 	case "project", "projects":
-		bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{})
+		bs, err = listProjectsHandlerInternal(r.Context(), true) // TODO: true ok here? TEST HEAVILY!
+		//bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{})
 	case "sale", "sales":
 		bs, err = listEntriesHandlerInternal[*Sale](r.Context(), true, maxResults, doStandardToo, &Sale{})
 	case "slant", "slants":

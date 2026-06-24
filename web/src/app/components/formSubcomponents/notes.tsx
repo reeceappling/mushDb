@@ -5,7 +5,7 @@ import {ChangeEvent, SetStateAction, useEffect, useState} from "react";
 import {AllEntries, Data, GroupProps, RevertableAreaProps} from "@/app/components/formSubcomponents/shared";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
-import {dataFor} from "@/app/components/common";
+import {dataFor, Subform} from "@/app/components/common";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 // TODO: USE THIS ONE LIKE EVERYWHERE FOR VIEWS!
@@ -680,14 +680,14 @@ export function SingleNoteV2(
 }
 
 export function NewEntryNotes({setNotes}: { setNotes?: (value: SetStateAction<Note[]>) => void }) {
-    return <div>
+    return <Subform>
         <div>{"Notes"}</div>
         <NoteEntriesGroup preexisting={false} readonly={false} updateParent={v => {
             setNotes && setNotes(v.map(x => {
                 return x.data
             }))
         }}/>
-    </div>
+    </Subform>
 }
 
 export function NoteEntriesGroup({

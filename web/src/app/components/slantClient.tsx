@@ -340,7 +340,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
         }
         DoCreateRequest("slant", body, AssertSlant, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new SlantData(v)) : console.log("no onCreate provided")
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))

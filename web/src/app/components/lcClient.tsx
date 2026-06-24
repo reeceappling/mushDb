@@ -399,7 +399,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
         }
         DoCreateRequest("lc", body, AssertLc, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new LcData(v)) : console.log("no onCreate provided")
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))

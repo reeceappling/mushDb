@@ -23,7 +23,8 @@ import {
     NewEntryInput,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey
+    OptionalSimpleKey,
+    Subform
 } from "@/app/components/common";
 import {ErrorDisplay, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {ProjectData,} from "@/app/components/projectServer";
@@ -52,6 +53,7 @@ export function AssertProject(input: any): asserts input is ProjectData {
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
+        ['private', 'boolean'],
     ])
     for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
@@ -126,6 +128,7 @@ export default function ProjectDisplay(
     }
 
     const [completed, setCompleted] = useState(data.completed)
+    const [isPrivate, setIsPrivate] = useState(data.private)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
     const [perms, setPerms] = useState<Map<string, string>>(permsObjAsMap(data.perms))
     const [err, setErr] = useState<string | undefined>()
@@ -133,6 +136,7 @@ export default function ProjectDisplay(
         setInitial(updated)
 
         setCompleted(updated.completed)
+        setIsPrivate(updated.private)
         setNotes(InitialNotesState(updated.notes))
         setPerms(permsObjAsMap(updated.perms))
         setErr(undefined)
@@ -158,6 +162,7 @@ export default function ProjectDisplay(
         const permsOut = Object.fromEntries(perms)
         const body: any = {
             notes: notes,
+            private: isPrivate,
             completed: completed,
             perms: permsOut,
         }
@@ -179,9 +184,16 @@ export default function ProjectDisplay(
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <DateArea pre={"Created: "} when={initial.creationDate} readonly={true}/>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                    <div className={"inlineChildren"}>
+                        <div>{"Privacy: " + (isPrivate ? "Private" : "Public") + " Project"}</div>
+                        <button className={"basicButtonSmall"} onClick={e => {
+                            e.stopPropagation()
+                            setIsPrivate(!isPrivate)
+                        }}>{"Change"}</button>
+                    </div>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     {completedArea()}
@@ -194,8 +206,8 @@ export default function ProjectDisplay(
                 {/*                  setPerms={setPerms} */}
                 {/*                  readonly={readonly}/>*/}
                 <ProjectPermsAreaNew initial={initial.perms}
-                                  setPerms={setPerms}
-                                  readonly={readonly}/>
+                                     setPerms={setPerms}
+                                     readonly={readonly}/>
             </TestAndValidate>
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
@@ -208,6 +220,7 @@ export default function ProjectDisplay(
 export function NewProjectForm(
     {handlers}: { handlers: NewEntryInput<ProjectData> }) {
     const [name, setName] = useState<string | undefined>(undefined)
+    const [isPrivate, setIsPrivate] = useState<boolean>(false)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
 
@@ -219,11 +232,12 @@ export function NewProjectForm(
         }
         const body = {
             name: name, // TODO: validate that project name is valid for url
+            private: isPrivate,
             notes: notes,
         }
         DoCreateRequest("project", body, AssertProject, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new ProjectData(v)) : console.log("no onCreate provided")
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
@@ -231,9 +245,19 @@ export function NewProjectForm(
     }
     return <NewEntryFormWrapper entryType={"project"}>
         <ErrorDisplay err={err}/>
-        <div>
+        <Subform>
             <InputTextInlineTitle label={"Project Name"} readonly={false} value={name || ""} onChange={setName}/>
-        </div>
+        </Subform>
+        <Subform>
+            <div className={"inlineChildren"}>
+                <div>{"Publicly viewable? "}</div>
+                <input type={"checkbox"} checked={isPrivate} onClick={e => {
+                    e.stopPropagation()
+                    setIsPrivate(!isPrivate)
+                }}/>
+                <div>{isPrivate ? "No, Private" : "Yes, Public"}</div>
+            </div>
+        </Subform>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"greenButton buttonFullWidth"} onClick={createProject}>{"Create Project"}</button>
     </NewEntryFormWrapper>
@@ -362,7 +386,7 @@ export function ProjectPermsAreaNew({initial, setPerms, readonly}: {
     // Current users are stored locally
     const defaultState = (upd?: Map<string, string>): Map<string, Data<string>> => {
         let out = new Map<string, Data<string>>()
-        if (upd ===undefined || upd.size === 0) {
+        if (upd === undefined || upd.size === 0) {
             return out
         }
         [...upd.entries()].forEach((up) => {
@@ -406,12 +430,12 @@ export function ProjectPermsAreaNew({initial, setPerms, readonly}: {
         // nw.entries().forEach(([k, v]) => {
         //     upd.set(k, v)
         // })
-        ex.forEach((v,k) => { // TODO: test ensure ok
+        ex.forEach((v, k) => { // TODO: test ensure ok
             if (!v.disabled) {
                 upd.set(k, v.data)
             }
         })
-        nw.forEach((v,k) => {
+        nw.forEach((v, k) => {
             upd.set(k, v)
         })
         setPerms && setPerms(upd)
@@ -450,11 +474,12 @@ export function ProjectPermsAreaNew({initial, setPerms, readonly}: {
                 //     }} txt={"Remove"}/></td>
                 // </tr>
                 return <>
-                    <div className={(up[1].disabled?"disabled ":"")+"projectUserRow"} key={up[0] + "name"}>{up[0]}</div>
+                    <div className={(up[1].disabled ? "disabled " : "") + "projectUserRow"}
+                         key={up[0] + "name"}>{up[0]}</div>
                     <ReadWriteAdminSelector key={up[1] + "sel"} readonly={readonly} value={up[1].data}
                                             onUpdate={(b) => {
                                                 const updated = new Map<string, Data<string>>(existing)
-                                                updated.set(up[0],  {data: b, disabled: false})
+                                                updated.set(up[0], {data: b, disabled: false})
                                                 updateExisting(updated)
                                             }}/>
                     <RemoveButton key={up[0] + "remv"} click={() => {

@@ -25,7 +25,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalSimpleKey,
-    RequiredKey,
+    RequiredKey, Subform,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -201,7 +201,7 @@ export function NewWaterJarForm(
         }
         DoCreateRequest("waterJar", body, AssertWaterJar, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new WaterJarData(v)) : console.log("no onCreate provided")
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
@@ -209,9 +209,6 @@ export function NewWaterJarForm(
     }
     return <NewEntryFormWrapper entryType={"waterJar"}>
         <ErrorDisplay err={err}/>
-        {/*<SelectorWrapper title={"PC Run"} nameFunc={(v:PcRunData):string=>{*/}
-        {/*    return v._id*/}
-        {/*}} current={pcRun}>*/}
         <PcRunSelectorCloseable doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>
         {/*</SelectorWrapper>*/}
         <NewEntryNotes setNotes={setNotes}/>

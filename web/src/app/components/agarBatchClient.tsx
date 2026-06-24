@@ -216,7 +216,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
         }
         DoCreateRequest("agarBatch", body, AssertAgarBatch, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(v) : console.warn("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new AgarBatchData(v)) : console.warn("no onCreate provided")
             })
             .catch(e => {
                 setErr("onCreate handler failed: " + JSON.stringify(e))

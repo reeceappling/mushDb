@@ -686,6 +686,13 @@ func (upd *Mods) updateProjectCompletedIfNeeded(future, existing *unix.Time) *Mo
 	return updatePointerIfNeeded(upd, "completed", future, existing)
 }
 
+func (upd *Mods) updateProjectPrivateIfNeeded(future, existing bool) *Mods {
+	if future == existing {
+		return upd
+	}
+	return updateValueIfNeeded(upd, "private", future, existing)
+}
+
 func (upd *Mods) updateProjectPermsIfNeeded(future, existing ProjectPerms) *Mods {
 	if future.Equal(existing) { // TODO: validate works
 		return upd

@@ -25,11 +25,12 @@ type projectName string
 type Project struct {
 	Name              projectName `bson:"_id" json:"_id"`
 	CreationDateField `bson:"inline"`
+	Private           bool       `bson:"private" json:"private"`
 	Completed         *unix.Time `bson:"completed,omitempty" json:"completed,omitempty"`
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
-	Perms             ProjectPerms `bson:"perms" json:"perms"` // Map of email of user to permission on project
-	// TODO: make it so we can add/remove users from Projects (maybe one at a time?)
+	// TODO: add user Project perm that allows modifying all except permissions?
+	Perms ProjectPerms `bson:"perms" json:"perms"` // Map of email of user to permission on project
 }
 
 func (p Project) DbId() string {
@@ -92,98 +93,136 @@ func GetAllProjects(ctx context.Context, complete *bool) ([]Project, error) {
 	}), nil
 }
 
-const TestProjectName = "testProjectA"
+const (
+	TestProjectNamePublic  = "testProjectPublic"
+	TestProjectNamePrivate = "testProjectPrivate"
+)
 
 var testProjectsMap = map[projectName]Project{
-	TestProjectName: Project{
-		Name:              TestProjectName,
+	TestProjectNamePublic: {
+		Name:              TestProjectNamePublic,
+		Private:           false,
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         nil,
 		NotesField: NotesField{Notes: []Note{
 			newNote(exampleTime, "Admin user is admin"),
-			newNote(exampleTime, testUserEmail+" is admin"),
-			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] can write`, testUserEmailPAA, testUserEmailPAB, testUserEmailPAC)),
-			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] can read`, testUserEmailPWA, testUserEmailPWB, testUserEmailPWC)),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] are admin`, testUserEmailPAA, testUserEmailPAB, testUserEmailPAC)),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] can write`, testUserEmailPWA, testUserEmailPWB, testUserEmailPWC)),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] can read`, testUserEmailPRA, testUserEmailPRB, testUserEmailPRC)),
 			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] excluded`, testUserEmailPNA, testUserEmailPNB, testUserEmailPNC)),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]ProjectPerm{
-			testUserEmail:     ProjectAdmin,
-			testUserEmailSelf: ProjectAdmin,
-			testUserEmailPAA:  ProjectWrite,
-			testUserEmailPAB:  ProjectWrite,
-			testUserEmailPAC:  ProjectWrite,
-			testUserEmailPWA:  ProjectRead,
-			testUserEmailPWB:  ProjectRead,
-			testUserEmailPWC:  ProjectRead,
-			//testUserEmailPNA:  ProjectNone,
-			//testUserEmailPNB:  ProjectNone,
-			//testUserEmailPNC:  ProjectNone,
+		Perms:            createTestProjectPerms(),
+	},
+	TestProjectNamePrivate: {
+		Name:              TestProjectNamePrivate,
+		Private:           true,
+		CreationDateField: CreationDateField{exampleTime},
+		Completed:         nil,
+		NotesField: NotesField{Notes: []Note{
+			newNote(exampleTime, "Admin users should be the only one that can read this project"),
 		}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		Perms:            map[string]ProjectPerm{},
+	},
+}
+
+func createTestProjectPerms() ProjectPerms {
+	out := ProjectPerms{}
+	admins := []string{
+		//testUserEmailGoogleNormal, testUserEmailSelf, // TODO: del?
+		testUserEmailPAA, testUserEmailPAB, testUserEmailPAC,
+	}
+	writers := []string{
+		testUserEmailPWA, testUserEmailPWB, testUserEmailPWC,
+	}
+	readers := []string{
+		testUserEmailPRA, testUserEmailPRB, testUserEmailPRC,
+	}
+	nones := []string{
+		testUserEmailPNA, testUserEmailPNB, testUserEmailPNC,
+	}
+	adminPerm, writePerm, readPerm := &ProjectAdmin, &ProjectWrite, &ProjectRead
+	for perm, emails := range map[*ProjectPerm][]string{
+		adminPerm: admins,
+		writePerm: writers,
+		readPerm:  readers,
+		nil:       nones,
+	} {
+		if perm == nil {
+			continue
+		}
+		for _, email := range emails {
+			out[email] = *perm
+		}
+	}
+	return out
 }
 
 var testProjects = []Project{
-	{
-		Name:              "testProjectAdmin",
-		CreationDateField: CreationDateField{exampleTime},
-		Completed:         nil,
-		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be admin. Admin user is admin"),
-		}},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]ProjectPerm{
-			testUserEmail:     ProjectAdmin,
-			testUserEmailSelf: ProjectAdmin,
-			//testUserEmailPAA:  ProjectWrite,
-			//testUserEmailPAB:  ProjectWrite,
-			//testUserEmailPAC:  ProjectWrite,
-			//testUserEmailPWA:  ProjectRead,
-			//testUserEmailPWB:  ProjectRead,
-			//testUserEmailPWC:  ProjectRead,
-			////testUserEmailPNA:  ProjectNone,
-			////testUserEmailPNB:  ProjectNone,
-		},
-	}, {
-		Name:              "testProjectWrite",
-		CreationDateField: CreationDateField{exampleTime},
-		Completed:         &exampleTime,
-		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be able to write but not admin. Admin user is admin"),
-		}},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]ProjectPerm{
-			testUserEmail:     ProjectWrite,
-			testUserEmailSelf: ProjectAdmin,
-		},
-	}, {
-		Name:              "testProjectRead",
-		CreationDateField: CreationDateField{exampleTime},
-		Completed:         nil,
-		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be able to read. Admin user is admin"),
-		}},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]ProjectPerm{
-			testUserEmail:     ProjectRead, // TODO: ensure to remove dots and plusses from (pre-@) emails? Maybe keep them because that's nicer as a service provider :)
-			testUserEmailSelf: ProjectAdmin,
-		},
-	}, {
-		Name:              "testProjectNone",
-		CreationDateField: CreationDateField{exampleTime},
-		Completed:         nil,
-		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should not be able to do anything. Admin user is admin"),
-		}},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]ProjectPerm{
-			testUserEmailSelf: ProjectAdmin, // This is self and not test user because I want only my main email to be admin
-		},
-	},
-	testProjectsMap[TestProjectName],
+	//{
+	//	Name:              "testProjectAdmin",
+	//	CreationDateField: CreationDateField{exampleTime},
+	//	Completed:         nil,
+	//	NotesField: NotesField{Notes: []Note{
+	//		newNote(exampleTime, "test user should be admin. Admin user is admin"),
+	//	}},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	Perms: map[string]ProjectPerm{
+	//		testUserEmailGoogleNormal:     ProjectAdmin,
+	//		testUserEmailSelf: ProjectAdmin,
+	//		//testUserEmailPAA:  ProjectWrite,
+	//		//testUserEmailPAB:  ProjectWrite,
+	//		//testUserEmailPAC:  ProjectWrite,
+	//		//testUserEmailPWA:  ProjectRead,
+	//		//testUserEmailPWB:  ProjectRead,
+	//		//testUserEmailPWC:  ProjectRead,
+	//		////testUserEmailPNA:  ProjectNone,
+	//		////testUserEmailPNB:  ProjectNone,
+	//	},
+	//}, {
+	//	Name:              "testProjectWrite",
+	//	CreationDateField: CreationDateField{exampleTime},
+	//	Completed:         &exampleTime,
+	//	NotesField: NotesField{Notes: []Note{
+	//		newNote(exampleTime, "test user should be able to write but not admin. Admin user is admin"),
+	//	}},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	Perms: map[string]ProjectPerm{
+	//		testUserEmailGoogleNormal:     ProjectWrite,
+	//		testUserEmailSelf: ProjectAdmin,
+	//	},
+	//}, {
+	//	Name:              "testProjectRead",
+	//	CreationDateField: CreationDateField{exampleTime},
+	//	Completed:         nil,
+	//	NotesField: NotesField{Notes: []Note{
+	//		newNote(exampleTime, "test user should be able to read. Admin user is admin"),
+	//	}},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	Perms: map[string]ProjectPerm{
+	//		testUserEmailGoogleNormal:     ProjectRead, // TODO: ensure to remove dots and plusses from (pre-@) emails? Maybe keep them because that's nicer as a service provider :)
+	//		testUserEmailSelf: ProjectAdmin,
+	//	},
+	//}, {
+	//	Name:              "testProjectNone",
+	//	CreationDateField: CreationDateField{exampleTime},
+	//	Completed:         nil,
+	//	NotesField: NotesField{Notes: []Note{
+	//		newNote(exampleTime, "test user should not be able to do anything. Admin user is admin"),
+	//	}},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	Perms: map[string]ProjectPerm{
+	//		testUserEmailSelf: ProjectAdmin, // This is self and not test user because I want only my main email to be admin
+	//	},
+	//},
+	testProjectsMap[TestProjectNamePublic],
+	testProjectsMap[TestProjectNamePrivate],
 }
 
 type createProjectRequest struct {
 	NameField
+	Private bool `json:"private"`
 	NotesField
 }
 
@@ -206,6 +245,7 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := Project{
 		Name:              projectName(req.Name),
 		CreationDateField: CreationDateField{now},
+		Private:           req.Private,
 		NotesField:        req.NotesField,
 		LastUpdatedField:  LastUpdatedField{now},
 		Perms: ProjectPerms(map[string]ProjectPerm{
@@ -221,6 +261,7 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateProjectRequest struct {
 	Completed *unix.Time `json:"completed,omitempty"`
+	Private   bool       `json:"private"`
 	NotesUpdateField
 	Perms ProjectPerms `json:"perms"`
 }
@@ -228,6 +269,7 @@ type updateProjectRequest struct {
 func (req updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
 	return NewMods().
 		updateProjectCompletedIfNeeded(req.Completed, existing.Completed).
+		updateProjectPrivateIfNeeded(req.Private, existing.Private).
 		updateNotesIfNeeded(req, existing).
 		updateProjectPermsIfNeeded(req.Perms, existing.Perms).
 		updateLastUpdatedIfNeeded().

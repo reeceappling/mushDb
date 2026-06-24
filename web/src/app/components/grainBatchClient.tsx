@@ -41,6 +41,7 @@ import {
 } from "@/app/components/accessControlClient";
 import { ACL } from "./accessControlServer";
 import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 // TODO: list users also not working (all of this as of 5/7/26)
 
@@ -254,7 +255,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
         }
         DoCreateRequest("grainBatch", body, AssertGrainBatch, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new GrainBatchData(v)) : console.log("no onCreate provided")
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))

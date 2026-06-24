@@ -82,6 +82,7 @@ import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
@@ -400,7 +401,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
         }
         DoCreateRequest("fruitingChamber", body, AssertFruitingChamber, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new FruitingChamberData(v)) : console.log("no onCreate provided")
             })
             .catch(e => {
                 setErr(JSON.stringify(e))

@@ -195,7 +195,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
         }
         DoCreateRequest("substrateBatch", body, AssertSubstrateBatch, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new SubstrateBatchData(v)) : console.log("no onCreate provided")
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))

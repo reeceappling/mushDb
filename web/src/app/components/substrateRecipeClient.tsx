@@ -5,7 +5,7 @@ import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {SubstrateRecipeData, SubstrateRecipeSelectorCloseable} from "@/app/components/substrateRecipeServer";
+import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     CreatedLinkFor,
@@ -25,16 +25,13 @@ import {
     NewEntryFormWrapper,
     NewEntryInput,
     NumberToDateStr,
-    OptionalArrayOfType, RequiredKey
+    OptionalArrayOfType,
+    RequiredKey,
+    Subform
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
 import {NewSubstrateBatchForm} from "@/app/components/substrateBatchClient";
-import {
-    AclDisplay,
-    MarshalAcl,
-    TogglableAreaWithDepth,
-    UnmarshalAcl
-} from "@/app/components/accessControlClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
@@ -95,86 +92,86 @@ export default function SubstrateRecipeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SubstrateRecipeData>) {
-        const [initial, setInitial] = useState(data)
+    const [initial, setInitial] = useState(data)
 
-        const [name, setName] = useState(initial.name)
-        const [isStandard, setIsStandard] = useState(initial.standard)
-        const [aliases, setAliases] = useState(initial.aliases || [])
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL>(initial.acl)
-        const updateInitial = (updated: SubstrateRecipeData) => {
-            setInitial(updated)
-            setName(updated.name)
-            setIsStandard(updated.standard)
-            setAliases(updated.aliases || [])
-            setNotes(InitialNotesState(updated.notes))
-            setAcl(initial.acl)
-            setErr(undefined)
+    const [name, setName] = useState(initial.name)
+    const [isStandard, setIsStandard] = useState(initial.standard)
+    const [aliases, setAliases] = useState(initial.aliases || [])
+    const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+    const [err, setErr] = useState<string | undefined>()
+    const [acl, setAcl] = useState<ACL>(initial.acl)
+    const updateInitial = (updated: SubstrateRecipeData) => {
+        setInitial(updated)
+        setName(updated.name)
+        setIsStandard(updated.standard)
+        setAliases(updated.aliases || [])
+        setNotes(InitialNotesState(updated.notes))
+        setAcl(initial.acl)
+        setErr(undefined)
+    }
+    const cookies = useContext(CookiesContext)
+    const substrateSubmit = () => {
+        const body: any = {
+            name: name,
+            aliases: aliases,
+            standard: isStandard,
+            notes: notes,
+            acl: MarshalAcl(acl),
         }
-        const cookies = useContext(CookiesContext)
-        const substrateSubmit = () => {
-            const body: any = {
-                name: name,
-                aliases: aliases,
-                standard: isStandard,
-                notes: notes,
-                acl: MarshalAcl(acl),
-            }
-            DoUpdateRequest("substrateRecipe", initial._id, body, AssertSubstrateRecipe, allCookies(cookies))
-                .then(v=>{
-                    updateInitial(new SubstrateRecipeData(v))
-                })
-                .catch(e=>{
-                    setErr("failed to update initial: "+JSON.stringify(e))
-                })
-        }
-        const ovcs: OnViewCreatorTriCol[] = [
-            // TODO: bag creation area! (MAYBE MUCH LATER)
-            // TODO: box creation area! (MAYBE MUCH LATER)
-            {
-                txt: "Create Substrate Batch",
-                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewSubstrateBatchForm recipe={data} handlers={{ // TODO: fix so it doesnt have an extra button
-                        onCreate: (newItem: SubstrateBatchData) => {
-                            return onCreate([{
-                                typeText: "Substrate Batch",
-                                node: <CreatedLinkFor linkId={newItem._id} typ={"substrateBatch"}/>
-                            }], false)
-                        },
-                        isTopLevel: false,
-                    }}/>
-                },
+        DoUpdateRequest("substrateRecipe", initial._id, body, AssertSubstrateRecipe, allCookies(cookies))
+            .then(v => {
+                updateInitial(new SubstrateRecipeData(v))
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+            })
+    }
+    const ovcs: OnViewCreatorTriCol[] = [
+        // TODO: bag creation area! (MAYBE MUCH LATER)
+        // TODO: box creation area! (MAYBE MUCH LATER)
+        {
+            txt: "Create Substrate Batch",
+            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                return <NewSubstrateBatchForm recipe={data} handlers={{ // TODO: fix so it doesnt have an extra button
+                    onCreate: (newItem: SubstrateBatchData) => {
+                        return onCreate([{
+                            typeText: "Substrate Batch",
+                            node: <CreatedLinkFor linkId={newItem._id} typ={"substrateBatch"}/>
+                        }], false)
+                    },
+                    isTopLevel: false,
+                }}/>
             },
-        ]
-        return (
-            <DisplayFormWrapper entryType={"substrateRecipe"}>
-                <ErrorDisplay err={err}/>
-                <ID props={{id:data._id, txt:"Substrate Recipe", entryType:"substrateRecipe"}}>
-                    <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
-                </ID>
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
-                <FlexedArea>
-                    <FlexedSinglesGroup>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
-                                      headerLevel={headerLevel}/>
-                    </FlexedSinglesGroup>
-                </FlexedArea>
-                <AliasesArea initial={initial.aliases} readonly={false} updateParent={setAliases}/>
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
-                                        closeTxt={"minimize perms area"}>
-                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
-                </TogglableAreaWithDepth>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
-                    e.stopPropagation();
-                    substrateSubmit()
-                }}>{"Update"}</button>}
-            </DisplayFormWrapper>
-        )
+        },
+    ]
+    return (
+        <DisplayFormWrapper entryType={"substrateRecipe"}>
+            <ErrorDisplay err={err}/>
+            <ID props={{id: data._id, txt: "Substrate Recipe", entryType: "substrateRecipe"}}>
+                <NameModifiable initial={initial.name} readonly={readonly} updateParent={setName}/>
+            </ID>
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <FlexedArea>
+                <FlexedSinglesGroup>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
+                                  headerLevel={headerLevel}/>
+                </FlexedSinglesGroup>
+            </FlexedArea>
+            <AliasesArea initial={initial.aliases} readonly={false} updateParent={setAliases}/>
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
+                                    closeTxt={"minimize perms area"}>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
+            </TogglableAreaWithDepth>
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
+                e.stopPropagation();
+                substrateSubmit()
+            }}>{"Update"}</button>}
+        </DisplayFormWrapper>
+    )
 }
 
 export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<SubstrateRecipeData> }) {
@@ -196,20 +193,24 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
             // Initial perms are read by all and write only by owner
         }
         DoCreateRequest("substrateRecipe", body, AssertSubstrateRecipe, allCookies(cookies))
-            .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            .then(v => {
+                handlers.onCreate ? handlers.onCreate(new SubstrateRecipeData(v)) : console.log("no onCreate provided")
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
     return (
         <NewEntryFormWrapper entryType={"substrateRecipe"}>
             <ErrorDisplay err={err}/>
-            <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} readonly={false}
-                      headerTxt={"Substrate Name: "}/>
-            <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}/>
-            <AliasesArea readonly={false} updateParent={setAliases}/>{/* TODO: ensure NEW is not displayed*/}
+            <Subform>
+                <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} readonly={false}
+                          headerTxt={"Substrate Name: "}/>
+                <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={false}/>
+            </Subform>
+            <Subform>
+                <AliasesArea readonly={false} updateParent={setAliases}/>{/* TODO: ensure NEW is not displayed*/}
+            </Subform>
             <NewEntryNotes setNotes={setNotes}/>
 
             {/* SUBMIT AREA */}
@@ -223,13 +224,13 @@ export function SubstrateRecipeArea({id, txt, readonly, onSelect}: { // TODO: OV
     txt?: string,
     readonly: boolean,
     onSelect?: (d?: SubstrateRecipeData) => void
-}){
+}) {
     const [val, setVal] = useState<string | undefined>(id)
     const [open, setOpen] = React.useState(false)
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
-    if (open){
-        <SubstrateRecipeSelector doSelect={r=>{
-            if (r!==undefined){
+    if (open) {
+        <SubstrateRecipeSelector doSelect={r => {
+            if (r !== undefined) {
                 onSelect && onSelect(r)
                 setVal(r._id)
                 setOpen(false)
@@ -266,7 +267,7 @@ export function SubstrateRecipeArea({id, txt, readonly, onSelect}: { // TODO: OV
         {txt ? txt : "Substrate Recipe: "}{linkArea}
         {!readonly && <button className={"basicButtonSmall"} onClick={() => {
             setOpen(true)
-    }}>{"Change"}</button>}
+        }}>{"Change"}</button>}
     </div>
 }
 
@@ -285,7 +286,9 @@ export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPage
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable className={"text-m"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new SubstrateRecipeData(v)}}/>
+    return <ListPageTable className={"text-m"} cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new SubstrateRecipeData(v)
+    }}/>
 }
 
 export function SubstrateRecipeSelectorTable({data, onClick}: ListPageItems<SubstrateRecipeData>) {

@@ -9,51 +9,58 @@ import {LcRecipeData} from "@/app/components/lcRecipeServer";
 import {
     IsValidLiquid,
     Liquid,
-    LiquidEntriesGroupForNew, LiquidsAreaReadOnly
+    LiquidEntriesGroupForNew,
+    LiquidsAreaReadOnly
 } from "@/app/components/formSubcomponents/liquids";
 import {
     IsValidNutrient,
-    Nutrient, NutrientsAreaReadOnly,
+    Nutrient,
+    NutrientsAreaReadOnly,
     NutrientsEntriesGroupForNew
 } from "@/app/components/formSubcomponents/nutrients";
 import {
     IsValidSugar,
     Sugar,
-    SugarEntriesGroupForNew, SugarsAreaReadOnly
+    SugarEntriesGroupForNew,
+    SugarsAreaReadOnly
 } from "@/app/components/formSubcomponents/sugars";
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingDualSelector, FlexedArea, FlexedSinglesGroup,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ExistingDualSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
     NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
-    RequiredArrayOfType, RequiredKey,
+    RequiredArrayOfType,
+    RequiredKey,
+    Subform,
 } from "@/app/components/common";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     Additive,
-    AdditiveEntriesGroupForNew, AdditivesAreaReadOnly,
+    AdditiveEntriesGroupForNew,
+    AdditivesAreaReadOnly,
     IsValidAdditive
 } from "@/app/components/formSubcomponents/additives";
 import {ErrorDisplay, NameArea, StandardArea} from "@/app/components/formSubcomponents/commonClient";
-import {
-    AclDisplay,
-    MarshalAcl,
-    TogglableAreaWithDepth,
-    UnmarshalAcl
-} from "@/app/components/accessControlClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import TestAndValidate from "@/app/components/testing/untested";
 import {NewLcForm} from "@/app/components/lcClient";
 import {LcData} from "@/app/components/lcServer";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
-import {Grain} from "@/app/components/formSubcomponents/grains";
-import {InputNumber2} from "@/app/components/formSubcomponents/numericInput";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -116,87 +123,87 @@ export default function LcRecipeDisplay(
     {
         id, readonly, data, headerLevel
     }: DisplayInput<LcRecipeData>) {
-        const [initial, setInitial] = useState(data)
+    const [initial, setInitial] = useState(data)
 
-        const [recName, setRecName] = useState(initial.name)
-        const [isStandard, setIsStandard] = useState(initial.standard)
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [acl, setAcl] = useState<ACL>(initial.acl)
-        const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: LcRecipeData) => {
-            setInitial(updated)
-            setRecName(updated.name)
-            setIsStandard(updated.standard)
-            setNotes(InitialNotesState(updated.notes))
-            setAcl(updated.acl)
-            setErr(undefined)
+    const [recName, setRecName] = useState(initial.name)
+    const [isStandard, setIsStandard] = useState(initial.standard)
+    const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+    const [acl, setAcl] = useState<ACL>(initial.acl)
+    const [err, setErr] = useState<string | undefined>()
+    const updateInitial = (updated: LcRecipeData) => {
+        setInitial(updated)
+        setRecName(updated.name)
+        setIsStandard(updated.standard)
+        setNotes(InitialNotesState(updated.notes))
+        setAcl(updated.acl)
+        setErr(undefined)
+    }
+    const cookies = useContext(CookiesContext)
+    const lcRecipeSubmit = () => {
+        const body: any = {
+            name: recName,
+            standard: isStandard,
+            notes: notes,
+            acl: MarshalAcl(acl),
         }
-        const cookies = useContext(CookiesContext)
-        const lcRecipeSubmit = () => {
-            const body: any = {
-                name: recName,
-                standard: isStandard,
-                notes: notes,
-                acl: MarshalAcl(acl),
-            }
-            DoUpdateRequest("lcRecipe",initial._id, body, AssertLcRecipe, allCookies(cookies))
-                .then(v=>{
-                    updateInitial(new LcRecipeData(v))
-                })
-                .catch(e=>{
-                    setErr("failed to update initial: "+JSON.stringify(e))
-                })
+        DoUpdateRequest("lcRecipe", initial._id, body, AssertLcRecipe, allCookies(cookies))
+            .then(v => {
+                updateInitial(new LcRecipeData(v))
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+            })
+    }
+    const ovcs: OnViewCreatorQuadCol[] = [
+        {
+            txt: "New LC from LcRecipe",
+            newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                return <NewLcForm lcRecipeIn={initial} handlers={{
+                    onCreate: (newItem: LcData) => {
+                        return onCreate([{
+                            typeText: "Liquid Culture Jar",
+                            node: <CreatedLinkFor linkId={newItem._id} typ={"lc"}/>
+                        }], false)
+                    },
+                    isTopLevel: false,
+                }}/>
+            },
         }
-        const ovcs: OnViewCreatorQuadCol[] = [
-            {
-                txt: "New LC from LcRecipe",
-                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewLcForm lcRecipeIn={initial} handlers={{
-                        onCreate: (newItem: LcData) => {
-                            return onCreate([{
-                                typeText: "Liquid Culture Jar",
-                                node: <CreatedLinkFor linkId={newItem._id} typ={"lc"}/>
-                            }], false)
-                        },
-                        isTopLevel: false,
-                    }}/>
-                },
-            }
-        ]
-        return (
-            <DisplayFormWrapper entryType={"lcRecipe"}>
-                <ErrorDisplay err={err}/>
-                <ID props={{id:data._id, txt:"Liquid Culture Recipe", entryType:"lcRecipe"}}>
-                        <NameModifiable initial={initial.name} readonly={readonly} updateParent={setRecName}/>
-                    </ID>
-                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
-                <FlexedArea>
-                    <FlexedSinglesGroup>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+    ]
+    return (
+        <DisplayFormWrapper entryType={"lcRecipe"}>
+            <ErrorDisplay err={err}/>
+            <ID props={{id: data._id, txt: "Liquid Culture Recipe", entryType: "lcRecipe"}}>
+                <NameModifiable initial={initial.name} readonly={readonly} updateParent={setRecName}/>
+            </ID>
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
+            <FlexedArea>
+                <FlexedSinglesGroup>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
 
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
-                                      headerLevel={headerLevel}/>
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <StandardArea isStandard={isStandard} setStandard={setIsStandard} readonly={readonly}
+                                  headerLevel={headerLevel}/>
 
-                    </FlexedSinglesGroup>
-                </FlexedArea>
+                </FlexedSinglesGroup>
+            </FlexedArea>
 
-                <LiquidsAreaReadOnly values={initial.liquids}/>
-                <NutrientsAreaReadOnly values={initial.nutrients}/>
-                <SugarsAreaReadOnly values={initial.sugars}/>
-                <AdditivesAreaReadOnly values={initial.additives}/>
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            <LiquidsAreaReadOnly values={initial.liquids}/>
+            <NutrientsAreaReadOnly values={initial.nutrients}/>
+            <SugarsAreaReadOnly values={initial.sugars}/>
+            <AdditivesAreaReadOnly values={initial.additives}/>
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
 
-                <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
-                </TogglableAreaWithDepth>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
-                    e.stopPropagation();
-                    lcRecipeSubmit()
-                }}>{"Update"}</button>}
-            </DisplayFormWrapper>
-        )
+            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
+            </TogglableAreaWithDepth>
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
+                e.stopPropagation();
+                lcRecipeSubmit()
+            }}>{"Update"}</button>}
+        </DisplayFormWrapper>
+    )
 }
 
 export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeData> }) {
@@ -244,10 +251,10 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
             notes: notes
         }
         DoCreateRequest("lcRecipe", body, AssertLcRecipe, allCookies(cookies))
-            .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            .then(v => {
+                handlers.onCreate ? handlers.onCreate(new LcRecipeData(v)) : console.log("no onCreate provided")
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
@@ -270,10 +277,12 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
         <NewEntryFormWrapper entryType={"lcRecipe"}>
             <ErrorDisplay err={err}/>
             {templateRecipeSelector()}
-            <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} headerTxt={"Recipe name: "}
-                      readonly={false}/>
-            <StandardArea isStandard={isStandard} setStandard={setIsStandard} headerTxt={"Standard recipe? "}
+            <Subform>
+                <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} headerTxt={"Recipe name: "}
                           readonly={false}/>
+                <StandardArea isStandard={isStandard} setStandard={setIsStandard} headerTxt={"Standard recipe? "}
+                              readonly={false}/>
+            </Subform>
             {/*<div>*/}
             {/*    {"Optional Container volume:"}*/}
             {/*    <InputNumber2 min={0} step={1} onChange={(val?: string) => {*/}
@@ -284,14 +293,22 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
             {/*        }*/}
             {/*    }} placeholder={"milliliters"} mode={"integer"} max={1000} value={ml.toString()}/>*/}
             {/*</div>*/}
-            <div>{"Liquids"}</div>
-            <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>
-            <div>{"Nutrients"}</div>
-            <NutrientsEntriesGroupForNew initial={defaultNutrients} updateParent={setNutrients}/>
-            <div>{"Sugars"}</div>
-            <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
-            <div>{"Additives"}</div>
-            <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
+            <Subform>
+                <div>{"Liquids"}</div>
+                <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>
+            </Subform>
+            <Subform>
+                <div>{"Nutrients"}</div>
+                <NutrientsEntriesGroupForNew initial={defaultNutrients} updateParent={setNutrients}/>
+            </Subform>
+            <Subform>
+                <div>{"Sugars"}</div>
+                <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
+            </Subform>
+            <Subform>
+                <div>{"Additives"}</div>
+                <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
+            </Subform>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
             <button className={"greenButton buttonFullWidth"} onClick={createEntry}>{"Create"}</button>
@@ -312,7 +329,7 @@ export function LcRecipeArea({lcRecipeId, headerLevel, offset}: {
             linkId: b58id,
             entryType: "lcRecipe",
             openInNewTab: false, // TODO: ok?
-            }}/>
+        }}/>
     }
     return <div className={"lcRecipeArea"}>
         <div>{"Liquid Culture Recipe ID: "}</div>
@@ -358,12 +375,14 @@ export function LcRecipeListPageTable({data, onClick, withLink}: ListPageItems<L
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcRecipeData) => {
-            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcRecipeData(v)}}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new LcRecipeData(v)
+    }}/>
 }
 
 export function LcRecipeSelectorTable({data, onClick}: ListPageItems<LcRecipeData>) {
@@ -374,12 +393,14 @@ export function LcRecipeSelectorTable({data, onClick}: ListPageItems<LcRecipeDat
             return NumberToDateStr(v.lastUpdated)
         }),
         NewColumn("Link", (v: LcRecipeData) => {
-            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })
     ]
-    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcRecipeData(v)}}/>
+    return <ListPageTable className={"text-xs"} cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new LcRecipeData(v)
+    }}/>
 }
 
 export function LcRecipeSelector(

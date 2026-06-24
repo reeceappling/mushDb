@@ -162,8 +162,7 @@ export function NewSubspeciesForm({handlers, species}: {
             }
         DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
             .then(v=>{
-                const newSubspecies = new SubspeciesData(v)
-                handlers.onCreate ? handlers.onCreate(newSubspecies) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new SubspeciesData(v)) : console.log("no onCreate provided")
             })
             .catch(e=>{
                 console.error("onCreate failed: "+JSON.stringify(e)) // TODO: del
@@ -177,10 +176,14 @@ export function NewSubspeciesForm({handlers, species}: {
             {species === undefined && <ExistingSpeciesSelector initialSpecies={species} doSelect={s => {
                 setSelectedSpecies(s)
             }} />}
+            <Subform>
             {/* NAME (ID) */}
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"New Subspecies Name: "} setName={setName} readonly={false}/>
-            {/* Aliases */}
+            </Subform>
+            <Subform>
+                {/* Aliases */}
             <AliasesArea readonly={false} updateParent={setAliases}/>
+            </Subform>
             {/* Notes */}
             <NewEntryNotes setNotes={setNotes}/>
             <CreateNewEntryButton onSubmit={submitNewSubspecies}/>

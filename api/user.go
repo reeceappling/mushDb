@@ -13,8 +13,7 @@ import (
 //var _ webauthn.User = &User{}
 
 type User struct {
-	Email string `bson:"_id" json:"_id"`
-	// TODO: can we make UserPerms.Admin not a pointer?
+	Email string    `bson:"_id" json:"_id"`
 	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: PROJECTS COME FROM PERMS! So even projects with only read perms can be associated with an item!
 	// All can view?
 }
@@ -25,6 +24,16 @@ func (u User) DbId() string {
 
 func (u User) IdValue() any {
 	return u.Email
+}
+
+func (u *User) Reload(ctx context.Context) error {
+	if u == nil {
+		return errors.New("User is nil")
+	}
+	return DbFrom(ctx).
+		Collection(UserCollName).
+		FindOne(ctx, BsonFindFilter("_id", u.Email)).
+		Decode(u) // TODO: ensure works!
 }
 
 //func (u User) WebAuthnID() []byte {
@@ -58,13 +67,42 @@ func initializeUsers(ctx context.Context) error {
 	//	return err
 	//}
 	// TODO: DELETE THIS AFTER TESTING!!!!
-	testUser := User{
-		Email: testUserEmail,
-		Perms: UserPerms{
-			Admin:    AcctTypeNormal(),
-			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
-		},
+	println("Adding test users that are not completely reset after every boot") // TODO: del!
+	// resolve final test user projects list
+	testUserProjectsBase := []projectName{TestProjectNamePublic}
+	testUser := &User{
+		Email: testUserEmailGoogleNormal,
 	}
+	if err := testUser.Reload(ctx); err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			return errors.Join(errors.New("failed to find possibly existing user"), err)
+		}
+		// User does not exist, create base built-in perms
+		testUser.Perms = UserPerms{
+			Admin:    AcctTypeNormal(),
+			Projects: testUserProjectsBase,
+		}
+	} else {
+		allProjects := make([]projectName, 0, len(testUserProjectsBase)+len(testUser.Perms.Projects))
+		for _, projGroup := range [][]projectName{testUserProjectsBase, testUser.Perms.Projects} {
+			allProjects = append(allProjects, projGroup...)
+		}
+		testUser.Perms.Projects = utils.SetFrom(allProjects...).ToSlice() // TODO: ensure ok that we do not overwrite the Admin field
+	}
+	//err := coll.FindOne(ctx, BsonFindFilter("_id", testUserEmailGoogleNormal)).Decode(&testUser)
+	//if err != nil {
+	//	if !errors.Is(err, mongo.ErrNoDocuments) {
+	//		return errors.Join(errors.New("failed to find possibly existing user"), err)
+	//	}
+	//	testUser.Perms = UserPerms{
+	//		Admin:    AcctTypeNormal(),
+	//		Projects: testUserProjectsFinal.ToSlice(),
+	//	}
+	//} else {
+	//	testUserProjectsFinal.Add(testUser.Perms.Projects...)
+	//	testUser.Perms.Projects = testUserProjectsFinal.ToSlice() // TODO: ensure ok that we do not overwrite the Admin field
+	//}
+	// Create user
 	_, err := coll.ReplaceOne(ctx, BsonFindFilter("_id", testUser.Email), testUser, options.Replace().SetUpsert(true))
 	if err != nil {
 		return err
@@ -72,49 +110,38 @@ func initializeUsers(ctx context.Context) error {
 	// TODO: DELETE THIS AFTER TESTING!!!!
 	var testUsers []User
 
-	println("ADDING TEST USERS!")
-	testUserSelf := User{
-		Email: testUserEmailSelf,
-		Perms: UserPerms{
-			Admin:    AcctTypeAdmin(), // TODO: change back to normal as long as Email is not the admin email...
-			Projects: []projectName{testProjects[0].Name, testProjects[1].Name, testProjects[2].Name},
-		},
-	}
-	testUsers = append(testUsers, testUserSelf)
-	//_, err = coll.ReplaceOne(ctx, BsonFindFilter("_id", testUserSelf.Email), testUserSelf, options.Replace().SetUpsert(true))
-	//if err != nil {
-	//	return err
-	//}
-	for email, onProject := range map[string]bool{
-		testUserEmailPAA: true,
-		testUserEmailPAB: true,
-		testUserEmailPAC: true,
-		testUserEmailPWA: true,
-		testUserEmailPWB: true,
-		testUserEmailPWC: true,
-		testUserEmailPNA: true,
-		testUserEmailPNB: true,
-		testUserEmailPNC: true,
-	} {
-		testUsr := User{
-			Email: email,
-			Perms: UserPerms{
-				Admin:    AcctTypeNormal(),
-				Projects: []projectName{},
-			},
-		}
-		if onProject {
-			testUsr.Perms.Projects = []projectName{TestProjectName}
-		}
-		testUsers = append(testUsers, testUsr)
-		//_, err = coll.ReplaceOne(ctx, BsonFindFilter("_id", email), testUsr, options.Replace().SetUpsert(true))
-		//if err != nil {
-		//	return err
-		//}
-		//coll.BulkWrite(ctx, options.BulkWrite())
+	println("Adding test users that are reset on every boot")
 
+	for _, info := range []struct { // TODO: validate working properly!
+		Projects []projectName
+		Emails   []string
+	}{
+		{
+			Projects: []projectName{TestProjectNamePublic},
+			Emails: []string{
+				testUserEmailPAA, testUserEmailPAB, testUserEmailPAC,
+				testUserEmailPWA, testUserEmailPWB, testUserEmailPWC,
+				testUserEmailPRA, testUserEmailPRB, testUserEmailPRC,
+			},
+		},
+		{
+			Projects: []projectName{},
+			Emails: []string{
+				testUserEmailPNA, testUserEmailPNB, testUserEmailPNC,
+			},
+		},
+	} {
+		for _, email := range info.Emails {
+			testUsers = append(testUsers, User{
+				Email: email,
+				Perms: UserPerms{
+					Admin:    AcctTypeNormal(),
+					Projects: info.Projects,
+				},
+			})
+		}
 	}
-	models := sliceutils.Map(testUsers, func(u User) mongo.WriteModel { // TODO: validate working right!
+	models := sliceutils.Map(testUsers, func(u User) mongo.WriteModel {
 		return mongo.NewReplaceOneModel().
 			SetFilter(bson.M{"_id": u.Email}).
 			SetReplacement(u).
@@ -126,20 +153,20 @@ func initializeUsers(ctx context.Context) error {
 }
 
 const (
-	testUserEmailSelf = "reece.appling@gmail.com" // TODO: or dot?
-	testUserEmail     = "nessapatch2408@gmail.com"
-	testUserEmailPAA  = "testProjAdminA@appli.ng" // Admin on project
-	testUserEmailPWA  = "testProjWriteA@appli.ng" // Can write on project
-	testUserEmailPRA  = "testProjReadA@appli.ng"  // Can read on project
-	testUserEmailPNA  = "testProjNoneA@appli.ng"  // No project access
-	testUserEmailPAB  = "testProjAdminB@appli.ng" // Admin on project
-	testUserEmailPWB  = "testProjWriteB@appli.ng" // Can write on project
-	testUserEmailPRB  = "testProjReadB@appli.ng"  // Can read on project
-	testUserEmailPNB  = "testProjNoneB@appli.ng"  // No project access
-	testUserEmailPAC  = "testProjAdminC@appli.ng" // Admin on project
-	testUserEmailPWC  = "testProjWriteC@appli.ng" // Can write on project
-	testUserEmailPRC  = "testProjReadC@appli.ng"  // Can read on project
-	testUserEmailPNC  = "testProjNoneC@appli.ng"  // No project access
+	//testUserEmailAdmin = "reece.appling@gmail.com" // TODO: remove
+	testUserEmailGoogleNormal = "nessapatch2408@gmail.com" // TODO: remove after testing!
+	testUserEmailPAA          = "testProjAdminA@appli.ng"  // Admin on project
+	testUserEmailPWA          = "testProjWriteA@appli.ng"  // Can write on project
+	testUserEmailPRA          = "testProjReadA@appli.ng"   // Can read on project
+	testUserEmailPNA          = "testProjNoneA@appli.ng"   // No project access
+	testUserEmailPAB          = "testProjAdminB@appli.ng"  // Admin on project
+	testUserEmailPWB          = "testProjWriteB@appli.ng"  // Can write on project
+	testUserEmailPRB          = "testProjReadB@appli.ng"   // Can read on project
+	testUserEmailPNB          = "testProjNoneB@appli.ng"   // No project access
+	testUserEmailPAC          = "testProjAdminC@appli.ng"  // Admin on project
+	testUserEmailPWC          = "testProjWriteC@appli.ng"  // Can write on project
+	testUserEmailPRC          = "testProjReadC@appli.ng"   // Can read on project
+	testUserEmailPNC          = "testProjNoneC@appli.ng"   // No project access
 )
 
 // TODO: update user!!!

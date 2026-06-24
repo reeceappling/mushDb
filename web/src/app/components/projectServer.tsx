@@ -44,6 +44,7 @@ export function TestProjectOk2(){
 export interface ProjectData {
     _id: string, // project name
     creationDate: number,
+    private: boolean,
     completed?: number,
     notes?: Note[],
     lastUpdated: number,

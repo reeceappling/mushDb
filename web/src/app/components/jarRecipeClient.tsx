@@ -41,6 +41,7 @@ import {
     OptionalArrayOfType,
     RequiredArrayOfType,
     RequiredKey,
+    Subform,
 } from "@/app/components/common";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
@@ -61,8 +62,6 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {InputText} from "@/app/components/formSubcomponents/numericInput";
-import {Liquid} from "@/app/components/formSubcomponents/liquids";
-import {Antibiotic} from "@/app/components/formSubcomponents/antibiotic";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -191,7 +190,7 @@ export default function JarRecipeDisplay(
         }
     ]
     return <DisplayFormWrapper entryType={"jarRecipe"}>
-        <ErrorDisplay err={err} />
+        <ErrorDisplay err={err}/>
         <ID props={{
             id: data._id,
             txt: "Grain Jar Recipe",
@@ -319,7 +318,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
         }
         DoCreateRequest("jarRecipe", body, AssertJarRecipe, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new JarRecipeData(v)) : console.log("no onCreate provided")
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
@@ -341,18 +340,26 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
     return <NewEntryFormWrapper entryType={"jarRecipe"}>
         <ErrorDisplay err={err}/>
         {templateRecipeSelector()}
-        <NameArea currentName={name} classNames={"inlineChildren"} readonly={false} setName={setName}/>
-
-        {/* TODO: SUBFORMS!*/}
-        <div>{"Grains"}</div>
-        <GrainsEntriesGroupForNew initial={defaultGrains} updateParent={setGrains}/>
-        <StandardArea readonly={false} setStandard={setIsStandard}/>
-        <div>{"Nutrients"}</div>
-        <NutrientsEntriesGroupForNew initial={defaultNutrients} updateParent={setNutrients}/>
-        <div>{"Sugars"}</div>
-        <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
-        <div>{"Additives"}</div>
-        <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
+        <Subform>
+            <NameArea currentName={name} classNames={"inlineChildren"} readonly={false} setName={setName}/>
+            <StandardArea readonly={false} setStandard={setIsStandard}/>
+        </Subform>
+        <Subform>
+            <div>{"Grains"}</div>
+            <GrainsEntriesGroupForNew initial={defaultGrains} updateParent={setGrains}/>
+        </Subform>
+        <Subform>
+            <div>{"Nutrients"}</div>
+            <NutrientsEntriesGroupForNew initial={defaultNutrients} updateParent={setNutrients}/>
+        </Subform>
+        <Subform>
+            <div>{"Sugars"}</div>
+            <SugarEntriesGroupForNew initial={defaultSugars} updateParent={setSugars}/>
+        </Subform>
+        <Subform>
+            <div>{"Additives"}</div>
+            <AdditiveEntriesGroupForNew initial={defaultAdditives} updateParent={setAdditives}/>
+        </Subform>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"greenButton buttonFullWidth"} onClick={newJarRecipeSubmit}>{"Create Jar Recipe"}</button>
     </NewEntryFormWrapper>

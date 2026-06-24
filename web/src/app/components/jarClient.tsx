@@ -452,8 +452,7 @@ export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
         }
         DoCreateRequest("jar", body, AssertJar, allCookies(cookies))
             .then(v=>{
-                const newJar = new JarData(v)
-                handlers.onCreate ? handlers.onCreate(newJar) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new JarData(v)) : console.log("no onCreate provided")
             })
             .catch(e=>{
                 setErr("failed on createJar post: "+JSON.stringify(e))

@@ -1092,14 +1092,14 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			} // TODO: del
 		} // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
-		projPermForUser := out.Perms.ForUser(user.Email)
-		if !user.IsAdmin() {
-			if projPermForUser == nil {
-				env.LogIfDev(ctx, "permission denied for project")
+		if !user.IsAdmin() && out.Private {
+			if user.AccountType.IsGuest() {
+				env.LogIfDev(ctx, "guests are not authorized to view this project") // TODO: reveals too much info, given we already grabbed the project
 				http.Error(w, "permission denied for project", http.StatusForbidden)
 				return
 			}
-			if !projPermForUser.CanRead() {
+			if !out.Perms.ForUser(user.Email).CanRead() {
+				env.LogIfDev(ctx, "permission denied to user for project") // TODO: reveals too much info, given we already grabbed the project
 				http.Error(w, "perm denied to user for project", http.StatusForbidden)
 				return
 			}

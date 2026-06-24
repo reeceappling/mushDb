@@ -498,6 +498,49 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 	}
 	return results, nil
 }
+func getUserProjectsFromCursor(ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]*Project, error) {
+	defer cursor.Close(ctx) // TODO; ensure ok
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	results := []*Project{}
+	if numItems != nil {
+		results = make([]*Project, 0, *numItems)
+	} else {
+		if user.IsAdmin() {
+			err = cursor.All(ctx, &results) // TODO: only results size???
+			return results, err
+		}
+	}
+
+	for numItems == nil || len(results) < *numItems {
+		if cursor.TryNext(ctx) {
+			var result *Project
+			if err = cursor.Decode(&result); err != nil {
+				return nil, err
+			}
+			if result.Private && !result.Perms.ForUser(user.Email).CanRead() {
+				continue
+			}
+			results = append(results, result)
+			continue
+		}
+		cursorClosed := cursor.ID() == 0
+		if cursorClosed {
+			if len(results) == 0 {
+				return results, mongo.ErrNoDocuments
+			}
+		}
+		if err = cursor.Err(); err != nil {
+			return nil, err
+		}
+		if cursorClosed {
+			break
+		}
+	}
+	return results, nil
+}
 
 type picWithNotesForm struct {
 	Time unix.Time `json:"time"`
@@ -753,8 +796,12 @@ var (
 	}
 	testAcl = ACL{
 		Users: map[string]bool{
-			testUserEmail:     false, // TODO: fix for correct user! may be 2409?
-			testUserEmailSelf: true,
+			//testUserEmailGoogleNormal:     false, // TODO: fix for correct user! may be 2409?
+			//testUserEmailSelf: true,
+			testUserEmailPAA: true,
+			testUserEmailPWA: true,
+			testUserEmailPRA: false,
+			// testUserEmailPNA: nil,
 		},
 		Projects: map[projectName]bool{
 			exProjRead:  false,

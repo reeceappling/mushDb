@@ -392,16 +392,16 @@ func (serv *AuthService) SigninTestUser(email string) (sessionId SessionId, err 
 	case testUserEmailPAA, testUserEmailPAB, testUserEmailPAC: // Can write (admin)
 		upp := UserProjectPerm(true)
 		projsPerms = map[projectName]*UserProjectPerm{
-			TestProjectName: &upp,
+			TestProjectNamePublic: &upp,
 		}
 	case testUserEmailPWA, testUserEmailPWB, testUserEmailPWC: // Can write
 		upp := UserProjectPerm(false)
 		projsPerms = map[projectName]*UserProjectPerm{
-			TestProjectName: &upp,
+			TestProjectNamePublic: &upp,
 		}
 	case testUserEmailPRA, testUserEmailPRB, testUserEmailPRC: // Can read
 		projsPerms = map[projectName]*UserProjectPerm{
-			TestProjectName: nil,
+			TestProjectNamePublic: nil,
 		}
 	case testUserEmailPNA, testUserEmailPNB, testUserEmailPNC: // No specific projects for user
 		projsPerms = map[projectName]*UserProjectPerm{}

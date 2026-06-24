@@ -34,15 +34,25 @@
     - [x] Validate guests cannot write anything
     - [x] Validate non-guest users cannot write anything that they have no permissions for
   - [ ] Project
-    - [ ] User that is admin (true) on project can
-      - [ ] View the project page
-      - [ ] Change the project, including adding/removing users and changing their permissions
-    - [ ] User that has write (false) on a project can
-      - [ ] View the project page
-      - [ ] Not change the project
-    - [ ] User that has read (nil) on a project can
-      - [ ] View the project page
-      - [ ] Not change the project
+    - [x] HANDLE NEW PRIVATE FIELD ON PROJECTS EVERYWHERE!
+      - [x] Guest user can
+        - [x] View the project page if it is publicly readable
+        - [x] Not view the project page if it is not publicly readable TODO: FIX!
+        - [x] Not change the project
+    - [ ] Add "Modify" permission to projects, which allows a user to modify the project but not add/remove users or change their permissions
+      - [ ] Will require an overhaul of the project perms fields and how they are stored in the database, as well as how they are checked on the frontend and backend
+      - [ ] Will require overhauling *UserProjectPerm from *bool to either *string or string
+    - [x] User that is admin (true) on project can
+      - [x] View the project page
+      - [x] Change the project, including adding/removing users and changing their permissions
+        - [x] Edit the project outside of perms
+        - [x] Edit the project perms
+    - [x] User that has write (false) on a project can
+      - [x] View the project page
+      - [x] Not change the project
+    - [x] User that has read (nil) on a project can
+      - [x] View the project page
+      - [x] Not change the project
 - [ ] Entries
   - [x] Agar Batch
     - [x] Display page
@@ -87,7 +97,7 @@
       - [x] Dispose button
       - [x] New fruit area
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-        - [ ] Ensure user confirms before this happens
+        - [x] Ensure user confirms before this happens
         - [x] Allow xfers on go side (to plates only for now)
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
     - [x] Import page (WE ONLY WANT TO IMPORT ALREADY-INNOCULATED)
@@ -118,7 +128,7 @@
   - [x] Jar Recipe
     - [x] Display page
     - [x] Create page
-      - [ ] Subforms?
+      - [x] Subforms?
       - [x] Template not working!
     - [x] List Page
       - [x] Standard

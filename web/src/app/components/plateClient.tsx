@@ -578,7 +578,7 @@ export function NewPlateForm(
         }
         DoCreateRequest("plate", body, AssertPlate, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new PlateData(v)) : console.log("no onCreate provided")
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))

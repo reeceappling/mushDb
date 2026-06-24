@@ -9,7 +9,7 @@ import (
 )
 
 type AclField struct {
-	ACL ACL `bson:"acl" json:"acl"` // TODO: removed omitempty
+	ACL ACL `bson:"acl" json:"acl"`
 }
 
 func (field AclField) Permissions() ACL {
@@ -44,11 +44,11 @@ func (acl ACL) AsPermsOnRequest() PermsOnRequest {
 	return PermsOnRequest{
 		UserPerms:    cloneMap(acl.Users),
 		ProjectPerms: cloneMap(acl.Projects),
-		BlanketPerm:  acl.BlanketPerm, // TODO; clone?
+		BlanketPerm:  acl.BlanketPerm.Copy(),
 	}
 }
 
-func cloneMap[T comparable, U any](m map[T]U) map[T]U { // TODO: use wherever needed
+func cloneMap[T comparable, U any](m map[T]U) map[T]U {
 	if m == nil {
 		return nil
 	}
@@ -99,7 +99,6 @@ func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
 
 // func (acl ACL) MarshalJSON()(bs []byte, err error) is not custom
 
-// TODO: is this ok if we don't want to remove projects that are below the threshold?
 func (acl ACL) simplified() ACL {
 	if acl.BlanketPerm == nil {
 		// If admin or default permission is no permission, return self
@@ -114,13 +113,8 @@ func (acl ACL) simplified() ACL {
 		}
 	}
 	if len(acl.Users) == 0 {
-		acl.Users = nil
+		acl.Users = nil // TODO: ensure ok!
 	}
-	//for proj, canWrite := range acl.Projects { // TODO: keep all projects!
-	//	if !canWrite {
-	//		delete(acl.Projects, proj)
-	//	}
-	//}
 	return acl
 }
 
@@ -172,7 +166,6 @@ func (acl ACL) userIdPermission(email string) *ReadWritePerm {
 	return acl.BlanketPerm
 }
 
-// TODO: ensure this works
 func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	if userPerms.IsAdmin() || acl.BlanketPerm.CanWrite() {
 		return RWPermWrite()
@@ -192,17 +185,13 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	}
 	if userPerms.Projects != nil {
 		for proj, projCanWriteOnEntry := range acl.Projects {
-			if projPerm, exists := userPerms.Projects[proj]; exists { // TODO: is projectPerm here ok
+			if projPerm, exists := userPerms.Projects[proj]; exists {
 				userCanWriteOnProj := projPerm != nil
-				userPermForProjectAndEntry := userCanWriteOnProj && projCanWriteOnEntry
-				if userPermForProjectAndEntry {
-					return RWPermWrite() //TODO: ?newPerm(projPerm != nil) // TODO: ensure ok
+				userCanWriteOnProjAndProjCanWriteOnEntry := userCanWriteOnProj && projCanWriteOnEntry
+				if userCanWriteOnProjAndProjCanWriteOnEntry {
+					return RWPermWrite()
 				}
 				maxPerm = RWPermRead()
-				//if maxPerm == nil {
-				//	maxPerm = RWPermRead()
-				//}
-				// TODO: probably don't need: maxPerm = maxPermsBetween(maxPerm, newPerm(projPerm != nil)) // TODO: newPerm(projPerm != nil) or RWPermRead()
 			}
 		}
 	}
@@ -247,39 +236,39 @@ func newPerm(canWrite bool) *ReadWritePerm {
 //	return nil
 //}
 
-func maxPermsBetween(ps ...*ReadWritePerm) *ReadWritePerm {
-	if len(ps) == 0 {
-		return nil
-	}
-	var out *ReadWritePerm = nil
-	for _, perm := range ps {
-		if perm != nil {
-			if *perm == true {
-				// Return early because this is the highest possible permission
-				return newPerm(true) // can write
-			}
-			if out == nil {
-				out = newPerm(false)
-			}
-		}
-	}
-	return out
-}
-func minPermsBetween(ps ...*ReadWritePerm) *ReadWritePerm {
-	if len(ps) == 0 {
-		return nil
-	}
-	temp := true
-	for _, perm := range ps {
-		if perm == nil {
-			return nil
-		}
-		if !bool(*perm) && temp {
-			temp = false
-		}
-	}
-	return newPerm(temp)
-}
+//func maxPermsBetween(ps ...*ReadWritePerm) *ReadWritePerm {
+//	if len(ps) == 0 {
+//		return nil
+//	}
+//	var out *ReadWritePerm = nil
+//	for _, perm := range ps {
+//		if perm != nil {
+//			if *perm == true {
+//				// Return early because this is the highest possible permission
+//				return newPerm(true) // can write
+//			}
+//			if out == nil {
+//				out = newPerm(false)
+//			}
+//		}
+//	}
+//	return out
+//}
+//func minPermsBetween(ps ...*ReadWritePerm) *ReadWritePerm {
+//	if len(ps) == 0 {
+//		return nil
+//	}
+//	temp := true
+//	for _, perm := range ps {
+//		if perm == nil {
+//			return nil
+//		}
+//		if !bool(*perm) && temp {
+//			temp = false
+//		}
+//	}
+//	return newPerm(temp)
+//}
 
 type Perm[T any] struct {
 	Id       T    `bson:"id" json:"id"`
@@ -402,9 +391,12 @@ func (pp ProjectPerms) ForUser(email string) *ProjectPerm {
 }
 
 type ProjectPerm string // "read", "write", or "admin". Used as a pointer, where nil == no perm on project
-var (
+var (                   // TODO: const?
 	// ProjectAdmin defines a ProjectPerm for a user that can write on entries for the specified project (if the project can write to the entry), as well as modify the project itself
 	ProjectAdmin ProjectPerm = "admin"
+	// TODO: next line
+	//// ProjectModify defines a ProjectPerm for a user that can write and read on entries for the specified project, as well as modify everything on the project except permissions
+	//ProjectModify ProjectPerm = "modify"
 	// ProjectWrite defines a ProjectPerm for a user that can write (and read) on entries for the specified project (if the project can write to the entry)
 	ProjectWrite ProjectPerm = "write"
 	// ProjectRead defines a ProjectPerm for a user that can read entries for the specified project
@@ -439,11 +431,17 @@ func (pp *ProjectPerm) CanWrite() bool {
 	return pp != nil && *pp != ProjectRead
 }
 
+//func (pp *ProjectPerm) CanModify() bool { // TODO: this!
+//	return pp != nil && *pp != ProjectRead
+//}
+
 func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) {
 	s := strings.Trim(string(bs), `"`)
 	switch s {
 	case "admin":
 		*projPerm = ProjectAdmin
+	//case "modify":
+	//	*projPerm = ProjectModify // TODO: reenable once ready!
 	case "write":
 		*projPerm = ProjectWrite
 	case "read":
@@ -507,7 +505,7 @@ var testAcls = []ACL{
 			//testUserEmailPNC: nil, // user not on entry     , user not on project       , project can write  == NONE
 		},
 		Projects: map[projectName]bool{
-			testProjectsMap[TestProjectName].Name: true,
+			testProjectsMap[TestProjectNamePublic].Name: true,
 		},
 		// admin can write
 		// testUserEmailPAA can write CONFIRMED
@@ -539,7 +537,7 @@ var testAcls = []ACL{
 			//testUserEmailPNC: nil, // user not on entry     , user not on project       , project can read  == NONE
 		},
 		Projects: map[projectName]bool{
-			testProjectsMap[TestProjectName].Name: false,
+			testProjectsMap[TestProjectNamePublic].Name: false,
 		},
 		// admin can write
 		// testUserEmailPAA can write CONFIRMED

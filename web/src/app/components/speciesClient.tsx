@@ -242,21 +242,27 @@ export function NewSpeciesForm(
         }
         DoCreateRequest("species", body, AssertSpecies, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new SpeciesData(v)) : console.log("no onCreate provided")
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
     return <NewEntryFormWrapper entryType={"species"}>
+        <ErrorDisplay err={err}/>
+        <Subform>
         <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"Name :"} setName={setName}/>
         <NameArea classNames={"inlineChildren"} currentName={sciName} headerTxt={"Scientific Name :"}
                   setName={setSciName}/>
-        <ErrorDisplay err={err}/>
+        </Subform>
+        <Subform>
         <AliasesArea updateParent={setAliases} readonly={false}/> {/* TODO: initial as just aliases?*/}
+        </Subform>
+        <Subform>
         <SelectorWrapper current={sub} title={"Standard Substrate"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setSub} allowCreate={handlers.isTopLevel} creatorInPage={false}/>
         </SelectorWrapper>
+        </Subform>
         <NewEntryNotes setNotes={setNotes}/>
         <AclDisplay readonly={false} initial={initialAcl} updateParent={setAcl}/>
         {/* SUBMIT AREA */}

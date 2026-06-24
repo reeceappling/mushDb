@@ -24,14 +24,10 @@ import {
     OptionalSimpleKey,
     RequiredArrayOfType,
     RequiredKey,
+    Subform,
 } from "@/app/components/common";
-import {
-    AclDisplay,
-    MarshalAcl,
-    TogglableAreaWithDepth,
-    UnmarshalAcl,
-} from "@/app/components/accessControlClient";
-import {EntryLinkWrapper, EntryLinkIdWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl,} from "@/app/components/accessControlClient";
+import {EntryLinkIdWrapper, EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {DowelType, PlugsData} from "@/app/components/plugsServer";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
@@ -40,18 +36,17 @@ import {AllEntries, OnViewCreatorQuadCol} from "./formSubcomponents/shared";
 import {ACL} from "./accessControlServer";
 import {ErrorDisplay, GensFormDisplay, ParentDisplay} from "./formSubcomponents/commonClient";
 import ID from "./formSubcomponents/id";
-import {PcRunArea, PcRunSelector} from "./pcRunClient";
+import {PcRunArea} from "./pcRunClient";
 import {InnocDisplay, TransfersOutDisplay} from "./transferClient";
 import {SpeciesData} from "./speciesServer";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
-import { ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
+import {ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "./speciesClient";
 import {WoodEntriesGroupForNew} from "@/app/components/formSubcomponents/plugs";
 import {SalesArea} from "@/app/components/saleClient";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
-import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
@@ -192,30 +187,36 @@ export default function PlugsDisplay(
             notes: notes,
             acl: MarshalAcl(acl),
         }
-        DoUpdateRequest("plugs",initial._id, body, AssertPlugs, allCookies(cookies))
-            .then(v=>{
+        DoUpdateRequest("plugs", initial._id, body, AssertPlugs, allCookies(cookies))
+            .then(v => {
                 updateInitial(new PlugsData(v))
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
-    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+    const ovcs: () => OnViewCreatorQuadCol[] = () => {
         const disp = initial.disposed !== undefined
         return !disp ? [
             WriteRfidOvcArea(initial._id),
-        ]:[]
+        ] : []
     }
-        // TODO: fruit?
-        // TODO: create spore print
-        // TODO: creat spore swab
-    const isInnoculated = ()=>{
+    // TODO: fruit?
+    // TODO: create spore print
+    // TODO: creat spore swab
+    const isInnoculated = () => {
         return initial.species !== undefined
     }
     return (
         <DisplayFormWrapper entryType={"plugs"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Plugs Jar", entryType:"plugs", linkPage:false, allowOpenMainPage:false}}/>
+            <ID props={{
+                id: data._id,
+                txt: "Plugs Jar",
+                entryType: "plugs",
+                linkPage: false,
+                allowOpenMainPage: false
+            }}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -224,15 +225,16 @@ export default function PlugsDisplay(
                                                 readonly={readonly} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    {isInnoculated()&&<SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>}
+                    {isInnoculated() &&
+                        <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>}
                     <PcRunArea binaryId={pcRun}/>
                 </FlexedSinglesGroup>
-                {isInnoculated()&&<FlexedSinglesGroup>
+                {isInnoculated() && <FlexedSinglesGroup>
                     <InnocDisplay innoc={initial.innoc}/>
                     <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                     <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
                 </FlexedSinglesGroup>}
-                {isInnoculated()&&<FlexedSinglesGroup>
+                {isInnoculated() && <FlexedSinglesGroup>
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
                 </FlexedSinglesGroup>}
             </FlexedArea>
@@ -240,10 +242,12 @@ export default function PlugsDisplay(
                 <div className={"text-lg"}>{"Dowel Types"}</div>
                 <DowelTypesTable data={initial.dowelTypes}/>
             </div>
-            {isInnoculated()&&<SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales}/>}
-            {isInnoculated()&&<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plugs"}
-                                 transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly}/>}
+            {isInnoculated() &&
+                <SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales}/>}
+            {isInnoculated() &&
+                <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plugs"}
+                                     transfersOut={transfersOut}
+                                     allowNewTransferCreation={!readonly}/>}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
@@ -345,31 +349,31 @@ export function NewPlugsForm(
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("plugs", body, AssertPlugs, allCookies(cookies))
-            .then(v=>{
-                handlers.onCreate ? handlers.onCreate(v) : console.log("no onCreate provided")
+            .then(v => {
+                handlers.onCreate ? handlers.onCreate(new PlugsData(v)) : console.log("no onCreate provided")
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
     return <NewEntryFormWrapper entryType={"plugs"}>
         <ErrorDisplay err={err}/>
-        <div>
+        <Subform>
             <div className={"text-lg"}>{"Dowels: "}</div>
             <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
-        </div>
+        </Subform>
+        <Subform>
 
-        <div>
             <div>{"PC Run: "}</div>
             <div>
-            {pcRunIn ? <EntryLinkIdWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
-                    {pcRunIn._id}
-                </EntryLinkIdWrapper>
-                : <PcRunSelectorCloseable doSelect={setPcRun} txt={"PC Run: "} creatorInPage={handlers.isTopLevel} allowCreation={handlers.isTopLevel}/>
-            }
+                {pcRunIn ? <EntryLinkIdWrapper props={{entryType: "pcRun", linkId: pcRunIn?._id, openInNewTab: true}}>
+                        {pcRunIn._id}
+                    </EntryLinkIdWrapper>
+                    : <PcRunSelectorCloseable doSelect={setPcRun} txt={"PC Run: "} creatorInPage={handlers.isTopLevel}
+                                              allowCreation={handlers.isTopLevel}/>
+                }
             </div>
-        </div>
-
+        </Subform>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton bottomButton"} onClick={createPlugs}>{"Create"}</button>
@@ -390,12 +394,14 @@ export function PlugsListPageTable({data, onClick, withLink}: ListPageItems<Plug
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PlugsData) => {
-            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new PlugsData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new PlugsData(v)
+    }}/>
 }
 
 export function PlugsSelectorTable({data, onClick}: ListPageItems<PlugsData>) {
