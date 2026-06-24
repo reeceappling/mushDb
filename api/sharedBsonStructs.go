@@ -647,32 +647,20 @@ func (upd *Mods) updatePourCoverageIfNeeded(future, existing hasPourCoverage) *M
 	return updatePointerIfNeeded(upd, "pourCoverage", fut, exist)
 }
 func (upd *Mods) updateWetAtCooledTimeIfNeeded(future, existing hasWact) *Mods {
+	// Only update if existing value is nil and new value is not
 	exist, fut := existing.wetAtCool(), future.wetAtCool()
-	if exist != nil {
-		if fut == nil || *fut != *exist {
-			upd.err = errors.New("wetAtCool mismatch")
-		}
-		return upd
-	} else {
-		if exist == fut { // Still empty
-			return upd
-		}
+	if exist == nil && fut != exist {
+		return updatePointerIfNeeded(upd, "wetAtCooledTime", fut, exist)
 	}
-	return updatePointerIfNeeded(upd, "wetAtCooledTime", fut, exist)
+	return upd
 }
 func (upd *Mods) updateAgarOnOutsideAtPourTimeIfNeeded(future, existing hasAgarOutside) *Mods {
+	// Only update if existing value is nil and new value is not
 	exist, fut := existing.agarOutside(), future.agarOutside()
-	if exist != nil {
-		if fut == nil || *fut != *exist {
-			upd.err = errors.New("agarOutside mismatch")
-		}
-		return upd
-	} else {
-		if exist == fut { // Still empty
-			return upd
-		}
+	if exist == nil && fut != exist {
+		return updatePointerIfNeeded(upd, "agarOnOutsideAtPourTime", fut, exist)
 	}
-	return updatePointerIfNeeded(upd, "agarOnOutsideAtPourTime", fut, exist)
+	return upd
 }
 
 func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {

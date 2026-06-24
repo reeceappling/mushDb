@@ -129,7 +129,7 @@ TODO: THIS
 ### Webserver
 TODO: THIS
 
-### Checking lines of code
+### Checking lines of code (because why not?)
 Install cloc
 ```bash
   brew install cloc

@@ -16,6 +16,10 @@
 # Wishlist
 - [ ] Biometric authentication
   - https://freedium-mirror.cfd/https://towardsdev.com/building-a-react-app-with-biometric-authentication-cc69d210a416
+- [ ] Backups of both DB and pictures!
+  - [ ] https://www.google.com/search?client=safari&rls=en&q=docker+compose+mounted+volume%2C+backup+on+cronjob&ie=UTF-8&oe=UTF-8
+  - [ ] Actually implement something that covers these backups
+  - [ ] Validate that we can restore from a backup
 # TODO
 - [ ] /db/list/nonguests
   - [ ] Make many typscript things request only nonguests
@@ -26,6 +30,9 @@
 - [ ] Transfer creation, validTypesTo on the go side!
 - [ ] ListPageTable entries should actually be links!
 
+- [x] Ensure files persist through shutdown on disk in specific directories
+  - [x] DB files
+  - [x] Images
 - [ ] PERMISSIONS
   - [x] Entries 
     - [x] All TODOs found when searching for "var testAcls = []ACL"
@@ -67,7 +74,6 @@
     - [x] List Page
       - [x] Clicks work
       - [x] Ensure text doesnt step all over each other on slim screens
-        - [ ] Reformat on slim screens?
   - [x] Bag
     - [x] Display page
       - [x] Fix wetness area
@@ -104,7 +110,6 @@
       - [x] Casing ratio is not allowing decimals easily...
       - [x] Default generation is not properly being tracked as 1
       - [x] Generation 0 is not working properly, failing on post (0-gen should not exist?)
-      - [ ] Ensure ratios are how we want to do this...
     - [x] List Page
   - [x] Grain Batch
     - [x] Display page
@@ -153,17 +158,17 @@
     - [x] List Page
   - [x] LC Syringe
     - [x] Display page
+      - [x] ConfirmedClean validate working properly
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Import page
+      - [x] Confirmed clean is not propagating properly, always showing up as unknown...
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
+    - [x] List Page
+    - [x] Display page
       - [x] KF validate working properly
         - [ ] KF cannot be changed once set to true? ----------- Allow changing for now!
         - [ ] ConfirmedClean can be unset? --------- Allow changing for now! We may not want to allow this later!
       - [ ] Set parent LC to clean from here once LcSyringe confirms it? ------------------------------------------- TODO: THIS IF WE CONFIRM THIS IS WHAT IS PREFERRED!
-    - [x] Display page
-      - [x] ConfirmedClean validate working properly
-      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
-    - [x] Import page
-      - [x] Confirmed clean is not propagating properly, always showing up as unknown...
-    - [x] List Page
   - [x] MSS
     - [x] Display page
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
@@ -171,6 +176,9 @@
     - [x] Import page
     - [x] List Page
   - [ ] PC Run
+    - [x] Create page
+      - [x] Runtime not styled correctly
+    - [x] List Page
     - [x] Display page
       - [x] Create LC is not inheriting PCRun and is not showing other selector
       - [ ] Create GrainJar is not inheriting PCRun and is not showing other selector
@@ -180,27 +188,21 @@
       - [ ] Create Plugs // TODO: create?
       - [ ] Create Slant // TODO: intermediate batch if does not already have a batch // TODO: create?
       - [ ] Create Stasis Tube // TODO: CREATE
-    - [x] Create page
-      - [x] Runtime not styled correctly
-      - [ ] Allow items to be added when creating a pc run???
-    - [x] List Page
   - [x] Plate
     - [x] Display page
       - [x] pour and condens cov
         - [x] Validate condens coverage (when unset, allow setting)
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
-      - [ ] Agar on outside at pour time
-        - [ ] If not set, do not show?
-        - [ ] If set, do not allow change?
+      - [x] Agar on outside at pour time
+        - [x] If not set, allow setting ONCE
+        - [x] If set, do not allow change!
     - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
+    - [x] List Page
     - [x] Import page
       - [x] Add Coverage sliders
         - [x] Ensure properly styled
       - [ ] Pour coverage positioning
-    - [x] List Page
   - [x] Plugs
-    - [x] Display page
-      - [ ] woods area displaying weird on slim screens!
     - [x] Display page
       - [x] Dowel types should be a table??? Maybe a grid?
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
@@ -215,22 +217,21 @@
     - [x] List Page
   - [x] Project
     - [x] Display page
-      - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)
-        - [ ] Switch to table (already mostly done)
-      - [x] Removing yourself as admin causes reloading the page to fail!
-        - [ ] Re-adding self as admin causes a go-side crash --------------------- (should be fixed, test!)
-    - [x] Create page
-    - [x] Display page
       - [x] Not properly showing initial user permissions
       - [x] Perms are not updating visually when users are added or removed!
+    - [x] Create page
+    - [x] Display page
+      - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)
+      - [x] Removing yourself as admin causes reloading the page to fail!
+        - [ ] Re-adding self as admin causes a go-side crash --------------------- (should be fixed, test!)
     - [x] List Page
+      - [x] Shows all projects a user should be able to see, including public projects
+      - [x] Does not show projects that the user is not privy to
       - [ ] Be able to filter projects by completeness
-      - [ ] Shows all projects a user should be able to see, including public projects
-      - [ ] Does not show projects that the user is not privy to
   - [ ] Sale
     - [x] Display page
-    - [ ] Create page // TODO: UNSURE WHERE DONE FROM
     - [x] List Page
+    - [ ] Create page // TODO: UNSURE WHERE DONE FROM
   - [x] Slant
     - [x] Display page
       - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
@@ -252,12 +253,12 @@
   - [x] Spore Print
     - [x] Display page
       - [x] Create MSS not working, failing to find current print (fixed)
-    - [x] Display page
-      - [ ] Chaining spore prints (probably just click the parent and then click to make another print...)-------------------------------------------------------------
-    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) only done from fruit, bag, box, plate?
     - [x] Import page
       - [x] Spore print colors and densities selectors not working!
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) only done from fruit, bag, box, plate?
     - [x] List Page
+    - [ ] Display page
+      - [ ] Chaining spore prints (probably just click the parent and then click to make another print...)-------------------------------------------------------------
   - [x] Spore Swab
     - [x] Display page
       - [x] Parent area
@@ -277,10 +278,11 @@
     - [x] Import page
     - [x] List Page
   - [x] Subspecies
+    - [x] Create page
+    - [x] List Page
+      - [x] Clicks work
+      - [x] Display species name then subspecies name!
     - [x] Display page
-      - [x] Aliases
-        - [ ] Cannot add aliases that already exist elsewhere?--------------------------------------------------------------------------------------------------------------------------
-          - [ ] Must create separate species, subspecies, subRec aliases collections to ensure this works properly :(
       - [x] Species at top
       - [x] Aliases
         - [x] Creating and deleting one at the same time is not working
@@ -290,10 +292,9 @@
       - [x] ACLs
         - [x] Validate both updating properly
         - [x] When setting to "Publicly Editable", ensure the extra self-user is not added...
-    - [x] Create page
-    - [x] List Page
-      - [x] Clicks work
-      - [x] Display species name then subspecies name!
+      - [x] Aliases
+        - [ ] Cannot add aliases that already exist elsewhere?--------------------------------------------------------------------------------------------------------------------------
+          - [ ] Must create separate species, subspecies, subRec aliases collections to ensure this works properly :(
   - [x] Substrate Batch
     - [x] Display page
       - [x] Create bag validate
@@ -315,7 +316,6 @@
     - [x] List Page
       - [x] Clickable
       - [x] Ensure things are not stepping all over each other!
-        - [ ] make text smaller for smaller screens?
   - [ ] User
     - [ ] Display page
     - [ ] Create page // TODO: figure this out
@@ -347,6 +347,8 @@
         - [ ] Create Agar batch without PC Run
         - [ ] Agar batch without PC Run  does not properly populate PC Run on Slant
   - [ ] AgarRecipe
+    - [ ] List Page
+      - [ ] Reformat on slim screens?
     - [ ] ListPageTable
       - [ ] sort by Created, Name, Last Updated
       - [ ] add creation date?
@@ -387,6 +389,8 @@
       - [ ] Create SporeSwab (Creates intermediate fruit)
       - [ ] Handle sale
         - [ ] Make sales also trigger disposal? (Do this on many entry types?)
+    - [ ] Import page
+      - [ ] Ensure ratios are how we want to do this... PRETTY SURE THIS IS FINE FOR NOW!
   - [ ] GrainBatch
     - [ ] ListPageTable
       - [ ] sort by Creation Date, Last Updated
@@ -431,6 +435,8 @@
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
       - [ ] filter by runtime?
+    - [ ] Create page
+      - [ ] Allow items to be added when creating a pc run???
   - [ ] Plate
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
@@ -442,12 +448,16 @@
       - [ ] sort by Created, LastUpdated
       - [ ] filter by species, subspecies, innoculated, disposed(availability)?
     - [ ] Display page
+      - [ ] woods area displaying weird on slim screens!
       - [ ] New fruit area
       - [ ] sales area
   - [ ] Project
     - [ ] ListPageTable
       - [ ] sort by Created, Name, LastUpdated
       - [ ] filter by completed?
+    - [x] Display page
+      - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)
+        - [ ] Switch to table (already mostly done)
   - [ ] Sale
     - [ ] ListPageTable
       - [ ] sort by Created, LastUpdated
@@ -502,6 +512,8 @@
     - [ ] ListPageTable
       - [ ] sort by Created, Last Updated
       - [ ] filter by Source, Reason?
+    - [ ] List Page
+      - [ ] make text smaller for smaller screens?
   - [ ] WaterJar
     - [ ] ListPageTable
       - [ ] sort by Created, Last Updated

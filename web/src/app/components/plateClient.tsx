@@ -311,10 +311,13 @@ export default function PlateDisplay(
                     <PourCoverageFieldDisplay initial={initial.pourCoverage} updateParent={setPourCoveragePct}/>
                     <div>{"Condensation Coverage at pour time: "+(initial.condensationCoverageAtPourTime?initial.condensationCoverageAtPourTime+"%":"unknown")}</div>
                     {isInnoculated()&&<CondensationCoverageFieldDisplay initial={initial.condensationCoverageAtSealTime/* TODO: STATIC IF PRE-SET*/} updateParent={setCondensationCoveragePct}/>}
-                    <YesNoSelector pre={"Wet at cooled time: "} initial={initial.wetAtCooledTime}
-                                   updateParent={setWetAtCoolTime}/>
-                    <YesNoSelector pre={"Agar on outside at pour time: "} initial={initial.agarOnOutsideAtPourTime}
-                                   updateParent={setAgarOnOutsideAtPourTime}/>
+                    {initial.wetAtCooledTime?<div>
+                        {"Wet at cooled time: "+(initial.wetAtCooledTime?"Yes":"No")}
+                    </div>:<YesNoSelector pre={"Wet at cooled time: "} initial={initial.wetAtCooledTime}
+                                   updateParent={setWetAtCoolTime}/>}
+                    {initial.agarOnOutsideAtPourTime!==undefined?(!initial.agarOnOutsideAtPourTime?null:<div>
+                        {"Agar on outside at pour time: "+(initial.agarOnOutsideAtPourTime?"Yes":"No")}
+                    </div>):<YesNoSelector pre={"Agar on outside at pour time: "} initial={initial.agarOnOutsideAtPourTime} updateParent={setAgarOnOutsideAtPourTime}/>}
                 </FlexedSinglesGroup>
             </FlexedArea>
             {isInnoculated()&&<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}

@@ -483,6 +483,8 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             creationDate: creationDate,
             species: species?._id,
             grainCups: grainCups,
+            // TODO: substrateCups:
+            // TODO: casingCups:
             substrateRatio: mixedSubRatio, // Ratio of mixed substrate (substrate that was mixed) to grain volume // TODO: consider changing to volume mixed sub?
             casingRatio: casingRatio, // Ratio of casing substrate to grain volume // TODO: consider changing to volume casing?
             //perms: perms, // From spec/subspec
