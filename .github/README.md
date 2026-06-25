@@ -70,6 +70,10 @@ See /env/example.env for an example of the environment variables needed to run t
 - LOCAL_IMAGES_DIR: the local directory where all pictures will be stored which are uploaded by authenticated users
 
 
+#### Filepaths
+Whichever paths you are using for LOCAL_DB_DIR and LOCAL_IMAGES_DIR, ensure they exist and have the correct permissions for the docker user to read/write in them. See the "Running the containers" section below for an example of how to do this.
+
+
 #### Mongodb keys
 ensure [etc/mongodb.key](../etc/mongodb.key) exists. It is required to keep mongodb secure. If you don't have one, generate it with:
 ```bash
@@ -99,22 +103,23 @@ For the db, I use
 LOCAL_IMAGES_DIR="/opt/mush/data/pictures"
 LOCAL_DB_DIR="/opt/mush/data/db"
 ```
-So I have made sure that those two exist via
+So I have made sure that those two exist and have the right permissions via the following, or view [scripts/setup_dirs.sh](../scripts/setup_dirs.sh) for an example of how to do this between different environments.
 ```bash
-# Ensure dirs exist
-mkdir -p /opt/mush/data/pictures
-mkdir -p /opt/mush/data/db
+MNGO_DIR="/opt/mush/data/db"
+PICS_DIR="/opt/mush/data/pictures"
+prep_dir() {
+    local filepath="$1"
+    echo "setting up path: $filepath"
+    # Create the dir
+    mkdir -p $filepath
+    # Set the ownership to the current user and group
+    chown -R $(id -u):$(id -g) $filepath
+    # Allow all to read and write
+    chmod -R a+rw $filepath
+}
 
-# File ownership and permissions
-# Ideally figure out the exact UID docker will be using, and set ownership and permissions JUST for that user...
-
-# Ownership
-chown -R $(id -u):$(id -g) /opt/mush/data/db
-chown -R $(id -u):$(id -g) /opt/mush/data/pictures
-
-# Read/write permissions for all users (Unsafe, but fine for testing and development).
-chmod -R a+rw /opt/mush/data/db
-chmod -R a+rw /opt/mush/data/pictures
+prep_dir $MNGO_DIR
+prep_dir $PICS_DIR
 ```
 
 #### With force recreate

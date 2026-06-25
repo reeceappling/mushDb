@@ -1,7 +1,7 @@
 version: '3.8'
 include:
   - docker-compose-web-prod.yaml
-  # TODO: Use the next line instead to run the dev version
+  # TODO: Use the next line instead to run the dev version instead of the prod webserver version. This is useful for local development and testing.
   #- docker-compose-web-dev.yaml
 services:
   # Service to maintain cloudflare tunnel (because homelab is behind CGNAT)

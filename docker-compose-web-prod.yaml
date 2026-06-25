@@ -24,6 +24,9 @@ services:
       NEXT_PUBLIC_BASE_API_URL: ${MAIN_API_EXTERNAL_PROTOCOL:-https}://${MAIN_API_EXTERNAL_HOST:-localhost}
     networks:
       - mushNet
+    depends_on:
+      # TODO: ensure ok, may not need
+      - api
 # TODO: https://github.com/offen/docker-volume-backup
 # TODO: config
 # TODO: automate restore
