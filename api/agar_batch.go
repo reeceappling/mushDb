@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -100,21 +101,21 @@ func initializeAgarBatches(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-
-	testAltId := altCollIdForint(0)
-	testItem := AgarBatch{
-		AlternateCollectionIdField: AlternateCollectionIdField{Id: exAltId},
-		PcRunField:                 PcRunField{testAltId},
-		AgarRecipeField:            AgarRecipeField{testAltId},
-		Color:                      clearColor,
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(nil), // TODO: allCanWrite?
-	}
-	err = addTestAltEntries(ctx, testItem)
-	println("test Agar Batch:", testAltId.AsBase58())
-	return err
+	// If test agar batch does not exist, and is dev, then create it
+	return env.IfNotProd(ctx, func() error {
+		testAltId := altCollIdForint(0)
+		testItem := AgarBatch{
+			AlternateCollectionIdField: AlternateCollectionIdField{Id: exAltId},
+			PcRunField:                 PcRunField{testAltId},
+			AgarRecipeField:            AgarRecipeField{testAltId},
+			Color:                      clearColor,
+			NotesField:                 NotesField{exampleNotes()},
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanReadAcl(nil), // TODO: allCanWrite?
+		}
+		println("test Agar Batch:", testAltId.AsBase58())
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createAgarBatchRequest struct {
@@ -162,7 +163,7 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		Color:                      req.Color,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
-		AclField:                   allCanWriteAcl(), // TODO: or read?
+		AclField:                   allCanWriteAcl(),
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }

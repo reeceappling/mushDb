@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -197,24 +198,27 @@ func initializeFruits(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	testItem := &Fruit{
-		MainCollectionIdField:             MainCollectionIdField{exFruitId},
-		CreationDateField:                 CreationDateField{exampleTime},
-		SpeciesField:                      SpeciesField{testEntryStringId},
-		SubspeciesOptionalField:           SubspeciesOptionalField{utils.Pointer(testEntryStringId)},
-		GenSporeField:                     GenSporeField{&exGenSinceSpore},
-		TransfersOutField:                 TransfersOutField{exAlts},
-		Prints:                            []MainCollectionId{exSporePrint},
-		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
-		PicsField:                         PicsField{exPics},
-		DisposedField:                     DisposedField{&exampleTime},
-		MostRecentImageField:              MostRecentImageField{&exPics[0]},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	}
-	return addTestMainEntries(ctx, testItem)
+	// Add test entries if dev
+	return env.IfNotProd(ctx, func() error {
+		// If test agar batch does not exist, then create it
+		testItem := &Fruit{
+			MainCollectionIdField:             MainCollectionIdField{exFruitId},
+			CreationDateField:                 CreationDateField{exampleTime},
+			SpeciesField:                      SpeciesField{testEntryStringId},
+			SubspeciesOptionalField:           SubspeciesOptionalField{utils.Pointer(testEntryStringId)},
+			GenSporeField:                     GenSporeField{&exGenSinceSpore},
+			TransfersOutField:                 TransfersOutField{exAlts},
+			Prints:                            []MainCollectionId{exSporePrint},
+			ParentTypeField:                   ParentTypeField{&exParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+			PicsField:                         PicsField{exPics},
+			DisposedField:                     DisposedField{&exampleTime},
+			MostRecentImageField:              MostRecentImageField{&exPics[0]},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createFruitRequest struct {

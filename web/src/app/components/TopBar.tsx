@@ -1,6 +1,7 @@
 "use client"
 
 import ReaderWriterSelector, {
+    ReadRfidTag,
     ReadTagFunc,
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
@@ -14,7 +15,6 @@ import Menu from "@mui/material/Menu"
 import MenuItem from "@mui/material/MenuItem"
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getPathFor, webUrl} from "@/app/components/common";
-import {ReadRfidTag} from "@/app/components/serverActions";
 
 
 const buttonProps = {
@@ -185,19 +185,19 @@ function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
                 })
 
             }, (err) => {
-                const toWrite = "failed to read tag: " + err
-                console.error(toWrite)
+                const newErr = "failed to read tag: " + err
+                console.error(newErr)
                 dispatch({
                     type: ActionTypes.SET_ERROR,
-                    payload: toWrite,
+                    payload: newErr,
                 })
             })
         } else {
-            const toWrite = "cannot read tag without knowing which reader to use!"
-            console.error(toWrite)
+            const newErr = "cannot read tag without knowing which reader to use!"
+            console.error(newErr)
             dispatch({
                 type: ActionTypes.SET_ERROR,
-                payload: toWrite,
+                payload: newErr,
             })
         }
 

@@ -9,7 +9,7 @@ require (
 	github.com/itchyny/base58-go v0.2.2
 	github.com/markbates/goth v1.82.0
 	github.com/reeceappling/goUtils/v2 v2.0.0-20250605212538-82fddbe29f22
-	github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20250612224743-e807be567a12
+	github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260701220612-8c2d0d79e887
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.37.0
@@ -49,6 +49,7 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
+	github.com/clausecker/nfc/v2 v2.2.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
@@ -95,6 +96,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/puzpuzpuz/xsync/v3 v3.5.1 // indirect
+	github.com/reeceappling/freefare v0.0.0-20241014223409-a627da2c6751 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.25.3 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect

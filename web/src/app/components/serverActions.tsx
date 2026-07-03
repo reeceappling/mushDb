@@ -21,57 +21,56 @@ export async function GetReaderWriterNames() {
     return data as string[]
 }
 
-export async function WriteRfidTag(toWrite: string, writerName: string) { // TODO: USE ME! NEEDS sessionInfo
-    const req: writeTagRequest = {secret: secret, data: toWrite} // TODO: FIX FOR SECRET
-    const resp = await fetch(BaseInternalUrl + '/rfid/write/' + writerName, {
-        method: 'POST',
-        headers: { // TODO: CHANGE?
-            credentials: 'include',
-            'Accept': 'text/html',
-            'Content-Type': 'application/json',
-            //'SessionId': session, // TODO: ensure works ok!
-        },
-        body: JSON.stringify(req)
-    })
-    if (resp.status != 200) {
-        throw "Error reading tag. Response status (" + resp.status + ")" + resp.statusText
-    }
-    const contentType = resp.headers.get('Content-Type')
-    if (contentType == null) {
-        throw "Response had no content type!"
-    }
-    if (contentType != 'text/html') {
-        throw "Unexpected response content type! " + contentType + " should be text/html"
-    }
-    return await resp.text()
-}
+// export async function WriteRfidTag(toWrite: string, writerName: string) { // TODO: USE ME! NEEDS sessionInfo
+//     const req: writeTagRequest = {secret: secret, data: toWrite} // TODO: FIX FOR SECRET
+//     const resp = await fetch(BaseInternalUrl + '/rfid/write/' + writerName, {
+//         method: 'POST',
+//         headers: { // TODO: CHANGE?
+//             credentials: 'include',
+//             'Accept': 'text/html',
+//             'Content-Type': 'application/json',
+//             //'SessionId': session, // TODO: ensure works ok!
+//         },
+//         body: JSON.stringify(req)
+//     })
+//     if (resp.status != 200) {
+//         throw "Error reading tag. Response status (" + resp.status + ")" + resp.statusText
+//     }
+//     const contentType = resp.headers.get('Content-Type')
+//     if (contentType == null) {
+//         throw "Response had no content type!"
+//     }
+//     if (contentType != 'text/html') {
+//         throw "Unexpected response content type! " + contentType + " should be text/html"
+//     }
+//     return await resp.text()
+// }
 
-export async function ReadRfidTag(session: string, readerName?: string) { // TODO: USE ME!!!
-    if (!readerName) {
-        throw "NO RFID READER SELECTED!"
-    }
-
-    const resp = await fetch(BaseInternalUrl + 'rfid/read/' + readerName, {
-        method: 'POST',
-        headers: { // TODO: CHANGE?
-            credentials: 'include',
-            'Accept': 'text/html',
-            'Content-Type': 'text/html'
-        },
-        body: session
-    })
-    if (resp.status != 200) {
-        throw "Error reading tag. Response status code " + resp.status
-    }
-    const contentType = resp.headers.get('Content-Type')
-    if (contentType == null) {
-        throw "Response had no content type!"
-    }
-    if (contentType != 'text/html') {
-        throw "Unexpected response content type!"
-    }
-    return await resp.text()
-}
+// export async function ReadRfidTag(readerName?: string):Promise<string> { // TODO: USE ME!!!
+//     if (!readerName) {
+//         throw "NO RFID READER SELECTED!"
+//     }
+//
+//     const resp = await fetch(BaseInternalUrl + '/rfid/read/' + readerName, {
+//         method: 'GET',
+//         headers: {
+//             credentials: 'include',
+//             'Accept': 'text/html',
+//             'Content-Type': 'text/html'
+//         },
+//     })
+//     if (resp.status != 200) {
+//         throw "Error reading tag. Response status code " + resp.status
+//     }
+//     const contentType = resp.headers.get('Content-Type')
+//     if (contentType == null) {
+//         throw "Response had no content type!"
+//     }
+//     if (contentType != 'text/html') {
+//         throw "Unexpected response content type!"
+//     }
+//     return await resp.text()
+// }
 
 // TODO: get rid of if not used
 // export async function GetRfidData(session: string, itemType: string, id: string){

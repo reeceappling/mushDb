@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -152,31 +153,33 @@ func initializeStasisTubes(ctx context.Context) error {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	testId := mainCollIdForint(idTestStasis)
-	testItem := &StasisTube{
-		MainCollectionIdField:   MainCollectionIdField{testId},
-		CreationDateField:       CreationDateField{exampleTime},
-		SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
-		SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
-		InnocField:              InnocField{&exAltId},
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{&exGenSinceSpore},
-			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		},
-		TransfersOutField:                 TransfersOutField{exAlts},
-		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
-		PicsField:                         PicsField{exPics},
-		ContaminationsField:               ContaminationsField{exContams},
-		KnownFruitableField:               KnownFruitableField{exBool},
-		SaleField:                         SaleField{&exAltId},
-		DisposedField:                     DisposedField{&exampleTime},
-		MostRecentImageField:              MostRecentImageField{&exPics[0]},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          allCanWriteAcl(),
-	}
-	return addTestMainEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		testId := mainCollIdForint(idTestStasis)
+		testItem := &StasisTube{
+			MainCollectionIdField:   MainCollectionIdField{testId},
+			CreationDateField:       CreationDateField{exampleTime},
+			SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
+			SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
+			InnocField:              InnocField{&exAltId},
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{&exGenSinceSpore},
+				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+			},
+			TransfersOutField:                 TransfersOutField{exAlts},
+			ParentTypeField:                   ParentTypeField{&exParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+			PicsField:                         PicsField{exPics},
+			ContaminationsField:               ContaminationsField{exContams},
+			KnownFruitableField:               KnownFruitableField{exBool},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+			MostRecentImageField:              MostRecentImageField{&exPics[0]},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+			AclField:                          allCanWriteAcl(),
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createStasisTubeRequest struct {

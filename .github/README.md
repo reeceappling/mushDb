@@ -47,6 +47,7 @@ TODO: how to setup google oauth stuff
 #### Environment
 See /env/example.env for an example of the environment variables needed to run the project.
 - COMPOSE_PROJECT_NAME: a project name utilized by docker compose
+- ENVIRONMENT: qual/dev/devl, cert, or prod
 - MAIN_API_EXTERNAL_PROTOCOL: http or https. I suggest https if going through cloudflare
 - MAIN_API_EXTERNAL_PORT: The port on which the user will be accessing the cloudflare tunnel, NOT the api
 - MAIN_API_EXTERNAL_HOST: The host on which the user will be accessing the service
@@ -54,8 +55,8 @@ See /env/example.env for an example of the environment variables needed to run t
 - CLOUDFLARE_EMAIL: The email associated with the cloudflare account that has access to the CLOUDFLARE_ZONE_ID
 - CLOUDFLARE_ZONE_ID: The zone ID for the domain you want to manage with cloudflare. You can find this in the cloudflare dashboard under the "Overview" tab for your domain, in the "API" section.
 - ADMIN_GMAIL: The gmail account you would like to use as the admin account for the webserver.
-- MONGO_INITDB_ROOT_USERNAME: The root username for the database. This is used to create the initial users in the database.
-- MONGO_INITDB_ROOT_PASSWORD: The root password for the database. This is used to create the initial users in the database.
+- MONGO_INITDB_ROOT_USERNAME: The root username for the database. This is used to create the initial users in the database. Also for backups
+- MONGO_INITDB_ROOT_PASSWORD: The root password for the database. This is used to create the initial users in the database. Also for backups
 - MONGO_INITDB_USERNAME: The username for the api to access the database typically.
 - MONGO_INITDB_PASSWORD: The password for the api to access the database typically.
 - MONGO_INITDB_DATABASE: The name of the database to create/use for the project.

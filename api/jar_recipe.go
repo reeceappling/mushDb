@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -85,7 +86,7 @@ func initializeJarRecipes(ctx context.Context) error {
 		return err
 	}
 
-	// Built-ins
+	// Built-ins // TODO: ensure these are not completely replaced every time!
 	basicEntries := []*JarRecipe{
 		{
 			NameField:                  NameField{"Popcorn"},
@@ -126,35 +127,37 @@ func initializeJarRecipes(ctx context.Context) error {
 		return err
 	}
 	// Add test entries
-	// If test jar recipe does not exist, then create it
-	testItem := &JarRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		NameField:                  NameField{"testJarRecipeName"},
-		Grains:                     []GrainPercentage{{Grain: BirdSeed, Percentage: 100}},
-		StandardField:              StandardField{false},
-		NutrientsField: NutrientsField{[]NutrientMeasurement{
-			{
-				Nutrient: LME,
-				Amount:   1,
-				Unit:     "kg",
-			},
-			{
-				Nutrient: Potato,
-				Amount:   8,
-				Unit:     "ug",
-			},
-		}},
-		SugarsField: SugarsField{[]SugarMeasurement{
-			newSugarMeasurement(Honey, 1, "large drop per quart jar"),
-		}},
-		AdditivesField: AdditivesField{[]AdditiveMeasurement{
-			newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
-			newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
-		}},
-		NotesField:       NotesField{exampleNotes()},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// If test jar recipe does not exist, then create it
+		testItem := &JarRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			NameField:                  NameField{"testJarRecipeName"},
+			Grains:                     []GrainPercentage{{Grain: BirdSeed, Percentage: 100}},
+			StandardField:              StandardField{false},
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
+				{
+					Nutrient: LME,
+					Amount:   1,
+					Unit:     "kg",
+				},
+				{
+					Nutrient: Potato,
+					Amount:   8,
+					Unit:     "ug",
+				},
+			}},
+			SugarsField: SugarsField{[]SugarMeasurement{
+				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
+			}},
+			AdditivesField: AdditivesField{[]AdditiveMeasurement{
+				newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
+				newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
+			}},
+			NotesField:       NotesField{exampleNotes()},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createJarRecipeRequest struct {

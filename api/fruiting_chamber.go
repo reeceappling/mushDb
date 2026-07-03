@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -175,40 +176,42 @@ func initializeFruitingChamber(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test FC does not exist, then create it
-	testId := mainCollIdForint(idTestFC)
-	xfer := exAltId
-	plateId := mainCollIdForint(idTestPlate)
-	testItem := &FruitingChamber{
+	return env.IfNotProd(ctx, func() error {
+		// If test FC does not exist, then create it
+		testId := mainCollIdForint(idTestFC)
+		xfer := exAltId
+		plateId := mainCollIdForint(idTestPlate)
+		testItem := &FruitingChamber{
 
-		MainCollectionIdField:       MainCollectionIdField{testId},
-		SubstrateRecipeField:        SubstrateRecipeField{exAltId},
-		SubstrateBatchOptionalField: SubstrateBatchOptionalField{}, // TODO: ADD ME
-		CupsGrain:                   4,                             // quart
-		MixedSubstratePerGrain:      1.0,                           // 1:1 grain:subsMixed
-		CasingPerGrain:              0.5,                           // Half casing per grain
-		CreationDateField:           CreationDateField{exampleTime},
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{&exGenSinceSpore},
-			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		},
-		KnownFruitableField:               KnownFruitableField{exBool},
-		SpeciesOptionalField:              SpeciesOptionalField{&exampleSpecies},
-		SubspeciesOptionalField:           SubspeciesOptionalField{exampleSubspecies},
-		InnocField:                        InnocField{&xfer},
-		TransfersOutField:                 TransfersOutField{exAlts},
-		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&plateId},
-		PicsField:                         PicsField{exPics},
-		ContaminationsField:               ContaminationsField{exContams},
-		MostRecentImageField:              MostRecentImageField{&exPics[0]},
-		FlushesField:                      FlushesField{exPics},
-		SaleField:                         SaleField{utils.Pointer(exAltId)},
-		DisposedField:                     DisposedField{}, // TODO: dispose of it in tests?
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	}
-	return addTestMainEntries(ctx, testItem)
+			MainCollectionIdField:       MainCollectionIdField{testId},
+			SubstrateRecipeField:        SubstrateRecipeField{exAltId},
+			SubstrateBatchOptionalField: SubstrateBatchOptionalField{}, // TODO: ADD ME
+			CupsGrain:                   4,                             // quart
+			MixedSubstratePerGrain:      1.0,                           // 1:1 grain:subsMixed
+			CasingPerGrain:              0.5,                           // Half casing per grain
+			CreationDateField:           CreationDateField{exampleTime},
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{&exGenSinceSpore},
+				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+			},
+			KnownFruitableField:               KnownFruitableField{exBool},
+			SpeciesOptionalField:              SpeciesOptionalField{&exampleSpecies},
+			SubspeciesOptionalField:           SubspeciesOptionalField{exampleSubspecies},
+			InnocField:                        InnocField{&xfer},
+			TransfersOutField:                 TransfersOutField{exAlts},
+			ParentTypeField:                   ParentTypeField{&exParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&plateId},
+			PicsField:                         PicsField{exPics},
+			ContaminationsField:               ContaminationsField{exContams},
+			MostRecentImageField:              MostRecentImageField{&exPics[0]},
+			FlushesField:                      FlushesField{exPics},
+			SaleField:                         SaleField{utils.Pointer(exAltId)},
+			DisposedField:                     DisposedField{}, // TODO: dispose of it in tests?
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createFruitingChamberRequest struct {

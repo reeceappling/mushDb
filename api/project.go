@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
@@ -59,14 +60,16 @@ func initializeProjects(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, testItem := range testProjects {
-		// If test item does not exist or does not match, then create/update it
-		_, errRep := coll.ReplaceOne(ctx, BsonFindFilter("_id", testItem.Name), testItem, options.Replace().SetUpsert(true))
-		err = errors.Join(errRep, err)
-		if err != nil {
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		for _, testItem := range testProjects {
+			// If test item does not exist or does not match, then create/update it
+			_, errRep := coll.ReplaceOne(ctx, BsonFindFilter("_id", testItem.Name), testItem, options.Replace().SetUpsert(true))
+			err = errors.Join(errRep, err)
+			if err != nil {
+			}
 		}
-	}
-	return err
+		return err
+	})
 }
 
 func GetAllProjects(ctx context.Context, complete *bool) ([]Project, error) {

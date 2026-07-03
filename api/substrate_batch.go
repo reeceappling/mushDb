@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -37,41 +38,43 @@ func initializeSubstrateBatches(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	createdDate := CreationDateField{exampleTime}
-	err = addTestAltEntries(ctx, []SubstrateBatch{
-		// Coir
-		{
-			AlternateCollectionIdField: altCollIdFieldForint(idCoir),
-			CreationDateField:          createdDate,
-			SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idCoir)},
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "test coir batch"),
-			}},
-			AclField:         allCanReadAcl(nil),
-			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
-		},
-		// HWFP
-		{
-			AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
-			CreationDateField:          createdDate,
-			SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idWoodPellets)},
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "test hwfp batch"),
-			}},
-			AclField:         allCanReadAcl(nil),
-			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
-		},
-	}...)
-	// Add test entry
-	testItem := SubstrateBatch{
-		AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
-		CreationDateField:          CreationDateField{exampleTime},
-		SubstrateRecipeField:       SubstrateRecipeField{altCollIdForint(idTestingOnly)},
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanWriteAcl(),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		createdDate := CreationDateField{exampleTime}
+		err = addTestAltEntries(ctx, []SubstrateBatch{
+			// Coir
+			{
+				AlternateCollectionIdField: altCollIdFieldForint(idCoir),
+				CreationDateField:          createdDate,
+				SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idCoir)},
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "test coir batch"),
+				}},
+				AclField:         allCanReadAcl(nil),
+				LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
+			},
+			// HWFP
+			{
+				AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
+				CreationDateField:          createdDate,
+				SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idWoodPellets)},
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "test hwfp batch"),
+				}},
+				AclField:         allCanReadAcl(nil),
+				LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
+			},
+		}...)
+		// Add test entry
+		testItem := SubstrateBatch{
+			AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
+			CreationDateField:          CreationDateField{exampleTime},
+			SubstrateRecipeField:       SubstrateRecipeField{altCollIdForint(idTestingOnly)},
+			NotesField:                 NotesField{exampleNotes()},
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanWriteAcl(),
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createSubstrateBatchRequest struct {

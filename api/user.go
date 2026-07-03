@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/env"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -58,7 +59,7 @@ func (u *User) Reload(ctx context.Context) error {
 func initializeUsers(ctx context.Context) error {
 	//Indices
 	coll := DbFrom(ctx).Collection(UserCollName)
-	//err := createIndexes(ctx, coll, []mongo.IndexModel{
+	//err := createIndexes(ctx, coll, []mongo.IndexModel{ // TODO: FIX!
 	//	//newSimpleIndex("username", "username", false, false, true), // TODO: is true ok?
 	//	//newSimpleIndex("email", "email", false, false, true),       // TODO: is true ok?
 	//	//newSimpleIndex("googleId", "googleIde", false, true, true), // TODO: is true ok?
@@ -68,88 +69,90 @@ func initializeUsers(ctx context.Context) error {
 	//}
 	// TODO: DELETE THIS AFTER TESTING!!!!
 	println("Adding test users that are not completely reset after every boot") // TODO: del!
-	// resolve final test user projects list
-	testUserProjectsBase := []projectName{TestProjectNamePublic}
-	testUser := &User{
-		Email: testUserEmailGoogleNormal,
-	}
-	if err := testUser.Reload(ctx); err != nil {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			return errors.Join(errors.New("failed to find possibly existing user"), err)
+	return env.IfNotProd(ctx, func() error {                                    // TODO: ensure ok
+		// resolve final test user projects list
+		testUserProjectsBase := []projectName{TestProjectNamePublic}
+		testUser := &User{
+			Email: testUserEmailGoogleNormal,
 		}
-		// User does not exist, create base built-in perms
-		testUser.Perms = UserPerms{
-			Admin:    AcctTypeNormal(),
-			Projects: testUserProjectsBase,
+		if err := testUser.Reload(ctx); err != nil {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				return errors.Join(errors.New("failed to find possibly existing user"), err)
+			}
+			// User does not exist, create base built-in perms
+			testUser.Perms = UserPerms{
+				Admin:    AcctTypeNormal(),
+				Projects: testUserProjectsBase,
+			}
+		} else {
+			allProjects := make([]projectName, 0, len(testUserProjectsBase)+len(testUser.Perms.Projects))
+			for _, projGroup := range [][]projectName{testUserProjectsBase, testUser.Perms.Projects} {
+				allProjects = append(allProjects, projGroup...)
+			}
+			testUser.Perms.Projects = utils.SetFrom(allProjects...).ToSlice() // TODO: ensure ok that we do not overwrite the Admin field
 		}
-	} else {
-		allProjects := make([]projectName, 0, len(testUserProjectsBase)+len(testUser.Perms.Projects))
-		for _, projGroup := range [][]projectName{testUserProjectsBase, testUser.Perms.Projects} {
-			allProjects = append(allProjects, projGroup...)
+		//err := coll.FindOne(ctx, BsonFindFilter("_id", testUserEmailGoogleNormal)).Decode(&testUser)
+		//if err != nil {
+		//	if !errors.Is(err, mongo.ErrNoDocuments) {
+		//		return errors.Join(errors.New("failed to find possibly existing user"), err)
+		//	}
+		//	testUser.Perms = UserPerms{
+		//		Admin:    AcctTypeNormal(),
+		//		Projects: testUserProjectsFinal.ToSlice(),
+		//	}
+		//} else {
+		//	testUserProjectsFinal.Add(testUser.Perms.Projects...)
+		//	testUser.Perms.Projects = testUserProjectsFinal.ToSlice() // TODO: ensure ok that we do not overwrite the Admin field
+		//}
+		// Create user
+		_, err := coll.ReplaceOne(ctx, BsonFindFilter("_id", testUser.Email), testUser, options.Replace().SetUpsert(true))
+		if err != nil {
+			return err
 		}
-		testUser.Perms.Projects = utils.SetFrom(allProjects...).ToSlice() // TODO: ensure ok that we do not overwrite the Admin field
-	}
-	//err := coll.FindOne(ctx, BsonFindFilter("_id", testUserEmailGoogleNormal)).Decode(&testUser)
-	//if err != nil {
-	//	if !errors.Is(err, mongo.ErrNoDocuments) {
-	//		return errors.Join(errors.New("failed to find possibly existing user"), err)
-	//	}
-	//	testUser.Perms = UserPerms{
-	//		Admin:    AcctTypeNormal(),
-	//		Projects: testUserProjectsFinal.ToSlice(),
-	//	}
-	//} else {
-	//	testUserProjectsFinal.Add(testUser.Perms.Projects...)
-	//	testUser.Perms.Projects = testUserProjectsFinal.ToSlice() // TODO: ensure ok that we do not overwrite the Admin field
-	//}
-	// Create user
-	_, err := coll.ReplaceOne(ctx, BsonFindFilter("_id", testUser.Email), testUser, options.Replace().SetUpsert(true))
-	if err != nil {
-		return err
-	}
-	// TODO: DELETE THIS AFTER TESTING!!!!
-	var testUsers []User
+		// TODO: DELETE THIS AFTER TESTING!!!!
+		var testUsers []User
 
-	println("Adding test users that are reset on every boot")
+		println("Adding test users that are reset on every boot")
 
-	for _, info := range []struct { // TODO: validate working properly!
-		Projects []projectName
-		Emails   []string
-	}{
-		{
-			Projects: []projectName{TestProjectNamePublic},
-			Emails: []string{
-				testUserEmailPAA, testUserEmailPAB, testUserEmailPAC,
-				testUserEmailPWA, testUserEmailPWB, testUserEmailPWC,
-				testUserEmailPRA, testUserEmailPRB, testUserEmailPRC,
-			},
-		},
-		{
-			Projects: []projectName{},
-			Emails: []string{
-				testUserEmailPNA, testUserEmailPNB, testUserEmailPNC,
-			},
-		},
-	} {
-		for _, email := range info.Emails {
-			testUsers = append(testUsers, User{
-				Email: email,
-				Perms: UserPerms{
-					Admin:    AcctTypeNormal(),
-					Projects: info.Projects,
+		for _, info := range []struct { // TODO: validate working properly!
+			Projects []projectName
+			Emails   []string
+		}{
+			{
+				Projects: []projectName{TestProjectNamePublic},
+				Emails: []string{
+					testUserEmailPAA, testUserEmailPAB, testUserEmailPAC,
+					testUserEmailPWA, testUserEmailPWB, testUserEmailPWC,
+					testUserEmailPRA, testUserEmailPRB, testUserEmailPRC,
 				},
-			})
+			},
+			{
+				Projects: []projectName{},
+				Emails: []string{
+					testUserEmailPNA, testUserEmailPNB, testUserEmailPNC,
+				},
+			},
+		} {
+			for _, email := range info.Emails {
+				testUsers = append(testUsers, User{
+					Email: email,
+					Perms: UserPerms{
+						Admin:    AcctTypeNormal(),
+						Projects: info.Projects,
+					},
+				})
+			}
 		}
-	}
-	models := sliceutils.Map(testUsers, func(u User) mongo.WriteModel {
-		return mongo.NewReplaceOneModel().
-			SetFilter(bson.M{"_id": u.Email}).
-			SetReplacement(u).
-			SetUpsert(true)
+		models := sliceutils.Map(testUsers, func(u User) mongo.WriteModel {
+			return mongo.NewReplaceOneModel().
+				SetFilter(bson.M{"_id": u.Email}).
+				SetReplacement(u).
+				SetUpsert(true)
+		})
+		opts := options.BulkWrite().SetOrdered(false)
+		_, err = coll.BulkWrite(ctx, models, opts)
+		return err
 	})
-	opts := options.BulkWrite().SetOrdered(false)
-	_, err = coll.BulkWrite(ctx, models, opts)
-	return err
 }
 
 const (

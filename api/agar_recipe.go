@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -194,50 +195,51 @@ func initializeAgarRecipes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Add test entries
-	testItem := &AgarRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		NameField:                  NameField{testEntryStringId},
-		LiquidsField: LiquidsField{[]Liquid{
-			Water.AsLiquid().withPct(40.0),
-			DistilledWater.AsLiquid().withPct(60.0),
-		}},
-		Agar:          20,
-		StandardField: StandardField{false},
-		NutrientsField: NutrientsField{[]NutrientMeasurement{
-			nutMmt(LME, 19, "g"),
-			nutMmt(Potato, 2, "g"),
-		}},
-		SugarsField: SugarsField{[]SugarMeasurement{
-			sugMmt(Dextrose, 1, "g"),
-			sugMmt(Honey, 2, "g"),
-		}},
-		AdditivesField: AdditivesField{[]AdditiveMeasurement{
-			{
-				Additive: Vermiculite,
-				Amount:   0.2,
-				Unit:     "lb",
-			},
-			{
-				Additive: Perlite,
-				Amount:   0.7,
-				Unit:     "tons",
-			},
-			{
-				Additive: Gypsum,
-				Amount:   1,
-				Unit:     "pinch",
-			},
-		}},
-		AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
-		NotesField:       NotesField{exampleNotes()},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         AclField{testAcl},
-	}
+	// Add test entries if dev
+	return env.IfNotProd(ctx, func() error {
+		testItem := &AgarRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			NameField:                  NameField{testEntryStringId},
+			LiquidsField: LiquidsField{[]Liquid{
+				Water.AsLiquid().withPct(40.0),
+				DistilledWater.AsLiquid().withPct(60.0),
+			}},
+			Agar:          20,
+			StandardField: StandardField{false},
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
+				nutMmt(LME, 19, "g"),
+				nutMmt(Potato, 2, "g"),
+			}},
+			SugarsField: SugarsField{[]SugarMeasurement{
+				sugMmt(Dextrose, 1, "g"),
+				sugMmt(Honey, 2, "g"),
+			}},
+			AdditivesField: AdditivesField{[]AdditiveMeasurement{
+				{
+					Additive: Vermiculite,
+					Amount:   0.2,
+					Unit:     "lb",
+				},
+				{
+					Additive: Perlite,
+					Amount:   0.7,
+					Unit:     "tons",
+				},
+				{
+					Additive: Gypsum,
+					Amount:   1,
+					Unit:     "pinch",
+				},
+			}},
+			AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
+			NotesField:       NotesField{exampleNotes()},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         AclField{testAcl},
+		}
 
-	// Add test entries
-	return addTestAltEntries(ctx, testItem) // TODO: remove once done testing...
-	return nil
+		// Add test entries
+		return addTestAltEntries(ctx, testItem) // TODO: remove once done testing...
+	})
 }
 
 func sugMmt(t Sugar, amt float64, unit string) SugarMeasurement {

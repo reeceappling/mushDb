@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -182,34 +183,36 @@ func initializeJars(ctx context.Context) error {
 			return err
 		}
 	}
-	// If test agar batch does not exist, then create it
-	testId := mainCollIdForint(idTestJar)
-	testItem := &GrainJar{
-		MainCollectionIdField:   MainCollectionIdField{testId},
-		JarRecipeField:          JarRecipeField{&exAltId},
-		PcRunOptionalField:      PcRunOptionalField{&exAltId},
-		CreationDateField:       CreationDateField{exampleTime},
-		SpeciesOptionalField:    SpeciesOptionalField{&exampleSpecies},
-		SubspeciesOptionalField: SubspeciesOptionalField{exampleSubspecies},
-		InnocField:              InnocField{&exAltId},
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{&exGenSinceSpore},
-			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		},
-		TransfersOutField:                 TransfersOutField{exAlts},
-		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
-		PicsField:                         PicsField{exPics},
-		ContaminationsField:               ContaminationsField{exContams},
-		KnownFruitableField:               KnownFruitableField{exBool},
-		SaleField:                         SaleField{&exAltId},
-		DisposedField:                     DisposedField{&exampleTime},
-		MostRecentImageField:              MostRecentImageField{&exPics[0]},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		SizeCups:                          4,
-	}
-	return addTestMainEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// If test agar batch does not exist, then create it
+		testId := mainCollIdForint(idTestJar)
+		testItem := &GrainJar{
+			MainCollectionIdField:   MainCollectionIdField{testId},
+			JarRecipeField:          JarRecipeField{&exAltId},
+			PcRunOptionalField:      PcRunOptionalField{&exAltId},
+			CreationDateField:       CreationDateField{exampleTime},
+			SpeciesOptionalField:    SpeciesOptionalField{&exampleSpecies},
+			SubspeciesOptionalField: SubspeciesOptionalField{exampleSubspecies},
+			InnocField:              InnocField{&exAltId},
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{&exGenSinceSpore},
+				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+			},
+			TransfersOutField:                 TransfersOutField{exAlts},
+			ParentTypeField:                   ParentTypeField{&exParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+			PicsField:                         PicsField{exPics},
+			ContaminationsField:               ContaminationsField{exContams},
+			KnownFruitableField:               KnownFruitableField{exBool},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+			MostRecentImageField:              MostRecentImageField{&exPics[0]},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+			SizeCups:                          4,
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 // TODO: RENAME AND MOVE!

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -80,18 +81,19 @@ func initializeWaterJars(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	testItem := &WaterJar{
-		MainCollectionIdField: MainCollectionIdField{exWaterId},
-		CreationDateField:     CreationDateField{exampleTime},
-		PcRunField:            PcRunField{exAltId},
-		NotesField:            NotesField{exampleNotes()},
-		LastUpdatedField:      LastUpdatedField{exampleTime},
-		AclField:              allCanWriteAcl(),
-	}
-	println("binary water jar id initial:"+string(exWaterId[:]), len(exWaterId[:]))
-	println("created waterJar with id: " + exWaterId.AsBase58())
-	return addTestMainEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// If test agar batch does not exist, then create it
+		testItem := &WaterJar{
+			MainCollectionIdField: MainCollectionIdField{exWaterId},
+			CreationDateField:     CreationDateField{exampleTime},
+			PcRunField:            PcRunField{exAltId},
+			NotesField:            NotesField{exampleNotes()},
+			LastUpdatedField:      LastUpdatedField{exampleTime},
+			AclField:              allCanWriteAcl(),
+		}
+		println("created waterJar with id: " + exWaterId.AsBase58()) // TODO: del?
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createWaterJarRequest struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -78,17 +79,19 @@ func initializeSubspecies(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Add test entry
-	testItem := &Subspecies{
-		NameIdField:      NameIdField{TestSubspeciesName},
-		SpeciesField:     SpeciesField{TestSpeciesName},
-		AliasesField:     AliasesField{[]string{"testSubSpecies", "example subspecies"}},
-		NotesField:       NotesField{exampleNotes()},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         allCanReadAcl(nil),
-		DefaultAcl:       allCanWriteAcl().ACL,
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// Add test entry
+		testItem := &Subspecies{
+			NameIdField:      NameIdField{TestSubspeciesName},
+			SpeciesField:     SpeciesField{TestSpeciesName},
+			AliasesField:     AliasesField{[]string{"testSubSpecies", "example subspecies"}},
+			NotesField:       NotesField{exampleNotes()},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         allCanReadAcl(nil),
+			DefaultAcl:       allCanWriteAcl().ACL,
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createSubspeciesRequest struct {

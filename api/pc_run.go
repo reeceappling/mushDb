@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -46,19 +47,21 @@ func initializePCRun(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test run does not exist, then create it
-	testItem := &PCRun{ // TODO: this is a
-		AlternateCollectionIdField: impPcRun.asIdField(),
-		CreationDateField:          CreationDateField{exampleTime},
-		RunTimeMinutes:             60,
-		NotesField: NotesField{[]Note{{
-			RequiredTimeField: RequiredTimeField{exampleTime},
-			Note:              "PC Run specified for Imports, also utilized for testing and development",
-		}}},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         allCanReadAcl(nil),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// If test run does not exist, then create it
+		testItem := &PCRun{ // TODO: this is a
+			AlternateCollectionIdField: impPcRun.asIdField(),
+			CreationDateField:          CreationDateField{exampleTime},
+			RunTimeMinutes:             60,
+			NotesField: NotesField{[]Note{{
+				RequiredTimeField: RequiredTimeField{exampleTime},
+				Note:              "PC Run specified for Imports, also utilized for testing and development",
+			}}},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         allCanReadAcl(nil),
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createPcRunRequest struct {

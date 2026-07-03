@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"github.com/reeceappling/mushDb/api/request/unix"
@@ -199,55 +200,57 @@ func initializePlates(ctx context.Context) error {
 		lastUpdatedIndexModel,
 		projectsIndexModel,
 	})
-	if err != nil {
-		return err
-	}
-	testPlateIds := []int{
-		idTestPlateBlanketWrite,
-		idTestPlateBlanketRead,
-		idTestPlateAdminOnly,
-		idTestPlateProjectWrite,
-		idTestPlateProjectRead,
-		idTestPlateUserOutsideProject,
-	}
-	platesMade := map[Base58Str]string{}
-	testPlates := []*Plate{}
-	// If test plate does not exist, then create it
-	firstPlate := basicTestPlate()
-	testId := firstPlate.Id
-	platesMade[testId.AsBase58()] = "test plate with id 1"
-	testPlates = append(testPlates, &firstPlate)
-	emptyPlate := emptyTestPlate()
-	emptyTestId := emptyPlate.Id
-	platesMade[emptyTestId.AsBase58()] = "test empty plate"
-
-	testPlates = append(testPlates, &emptyPlate)
-	for i, permInt := range testPlateIds {
-		id := mainCollIdForint(permInt)
-		platesMade[id.AsBase58()] = testAclStrings[i]
-		var tempCoverage = &i
-		var tempBool = utils.Pointer(false)
-		switch i {
-		case 1:
-			tempCoverage = nil
-			tempBool = nil
-		case 2:
-			tempBool = utils.Pointer(true)
-		default:
-			// Do nothing different
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		if err != nil {
+			return err
 		}
-		// Project-user + Project-entry permissions test plates
-		newTestPlate := testPlateFor(id, &exAltId, exampleTime, tempCoverage, tempCoverage, tempBool, tempBool,
-			&testEntryStringId, &testEntryStringId, &exAltId, &exGenSinceSpore, &exGenSinceFruitSpore, exAlts,
-			&exParentType, &testId, exPics, exContams, exBool, &exAltId, &exampleTime, &exPics[0], exampleNotes(),
-			exampleTime, testAcls[i])
-		testPlates = append(testPlates, &newTestPlate)
-	}
-	println("Built-in plates entries:")
-	for tempId, name := range platesMade {
-		println(tempId, name)
-	}
-	return addTestMainEntries(ctx, testPlates...)
+		testPlateIds := []int{
+			idTestPlateBlanketWrite,
+			idTestPlateBlanketRead,
+			idTestPlateAdminOnly,
+			idTestPlateProjectWrite,
+			idTestPlateProjectRead,
+			idTestPlateUserOutsideProject,
+		}
+		platesMade := map[Base58Str]string{}
+		testPlates := []*Plate{}
+		// If test plate does not exist, then create it
+		firstPlate := basicTestPlate()
+		testId := firstPlate.Id
+		platesMade[testId.AsBase58()] = "test plate with id 1"
+		testPlates = append(testPlates, &firstPlate)
+		emptyPlate := emptyTestPlate()
+		emptyTestId := emptyPlate.Id
+		platesMade[emptyTestId.AsBase58()] = "test empty plate"
+
+		testPlates = append(testPlates, &emptyPlate)
+		for i, permInt := range testPlateIds {
+			id := mainCollIdForint(permInt)
+			platesMade[id.AsBase58()] = testAclStrings[i]
+			var tempCoverage = &i
+			var tempBool = utils.Pointer(false)
+			switch i {
+			case 1:
+				tempCoverage = nil
+				tempBool = nil
+			case 2:
+				tempBool = utils.Pointer(true)
+			default:
+				// Do nothing different
+			}
+			// Project-user + Project-entry permissions test plates
+			newTestPlate := testPlateFor(id, &exAltId, exampleTime, tempCoverage, tempCoverage, tempBool, tempBool,
+				&testEntryStringId, &testEntryStringId, &exAltId, &exGenSinceSpore, &exGenSinceFruitSpore, exAlts,
+				&exParentType, &testId, exPics, exContams, exBool, &exAltId, &exampleTime, &exPics[0], exampleNotes(),
+				exampleTime, testAcls[i])
+			testPlates = append(testPlates, &newTestPlate)
+		}
+		println("Built-in plates entries:")
+		for tempId, name := range platesMade {
+			println(tempId, name)
+		}
+		return addTestMainEntries(ctx, testPlates...)
+	})
 }
 
 func basicTestPlate() Plate {

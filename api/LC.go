@@ -135,58 +135,60 @@ func initializeLCs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test LC does not exist, then create it
-	testId := mainCollIdForint(idTestLC)
-	testItem := &LiquidCulture{
-		MainCollectionIdField:   MainCollectionIdField{testId},
-		PcRunField:              PcRunField{impPcRun},
-		LcRecipeField:           LcRecipeField{exAltId},
-		CreationDateField:       CreationDateField{exampleTime},
-		SpeciesOptionalField:    SpeciesOptionalField{&exampleSpecies},
-		SubspeciesOptionalField: SubspeciesOptionalField{exampleSubspecies},
-		InnocField:              InnocField{&exAltId},
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{&exGenSinceSpore},
-			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		},
-		TransfersOutField:                 TransfersOutField{exAlts},
-		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: &exPlate},
-		PicsField:                         PicsField{exPics},
-		ConfirmedCleanField:               ConfirmedCleanField{exBool},
-		ContaminationsField:               ContaminationsField{exContams},
-		KnownFruitableField:               KnownFruitableField{exBool},
-		DisposedField:                     DisposedField{&exampleTime},
-		MostRecentImageField:              MostRecentImageField{&exPics[0]},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	}
-	testId2 := mainCollIdForint(idTestLC2)
-	testItem2 := &LiquidCulture{
-		MainCollectionIdField:   MainCollectionIdField{testId2},
-		PcRunField:              PcRunField{impPcRun},
-		LcRecipeField:           LcRecipeField{exAltId},
-		CreationDateField:       CreationDateField{exampleTime},
-		SpeciesOptionalField:    SpeciesOptionalField{nil},
-		SubspeciesOptionalField: SubspeciesOptionalField{nil},
-		InnocField:              InnocField{nil},
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{nil},
-			GenSinceFruitOrSpore: nil,
-		},
-		TransfersOutField:                 TransfersOutField{nil},
-		ParentTypeField:                   ParentTypeField{nil},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: nil},
-		PicsField:                         PicsField{nil},
-		ConfirmedCleanField:               ConfirmedCleanField{nil},
-		ContaminationsField:               ContaminationsField{nil},
-		KnownFruitableField:               KnownFruitableField{nil},
-		DisposedField:                     DisposedField{nil},
-		MostRecentImageField:              MostRecentImageField{nil},
-		NotesField:                        NotesField{nil},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	}
-	return addTestMainEntries(ctx, testItem, testItem2)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// If test LC does not exist, then create it
+		testId := mainCollIdForint(idTestLC)
+		testItem := &LiquidCulture{
+			MainCollectionIdField:   MainCollectionIdField{testId},
+			PcRunField:              PcRunField{impPcRun},
+			LcRecipeField:           LcRecipeField{exAltId},
+			CreationDateField:       CreationDateField{exampleTime},
+			SpeciesOptionalField:    SpeciesOptionalField{&exampleSpecies},
+			SubspeciesOptionalField: SubspeciesOptionalField{exampleSubspecies},
+			InnocField:              InnocField{&exAltId},
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{&exGenSinceSpore},
+				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+			},
+			TransfersOutField:                 TransfersOutField{exAlts},
+			ParentTypeField:                   ParentTypeField{&exParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: &exPlate},
+			PicsField:                         PicsField{exPics},
+			ConfirmedCleanField:               ConfirmedCleanField{exBool},
+			ContaminationsField:               ContaminationsField{exContams},
+			KnownFruitableField:               KnownFruitableField{exBool},
+			DisposedField:                     DisposedField{&exampleTime},
+			MostRecentImageField:              MostRecentImageField{&exPics[0]},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+		}
+		testId2 := mainCollIdForint(idTestLC2)
+		testItem2 := &LiquidCulture{
+			MainCollectionIdField:   MainCollectionIdField{testId2},
+			PcRunField:              PcRunField{impPcRun},
+			LcRecipeField:           LcRecipeField{exAltId},
+			CreationDateField:       CreationDateField{exampleTime},
+			SpeciesOptionalField:    SpeciesOptionalField{nil},
+			SubspeciesOptionalField: SubspeciesOptionalField{nil},
+			InnocField:              InnocField{nil},
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{nil},
+				GenSinceFruitOrSpore: nil,
+			},
+			TransfersOutField:                 TransfersOutField{nil},
+			ParentTypeField:                   ParentTypeField{nil},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{Parent: nil},
+			PicsField:                         PicsField{nil},
+			ConfirmedCleanField:               ConfirmedCleanField{nil},
+			ContaminationsField:               ContaminationsField{nil},
+			KnownFruitableField:               KnownFruitableField{nil},
+			DisposedField:                     DisposedField{nil},
+			MostRecentImageField:              MostRecentImageField{nil},
+			NotesField:                        NotesField{nil},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+		}
+		return addTestMainEntries(ctx, testItem, testItem2)
+	})
 }
 
 type createLiquidCultureRequest struct {

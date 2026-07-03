@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"github.com/reeceappling/mushDb/api/request/unix"
@@ -148,48 +149,57 @@ func initializeBags(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	testId := mainCollIdForint(idTestBag)
-	testItem := &Bag{
-		MainCollectionIdField:       MainCollectionIdField{testId},
-		SubstrateRecipeField:        SubstrateRecipeField{exAltId},
-		SubstrateBatchOptionalField: SubstrateBatchOptionalField{SubstrateBatch: utils.Pointer(altCollIdForint(idWoodPellets))},
-		PcRunField:                  PcRunField{exAltId},
-		FilterSize:                  "0.2 micron",
-		CreationDateField:           CreationDateField{exampleTime},
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{&exGenSinceSpore},
-			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		},
-		SealDate:                          &exampleTime,
-		KnownFruitableField:               KnownFruitableField{exBool},
-		SpeciesOptionalField:              SpeciesOptionalField{&testEntryStringId},
-		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
-		InnocField:                        InnocField{&exAltId},
-		TransfersOutField:                 TransfersOutField{exAlts},
-		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
-		PicsField:                         PicsField{exPics},
-		ContaminationsField:               ContaminationsField{exContams},
-		MostRecentImageField:              MostRecentImageField{&exPics[0]},
-		FlushesField:                      FlushesField{exPics},
-		SaleField:                         SaleField{&exAltId},
-		DisposedField:                     DisposedField{&exampleTime},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          AclField{testAcl},
-	}
-	return addTestMainEntries(ctx, testItem)
+	// Add test entries if dev
+	return env.IfNotProd(ctx, func() error {
+		// If test agar batch does not exist, then create it
+		testId := mainCollIdForint(idTestBag)
+		testItem := &Bag{
+			MainCollectionIdField:       MainCollectionIdField{testId},
+			SubstrateRecipeField:        SubstrateRecipeField{exAltId},
+			SubstrateBatchOptionalField: SubstrateBatchOptionalField{SubstrateBatch: utils.Pointer(altCollIdForint(idWoodPellets))},
+			PcRunField:                  PcRunField{exAltId},
+			FilterSize:                  filterSizetwoMic,
+			CreationDateField:           CreationDateField{exampleTime},
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{&exGenSinceSpore},
+				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+			},
+			SealDate:                          &exampleTime,
+			KnownFruitableField:               KnownFruitableField{exBool},
+			SpeciesOptionalField:              SpeciesOptionalField{&testEntryStringId},
+			SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+			InnocField:                        InnocField{&exAltId},
+			TransfersOutField:                 TransfersOutField{exAlts},
+			ParentTypeField:                   ParentTypeField{&exParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+			PicsField:                         PicsField{exPics},
+			ContaminationsField:               ContaminationsField{exContams},
+			MostRecentImageField:              MostRecentImageField{&exPics[0]},
+			FlushesField:                      FlushesField{exPics},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+			AclField:                          AclField{testAcl},
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
+const (
+	filterSizetwoMic       = "0.2 micron"
+	filterSizeTwentyTwoMic = "0.22 micron"
+	filterSizeUnknown      = "unknown"
+)
+
 var bagFilterSizes = map[string]string{
-	"0.2 micron":  "Average large bag with filter", // Avg large bag // TODO; figure out which sizes apply to which bags
-	"0.22 micron": "Average filter patches",        // Avg patches
+	filterSizetwoMic:       "Average large bag with filter", // Avg large bag // TODO; figure out which sizes apply to which bags
+	filterSizeTwentyTwoMic: "Average filter patches",        // Avg patches
 	//"0.3 micron",
 	//"0.45 micron",
 	//"0.5 micron",
 	//"5 micron": "Airy large bags (do not have)", // TODO: Airy large bag?
-	"unknown": "monotub filter patches, etc",
+	filterSizeUnknown: "monotub filter patches, etc",
 }
 
 type createBagRequest struct {

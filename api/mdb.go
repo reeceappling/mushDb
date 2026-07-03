@@ -138,7 +138,7 @@ func Base2BytesToBase58(littleEndianBytes []byte) (Base58Str, error) {
 	}
 	baseTenStr := []byte(new(big.Int).SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10))
 	encoded, err := base58.BitcoinEncoding.Encode(baseTenStr)
-	println(string(baseTenStr), string(encoded)) // TODO; DEL
+	//println(string(baseTenStr), string(encoded), "a thing") // TODO; DEL
 	if err != nil {
 		return "", errors.Join(errors.New("base58 encoding fault"), err)
 	}
@@ -556,7 +556,7 @@ func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresul
 	if filterOutStandard {
 		findBson = BsonFindFilter("standard", false)
 	} else {
-		println("trying to find ANY items") // TODO: ???
+		//println("trying to find ANY items") // TODO: ???
 	}
 	sortField := "$natural"
 	if updated {

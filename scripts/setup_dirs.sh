@@ -6,16 +6,22 @@ case "$ENV_NAME" in
         # Commands to run if VARIABLE matches pattern1
         MNGO_DIR="/opt/mush/data/db"
         PICS_DIR="/opt/mush/data/pictures"
+        DB_BACKUP_DIR="/opt/mush/backups/db"
+        #PICS_BACKUP_DIR="/opt/mush/backups/pics"
         ;;
     "cert"|"Cert"|"CERT")
         # Commands to run if VARIABLE matches pattern2 OR pattern3
         MNGO_DIR="/tmp/mush/data/cert/db"
         PICS_DIR="/tmp/mush/data/cert/pictures"
+        DB_BACKUP_DIR="/tmp/mush/cert/backups/db"
+        #PICS_BACKUP_DIR="/opt/mush/cert/backups/pics"
         ;;
     *) # |"dev"|"Dev"|"DEV"|"qual"|"Qual"|"QUAL"
         # Default fallback commands (like "default:" in C/Java)
         MNGO_DIR="/tmp/mush/data/db"
         PICS_DIR="/tmp/mush/data/pictures"
+        DB_BACKUP_DIR="/tmp/mush/backups/db"
+        #PICS_BACKUP_DIR="/opt/mush/backups/pics"
         ;;
 esac
 
@@ -25,13 +31,16 @@ prep_dir() {
     # Create the dir
     mkdir -p $filepath
     # Set the ownership to the current user and group
-    chown -R $(id -u):$(id -g) $filepath
+    #chown -R $(id -u):$(id -g) $filepath # TODO: FIX NEXT LINE
+    chown -R 503:20 $filepath
     # Allow all to read and write
     chmod -R a+rw $filepath
 }
 
 prep_dir $MNGO_DIR
 prep_dir $PICS_DIR
+prep_dir $DB_BACKUP_DIR
+#prep_dir $PICS_BACKUP_DIR
 
 # Whitelist the Parent Directory in Docker Desktopmac
 # OS requires explicit permission for Docker to access local files.

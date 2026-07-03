@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -82,20 +83,22 @@ func initializeSporeSwabs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	testItem := &SporeSwab{
-		MainCollectionIdField:             MainCollectionIdField{exSwabId},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
-		CreationDateField:                 CreationDateField{exampleTime},
-		SpeciesField:                      SpeciesField{testEntryStringId},
-		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
-		SaleField:                         SaleField{&exAltId},
-		DisposedField:                     DisposedField{&exampleTime},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          allCanWriteAcl(),
-	}
-	return addTestMainEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// If test agar batch does not exist, then create it
+		testItem := &SporeSwab{
+			MainCollectionIdField:             MainCollectionIdField{exSwabId},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
+			CreationDateField:                 CreationDateField{exampleTime},
+			SpeciesField:                      SpeciesField{testEntryStringId},
+			SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+			AclField:                          allCanWriteAcl(),
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createSporeSwabRequest struct {

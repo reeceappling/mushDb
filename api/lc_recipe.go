@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -95,36 +96,38 @@ func initializeLcRecipes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Add test entries
-	testItem := &LcRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		NameField:                  NameField{"testLcRecipeName"},
-		StandardField:              StandardField{false},
-		LiquidsField:               allWater,
-		NutrientsField: NutrientsField{[]NutrientMeasurement{
-			{
-				Nutrient: LME,
-				Amount:   1,
-				Unit:     "kg",
-			},
-			{
-				Nutrient: Potato,
-				Amount:   8,
-				Unit:     "ug",
-			},
-		}},
-		SugarsField: SugarsField{[]SugarMeasurement{
-			newSugarMeasurement(Honey, 1, "large drop per quart jar"),
-		}},
-		AdditivesField: AdditivesField{[]AdditiveMeasurement{
-			newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
-			newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
-		}},
-		NotesField:       NotesField{exampleNotes()},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         allCanWriteAcl(),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// Add test entries
+		testItem := &LcRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			NameField:                  NameField{"testLcRecipeName"},
+			StandardField:              StandardField{false},
+			LiquidsField:               allWater,
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
+				{
+					Nutrient: LME,
+					Amount:   1,
+					Unit:     "kg",
+				},
+				{
+					Nutrient: Potato,
+					Amount:   8,
+					Unit:     "ug",
+				},
+			}},
+			SugarsField: SugarsField{[]SugarMeasurement{
+				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
+			}},
+			AdditivesField: AdditivesField{[]AdditiveMeasurement{
+				newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
+				newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
+			}},
+			NotesField:       NotesField{exampleNotes()},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         allCanWriteAcl(),
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createLcRecipeRequest struct {

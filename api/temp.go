@@ -24,12 +24,11 @@ func writeRfidTagIfNecessary(ctx context.Context, writeTagTo *string, id MainCol
 	if writeTagTo == nil {
 		return nil // Don't write
 	}
-	// TODO: DO THIS!!!!! IDEAS IN test/main
-	return errors.New("not yet implemented") // TODO: write tag
+	// TODO: WRITE THE TAG HERE!
+	return errors.New("not yet implemented")
 }
 
 func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
-	println(id)    // TODO: delete
 	if id == "1" { // TODO: DO THIS ELSEWHERE!
 		println("making ID 1!")
 		return utils.Pointer(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....

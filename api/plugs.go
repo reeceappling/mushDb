@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -192,33 +193,35 @@ func initializePlugs(ctx context.Context) error {
 		return err
 	}
 	// Create test plugs
-	testItem := &PlugsJar{
-		MainCollectionIdField: MainCollectionIdField{exPlugId},
-		ParentTypeField: ParentTypeField{
-			utils.Pointer("plate"),
-		},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
-		CreationDateField:                 CreationDateField{exampleTime},
-		DowelTypes: []Dowel{
-			{
-				Radius: Radius{
-					Size:  2,
-					Units: "cm",
-				},
-				Wood: "oak",
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		testItem := &PlugsJar{
+			MainCollectionIdField: MainCollectionIdField{exPlugId},
+			ParentTypeField: ParentTypeField{
+				utils.Pointer("plate"),
 			},
-		},
-		SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
-		SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
-		InnocField:              InnocField{&exAltId},
-		PcRunOptionalField:      PcRunOptionalField{&exAltId},
-		SalesField:              SalesField{[]AlternateCollectionId{exAltId}},
-		DisposedField:           DisposedField{&exampleTime},
-		NotesField:              NotesField{exampleNotes()},
-		LastUpdatedField:        LastUpdatedField{exampleTime},
-		AclField:                allCanReadAcl(nil),
-	}
-	return addTestMainEntries(ctx, testItem)
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+			CreationDateField:                 CreationDateField{exampleTime},
+			DowelTypes: []Dowel{
+				{
+					Radius: Radius{
+						Size:  2,
+						Units: "cm",
+					},
+					Wood: "oak",
+				},
+			},
+			SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
+			SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
+			InnocField:              InnocField{&exAltId},
+			PcRunOptionalField:      PcRunOptionalField{&exAltId},
+			SalesField:              SalesField{[]AlternateCollectionId{exAltId}},
+			DisposedField:           DisposedField{&exampleTime},
+			NotesField:              NotesField{exampleNotes()},
+			LastUpdatedField:        LastUpdatedField{exampleTime},
+			AclField:                allCanReadAcl(nil),
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createPlugsRequest struct {

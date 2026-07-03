@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -58,6 +59,7 @@ func initializeSpecies(ctx context.Context) error {
 	}
 
 	woodPelletsId := altCollIdForint(idWoodPellets)
+	// TODO: ensure does not completely overwrite if there are changes....
 	basicEntries := []*Species{
 		// King Oyster
 		{
@@ -153,18 +155,20 @@ func initializeSpecies(ctx context.Context) error {
 		return err
 	}
 	// Add test entry
-	testItem := &Species{
-		NameIdField:       NameIdField{TestSpeciesName},
-		ScientificName:    "examplius speciesus",
-		AliasesField:      AliasesField{[]string{"testSpecies", "example species"}},
-		Subspecies:        []string{}, // TODO: ADD EXAMPLE SUBSPECIES!
-		StandardSubstrate: exAltId,
-		NotesField:        NotesField{exampleNotes()},
-		LastUpdatedField:  LastUpdatedField{exampleTime},
-		AclField:          allCanReadAcl(nil),
-		DefaultAcl:        allCanWriteAcl().ACL,
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		testItem := &Species{
+			NameIdField:       NameIdField{TestSpeciesName},
+			ScientificName:    "examplius speciesus",
+			AliasesField:      AliasesField{[]string{"testSpecies", "example species"}},
+			Subspecies:        []string{}, // TODO: ADD EXAMPLE SUBSPECIES!
+			StandardSubstrate: exAltId,
+			NotesField:        NotesField{exampleNotes()},
+			LastUpdatedField:  LastUpdatedField{exampleTime},
+			AclField:          allCanReadAcl(nil),
+			DefaultAcl:        allCanWriteAcl().ACL,
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createSpeciesRequest struct {

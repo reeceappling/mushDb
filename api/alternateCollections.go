@@ -44,7 +44,7 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 		println("error getting entries: " + err.Error())
 		latestEntries, err = []T{}, nil
 	}
-	println(fmt.Sprintf("listEntriesHandlerInternal found %d entries", len(latestEntries)))
+	//println(fmt.Sprintf("listEntriesHandlerInternal found %d entries", len(latestEntries))) // TODO: del
 	if !doStandardToo {
 		bs, err = json.Marshal(latestEntries)
 	} else {
@@ -60,7 +60,7 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 			outObj["standard"], err = []T{}, nil
 		}
 		// Standard is filtered out from latest already
-		println(fmt.Sprintf("listEntriesHandlerInternal found %d std entries", len(outObj["standard"])))
+		//println(fmt.Sprintf("listEntriesHandlerInternal found %d std entries", len(outObj["standard"]))) // TODO: del
 
 		bs, err = json.Marshal(outObj)
 	}
@@ -396,23 +396,15 @@ func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx conte
 	// TODO: txn or no?
 	coll := DbFrom(ctx).Collection(testItems[0].CollectionName())
 	for _, item := range testItems {
-		switch id := item.IdValue().(type) {
-		case AlternateCollectionId:
-			println(id.AsBase58())
-		case string:
-			println(id)
-		default:
-			return errors.New("invalid basic alt entry id, must be string or Alt Id")
-		}
 		_, err := coll.InsertOne(ctx, item, options.InsertOne())
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
 				continue
 			}
-			// TODO: update existing if needed?
 			println("error adding basic alt entries: " + err.Error())
 			return err
 		}
+
 	}
 
 	return nil

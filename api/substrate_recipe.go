@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -90,17 +91,19 @@ func initializeSubstrates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// Add test entry
-	testItem := &SubstrateRecipe{
-		AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
-		NameField:                  NameField{testEntryStringId},
-		StandardField:              StandardField{false},
-		AliasesField:               AliasesField{[]string{"testSubstrate", "example substrate"}},
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanWriteAcl(),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// Add test entry
+		testItem := &SubstrateRecipe{
+			AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
+			NameField:                  NameField{testEntryStringId},
+			StandardField:              StandardField{false},
+			AliasesField:               AliasesField{[]string{"testSubstrate", "example substrate"}},
+			NotesField:                 NotesField{exampleNotes()},
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanWriteAcl(),
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type PermsOnRequest struct {

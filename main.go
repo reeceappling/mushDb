@@ -51,9 +51,15 @@ func init() {
 func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, err error) {
 	dbHostName := os.Getenv("DB_HOST_NAME")
 	dbUser := os.Getenv("MONGO_INITDB_USERNAME")
-	dbPass := os.Getenv("MONGO_INITDB_PASSWORD")
+	dbPass, err := getSecret("MONGO_INITDB_PASSWORD")
+	if err != nil {
+		panic("failed to resolve secret MONGO_INITDB_PASSWORD: " + err.Error())
+	}
+	dbSetupPass, err := getSecret("MONGO_INITDB_SETUP_PASSWORD")
+	if err != nil {
+		panic("failed to resolve secret MONGO_INITDB_SETUP_PASSWORD: " + err.Error())
+	}
 	dbSetupUser := os.Getenv("MONGO_INITDB_SETUP_USERNAME")
-	dbSetupPass := os.Getenv("MONGO_INITDB_SETUP_PASSWORD")
 	dbHostPortStr := os.Getenv("DB_HOST_PORT")
 	dbHostPort, err := strconv.Atoi(dbHostPortStr)
 	if err != nil {
@@ -63,10 +69,6 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 
 	if dbUser == "" {
 		err = errors.New("no MONGO_INITDB_USERNAME env var found")
-		return
-	}
-	if dbPass == "" {
-		err = errors.New("no MONGO_INITDB_PASSWORD env var found")
 		return
 	}
 
@@ -97,13 +99,27 @@ const defaultHttpPort = 8080
 
 func main() {
 	// TODO: need to clear out the db for actually using it!
-	//env := os.Getenv("ENVIRONMENT") // TODO: set this!
+	ctx := context.Background()
+	var envir string
+	switch os.Getenv("ENVIRONMENT") { // TODO: set this!
+	case "prod":
+		envir = env.Prod
+	case "cert":
+		envir = env.Cert
+	case "qual", "dev", "devl":
+		envir = env.Dev
+	default:
+		panic("invalid environment: " + os.Getenv("ENVIRONMENT"))
+	}
+	ctx = env.SetEnv(ctx, envir)
 	picsPath := os.Getenv("PICS_PATH")
 	if picsPath == "" {
 		panic("env var missing for PICS_PATH")
 	}
-	ctx := pics.SetFilePath(context.Background(), picsPath)
-	//ctx = rfid.SetEnv(ctx, env == "prod") // TODO: ???
+	ctx = pics.SetFilePath(ctx, picsPath)
+	if err := resolveGothicSessionSecret(); err != nil {
+		panic("failed to resolve gothic session secret: " + err.Error())
+	}
 	var err error
 	authSvc := rfid.NewAuthService(utils.Pointer(2*time.Minute), utils.Pointer(1*time.Hour))
 	ctx = authSvc.OnContext(ctx)
@@ -115,16 +131,19 @@ func main() {
 	ctx = logging.SetLogger(ctx, log)
 	ctx = logging.SetSugaredLogger(ctx, log.Sugar())
 
-	// TODO: set environment!
-	//ctx = env.SetEnv(ctx, env.Prod)
-	ctx = env.SetEnv(ctx, env.Dev)
-
 	// Get non-db env vars
-	rfidRegistrySecret := os.Getenv("RFID_SECRET")
-	if rfidRegistrySecret == "" {
-		panic("env var missing for RFID_SECRET")
+	rfidRegistrySecret, err := getSecret("RFID_SECRET")
+	if err != nil {
+		panic("failed to resolve secret RFID_SECRET: " + err.Error())
 	}
-	googId, googSecret := os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET")
+	googId, err := getSecret("GOOGLE_CLIENT_ID")
+	if err != nil {
+		panic("failed to resolve secret GOOGLE_CLIENT_ID: " + err.Error())
+	}
+	googSecret, err := getSecret("GOOGLE_CLIENT_SECRET")
+	if err != nil {
+		panic("failed to resolve secret GOOGLE_CLIENT_SECRET: " + err.Error())
+	}
 	apiPort, err := strconv.Atoi(os.Getenv("API_PORT")) // TODO: ok?
 	if err != nil {
 		fmt.Printf(`No api port configured, defaulting to port %d`, defaultHttpPort)
@@ -160,7 +179,7 @@ func main() {
 
 	// Set up server
 	srv := &http.Server{
-		Addr:              ":" + strconv.Itoa(apiPort),
+		Addr:              ":" + strconv.Itoa(apiPort), // TODO: will this work for websockets?
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
@@ -223,7 +242,7 @@ func main() {
 	defer mgr.Cleanup()
 	// Start generating mainCollectionIds
 	rfid.StartGeneratingMCIDs(ctx, 12)
-	ctx, rateLimiter, rfidMiddleware, internalOnlyMiddleware, webAuthMiddleware, internalAuthMiddleware, ctxMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, apiPort)
+	ctx, rateLimiter, rfidMiddleware, internalOnlyMiddleware, webAuthMiddleware, authOrDenyMiddleware, ctxMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, apiPort)
 	if err != nil {
 		panic("Error setting up middleware: " + err.Error())
 	}
@@ -232,11 +251,11 @@ func main() {
 	println("Defining endpoints")
 	println("Defining RFID endpoints")
 	// Must be publicly available. (external)
-	http.HandleFunc("/rfid/ws", ctxMiddleware(rfidMiddleware(http.HandlerFunc(websocketSessions.ServerHandler))))
+	http.HandleFunc("/rfid/ws", ctxMiddleware(rfidMiddleware(http.HandlerFunc(websocketSessions.ServerHandler)))) // TODO: was /rfid/ws
 	// Must be internal to docker network
-	http.HandleFunc("/rfid/read/{readerName}", ctxMiddleware(rfidMiddleware(internalOnlyMiddleware(rfidReadHandler))))   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/write/{writerName}", ctxMiddleware(rfidMiddleware(internalOnlyMiddleware(rfidWriteHandler)))) // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/readers", ctxMiddleware(rfidMiddleware(internalOnlyMiddleware(getRfidReaderNamesHandler))))   // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/read/{readerName}", ctxMiddleware(rfidMiddleware(authOrDenyMiddleware(rfidReadHandler))))   // TODO: internal only?   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/write/{writerName}", ctxMiddleware(rfidMiddleware(authOrDenyMiddleware(rfidWriteHandler)))) // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/readers", ctxMiddleware(rfidMiddleware(internalOnlyMiddleware(getRfidReaderNamesHandler)))) // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
 	webHostPort := 3000
@@ -314,7 +333,7 @@ func main() {
 	println("Defining db interaction endpoints")
 	// TODO: CORS db middlewares?
 	rateLimitCtxInternalAuthMiddleware := func(next http.Handler) http.Handler {
-		return rateLimiter(ctxMiddleware(internalAuthMiddleware(next)))
+		return rateLimiter(ctxMiddleware(authOrDenyMiddleware(next)))
 	}
 	// Resolving Types
 	http.Handle("/db/pathFor/{id}", rateLimitCtxInternalAuthMiddleware(rfid.GetPageForIdHandler)) // TODO: DenyGuestMiddleware?
@@ -342,6 +361,27 @@ func main() {
 	if err != nil {
 		panic("ERROR CLOSING SERVER " + err.Error())
 	}
+}
+
+func getSecret(secretName string) (string, error) {
+	path := filepath.Join("/run/secrets", secretName)
+	payload, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	//// Trim trailing newlines or whitespace added by file editors // TODO: ????
+	//return string(bytes.TrimSpace(payload)), nil
+	return string(payload), nil
+}
+
+func resolveGothicSessionSecret() error {
+	sessionSecretName := "SESSION_SECRET"
+	sec, err := getSecret(sessionSecretName)
+	if err != nil {
+		return err
+	}
+	println("Gothic secret used: ", sec)
+	return os.Setenv(sessionSecretName, sec)
 }
 
 type customSessionStore struct { // TODO: use or delete
@@ -1347,7 +1387,11 @@ var getRfidReaderNamesHandler http.HandlerFunc = func(w http.ResponseWriter, r *
 	}
 	rfidReaderSessions := mgr.Sessions()
 	totalSessions := rfidReaderSessions
-	totalSessions = withGoodBadTestWriters(totalSessions) // TODO: remove after testing
+	_ = env.IfNotProd(r.Context(), func() error { // TODO: del later
+		totalSessions = withGoodBadTestWriters(totalSessions)
+		return nil
+	})
+
 	out, err := json.Marshal(totalSessions)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1367,50 +1411,65 @@ var (
 var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	readerName := shared.RfidReaderName(r.PathValue("readerName"))
-	if readerName == goodTestRfid {
-		// TODO: multiple? not just one id?
-		_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
-		if err != nil {
-			println("failed to write internal result", err)
+	println("trying to read from reader: " + readerName)
+	ctx := r.Context()
+	err := env.IfNotProd(ctx, func() error { // TODO: del later?
+		if readerName == goodTestRfid { // TODO: remove later
+			// TODO: multiple? not just one id?
+			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
+			if err != nil {
+				println("failed to write internal result", err)
+			}
+			return errors.New("wrote")
+		} else if readerName == badTestRfid {
+			http.Error(w, "bad test rfid reader/writer selected", http.StatusInternalServerError)
+			return errors.New("wrote")
 		}
-		return
-	} else if readerName == badTestRfid {
-		http.Error(w, "bad test rfid reader/writer selected", http.StatusInternalServerError)
+		return nil
+	})
+	if err != nil {
 		return
 	}
-	mgr := websocketSessions.GetSessionManager(r.Context())
+
+	mgr := websocketSessions.GetSessionManager(ctx)
 	if mgr == nil {
+		println("no session mgr found?") // TODO: del
 		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
 		return
 	}
-	if r.Method != "POST" {
+	if r.Method != http.MethodGet {
+		println("invalid method") // TODO: del
 		http.Error(w, unsupportedHttpMethod, http.StatusBadRequest)
 		return
 	}
 	headers := r.Header
 	if headers.Get("Content-Type") != "text/html" {
+		println("invalid content type header") // TODO: del
 		http.Error(w, unacceptableContentType, http.StatusBadRequest)
 		return
 	}
 
 	if r.Header.Get("Accept") != "text/html" {
+		println("invalid accept header") // TODO: del
 		http.Error(w, invalidAcceptHeader, http.StatusBadRequest)
 		return
 	}
 
-	bodyIn, err := io.ReadAll(r.Body)
+	//bodyIn, err := io.ReadAll(r.Body)
+	//if err != nil {
+	//	http.Error(w, "unable to read request body: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//if !mgr.SecretValid(string(bodyIn)) {
+	//	http.Error(w, "forbidden", http.StatusForbidden)
+	//	return
+	//}
+	println("trying to read rfid") // TODO: del
+	binaryUID, err := mgr.ReadRfid(ctx, readerName)
 	if err != nil {
-		http.Error(w, "unable to read request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	if !mgr.SecretValid(string(bodyIn)) {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
-	}
-	binaryUID, err := mgr.ReadRfid(readerName)
-	if err != nil {
+		println("read error " + err.Error()) // TODO: del
 		// TODO: what type of error?
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to read rfid: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -1429,22 +1488,28 @@ type writeTagRequest struct {
 // TODO: consider moving to reader/internal side?
 var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	println("Received rfid write request for: ", r.URL.String()) // TODO: del
+	ctx := r.Context()
 	if r.Header.Get("Accept") != "text/html" {
 		http.Error(w, invalidAcceptHeader, http.StatusBadRequest)
 		return
 	}
 
-	bodyIn, err := io.ReadAll(r.Body)
+	toWrite, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "unable to read request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	req := writeTagRequest{}
-	if err = json.Unmarshal(bodyIn, &req); err != nil {
-		http.Error(w, "invalid request body structure", http.StatusBadRequest)
-		return
+	toWriteB58 := rfid.Base58Str(toWrite) // TODO: this is base58?!
+	toWriteBytesTemp, err := toWriteB58.Base2Bytes()
+	if err != nil {
+		http.Error(w, "unable to read request body. Invalid base58: "+err.Error(), http.StatusBadRequest)
 	}
+	toWriteBytes := [rfid.RfidByteSize]byte(toWriteBytesTemp) // TODO: ensure base2?
+	//req := writeTagRequest{}
+	//if err = json.Unmarshal(bodyIn, &req); err != nil {
+	//	http.Error(w, "invalid request body structure", http.StatusBadRequest)
+	//	return
+	//}
 	if r.Method != "POST" {
 		http.Error(w, unsupportedHttpMethod, http.StatusBadRequest)
 		return
@@ -1455,14 +1520,20 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	if writerName == goodTestRfid { // TODO: del
-		_, err = w.Write(req.Data) // TODO: is this still ok if incoming was base58?
-		if err != nil {
-			println("failed to write internal result", err)
+	err = env.IfNotProd(r.Context(), func() error { // TODO: del later?
+		if writerName == goodTestRfid {
+			_, err = w.Write([]byte(toWrite)) // TODO: is this still ok if incoming was base58?
+			if err != nil {
+				println("failed to write internal result", err)
+			}
+			return errors.New("wrote")
+		} else if writerName == badTestRfid {
+			http.Error(w, "bad test rfid reader/writer selected", http.StatusInternalServerError)
+			return errors.New("wrote")
 		}
-		return
-	} else if writerName == badTestRfid {
-		http.Error(w, "bad test rfid reader/writer selected", http.StatusInternalServerError)
+		return nil
+	})
+	if err != nil {
 		return
 	}
 
@@ -1471,29 +1542,29 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO: what if this is something like id==1????
-	if len(req.Data) != shared.RfidByteSize { // TODO: use constant for length! // TODO: this is a base58 string, shouldnt it always be that?
-		// could be base58str
-		req.Data, err = rfid.Base58Str(req.Data).Base2Bytes()
-		if err != nil || len(req.Data) != shared.RfidByteSize {
-			http.Error(w, "invalid request body data: "+string(req.Data), http.StatusBadRequest)
-			return
-		}
-	}
-	if !mgr.SecretValid(req.Secret) {
-		http.Error(w, "forbidden", http.StatusForbidden)
-		return
-	}
+	//// TODO: fix to either use secret and internal, or no secret but external auth!
+	//// TODO: what if this is something like id==1????
+	//if len(toWri) != shared.RfidByteSize { // TODO: use constant for length! // TODO: this is a base58 string, shouldnt it always be that?
+	//	// could be base58str
+	//	req.Data, err = rfid.Base58Str(toWrite).Base2Bytes()
+	//	if err != nil || len(req.Data) != shared.RfidByteSize {
+	//		http.Error(w, "invalid request body data: "+string(req.Data), http.StatusBadRequest)
+	//		return
+	//	}
+	//}
+	//if !mgr.SecretValid(req.Secret) {
+	//	http.Error(w, "forbidden", http.StatusForbidden)
+	//	return
+	//}
 
-	toWrite := [shared.RfidByteSize]byte(req.Data) // TODO: ensure base2?
-	if err = mgr.WriteRfid(writerName, toWrite); err != nil {
+	if err = mgr.WriteRfid(ctx, writerName, toWriteBytes); err != nil {
 		// TODO: what type of error?
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "text/html")
-	_, err = w.Write(req.Data) // TODO: is this still ok if incoming was base58? Probably want to unmarshal into a binary one instead
+	_, err = w.Write(toWrite) // TODO: is this still ok if incoming was base58? Probably want to unmarshal into a binary one instead
 	if err != nil {
 		println("failed to write internal result", err)
 	}

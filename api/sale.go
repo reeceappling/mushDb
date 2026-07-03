@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -267,15 +268,17 @@ func initializeSales(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	testItem := &Sale{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		CreationDateField:          CreationDateField{exampleTime},
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(nil),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// If test agar batch does not exist, then create it
+		testItem := &Sale{
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			CreationDateField:          CreationDateField{exampleTime},
+			NotesField:                 NotesField{exampleNotes()},
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanReadAcl(nil),
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createSaleRequest struct {

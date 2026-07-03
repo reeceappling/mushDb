@@ -1,5 +1,9 @@
 # In Progress
 ## Actively Working On
+- [ ] RFID SIGNUP IS WORKING! ENSURE READING AND WRITING WORKS!!!!
+  - [ ] Reading
+  - [ ] Writing
+  - [ ] LISTING
 - [x] Adding pics/flushes/contams images is not working when trying to view them after update
   - [x] Switch from <Image> back to <img>
 - [x] Spore print and below Go TODOs

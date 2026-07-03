@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -195,23 +196,25 @@ func initializeSporePrints(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	testItem := &SporePrint{
-		MainCollectionIdField:             MainCollectionIdField{exSporePrint},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exFruitId},
-		CreationDateField:                 CreationDateField{exampleTime},
-		SporePrintColorField:              SporePrintColorField{utils.Pointer(SpColorBlack)},
-		SporePrintDensityField:            SporePrintDensityField{utils.Pointer(SpDensityAvg)},
-		SpeciesField:                      SpeciesField{testEntryStringId},
-		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
-		PicsField:                         PicsField{exPics},
-		SaleField:                         SaleField{&exAltId},
-		DisposedField:                     DisposedField{&exampleTime},
-		MostRecentImageField:              MostRecentImageField{utils.Pointer(exPics[0])},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	}
-	return addTestMainEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		// If test agar batch does not exist, then create it
+		testItem := &SporePrint{
+			MainCollectionIdField:             MainCollectionIdField{exSporePrint},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exFruitId},
+			CreationDateField:                 CreationDateField{exampleTime},
+			SporePrintColorField:              SporePrintColorField{utils.Pointer(SpColorBlack)},
+			SporePrintDensityField:            SporePrintDensityField{utils.Pointer(SpDensityAvg)},
+			SpeciesField:                      SpeciesField{testEntryStringId},
+			SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+			PicsField:                         PicsField{exPics},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+			MostRecentImageField:              MostRecentImageField{utils.Pointer(exPics[0])},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createSporePrintRequest struct {

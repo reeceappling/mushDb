@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -61,19 +62,21 @@ func initializeGrainBatches(ctx context.Context) error {
 		return err
 	}
 
-	testItem := GrainBatch{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		SoakTimeHours:              utils.Pointer(8),
-		BoilTimeMins:               utils.Pointer(30),
-		DryTimeHours:               utils.Pointer(4),
-		CreationDateField:          CreationDateField{},
-		JarRecipeRequiredField:     JarRecipeRequiredField{Recipe: exAltId},
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-	}
-	err = addTestAltEntries(ctx, testItem)
-	println("test Grain Batch:", exAltId.AsBase58())
-	return err
+	return env.IfNotProd(ctx, func() error {
+
+		testItem := GrainBatch{
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			SoakTimeHours:              utils.Pointer(8),
+			BoilTimeMins:               utils.Pointer(30),
+			DryTimeHours:               utils.Pointer(4),
+			CreationDateField:          CreationDateField{},
+			JarRecipeRequiredField:     JarRecipeRequiredField{Recipe: exAltId},
+			NotesField:                 NotesField{exampleNotes()},
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+		}
+		println("test Grain Batch:", exAltId.AsBase58())
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createGrainBatchRequest struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -121,21 +122,23 @@ func initializeTransfers(ctx context.Context) error {
 	}
 	// If test agar batch does not exist, then create it
 	// TODO: also create many-to-one monotub test transfer
-	testItem := &Transfer{
-		AlternateCollectionIdField: exAltId.asIdField(),
-		From:                       exPlate,
-		To:                         exJar,
-		FromType:                   "plate",
-		ToType:                     "jar",
-		CreationDateField:          CreationDateField{exampleTime},
-		Reason:                     xferReasonReady,
-		FromImage:                  (*ImageLocation)(&exPicLoc),
-		ToImage:                    (*ImageLocation)(&exPicLoc),
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanWriteAcl(),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		testItem := &Transfer{
+			AlternateCollectionIdField: exAltId.asIdField(),
+			From:                       exPlate,
+			To:                         exJar,
+			FromType:                   "plate",
+			ToType:                     "jar",
+			CreationDateField:          CreationDateField{exampleTime},
+			Reason:                     xferReasonReady,
+			FromImage:                  (*ImageLocation)(&exPicLoc),
+			ToImage:                    (*ImageLocation)(&exPicLoc),
+			NotesField:                 NotesField{exampleNotes()},
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanWriteAcl(),
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createTransferRequest struct {
