@@ -1129,11 +1129,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		uat := user.AccountType // TODO: del
 		if uat.IsAdmin() {      // TODO: del
 			uats = "Admin" // TODO: del
-		} else { // TODO: del
+		} else {                 // TODO: del
 			if uat.IsRegular() { // TODO: del
 				uats = "Regular user" // TODO: del
 			} // TODO: del
-		} // TODO: del
+		}                                                                                       // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		if !user.IsAdmin() && out.Private {
 			if user.AccountType.IsGuest() {
@@ -1417,7 +1417,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	println("trying to read from reader: " + readerName)
 	ctx := r.Context()
 	err := env.IfNotProd(ctx, func() error { // TODO: del later?
-		if readerName == goodTestRfid { // TODO: remove later
+		if readerName == goodTestRfid {      // TODO: remove later
 			// TODO: multiple? not just one id?
 			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 			if err != nil {
@@ -1524,7 +1524,7 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
 	err = env.IfNotProd(r.Context(), func() error { // TODO: del later?
 		if writerName == goodTestRfid {
-			_, err = w.Write([]byte(toWrite)) // TODO: is this still ok if incoming was base58?
+			_, err = w.Write(toWriteB58.Bytes())
 			if err != nil {
 				println("failed to write internal result", err)
 			}
@@ -1560,7 +1560,6 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	//}
 
 	if err = mgr.WriteRfid(ctx, writerName, toWriteBytes); err != nil {
-		// TODO: what type of error?
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
