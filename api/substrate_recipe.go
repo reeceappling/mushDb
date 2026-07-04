@@ -52,46 +52,47 @@ func initializeSubstrates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	basicEntries := []*SubstrateRecipe{
-		// Coir
-		{
-			AlternateCollectionIdField: altCollIdFieldForint(idCoir),
-			NameField:                  NameField{"Coir"},
-			AliasesField:               AliasesField{[]string{}},
-			StandardField:              StandardField{true},
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "roughly 40g dry coir, 1 cup H20 per quart"),
-			}},
-			AclField: allCanReadAcl(nil),
-		},
-		// Coir and Vermiculite
-		{
-			AlternateCollectionIdField: altCollIdFieldForint(idCoirVerm),
-			NameField:                  NameField{"CVG"},
-			AliasesField:               AliasesField{[]string{"Coir with Vermiculite"}},
-			StandardField:              StandardField{true},
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "Recipe: roughly 40g dry coir, up to 1/2 cup vermiculite, 1 cup H20 per quart"),
-				newNote(ogTime, "Vermiculite helps to keep more moisture in the substrate over time"),
-			}},
-			AclField: allCanReadAcl(nil),
-		},
-		{
-			AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
-			NameField:                  NameField{"HWFP"},
-			AliasesField:               AliasesField{[]string{"Hardwood Fuel Pellets"}},
-			StandardField:              StandardField{true},
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "Roughly equal parts wood pellets and water (maybe less water. Do less at first to ensure field capacity)"),
-			}},
-			AclField: allCanReadAcl(nil),
-		},
-	}
-	err = addBasicAltEntries(ctx, basicEntries...)
-	if err != nil {
-		return err
-	}
 	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		basicEntries := []*SubstrateRecipe{
+			// Coir
+			{
+				AlternateCollectionIdField: altCollIdFieldForint(idCoir),
+				NameField:                  NameField{"Coir-Builtin"},
+				AliasesField:               AliasesField{[]string{}},
+				StandardField:              StandardField{true},
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "roughly 40g dry coir, 1 cup H20 per quart"),
+				}},
+				AclField: allCanReadAcl(nil),
+			},
+			// Coir and Vermiculite
+			{
+				AlternateCollectionIdField: altCollIdFieldForint(idCoirVerm),
+				NameField:                  NameField{"CVG-Builtin"},
+				AliasesField:               AliasesField{[]string{"Coir with Vermiculite"}},
+				StandardField:              StandardField{true},
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "Recipe: roughly 40g dry coir, up to 1/2 cup vermiculite, 1 cup H20 per quart"),
+					newNote(ogTime, "Vermiculite helps to keep more moisture in the substrate over time"),
+				}},
+				AclField: allCanReadAcl(nil),
+			},
+			{
+				AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
+				NameField:                  NameField{"HWFP-Builtin"},
+				AliasesField:               AliasesField{[]string{"Hardwood Fuel Pellets"}},
+				StandardField:              StandardField{true},
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "Roughly equal parts wood pellets and water (maybe less water. Do less at first to ensure field capacity)"),
+				}},
+				AclField: allCanReadAcl(nil),
+			},
+		}
+		err = addBasicAltEntries(ctx, basicEntries...)
+		if err != nil {
+			return err
+		}
+
 		// Add test entry
 		testItem := &SubstrateRecipe{
 			AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),

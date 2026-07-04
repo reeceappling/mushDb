@@ -58,104 +58,105 @@ func initializeSpecies(ctx context.Context) error {
 		return err
 	}
 
-	woodPelletsId := altCollIdForint(idWoodPellets)
-	// TODO: ensure does not completely overwrite if there are changes....
-	basicEntries := []*Species{
-		// King Oyster
-		{
-			NameIdField:       NameIdField{"King Oyster"},
-			ScientificName:    "Pleurotus Eryngii",
-			AliasesField:      AliasesField{},
-			StandardSubstrate: woodPelletsId,
-			Subspecies:        nil,
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "Colonization conditions: FIXME"),
-				newNote(ogTime, "Fruiting conditions: Prefer higher humidity than pinks FIXME"),
-				newNote(ogTime, "Best Agar: LMEA"),
-			}},
-			AclField:   allCanWriteAcl(),
-			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
-		},
-
-		// Pink Oyster
-		{
-			NameIdField:       NameIdField{"Pink Oyster"},
-			ScientificName:    "Pleurotus Djamor",
-			AliasesField:      AliasesField{},
-			StandardSubstrate: woodPelletsId,
-			Subspecies:        nil,
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "Colonization conditions: FIXME"),
-				newNote(ogTime, "Fruiting conditions: Prefer higher FAE than kings FIXME"),
-				newNote(ogTime, "Best Agar: LMEA"),
-			}},
-			AclField:   allCanWriteAcl(),
-			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
-		},
-		// Enoki
-		{
-			NameIdField:       NameIdField{"Enoki"},
-			ScientificName:    "Flammulina filiformis",
-			AliasesField:      AliasesField{},
-			StandardSubstrate: woodPelletsId,
-			Subspecies:        nil,
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "Colonization conditions: FIXME"),
-				newNote(ogTime, "Fruiting conditions: Grow in a high-CO2 environment, with the only light being high-up in the enclosure to ensure they grow tall and thin, FAE==0, humidity=70+"),
-				newNote(ogTime, "Best Agar: LMEA"),
-			}},
-			AclField:   allCanWriteAcl(),
-			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
-		},
-		// Shiitake
-		{
-			NameIdField:       NameIdField{shiitakeName},
-			ScientificName:    shiitakeSciName,
-			AliasesField:      AliasesField{}, // TODO: FIX!
-			StandardSubstrate: woodPelletsId,
-			Subspecies:        []string{}, // TODO: FIX!
-			NotesField:        shiitakeNotes,
-			AclField:          allCanWriteAcl(),
-			DefaultAcl:        allCanWriteAcl().ACL, // TODO: ensure this is right
-		},
-		// Maitake, Hen of the Woods
-		{
-			NameIdField:       NameIdField{"Maitake"},
-			ScientificName:    "Grifola frondosa",
-			AliasesField:      AliasesField{[]string{"hen of the woods"}},
-			Subspecies:        nil,
-			StandardSubstrate: woodPelletsId,
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "Colonization conditions: FIXME"),
-				newNote(ogTime, "Fruiting conditions: 50-70degF (64-66 is ideal). >90% humidity. Cold shock to begin fruiting"),
-				newNote(ogTime, "Best Agar: LMEA"),
-			}},
-			AclField:   allCanWriteAcl(),
-			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
-		},
-		// Beech
-		{
-			NameIdField:       NameIdField{SpeciesNameBeech},
-			ScientificName:    "Hypsizygus tessulatus",
-			AliasesField:      AliasesField{[]string{"Hypsizygus tessellatus", "Shimeji"}},
-			StandardSubstrate: woodPelletsId,
-			Subspecies:        []string{"White Beech", "Brown Beech"}, // TODO: ENSURE OK!
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin"),
-				newNote(ogTime, "50-60DegF, 80-90RH, FAE"),
-				newNote(ogTime, "Best Agar: LMEA"),
-				newNote(ogTime, "Can be white (patented) subspecies or brown"),
-			}},
-			AclField:   allCanWriteAcl(),
-			DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
-		},
-	}
-	err = addBasicAltEntries(ctx, basicEntries...) // TODO: return here if we dont want test entries
-	if err != nil {
-		return err
-	}
 	// Add test entry
 	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		woodPelletsId := altCollIdForint(idWoodPellets)
+		// TODO: ensure does not completely overwrite if there are changes....
+		basicEntries := []*Species{
+			// King Oyster
+			{
+				NameIdField:       NameIdField{"King Oyster"},
+				ScientificName:    "Pleurotus Eryngii",
+				AliasesField:      AliasesField{},
+				StandardSubstrate: woodPelletsId,
+				Subspecies:        nil,
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "Colonization conditions: FIXME"),
+					newNote(ogTime, "Fruiting conditions: Prefer higher humidity than pinks FIXME"),
+					newNote(ogTime, "Best Agar: LMEA"),
+				}},
+				AclField:   allCanWriteAcl(),
+				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+			},
+
+			// Pink Oyster
+			{
+				NameIdField:       NameIdField{"Pink Oyster"},
+				ScientificName:    "Pleurotus Djamor",
+				AliasesField:      AliasesField{},
+				StandardSubstrate: woodPelletsId,
+				Subspecies:        nil,
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "Colonization conditions: FIXME"),
+					newNote(ogTime, "Fruiting conditions: Prefer higher FAE than kings FIXME"),
+					newNote(ogTime, "Best Agar: LMEA"),
+				}},
+				AclField:   allCanWriteAcl(),
+				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+			},
+			// Enoki
+			{
+				NameIdField:       NameIdField{"Enoki"},
+				ScientificName:    "Flammulina filiformis",
+				AliasesField:      AliasesField{},
+				StandardSubstrate: woodPelletsId,
+				Subspecies:        nil,
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "Colonization conditions: FIXME"),
+					newNote(ogTime, "Fruiting conditions: Grow in a high-CO2 environment, with the only light being high-up in the enclosure to ensure they grow tall and thin, FAE==0, humidity=70+"),
+					newNote(ogTime, "Best Agar: LMEA"),
+				}},
+				AclField:   allCanWriteAcl(),
+				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+			},
+			// Shiitake
+			{
+				NameIdField:       NameIdField{shiitakeName},
+				ScientificName:    shiitakeSciName,
+				AliasesField:      AliasesField{}, // TODO: FIX!
+				StandardSubstrate: woodPelletsId,
+				Subspecies:        []string{}, // TODO: FIX!
+				NotesField:        shiitakeNotes,
+				AclField:          allCanWriteAcl(),
+				DefaultAcl:        allCanWriteAcl().ACL, // TODO: ensure this is right
+			},
+			// Maitake, Hen of the Woods
+			{
+				NameIdField:       NameIdField{"Maitake"},
+				ScientificName:    "Grifola frondosa",
+				AliasesField:      AliasesField{[]string{"hen of the woods"}},
+				Subspecies:        nil,
+				StandardSubstrate: woodPelletsId,
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "Colonization conditions: FIXME"),
+					newNote(ogTime, "Fruiting conditions: 50-70degF (64-66 is ideal). >90% humidity. Cold shock to begin fruiting"),
+					newNote(ogTime, "Best Agar: LMEA"),
+				}},
+				AclField:   allCanWriteAcl(),
+				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+			},
+			// Beech
+			{
+				NameIdField:       NameIdField{SpeciesNameBeech},
+				ScientificName:    "Hypsizygus tessulatus",
+				AliasesField:      AliasesField{[]string{"Hypsizygus tessellatus", "Shimeji"}},
+				StandardSubstrate: woodPelletsId,
+				Subspecies:        []string{"White Beech", "Brown Beech"}, // TODO: ENSURE OK!
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin"),
+					newNote(ogTime, "50-60DegF, 80-90RH, FAE"),
+					newNote(ogTime, "Best Agar: LMEA"),
+					newNote(ogTime, "Can be white (patented) subspecies or brown"),
+				}},
+				AclField:   allCanWriteAcl(),
+				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+			},
+		}
+		err = addBasicAltEntries(ctx, basicEntries...) // TODO: return here if we dont want test entries
+		if err != nil {
+			return err
+		}
+
 		testItem := &Species{
 			NameIdField:       NameIdField{TestSpeciesName},
 			ScientificName:    "examplius speciesus",
@@ -177,7 +178,7 @@ type createSpeciesRequest struct {
 	AliasesField
 	SubstrateRecipeField
 	NotesField
-	PermsOnRequest `json:"acl"` // TODO: USE!
+	PermsOnRequest `json:"acl"`
 }
 
 func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {

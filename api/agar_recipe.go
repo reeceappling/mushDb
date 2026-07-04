@@ -24,8 +24,8 @@ type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"` // CreationDate is embedded?
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
-	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
-	StandardField              `bson:"inline"` // If this is a standard recipe
+	Agar                       int `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField              `bson:"inline"`               // If this is a standard recipe
 	NutrientsField             `bson:"inline"`
 	SugarsField                `bson:"inline"`
 	AdditivesField             `bson:"inline"`
@@ -117,7 +117,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	basicEntries := []*AgarRecipe{
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
-			NameField:                  NameField{LmeaName},
+			NameField:                  NameField{"LMEA"},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
@@ -132,7 +132,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idPda)},
-			NameField:                  NameField{PdaName},
+			NameField:                  NameField{"PDA"},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
@@ -149,7 +149,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idWaterAgar)},
-			NameField:                  NameField{WaterAgarName},
+			NameField:                  NameField{"Water Agar"},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField:             NutrientsField{},
@@ -176,7 +176,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idAntibioticAgar)},
-			NameField:                  NameField{AntibioticAgarName},
+			NameField:                  NameField{"Antibiotic Built-In"},
 			LiquidsField:               LiquidsField{[]Liquid{DistilledWater.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{

@@ -89,7 +89,7 @@ func initializeJarRecipes(ctx context.Context) error {
 	// Built-ins // TODO: ensure these are not completely replaced every time!
 	basicEntries := []*JarRecipe{
 		{
-			NameField:                  NameField{"Popcorn"},
+			NameField:                  NameField{"Popcorn Built-in"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarPop)},
 			Grains:                     []GrainPercentage{{Grain: Popcorn, Percentage: 100}},
 			StandardField:              StandardField{true},
@@ -98,14 +98,14 @@ func initializeJarRecipes(ctx context.Context) error {
 			}},
 		},
 		{
-			NameField:                  NameField{"Oats"},
+			NameField:                  NameField{"Oats Built-in"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOat)},
 			Grains:                     []GrainPercentage{{Grain: Oats, Percentage: 100}},
 			StandardField:              StandardField{true},
 			NotesField:                 NotesField{},
 		},
 		{
-			NameField:                  NameField{"Oats with standard additives"},
+			NameField:                  NameField{"Oats with standard additives Built-in"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOatWithVermGypsum)},
 			Grains:                     []GrainPercentage{{Grain: Oats, Percentage: 100}},
 			StandardField:              StandardField{true},

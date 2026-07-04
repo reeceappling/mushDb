@@ -51,35 +51,36 @@ func initializeSubspecies(ctx context.Context) error {
 		return err
 	}
 
-	basicEntries := []Subspecies{
-		// White Beech
-		{
-			NameIdField:  NameIdField{"White Beech"},
-			SpeciesField: SpeciesField{"Beech"},
-			AliasesField: AliasesField{[]string{"Bunapi-shimeji"}},
-			NotesField: NotesField{Notes: []Note{
-				newNote(ogTime, "something to do with light, fixme"),
-			}},
-			AclField:   allCanWriteAcl(),
-			DefaultAcl: allCanWriteAcl().ACL,
-		},
-		// Brown Beech
-		{
-			NameIdField:  NameIdField{"Brown Beech"},
-			SpeciesField: SpeciesField{"Beech"},
-			AliasesField: AliasesField{[]string{"Buna-shimeji"}},
-			NotesField: NotesField{Notes: []Note{
-				newNote(ogTime, "something to do with light, fixme"),
-			}},
-			AclField:   allCanWriteAcl(),
-			DefaultAcl: allCanWriteAcl().ACL,
-		},
-	}
-	err = addBasicAltEntries(ctx, basicEntries...)
-	if err != nil {
-		return err
-	}
 	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+		basicEntries := []Subspecies{
+			// White Beech
+			{
+				NameIdField:  NameIdField{"White Beech"},
+				SpeciesField: SpeciesField{"Beech"},
+				AliasesField: AliasesField{[]string{"Bunapi-shimeji"}},
+				NotesField: NotesField{Notes: []Note{
+					newNote(ogTime, "something to do with light, fixme"),
+				}},
+				AclField:   allCanWriteAcl(),
+				DefaultAcl: allCanWriteAcl().ACL,
+			},
+			// Brown Beech
+			{
+				NameIdField:  NameIdField{"Brown Beech"},
+				SpeciesField: SpeciesField{"Beech"},
+				AliasesField: AliasesField{[]string{"Buna-shimeji"}},
+				NotesField: NotesField{Notes: []Note{
+					newNote(ogTime, "something to do with light, fixme"),
+				}},
+				AclField:   allCanWriteAcl(),
+				DefaultAcl: allCanWriteAcl().ACL,
+			},
+		}
+		err = addBasicAltEntries(ctx, basicEntries...)
+		if err != nil {
+			return err
+		}
+
 		// Add test entry
 		testItem := &Subspecies{
 			NameIdField:      NameIdField{TestSubspeciesName},
