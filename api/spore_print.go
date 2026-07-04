@@ -642,7 +642,7 @@ func deleteSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
 		return
 	}
-	id, err := Base58Str(idStr).toMainCollectionId()
+	id, err := Base58Str(idStr).ToMainCollectionId()
 	if err != nil {
 		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
 		return

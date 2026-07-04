@@ -350,7 +350,7 @@ func main() {
 	http.Handle("/db/import/{endpt}", rateLimitCtxInternalAuthMiddleware(rfidMiddleware(rfid.DenyGuestMiddleware(rfid.ImportHandler))))
 
 	// delete handlers
-	http.Handle("/db/delete/{endpt}/{id}", rateLimitCtxInternalAuthMiddleware(rfidMiddleware(rfid.AdminOnlyMiddleware(rfid.ImportHandler))))
+	// TODO: enable! http.Handle("/db/delete/{endpt}/{id}", rateLimitCtxInternalAuthMiddleware(rfidMiddleware(rfid.AdminOnlyMiddleware(rfid.DeleteHandler))))
 	// List handlers
 	http.Handle("/db/list/{variant}", rateLimitCtxInternalAuthMiddleware(rfid.ListEntriesHandler))
 	http.Handle("/subspeciesFor/{variant}", rateLimitCtxInternalAuthMiddleware(rfid.ListSubspeciesHandler))
@@ -379,7 +379,7 @@ func getSecret(secretName string) (string, error) {
 
 func resolveGothicSessionSecret() error {
 	sessionSecretName := "SESSION_SECRET"
-	sec, err := getSecret(sessionSecretName)
+	sec, err := getSecret(sessionSecretName) // TODO: unnecessary, sessionsecret is pulled in during init of gothic
 	if err != nil {
 		return err
 	}
@@ -1477,7 +1477,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	}
 
 	w.Header().Set("Content-Type", "text/html")
-	_, err = w.Write(binaryUID[:])
+	_, err = w.Write(rfid.MainCollectionId(binaryUID).AsBase58().Bytes())
 	if err != nil {
 		println("failed to write reader result", err)
 	}
@@ -1503,11 +1503,10 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	toWriteB58 := rfid.Base58Str(toWrite) // TODO: this is base58?!
-	toWriteBytesTemp, err := toWriteB58.Base2Bytes()
+	toWriteBytes, err := toWriteB58.ToMainCollectionId()
 	if err != nil {
 		http.Error(w, "unable to read request body. Invalid base58: "+err.Error(), http.StatusBadRequest)
 	}
-	toWriteBytes := [rfid.RfidByteSize]byte(toWriteBytesTemp) // TODO: ensure base2?
 	//req := writeTagRequest{}
 	//if err = json.Unmarshal(bodyIn, &req); err != nil {
 	//	http.Error(w, "invalid request body structure", http.StatusBadRequest)
@@ -1567,7 +1566,7 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	}
 
 	w.Header().Set("Content-Type", "text/html")
-	_, err = w.Write(toWrite) // TODO: is this still ok if incoming was base58? Probably want to unmarshal into a binary one instead
+	_, err = w.Write([]byte(toWriteB58)) // TODO: is this still ok if incoming was base58? Probably want to unmarshal into a binary one instead
 	if err != nil {
 		println("failed to write internal result", err)
 	}

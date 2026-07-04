@@ -39,6 +39,10 @@ func (b58str Base58Str) ToBinaryCollectionId() (BinaryCollectionId, error) {
 	return BinaryCollectionId(bs), nil
 }
 
+func (b58str Base58Str) Bytes() []byte {
+	return []byte(b58str)
+}
+
 // ConvertBase10StringToLittleEndianBytes converts a base-10 string to little-endian bytes.
 func convertBase10StringToLittleEndianBytes(base10 string) ([]byte, error) { // TODO: AI-GENERATED, GO OVER IT
 	// Parse the base-10 string into a big.Int.
@@ -80,7 +84,7 @@ func (b58str Base58Str) Base2Bytes() ([]byte, error) {
 //	}
 //}
 
-func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
+func (b58str Base58Str) ToMainCollectionId() (MainCollectionId, error) {
 	intVal, err := strconv.Atoi(string(b58str))
 	if err == nil && intVal < 128 && intVal > 0 { // TODO: fix for zero???
 		return [8]byte{0, 0, 0, 0, 0, 0, 0, uint8(intVal - 1)}, nil // TODO: validate works ok!
@@ -311,7 +315,7 @@ func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
 	if err := json.Unmarshal(bs, &b58Str); err != nil {
 		return err
 	}
-	val, err := b58Str.toMainCollectionId()
+	val, err := b58Str.ToMainCollectionId()
 	if err != nil {
 		return err
 	}
@@ -813,17 +817,16 @@ var DeleteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 	}
 
 	handler, exists := map[string]http.HandlerFunc{
-		"agarBatch":  deleteAgarBatchHandler, // TODO: in plate and slant
-		"agarRecipe": deleteAgarRecipeHandler,
-		"bag":        deleteBagHandler,
-		// importLiquidCultureHandler
+		"agarBatch":       deleteAgarBatchHandler,
+		"agarRecipe":      deleteAgarRecipeHandler,
+		"bag":             deleteBagHandler,
 		"fruit":           deleteFruitHandler,
 		"fruitingChamber": deleteFruitingChamberHandler,
 		"grainBatch":      deleteGrainBatchHandler,
 		"jar":             deleteJarHandler,
 		"jarRecipe":       deleteJarRecipeHandler,
-		"lc":              deleteLiquidCultureHandler,
-		"lcRecipe":        deleteLiquidCultureRecipeHandler,
+		"lc":              deleteLcHandler,
+		"lcRecipe":        deleteLcRecipeHandler,
 		"lcSyringe":       deleteLcSyringeHandler,
 		"mss":             deleteMssHandler,
 		"pcRun":           deletePcRunHandler,

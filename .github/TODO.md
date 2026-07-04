@@ -249,13 +249,19 @@
       - [x] Aliases
       - [x] Substrate
         - [x] Make this changeable
+        - [ ] Lion's mane is failing to change aliases properly, not sure why... Make first letters capitalized
+          - [ ] Creating a new alias instead of editing works fine... 
       - [x] ACLs
       - [x] Subspecies viewer
       - [x] Subspecies creator
         - [x] Subspecies creator leave out the TriColTable?
     - [x] Create page
       - [x] Aliases not working
+      - [ ] Setting to private is not working!
+        - [ ] Add PC, Wood-lovers
+      - [ ] Add Indigo Milk cap
     - [x] List Page
+      - [ ] Default list to sorted by Name
   - [x] Spore Print
     - [x] Display page
       - [x] Create MSS not working, failing to find current print (fixed)

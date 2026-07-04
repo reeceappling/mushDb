@@ -252,6 +252,14 @@ github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260701212756-c92ab90
 github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260701212756-c92ab907e2c3/go.mod h1:N4uTLGyo3sOiQFLfAApzeVuV1ESFvOPxiWOPOpypB3I=
 github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260701220612-8c2d0d79e887 h1:/hSY5l7q+q2lWY2SyhYSFVduRdyECQ4kXjBJ89ob8R4=
 github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260701220612-8c2d0d79e887/go.mod h1:N4uTLGyo3sOiQFLfAApzeVuV1ESFvOPxiWOPOpypB3I=
+github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704192622-11151f31d9af h1:8caaUbqfJR8fuvO5151TxmaRndWWrLgPZ4dTrXnV+6w=
+github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704192622-11151f31d9af/go.mod h1:N4uTLGyo3sOiQFLfAApzeVuV1ESFvOPxiWOPOpypB3I=
+github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704201512-61217f20e56e h1:I0n7Il6qsEIoGHjmsipFMzGv+TG8GBbwmgyO8RQT4P8=
+github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704201512-61217f20e56e/go.mod h1:N4uTLGyo3sOiQFLfAApzeVuV1ESFvOPxiWOPOpypB3I=
+github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704202422-ae39bf8eb299 h1:kRh3xzAuQWDgWoPu++4oo+Dxb7uCodu2oqMvoorqWNA=
+github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704202422-ae39bf8eb299/go.mod h1:N4uTLGyo3sOiQFLfAApzeVuV1ESFvOPxiWOPOpypB3I=
+github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704202949-aa35c717be1e h1:IK1qgeq0f8dLFUARHC8gNrcBV0U+IE4f+aiM7hEqXcw=
+github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704202949-aa35c717be1e/go.mod h1:N4uTLGyo3sOiQFLfAApzeVuV1ESFvOPxiWOPOpypB3I=
 github.com/richardartoul/molecule v1.0.1-0.20240531184615-7ca0df43c0b3 h1:4+LEVOB87y175cLJC/mbsgKmoDOjrBldtXvioEy96WY=
 github.com/richardartoul/molecule v1.0.1-0.20240531184615-7ca0df43c0b3/go.mod h1:vl5+MqJ1nBINuSsUI2mGgH79UweUT/B5Fy8857PqyyI=
 github.com/rogpeppe/go-internal v1.14.1 h1:UQB4HGPB6osV0SQTLymcB4TgvyWu6ZyliaW0tI/otEQ=

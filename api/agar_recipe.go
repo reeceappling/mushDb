@@ -24,8 +24,8 @@ type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"` // CreationDate is embedded?
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
-	Agar                       int `bson:"agar" json:"agar"` // agar grams per 1L
-	StandardField              `bson:"inline"`               // If this is a standard recipe
+	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField              `bson:"inline"` // If this is a standard recipe
 	NutrientsField             `bson:"inline"`
 	SugarsField                `bson:"inline"`
 	AdditivesField             `bson:"inline"`

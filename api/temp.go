@@ -40,7 +40,7 @@ func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 	//	return &out, nil
 	//}
 	println("ID BYTES NOT LENGTH 8! CONVERTING!") // TODO: del
-	realId, err := Base58Str(id).toMainCollectionId()
+	realId, err := Base58Str(id).ToMainCollectionId()
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 
 // Perms have not been checked yet // TODO: validate works
 func GetMainCollectionItemSpecific[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out T, err error) {
-	println("reading mcitem from " + resultItemType.CollectionName())
+	println("B reading mcitem from " + resultItemType.CollectionName())
 	encodedResult := DbFrom(ctx).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id))
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404

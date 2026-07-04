@@ -9,7 +9,7 @@ require (
 	github.com/itchyny/base58-go v0.2.2
 	github.com/markbates/goth v1.82.0
 	github.com/reeceappling/goUtils/v2 v2.0.0-20250605212538-82fddbe29f22
-	github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260701220612-8c2d0d79e887
+	github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2 v2.0.0-20260704202949-aa35c717be1e
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/mongodb v0.37.0
