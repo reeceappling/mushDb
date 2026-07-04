@@ -711,6 +711,21 @@ func DenyGuestMiddleware(handler http.Handler) http.Handler {
 	})
 
 }
+func AdminOnlyMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resolvedPerms, err := GetAuthInfo(r.Context()) // TODO: is err still needed here?
+		if err != nil {
+			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
+			return
+		}
+		if !resolvedPerms.IsAdmin() {
+			http.Error(w, "non-admin users cannot delete entries", http.StatusUnauthorized)
+			return
+		}
+		handler.ServeHTTP(w, r)
+	})
+
+}
 
 var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	endpt := r.PathValue("endpt")
@@ -786,6 +801,50 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 	}[endpt]
 	if !exists {
 		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
+	}
+	handler.ServeHTTP(w, r)
+}
+
+var DeleteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	endpt := r.PathValue("endpt")
+	if r.Method != http.MethodDelete {
+		http.Error(w, "invalid method for endpoint", http.StatusMethodNotAllowed)
+		return
+	}
+
+	handler, exists := map[string]http.HandlerFunc{
+		"agarBatch":  deleteAgarBatchHandler, // TODO: in plate and slant
+		"agarRecipe": deleteAgarRecipeHandler,
+		"bag":        deleteBagHandler,
+		// importLiquidCultureHandler
+		"fruit":           deleteFruitHandler,
+		"fruitingChamber": deleteFruitingChamberHandler,
+		"grainBatch":      deleteGrainBatchHandler,
+		"jar":             deleteJarHandler,
+		"jarRecipe":       deleteJarRecipeHandler,
+		"lc":              deleteLiquidCultureHandler,
+		"lcRecipe":        deleteLiquidCultureRecipeHandler,
+		"lcSyringe":       deleteLcSyringeHandler,
+		"mss":             deleteMssHandler,
+		"pcRun":           deletePcRunHandler,
+		"plate":           deletePlateHandler,
+		"plugs":           deletePlugsHandler,
+		"project":         deleteProjectHandler,
+		"sale":            deleteSaleHandler,
+		"slant":           deleteSlantHandler,
+		"species":         deleteSpeciesHandler,
+		"sporePrint":      deleteSporePrintHandler,
+		"sporeSwab":       deleteSporeSwabHandler,
+		"stasisTube":      deleteStasisTubeHandler,
+		"subspecies":      deleteSubspeciesHandler,
+		"substrateBatch":  deleteSubstrateBatchHandler,
+		"substrateRecipe": deleteSubstrateRecipeHandler,
+		"transfer":        deleteTransferHandler,
+		"waterJar":        deleteWaterJarHandler,
+	}[endpt]
+	if !exists {
+		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
+		return
 	}
 	handler.ServeHTTP(w, r)
 }

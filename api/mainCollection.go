@@ -27,6 +27,7 @@ var (
 
 type CollectionId interface { // TODO; USE????
 	MainCollectionId | AlternateCollectionId // TODO: DELETEME
+	AsBase58() Base58Str
 }
 
 type MainCollectionItem interface {

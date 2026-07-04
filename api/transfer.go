@@ -416,3 +416,7 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
+func deleteTransferHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "transfers cannot be deleted", http.StatusNotImplemented)
+	return
+}

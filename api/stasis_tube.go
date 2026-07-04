@@ -529,3 +529,50 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
+
+func deleteStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+		return
+	}
+	id, err := Base58Str(idStr).toMainCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate not used in other places...
+	ctx := r.Context()
+	db := DbFrom(ctx)
+	// ensure item does not have any transfers in or out
+	item, err := GetMainCollectionItemSpecific[*StasisTube](ctx, id, &StasisTube{})
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+		} else {
+			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	if item.Innoc != nil {
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		return
+	}
+	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		return
+	}
+
+	// Delete if not found elsewhere!
+	deleteResult, err := db.Collection(StasisTubeCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if deleteResult.DeletedCount == 0 {
+		http.Error(w, "failed to delete id "+idStr+" from stasis tubes. Id not found", http.StatusNotFound)
+		return
+	}
+	_, err = w.Write([]byte(idStr))
+	handleWriteErr(err, w)
+}

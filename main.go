@@ -348,6 +348,9 @@ func main() {
 	http.Handle("/db/update/{endpt}/{id}", rateLimitCtxInternalAuthMiddleware(rfid.DenyGuestMiddleware(rfid.UpdateHandler))) // TODO: no rfid?
 	// import handlers
 	http.Handle("/db/import/{endpt}", rateLimitCtxInternalAuthMiddleware(rfidMiddleware(rfid.DenyGuestMiddleware(rfid.ImportHandler))))
+
+	// delete handlers
+	http.Handle("/db/delete/{endpt}/{id}", rateLimitCtxInternalAuthMiddleware(rfidMiddleware(rfid.AdminOnlyMiddleware(rfid.ImportHandler))))
 	// List handlers
 	http.Handle("/db/list/{variant}", rateLimitCtxInternalAuthMiddleware(rfid.ListEntriesHandler))
 	http.Handle("/subspeciesFor/{variant}", rateLimitCtxInternalAuthMiddleware(rfid.ListSubspeciesHandler))

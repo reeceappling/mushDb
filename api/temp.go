@@ -83,6 +83,26 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 	return item, nil
 }
 
+// Perms have not been checked yet // TODO: validate works
+func GetMainCollectionItemSpecific[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out T, err error) {
+	println("reading mcitem from " + resultItemType.CollectionName())
+	encodedResult := DbFrom(ctx).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id))
+	if encodedResult.Err() != nil {
+		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404
+	}
+	temp, err := resultItemType.Decode(encodedResult)
+	if err != nil {
+		err = errors.Join(errors.New("failed to decode"), err)
+		return resultItemType, err
+	}
+	item, ok := temp.(T)
+	if !ok {
+		err = errors.New("failed to decode. Item was not a mainCollection item")
+		return item, err
+	}
+	return item, nil
+}
+
 //func GetCollectionItemInTxn(ctx context.Context, id MainCollectionId, sourceType string) (out MainCollectionItem, err error) {
 //	db := DbFrom(ctx)
 //	out, err = typeForSource(sourceType) // TODO: this should be sourceType instead

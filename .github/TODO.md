@@ -536,6 +536,93 @@
     - [x] Existing/Update notes area
   - [x] ACL (updates and displays)
   - [ ] more! pull from TODOs in code....
+- [ ] Delete handlers
+  - [ ] AgarBatch
+    - [x] Code
+    - [ ] Test
+  - [ ] AgarRecipe
+    - [x] Code
+    - [ ] Test
+  - [ ] Bag
+    - [x] Code
+    - [ ] Test
+  - [ ] Fruit
+    - [x] Code
+    - [ ] Test
+  - [ ] FruitingChamber
+    - [x] Code
+    - [ ] Test
+  - [ ] GrainBatch
+    - [x] Code
+    - [ ] Test
+  - [ ] Jar
+    - [x] Code
+    - [ ] Test
+  - [ ] JarRecipe
+    - [x] Code
+    - [ ] Test
+  - [ ] LC
+    - [x] Code
+    - [ ] Test
+  - [ ] LcRecipe
+    - [x] Code
+    - [ ] Test
+  - [ ] LcSyringe
+    - [x] Code
+    - [ ] Test
+  - [ ] MSS
+    - [x] Code
+    - [ ] Test
+  - [ ] PcRun
+    - [x] Code
+    - [ ] Test
+  - [ ] Plate
+    - [x] Code
+    - [ ] Test
+  - [ ] Plugs
+    - [x] Code
+    - [ ] Test
+  - [x] Project ------?
+    - [x] Code
+    - [x] Test
+  - [x] Sale
+    - [x] Code
+    - [x] Test
+  - [ ] Slant
+    - [x] Code
+    - [ ] Test
+  - [ ] Species
+    - [x] Code
+      - [ ] Also delete subspecies?
+    - [ ] Test
+  - [ ] SporePrint
+    - [x] Code
+    - [ ] Test
+  - [ ] SporeSwab
+    - [x] Code
+    - [ ] Test
+  - [ ] StasisTube
+    - [x] Code
+    - [ ] Test
+  - [ ] Subspecies
+    - [ ] Code
+      - [ ] Also remove from species?
+    - [ ] Test
+  - [ ] SubstrateBatch
+    - [x] Code
+    - [ ] Test
+  - [ ] SubstrateRecipe
+    - [x] Code
+    - [ ] Test
+  - [x] Transfer
+    - [x] Code
+    - [x] Test
+  - [ ] User
+    - [ ] Code
+    - [ ] Test
+  - [ ] WaterJar
+    - [x] Code
+    - [ ] Test
 
 
 

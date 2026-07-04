@@ -271,3 +271,35 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
+
+func deleteJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id") // TODO: recipe by name?
+	if idStr == "" {
+		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+		return
+	}
+	id, err := Base58Str(idStr).toAltCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate not used in other places...
+	ctx := r.Context()
+	db := DbFrom(ctx)
+	// ensure batch not used by any jars first
+	for _, collName := range []string{GrainBatchCollectionName, GrainJarCollectionName} {
+		err = db.Collection(collName).FindOne(ctx, bson.M{"recipe": id}).Err()
+		if err != nil {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				http.Error(w, "failed to check for jar recipe usage in "+collName+" collection. "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// At least one item exists, fail
+			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			return
+		}
+	}
+
+	DeleteCollectionItem(ctx, JarRecipesCollectionName, id, w)
+}

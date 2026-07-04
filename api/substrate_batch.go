@@ -177,3 +177,62 @@ func (field SubstrateBatchField) asOptional() SubstrateBatchOptionalField {
 type SubstrateBatchOptionalField struct {
 	SubstrateBatch *AlternateCollectionId `bson:"substrateBatch,omitempty" json:"substrateBatch,omitempty"`
 }
+
+func deleteSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
+	// used in batch, species, box, bag!
+	idStr := r.PathValue("id") // TODO: recipe by name?
+	if idStr == "" {
+		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+		return
+	}
+	id, err := Base58Str(idStr).toAltCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate not used in other places...
+	ctx := r.Context()
+	db := DbFrom(ctx)
+	// ensure recipe not used by any batches first
+	// Ensure not used as a standard substrate for a species
+	err = db.Collection(SpeciesCollectionName).FindOne(ctx, bson.M{"standardSubstrate": id}).Err()
+	if err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, "failed to check for substrate recipe usage in species. "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// At least one item exists, fail
+		http.Error(w, "at least one species utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+		return
+	}
+	for _, collName := range []string{
+		BagsCollectionName,
+		FruitingChamberCollectionName,
+	} {
+		err = db.Collection(collName).FindOne(ctx, bson.M{"substrateBatch": id}).Err()
+		if err != nil {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				http.Error(w, "failed to check for substrate batch usage in "+collName+". "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// At least one item exists, fail
+			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			return
+		}
+	}
+
+	// Delete if not found elsewhere!
+	deleteResult, err := db.Collection(SubstrateBatchCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if deleteResult.DeletedCount == 0 {
+		http.Error(w, "failed to delete id "+idStr+" from substrate recipes. Id not found", http.StatusNotFound)
+		return
+	}
+	_, err = w.Write([]byte(idStr))
+	handleWriteErr(err, w)
+}

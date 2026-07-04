@@ -617,3 +617,9 @@ func finishCreateProject(ctx context.Context, toInsert CollectionItem, w http.Re
 		return
 	}
 }
+
+func deleteProjectHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: ensure no items have this project on it!
+	http.Error(w, "delete project not implemented yet...", http.StatusNotImplemented)
+	return
+}

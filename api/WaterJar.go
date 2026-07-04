@@ -209,3 +209,46 @@ func updateWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishMainCollItemUpdate(ctx, w, req.modsFor, wj, req.PermsOnRequest)
 }
+
+func deleteWaterJarHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+		return
+	}
+	id, err := Base58Str(idStr).toMainCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate not used in other places...
+	ctx := r.Context()
+	db := DbFrom(ctx)
+	// ensure recipe not used by any batches first
+	for _, collName := range []string{MssCollectionName, StasisTubeCollectionName} {
+		err = db.Collection(collName).FindOne(ctx, bson.M{"waterSource": id}).Err()
+		if err != nil {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				http.Error(w, "failed to check for waterJar (waterSource) usage in "+collName+". "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// At least one item exists, fail
+			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			return
+		}
+	}
+
+	// Delete if not found elsewhere!
+	deleteResult, err := db.Collection(WaterJarsCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	if err != nil {
+		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if deleteResult.DeletedCount == 0 {
+		http.Error(w, "failed to delete id "+idStr+" from water jars. Id not found", http.StatusNotFound)
+		return
+	}
+	_, err = w.Write([]byte(idStr))
+	handleWriteErr(err, w)
+}

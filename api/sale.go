@@ -363,3 +363,7 @@ func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
+
+func deleteSaleHandler(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "delete sale not allowed...", http.StatusForbidden)
+}
