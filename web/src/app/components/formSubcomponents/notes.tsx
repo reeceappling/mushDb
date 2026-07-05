@@ -40,10 +40,10 @@ export function IsValidNote(input: any): boolean {
     )
 }
 
-function useForceUpdate() {
-    const [, setToggle] = useState(false)
-    return () => setToggle(toggle => !toggle)
-}
+// function useForceUpdate() {
+//     const [, setToggle] = useState(false)
+//     return () => setToggle(toggle => !toggle)
+// }
 
 // TODO: NotesFormArea/NotesAreaSubcomponent instead
 export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SOME NOTES ARE DELETED, FIX!
@@ -162,13 +162,13 @@ export function NotesAreaViewSubcomponent({initial,updateParent,readonly}:{initi
     }
     const updateExisting = (updated:Data<Note>[])=>{
         setExisting(updated)
-        const out = currentClone()
+        let out = currentClone()
         out.existing = updated
         deliverUpdatesToParent(out)
     }
     const updateCreated = (updated:Data<Note>[])=>{
         setCreated(updated)
-        const out = currentClone()
+        let out = currentClone()
         out.new = updated
         deliverUpdatesToParent(out)
     }
@@ -663,13 +663,14 @@ export function SingleNoteV2(
                           onBlur={() => {
                               setEditing(false)
                           }}
-                          onChange={(e)=>{
+                          onChange={(e)=>{ // TODO: is this properly propagating the last letter?
                               e.stopPropagation();
                               //e.preventDefault();
                               console.log("new note value: "+e.target.value) // TODO: del
                               const updated = structuredClone(val);
                               updated.data.note = e.target.value
                               handleChangeNote(updated)
+                              console.log("new note value should now be propagated to parent!") // TODO: del
                           }}
             /> : <>
             <div>{val.data.note}</div><button className={"basicButtonSmall"} onClick={()=>{setEditing(!editing)}}>
@@ -704,15 +705,15 @@ export function NoteEntriesGroup({
         setInputFields(data);
     }
     // TODO: NUMBER AS DATE AND VISE-VERSA
-    const handleFormChangeDate = (index: number, event: ChangeEvent<HTMLInputElement>) => {
-        changeDate(index, Number(event.target.value))
-    }
-    const changeDateToNow = (index: number,) => {
-        return (e: MouseEvent) => {
-            e.preventDefault()
-            changeDate(index, Date.now())
-        }
-    }
+    // const handleFormChangeDate = (index: number, event: ChangeEvent<HTMLInputElement>) => {
+    //     changeDate(index, Number(event.target.value))
+    // }
+    // const changeDateToNow = (index: number,) => {
+    //     return (e: MouseEvent) => {
+    //         e.preventDefault()
+    //         changeDate(index, Date.now())
+    //     }
+    // }
     const changeDate = (index: number, newDate: number) => {
         const data = [...(inputFields || [])];
         data[index].data.time = newDate
@@ -776,7 +777,7 @@ export function NoteEntriesGroup({
                                className={"noteValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
                                onBlur={() => { // TODO: on focus elsewhere
                                    // TODO: do nothing?
-                               }}
+                               }/* TODO: MULTILINE TEXT INPUT FOR VERY LARGE THINGS!*/}
                         />
                         // <TextBox readonly={false} label={"noteLabel"/* TODO: REPLACE TEXTBOX????*/}
                         //          value={input.data.note} fieldName={"noteLabel"}

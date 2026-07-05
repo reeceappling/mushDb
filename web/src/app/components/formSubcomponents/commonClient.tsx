@@ -450,23 +450,27 @@ export const PicsDisplay = (
     const [created, setCreated] = useState<NewPicWithNotesForm[]>([]);
 
     useEffect(() => {
-        setExisting(pwnfs(pix));
+        const ex = pwnfs(pix)
+        setExisting(ex);
         setCreated([]);
+        // props.updateParent({ // TODO: needed?
+        //     existing: ex,
+        //     new: [],
+        // })
     }, [pixInitKey]);
-
-    const doUpdate = () => {
+    const updateExisting = (updated: Data<PicWithNotesForm>[]) => {
+        setExisting(updated)
         props.updateParent({
-            existing: existing,
+            existing: updated,
             new: created,
         })
     }
-    const updateExisting = (updated: Data<PicWithNotesForm>[]) => {
-        setExisting(updated)
-        doUpdate()
-    }
     const updateNew = (updated: NewPicWithNotesForm[]) => {
         setCreated(updated)
-        doUpdate()
+        props.updateParent({
+            existing: existing,
+            new: updated,
+        })
     }
     const depth = useContext(DepthContext)
     // TODO: OVERHAUL WITH EITHER GRID OR FLEXBOX?
@@ -474,8 +478,6 @@ export const PicsDisplay = (
         <div className={"areaHeader"}>{props.sectionHeader || "Pictures"}</div>
         <div className={"picsGroup picsRows"}>{/* TODO: change to grid???*/}
             {pix.map((img, i) => {
-                {/* TODO: REMOVE CURRENT FROM INPUTS! DO INITIAL INSTEAD!*/
-                }
                 return <PixRowExisting key={i} initial={img} readonly={props.readonly} updateParent={a => {
                     const upd = structuredClone(existing)
                     upd[i] = a
@@ -510,6 +512,7 @@ export const PixRowExisting = (
     const [current, setCurrent] = useState<Data<PicWithNotesForm>>(pwnfFor(initial))
     useEffect(() => {
         setCurrent(pwnfFor(initial))// reset when initial changes
+        // TODO: update parent??
     }, [initial])
     const update = (updated: Data<PicWithNotesForm>) => {
         setCurrent(updated)

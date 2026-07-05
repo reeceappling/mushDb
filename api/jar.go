@@ -314,8 +314,8 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 
 type importJarRequest struct {
 	// TODO: ALSO IMPORT WITH sizeCups!
-	SizeCups int                   `json:"sizeCups"`
-	Recipe   AlternateCollectionId // Jar Recipe
+	SizeCups int                    `json:"sizeCups"`
+	Recipe   *AlternateCollectionId `json:"recipe,omitempty"` // Jar Recipe // TODO: optional for imports?
 	CreationDateField
 	SpeciesOptionalField // Only empty when non-innoc'd
 	SubspeciesOptionalField
@@ -435,7 +435,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		SizeCups:                data.SizeCups,
-		JarRecipeField:          JarRecipeField{&data.Recipe},
+		JarRecipeField:          JarRecipeField{data.Recipe},
 		GrainBatchOptionalField: GrainBatchOptionalField{nil}, // Batch not provided for import
 		WetnessField:            data.WetnessField,
 		BurstGrainsField:        data.BurstGrainsField,
@@ -457,13 +457,16 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = toInsert.PcRunOptionalField.Get(ctx)
 	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-		dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
+		dbErr(w, "invalid pc run: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = toInsert.JarRecipeField.Get(ctx)
-	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
-		dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
-		return
+	if err != nil {
+		if !errors.Is(err, ErrMissingOptionalField) {
+			dbErr(w, "invalid jar recipe: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

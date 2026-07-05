@@ -188,14 +188,10 @@ export function JarImportDisplay({}: ImportDisplayInput) {
     const cookies = useContext(CookiesContext)
     const importEntry = () => {
         const formData = new FormData()
-        if (recipe === undefined) {
-            setErr("Recipe must be set!")
-            return
-        }
         const dataObj: any = {
             creationDate: created,
             sizeCups: sizeCups,
-            recipe: recipe._id,
+            recipe: recipe?._id,
             // optional
             species: species?._id,
             subspecies: subspecies,
@@ -205,7 +201,7 @@ export function JarImportDisplay({}: ImportDisplayInput) {
             burstGrains: burstGrains,
             writeTagTo: writeTagTo,
         }
-        setFormData(formData, dataObj) // TODO: should this go first or last everywhere?
+        setFormData(formData, dataObj) // TODO: THIS SHOULD GO FIRST EVERYWHERE!
         if (imageFile !== undefined) {
             formData.set("img", imageFile, "img")
         }

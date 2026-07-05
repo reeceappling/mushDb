@@ -184,9 +184,14 @@ func Initialize(ctx context.Context) error {
 	} {
 		println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
 	}
+	// TODO: validateDbEntries(ctx)
 
 	return nil
 }
+
+//func validateDbEntries(ctx context.Context) {
+//	for _, _ = range map[string]
+//}
 
 func simplifyUpdates(elementsGroup ...bson.E) bson.D { // TODO: USE THIS
 	return elementsGroup
@@ -466,6 +471,10 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 	for numItems == nil || len(results) < *numItems {
 		if cursor.TryNext(ctx) {
 			var result T
+			//err = checkIdTypeWithRawOnCursor(cursor) // TODO: DEL!
+			//if err != nil {                          // TODO: del!
+			//	panic("failed to check id type! " + err.Error()) // TODO: del!
+			//} // TODO: del!
 			if err = cursor.Decode(&result); err != nil {
 				return nil, err
 			}
@@ -617,6 +626,14 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 
 func BsonFindFilter(key string, value any) bson.D {
 	return bson.D{bson.E{Key: key, Value: value}}
+}
+
+func BsonFindByIdFilterOrdered[T CollectionId](id T) bson.D { // TODO: ensure ok
+	return BsonFindFilter("_id", id)
+}
+
+func BsonFindByIdFilterUnordered[T CollectionId](id T) bson.M { // TODO: ensure ok
+	return bson.M{"_id": id}
 }
 
 //func setUnsetUnequalPointers[T comparable](key string, update *T, current *T, modsIn bson.D) bson.D {

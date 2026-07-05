@@ -31,7 +31,7 @@ export function PixRows(
     const doUpdate = (updated: Data<NewPicWithNotesForm>[]) => {
         setCurrent(updated)
         updateParent && updateParent(updated.filter(e => {
-            const hasImgOrNotes = e.data.img !== undefined || e.data.notes.new.length > 0
+            const hasImgOrNotes = (e.data.img !== undefined) || (e.data.notes.new.length > 0)
             return !e.disabled && hasImgOrNotes
         }).map(e => e.data))
     }
@@ -63,7 +63,6 @@ export function PixRows(
                     disabled: false
                 }]
                 doUpdate(upd)
-                console.log(upd.length)
             }}>{addButtonText || "Add picture"}</button>
         </div>
     </>

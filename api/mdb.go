@@ -113,14 +113,16 @@ func (b58str Base58Str) ToMainCollectionId() (MainCollectionId, error) {
 }
 
 func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
-	println("converting base58 string", b58str)
+
 	out := [12]byte{}
 	bs, err := b58str.Base2Bytes()
 	if err != nil {
 		return out, err
 	}
 	if len(bs) == 12 {
-		return AlternateCollectionId(bs), nil
+		id := AlternateCollectionId(bs)
+		println("converting base58 string", b58str, "result", string(bs))
+		return id, nil
 	}
 	if len(bs) < 12 {
 		// TODO: ensure padding ok
@@ -128,6 +130,7 @@ func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
 		for i, b := range bs {
 			result[12-len(bs)+i] = b // TODO: validate ok
 		}
+		println("converting base58 string", b58str, "result", string(result[:]))
 		return result, nil
 	}
 	// TODO: what about too long?
@@ -435,7 +438,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi").
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
-		SetTimeout(15 * time.Second)         // TODO: no?
+		SetTimeout(15 * time.Second) // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {

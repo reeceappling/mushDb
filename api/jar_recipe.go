@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -25,18 +27,72 @@ type JarRecipeRequiredField struct {
 }
 
 func (field JarRecipeRequiredField) Get(ctx context.Context) (out JarRecipe, err error) {
-	err = DbFrom(ctx).Collection(JarRecipesCollectionName).
-		FindOne(ctx, bson.M{"_id": field.Recipe}).Decode(&out)
-	return
+	println("searching for recipe: ", field.Recipe.AsBase58(), string(field.Recipe[:]))
+	out = JarRecipe{}
+	coll := DbFrom(ctx).Collection(JarRecipesCollectionName)
+	findFilter := BsonFindByIdFilterUnordered(field.Recipe) // TODO: BsonFindByIdFilterOrdered(field.Recipe) /* TODO: ??? bson.M{"_id": field.Recipe}*/
+	err = coll.FindOne(ctx, findFilter).Decode(&out)
+	return out, err
 }
 
-func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) {
+func (field JarRecipeField) asRequiredField() (out JarRecipeRequiredField, err error) {
 	if field.Recipe == nil {
 		return out, ErrMissingOptionalField
 	}
-	err = DbFrom(ctx).Collection(JarRecipesCollectionName).
-		FindOne(ctx, bson.M{"_id": *field.Recipe}).Decode(&out)
-	return
+	return JarRecipeRequiredField{*field.Recipe}, nil
+}
+
+// TODO: move
+func checkIdTypeWithRaw[T bson.M | bson.D](ctx context.Context, collection *mongo.Collection, filter T) {
+	var rawDoc bson.Raw
+	err := collection.FindOne(ctx, filter).Decode(&rawDoc)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Lookup looks up an element in the raw document by key
+	idElement, err := rawDoc.LookupErr("_id")
+	if err != nil {
+		fmt.Println("_id field does not exist in this document")
+		return
+	}
+
+	// idElement.Type returns a bsontype.Type (e.g., bsontype.ObjectID, bsontype.String)
+	fmt.Printf("Exact BSON Type: %s (Hex byte value: %x)\n", idElement.Type, idElement.Type)
+}
+
+// TODO: move
+func checkIdTypeWithRawOnCursor(cursor *mongo.Cursor) error {
+	var rawDoc bson.Raw
+	err := cursor.Decode(&rawDoc)
+	if err != nil {
+		println("failed to decode document from cursor: " + err.Error())
+		return errors.Join(err, errors.New("failed to decode document from cursor"))
+	}
+
+	// Lookup looks up an element in the raw document by key
+	idElement, err := rawDoc.LookupErr("_id")
+	if err != nil {
+		println("_id field does not exist in this document: " + err.Error())
+		return errors.Join(err, errors.New("_id field does not exist in this document"))
+	}
+
+	// idElement.Type returns a bsontype.Type (e.g., bsontype.ObjectID, bsontype.String)
+
+	println("item: ", rawDoc.String())
+	println("id", idElement.String(), "value", string(idElement.Value))
+	//idElType := idElement.Type
+	//println(fmt.Sprintf("Exact BSON Type: %s (Hex byte value: %x)\n", idElType, idElType))
+	//println(fmt.Sprintf("As string: %s. Value: %s\n", idElement.String(), string(idElement.Value)))
+	return nil
+}
+
+func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) {
+	f, err := field.asRequiredField()
+	if err != nil {
+		return out, err
+	}
+	return f.Get(ctx)
 }
 
 type JarRecipe struct {
