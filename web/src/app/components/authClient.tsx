@@ -356,30 +356,30 @@ const testSignIn = ()=>{
                 useOneTap
             />
             <button className={"basicButtonSmall"} onClick={guestSignIn}>{"Continue as guest"}</button>
-            <div>
-                <div>{"Test user signin area"}</div>
-                <div className={"inlineChildren"}>
-                    <SelectorFor options={[
-                        "",
-                        "testProjAdminA@appli.ng",
-                        "testProjAdminB@appli.ng",
-                        "testProjAdminC@appli.ng",
-                        "testProjWriteA@appli.ng",
-                        "testProjWriteB@appli.ng",
-                        "testProjWriteC@appli.ng",
-                        "testProjReadA@appli.ng",
-                        "testProjReadB@appli.ng",
-                        "testProjReadC@appli.ng",
-                        "testProjNoneA@appli.ng",
-                        "testProjNoneB@appli.ng",
-                        "testProjNoneC@appli.ng",
-                    ]} initial={""} updateParent={setTestEmail} disabled={false}/>
-                    <button className={"basicButtonSmall"} onClick={e=>{
-                        e.stopPropagation()
-                        testSignIn()
-                    }}>{"Sign in with test user"}</button>
-                </div>
-            </div>
+            {/*<div> TODO: reenable for testing only!*/}
+            {/*    <div>{"Test user signin area"}</div>*/}
+            {/*    <div className={"inlineChildren"}>*/}
+            {/*        <SelectorFor options={[*/}
+            {/*            "",*/}
+            {/*            "testProjAdminA@appli.ng",*/}
+            {/*            "testProjAdminB@appli.ng",*/}
+            {/*            "testProjAdminC@appli.ng",*/}
+            {/*            "testProjWriteA@appli.ng",*/}
+            {/*            "testProjWriteB@appli.ng",*/}
+            {/*            "testProjWriteC@appli.ng",*/}
+            {/*            "testProjReadA@appli.ng",*/}
+            {/*            "testProjReadB@appli.ng",*/}
+            {/*            "testProjReadC@appli.ng",*/}
+            {/*            "testProjNoneA@appli.ng",*/}
+            {/*            "testProjNoneB@appli.ng",*/}
+            {/*            "testProjNoneC@appli.ng",*/}
+            {/*        ]} initial={""} updateParent={setTestEmail} disabled={false}/>*/}
+            {/*        <button className={"basicButtonSmall"} onClick={e=>{*/}
+            {/*            e.stopPropagation()*/}
+            {/*            testSignIn()*/}
+            {/*        }}>{"Sign in with test user"}</button>*/}
+            {/*    </div>*/}
+            {/*</div>*/}
         </div>
     );
 }

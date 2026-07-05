@@ -291,7 +291,7 @@ func main() {
 	http.Handle(loginPath /* /login */, CorsAuthMiddleware(rateLimitCtxMiddleware(handleLoginMiddleware(webProxyHandler))))
 	http.Handle("/logout", CorsAuthMiddleware(rateLimitCtxMiddleware(handleLogout))) // TODO: make logout button in ts!
 	http.Handle("/guestLogin", rateLimitCtxMiddleware(handleGuestLogin))
-	http.Handle("/testLogin/{emailEncoded}", rateLimitCtxMiddleware(handleTestLogin)) // TODO: remove later
+	// TODO: reenable for testing only! http.Handle("/testLogin/{emailEncoded}", rateLimitCtxMiddleware(handleTestLogin)) // TODO: remove later
 	http.Handle("/auth/{provider}", CorsAuthMiddleware(rateLimitCtxMiddleware(authProviderHandler)))
 	http.Handle("/auth/{provider}/callback", CorsAuthMiddleware(rateLimitCtxMiddleware(authCallbackHandler)))
 	// Biometrics endpoints TODO: (maybe add biometric provider?)
@@ -1129,11 +1129,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		uat := user.AccountType // TODO: del
 		if uat.IsAdmin() {      // TODO: del
 			uats = "Admin" // TODO: del
-		} else {                 // TODO: del
+		} else { // TODO: del
 			if uat.IsRegular() { // TODO: del
 				uats = "Regular user" // TODO: del
 			} // TODO: del
-		}                                                                                       // TODO: del
+		} // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		if !user.IsAdmin() && out.Private {
 			if user.AccountType.IsGuest() {
@@ -1417,7 +1417,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	println("trying to read from reader: " + readerName)
 	ctx := r.Context()
 	err := env.IfNotProd(ctx, func() error { // TODO: del later?
-		if readerName == goodTestRfid {      // TODO: remove later
+		if readerName == goodTestRfid { // TODO: remove later
 			// TODO: multiple? not just one id?
 			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 			if err != nil {

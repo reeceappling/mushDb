@@ -404,6 +404,8 @@
         - [ ] Make sales also trigger disposal? (Do this on many entry types?)
     - [ ] Import page
       - [ ] Ensure ratios are how we want to do this... PRETTY SURE THIS IS FINE FOR NOW!
+      - [ ] Casing ratio is not allowing decimals easily...
+      - [ ] Substrate and casing is miscalculating!!!!
   - [ ] GrainBatch
     - [ ] ListPageTable
       - [ ] sort by Creation Date, Last Updated

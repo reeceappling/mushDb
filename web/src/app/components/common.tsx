@@ -732,7 +732,6 @@ export function ImportResponseHandler<T extends Importable>(asserter: TypeAssert
             .then(item=>{
                 asserter(item)
                 window.location.assign(viewUrlFor(typeStr, item._id))
-                // redirect(viewUrlFor(typeStr, item._id)) // TODO: del if working
             })
             .catch(ErrHandler(setErr))
     }
@@ -772,6 +771,9 @@ export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string,
 export function DoMultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
     SendMultipartRequest(importApiUrlFor(typeStr), formData, cookies)
         .then(ImportResponseHandler(asserter,typeStr, setErr))
+        .catch(caughtErr=>{
+            setErr(JSON.stringify(caughtErr))
+    })
 }
 
 export function HandleTxtResponse(res: Response): Promise<string> {
@@ -962,53 +964,63 @@ export function SelectorTableWithHeader<T>({header, data,table,onSelect}:{
     </>
 }
 
-// TODO: may disappear
-export function InlineEntry(props: React.PropsWithChildren<{ onClick?: () => void }>) { // TODO: ADD THIS TO ALL INLINES!!!!!
-    return <div className={"inlineEntry"} onClick={(e) => {
-        e.stopPropagation()
-        props.onClick && props.onClick()
-    }}>
-        {props.children}
-    </div>
-}
-
+// // TODO: may disappear
+// export function InlineEntry(props: React.PropsWithChildren<{ onClick?: () => void }>) { // TODO: ADD THIS TO ALL INLINES!!!!!
+//     return <div className={"inlineEntry"} onClick={(e) => {
+//         e.stopPropagation()
+//         props.onClick && props.onClick()
+//     }}>
+//         {props.children}
+//     </div>
+// }
+//
 export function dataFor<Type>(vals?: Type[]): Data<Type>[] {
     return (vals || []).map((l) => {
         return {data: l, disabled: false}
     })
 }
 
-export function FloatInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
-    const [val, setVal] = useState<number>(initial || 0)
-    const updateNumber = (s: string) => {
-        const n = NumbersOnlyFromText(s)
-        setVal(n)
-        onChange(n)
-    }
-    return <div>
-        <TestAndValidate todos={["validate working properly"]}>
-            <InputNumber min={0} max={10000} onChange={s => {
-                s && updateNumber(s)
-            }} step={1} mode={Modes.floating} value={val.toString()} readonly={false}/>
-        </TestAndValidate>
-    </div>
-}
+//InputDecimal
+// export function FloatInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
+//     const [val, setVal] = useState<number>(initial || 0)
+//     const updateNumber = (s: string) => {
+//         try {
+//             const n = Number(s)
+//             setVal(n)
+//             onChange(n)
+//         } catch (e) {
+//             console.error("failed to set float input for "+s+" "+JSON.stringify(e))
+//         }
+//     }
+//     return <div>
+//         <TestAndValidate todos={["validate working properly"]}>
+//             <InputNumber min={0} max={10000} onChange={s => {
+//                 s && updateNumber(s)
+//             }} step={1} mode={Modes.floating} value={val.toString()} readonly={false}/>
+//         </TestAndValidate>
+//     </div>
+// }
 
-export function DecimalInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
-    const [val, setVal] = useState<number>(initial || 0)
-    const updateNumber = (s: string) => {
-        const n = NumbersOnlyFromText(s)
-        setVal(n)
-        onChange(n)
-    }
-    return <div>
-        <TestAndValidate todos={["validate working properly"]}>
-            <InputNumber min={0} max={10000} onChange={s => {
-                s && updateNumber(s)
-            }} step={1} mode={"floating"} value={val.toString()} readonly={false}/>
-        </TestAndValidate>
-    </div>
-}
+//InputDecimal
+// export function DecimalInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
+//     const [val, setVal] = useState<number>(initial || 0)
+//     const updateNumber = (s: string) => {
+//         try {
+//             const n = Number(s)
+//             setVal(n)
+//             onChange(n)
+//         } catch (e) {
+//             console.error("failed to set float input for "+s+" "+JSON.stringify(e))
+//         }
+//     }
+//     return <div>
+//         <TestAndValidate todos={["validate working properly"]}>
+//             <InputNumber min={0} max={10000} onChange={s => {
+//                 s && updateNumber(s)
+//             }} step={1} mode={"floating"} value={val.toString()} readonly={false}/>
+//         </TestAndValidate>
+//     </div>
+// }
 
 export function SelectorWrapper<T>(props: React.PropsWithChildren<{
     title: string,

@@ -848,6 +848,9 @@ a {
 .bottomButton {
     margin-top: var(--smallSpace);
     padding: 1em;
+    clear: both; /* TODO: ok?*/
+    position: relative;/* TODO: ok?*/
+    z-index: 10;/* TODO: ok?*/
 }
 
 .padContent {
@@ -869,4 +872,8 @@ a {
     margin: auto;    /* Centers the element in the available space */
     width: fit-content;
     height: fit-content;
+}
+
+.imageSelector .preview {
+    pointer-events: none;
 }

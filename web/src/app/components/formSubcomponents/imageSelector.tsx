@@ -20,10 +20,14 @@ export default function ImageSelector({updateParent, buttonText}:{buttonText?:st
             if (fileToSave !== null) {
                 updateParent(fileToSave)
                 setFile(fileToSave)
+                e.currentTarget.blur();
+                (document.activeElement as HTMLElement)?.blur();
                 return
             }
             updateParent(undefined)
             setFile(undefined)
+            e.currentTarget.blur();
+            (document.activeElement as HTMLElement)?.blur();
             return
         }
     }

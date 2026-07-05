@@ -22,7 +22,6 @@ import {
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    FloatInput,
     ImportDisplayInput,
     ImportEntryFormWrapper,
     ListPageItems,
@@ -42,7 +41,7 @@ import {
     resolvePicsFormData,
     SelectorWrapper,
     setFormData,
-    setFormImages, DecimalInput,
+    setFormImages, viewUrlFor,
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -78,7 +77,7 @@ import {SelectorFor} from "@/app/components/selector";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
+import {InputDecimal, InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
@@ -465,6 +464,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
+    const [debug, setDebug] = useState<string>("init");
     const submitImportFruitingChamber = () => {
         const reqd = new Map<string, any>([
             ['recipe', recipe],
@@ -492,11 +492,51 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             subspecies: subspecies,
             generation: generation,
             knownFruitable: knownFruitable,
-            writeTagTo: writeTagTo,
+            writeTagTo: writeTagTo
         }
+        setDebug("creating form data");
         const formData = new FormData()
-        imageFile && formData.set("img", imageFile, "img")
-        setFormData(formData, bodyObj)
+        setFormData(formData, bodyObj) // TODO: ENSURE ALWAYS CALLED BEFORE SETTING IMAGE!
+        setDebug("set form data");
+        // TODO: does images need to be set on the data obj?
+        imageFile && formData.set("img", imageFile, "img") // TODO: for some reason images are not working!
+        // setDebug("set image file");
+        //
+        //
+        // try {
+        //     fetch("/db/import/fruitingChamber", {
+        //         method: "POST",
+        //         body: formData,
+        //         credentials: "include",
+        //     }).then(res=>{
+        //         res.text().then(id=>{
+        //             setDebug(
+        //                 "response:\n" +
+        //                 JSON.stringify(
+        //                     { ok: res.ok, status: res.status, statusText: res.statusText, body: id },
+        //                     null,
+        //                     2
+        //                 )
+        //             );
+        //             if (!res.ok) {
+        //                 setErr(`import failed: ${res.status} ${res.statusText} id`);
+        //                 return;
+        //             }
+        //             // optional: parse + redirect on success
+        //             window.location.assign(viewUrlFor("fruitingChamber", id))
+        //         }).catch(errr=>{
+        //             setDebug("fetch error:\n" + JSON.stringify(errr, null, 2));
+        //             setErr("request failed 2");
+        //         })
+        //     }).catch(errr=>{
+        //         setDebug("fetch error:\n" + JSON.stringify(errr, null, 2));
+        //         setErr("request failed 1");
+        //     })
+        // } catch (e: any) {
+        //     setDebug("fetch error:\n" + JSON.stringify(e, null, 2));
+        //     setErr("request failed");
+        // }
+
 
         DoMultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr, allCookies(cookies))
     }
@@ -514,27 +554,46 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             <VolumeSelector initialVal={1} initialUnit={"quarts"} updateNumberOfCups={setGrainCups}/>
         </div>
         <div className={"inlineChildren"}>
-            <div>{"Mixed substrate ratio"}</div>
-            <DecimalInput initial={mixedSubRatio} onChange={setMixedSubRatio}/>
+            {/*<div>{"Mixed substrate ratio"}</div>*/}
+            <InputDecimal initial={1} label={"Mixed substrate ratio"} updateParent={setMixedSubRatio}/>
+            {/*<DecimalInput initial={1} onChange={setMixedSubRatio}/>*/}
         </div>
         <div className={"inlineChildren"}>
-            <div>{"Casing ratio"}</div>
-            <DecimalInput initial={casingRatio} onChange={setCasingRatio}/>
+            {/*<div>{"Casing ratio"}</div>*/}
+            {/*<DecimalInput initial={0.5} onChange={setCasingRatio}/>*/}
+            <InputDecimal initial={0.5} label={"Casing ratio"} updateParent={setCasingRatio}/>
         </div>
         {/* Optional fields*/}
 
         <GenerationInput updateParent={g=>{
             if (g!==undefined) {
                 setGeneration(g)
+                setErr(undefined)
             } else {
                 setErr("got undefined generation") // TODO: del?
             }
         }}/>
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
-        <ImageSelector updateParent={setImageFile}/>
+        <div className={"centerH"/* TODO: if this works put it on all import pages*/}
+             onPointerDown={() => setDebug("image area pointerdown")}
+             onClick={() => setDebug("image area click")}>
+            <ImageSelector updateParent={setImageFile}/>
+        </div>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         {/* SUBMIT AREA */}
-        <button className={"bottomButton greenButton"} onClick={submitImportFruitingChamber}>{"Submit"}</button>
+        <div className={"Error"}>{`debug: ${debug}`}</div>
+        <button className={"bottomButton greenButton"} type={"button"} onPointerDown={() => setDebug("submit pointerdown")}
+                onPointerUp={() => setDebug("submit pointerup")}
+                onTouchStart={() => setDebug("submit touchstart")}
+                onTouchEnd={() => {
+                    setDebug("submit touchend")
+                }}
+                onClick={(e) => {
+                    setDebug("submit click");
+                    e.preventDefault();
+                    e.stopPropagation();
+                    submitImportFruitingChamber();
+                }}>{"Submit"}</button>
     </ImportEntryFormWrapper>
 }
 
