@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/disintegration/imageorient"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request/unix"
@@ -17,7 +18,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/exp/maps"
 	"image/jpeg"
-	"image/png"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -721,15 +721,20 @@ func BsonFindFilter(key string, value any) bson.D {
 func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, error) {
 	// Get field bytes as an image
 	println("decoding jpg")
-	img, err := jpeg.Decode(p)
+	img, _, err := imageorient.Decode(p)
 	if err != nil {
-		println("decoding png")
-		img, err = png.Decode(p)
-		if err != nil {
-			http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
-			return nil, err
-		}
+		http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
+		return nil, err
 	}
+	//img, err := jpeg.Decode(p)
+	//if err != nil {
+	//	println("decoding png")
+	//	img, err = png.Decode(p)
+	//	if err != nil {
+	//		http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
+	//		return nil, err
+	//	}
+	//}
 	buf := new(bytes.Buffer)
 	println("re-encoding as jpg")
 	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG??????
