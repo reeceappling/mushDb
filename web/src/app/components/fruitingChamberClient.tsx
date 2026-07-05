@@ -294,7 +294,7 @@ export default function FruitingChamberDisplay(
                                  transfersOut={initial.transfersOut} allowNewTransferCreation={true}/>{/* TODO: validTypesTo, allowXferCreation?*/}
 
             <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
-            {/* Flushes */}<PicsDisplay pix={initial.flushes || []} sectionHeader={"Flushes"} readonly={readonly}
+            {/* Flushes */}<PicsDisplay pix={initial.flushes || []} sectionHeader={"Flushes: "} readonly={readonly}
                                         updateParent={setFlushes} addButtonText={"Create New Flush"}/>
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>{/* Contamination */}
