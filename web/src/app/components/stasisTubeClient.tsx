@@ -161,10 +161,10 @@ export function StasisTubeImportDisplay() {
             notes: notes,
             writeTagTo: writeTagTo,
         }
+        setFormData(formData, dataObj)
         if(imageFile!==undefined){
             formData.set("image", imageFile, "imgFile")
         }
-        setFormData(formData, dataObj)
         DoMultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"stasisTube"}>

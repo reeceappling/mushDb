@@ -359,6 +359,7 @@ export function NewFruitForm(
                     })
                 }
             })
+            setFormData(formData, dataObj)
             for (let i = 0; i < pics.length; i++) {
                 const imgi = pics[i].img
                 if (imgi === undefined) {
@@ -369,7 +370,6 @@ export function NewFruitForm(
                 formData.set(filePrefix, imgi, filePrefix)
             }
         }
-        setFormData(formData, dataObj)
         DoCreateRequestMultipart("fruit", formData, AssertFruit, allCookies(cookies))
             .then(onCreate)
             .catch(e => {

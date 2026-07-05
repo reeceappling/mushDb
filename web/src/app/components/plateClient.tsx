@@ -246,13 +246,14 @@ export default function PlateDisplay(
             // Pics
             const picsInfo = resolvePicsFormData(images)
             dataObj.images = picsInfo.obj
-            setFormImages(formData, "newPic", picsInfo.images)
+            // Set data on form
             // Contams
             const contamsInfo = resolveContamsFormData(contams)
             dataObj.contams = contamsInfo.obj
-            setFormImages(formData, "newContam", contamsInfo.images)
-            // Set data on form
             setFormData(formData, dataObj)
+            setFormImages(formData, "newPic", picsInfo.images)
+            setFormImages(formData, "newContam", contamsInfo.images)
+
         } catch (caught: any) {
             console.log("error in submit")
             setErr(JSON.stringify(caught))
@@ -522,10 +523,10 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             condensationCoverageAtPourTime: condensationCoverage,
             writeTagTo: writeTagTo,
         }
+        setFormData(formData, dataObj)
         if (imageFile !== undefined) {
             formData.set("image", imageFile, "image")
         }
-        setFormData(formData, dataObj)
         DoMultipartImportRequest(formData, "plate", AssertPlate, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"plate"}>
