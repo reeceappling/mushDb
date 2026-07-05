@@ -6,6 +6,16 @@ import {Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 import {InputDecimal, InputNumber, InputText} from "@/app/components/formSubcomponents/numericInput";
 
+function picRowsKey(items: PicWithNotesIncoming[]): string {
+    return items.map((p) =>
+        [
+            p.time,
+            p.location || "",
+            (p.notes || []).map((n) => `${n.time}:${n.note}`).join("^"),
+        ].join("|")
+    ).join("||");
+}
+
 export function PixRows(
     {initial, updateParent, addButtonText}: {
         initial: PicWithNotesIncoming[],
@@ -13,9 +23,11 @@ export function PixRows(
         addButtonText?: string,
     }) {
     const [current, setCurrent] = useState<Data<NewPicWithNotesForm>[]>([])
+    const initialKey = picRowsKey(initial);
+
     useEffect(() => {
-        setCurrent([])  // Reset when initial changes
-    }, [initial])
+        setCurrent([]); // Reset only when pic content actually changes
+    }, [initialKey]);
     const doUpdate = (updated: Data<NewPicWithNotesForm>[]) => {
         setCurrent(updated)
         updateParent && updateParent(updated.filter(e => {
@@ -37,8 +49,10 @@ export function PixRows(
                 }}/>
             })}
         </div>
-        <div className={"centerH gapTop"}>
+        <div className={"centerH gapTop picsRowsAdd"}>
             <button className={"greenButton"} onClick={(e) => {
+                console.log("adding a picture")
+                e.preventDefault();
                 e.stopPropagation();
                 const upd = [...structuredClone(current), {
                     data: {
@@ -49,6 +63,7 @@ export function PixRows(
                     disabled: false
                 }]
                 doUpdate(upd)
+                console.log(upd.length)
             }}>{addButtonText || "Add picture"}</button>
         </div>
     </>
@@ -76,7 +91,7 @@ export function PixRowNew(
                 upd.img = f
                 updateRow(upd)
             }}/>
-            <button className={"removeButton"} onClick={remv}>{"REMOVE THIS Entry"}</button>
+            <button className={"removeButton"} onClick={remv}>{"Remove This Entry"}</button>
         </div>
     }
     const rightArea = () => {

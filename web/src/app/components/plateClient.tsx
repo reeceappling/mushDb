@@ -324,7 +324,7 @@ export default function PlateDisplay(
             {isInnoculated()&&<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
                                  transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly}/>}{/* TODO: have this rely on dictation as well to figure out if we want it open on the screen*/}
-            <PicsDisplay pix={initial.pics || []} readonly={readonly}
+            <PicsDisplay pix={initial.pics} readonly={readonly}
                          headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>

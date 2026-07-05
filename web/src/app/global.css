@@ -875,5 +875,9 @@ a {
 }
 
 .imageSelector .preview {
-    pointer-events: none;
+    &:not(.picsRowsAdd) { /* TODO: ensure works with importing fruiting chamber with picture*/
+        pointer-events: none;
+    }
+
 }
+

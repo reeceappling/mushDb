@@ -412,9 +412,21 @@ export function GensFormDisplay(
     </>
 }
 
+function picsKey(items: PicWithNotesIncoming[]): string {
+    return items.map((p) =>
+        [
+            p.time,
+            p.location || "",
+            (p.notes || []).map((n) => `${n.time}:${n.note}`).join("^"),
+        ].join("|")
+    ).join("||");
+}
+
+
+
 export const PicsDisplay = (
     props: {
-        pix: PicWithNotesIncoming[],
+        pix?: PicWithNotesIncoming[],
         updateParent: (v: SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>) => void,
         readonly?: boolean,
         sectionHeader?: string,
@@ -431,13 +443,17 @@ export const PicsDisplay = (
             return pwnfFor(v)
         })
     }
-    const [existing, setExisting] = useState<Data<PicWithNotesForm>[]>(pwnfs(props.pix))
-    const [created, setCreated] = useState<NewPicWithNotesForm[]>([])
+    const pix = props.pix || [];
+    const pixInitKey = picsKey(pix);
+
+    const [existing, setExisting] = useState<Data<PicWithNotesForm>[]>(pwnfs(pix));
+    const [created, setCreated] = useState<NewPicWithNotesForm[]>([]);
+
     useEffect(() => {
-        setExisting(pwnfs(props.pix))
-        setCreated([])
-        //doUpdate() // TODO: do we need this?
-    }, [props.pix])
+        setExisting(pwnfs(pix));
+        setCreated([]);
+    }, [pixInitKey]);
+
     const doUpdate = () => {
         props.updateParent({
             existing: existing,
@@ -457,7 +473,7 @@ export const PicsDisplay = (
     return <div /*key={count}*/ className={"depthContainer depth" + depth}>
         <div className={"areaHeader"}>{props.sectionHeader || "Pictures"}</div>
         <div className={"picsGroup picsRows"}>{/* TODO: change to grid???*/}
-            {props.pix.map((img, i) => {
+            {pix.map((img, i) => {
                 {/* TODO: REMOVE CURRENT FROM INPUTS! DO INITIAL INSTEAD!*/
                 }
                 return <PixRowExisting key={i} initial={img} readonly={props.readonly} updateParent={a => {
@@ -467,7 +483,7 @@ export const PicsDisplay = (
                 }}/>
             })}
         </div>
-        {!props.readonly && <PixRows initial={props.pix} addButtonText={props.addButtonText} updateParent={a => {
+        {!props.readonly && <PixRows initial={pix} addButtonText={props.addButtonText} updateParent={a => {
             const upd = structuredClone(a)
             updateNew(upd)
         }}/>}

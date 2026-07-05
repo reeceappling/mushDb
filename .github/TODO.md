@@ -25,6 +25,8 @@
   - [ ] Actually implement something that covers these backups
   - [ ] Validate that we can restore from a backup
 # TODO
+- [ ] Show contams in mostRecentImages area on display pages
+  - [ ] see https://mush.appli.ng/view/plate/jWhiSvRFkgH for example where it does not occur
 - [x] Ensure selectors allow filtering out disposed items (Confirmed working via NewMssForm)
 - [ ] ListPages ensure disposed items are properly marked?
 - [ ] /db/list/nonguests

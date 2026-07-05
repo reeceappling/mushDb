@@ -722,6 +722,8 @@ func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, er
 	// Get field bytes as an image
 	println("decoding jpg")
 	img, _, err := imageorient.Decode(p)
+	// If using mac screenshots (cmd+shift+5), you'll need to do this:
+	// defaults write com.apple.screencapture type jpg; killall SystemUIServer
 	if err != nil {
 		http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
 		return nil, err

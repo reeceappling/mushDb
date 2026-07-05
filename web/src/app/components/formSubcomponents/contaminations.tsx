@@ -42,6 +42,21 @@ export interface NewContaminationForm {
     notes: Note[]
 }
 
+// add helper near top of file
+function contaminationKey(items: Contamination[]): string {
+    return items.map((c) =>
+        [
+            c.time,
+            c.confirmed ? 1 : 0,
+            c.bacteria ? 1 : 0,
+            c.mold ? 1 : 0,
+            c.location || "",
+            (c.notes || []).map((n) => `${n.time}:${n.note}`).join("^"),
+        ].join("|")
+    ).join("||");
+}
+
+
 export function IsValidContamination(input: any): boolean {
     return typeof input === 'object' &&
         'time' in input && typeof input.time === 'number' &&
@@ -98,10 +113,11 @@ export function ContamsDisplay(
     }
     const [existing, setExisting] = useState<Data<ContaminationForm>[]>(initFor(initial))
     const [created, setCreated] = useState<NewContaminationForm[]>([])
+    const initKey = contaminationKey(initial);
     useEffect(() => {
-        setExisting(initFor(structuredClone(initial)))
-        setCreated([])
-    }, [initial])
+        setExisting(initFor(structuredClone(initial)));
+        setCreated([]);
+    }, [initKey]);
     const update = (ex: Data<ContaminationForm>[], nw: NewContaminationForm[]) => {
         updateParent({
             existing: structuredClone(ex),
@@ -154,9 +170,10 @@ export function ContamsRows({initial, updateParent, readonly}: {
         })
     }
     const [current, setCurrent] = useState<Data<ContaminationForm>[]>(InitialData(initial))
+    const initKey = contaminationKey(initial);
     useEffect(() => {
-        setCurrent(InitialData(initial))
-    }, [initial])
+        setCurrent(InitialData(initial));
+    }, [initKey]);
     const doUpdate = (updated: Data<ContaminationForm>[]) => {
         setCurrent(updated)
         updateParent(updated)
@@ -258,9 +275,10 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
         return null
     }
     const [current, setCurrent] = useState<Data<NewContaminationForm>[]>([])
+    const initKey = contaminationKey(initial);
     useEffect(() => {
-        setCurrent([])
-    }, [initial])
+        setCurrent([]);
+    }, [initKey]);
     const update = (updated: Data<NewContaminationForm>[]) => {
         setCurrent(updated)
         updateParent(updated
