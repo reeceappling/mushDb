@@ -7,9 +7,10 @@ import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 import {InputDecimal, InputNumber, InputText} from "@/app/components/formSubcomponents/numericInput";
 
 export function PixRows(
-    {initial, updateParent}: {
+    {initial, updateParent, addButtonText}: {
         initial: PicWithNotesIncoming[],
         updateParent?: (d: NewPicWithNotesForm[]) => void,
+        addButtonText?: string,
     }) {
     const [current, setCurrent] = useState<Data<NewPicWithNotesForm>[]>([])
     useEffect(() => {
@@ -48,7 +49,7 @@ export function PixRows(
                     disabled: false
                 }]
                 doUpdate(upd)
-            }}>{"Add picture"}</button>
+            }}>{addButtonText || "Add picture"}</button>
         </div>
     </>
 }

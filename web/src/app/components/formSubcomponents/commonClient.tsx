@@ -467,7 +467,7 @@ export const PicsDisplay = (
                 }}/>
             })}
         </div>
-        {!props.readonly && <PixRows initial={props.pix} updateParent={a => {
+        {!props.readonly && <PixRows initial={props.pix} addButtonText={props.addButtonText} updateParent={a => {
             const upd = structuredClone(a)
             updateNew(upd)
         }}/>}
