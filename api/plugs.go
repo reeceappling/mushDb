@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -28,15 +29,16 @@ type PlugsJar struct {
 	TransfersOutField                 `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	InnocField                        `bson:"inline"`
-	//PicsField                           `bson:"inline"` // TODO: pics?
-	//ContaminationsField                 `bson:"inline"` // TODO: contams?
-	KnownFruitableField `bson:"inline"`
-	PcRunOptionalField  `bson:"inline"` // defaults on import, but can be created without a run!
-	SalesField          `bson:"inline"` // TODO: MULTIPLE!
-	DisposedField       `bson:"inline"` // Also changed once all pegs are sold/used?
-	NotesField          `bson:"inline"`
-	LastUpdatedField    `bson:"inline"`
-	AclField            `bson:"inline"`
+	PicsField                         `bson:"inline"` // TODO: ADDED 7/6/26
+	ContaminationsField               `bson:"inline"` // TODO: ADDED 7/6/26
+	MostRecentImageField              `bson:"inline"`
+	KnownFruitableField               `bson:"inline"`
+	PcRunOptionalField                `bson:"inline"` // defaults on import, but can be created without a run!
+	SalesField                        `bson:"inline"` // TODO: MULTIPLE!
+	DisposedField                     `bson:"inline"` // Also changed once all pegs are sold/used?
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"`
 }
 
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
@@ -293,19 +295,61 @@ type importPlugsRequest struct {
 }
 
 func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	defer r.Body.Close()
+	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	data := importPlugsRequest{}
 	id := NextMainCollectionId()
-	defer r.Body.Close()
-	bs, err := io.ReadAll(r.Body)
+	b58id := id.AsBase58()
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
 	if err != nil {
-		http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
+		// Already written
 		return
 	}
-	err = json.Unmarshal(bs, &data)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
-		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+	// Try to get pic if exists
+	picsSaved := []string{}
+	defer func() {
+		if err != nil {
+			err = pics.DeleteFiles(ctx, picsSaved...)
+			if err != nil {
+				handleFileDeleteErr(err)
+			}
+		}
+	}()
+	// Go to next part, if exists to get image
+	var importedPic *PicWithNotes = nil
+	p, errr := reader.NextPart()
+	if errr != nil {
+		err = errr
+		if err != io.EOF {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		fileName := p.FileName()
+		defer p.Close()
+		if fileName != "img" {
+			http.Error(w, "invalid image name", http.StatusBadRequest)
+			return
+		}
+		// Process file
+		fieldBytes, err := multipartToImageBytes(p, w)
+		if err != nil {
+			// Already wrote
+			return
+		}
+		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "plugs", string(b58id), "img") // TODO: plugs ok?
+		if errr != nil {
+			err = errr
+			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	// Validation
 	for i, d := range data.DowelTypes {
@@ -316,7 +360,6 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var gen *Generation = nil
-	var finalAcl = allCanWriteAcl()
 	if data.Species != nil {
 		if data.Generation == nil {
 			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
@@ -327,51 +370,46 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		gen = data.Generation
-		//spec, err := data.SpeciesOptionalField.Get(ctx) // TODO: remove from everywhere if unused?
-		finalAcl.ACL, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
-		if err != nil {
-			http.Error(w, "failed to get species or subspecies information: "+err.Error(), http.StatusBadRequest)
-		}
 	} else {
 		data.KnownFruitable = nil
 		data.Subspecies = nil
 	}
-	if err = data.Generation.validate(); err != nil {
-		http.Error(w, "generation validation failure: "+err.Error(), http.StatusBadRequest)
-		return
+	pix := []PicWithNotes{}
+	if importedPic != nil {
+		pix = []PicWithNotes{*importedPic}
 	}
-	ctx, now := request.UnixTime(r.Context())
+
+	var finalPerms ACL
+	if data.Species == nil { // Not innoculated
+		finalPerms = allCanWriteAcl().ACL
+	} else {
+		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
+		if err != nil {
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	toInsert := PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{id},
-		//ParentTypeField:                   ParentTypeField{},
-		//MainCollectionOptionalParentField: MainCollectionOptionalParentField{},
-		PcRunOptionalField: PcRunOptionalField{&impPcRun}, // default for imports
-		CreationDateField:  CreationDateField{now},
-		DowelTypes:         data.DowelTypes,
+		PcRunOptionalField:    PcRunOptionalField{&impPcRun}, // default for imports
+		CreationDateField:     CreationDateField{now},
+		DowelTypes:            data.DowelTypes,
 		GenerationsFields: GenerationsFields{
 			GenSporeField:        GenSporeField{gen},
 			GenSinceFruitOrSpore: gen,
 		},
-		SpeciesOptionalField: SpeciesOptionalField{data.Species},
-		//TransfersOutField:       TransfersOutField{},
+		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
 		SubspeciesOptionalField: SubspeciesOptionalField{data.Subspecies},
-		//InnocField:              InnocField{},
-		KnownFruitableField: data.KnownFruitableField,
-		//PcRunOptionalField:      PcRunOptionalField{nil},
-		//SalesField:              SalesField{},
-		//DisposedField:           DisposedField{},
-		NotesField:       NotesField{data.Notes},
-		LastUpdatedField: LastUpdatedField{now},
+		KnownFruitableField:     data.KnownFruitableField,
+		PicsField:               PicsField{pix},
+		ContaminationsField:     ContaminationsField{Contaminations: []Contamination{}}, // TODO: ok?
+		NotesField:              NotesField{data.Notes},
+		LastUpdatedField:        LastUpdatedField{now},
 		// No Perms here for basic plugs
-		AclField: finalAcl,
+		AclField: finalPerms.AsField(),
 	}
-
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	finishCreateMainCollectionEntry(ctx, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
 // TODO: new sale?
@@ -380,6 +418,7 @@ type updatePlugsRequest struct {
 	PcRunOptionalField // Can only be set once!
 	KnownFruitableField
 	NotesUpdateField
+	// TODO: ALLOW UPDATING PICTURES!
 	DisposedField
 	PermsOnRequest `json:"acl"`
 }

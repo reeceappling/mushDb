@@ -92,6 +92,7 @@ export function NutrientsAreaReadOnly({values}: {values?:Nutrient[]}) {
 }
 
 export function NutrientsEntriesGroupForNew({initial, updateParent}: {initial: Nutrient[], updateParent: (l: Nutrient[])=>void}){
+    // TODO: initialModified????
     const [current, setCurrent] = useState<Nutrient[]>(initial);
     useEffect(()=>{
         setCurrent(initial)
@@ -99,6 +100,7 @@ export function NutrientsEntriesGroupForNew({initial, updateParent}: {initial: N
     const handleSelectNutrient = (v: string) => {
         const data = [...(current || []), {nutrient: v, amount: 0, unit: ""}];
         setCurrent(data)
+        // TODO: why no update parent here?
     }
     const doUpdate = (upd:Nutrient[]) => {
         setCurrent(upd)

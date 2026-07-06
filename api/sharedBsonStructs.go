@@ -402,13 +402,14 @@ func ValidColor(c Colorant) bool {
 }
 
 type Additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
-var additives = []Additive{Vermiculite, Perlite, Gypsum}
+var additives = []Additive{Vermiculite, Perlite, Gypsum, YeastNutrient}
 
 // TODO: add all of these to autogenned
 var (
-	Vermiculite Additive = "vermiculite"
-	Perlite     Additive = "perlite"
-	Gypsum      Additive = "gypsum"
+	Vermiculite   Additive = "vermiculite"
+	Perlite       Additive = "perlite"
+	Gypsum        Additive = "gypsum"
+	YeastNutrient Additive = "yeast nutrient"
 )
 
 type Antibiotic string

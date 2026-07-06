@@ -226,7 +226,6 @@ export default function PlateDisplay(
     }
     const cookies = useContext(CookiesContext)
     const submit = () => {
-        console.log("creating update request")
         const formData = new FormData()
         const dataObj: any = {
             knownFruitable: knownFruitable,

@@ -2,6 +2,8 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {PlugsSelector} from "@/app/components/plugsClient";
+import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
+import {Contamination} from "@/app/components/formSubcomponents/contaminations";
 
 export function TestPlugsOk(){
     const testNote = ()=>{
@@ -49,6 +51,9 @@ export interface PlugsData {
     transfersOut?: string[]
     knownFruitable?: boolean
     pcRun?:string
+    pics?: PicWithNotesIncoming[]
+    contamination?: Contamination[]
+    mostRecentImage?: PicWithNotesIncoming
     sales?: string[]
     disposed?: number
     notes?: Note[]

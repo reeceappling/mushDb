@@ -3,6 +3,7 @@
 - [ ] Species selector is not showing all species in plugs import...
 - [ ] Adding pictures on mobile on jar view page is not adding new pictures if they have no notes....
 - [ ] Adding pictures on jar view page is truncating notes added and edited on photos ("new pic" ends up as "new pi")
+- [ ] Creating spore print with a picture from a fruit's page is not propagating the picture to the spore print's page
 
 # In Progress
 ## Actively Working On

@@ -118,7 +118,7 @@ export function SugarEntriesGroupForNew({initial, updateParent}: {initial: Sugar
                 <SugarEntryForNew initial={{
                     type: n.type,
                     amount: initial.length>i?initial[i].amount:1.0, // TODO: ok?
-                    unit: initial.length>i?initial[i].unit:"g", // TODO: ok?
+                    unit: initial.length>i?initial[i].unit:"g", // TODO: ok? // TODO: not working properly!!!!
                 }} updateParent={(updated: Sugar) => {
                     doUpdate([...(current || [])].map((existing) => {
                         return existing.type !== n.type ? existing : updated
@@ -238,7 +238,7 @@ export function SugarEntriesGroup({initialEntries, preexisting, readonly, update
                         <TextBox label={"Unit"} readonly={readonly} value={input.data.unit} fieldName={"FIXME"}
                                  updateTextHandler={(t) => {
                                      handleFormChangeUnit(index, t)
-                                 }}/>{/* TODO: not working*/}
+                                 }}/>{/* TODO: not working!!!*/} {/*TODO: not working properly!!!!*/}
                         {(!readonly) && <button className={input.disabled?"removeButton":"basicButton"} onClick={() => {
                             (preexisting ? disableField(input.data.type) : removeFields(index))
                         }}>

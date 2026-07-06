@@ -6,7 +6,7 @@ import {
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
-    DoImportRequest,
+    DoImportRequest, DoMultipartImportRequest, DoUpdateMultipartRequest,
     DoUpdateRequest,
     ExistingRecentSelector,
     FlexedArea,
@@ -20,10 +20,10 @@ import {
     NewEntryFormWrapper,
     NewEntryInput,
     NumberToDateStr,
-    OptionalArrayOfType,
+    OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
     RequiredArrayOfType,
-    RequiredKey,
+    RequiredKey, resolveContamsFormData, resolvePicsFormData, setFormData, setFormImages,
     Subform,
 } from "@/app/components/common";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl,} from "@/app/components/accessControlClient";
@@ -32,9 +32,15 @@ import {DowelType, PlugsData} from "@/app/components/plugsServer";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "./formSubcomponents/readerWriterButtons/readerSelector";
-import {AllEntries, OnViewCreatorQuadCol} from "./formSubcomponents/shared";
+import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "./formSubcomponents/shared";
 import {ACL} from "./accessControlServer";
-import {ErrorDisplay, GensFormDisplay, ParentDisplay} from "./formSubcomponents/commonClient";
+import {
+    ErrorDisplay,
+    GensFormDisplay,
+    MostRecentImageDisplay,
+    ParentDisplay,
+    PicsDisplay
+} from "./formSubcomponents/commonClient";
 import ID from "./formSubcomponents/id";
 import {PcRunArea} from "./pcRunClient";
 import {InnocDisplay, TransfersOutDisplay} from "./transferClient";
@@ -47,6 +53,20 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
+import {
+    InitialPicsEntries,
+    IsValidPicWithNotesIncoming,
+    NewPicWithNotesForm,
+    PicWithNotesForm
+} from "@/app/components/formSubcomponents/picWithNotes";
+import {
+    ContaminationForm,
+    ContamsDisplay, InitialContamState,
+    IsValidContamination, NewContaminationForm
+} from "@/app/components/formSubcomponents/contaminations";
+import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
+import {AssertPlate} from "@/app/components/plateClient";
+import {PlateData} from "@/app/components/plateServer";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
@@ -91,6 +111,15 @@ export function AssertPlugs(input: any): asserts input is PlugsData {
             throw new Error('Plug assertion failure: required array key ' + key + ' was not valid');
         }
     }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
+        if (!OptionalKey(key, input, validator)) {
+            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
+        }
+    }
     // complex required keys
     const complexRequiredKeys = new Map<string, (v: any) => boolean>([
         //['acl', IsValidAcl]
@@ -109,6 +138,8 @@ export function AssertPlugs(input: any): asserts input is PlugsData {
             return typeof item === 'string'
         }],
         ['notes', IsValidNote],
+        ['pics', IsValidPicWithNotesIncoming],
+        ['contamination', IsValidContamination],
     ])
     for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
@@ -158,6 +189,9 @@ export default function PlugsDisplay(
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<PlugsData>) {
     const [initial, setInitial] = useState(data)
+
+    const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
+    const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(data.contamination))
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(data.knownFruitable)
     const [pcRun, setPcRun] = useState<string | undefined>(data.pcRun)
     const [sales, setSales] = useState<string[] | undefined>(data.sales)
@@ -169,6 +203,8 @@ export default function PlugsDisplay(
     const [err, setErr] = useState<string | undefined>()
     const updateInitial = (updated: PlugsData) => {
         setInitial(updated)
+        setImages(InitialPicsEntries(updated.pics))
+        setContams(InitialContamState(updated.contamination))
         setPcRun(updated.pcRun)
         setKnownFruitable(updated.knownFruitable)
         setSales(updated.sales)
@@ -180,20 +216,45 @@ export default function PlugsDisplay(
     }
     const cookies = useContext(CookiesContext)
     const submit = () => {
-        const body: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             pcRun: pcRun, // optional. can only be set once
             knownFruitable: knownFruitable,
             disposed: disposed,
             notes: notes,
             acl: MarshalAcl(acl),
         }
-        DoUpdateRequest("plugs", initial._id, body, AssertPlugs, allCookies(cookies))
-            .then(v => {
+        try {
+            // Pics
+            const picsInfo = resolvePicsFormData(images)
+            dataObj.images = picsInfo.obj
+            // Set data on form
+            // Contams
+            const contamsInfo = resolveContamsFormData(contams)
+            dataObj.contams = contamsInfo.obj
+            setFormData(formData, dataObj)
+            setFormImages(formData, "newPic", picsInfo.images)
+            setFormImages(formData, "newContam", contamsInfo.images)
+        } catch (caught: any) {
+            console.log("error in submit")
+            setErr(JSON.stringify(caught))
+            return
+        }
+        DoUpdateMultipartRequest("plugs",initial._id, formData, AssertPlugs, allCookies(cookies))
+            .then(v=>{
                 updateInitial(new PlugsData(v))
+                console.log("updated initial state")
             })
-            .catch(e => {
-                setErr(JSON.stringify(e))
+            .catch(e=>{
+                setErr("Error in parsing updated plugs: "+JSON.stringify(e))
             })
+        // DoUpdateRequest("plugs", initial._id, body, AssertPlugs, allCookies(cookies))
+        //     .then(v => {
+        //         updateInitial(new PlugsData(v))
+        //     })
+        //     .catch(e => {
+        //         setErr(JSON.stringify(e))
+        //     })
     }
     const ovcs: () => OnViewCreatorQuadCol[] = () => {
         const disp = initial.disposed !== undefined
@@ -217,6 +278,7 @@ export default function PlugsDisplay(
                 linkPage: false,
                 allowOpenMainPage: false
             }}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -242,6 +304,10 @@ export default function PlugsDisplay(
                 <div className={"text-lg"}>{"Dowel Types"}</div>
                 <DowelTypesTable data={initial.dowelTypes}/>
             </div>
+            <PicsDisplay pix={initial.pics} readonly={readonly}
+                         headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
+            <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
+                            readonly={readonly} headerLevel={headerLevel}/>
             {isInnoculated() &&
                 <SalesArea allowCreate={!readonly} sales={sales} readonly={readonly} setEntries={setSales}/>}
             {isInnoculated() &&
@@ -284,11 +350,13 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
+    const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const ImportEntry = () => {
-        const body: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             dowelTypes: dowelTypes,
             generation: gen,
             // optional
@@ -298,7 +366,12 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        DoImportRequest(body, "plugs", AssertPlugs, setErr, allCookies(cookies))
+        setFormData(formData, dataObj)
+        if (imageFile !== undefined) {
+            formData.set("image", imageFile, "image")
+        }
+        DoMultipartImportRequest(formData, "plugs", AssertPlugs, setErr, allCookies(cookies))
+        //DoImportRequest(body, "plugs", AssertPlugs, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"plugs"}>
 
@@ -314,6 +387,9 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
             <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
         </>}
         <NewEntryNotes setNotes={setNotes}/>
+        <div className={"centerH mt-2"}>
+            <ImageSelector updateParent={setImageFile}/>
+        </div>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"bottomButton"} onClick={ImportEntry}>{"Import Plugs"}</button>
     </ImportEntryFormWrapper>

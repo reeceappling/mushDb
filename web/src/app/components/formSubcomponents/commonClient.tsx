@@ -101,11 +101,13 @@ export function NutrientEntryForNew({initial, updateParent}: {
     const handleFormChangeAmt = (val: number) => {
         const data = {...current};
         data.amount = val
+        setCurrent(data) // TODO: not working?
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
         const data = {...current};
         data.unit = val
+        setCurrent(data) // TODO: not working?
         updateParent(data)
     }
     return <>
@@ -126,8 +128,8 @@ export function NutrientEntryForNew({initial, updateParent}: {
         {/*                                    setErr(JSON.stringify(e))*/}
         {/*                                }*/}
         {/*                            }}/>*/}
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={current.unit.toString()} onChange={(val?: string) => {
+        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt/*TODO: not working properly!!!!*/}
+                                 value={current.unit.toString()}    onChange={(val?: string) => { // TODO: not working properly?
             try {
                 val && handleFormChangeUnit(val)
             } catch (e) {
@@ -150,11 +152,13 @@ export function SugarEntryForNew({initial, updateParent}: {
     const handleFormChangeAmt = (val: number) => {
         const data = {...current};
         data.amount = val
+        setCurrent(data)
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
         const data = {...current};
         data.unit = val
+        setCurrent(data)
         updateParent(data)
     }
     return <>
@@ -190,7 +194,6 @@ export function AdditiveEntryForNew({initial, updateParent}: {
     initial: Additive,
     updateParent: (l: Additive) => void
 }) {
-    const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
     const [current, setCurrent] = useState<Additive>(initial)
     useEffect(() => {
@@ -199,11 +202,13 @@ export function AdditiveEntryForNew({initial, updateParent}: {
     const handleFormChangeAmt = (val: number) => {
         const data = {...current};
         data.amount = val
+        setCurrent(data) // TODO: validate working as preferred...
         updateParent(data)
     }
     const handleFormChangeUnit = (val: string) => {
         const data = {...current};
         data.unit = val
+        setCurrent(data) // TODO: validate working as preferred...
         updateParent(data)
     }
     return <>
