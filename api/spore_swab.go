@@ -201,7 +201,6 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			http.Error(w, e.Error(), http.StatusBadRequest)
 			return nil, e
 		}
-		// TODO: WRITE TAG TO!
 	})
 	if er != nil {
 		http.Error(w, er.Error(), http.StatusInternalServerError)
