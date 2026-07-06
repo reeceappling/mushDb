@@ -459,7 +459,7 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 		return nil, err
 	} // TODO: del if unneeded
 	results := []T{}
-	if numItems != nil {
+	if numItems != nil && *numItems > 0 {
 		results = make([]T, 0, *numItems)
 	} else {
 		if user.IsAdmin() {

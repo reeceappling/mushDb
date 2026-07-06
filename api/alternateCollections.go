@@ -186,7 +186,7 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 	case "slant", "slants":
 		bs, err = listEntriesHandlerInternal[*Slant](r.Context(), true, maxResults, doStandardToo, &Slant{}, allowDisposed)
 	case "species":
-		bs, err = listEntriesHandlerInternal[*Species](r.Context(), true, maxResults, doStandardToo, &Species{}, allowDisposed)
+		bs, err = listEntriesHandlerInternal[*Species](r.Context(), true, -1, doStandardToo, &Species{}, allowDisposed) // TODO: ensure showing all species (that can be viewed) instead of just 10
 	case "sporeprint", "spore print", "print",
 		"sporeprints", "spore prints", "prints":
 		bs, err = listEntriesHandlerInternal[*SporePrint](r.Context(), true, maxResults, doStandardToo, &SporePrint{}, allowDisposed)
@@ -196,7 +196,7 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 		"stasistubes", "stasis tubes", "tubes":
 		bs, err = listEntriesHandlerInternal[*StasisTube](r.Context(), true, maxResults, doStandardToo, &StasisTube{}, allowDisposed)
 	case "subspecies":
-		bs, err = listEntriesHandlerInternal[*Subspecies](r.Context(), true, maxResults, doStandardToo, &Subspecies{}, allowDisposed)
+		bs, err = listEntriesHandlerInternal[*Subspecies](r.Context(), true, -1, doStandardToo, &Subspecies{}, allowDisposed) // TODO: ensure showing all subspecies (that can be viewed) instead of just 10
 	case "substrate", "substraterecipe", "substrate recipe",
 		"substrates", "substraterecipes", "substrate recipes":
 		bs, err = listEntriesHandlerInternal[*SubstrateRecipe](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{}, allowDisposed)

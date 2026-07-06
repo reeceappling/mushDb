@@ -418,23 +418,48 @@ type updatePlugsRequest struct {
 	PcRunOptionalField // Can only be set once!
 	KnownFruitableField
 	NotesUpdateField
-	// TODO: ALLOW UPDATING PICTURES!
+	ImagesUpdateField
+	ContamsUpdateField
 	DisposedField
 	PermsOnRequest `json:"acl"`
 }
 
-func (req updatePlugsRequest) modsFor(existing *PlugsJar, acl AclField) (bson.D, error) {
+func (upr updatePlugsRequest) reform() resolvedUpdatePlugsRequest {
+	return resolvedUpdatePlugsRequest{
+		PcRunOptionalField:  upr.PcRunOptionalField,
+		KnownFruitableField: upr.KnownFruitableField,
+		DisposedField:       upr.DisposedField,
+		NotesUpdateField:    upr.NotesUpdateField,
+		Images:              imageUpdates(upr.Images),
+		Contams:             contamUpdates(upr.Contams),
+		PermsOnRequest:      upr.PermsOnRequest,
+	}
+}
+
+type resolvedUpdatePlugsRequest struct {
+	PcRunOptionalField // Can only be set once!
+	KnownFruitableField
+	NotesUpdateField
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	DisposedField
+	PermsOnRequest `json:"acl"`
+}
+
+func (req resolvedUpdatePlugsRequest) modsFor(existing *PlugsJar, acl AclField) (bson.D, error) {
 	mods := NewMods()
 	return mods.
 		updatePcRunIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updateDisposedIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
 
-func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
-	req := &updatePlugsRequest{}
+func updatePlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: overhauled for images and contams! thoroughly test!
+	data := &updatePlugsRequest{}
 	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
@@ -446,6 +471,42 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plugs", &data, Base58Str(idStr))
+	if err != nil {
+		// Already wrotw
+		return
+	}
+
+	// CHECK THAT ALL NEW PICS EXIST
+	// PROCESS ALL NEW PICS AND CONTAMS
+	//// TODO: PANICKING WHEN SENDING EMPTY THINGS!!!!
+	//for i, picNote := range data.Images.Existing[0].Data.Notes.asEntries() {
+	//	println("note", i, picNote.Note)
+	//}
+	out := data.reform()
+	for i, _ := range data.Images.New {
+		loc, exists := newPics[i]
+		if !exists {
+			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
+			return
+		}
+		out.Images.New[i].Location = ImageLocation(loc)
+	}
+	for i, _ := range data.Contams.New {
+		if loc, exists := newContams[i]; exists {
+			finalLoc := ImageLocation(loc)
+			out.Contams.New[i].Location = &finalLoc
+		} else {
+			println("no contam location for", i)
+		}
+	}
+	finalReqBs, err := json.MarshalIndent(out, "", " ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	println("REQUEST BYTES: ", string(finalReqBs)) // TODO: del
+
 	existing := &PlugsJar{}
 	db := DbFrom(ctx)
 	err = db.Collection(PlugsCollectionName).FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
@@ -453,14 +514,15 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if req.PcRun != nil {
-		_, err = req.PcRunOptionalField.Get(ctx)
+	if data.PcRun != nil { // TODO: ONLY CHECK THIS IF THE RUN CHANGED!!!!
+		_, err = data.PcRunOptionalField.Get(ctx)
 		if err != nil {
 			http.Error(w, "invalid pc run: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
-	finishMainCollItemUpdate(ctx, w, req.modsFor, existing, req.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, out.PermsOnRequest)
+
 }
 
 func deletePlugsHandler(w http.ResponseWriter, r *http.Request) {
