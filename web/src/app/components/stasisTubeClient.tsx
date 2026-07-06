@@ -163,7 +163,7 @@ export function StasisTubeImportDisplay() {
         }
         setFormData(formData, dataObj)
         if(imageFile!==undefined){
-            formData.set("image", imageFile, "imgFile")
+            formData.set("image", imageFile, "img")
         }
         DoMultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies))
     }

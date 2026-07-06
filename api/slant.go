@@ -259,6 +259,7 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 	if err != nil {
 		handleWriteErr(err, w)
 	}
+	println("wrote response: ", string(bs)) // TODO; del
 }
 
 func createMainCollectionEntryInTxn(ctx mongo.SessionContext, toInsert MainCollectionItem) error {

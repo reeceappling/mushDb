@@ -180,7 +180,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
             writeTagTo: writeTagTo,
         }))
         if(imageFile!==undefined){
-            formData.set("image", imageFile, "imgFile")
+            formData.set("image", imageFile, "img")
         }
 
         DoMultipartImportRequest(formData, "slant", AssertSlant, setErr, allCookies(cookies))

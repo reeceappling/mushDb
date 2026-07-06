@@ -371,7 +371,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newPics[num] = newFileNameWithPrefixPath
 		case "newContam":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "stasisTube", string(b58Id), "contam")
+			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "stasisTube", string(b58Id), "contam") // TODO: contam even needed here???
 			if err != nil {
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
 				return
@@ -470,6 +470,8 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		fileName := p.FileName()
 		defer p.Close()
 		if fileName != "img" {
+			http.Error(w, "invalid image name", http.StatusBadRequest)
+			return
 		}
 		// Process file
 		fieldBytes, err := multipartToImageBytes(p, w)

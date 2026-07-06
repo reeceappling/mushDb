@@ -627,12 +627,8 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	println("multipart reader if necessary")
 	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
 	if err != nil {
+		println("failed in multipart reader area") // TODO: del
 		// Already written
-		return
-	}
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	// Try to get pic if exists
@@ -650,6 +646,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	p, err := reader.NextPart()
 	if err != nil {
 		if err != io.EOF {
+			println("failed in nextPart") // TODO: del
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -657,6 +654,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		fileName := p.FileName()
 		defer p.Close()
 		if fileName != "img" {
+			println("invalid image name") // TODO: del
 			http.Error(w, "invalid image name", http.StatusBadRequest)
 			return
 		}
@@ -664,11 +662,13 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		fieldBytes, err := multipartToImageBytes(p, w)
 		if err != nil {
 			// Already wrote
+			println("failed in multipartToImageBytes") // TODO: del
 			return
 		}
 		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "plate", string(b58id), "img")
 		if errr != nil {
 			err = errr
+			println("failed to save file: " + err.Error()) // TODO: del
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -679,10 +679,12 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	var gen *Generation = nil
 	if data.Species != nil {
 		if data.Generation == nil {
-			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
+			println("innoculated must have generation") // TODO: del
+			http.Error(w, "innoculated must have generation", http.StatusBadRequest)
 			return
 		}
 		if *data.Generation < 1 {
+			println("gen must be positive") // TODO: del
 			http.Error(w, "gen must be positive", http.StatusBadRequest)
 			return
 		}
@@ -705,6 +707,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
 		if err != nil {
+			println("failed to get species and/or subspecies: " + err.Error()) // TODO: del
 			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -729,9 +732,11 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
+		println("failed to write tag: " + err.Error()) // TODO: del
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	println("trying to import the plate...")
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 

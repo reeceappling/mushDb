@@ -368,7 +368,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
         }
         setFormData(formData, dataObj)
         if (imageFile !== undefined) {
-            formData.set("image", imageFile, "image")
+            formData.set("image", imageFile, "img")
         }
         DoMultipartImportRequest(formData, "plugs", AssertPlugs, setErr, allCookies(cookies))
         //DoImportRequest(body, "plugs", AssertPlugs, setErr, allCookies(cookies))

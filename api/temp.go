@@ -7,6 +7,8 @@ import (
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
+	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/shared"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -24,8 +26,20 @@ func writeRfidTagIfNecessary(ctx context.Context, writeTagTo *string, id MainCol
 	if writeTagTo == nil {
 		return nil // Don't write
 	}
-	// TODO: WRITE THE TAG HERE!
-	return errors.New("not yet implemented")
+	mgr := websocketSessions.GetSessionManager(ctx)
+	if mgr == nil {
+		println("no session mgr found?") // TODO: del
+		return websocketSessions.ErrNoSessionManager
+	}
+	err := mgr.WriteRfid(ctx, shared.RfidReaderName(*writeTagTo), id)
+	if err != nil {
+
+		println("failed to write tag! " + err.Error())
+		return err
+	} else {
+		println("successfully wrote tag!") // TODO: del!
+		return nil
+	}
 }
 
 func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {

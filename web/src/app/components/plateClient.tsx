@@ -524,7 +524,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
         }
         setFormData(formData, dataObj)
         if (imageFile !== undefined) {
-            formData.set("image", imageFile, "image")
+            formData.set("image", imageFile, "img")
         }
         DoMultipartImportRequest(formData, "plate", AssertPlate, setErr, allCookies(cookies))
     }
