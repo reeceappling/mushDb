@@ -100,9 +100,9 @@ var (
 )
 
 func (srv *AuthService) LogoutSession(sessId SessionId) error {
-	srv.Lock()
-	defer srv.Unlock()
-	res := srv.GetSession(sessId, false)
+	//srv.Lock()// TODO: fix
+	//defer srv.Unlock()// TODO: fix
+	res := srv.GetSession(sessId, false) // TODO: misuses lock!
 	if res.Err != nil {
 		return res.Err
 	}
@@ -114,14 +114,14 @@ func (srv *AuthService) LogoutSession(sessId SessionId) error {
 	return nil
 }
 
-func (srv *AuthService) NewSessionIdForUser(email string) (SessionId, error) {
-	if srv == nil {
-		return "", errors.New("nil auth service")
-	}
-	srv.RLock()
-	defer srv.RUnlock()
-	return srv.newSessionIdForUserWithoutLock(email)
-}
+//	func (srv *AuthService) NewSessionIdForUser(email string) (SessionId, error) {
+//		if srv == nil {
+//			return "", errors.New("nil auth service")
+//		}
+//		srv.RLock()
+//		defer srv.RUnlock()
+//		return srv.newSessionIdForUserWithoutLock(email)
+//	}
 func (srv *AuthService) newSessionIdForUserWithoutLock(email string) (SessionId, error) {
 	if _, userHasSessionAlready := srv.UserSessionMap[email]; userHasSessionAlready {
 		return "", errors.New("email already has existing session") // TODO: dont like. Maybe remove the email and their old session?
@@ -162,6 +162,7 @@ func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[g
 
 	srv.RLock()
 	sess, ok := srv.sessMap[id]
+	srv.RUnlock()
 	if !ok {
 		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](ErrSessionNotFound)
 	}
@@ -172,7 +173,7 @@ func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[g
 			srv.deleteSession(id, sess.Data.Email)
 			wg.Done()
 		}()
-		srv.RUnlock()
+
 		wg.Wait()
 		// TODO; is this ok?
 		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](ErrExpired)
@@ -185,8 +186,6 @@ func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[g
 			result = srv.setRefreshedSession(id, sess)
 			wg.Done()
 		}()
-
-		srv.RUnlock()
 		wg.Wait()
 		return utils.ResultFrom(result, nil)
 	}
@@ -281,9 +280,8 @@ func (serv *AuthService) TryToReAuth(ctx context.Context, sessionKey SessionId) 
 
 func (serv *AuthService) SessionForEmail(email string) (session SessionId, err error) {
 	serv.RLock()
-	defer serv.RUnlock()
-
 	sess, exists := serv.UserSessionMap[email]
+	serv.RUnlock()
 	if !exists {
 		return "", utils.NotFound
 	}
@@ -373,6 +371,7 @@ func (serv *AuthService) SigninGuestUser() (sessionId SessionId, err error) {
 		Expiry: time.Now().Add(serv.ttl),
 	}
 
+	println("creating new id without lock") // TODO: del
 	id, err := serv.newSessionIdForUserWithoutLock(email)
 	if err != nil {
 		return "", errors.Join(err, errors.New("session with that ID already exists"))
@@ -493,21 +492,52 @@ func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 			//	println(c.Name, c.Path, c.Domain, c.Value) // TODO: del
 			//}
 			svc := GetAuthService(ctx)
+			var sess genericsessions.Session[ResolvedUserPerms]
 			sessionId, err := SessionIdFromRequest(r)
 			if err != nil {
-				env.LogIfDev(ctx, "no session id found on request: "+err.Error())
-				handleAuthErr(err).ServeHTTP(w, r)
+				handleNoSessionCookie.ServeHTTP(w, r)
 				return
+				//env.LogIfDev(ctx, "no session id found on request. Signing in as guest")
+				//sessionId, err = svc.SigninGuestUser()
+				//if err != nil {
+				//	env.LogIfDev(ctx, "Failed to sign in as guest: "+err.Error())
+				//	handleAuthErr(err).ServeHTTP(w, r)
+				//	return
+				//}
+				//var ok bool
+				//svc.RLock()
+				//sess, ok = svc.sessMap[sessionId]
+				//svc.RUnlock()
+				//if !ok {
+				//	env.LogIfDev(ctx, "guest not found in session map")
+				//	handleAuthErr(err).ServeHTTP(w, r)
+				//	return
+				//}
+				err = gothic.StoreInSession(SessionIdKey, string(sessionId), r, w)
+				if err != nil {
+					e := errors.Join(errors.New("sessId storage fail"), err)
+					env.LogIfDev(ctx, e.Error())
+					handleAuthErr(err).ServeHTTP(w, r)
+					return
+				}
+			} else {
+				env.LogIfDev(ctx, string("Trying to reauth session ID "+sessionId))
+				sess, err = svc.TryToReAuth(r.Context(), sessionId)
+				if err != nil {
+					env.LogIfDev(ctx, "failed to reAuth: "+err.Error())
+					if errors.Is(err, ErrBlankSessionKey) || errors.Is(err, utils.NotFound) {
+						handleNoSessionCookie.ServeHTTP(w, r)
+						return
+					}
+
+					handleAuthErr(err).ServeHTTP(w, r)
+					return
+				}
 			}
-			env.LogIfDev(ctx, string("Trying to reauth session ID "+sessionId))
-			sess, err := svc.TryToReAuth(r.Context(), sessionId)
-			if err != nil {
-				env.LogIfDev(ctx, "failed to reAuth: "+err.Error())
-				handleAuthErr(err).ServeHTTP(w, r)
-				return
-			}
+			ctxWithAuthInfo := SetAuthInfo(r.Context(), sess.Data)
+
 			// TODO: ensure session cookies persist!
-			onAuthed.ServeHTTP(w, r.WithContext(SetAuthInfo(r.Context(), sess.Data)))
+			onAuthed.ServeHTTP(w, r.WithContext(ctxWithAuthInfo))
 		})
 	}
 }
@@ -575,8 +605,10 @@ func (serv *AuthService) necessaryFirstMiddleware(next http.Handler) http.Handle
 
 func (serv *AuthService) AuthOrRedirectMiddleware(redirectUrl string) func(http.Handler) http.Handler {
 	var redirectHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		finalQuery := r.URL.Query()                   // TODO: ensure ok!
+		finalQuery.Set("destination", r.URL.String()) // TODO: ENSURE OK!
 		// TODO: PUT PAGE FROM IN THE DATA SO WE CAN PULL IT LATER?
-		http.Redirect(w, r, redirectUrl, http.StatusTemporaryRedirect)
+		http.Redirect(w, r, redirectUrl+"?"+finalQuery.Encode(), http.StatusTemporaryRedirect)
 	})
 
 	//var redirectHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -600,7 +632,7 @@ var denyHandler = customDenyHandler(errors.New("Denied access"))
 
 func customDenyHandler(err error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Error(w, "denied here"+err.Error(), http.StatusForbidden)
+		http.Error(w, "denied access or nonexistent: "+err.Error(), http.StatusForbidden)
 		return
 	})
 }

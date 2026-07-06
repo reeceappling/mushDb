@@ -5,6 +5,7 @@ import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {CredentialResponse, GoogleLogin} from "@react-oauth/google";
 import {SelectorFor} from "@/app/components/selector";
 import {SelectorWrapper} from "@/app/components/common";
+import {useSearchParams} from "next/navigation";
 
 // TODO: ADD LOGOUT BUTTON SOMEWHERE!
 export interface AuthAreaProps {
@@ -218,6 +219,7 @@ export default function AuthArea( // TODO: any depth?????
 // }
 
 function SignUpArea({onSignup}:{onSignup:(sessId:string)=>void}) {
+    const searchParams = useSearchParams();
     // This function will be called upon a successful login
     const handleSuccess = (credentialResponse: CredentialResponse) => {
         // If you are using the authorization code flow, you will receive a code to be exchanged for an access token
@@ -239,7 +241,12 @@ function SignUpArea({onSignup}:{onSignup:(sessId:string)=>void}) {
             });
     };
     const guestSignIn = ()=>{
-        fetch('/guestLogin', { // TODO: FIX THIS ENDPOINT
+        // let signinPath = '/guestLogin'
+        // const dst = searchParams.get('destination')
+        // if (dst !== null) {
+        //     signinPath += '?destination=' + encodeURIComponent(dst)
+        // }
+        fetch('/guestLogin',{ // TODO:
             method: 'POST',
             headers: { // TODO: no auth headers?
                 'Content-Type': 'application/json',
@@ -270,6 +277,7 @@ function SignUpArea({onSignup}:{onSignup:(sessId:string)=>void}) {
 }
 
 function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
+    const searchParams = useSearchParams();
     const [testEmail, setTestEmail] = useState<string>("")
     // This function will be called upon a successful login
     const handleSuccess = (credentialResponse: CredentialResponse) => {
@@ -277,7 +285,7 @@ function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
         const authorizationCode = credentialResponse.credential;
 
         // Send the authorization code to your backend server
-        location.assign("/auth/google")
+        location.assign("/auth/google") // TODO: SEE IF WE CAN DODGE THIS SECOND PAGE SOMEHOW
         // fetch('/auth/google', { // TODO: FIX THIS ENDPOINT
         // //fetch('/auth/google/callback', { // TODO: FIX THIS ENDPOINT
         // //fetch('/login', { // TODO: FIX THIS ENDPOINT
@@ -295,17 +303,24 @@ function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
         //     });
     };
     const guestSignIn = ()=>{
-        fetch('/guestLogin', {
+        let signinPath = '/guestLogin'
+        const dst = searchParams.get('destination')
+        if (dst !== null) {
+            signinPath += '?destination=' + encodeURIComponent(dst)
+        }
+        fetch(signinPath, { // TODO: fetch('/guestLogin', {
             method: 'POST',
             headers: { // TODO: no auth headers?
                 'Content-Type': 'application/json',
             },
         })
-            .then(response => response.text()) // TODO: what about errors?
-            .then(()=>{
-                location.assign("/") // TODO: ok?
+            .then(response => {
+                if (response.redirected) {
+                    // response.url contains the final destination URL
+                    window.location.href = response.url;
+                    return;
+                }
             })
-            //.then(onLogin)
             .catch(error => {
                 // Handle errors in communicating with your backend server
                 console.error('Error signing in as guest:', error);
@@ -316,27 +331,25 @@ const testSignIn = ()=>{
             console.error("no test email provided!")
             return
         }
+        let signinPath = '/testLogin/'+encodeURI(testEmail)
+        const dst = searchParams.get('destination')
+        if (dst !== null) {
+            signinPath += '?destination=' + encodeURIComponent(dst)
+        }
 
-        fetch('/testLogin/'+encodeURI(testEmail), {
+        fetch(signinPath, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
         })
-            .then(response =>
-                response.text()/*{
-                if (!response.ok){
-                    throw "response not ok for testLogin"
+            .then(response =>{
+                if (response.redirected) {
+                    // response.url contains the final destination URL
+                    window.location.href = response.url;
+                    return;
                 }
-                if (response.status!==200){
-                    throw "response status "+response.status
-                }
-                }*/
-                )
-            .then(()=>{
-                location.assign("/") // TODO: ok?
             })
-            //.then(onLogin)
             .catch(error => {
                 // Handle errors in communicating with backend server
                 console.error('Error signing in as test user:', error);

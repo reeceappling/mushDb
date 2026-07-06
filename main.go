@@ -569,7 +569,7 @@ func envVarOrDefault(varName, defaultResult string) string {
 
 var handleGuestLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
+	println("signing in as guest user...") // TODO: del!
 	sessId, err := rfid.GetAuthService(ctx).SigninGuestUser()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -649,11 +649,23 @@ func handleLoginMiddleware(viewHandler http.HandlerFunc) http.Handler {
 
 func handleUserAuthedViaGoth(ctx context.Context, user goth.User, w http.ResponseWriter, r *http.Request) error {
 	authSvc := rfid.GetAuthService(ctx)
-	// TODO: WHAT ABOUT GUESTS?
-	sessId, _, err := authSvc.SigninGoogleAuthedUser(ctx, user)
-	if err != nil {
-		return errors.Join(errors.New("authSvc signin fail"), err)
+	provider := r.PathValue("provider")
+	var sessId rfid.SessionId
+	var err error
+	switch provider {
+	case "google":
+		sessId, _, err = authSvc.SigninGoogleAuthedUser(ctx, user) // TODO: ???
+		if err != nil {
+			return errors.Join(errors.New("authSvc google signin fail"), err)
+		}
+	default:
+		sessId, err = authSvc.SigninGuestUser() // TODO: ???
+		if err != nil {
+			return errors.Join(errors.New("authSvc guest signin fail"), err)
+		}
 	}
+	// TODO: WHAT ABOUT GUESTS?
+
 	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
 	if err != nil {
 		return errors.Join(errors.New("sessId storage fail"), err)
@@ -687,13 +699,18 @@ func handleUserAuthedViaGoth(ctx context.Context, user goth.User, w http.Respons
 var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	providerName := r.PathValue("provider")
 	println("RECEIVED REQUEST at /auth/" + providerName) // TODO: del?
-	bs, err := io.ReadAll(r.Body)
-	if err != nil {
-		println("failed to read body", err.Error())
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if providerName == "guest" {
+		handleGuestLogin(w, r)
 		return
 	}
-	println(string(bs)) // TODO: del?
+
+	//bs, err := io.ReadAll(r.Body)
+	//if err != nil {
+	//	println("failed to read body", err.Error())
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//println(string(bs)) // TODO: del?
 
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err == nil {
@@ -771,25 +788,27 @@ var authCallbackHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	println("hit callback")
 	// Clear cookies if needed
+	provider := r.PathValue("provider")
+	callbackPath := fmt.Sprintf(`/auth/%s/callback`, provider)
 	if len(r.CookiesNamed("_gothic_session")) > 1 { // TODO: or >0? should probably be 0
 		c, _ := r.Cookie("_gothic_session")
-		c.MaxAge = -1
+		c.MaxAge = -1 // TODO: is this ok?
 		http.SetCookie(w, c)
-		http.Redirect(w, r, "/auth/google/callback", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, callbackPath, http.StatusTemporaryRedirect)
 		return
 	}
-	c, err := r.Cookie("_gothic_session")
+	_, err := r.Cookie("_gothic_session")
 	if err != nil {
 		println("no gothic session cookie")
 	} else {
-		println("session cookie", c.Name, c.Value)
+		//println("session cookie", c.Name, c.Value)
 	}
 
 	// TODO: ensure goth storage expirations match our storage expirations
 	// TODO: OVERHAUL THE COOKIE STORAGE???
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err != nil {
-		println("failed to auth in callback", err.Error())
+		println("failed to auth in callback", err.Error()) // TODO: del
 		if strings.Contains(err.Error(), "state token mismatch") {
 			err = gothic.Logout(w, r)
 			if err != nil {
@@ -797,24 +816,23 @@ var authCallbackHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			http.Redirect(w, r, "/auth/google/callback", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, callbackPath, http.StatusTemporaryRedirect)
 			return
 		}
 	}
 
 	// Loop back on initial failure
-	//reqState := gothic.GetState(r)
-	//
-	//originalState := authURL.Query().Get("state")
-	//if originalState != "" && (originalState != reqState) {
-	//	gothic.BeginAuthHandler(w, r)
-	//	return
-	//}
-	err = handleUserAuthedViaGoth(ctx, user, w, r)
-	if err != nil {
-		http.Error(w, "failed in handleUserAuthedViaGoth: "+err.Error(), http.StatusInternalServerError)
-		return
+	switch provider {
+	case "google":
+		err = handleUserAuthedViaGoth(ctx, user, w, r)
+		if err != nil {
+			http.Error(w, "failed in handleUserAuthedViaGoth: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	default:
+		// TODO: ?????
 	}
+
 	_, err = r.Cookie("_gothic_session")
 	if err != nil {
 		println("no cookie after auth", err.Error()) // TODO: ensure ok
@@ -829,9 +847,11 @@ var authCallbackHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 func redirectToBasePage(r *http.Request, w http.ResponseWriter) {
 	dst := r.URL.Query().Get("destination")
 	if dst == "" {
+		println("dst not on query")
 		dst = baseApiUrl
 	}
-	http.Redirect(w, r, dst, http.StatusTemporaryRedirect)
+	println("redirecting to: ", dst)
+	http.Redirect(w, r, dst, http.StatusTemporaryRedirect) // TODO: REDIRECT!
 }
 
 var handleLogout = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
