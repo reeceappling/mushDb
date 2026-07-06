@@ -388,11 +388,6 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	agarBatchField := AgarBatchField{AgarBatch: &data.AgarBatch}
@@ -414,6 +409,11 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:                    LastUpdatedField{now},
 		// No Perms here for basic plates
 		AclField: allCanWriteAcl(),
+	}
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
@@ -726,6 +726,11 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		MostRecentImageField:                MostRecentImageField{importedPic},
 		LastUpdatedField:                    LastUpdatedField{now},
 		AclField:                            AclField{finalPerms},
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

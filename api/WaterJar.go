@@ -134,7 +134,7 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 		AclField:              allCanWriteAcl(),
 	}
 
-	err = writeRfidTagIfNecessary(r.Context(), req.WriteTagTo, id)
+	err = writeRfidTagIfNecessary(ctx, req.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -163,6 +163,11 @@ func importWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:            NotesField{req.Notes},
 		LastUpdatedField:      LastUpdatedField{now},
 		AclField:              allCanWriteAcl(), // TODO: ok?
+	}
+	err := writeRfidTagIfNecessary(ctx, req.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

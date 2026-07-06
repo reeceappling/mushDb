@@ -262,11 +262,6 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 		}
 	}
 	// TODO: validate dowels
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := PlugsJar{
@@ -278,6 +273,12 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 		LastUpdatedField:      LastUpdatedField{now},
 		// No Perms here for basic plugs
 		AclField: allCanWriteAcl(),
+	}
+
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
@@ -408,6 +409,11 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{now},
 		// No Perms here for basic plugs
 		AclField: finalPerms.AsField(),
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

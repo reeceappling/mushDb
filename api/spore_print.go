@@ -76,6 +76,7 @@ func (sp SporePrint) CanTransferTo(dst geneticSource) error {
 func (sp SporePrint) createSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNotes NotesField) (*SporeSwab, error) {
 	ctx, now := request.UnixTimeInTxn(ctx)
 	idOut := NextMainCollectionId()
+	// TODO: how to write tag????
 	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 	swab := SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{idOut},
@@ -372,8 +373,14 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			return nil, e
 		}
 		printOut, e = fr.createSporePrintInTxn(sessCtx, PicsField{}, NotesField{}) // TODO: pics and notes?
-		return nil, e
-		// TODO: WRITE TAG TO!
+		if e != nil {
+			return nil, e
+		}
+		e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+		if e != nil {
+			return nil, errors.Join(e, errors.New("failed to write tag"))
+		}
+		return nil, nil
 	})
 	if er != nil {
 		http.Error(w, er.Error(), http.StatusInternalServerError)
@@ -631,6 +638,11 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
+	// TODO: THIS! //err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	//if err != nil {
+	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 

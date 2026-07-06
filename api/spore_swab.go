@@ -161,7 +161,11 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			if e != nil {
 				return nil, e
 			}
-			// TODO: WRITE TAG TO!
+			// TODO: unsure if we want this to write!!!
+			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id) // TODO: this should always only occur right before the true writes
+			if e != nil {
+				return nil, errors.Join(e, errors.New("failed to write tag"))
+			}
 			return nil, e
 		case FruitSourceType:
 			var ok bool
@@ -173,7 +177,10 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			if e != nil {
 				return nil, e
 			}
-			// TODO: WRITE TAG TO!
+			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id) // TODO: this should always only occur right before the true writes
+			if e != nil {
+				return nil, errors.Join(e, errors.New("failed to write tag"))
+			}
 			return nil, e
 		case SporePrintSourceType: // Goes directly to swab
 			parentPrint, ok := parentItem.(*SporePrint)
@@ -184,7 +191,10 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			if e != nil {
 				return nil, e
 			}
-			// TODO: WRITE TAG TO!
+			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id) // TODO: this should always only occur right before the true writes
+			if e != nil {
+				return nil, errors.Join(e, errors.New("failed to write tag"))
+			}
 			return nil, e
 		default:
 			e := errors.New("invalid source type: " + parentItem.SourceType())
@@ -307,6 +317,11 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                finalPerms.AsField(),
 	}
+	//// TODO: THIS! err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	//if err != nil {
+	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 

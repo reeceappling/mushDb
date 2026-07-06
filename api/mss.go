@@ -151,11 +151,6 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		dbErr(w, "failed to find sporePrint: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
-	if err != nil {
-		dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
 	toInsert := &MSS{
 		MainCollectionIdField:             MainCollectionIdField{id},
@@ -166,6 +161,11 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		NotesField:                        NotesField{data.Notes},
 		LastUpdatedField:                  LastUpdatedField{now},
 		AclField:                          parent.AclField, // do NOT ensure email is authorized to write on parent, they will just be blocked from viewing.
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
@@ -195,12 +195,6 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := NextMainCollectionId()
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
 	if err != nil {
 		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
@@ -215,6 +209,11 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:              data.NotesField,
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

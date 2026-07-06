@@ -311,6 +311,11 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 		LastUpdatedField:                  LastUpdatedField{now},
 		AclField:                          AclField{parent.Permissions()},
 	}
+	//err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	//if err != nil {
+	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
@@ -513,6 +518,11 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
+	//err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	//if err != nil {
+	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	finishImportMainCollectionEntry(ctx, toInsert, w)
 }
 

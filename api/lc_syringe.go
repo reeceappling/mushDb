@@ -155,11 +155,6 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	ctx, db := Db(r)
 	// Validate inputs and grab parent
 	parent := &LiquidCulture{}
@@ -187,6 +182,11 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:                  LastUpdatedField{now},
 		// Do not check permissions, just pass parent perms to child
 		AclField: parent.AclField,
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
@@ -397,6 +397,11 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
+	//err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	//if err != nil {
+	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 

@@ -304,9 +304,9 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:                allCanWriteAcl(),
 	}
 
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
 	if err != nil {
-		dbErr(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
@@ -467,6 +467,11 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

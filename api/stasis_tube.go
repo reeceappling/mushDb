@@ -222,6 +222,11 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
@@ -526,6 +531,11 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:              data.NotesField,
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

@@ -254,11 +254,6 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid substrate batch: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	toInsert := FruitingChamber{
 		MainCollectionIdField:       MainCollectionIdField{id},
 		SubstrateRecipeField:        batch.SubstrateRecipeField,
@@ -270,6 +265,11 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:                  NotesField{data.Notes},
 		LastUpdatedField:            LastUpdatedField{now},
 		AclField:                    allCanReadAcl(GetUserEmailPtr(ctx)),
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
 		// Create the main entry and its type table entry
@@ -444,7 +444,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad substrate recipe: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return

@@ -212,11 +212,6 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	ctx, now := request.UnixTime(r.Context())
 
@@ -238,6 +233,11 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = toInsert.PcRunField.Get(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
@@ -290,11 +290,6 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	//	http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
 	//	return
 	//}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	// Try to get pic if exists
 	picsSaved := []string{}
 	defer func() {
@@ -336,11 +331,6 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
-	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
 	}
 	var gen *Generation = nil
 	if data.Species != nil {
@@ -398,6 +388,11 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }

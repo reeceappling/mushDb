@@ -211,11 +211,6 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := &Slant{
@@ -230,6 +225,11 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = toInsert.AgarBatchField.Get(ctx)
 	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
 		http.Error(w, "agar batch field missing: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
@@ -436,11 +436,6 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	// Try to get pic if exists
 	picsSaved := []string{}
 	defer func() {
@@ -528,6 +523,11 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 		MostRecentImageField: MostRecentImageField{importedPic},
 		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
