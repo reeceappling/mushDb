@@ -2,6 +2,7 @@
 - [ ] Jar import is not working properly (maybe only on mobile?), giving 500s when submitting 10/27/25 quart using Rye. Wav, unknown KF, gen 4 undefined undefined with pic, no writeTo
   - [ ] I believe this is fixed! 
 - [ ] Species selector is not showing all species in plugs import...
+  - [ ] Should be fixed. Ensure spec and subspec lists are showing all (which can be viewed by the user)
 - [ ] Adding pictures on mobile on jar view page is not adding new pictures if they have no notes....
 - [ ] Adding pictures on jar view page is truncating notes added and edited on photos ("new pic" ends up as "new pi")
 - [ ] Creating spore print with a picture from a fruit's page is not propagating the picture to the spore print's page
