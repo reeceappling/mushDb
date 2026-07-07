@@ -40,8 +40,7 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     SelectorWrapper,
-    setFormData,
-    setFormImages, viewUrlFor,
+    setFormFull,
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -227,10 +226,11 @@ export default function FruitingChamberDisplay(
             const newFlushes = flushesInfo.images
             dataObj.flushes = flushesInfo.obj
             // Set data on form
-            setFormData(formData, dataObj)
-            setFormImages(formData, "newPic", newImages)
-            setFormImages(formData, "newContam", newContams)
-            setFormImages(formData, "newFlush", newFlushes)
+            setFormFull(formData, dataObj, newImages, newContams, newFlushes)
+            // formData.set("data", JSON.stringify(dataObj))
+            // setFormImages("newPic", formData, newImages)
+            // setFormImages("newContam", formData, newContams)
+            // setFormImages("newFlush", formData, newFlushes)
         } catch (caught: any) {
             setErr(JSON.stringify(caught))
             return
@@ -478,7 +478,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             }
         }
 
-        const bodyObj: any = {
+        const dataObj: any = {
             recipe: recipe?._id,
             creationDate: creationDate,
             species: species?._id,
@@ -496,7 +496,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
         }
         setDebug("creating form data");
         const formData = new FormData()
-        setFormData(formData, bodyObj) // TODO: ENSURE ALWAYS CALLED BEFORE SETTING IMAGE!
+        formData.set("data", JSON.stringify(dataObj)) // Must always be called before setting the images
         setDebug("set form data");
         // TODO: does images need to be set on the data obj?
         imageFile && formData.set("img", imageFile, "img") // TODO: for some reason images are not working!

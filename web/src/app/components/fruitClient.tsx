@@ -39,9 +39,7 @@ import {
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
-    resolvePicsFormData,
-    setFormData,
-    setFormImages, Subform,
+    resolvePicsFormData,Subform, setFormFull,
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -203,7 +201,7 @@ export default function FruitDisplay(
     const fruitSubmit = () => {
         // disposed, notes, existing pics
         const formData = new FormData()
-        const dataObj: any = {
+        const dataObj: any = { // TODO: ensure const instead of let is ok here!
             notes: notes,
             disposed: disposed,
             acl: MarshalAcl(acl),
@@ -214,9 +212,9 @@ export default function FruitDisplay(
             const newImages = picsInfo.images
             dataObj.images = picsInfo.obj
             // Set data on form
-            setFormData(formData, dataObj)
-            //body.set("data", JSON.stringify(dataObj))
-            setFormImages(formData, "newPic", newImages)
+            setFormFull(formData, dataObj, newImages, undefined, undefined)
+            // formData.set("data", JSON.stringify(dataObj))
+            // setFormImages("newPic", formData, newImages)
         } catch (caught: any) {
             setErr(JSON.stringify(caught))
             return
@@ -362,7 +360,7 @@ export function NewFruitForm(
                     })
                 }
             })
-            setFormData(formData, dataObj)
+            formData.set("data", JSON.stringify(dataObj))
             for (let i = 0; i < pics.length; i++) {
                 const imgi = pics[i].img
                 if (imgi === undefined) {
@@ -426,7 +424,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
             subspecies: subspecies,
             // TODO: RFID?
         }
-        setFormData(formData, dataObj)
+        formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
 
         DoMultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies))

@@ -43,8 +43,7 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     SelectorWrapper,
-    setFormData,
-    setFormImages,
+    setFormFull,
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -237,11 +236,11 @@ export default function BagDisplay(
             const newFlushes = flushesInfo.images
             dataObj.flushes = flushesInfo.obj
             // Set data on form
-            setFormData(formData, dataObj)
-            //formData.set("data", JSON.stringify(dataObj))
-            setFormImages(formData, "newPic", newImages)
-            setFormImages(formData, "newContam", newContams)
-            setFormImages(formData, "newFlush", newFlushes)
+            setFormFull(formData, dataObj, newImages, newContams, newFlushes)
+            // formData.set("data", JSON.stringify(dataObj))
+            // setFormImages("newPic", formData, newImages)
+            // setFormImages("newContam", formData, newContams)
+            // setFormImages("newFlush", formData, newFlushes)
         } catch (caught: any) {
             setErr(JSON.stringify(caught))
             return
@@ -464,7 +463,7 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
             knownFruitable: knownFruitable,
             writeTagTo: writeTagTo,
         }
-        setFormData(formData, dataObj)
+        formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
         DoMultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies))
         // TODO: redirect not working.

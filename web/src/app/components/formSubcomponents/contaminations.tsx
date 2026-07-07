@@ -255,7 +255,8 @@ export function ContamsRows({initial, updateParent, readonly}: {
                     </>}
                 </div>
                 <div className={"inline" + disabledClass}>
-                    <NotesFormArea readonly={readonly} initial={init.notes} updateParent={nts => {
+                    <NotesFormArea readonly={readonly} initial={init.notes} allowLargeTextBox={false/* TODO: OK?*/}
+                                   updateParent={nts => {
                         const updated = structuredClone(current)
                         updated[i].data.notes = nts
                         doUpdate(updated)
@@ -347,13 +348,14 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
                         }
                     </div>
                     <div className={"inline"}>
-                        <NotesFormArea readonly={false} initial={[]} updateParent={nts => {
-                            const updated = structuredClone(current)
-                            updated[i].data.notes = nts.new.map(n => {
-                                return n.data
-                            })
-                            update(updated)
-                        }}/>
+                        <NotesFormArea readonly={false} initial={[]} allowLargeTextBox={false/* TODO: OK?*/}
+                            updateParent={nts => {
+                                const updated = structuredClone(current)
+                                updated[i].data.notes = nts.new.map(n => {
+                                    return n.data
+                                })
+                                update(updated)
+                            }}/>
                     </div>
                 </div>
             })}

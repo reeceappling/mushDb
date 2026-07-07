@@ -26,14 +26,28 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, DoMultipartImportRequest, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType, OptionalKey,
-    OptionalSimpleKey, RequiredKey,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    DoMultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
+    OptionalArrayOfType,
+    OptionalKey,
+    OptionalSimpleKey,
+    RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData, setFormData,
-    setFormImages,
+    resolvePicsFormData,
+    setFormFull,
 } from "@/app/components/common";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
@@ -161,7 +175,7 @@ export function StasisTubeImportDisplay() {
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        setFormData(formData, dataObj)
+        formData.set("data", JSON.stringify(dataObj))
         if(imageFile!==undefined){
             formData.set("image", imageFile, "img")
         }
@@ -235,9 +249,10 @@ export default function StasisTubeDisplay(
                 const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(formData, dataObj)
-                setFormImages(formData, "newPic", newImages)
-                setFormImages(formData, "newContam", newContams)
+                setFormFull(formData, dataObj, newImages, newContams, undefined)
+                // formData.set("data", JSON.stringify(dataObj))
+                // setFormImages("newPic", formData, newImages)
+                // setFormImages("newContam", formData, newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return

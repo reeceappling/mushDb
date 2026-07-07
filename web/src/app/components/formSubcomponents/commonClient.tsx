@@ -545,7 +545,7 @@ export const PixRowExisting = (
     const rightArea = () => {
         return <div className={"picRight" + disabledClass()}>
             <DateArea readonly={true} when={initial.time}/>
-            <NotesFormArea initial={initial.notes} readonly={readonly || false}
+            <NotesFormArea initial={initial.notes} readonly={readonly || false} allowLargeTextBox={false/* TODO: OK?*/}
                            updateParent={(nts: AllEntries<Note>) => {
                                const updated = structuredClone(current)
                                updated.data.notes = nts

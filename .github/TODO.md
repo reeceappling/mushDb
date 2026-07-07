@@ -11,6 +11,7 @@
 - [ ] Disallow guests from even trying to modify things!
 - [ ] Allow not-logged-in users to view public entries without redirecting to the login page...
 - [ ] When a reference is used, the referenced item should also update its updated time? Idk, feels weird...
+- [ ] SingleNoteV2 NEEDS SIZING CHANGES DURING EDITING FOR NORMAL NOTES AS WELL AS PICTURE AND CONTAM NOTES!
 
 # In Progress
 ## Actively Working On

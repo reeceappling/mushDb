@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from "react";
-import {ChangeEvent, SetStateAction, useEffect, useState} from "react";
+import {ChangeEvent, RefObject, SetStateAction, useEffect, useRef, useState} from "react";
 import {AllEntries, Data, GroupProps, RevertableAreaProps} from "@/app/components/formSubcomponents/shared";
 import DateArea, {NumberToDate} from "@/app/components/formSubcomponents/date";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
@@ -15,15 +15,19 @@ export function NotesFormArea({
                                   initial,
                                   updateParent,
                                   removeHeader,
+                                  allowLargeTextBox = true
                               }: { // TODO: add withDictaphone if possible? we only want the dictaphone in some edge cases
     readonly?: boolean,
     initial?: Note[],
     updateParent?: (entries: AllEntries<Note>) => void,
     removeHeader?: boolean,
+    allowLargeTextBox?: boolean
 }) {
     return <div>
         {removeHeader || <div className={"areaHeader"}>{"Notes"}</div>}
-        <NotesAreaViewSubcomponent initial={initial || []} readonly={readonly || false} updateParent={upd=>{updateParent && updateParent(upd)}} />
+        <NotesAreaViewSubcomponent initial={initial || []} readonly={readonly || false} updateParent={upd => {
+            updateParent && updateParent(upd)
+        }} allowLargeTextBox={allowLargeTextBox}/>
     </div>
 }
 
@@ -75,7 +79,7 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
                         out.existing[i] = structuredClone(nd)
                         updateCurrent(out)
                     }}/>
-                    {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={()=>{
+                    {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={() => {
                         const out = structuredClone(current)
                         out.existing[i].disabled = !out.existing[i].disabled
                         updateCurrent(out)
@@ -84,7 +88,7 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
             })}</div>
 
     }
-    const createNewNote = ()=>{
+    const createNewNote = () => {
         return {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}} // TODO: fixme
     }
     // TODO: 5/3/26 creating 3 new notes and deleting the second does not update the new notes visually properly
@@ -97,18 +101,20 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
                 if (n.disabled) {
                     return null
                 }
-                return <div key={i}> {/* TODO: should be able to rely on key for deletion because "deleted" new notes are still in-mem*/}
+                return <div
+                    key={i}> {/* TODO: should be able to rely on key for deletion because "deleted" new notes are still in-mem*/}
                     <SingleNote startEditing={true} updateParent={nd => {
                         const out = structuredClone(current)
                         out.new[i] = structuredClone(nd)
                         updateCurrent(out)
                     }}/>
-                    <RemoveNewNoteButton click={()=>{
+                    <RemoveNewNoteButton click={() => {
                         const out = structuredClone(current)
                         out.new[i].disabled = true;
                         const toParent = structuredClone(out)
                         toParent.new = toParent.new.filter(item => !(item.disabled))
-                        updateCurrent(toParent)}} />
+                        updateCurrent(toParent)
+                    }}/>
                 </div>
             })}
             <div>
@@ -131,42 +137,50 @@ export default function NotesArea({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WH
     </div>
 
 }
-function RemoveNoteButton({disabled,click}:{disabled:boolean,click:()=>void}){
-    return <RemoveToggle disabled={disabled} click={click} keptTxt={"Delete Note"} removedTxt={"Don't Delete"} keptClass={"removeButtonSmall"} removedClass={"basicButtonSmall"}/>
+
+function RemoveNoteButton({disabled, click}: { disabled: boolean, click: () => void }) {
+    return <RemoveToggle disabled={disabled} click={click} keptTxt={"Delete Note"} removedTxt={"Don't Delete"}
+                         keptClass={"removeButtonSmall"} removedClass={"basicButtonSmall"}/>
 }
-function RemoveNewNoteButton({click}:{click:()=>void}){
+
+function RemoveNewNoteButton({click}: { click: () => void }) {
     return <RemoveNoteButton disabled={false} click={click}/>
 }
 
 
-export function NotesAreaViewSubcomponent({initial,updateParent,readonly}:{initial:Note[],readonly:boolean,updateParent:(entries:AllEntries<Note>) => void}){
+export function NotesAreaViewSubcomponent({initial, updateParent, readonly, allowLargeTextBox}: {
+    initial: Note[],
+    readonly: boolean,
+    updateParent: (entries: AllEntries<Note>) => void,
+    allowLargeTextBox: boolean
+}) {
     const [existing, setExisting] = useState<Data<Note>[]>(dataFor(initial))
     const [created, setCreated] = useState<Data<Note>[]>([])
     const [reloadCount, setReloadCount] = useState(0)
-    const currentClone = ()=>{
+    const currentClone = () => {
         return {
-            existing:structuredClone(existing),
+            existing: structuredClone(existing),
             new: structuredClone(created)
         }
     }
-    useEffect(()=>{
+    useEffect(() => {
         const newAll = InitialNotesState(initial)
         setExisting(newAll.existing) // Must be first!
         setCreated(newAll.new)
-        setReloadCount(reloadCount+1)
+        setReloadCount(reloadCount + 1)
         deliverUpdatesToParent(newAll)
-    },initial)
+    }, initial)
 
-    const deliverUpdatesToParent = (updated:AllEntries<Note>) => {
+    const deliverUpdatesToParent = (updated: AllEntries<Note>) => {
         updateParent && updateParent(structuredClone(updated))
     }
-    const updateExisting = (updated:Data<Note>[])=>{
+    const updateExisting = (updated: Data<Note>[]) => {
         setExisting(updated)
         let out = currentClone()
         out.existing = updated
         deliverUpdatesToParent(out)
     }
-    const updateCreated = (updated:Data<Note>[])=>{
+    const updateCreated = (updated: Data<Note>[]) => {
         setCreated(updated)
         let out = currentClone()
         out.new = updated
@@ -179,11 +193,12 @@ export function NotesAreaViewSubcomponent({initial,updateParent,readonly}:{initi
         return <>
             {existing.map((n, i) => {
                 return <div key={i} className={"existingNote" + (n.disabled ? " disabled" : "")}>
-                    <SingleNoteV2 initial={initial[i]} readonly={readonly} updateParent={nd => {
-                        const updated = structuredClone(existing)
-                        updated[i] = structuredClone(nd)
-                        updateExisting(updated)
-                    }}/>
+                    <SingleNoteV2 initial={initial[i]} readonly={readonly} allowLargeBox={allowLargeTextBox}
+                                  updateParent={nd => {
+                                      const updated = structuredClone(existing)
+                                      updated[i] = structuredClone(nd)
+                                      updateExisting(updated)
+                                  }}/>
                     {readonly || <RemoveNoteButton disabled={n.disabled} click={() => {// TODO: does this need to be in a div?
                         const updated = structuredClone(existing)
                         updated[i].disabled = !n.disabled
@@ -195,10 +210,17 @@ export function NotesAreaViewSubcomponent({initial,updateParent,readonly}:{initi
     }
     return <div className={"notesAreaV2"}>
         {existingArea()}
-        <NewNotesSubArea count={reloadCount} readonly={readonly} updateParent={updateCreated}/>
+        <NewNotesSubArea count={reloadCount} readonly={readonly} updateParent={updateCreated}
+                         allowLargeTextBox={allowLargeTextBox}/>
     </div>
 }
-export function NewNotesSubArea({count,readonly,updateParent}:{count:number,readonly:boolean,updateParent:(entries:Data<Note>[]) => void}){
+
+export function NewNotesSubArea({count, readonly, updateParent, allowLargeTextBox}: {
+    count: number,
+    readonly: boolean,
+    updateParent: (entries: Data<Note>[]) => void,
+    allowLargeTextBox: boolean
+}) {
     if (readonly) {
         return null
     }
@@ -206,14 +228,14 @@ export function NewNotesSubArea({count,readonly,updateParent}:{count:number,read
     useEffect(() => {
         setNotes([]);
     }, [count]);
-    const propagateUpdate = (updated:Data<Note>[]) => {
+    const propagateUpdate = (updated: Data<Note>[]) => {
         setNotes(updated)
-        updateParent(structuredClone(updated).filter((item)=>{
-            return !item.disabled && item.data.note!==""
+        updateParent(structuredClone(updated).filter((item) => {
+            return !item.disabled && item.data.note !== ""
         }))
     }
-    const defaultNote = ()=>{
-        return {data:{time: new Date().getTime(), note: ""},disabled:false}
+    const defaultNote = () => {
+        return {data: {time: new Date().getTime(), note: ""}, disabled: false}
     }
     const createNewNote = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         //e.preventDefault()
@@ -222,16 +244,17 @@ export function NewNotesSubArea({count,readonly,updateParent}:{count:number,read
         setNotes([...structuredClone(notes), defaultNote()])
     }
     return <div>
-            {notes.map((n, i) => {
-                if (n.disabled) {
+        {notes.map((n, i) => {
+            if (n.disabled) {
                 return null
             }
             return <div key={i}>
-                <SingleNoteV2 readonly={false} startEditing={true} updateParent={nd => {
-                    const updated = structuredClone(notes)
-                    updated[i].data = structuredClone(nd.data)
-                    propagateUpdate(updated)
-                }}/>
+                <SingleNoteV2 readonly={false} startEditing={true} allowLargeBox={allowLargeTextBox}
+                              updateParent={nd => {
+                                  const updated = structuredClone(notes)
+                                  updated[i].data = structuredClone(nd.data)
+                                  propagateUpdate(updated)
+                              }}/>
                 <RemoveNewNoteButton click={() => { // TODO: does this need to be in a div?
                     const updated = structuredClone(notes)
                     updated[i].disabled = true
@@ -246,6 +269,7 @@ export function NewNotesSubArea({count,readonly,updateParent}:{count:number,read
 
 
 }
+
 // TODO: consider only using initial for notes, but parent stores current for updates!
 // TODO: this one is working, but should we use NotesArea instead????
 // TODO: NotesFormArea/NotesAreaSubcomponent instead
@@ -268,10 +292,10 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
                         updateParent && updateParent(out)
                     }}/>
                     {!readonly && <RemoveNoteButton disabled={current.existing[i].disabled} click={() => {
-                            const out = structuredClone(current)
-                            out.existing[i].disabled = !current.existing[i].disabled
-                            updateParent && updateParent(out)
-                        }}/>}
+                        const out = structuredClone(current)
+                        out.existing[i].disabled = !current.existing[i].disabled
+                        updateParent && updateParent(out)
+                    }}/>}
                 </div>
             })}
         </div>
@@ -330,10 +354,10 @@ export function NotesAreaOld({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SO
 
 // TODO: NotesFormArea/NotesAreaSubcomponent instead
 export function NotesGrid({
-                                 readonly,
-                                 current,
-                                 updateParent,
-                             }: RevertableAreaProps<Note>) {
+                              readonly,
+                              current,
+                              updateParent,
+                          }: RevertableAreaProps<Note>) {
     // TODO: control initial vs final so that updating initial reverts the whole thing to the new values
     const existingArea = () => {
         if (!current || current.existing.length === 0) {
@@ -410,10 +434,10 @@ export function NotesGrid({
 }
 
 export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROPERLY WHEN SOME NOTES ARE DELETED, FIX!
-                                         readonly,
-                                         current,
-                                         updateParent,
-                                     }: RevertableAreaProps<Note>) {
+                                             readonly,
+                                             current,
+                                             updateParent,
+                                         }: RevertableAreaProps<Note>) {
     // TODO: control initial vs final so that updating initial reverts the whole thing to the new values
     const existingArea = () => {
         if (!current || current.existing.length === 0) {
@@ -468,7 +492,10 @@ export function NotesAreaMostRecentImage({ // TODO: CURRENTLY DOES NOT WORK PROP
                     e.preventDefault()
                     if (!!current) {
                         const out = {...current}
-                        out.new = [...structuredClone(current.new), {disabled: false, data: {time: new Date().getTime(), note: "FIXME"}}]
+                        out.new = [...structuredClone(current.new), {
+                            disabled: false,
+                            data: {time: new Date().getTime(), note: "FIXME"}
+                        }]
                         updateParent && updateParent(out)
                     } else {
                         updateParent && updateParent({
@@ -619,61 +646,151 @@ export function SingleNote( // TODO: notes need a pretty major overhaul
         />)
 }
 
+const useAutosizeTextArea = (textAreaRef: React.RefObject<HTMLTextAreaElement | null>, value: string) => {
+    useEffect(() => {
+        if (textAreaRef.current) {
+            // 1. Reset height momentarily to get the true inner height
+            textAreaRef.current.style.height = "auto";
+            // 2. Set the height directly to the scrollHeight
+            textAreaRef.current.style.height = `${textAreaRef.current.scrollHeight}px`;
+        }
+    }, [textAreaRef, value]);
+};
+
+export function AutoGrowTextarea({initial, className, updateParent,onBlur,ref}: { // TODO: set min/max widths! Set background colors!
+    initial: string,
+    updateParent: (s: string) => void,
+    className?: string
+    onBlur?: () => void
+    ref:RefObject<HTMLTextAreaElement | null>
+}) {
+    const [value, setValue] = useState(initial);
+    //const textAreaRef: RefObject<HTMLTextAreaElement | null> = useRef<HTMLTextAreaElement | null>(null);
+    useEffect(() => {
+        setValue(initial)
+    }, [initial]);
+
+
+    useAutosizeTextArea(ref, value);
+
+    return (
+        <textarea
+            ref={ref}
+            onChange={e => {
+                const upd = e.target.value
+                setValue(upd);
+                updateParent(upd)
+            }}
+            value={value}
+            rows={1}
+            onBlur={onBlur}
+            placeholder="Type here..."
+            className={"noteValue w-fit rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300 "+className}
+            style={{
+                resize: "none",
+                overflow: "hidden",
+                transition: "height 0.2s ease", // Smooth transition
+                minHeight: "40px",
+                width: "100%",
+                boxSizing: "border-box"
+            }}
+        />
+    );
+}
+
 export function SingleNoteV2(
     {
         initial,
         readonly,
         startEditing,
         updateParent,
+        allowLargeBox = false,
     }: {
         initial?: Note
-        readonly:boolean
+        readonly: boolean
         startEditing?: boolean
         updateParent?: (n: Data<Note>) => void
+        allowLargeBox: boolean
     }) {
-    const defaultInitialNote = ()=>{
+    const defaultInitialNote = () => {
         return {time: new Date().getTime(), note: ""}
     }
-    const [val, setVal] = useState<Data<Note>>({data:initial||defaultInitialNote(),disabled:false})
+    const [val, setVal] = useState<Data<Note>>({data: initial || defaultInitialNote(), disabled: false})
     const [started, setStarted] = useState(false)
     const [editing, setEditing] = useState(startEditing ?? false)
-    useEffect(()=>{
-        setVal({data:initial||defaultInitialNote(),disabled:false})
-        if (!started){
+    const maxSize = 12
+    const [small, setSmall] = useState(val.data.note.length < maxSize)
+    const smRef = useRef<HTMLInputElement|null>(null);
+    const lgRef = useRef<HTMLTextAreaElement|null>(null);
+    useEffect(() => {
+        setVal({data: initial || defaultInitialNote(), disabled: false})
+        // setEditing(!started && (startEditing || false)) // TODO: ???
+        // if (!started){
+        //     setStarted(true)
+        // }
+        if (!started) {
             setEditing(startEditing || false)
             setStarted(true)
         } else {
             setEditing(false)
         }
-    },[initial])
+    }, [initial])
+    // const smallNoteEditArea = <input ref={smRef} name='txt' type="text" disabled={false}
+    //                                  autoComplete="off" value={val.data.note}
+    //                                  placeholder={"new note"}
+    //                                  className={small ? "noteValue w-fit rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300" : "hidden"}
+    //                                  onBlur={() => {
+    //                                      setEditing(false)
+    //                                  }}
+    //                                  onChange={(e) => { // TODO: is this properly propagating the last letter?
+    //                                      e.stopPropagation();
+    //                                      //e.preventDefault(); // TODO: ????
+    //                                      const updated = structuredClone(val);
+    //                                      updated.data.note = e.target.value
+    //                                      handleChangeNote(updated)
+    //                                  }}
+    // />
+    const largeNoteEditArea = <AutoGrowTextarea
+        /*max-w-full*/
+        className={"noteValue w-fit rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
+        /*className={small ? "hidden" : ""}*/ ref={lgRef}
+                                                initial={val.data.note/* TODO: NEEDS THOROUGH DEBUGGING!*/}
+                                                onBlur={() => {
+                                                    setEditing(false)
+                                                }}
+                                                updateParent={s => {
+                                                    const updated = structuredClone(val);
+                                                    updated.data.note = s
+                                                    handleChangeNote(updated)
+                                                }}/>
     const handleChangeNote = (updated: Data<Note>) => {
+        const shouldBeLarge = updated.data.note.length >= maxSize
         setVal(updated)
         updateParent && updateParent(updated)
+        // if ((editing || (!started && startEditing)) && small == shouldBeLarge) { // TODO: ensure ok
+        //     setSmall(!small)
+        //     if (shouldBeLarge) {
+        //         // TODO: ignores ok?
+        //         // @ts-ignore
+        //         lgRef.current.focus() // TODO: NOT WORKING!
+        //     } else {
+        //         // @ts-ignore
+        //         smRef.current.focus() // TODO: NOT WORKING!
+        //     }
+        // }
     }
+
     return <div className={"note"}>
-        <DateArea readonly={readonly || !editing} when={val.data.time} updateParent={(newDate)=>{
+        <DateArea readonly={readonly || !editing} when={val.data.time} updateParent={(newDate) => {
             const updated = structuredClone(val);
             updated.data.time = newDate
             handleChangeNote(updated)
         }}/>
-        {(!readonly && editing) ? <input name='txt' type="text" disabled={false}
-                          autoComplete="off" value={val.data.note}
-                          placeholder={"new note"}
-                          className={"noteValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
-                          onBlur={() => {
-                              setEditing(false)
-                          }}
-                          onChange={(e)=>{ // TODO: is this properly propagating the last letter?
-                              e.stopPropagation();
-                              //e.preventDefault();
-                              console.log("new note value: "+e.target.value) // TODO: del
-                              const updated = structuredClone(val);
-                              updated.data.note = e.target.value
-                              handleChangeNote(updated)
-                              console.log("new note value should now be propagated to parent!") // TODO: del
-                          }}
-            /> : <>
-            <div>{val.data.note}</div><button className={"basicButtonSmall"} onClick={()=>{setEditing(!editing)}}>
+        {(!readonly && editing) ? (/*(!allowLargeBox || small) ? smallNoteEditArea :*/ largeNoteEditArea) : <>
+            <div>{val.data.note}</div>
+            <button className={"basicButtonSmall"} onClick={() => {
+                setEditing(!editing)
+            }}>
                 {"Edit Note"}
             </button>
         </>}
@@ -771,9 +888,11 @@ export function NoteEntriesGroup({
                               }}/>
                     {readonly ? <div className={"noteValue"}>{input.data.note}</div> :
                         <input name='txt' type="text" disabled={false}
-                               autoComplete="off" onChange={e => {handleFormChangeText(index, e.target.value)}}
+                               autoComplete="off" onChange={e => {
+                            handleFormChangeText(index, e.target.value)
+                        }}
                                value={input.data.note} placeholder={"new note"}
-                               /* TODO: NOTEVALUE OK ON NEXT LINE? OR AT ALTERNATE DIV ABOVE?*/
+                            /* TODO: NOTEVALUE OK ON NEXT LINE? OR AT ALTERNATE DIV ABOVE?*/
                                className={"noteValue rounded-none border-2 border-gray-300 bg-input px-4 text-left text-sm font-normal text-gray-900 placeholder:text-gray-400 focus:bg-white focus:outline-none focus:outline-0 focus:[&:not(:invalid)]:border-blue-300"}
                                onBlur={() => { // TODO: on focus elsewhere
                                    // TODO: do nothing?

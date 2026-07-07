@@ -43,9 +43,7 @@ import {
     OptionalSimpleKey, RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData,
-    setFormData,
-    setFormImages,
-    YesNoSelector,
+    YesNoSelector, setFormFull,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -244,14 +242,17 @@ export default function PlateDisplay(
 
             // Pics
             const picsInfo = resolvePicsFormData(images)
+            const newImages = picsInfo.images
             dataObj.images = picsInfo.obj
             // Set data on form
             // Contams
             const contamsInfo = resolveContamsFormData(contams)
+            const newContams = contamsInfo.images
             dataObj.contams = contamsInfo.obj
-            setFormData(formData, dataObj)
-            setFormImages(formData, "newPic", picsInfo.images)
-            setFormImages(formData, "newContam", contamsInfo.images)
+            setFormFull(formData, dataObj, newImages, newContams, undefined)
+            // formData.set("data", JSON.stringify(dataObj))
+            // setFormImages("newPic", formData, picsInfo.images)
+            // setFormImages("newContam", formData, contamsInfo.images)
 
         } catch (caught: any) {
             console.log("error in submit")
@@ -522,7 +523,7 @@ export function PlateImportDisplay({}: ImportDisplayInput) {
             condensationCoverageAtPourTime: condensationCoverage,
             writeTagTo: writeTagTo,
         }
-        setFormData(formData, dataObj)
+        formData.set("data", JSON.stringify(dataObj))
         if (imageFile !== undefined) {
             formData.set("image", imageFile, "img")
         }

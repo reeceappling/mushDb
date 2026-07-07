@@ -40,7 +40,7 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     setFormData,
-    setFormImages,
+    setFormFull,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -181,7 +181,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
             setErr("Recipe must be set!")
             return
         }
-        const bodyObj: any = {
+        const dataObj: any = {
             creationDate: created,
             recipe: recipe._id,
             // Optionals
@@ -192,7 +192,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
             generation: generation,
             writeTagTo: writeTagTo,
         }
-        setFormData(formData, bodyObj)
+        formData.set("data", JSON.stringify(dataObj))
         if (imageFile !== undefined) {
             formData.set("img", imageFile, "img")
         }
@@ -247,7 +247,7 @@ export default function LcDisplay(
         const cookies = useContext(CookiesContext)
         const lcSubmit = () => {
             const formData = new FormData()
-            const bodyObj: any = {
+            const dataObj: any = {
                 notes: notes,
                 // Optionals
                 confirmedClean: confirmedClean,
@@ -260,15 +260,16 @@ export default function LcDisplay(
                 // Pics
                 const picsInfo = resolvePicsFormData(images)
                 const newImages = picsInfo.images
-                bodyObj.images = picsInfo.obj
+                dataObj.images = picsInfo.obj
                 // Contams
                 const contamsInfo = resolveContamsFormData(contams)
                 const newContams = contamsInfo.images
-                bodyObj.contams = contamsInfo.obj
+                dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(formData, bodyObj)
-                setFormImages(formData, "newPic", newImages)
-                setFormImages(formData, "newContam", newContams)
+                setFormFull(formData, dataObj, newImages, newContams, undefined)
+                // formData.set("data", JSON.stringify(dataObj))
+                // setFormImages("newPic", formData, newImages)
+                // setFormImages("newContam", formData, newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return

@@ -688,15 +688,28 @@ export function resolveContamsFormData(inp: SplitAllEntries<ContaminationForm, N
     }
 }
 
-export function setFormImages(formData: FormData, filePrefix: string, pics: any[]) {
+export function setFormImages(filePrefix: string, formData: FormData, pics: any[]) {
     for (let i = 0; i < pics.length; i++) {
         const fileName = filePrefix + "-" + i
         if (pics[i] === undefined) {
-            console.log("Picture undefined, " + fileName)
+            console.log("Picture undefined, " + fileName) // TODO: DEL
             continue
         }
-        console.log("Picture set, " + fileName)
+        console.log("Picture set, " + fileName) // TODO: DEL
         formData.set(fileName, pics[i], fileName)
+    }
+}
+
+export function setFormFull(formData: FormData, dataObj: any, pics?: any[], contams?: any[], flushes?: any[]) {
+    formData.set("data", JSON.stringify(dataObj))
+    if (pics && pics.length > 0){
+        setFormImages("newPic", formData, pics)
+    }
+    if (contams && contams.length > 0){
+        setFormImages("newContam", formData, contams)
+    }
+    if (flushes && flushes.length > 0){
+        setFormImages("newFlush", formData, flushes)
     }
 }
 

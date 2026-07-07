@@ -228,7 +228,7 @@ export function NewTransferArea({
             notes: notes,
             disposeParent: disposeAfter || dispose,
         }
-        setFormData(formData, dataObj)
+        formData.set("data", JSON.stringify(dataObj))
         picFrom && formData.set('picFrom', picFrom, 'picFrom')
         picTo && formData.set('picTo', picTo, 'picTo')
         DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
@@ -361,7 +361,8 @@ export function NewTransferArea({
 //             fromType: typeFrom,
 //             notes: notes,
 //         }
-//         setFormData(formData, dataObj)
+
+//         formData.set("data", JSON.stringify(dataObj))
 //         picFrom && formData.set('picFrom', picFrom, 'picFrom')
 //         picTo && formData.set('picTo', picTo, 'picTo')
 //         // Send request

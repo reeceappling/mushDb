@@ -9,9 +9,7 @@ import {
     DisplayInput,
     ImportDisplayInput,
     resolvePicsFormData,
-    setFormImages,
     OptionalKey,
-    setFormData,
     ListPageItems,
     ImportEntryFormWrapper,
     DisplayFormWrapper,
@@ -24,7 +22,7 @@ import {
     ListPageTable,
     ExistingRecentSelector,
     CreatedLinkFor,
-    DoMultipartImportRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest
+    DoMultipartImportRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest, setFormFull
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -167,7 +165,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
             subspecies: subspecies,
             notes:notes,
         }
-        setFormData(formData, dataObj)
+        formData.set("data", JSON.stringify(dataObj))
         if(image!==undefined){
             formData.set("img",image,"img")
         }
@@ -236,8 +234,9 @@ export default function SporePrintDisplay(
                 const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Set data on form
-                setFormData(formData, dataObj)
-                setFormImages(formData, "newPic", newImages)
+                setFormFull(formData, dataObj, newImages, undefined, undefined)
+                // formData.set("data", JSON.stringify(dataObj))
+                // setFormImages("newPic", formData, newImages)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
@@ -364,7 +363,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
                     return n.data
                 })}})
             // Perms
-            setFormData(formData, dataObj)
+            formData.set("data", JSON.stringify(dataObj))
             for (let i = 0; i < pics.length; i++) {
                 const toSend = pics[i]
                 if (toSend.img === undefined) {

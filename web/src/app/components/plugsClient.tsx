@@ -23,7 +23,7 @@ import {
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
     RequiredArrayOfType,
-    RequiredKey, resolveContamsFormData, resolvePicsFormData, setFormData, setFormImages,
+    RequiredKey, resolveContamsFormData, resolvePicsFormData, setFormFull,
     Subform,
 } from "@/app/components/common";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl,} from "@/app/components/accessControlClient";
@@ -227,14 +227,17 @@ export default function PlugsDisplay(
         try {
             // Pics
             const picsInfo = resolvePicsFormData(images)
+            const newImages = picsInfo.images
             dataObj.images = picsInfo.obj
             // Set data on form
             // Contams
             const contamsInfo = resolveContamsFormData(contams)
+            const newContams = contamsInfo.images
             dataObj.contams = contamsInfo.obj
-            setFormData(formData, dataObj)
-            setFormImages(formData, "newPic", picsInfo.images)
-            setFormImages(formData, "newContam", contamsInfo.images)
+            setFormFull(formData, dataObj, newImages, newContams, undefined)
+            // formData.set("data", JSON.stringify(dataObj))
+            // setFormImages("newPic", formData, picsInfo.images)
+            // setFormImages("newContam",formData,  contamsInfo.images)
         } catch (caught: any) {
             console.log("error in submit")
             setErr(JSON.stringify(caught))
@@ -366,7 +369,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        setFormData(formData, dataObj)
+        formData.set("data", JSON.stringify(dataObj))
         if (imageFile !== undefined) {
             formData.set("image", imageFile, "img")
         }

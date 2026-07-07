@@ -96,11 +96,12 @@ export function PixRowNew(
     const rightArea = () => {
         return <div className={"picRight"}>
             <DateArea readonly={true} when={current.time}/>
-            <NotesFormArea readonly={false} initial={[]} updateParent={(nts: AllEntries<Note>) => {
-                const updated = structuredClone(current)
-                updated.notes = nts
-                updateRow(updated)
-            }} removeHeader={true}/>
+            <NotesFormArea readonly={false} initial={[]} allowLargeTextBox={false/* TODO: OK?*/}
+                updateParent={(nts: AllEntries<Note>) => {
+                    const updated = structuredClone(current)
+                    updated.notes = nts
+                    updateRow(updated)
+                }} removeHeader={true}/>
         </div>
     }
     return <div className={"contentsOnly picRow"}>

@@ -42,7 +42,7 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     setFormData,
-    setFormImages,
+    setFormFull,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
@@ -248,9 +248,10 @@ export default function SlantDisplay(
                 const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(formData, dataObj)
-                setFormImages(formData, "newPic", newImages)
-                setFormImages(formData, "newContam", newContams)
+                setFormFull(formData, dataObj, newImages, newContams, undefined)
+                // formData.set("data", JSON.stringify(dataObj))
+                // setFormImages("newPic", formData, newImages)
+                // setFormImages("newContam", formData, newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return

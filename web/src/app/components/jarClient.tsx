@@ -26,8 +26,7 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     SelectorWrapper,
-    setFormData,
-    setFormImages,
+    setFormFull,
 } from "@/app/components/common";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import React, {JSX, useContext, useState} from "react";
@@ -201,7 +200,7 @@ export function JarImportDisplay({}: ImportDisplayInput) {
             burstGrains: burstGrains,
             writeTagTo: writeTagTo,
         }
-        setFormData(formData, dataObj) // TODO: THIS SHOULD GO FIRST EVERYWHERE!
+        formData.set("data", JSON.stringify(dataObj))
         if (imageFile !== undefined) {
             formData.set("img", imageFile, "img")
         }
@@ -324,9 +323,10 @@ export default function JarDisplay(
                 const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(formData, dataObj)
-                setFormImages(formData, "newPic", newImages)
-                setFormImages(formData, "newContam", newContams)
+                setFormFull(formData, dataObj, newImages, newContams, undefined)
+                // formData.set("data", JSON.stringify(dataObj))
+                // setFormImages("newPic", formData, newImages)
+                // setFormImages("newContam", formData, newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
