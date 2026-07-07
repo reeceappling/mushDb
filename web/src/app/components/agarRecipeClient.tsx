@@ -245,7 +245,7 @@ export default function AgarRecipeDisplay(
             <NotesFormArea readonly={readonly} initial={initial.notes}
                            updateParent={setNotes}/>{/* TODO: this is erroring when updating after creating a note, then erroring again when trying to click update with no changes because it says existing notes length is not the same!*/}
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay initial={acl} readonly={readonly}
+                <AclDisplay initial={initial.acl} readonly={readonly}
                             updateParent={setAcl}/>{/*TODO: agarRecipe 1 is not properly loading the initial acl!*/}
             </TogglableAreaWithDepth>
             {readonly ? null :

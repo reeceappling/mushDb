@@ -124,7 +124,7 @@ export default function SubspeciesDisplay(
                 </FlexedArea>
                 <AliasesArea initial={initial.aliases} readonly={readonly} updateParent={setAliases}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <AclDefaultAclDisplay ACL={acl} defaultACL={defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl} readonly={readonly}/>
+                <AclDefaultAclDisplay ACL={initial.acl} defaultACL={initial.defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl} readonly={readonly}/>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
                     update()

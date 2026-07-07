@@ -224,7 +224,7 @@ export default function GrainBatchDisplay(
 
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
+                <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
             </TogglableAreaWithDepth>
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
@@ -267,7 +267,11 @@ export function NewGrainBatchForm({handlers, recipe}: {
             <JarRecipeSelector doSelect={setJarRecipe} allowCreate={handlers.isTopLevel}
                                creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>
-        <AclDisplay readonly={false} updateParent={setAcl} initial={acl} />
+        <AclDisplay readonly={false} updateParent={setAcl} initial={{
+            users:new Map<string,boolean>(),
+            projects:new Map<string,boolean>(),
+            blanketPerm:true,
+        }} />
         <button className={"bottomButton greenButton"} onClick={(e) => {
             e.stopPropagation();
             newGrainBatchSubmit()

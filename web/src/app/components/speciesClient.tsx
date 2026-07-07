@@ -193,7 +193,7 @@ export default function SpeciesDisplay(
             <SubspeciesForSpeciesArea subspecies={subspecies}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-            <AclDefaultAclDisplay ACL={acl} defaultACL={defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl}
+            <AclDefaultAclDisplay ACL={initial.acl} defaultACL={initial.defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl}
                                   readonly={readonly}/>
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();

@@ -330,7 +330,7 @@ export default function PlateDisplay(
             {/* TODO: SOMEHOW SHOVE THE DICTAPHONE INTO THE NotesFormArea*/}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay initial={acl} readonly={readonly} updateParent={setAcl}/>
+                <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
                 {/* TODO: removing users is not autoupdating in the UI (the removed user is re-added on submit...). Make sure those changes are shown immediately...*/}
             </TogglableAreaWithDepth>
 

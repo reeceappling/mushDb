@@ -1,6 +1,5 @@
 'use client'
 
-import { OptionalSimpleKeyNew} from "@/app/components/common";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {SelectorFor} from "@/app/components/selector";
@@ -10,35 +9,6 @@ import * as React from "react";
 import {useContext, useEffect, useState} from "react";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveButton} from "@/app/components/formSubcomponents/commonClient";
-
-// Replaced by UnmarshalAcl
-// export function AssertACL(input: any): asserts input is ACL { // TODO: FIX THIS!!!! NEEDS TO DO MAP STUFF PROPERLY!
-//     if (typeof input !== 'object') {
-//         throw new Error('Input is not an object! Input is ' + typeof input);
-//     }
-//
-//     // optional simple keys
-//     OptionalSimpleKeyNew('blanketPerm', input, 'boolean')
-//     input.users = UnmarshalAclMapField(input, 'users')
-//     input.projects = UnmarshalAclMapField(input, 'projects')
-//
-//
-//     // // complex optional array keys
-//     // const complexOptionalMapKeys = new Map<string, (v: any) => boolean>([
-//     //     ['users', IsStringMapToBoolNew], // TODO: UNSURE IF WORKING
-//     //     ['projects', IsStringMapToBoolNew], // TODO: UNSURE IF WORKING
-//     //     // ['users', IsStringMapToBool], // TODO: UNSURE IF WORKING
-//     //     // ['projects', IsStringMapToBool], // TODO: UNSURE IF WORKING
-//     // ])
-//     // for (const [key, validator] of complexOptionalMapKeys) {
-//     //     OptionalKeyNew(key, input, validator)
-//     //     // if (!OptionalKey(key, input, validator)) {
-//     //     //     console.error("failed when validating maps!") // TODO: THIS!
-//     //     //     throw new Error('ACL assertion failure: optional array key ' + key + ' was not valid: ' + JSON.stringify(input[key]));
-//     //     // }
-//     // }
-//     return
-// }
 
 export function UnmarshalAcl(input: any): ACL {
     if (typeof input !== 'object') {
@@ -390,12 +360,11 @@ export function AclDisplay(inp: {
 }) {
     const [current, setCurrent] = React.useState(inp.initial)
     useEffect(()=>{
-        const temp = {
+        setCurrent({
             blanketPerm: inp.initial.blanketPerm,
             users: mapFor(inp.initial.users),
             projects: mapFor(inp.initial.projects),
-        }
-        setCurrent(temp)
+        })
     },[inp.initial])
     const cloneCurrent = ()=>{
         return {
