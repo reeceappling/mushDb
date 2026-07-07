@@ -1,22 +1,9 @@
 #!/bin/bash
-BACKUP_DIR="/backups/backup_$(date +%Y%m%d_%H%M%S)"
 
-echo "Starting backup at $(date)"
+# Create a backup with default name
+# sudo go run ./backups --create "/Users/ZNM4U7N/projects/other/mushDb/env/.env.prod"
+# Create a backup with a specific name
+# sudo go run ./backups --create --zipfile="/Users/ZNM4U7N/projects/other/mushDb/testBackups/backup.zip" "/Users/ZNM4U7N/projects/other/mushDb/env/.env.prod"
 
-mongodump --host="$MONGO_HOST" \
-          --port="$MONGO_PORT" \
-          --username="$MONGO_USER" \
-          --password="$MONGO_PASS" \
-          --authenticationDatabase=admin \
-          --oplog \
-          --gzip \
-          --out="$BACKUP_DIR"
-
-if [ $? -eq 0 ]; then
-    echo "Backup completed successfully to $BACKUP_DIR"
-else
-    echo "Backup failed!"
-fi
-
-# Optional: Clean up backups older than 7 days
-find /backups -type d -name "backup_*" -mtime +7 -exec rm -rf {} +
+# Load a backup into test area
+# sudo go run ./backups --load --zipfile="/Users/ZNM4U7N/projects/other/mushDb/testBackups/backup.zip" "/Users/ZNM4U7N/projects/other/mushDb/env/.env.load"

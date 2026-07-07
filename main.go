@@ -26,6 +26,7 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -98,7 +99,6 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 const defaultHttpPort = 8080
 
 func main() {
-	// TODO: need to clear out the db for actually using it!
 	ctx := context.Background()
 	var envir string
 	switch os.Getenv("ENVIRONMENT") { // TODO: set this!
@@ -696,9 +696,16 @@ func handleUserAuthedViaGoth(ctx context.Context, user goth.User, w http.Respons
 //	// TODO: implement!
 //}
 
+func getDestinationFromAuthRequest(r *http.Request) string {
+	if dst := r.URL.Query().Get("destination"); dst != "" {
+		return dst
+	}
+	return "/?noDst=true"
+}
+
 var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	providerName := r.PathValue("provider")
-	println("RECEIVED REQUEST at /auth/" + providerName) // TODO: del?
+	println("RECEIVED REQUEST at " + r.URL.String()) // TODO: del?
 	if providerName == "guest" {
 		handleGuestLogin(w, r)
 		return
@@ -711,6 +718,26 @@ var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	//	return
 	//}
 	//println(string(bs)) // TODO: del?
+	q := r.URL.Query()
+	q.Add("provider", "google")
+	customParamsFromMap := func(m map[string]string) string {
+		sb := strings.Builder{}
+		ct := 0
+		for k, v := range m {
+			if ct != 0 {
+				sb.Write([]byte("|"))
+			}
+			sb.Write([]byte(fmt.Sprintf("%s=%s", k, v)))
+			ct++
+		}
+		return sb.String()
+	}
+	customParams := customParamsFromMap(map[string]string{
+		"destination": getDestinationFromAuthRequest(r),
+		"provider":    "google",
+	})
+	q.Add("state", customParams) // Combine
+	r.URL.RawQuery = q.Encode()
 
 	user, err := gothic.CompleteUserAuth(w, r)
 	if err == nil {
@@ -784,24 +811,104 @@ var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 //	// TODO: this
 //}
 
+func addDestinationToUrl(basePath string, destination string) string {
+	if destination == "" {
+		return basePath
+	}
+	q := url.Values{}
+	q.Set("destination", destination)
+	return basePath + "?" + q.Encode()
+
+}
+
+type stateMap map[string]string
+
+func (sm stateMap) updateRequest(r *http.Request) error {
+	if r == nil {
+		return errors.New("request cannot be nil")
+	}
+	if r.URL == nil {
+		return errors.New("url cannot be nil")
+	}
+	// TODO: update url?
+	// Update query params based on state param returned from google
+	updatedQuery := r.URL.Query()
+	for stateKey, queryKey := range map[string]string{
+		"destination": "destination",
+		"provider":    "provider",
+	} {
+		if stateVal, exists := sm[stateKey]; exists {
+			updatedQuery.Set(queryKey, stateVal)
+		}
+	}
+	r.URL.RawQuery = updatedQuery.Encode()
+	// TODO: update body?
+	// TODO: update method?
+	// TODO: update host?
+	// TODO: update headers?
+	// TODO: update cookies?
+	return nil
+}
+
+func getStateMap(r *http.Request) (stateMap, error) {
+	returnedState := r.URL.Query().Get("state")
+	// Split out state and custom parameters
+	parts := strings.Split(returnedState, "|")
+	stateMap := make(map[string]string, len(parts))
+	for _, part := range parts {
+		keyval := strings.Split(part, "=") // TODO: ensure no equals in strings otherwise!
+		if len(keyval) != 2 {
+			return nil, errors.New("malformed state for part: " + part)
+		}
+		stateMap[keyval[0]] = keyval[1]
+	}
+	return stateMap, nil
+}
+
+func getStateMapAndUpdateRequest(r *http.Request) error {
+	sm, err := getStateMap(r)
+	if err != nil {
+		return err
+	}
+	return sm.updateRequest(r)
+
+}
+
+func removeCookie(c *http.Cookie, w http.ResponseWriter) {
+	c.MaxAge = -1 // TODO: is this ok?
+	http.SetCookie(w, c)
+}
+
 var authCallbackHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	println("hit callback")
-	// Clear cookies if needed
-	provider := r.PathValue("provider")
-	callbackPath := fmt.Sprintf(`/auth/%s/callback`, provider)
-	if len(r.CookiesNamed("_gothic_session")) > 1 { // TODO: or >0? should probably be 0
-		c, _ := r.Cookie("_gothic_session")
-		c.MaxAge = -1 // TODO: is this ok?
-		http.SetCookie(w, c)
-		http.Redirect(w, r, callbackPath, http.StatusTemporaryRedirect)
+	// check for state params (from google) and update the request (params, etc) as needed
+	err := getStateMapAndUpdateRequest(r)
+	if err != nil {
+		http.Error(w, "failed to get or utilize stateMap returned to auth callback: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	_, err := r.Cookie("_gothic_session")
+
+	// Clear cookies if needed
+	provider := r.PathValue("provider")
+	callbackPath := addDestinationToUrl(fmt.Sprintf(`/auth/%s/callback`, provider), r.URL.Query().Get("destination"))
+	// If too many cookies, remove the cookies
+	sessCookies := r.CookiesNamed("_gothic_session")
+	c, err := r.Cookie("_gothic_session")
 	if err != nil {
 		println("no gothic session cookie")
 	} else {
 		//println("session cookie", c.Name, c.Value)
+	}
+	if len(sessCookies) > 1 { // TODO: or >0? should probably be 0
+		if err != nil {
+			println("not finding cookie should never happen here!")
+			http.Error(w, "not finding cookie should never happen here!", http.StatusInternalServerError)
+			return
+		}
+		removeCookie(c, w)
+		http.Redirect(w, r, callbackPath, http.StatusTemporaryRedirect)
+		return
 	}
 
 	// TODO: ensure goth storage expirations match our storage expirations
@@ -840,17 +947,17 @@ var authCallbackHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 		//return
 	}
 	//http.SetCookie(w, c) // TODO: if this works do it everywhere? May not be needed!
-	// redirect to original page
 	redirectToBasePage(r, w)
 }
 
 func redirectToBasePage(r *http.Request, w http.ResponseWriter) {
+	ctx := r.Context()
 	dst := r.URL.Query().Get("destination")
 	if dst == "" {
-		println("dst not on query")
+		env.LogIfDev(ctx, "dst not on query")
 		dst = baseApiUrl
 	}
-	println("redirecting to: ", dst)
+	env.LogIfDev(ctx, "redirecting to: "+dst)
 	http.Redirect(w, r, dst, http.StatusTemporaryRedirect) // TODO: REDIRECT!
 }
 
@@ -1597,7 +1704,7 @@ func authUrlFor(providerName string) string {
 	return fmt.Sprintf(`%s/auth/%s`, baseApiUrl, providerName)
 }
 func authCallbackUrlFor(providerName string) string {
-	return fmt.Sprintf(`%s/auth/%s/callback`, baseApiUrl, providerName)
+	return fmt.Sprintf(`%s/auth/%s/callback`, baseApiUrl, providerName) // TODO: add state to the auth callback url to ensure we have destination params?
 }
 
 var _ goth.Provider = &guestLoginProvider{}
@@ -1634,11 +1741,11 @@ func (p *guestLoginProvider) SetName(name string) {
 
 func (p *guestLoginProvider) BeginAuth(state string) (goth.Session, error) {
 	return &guestSession{
-		AuthURL:      p.Config.AuthCodeURL(state),
-		AccessToken:  "",          // TODO: fixme!
-		RefreshToken: "",          // TODO: fixme!
-		ExpiresAt:    time.Time{}, // TODO: fixme!
-		IDToken:      "",          // TODO: fixme!
+		AuthURL:      p.Config.AuthCodeURL(state), // TODO: fix the state
+		AccessToken:  "",                          // TODO: fixme!
+		RefreshToken: "",                          // TODO: fixme!
+		ExpiresAt:    time.Time{},                 // TODO: fixme!
+		IDToken:      "",                          // TODO: fixme!
 	}, nil
 }
 

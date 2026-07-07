@@ -5,7 +5,7 @@ import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {CredentialResponse, GoogleLogin} from "@react-oauth/google";
 import {SelectorFor} from "@/app/components/selector";
 import {SelectorWrapper} from "@/app/components/common";
-import {useSearchParams} from "next/navigation";
+import {ReadonlyURLSearchParams, useSearchParams} from "next/navigation";
 
 // TODO: ADD LOGOUT BUTTON SOMEWHERE!
 export interface AuthAreaProps {
@@ -218,97 +218,81 @@ export default function AuthArea( // TODO: any depth?????
 //     )
 // }
 
-function SignUpArea({onSignup}:{onSignup:(sessId:string)=>void}) {
-    const searchParams = useSearchParams();
-    // This function will be called upon a successful login
-    const handleSuccess = (credentialResponse: CredentialResponse) => {
-        // If you are using the authorization code flow, you will receive a code to be exchanged for an access token
-        const authorizationCode = credentialResponse.credential;
+// function SignUpArea({onSignup}:{onSignup:(sessId:string)=>void}) {
+//     const searchParams = useSearchParams();
+//     // This function will be called upon a successful login
+//     const handleSuccess = (credentialResponse: CredentialResponse) => {
+//         // If you are using the authorization code flow, you will receive a code to be exchanged for an access token
+//         const authorizationCode = credentialResponse.credential;
+//
+//         // Send the authorization code to your backend server
+//
+//         fetch(loginDestination('/login', searchParams), { // TODO: FIX THIS ENDPOINT!!!
+//             method: 'POST',
+//             headers: { // TODO: no auth headers?
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({ code: authorizationCode }),
+//         })
+//             .then(response => response.text())
+//             .then(onSignup)
+//             .catch(error => {
+//                 // Handle errors in communicating with your backend server
+//                 console.error('Error exchanging authorization code:', error);
+//             });
+//     };
+//     const guestSignIn = ()=>{
+//         fetch(loginDestination('/guestLogin', searchParams),{ // TODO:
+//             method: 'POST',
+//             headers: { // TODO: no auth headers?
+//                 'Content-Type': 'application/json',
+//             },
+//         })
+//             .then(response => response.text())
+//             .then(onSignup)
+//             .catch(error => {
+//                 // Handle errors in communicating with your backend server
+//                 console.error('Error signing in as guest:', error);
+//             });
+//     }
+//
+//     const handleError = () => {
+//         console.error('Google login failed');
+//     };
+//
+//     return (
+//         <div>
+//             <GoogleLogin
+//                 onSuccess={handleSuccess}
+//                 onError={handleError}
+//                 useOneTap
+//             />
+//             <button className={"basicButtonSmall"} onClick={guestSignIn}>{"Continue as guest"}</button>
+//         </div>
+//     );
+// }
 
-        // Send the authorization code to your backend server
-        fetch('/login', { // TODO: FIX THIS ENDPOINT
-            method: 'POST',
-            headers: { // TODO: no auth headers?
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ code: authorizationCode }),
-        })
-            .then(response => response.text())
-            .then(onSignup)
-            .catch(error => {
-                // Handle errors in communicating with your backend server
-                console.error('Error exchanging authorization code:', error);
-            });
-    };
-    const guestSignIn = ()=>{
-        // let signinPath = '/guestLogin'
-        // const dst = searchParams.get('destination')
-        // if (dst !== null) {
-        //     signinPath += '?destination=' + encodeURIComponent(dst)
-        // }
-        fetch('/guestLogin',{ // TODO:
-            method: 'POST',
-            headers: { // TODO: no auth headers?
-                'Content-Type': 'application/json',
-            },
-        })
-            .then(response => response.text())
-            .then(onSignup)
-            .catch(error => {
-                // Handle errors in communicating with your backend server
-                console.error('Error signing in as guest:', error);
-            });
+function loginDestination(basePath: string, searchParams: ReadonlyURLSearchParams): string {
+    const dst = searchParams.get('destination')
+    if (dst !== null) {
+        return basePath +'?destination=' + encodeURIComponent(dst)
     }
-
-    const handleError = () => {
-        console.error('Google login failed');
-    };
-
-    return (
-        <div>
-            <GoogleLogin
-                onSuccess={handleSuccess}
-                onError={handleError}
-                useOneTap
-            />
-            <button className={"basicButtonSmall"} onClick={guestSignIn}>{"Continue as guest"}</button>
-        </div>
-    );
+    return basePath
 }
 
 function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
     const searchParams = useSearchParams();
     const [testEmail, setTestEmail] = useState<string>("")
+    const dstParam = searchParams.get('destination')
+    const loginParams = (dstParam !== null && dstParam !== "" ? '?destination=' + encodeURIComponent(dstParam):"")
     // This function will be called upon a successful login
     const handleSuccess = (credentialResponse: CredentialResponse) => {
-        // If you are using the authorization code flow, you will receive a code to be exchanged for an access token
-        const authorizationCode = credentialResponse.credential;
-
-        // Send the authorization code to your backend server
-        location.assign("/auth/google") // TODO: SEE IF WE CAN DODGE THIS SECOND PAGE SOMEHOW
-        // fetch('/auth/google', { // TODO: FIX THIS ENDPOINT
-        // //fetch('/auth/google/callback', { // TODO: FIX THIS ENDPOINT
-        // //fetch('/login', { // TODO: FIX THIS ENDPOINT
-        //     method: 'POST',
-        //     headers: { // TODO: no auth headers?
-        //         'Content-Type': 'application/json',
-        //     },
-        //     body: JSON.stringify({ token: authorizationCode, code: authorizationCode }),
-        // })
-        //     .then(response => response.text())
-        //     .then(onLogin)
-        //     .catch(error => {
-        //         // Handle errors in communicating with your backend server
-        //         console.error('Error exchanging authorization code:', error);
-        //     });
+        // // If you are using the authorization code flow, you will receive a code to be exchanged for an access token
+        // const authorizationCode = credentialResponse.credential; // TODO: ????
+        location.assign('/auth/google'+loginParams)
     };
     const guestSignIn = ()=>{
-        let signinPath = '/guestLogin'
-        const dst = searchParams.get('destination')
-        if (dst !== null) {
-            signinPath += '?destination=' + encodeURIComponent(dst)
-        }
-        fetch(signinPath, { // TODO: fetch('/guestLogin', {
+        fetch('/guestLogin'+loginParams, { // TODO: fetch('/guestLogin', {
             method: 'POST',
             headers: { // TODO: no auth headers?
                 'Content-Type': 'application/json',
@@ -331,13 +315,7 @@ const testSignIn = ()=>{
             console.error("no test email provided!")
             return
         }
-        let signinPath = '/testLogin/'+encodeURI(testEmail)
-        const dst = searchParams.get('destination')
-        if (dst !== null) {
-            signinPath += '?destination=' + encodeURIComponent(dst)
-        }
-
-        fetch(signinPath, {
+        fetch('/testLogin/'+encodeURI(testEmail)+loginParams, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
