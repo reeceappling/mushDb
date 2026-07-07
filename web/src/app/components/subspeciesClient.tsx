@@ -315,17 +315,13 @@ export function SubspeciesSelectorTable({data, onClick}: ListPageItems<Subspecie
 // SubspeciesSelector is a selector between ALL subspecies, not just those of a single species
 export function SubspeciesSelector(
     {
-        doSelect,
-        allowCreate
+        doSelect
     }: {
-        doSelect: (val: SubspeciesData | undefined) => void,
-        allowCreate?: boolean
+        doSelect: (val: SubspeciesData | undefined) => void
     }) {
     const table = (items: SubspeciesData[]):JSX.Element=>{
         return <SubspeciesSelectorTable data={items} onClick={doSelect}/>
     }
-
     return <ExistingRecentSelector entryType={"subspecies"} entryTypes={"subspecies"} doSelect={doSelect} asserter={AssertSubspecies}
-                                   table={table}>
-    </ExistingRecentSelector>
+                                   table={table}/>
 }

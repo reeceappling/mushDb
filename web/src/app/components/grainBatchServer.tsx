@@ -26,7 +26,7 @@ export interface GrainBatchData {
     dryTimeHours?: number
     notes?: Note[]
     lastUpdated: number
-    acl: ACL // TODO: do we want this?
+    acl: ACL
 }
 export class GrainBatchData {
     // Accept a single object containing the fields

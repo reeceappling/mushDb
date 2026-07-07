@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
@@ -62,7 +62,7 @@ import {
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AclDisplay, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwabData} from "@/app/components/sporeSwabServer";
@@ -167,6 +167,9 @@ export default function FruitDisplay(
     const [sporePrints, setSporePrints] = useState(data.prints) // TODO: use?
     const [err, setErr] = useState<string | undefined>()
     const [acl, setAcl] = useState<ACL>(initial.acl)
+    useEffect(() => {
+        console.log("ACL set to: "+JSON.stringify(MarshalAcl(acl))) // TODO: del!
+    }, [acl])
     const updateInitial = (updated: FruitData) => {
         setInitial(updated)
         setPics(InitialPicsEntries(updated.pics))
@@ -203,7 +206,7 @@ export default function FruitDisplay(
         const dataObj: any = {
             notes: notes,
             disposed: disposed,
-            acl: acl,
+            acl: MarshalAcl(acl),
         }
         try {
             // Pics

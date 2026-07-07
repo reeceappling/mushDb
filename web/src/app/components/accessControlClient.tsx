@@ -43,6 +43,14 @@ export function UnmarshalAclMapField(input: any, fieldName:string): Map<string,b
     }
 }
 
+export function NewAllCanWriteAcl():ACL{
+    return {
+        users: new Map<string, boolean>(),
+        projects: new Map<string, boolean>(),
+        blanketPerm: true,
+    }
+}
+
 export function MarshalAcl(acl: ACL): any {
     if (acl === undefined) {
         return undefined
@@ -379,6 +387,9 @@ export function AclDisplay(inp: {
         setCurrent(updated)
     }
     const updateProjects = (updated: Map<string,boolean>)=>{
+        const newProjects = {...cloneCurrent(), projects: updated}
+        console.log("new projects: ") // TODO: del
+        console.table(Array.from(newProjects.projects.entries()), ["name", "canWrite"]); // TODO: del
         update({...cloneCurrent(), projects: updated})
     }
     const updateUsers = (updated: Map<string,boolean>)=>{

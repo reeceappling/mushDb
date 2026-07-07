@@ -76,7 +76,7 @@ import {
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
 import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
-import {AclDisplay, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -254,7 +254,7 @@ export default function LcDisplay(
                 knownFruitable: knownFruitable,
                 disposed: disposed,
                 writeTagTo: writeTagTo,
-                acl: acl,
+                acl: MarshalAcl(acl),
             }
             try {
                 // Pics

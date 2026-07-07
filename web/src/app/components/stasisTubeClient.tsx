@@ -56,7 +56,7 @@ import {
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
-import {AclDisplay, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
@@ -223,7 +223,7 @@ export default function StasisTubeDisplay(
                 sale: sale,
                 disposed: disposed,
                 notes: notes,
-                acl: acl,
+                acl: MarshalAcl(acl),
             }
             try {
                 // Pics

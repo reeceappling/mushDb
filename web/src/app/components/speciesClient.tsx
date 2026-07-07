@@ -44,7 +44,13 @@ import {
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {SubstrateRecipeArea, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {AclDefaultAclDisplay, AclDisplay, MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
+import {
+    AclDefaultAclDisplay,
+    AclDisplay,
+    MarshalAcl,
+    NewAllCanWriteAcl,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
@@ -134,7 +140,7 @@ export default function SpeciesDisplay(
         // TODO: validate substrate?
         // Notes, aliases, substrate recipe, and have only
         const body: any = {
-            substrate: substrate, // TODO: something is going wrong with this
+            substrate: substrate, // TODO: something is going wrong with this?
             notes: notes,
             aliases: aliases,
             acl: MarshalAcl(acl),
@@ -207,20 +213,16 @@ export function NewSpeciesForm(
     {handlers, substrateIn}:
     { handlers: NewEntryInput<SpeciesData>, substrateIn?: SubstrateRecipeData }
 ) {
-    const initialAcl: ACL = {
-        users: new Map<string, boolean>(),
-        projects: new Map<string, boolean>(),
-        blanketPerm: true,
-    }
     const [name, setName] = useState("")
     const [sciName, setSciName] = useState("")
     const [aliases, setAliases] = useState<string[]>([])
     const [sub, setSub] = useState(substrateIn)
     const [notes, setNotes] = useState<Note[]>([])
-    const [acl, setAcl] = useState<ACL>(initialAcl)
+    const [acl, setAcl] = useState<ACL>(NewAllCanWriteAcl())
     const [err, setErr] = useState<string | undefined>();
 
     const cookies = useContext(CookiesContext)
+    const baseAcl = NewAllCanWriteAcl()
     const submitNewSpecies = () => {
         console.log("submitting new species")
         if (name === "") {
@@ -237,8 +239,8 @@ export function NewSpeciesForm(
             aliases: aliases,
             recipe: sub._id, // substrate recipe
             notes: notes,
-            acl: acl, // TODO: add this!
-            // defaultAcl starts same as ACL... //defaultAcl: defaultAcl, // TODO: add this! optional because it will keep ACL
+            acl: MarshalAcl(acl), // TODO: add this!
+            // defaultAcl starts same as ACL... //defaultAcl: defaultAcl, // TODO: add this! optional because it will keep ACL? Species starts with default ACL being equal to the species ACL
         }
         DoCreateRequest("species", body, AssertSpecies, allCookies(cookies))
             .then(v => {
@@ -264,7 +266,7 @@ export function NewSpeciesForm(
         </SelectorWrapper>
         </Subform>
         <NewEntryNotes setNotes={setNotes}/>
-        <AclDisplay readonly={false} initial={initialAcl} updateParent={setAcl}/>
+        <AclDisplay readonly={false} initial={baseAcl} updateParent={setAcl}/>
         {/* SUBMIT AREA */}
         <CreateNewEntryButton onSubmit={submitNewSpecies}/>
     </NewEntryFormWrapper>

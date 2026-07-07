@@ -37,7 +37,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {
     AclDisplay, MarshalAcl, UnmarshalAcl,
-    TogglableAreaWithDepth
+    TogglableAreaWithDepth, NewAllCanWriteAcl
 } from "@/app/components/accessControlClient";
 import { ACL } from "./accessControlServer";
 import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
@@ -242,6 +242,8 @@ export function NewGrainBatchForm({handlers, recipe}: {
     const [acl, setAcl] = useState<ACL>({blanketPerm:true})
     const [err, setErr] = useState<string | undefined>()
 
+    const baseAcl = NewAllCanWriteAcl()
+
     const cookies = useContext(CookiesContext)
     const newGrainBatchSubmit = () => {
         if (jarRecipe === undefined) {
@@ -267,11 +269,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
             <JarRecipeSelector doSelect={setJarRecipe} allowCreate={handlers.isTopLevel}
                                creatorInPage={handlers.isTopLevel}/>}
         <NewEntryNotes setNotes={setNotes}/>
-        <AclDisplay readonly={false} updateParent={setAcl} initial={{
-            users:new Map<string,boolean>(),
-            projects:new Map<string,boolean>(),
-            blanketPerm:true,
-        }} />
+        <AclDisplay readonly={false} updateParent={setAcl} initial={baseAcl} />
         <button className={"bottomButton greenButton"} onClick={(e) => {
             e.stopPropagation();
             newGrainBatchSubmit()

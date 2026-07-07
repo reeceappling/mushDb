@@ -27,7 +27,7 @@ export function TestJarRecipeOK() {
         ],
         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
         lastUpdated: 789,
-        acl: TestAcl(), // TODO; dow e want this?
+        acl: TestAcl(),
     })
 }
 
