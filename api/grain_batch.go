@@ -16,6 +16,7 @@ import (
 // needed for grain jars
 
 // TODO: mixed-grain batches are covered through jarRecipe
+// TODO: allow creating grain water jars through this?
 
 type GrainBatch struct {
 	AlternateCollectionIdField `bson:"inline"`

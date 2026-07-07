@@ -291,20 +291,24 @@ func (serv *AuthService) SessionForEmail(email string) (session SessionId, err e
 var UserWhitelist = utils.Set[string]{}
 
 func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser goth.User) (sessionId SessionId, email string, err error) {
+	log := logging.GetSugaredLogger(ctx)
 	var u User
 	email = oauthUser.Email
-	adminEmail := os.Getenv("ADMIN_GMAIL")          // TODO: del!
-	println(adminEmail, email, adminEmail == email) // TODO: del
+	adminEmail := os.Getenv("ADMIN_GMAIL") // TODO: del! This would allow an attacker with server access to just change an env var!
 	coll := DbFrom(ctx).Collection(UserCollName)
 	err = coll.FindOne(ctx, BsonFindFilter("_id", email)).Decode(&u)
 	if err != nil {
-		println("may attempt to create user?") // TODO: del
 		if !errors.Is(err, mongo.ErrNoDocuments) {
-			return "", oauthUser.Email, errors.Join(errors.New("failed to get user. May exist?"), err)
+			err = errors.Join(errors.New("failed to get user. May exist?"), err)
+			log.Errorw("failed to get user. May exist?", "error", err)
+			env.LogIfDev(ctx, err.Error()) // TODO: del?
+			return "", oauthUser.Email, err
 		}
-		adminEmail := os.Getenv("ADMIN_GMAIL")
 		if !UserWhitelist.Contains(email) && email != adminEmail {
-			return "", email, errors.New("user does not exist and is not on the account creation whitelist!")
+			err = errors.New("user does not exist and is not on the account creation whitelist!")
+			log.Errorw("user does not exist and is not on the account creation whitelist!", "error", err)
+			env.LogIfDev(ctx, err.Error()) // TODO: del?
+			return "", email, err
 		}
 		u = User{
 			Email: email,
@@ -315,15 +319,22 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 		}
 
 		if adminEmail != "" && email == adminEmail {
-			println("Admin user signed up!") // TODO; del
+			log.Infow("Creating Admin user for email: " + adminEmail) // TODO: ensure sugared logger is properly set up!
+			println("Creating Admin user for email: " + adminEmail)   // TODO; del
 			logging.GetLogger(ctx).Info("Admin user signed up with email " + email)
 			u.Perms = UserPerms{
 				Admin:    AcctTypeAdmin(),
 				Projects: []projectName{}, // TODO: ADD PROJECTS???
 			}
+		} else {
+			log.Infow("Creating Non-Admin user for email: " + u.Email) // TODO: ensure sugared logger is properly set up!
+			println("Creating Non-Admin user for email: " + u.Email)   // TODO: del?
 		}
+
 		_, err = coll.InsertOne(ctx, u)
 		if err != nil {
+			log.Infow("Failed to add user for email: " + u.Email) // TODO: ensure sugared logger is properly set up!
+			println("Failed to add user for email: " + u.Email)   // TODO: del?
 			return "", email, err
 		}
 		if adminEmail != "" && email == adminEmail {
@@ -336,17 +347,16 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 				return "", email, errors.New("result does not show Admin")
 			}
 		}
-		println("user created, continuing") // TODO: del
 	}
-	if u.Perms.Admin == nil {
-		env.LogIfDev(ctx, "Admin on perms was nil when it should not have been!")
-	} else {
-		adm := "was not admin"
-		if *u.Perms.Admin {
-			adm = "was admin"
-		}
-		env.LogIfDev(ctx, "Admin on perms "+adm)
-	}
+	//if u.Perms.Admin == nil { // TODO: del or reenable for testing
+	//	env.LogIfDev(ctx, "Admin on perms was nil when it should not have been!")
+	//} else {
+	//	adm := "was not admin"
+	//	if *u.Perms.Admin {
+	//		adm = "was admin"
+	//	}
+	//	env.LogIfDev(ctx, "Admin on perms "+adm)
+	//}
 	sessionId, _, err = serv.registerSessionAndResolvePerms(ctx, u)
 	return
 }
