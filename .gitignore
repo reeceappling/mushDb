@@ -75,6 +75,7 @@ letsencrypt
 
 # noCommit
 noCommit/*
+testBackups/*
 
 
 
