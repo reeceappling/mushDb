@@ -915,16 +915,30 @@ a {
     grid-column-end: 4;
     justify-self: end;
 }
+
 .notesAreaV2Grid {
     display: grid;
     width: 100%;
-    grid-template-columns: min-content auto max-content max-content;
+    grid-template-columns: min-content fit-content(100%) max-content max-content;
     grid-auto-flow: row;
     grid-row-gap: 1.5em;
     grid-column-gap: 1em;
     align-items: start;
     align-content: start;
+}
+:not(.subForm) > .notesAreaV2Grid { /* basic view page notes, does not include picture or contam notes!*/
+    /* Regular notes, not those in newPlugs*/
     justify-content: center;
+}
+.notesAreaV2Grid > :nth-child(4n + 2) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.subForm > .notesAreaV2Grid { /*NewEntryNotes*/
+    align-content: start;
+    /* Pushes items to the absolute edges, maximizing space between them */
+    justify-content: space-around; /* TODO: SHOULD BE start?*/
 }
 .inputNumbersInline {
     width: max-content;
@@ -932,4 +946,20 @@ a {
         display: inline-block !important;
     }
 }
-
+.noteTextCell {
+    min-width: 0;
+    width: fit-content;
+    max-width: 100%;
+}
+.noteTextDisplay {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.noteTextEditor {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}

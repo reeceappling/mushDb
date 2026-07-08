@@ -173,9 +173,11 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	// Handle blanket perm
 	var maxPerm = RWPermNothing()
 	if acl.BlanketPerm.CanRead() {
+		println("user can read") // TODO: del!
 		maxPerm = RWPermRead()
 	}
 	if userPerms.isGuest() {
+		println("user was guest, returning perm: ", maxPerm) // TODO: del!
 		return maxPerm
 	}
 

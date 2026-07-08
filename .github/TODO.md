@@ -9,12 +9,14 @@
 - [ ] Make websocket connections more stable. Currently has random closures.
 - [ ] I don't think the websocket manager is handling renews well, if at all...
 - [ ] Disallow guests from even trying to modify things!
-- [ ] Allow not-logged-in users to view public entries without redirecting to the login page...
+- [NO] Allow not-logged-in users to view public entries without redirecting to the login page...
 - [ ] When a reference is used, the referenced item should also update its updated time? Idk, feels weird...
-- [ ] SingleNoteV2 NEEDS SIZING CHANGES DURING EDITING FOR NORMAL NOTES AS WELL AS PICTURE AND CONTAM NOTES!
-- [ ] Notes styling!
-  - [ ] Pictures and Contams should be vertical?
-  - [ ] All others should be horizontal?
+- [x] SingleNoteV2 NEEDS SIZING CHANGES DURING EDITING FOR NORMAL NOTES AS WELL AS PICTURE AND CONTAM NOTES!
+- [x] Notes styling!
+  - [x] Pictures and Contams should be vertical?
+  - [x] All others should be horizontal?
+- [ ] SPECIES LIST NOT WORKING FOR GUESTS! (NOT SHOWING ANYTHING!)
+- [ ] When trying to edit a large note that already exists, clicking the edit button causes the textArea to be very large comparably to its contents!
 
 # In Progress
 ## Actively Working On

@@ -438,7 +438,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi").
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
-		SetTimeout(15 * time.Second)         // TODO: no?
+		SetTimeout(15 * time.Second) // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
@@ -580,7 +580,11 @@ func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresul
 	if err != nil {
 		return nil, err
 	}
-	return getCollectionItemsFromCursor[T](ctx, cursor, &nresults, allowDisposed)
+	var finalNumResults *int = nil
+	if nresults > 0 {
+		finalNumResults = &nresults
+	}
+	return getCollectionItemsFromCursor[T](ctx, cursor, finalNumResults, allowDisposed)
 }
 
 func FindItemTypeForId(ctx context.Context, id MainCollectionId) (MainCollectionItem, error) {

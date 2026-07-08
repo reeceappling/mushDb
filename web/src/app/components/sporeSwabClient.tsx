@@ -29,10 +29,9 @@ import {
     IsValidNote,
     NewEntryNotes,
     Note,
-    NoteEntriesGroup, NotesFormArea,
+    NotesFormArea,
 } from "@/app/components/formSubcomponents/notes";
 import {SporePrintData} from "@/app/components/sporePrintServer";
-import TestAndValidate from "@/app/components/testing/untested";
 import {FruitData} from "@/app/components/fruitServer";
 import {
     AclDisplay,
@@ -150,11 +149,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
         {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
         {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}
         <ImageSelector updateParent={setImage}/>
-        <NoteEntriesGroup preexisting={false} readonly={false} updateParent={ns => {
-            setNotes(ns.map(n => {
-                return n.data
-            }))
-        }} headerLevel={headerLevel}/>
+        <NewEntryNotes setNotes={setNotes}/>
         <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
     </ImportEntryFormWrapper>
 

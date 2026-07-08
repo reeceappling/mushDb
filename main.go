@@ -873,15 +873,16 @@ func getStateMap(r *http.Request) (stateMap, error) {
 	returnedState := r.URL.Query().Get("state")
 	// Split out state and custom parameters
 	parts := strings.Split(returnedState, "|")
-	stateMap := make(map[string]string, len(parts))
+	sm := make(map[string]string, len(parts))
 	for _, part := range parts {
 		keyval := strings.Split(part, "=") // TODO: ensure no equals in strings otherwise!
 		if len(keyval) != 2 {
-			return nil, errors.New("malformed state for part: " + part)
+			println("malformed state for part: " + part)
+			continue
 		}
-		stateMap[keyval[0]] = keyval[1]
+		sm[keyval[0]] = keyval[1]
 	}
-	return stateMap, nil
+	return sm, nil
 }
 
 func getStateMapAndUpdateRequest(r *http.Request) error {

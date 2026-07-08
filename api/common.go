@@ -470,19 +470,21 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 
 	for numItems == nil || len(results) < *numItems {
 		if cursor.TryNext(ctx) {
+
 			var result T
-			//err = checkIdTypeWithRawOnCursor(cursor) // TODO: DEL!
-			//if err != nil {                          // TODO: del!
-			//	panic("failed to check id type! " + err.Error()) // TODO: del!
-			//} // TODO: del!
 			if err = cursor.Decode(&result); err != nil {
 				return nil, err
+			}
+			bs, err := json.Marshal(result)
+			if err == nil {
+				println("CHECKING AN ITEM: " + string(bs)) // TODO: del
 			}
 			// If item is permissioned, ensure the user can read it
 			permedItem, ok := interface{}(result).(Permissioned)
 			if ok {
+				acl := permedItem.Permissions()
 				// If user cannot read or write, do not add
-				if permedItem.Permissions().HighestPermFor(user) == nil {
+				if acl.HighestPermFor(user) == nil {
 					println("skipping entry, user does not have permission!") // TODO: del
 					// Skip this entry
 					continue
