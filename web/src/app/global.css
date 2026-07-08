@@ -920,11 +920,11 @@ a {
     width: 100%;
     grid-template-columns: min-content auto max-content max-content;
     grid-auto-flow: row;
-    grid-row-gap: 1.5em; /* TODO: ok?*/
-    grid-column-gap: 1em; /* TODO: ok?*/
-    align-items: start;/* TODO: ok?*/
-    align-content: start;/* TODO: ok?*/
-    justify-content: center;/* TODO: ok?*/
+    grid-row-gap: 1.5em;
+    grid-column-gap: 1em;
+    align-items: start;
+    align-content: start;
+    justify-content: center;
 }
 .inputNumbersInline {
     width: max-content;
