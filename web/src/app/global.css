@@ -881,3 +881,33 @@ a {
 
 }
 
+.notesViewArea {
+    display: block;
+    & > * {
+
+    }
+}
+.notesAreaV2 {
+    width: 100%;
+    & > tr {
+        width: 100%;
+        & > td {
+            padding: 1em;
+            &:first-child {
+                width: fit-content;
+            }
+            &:nth-child(1) {
+                width: auto;
+            }
+            &:nth-child(2) {
+                width: max-content;
+            }
+            &:nth-child(3) {
+                width: max-content;
+            }
+        }
+    }
+
+    /*display: TODO: FIX THIS AS NEEDED!*/
+}
+

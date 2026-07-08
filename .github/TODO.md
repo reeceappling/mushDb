@@ -12,6 +12,9 @@
 - [ ] Allow not-logged-in users to view public entries without redirecting to the login page...
 - [ ] When a reference is used, the referenced item should also update its updated time? Idk, feels weird...
 - [ ] SingleNoteV2 NEEDS SIZING CHANGES DURING EDITING FOR NORMAL NOTES AS WELL AS PICTURE AND CONTAM NOTES!
+- [ ] Notes styling!
+  - [ ] Pictures and Contams should be vertical?
+  - [ ] All others should be horizontal?
 
 # In Progress
 ## Actively Working On

@@ -21,7 +21,7 @@ import {
     NumericalAreaWithAbsolutes
 } from "./numericInput";
 import DateArea, {NumberToDate} from "./date";
-import {Note, NotesAreaMostRecentImage, NotesFormArea, SingleNoteV2} from "./notes";
+import {Note, NotesAreaMostRecentImage, NotesFormArea, NotesFormAreaPics, SingleNoteV2} from "./notes";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
@@ -545,7 +545,7 @@ export const PixRowExisting = (
     const rightArea = () => {
         return <div className={"picRight" + disabledClass()}>
             <DateArea readonly={true} when={initial.time}/>
-            <NotesFormArea initial={initial.notes} readonly={readonly || false} allowLargeTextBox={false/* TODO: OK?*/}
+            <NotesFormAreaPics initial={initial.notes} readonly={readonly || false} allowLargeTextBox={false/* TODO: OK?*/}
                            updateParent={(nts: AllEntries<Note>) => {
                                const updated = structuredClone(current)
                                updated.data.notes = nts

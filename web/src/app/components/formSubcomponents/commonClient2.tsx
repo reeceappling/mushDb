@@ -2,7 +2,7 @@ import {NewPicWithNotesForm, PicWithNotesIncoming} from "@/app/components/formSu
 import {useEffect, useState} from "react";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
+import {Note, NotesFormArea, NotesFormAreaPics} from "@/app/components/formSubcomponents/notes";
 import {AllEntries, Data} from "@/app/components/formSubcomponents/shared";
 import {InputDecimal, InputNumber, InputText} from "@/app/components/formSubcomponents/numericInput";
 
@@ -96,7 +96,7 @@ export function PixRowNew(
     const rightArea = () => {
         return <div className={"picRight"}>
             <DateArea readonly={true} when={current.time}/>
-            <NotesFormArea readonly={false} initial={[]} allowLargeTextBox={false/* TODO: OK?*/}
+            <NotesFormAreaPics readonly={false} initial={[]} allowLargeTextBox={false/* TODO: OK?*/}
                 updateParent={(nts: AllEntries<Note>) => {
                     const updated = structuredClone(current)
                     updated.notes = nts

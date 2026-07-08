@@ -1,7 +1,7 @@
 // non-client even though it uses state?
 
 import {AllEntries, Data, InitialToAllEntries, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
-import {IsValidNote, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, Note, NotesFormArea, NotesFormAreaPics} from "@/app/components/formSubcomponents/notes";
 import {ImageLocationFor, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";
@@ -255,7 +255,7 @@ export function ContamsRows({initial, updateParent, readonly}: {
                     </>}
                 </div>
                 <div className={"inline" + disabledClass}>
-                    <NotesFormArea readonly={readonly} initial={init.notes} allowLargeTextBox={false/* TODO: OK?*/}
+                    <NotesFormAreaPics readonly={readonly} initial={init.notes} allowLargeTextBox={false/* TODO: OK?*/}
                                    updateParent={nts => {
                         const updated = structuredClone(current)
                         updated[i].data.notes = nts
@@ -348,7 +348,7 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
                         }
                     </div>
                     <div className={"inline"}>
-                        <NotesFormArea readonly={false} initial={[]} allowLargeTextBox={false/* TODO: OK?*/}
+                        <NotesFormAreaPics readonly={false} initial={[]} allowLargeTextBox={false/* TODO: OK?*/}
                             updateParent={nts => {
                                 const updated = structuredClone(current)
                                 updated[i].data.notes = nts.new.map(n => {
