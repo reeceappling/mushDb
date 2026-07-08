@@ -62,6 +62,7 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 	}
 	dbSetupUser := os.Getenv("MONGO_INITDB_SETUP_USERNAME")
 	dbHostPortStr := os.Getenv("DB_HOST_PORT")
+	http.MethodOptions
 	dbHostPort, err := strconv.Atoi(dbHostPortStr)
 	if err != nil {
 		println(errors.Join(errors.New("no db port configured on env var DB_HOST_PORT. Defaulting to 27017"), err).Error())
