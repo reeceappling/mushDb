@@ -88,219 +88,183 @@ export function LiquidEntryForNew({initial, updateParent}: {
         <InputDecimal label={"Percentage by volume"} initial={initial.pct} updateParent={handleFormChangePct}  min={0.0} max={100}/>{/* TODO: min/max ok?*/}
     </>
 }
-
-export function NutrientEntryForNew({initial, updateParent}: {
-    initial: Nutrient,
-    updateParent: (l: Nutrient) => void
-}) {
-    const [current, setCurrent] = useState<Nutrient>(initial)
-    const [errTxt, setErrTxt] = useState<string | undefined>()
-    useEffect(() => {
-        setCurrent(initial)
-    }, [initial]);
-    const handleFormChangeAmt = (val: number) => {
-        const data = {...current};
-        data.amount = val
-        setCurrent(data) // TODO: not working?
-        updateParent(data)
-    }
-    const handleFormChangeUnit = (val: string) => {
-        const data = {...current};
-        data.unit = val
-        setCurrent(data) // TODO: not working?
-        updateParent(data)
-    }
-    return <>
-        <div className={"text-m"}>{current.nutrient}</div>
-        <InputDecimal label={"Amount"} initial={initial.amount} updateParent={handleFormChangeAmt} min={0.0} max={1000.0}/>{/* TODO: min/max ok?*/}
-        {/*<NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}*/}
-        {/*                            errorMessage={err} value={currentValue.amount.toString()}*/}
-        {/*                            onChange={(val?: string) => {*/}
-        {/*                                try {*/}
-        {/*                                    const n = Number(val) // TODO: allow only numbers here*/}
-        {/*                                    if (Number.isNaN(n)) {*/}
-        {/*                                        setErr("NaN input")*/}
-        {/*                                    } else {*/}
-        {/*                                        val && handleFormChangeAmt(n)*/}
-        {/*                                        setErr(undefined)*/}
-        {/*                                    }*/}
-        {/*                                } catch (e) {*/}
-        {/*                                    setErr(JSON.stringify(e))*/}
-        {/*                                }*/}
-        {/*                            }}/>*/}
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt/*TODO: not working properly!!!!*/}
-                                 value={current.unit.toString()}    onChange={(val?: string) => { // TODO: not working properly?
-            try {
-                val && handleFormChangeUnit(val)
-            } catch (e) {
-                console.error(JSON.stringify(e))
-                setErrTxt(JSON.stringify(e))
-            }
-        }}/>
-    </>
-}
-
-export function SugarEntryForNew({initial, updateParent}: {
+export function SugarEntryForNew({
+                                        initial,
+                                        updateParent,
+                                    }: {
     initial: Sugar,
     updateParent: (l: Sugar) => void
 }) {
     const [errTxt, setErrTxt] = useState<string | undefined>()
-    const [current, setCurrent] = useState<Sugar>(initial)
-    useEffect(() => {
-        setCurrent(initial)
-    }, [initial]);
+
     const handleFormChangeAmt = (val: number) => {
-        const data = {...current};
-        data.amount = val
-        setCurrent(data)
-        updateParent(data)
+        updateParent({ ...initial, amount: val })
     }
+
     const handleFormChangeUnit = (val: string) => {
-        const data = {...current};
-        data.unit = val
-        setCurrent(data)
-        updateParent(data)
+        updateParent({ ...initial, unit: val })
     }
+
     return <>
-        <div className={"text-m"}>{current.type}</div>
-        <InputDecimal label={"Amount"} initial={initial.amount} updateParent={handleFormChangeAmt}  min={0.0} max={1000.0}/>{/* TODO: min/max ok?*/}
-        {/*<NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}*/}
-        {/*                            errorMessage={err} value={current.amount.toString()}*/}
-        {/*                            onChange={(val?: string) => {*/}
-        {/*                                try {*/}
-        {/*                                    const n = Number(val) // TODO: allow only numbers here*/}
-        {/*                                    if (Number.isNaN(n)) {*/}
-        {/*                                        setErr("NaN input")*/}
-        {/*                                    } else {*/}
-        {/*                                        val && handleFormChangeAmt(n)*/}
-        {/*                                        setErr(undefined)*/}
-        {/*                                    }*/}
-        {/*                                } catch (e) {*/}
-        {/*                                    setErr(JSON.stringify(e))*/}
-        {/*                                }*/}
-        {/*                            }}/>*/}
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={current.unit.toString()} onChange={(val?: string) => {
-            try {
-                val && handleFormChangeUnit(val)
-            } catch (e) {
-                setErrTxt(JSON.stringify(e))
-            }
-        }}/>
+        <div className={"text-m"}>{initial.type}</div>
+        <InputDecimal
+            label={"Amount"}
+            initial={initial.amount}
+            updateParent={handleFormChangeAmt}
+            min={0.0}
+            max={1000.0}
+        />
+        <InputTextWithSmallTitle
+            label="Unit"
+            readonly={false}
+            errorMessage={errTxt}
+            value={initial.unit}
+            onChange={(val?: string) => {
+                try {
+                    if (val !== undefined) {
+                        handleFormChangeUnit(val)
+                    }
+                } catch (e) {
+                    console.error(JSON.stringify(e))
+                    setErrTxt(JSON.stringify(e))
+                }
+            }}
+        />
     </>
 }
 
-export function AdditiveEntryForNew({initial, updateParent}: {
+export function NutrientEntryForNew({
+                                        initial,
+                                        updateParent,
+                                    }: {
+    initial: Nutrient,
+    updateParent: (l: Nutrient) => void
+}) {
+    const [errTxt, setErrTxt] = useState<string | undefined>()
+
+    const handleFormChangeAmt = (val: number) => {
+        updateParent({ ...initial, amount: val })
+    }
+
+    const handleFormChangeUnit = (val: string) => {
+        updateParent({ ...initial, unit: val })
+    }
+
+    return <>
+        <div className={"text-m"}>{initial.nutrient}</div>
+        <InputDecimal
+            label={"Amount"}
+            initial={initial.amount}
+            updateParent={handleFormChangeAmt}
+            min={0.0}
+            max={1000.0}
+        />
+        <InputTextWithSmallTitle
+            label="Unit"
+            readonly={false}
+            errorMessage={errTxt}
+            value={initial.unit}
+            onChange={(val?: string) => {
+                try {
+                    if (val !== undefined) {
+                        handleFormChangeUnit(val)
+                    }
+                } catch (e) {
+                    console.error(JSON.stringify(e))
+                    setErrTxt(JSON.stringify(e))
+                }
+            }}
+        />
+    </>
+}
+
+export function AdditiveEntryForNew({
+                                        initial,
+                                        updateParent,
+                                    }: {
     initial: Additive,
     updateParent: (l: Additive) => void
 }) {
     const [errTxt, setErrTxt] = useState<string | undefined>()
-    const [current, setCurrent] = useState<Additive>(initial)
-    useEffect(() => {
-        setCurrent(initial)
-    }, [initial]);
-    const handleFormChangeAmt = (val: number) => {
-        const data = {...current};
-        data.amount = val
-        setCurrent(data) // TODO: validate working as preferred...
-        updateParent(data)
-    }
-    const handleFormChangeUnit = (val: string) => {
-        const data = {...current};
-        data.unit = val
-        setCurrent(data) // TODO: validate working as preferred...
-        updateParent(data)
-    }
-    return <>
-        <div className={"text-m"}>{current.additive}</div>
-        {/* TODO: ensure floating */}
-        <InputDecimal label={"Amount"} initial={initial.amount} updateParent={handleFormChangeAmt}  min={0.0} max={1000.0}/>{/* TODO: min/max ok?*/}
 
-        {/*<NumericalAreaWithAbsolutes label="Amount" mode="floating" min={0.0} max={100.0} readonly={false}*/}
-        {/*                            errorMessage={err} value={currentValue.amount.toString()}*/}
-        {/*                            onChange={(val?: string) => {*/}
-        {/*                                try {*/}
-        {/*                                    const n = Number(val) // TODO: allow only numbers here*/}
-        {/*                                    if (Number.isNaN(n)) {*/}
-        {/*                                        setErr("NaN input")*/}
-        {/*                                    } else {*/}
-        {/*                                        val && handleFormChangeAmt(n)*/}
-        {/*                                        setErr(undefined)*/}
-        {/*                                    }*/}
-        {/*                                } catch (e) {*/}
-        {/*                                    setErr(JSON.stringify(e))*/}
-        {/*                                }*/}
-        {/*                            }}/>*/}
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={current.unit.toString()} onChange={(val?: string) => {
-            try {
-                val && handleFormChangeUnit(val)
-            } catch (e) {
-                setErrTxt(JSON.stringify(e))
-            }
-        }}/>
+    const handleFormChangeAmt = (val: number) => {
+        updateParent({ ...initial, amount: val })
+    }
+
+    const handleFormChangeUnit = (val: string) => {
+        updateParent({ ...initial, unit: val })
+    }
+
+    return <>
+        <div className={"text-m"}>{initial.additive}</div>
+        <InputDecimal
+            label={"Amount"}
+            initial={initial.amount}
+            updateParent={handleFormChangeAmt}
+            min={0.0}
+            max={1000.0}
+        />
+        <InputTextWithSmallTitle
+            label="Unit"
+            readonly={false}
+            errorMessage={errTxt}
+            value={initial.unit}
+            onChange={(val?: string) => {
+                try {
+                    if (val !== undefined) {
+                        handleFormChangeUnit(val)
+                    }
+                } catch (e) {
+                    console.error(JSON.stringify(e))
+                    setErrTxt(JSON.stringify(e))
+                }
+            }}
+        />
     </>
 }
 
-export function DowelEntryForNew({initial, updateParent}: {
+export function DowelEntryForNew({
+                                        initial,
+                                        updateParent,
+                                    }: {
     initial: DowelType,
     updateParent: (l: DowelType) => void
 }) {
-    // TODO: const [err, setErr] = useState<string | undefined>()
     const [errTxt, setErrTxt] = useState<string | undefined>()
-    const [current, setCurrent] = useState<DowelType>(initial)
-    useEffect(() => {
-        setCurrent(initial)
-    }, [initial]);
-    // TODO: const [radiusDraft, setRadiusDraft] = useState(currentValue.size.toString())
-    // TODO: useEffect(() => {
-    //     setRadiusDraft(currentValue.size.toString())
-    // }, [currentValue.size])
-    const handleFormChangeRadius = (val: number) => {
-        updateParent({...structuredClone(current), size: val}) // TODO: switch back if not work
-        // const data = structuredClone(currentValue);
-        // data.size = val
-        // updateParent(data)
+
+    const handleFormChangeAmt = (val: number) => {
+        updateParent({ ...initial, size: val })
     }
+
     const handleFormChangeUnit = (val: string) => {
-        updateParent({...structuredClone(current), units: val}) // TODO: switch back if not work
-        // const data = structuredClone(currentValue);
-        // data.units = val
-        // updateParent(data)
+        updateParent({ ...initial, units: val })
     }
+
     return <>
-        <div className={"text-m"}>{current.wood}</div>
-        <InputDecimal initial={0.25} updateParent={handleFormChangeRadius} label={"Radius Magnitude"} min={0.0} max={1000.0}/>
-        {/*<NumericalAreaWithAbsolutes label="Radius Magnitude" mode="floating" min={0.0} max={1000.0} readonly={false}*/}
-        {/*                            errorMessage={err} value={radiusDraft}*/}
-        {/*                            onChange={(val?: string) => {*/}
-        {/*                                const next = val ?? ""*/}
-        {/*                                setRadiusDraft(next) // TODO: do this on any other absolutes components...*/}
-        {/*                                // allow in-progress values like "1."*/}
-        {/*                                if (next === "" || next.endsWith(".")) {*/}
-        {/*                                    setErr(undefined)*/}
-        {/*                                    return*/}
-        {/*                                }*/}
-        {/*                                try {*/}
-        {/*                                    const n = Number(val) // TODO: allow only numbers here*/}
-        {/*                                    if (!Number.isNaN(n)) {*/}
-        {/*                                        val && handleFormChangeRadius(n)*/}
-        {/*                                        setErr(undefined)*/}
-        {/*                                    } else {*/}
-        {/*                                        setErr("NaN input")*/}
-        {/*                                    }*/}
-        {/*                                } catch (e) {*/}
-        {/*                                    setErr(JSON.stringify(e))*/}
-        {/*                                }*/}
-        {/*                            }}/>*/}
-        <InputTextWithSmallTitle label="Unit" readonly={false} errorMessage={errTxt}
-                                 value={current.units.toString()} onChange={(val?: string) => {
-            try {
-                val && handleFormChangeUnit(val)
-            } catch (e) {
-                setErrTxt(JSON.stringify(e))
-            }
-        }}/>
+        <div className={"text-m"}>{initial.wood}</div>
+        <InputDecimal
+            label={"Radius"/* TODO: DIAMETER? */}
+            initial={initial.size}
+            updateParent={handleFormChangeAmt}
+            min={0.0}
+            max={1000.0}
+        />
+        <InputTextWithSmallTitle
+            label="Unit"
+            readonly={false}
+            errorMessage={errTxt}
+            value={initial.units}
+            onChange={(val?: string) => {
+                try {
+                    if (val !== undefined) {
+                        handleFormChangeUnit(val)
+                    }
+                } catch (e) {
+                    console.error(JSON.stringify(e))
+                    setErrTxt(JSON.stringify(e))
+                }
+            }}
+        />
     </>
 }
 

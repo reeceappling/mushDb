@@ -381,7 +381,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
         {err != undefined && <div>{"Error: " + err}</div>}
         <div>
             <div className={"text-lg"}>{"Dowels: "}</div>
-            <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
+            <WoodEntriesGroupForNew initial={dowelTypes/* TODO: OR []?*/} updateParent={setDowelTypes}/>
         </div>
 
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
@@ -439,7 +439,7 @@ export function NewPlugsForm(
         <ErrorDisplay err={err}/>
         <Subform>
             <div className={"text-lg"}>{"Dowels: "}</div>
-            <WoodEntriesGroupForNew currentEntries={dowelTypes} updateParent={setDowelTypes}/>
+            <WoodEntriesGroupForNew initial={dowelTypes/* TODO: OR []?*/} updateParent={setDowelTypes}/>
         </Subform>
         <Subform>
 

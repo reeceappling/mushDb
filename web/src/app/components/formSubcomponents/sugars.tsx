@@ -6,9 +6,9 @@ import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
-import {RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
+import {NutrientEntryForNew, RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
-import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
+import {Nutrient, NutrientTypeSelectorForNew} from "@/app/components/formSubcomponents/nutrients";
 import {Antibiotic} from "@/app/components/formSubcomponents/antibiotic";
 
 export interface Sugar {
@@ -98,39 +98,53 @@ export function SugarsAreaReadOnly({values}: {values?:Sugar[]}) {
     </div>
 }
 
-export function SugarEntriesGroupForNew({initial, updateParent}: {initial: Sugar[], updateParent: (l: Sugar[])=>void}){
-    const [current, setCurrent] = useState<Sugar[]>(initial);
-    useEffect(()=>{
+export function SugarEntriesGroupForNew({
+                                                initial,
+                                                updateParent,
+                                            }: {
+    initial: Sugar[],
+    updateParent: (l: Sugar[]) => void
+}) {
+    const [current, setCurrent] = useState<Sugar[]>(initial)
+
+    useEffect(() => {
         setCurrent(initial)
-    },[initial])
-    const handleSelect = (v: string) => {
-        const data = [...(current || []), {type: v, amount: 0, unit: ""}];
-        setCurrent(data)
-    }
-    const doUpdate = (upd:Sugar[]) => {
+    }, [initial])
+
+    const doUpdate = (upd: Sugar[]) => {
         setCurrent(upd)
         updateParent(upd)
     }
+
+    const handleSelectType = (v: string) => {
+        const data = [...current, { type: v, amount: 1, unit: "g" }]
+        doUpdate(data)
+    }
+
     return <div>
-        {current.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
-            {current.map((n,i)=>{
-            return <div key={n.type} className={"contentsOnly"}>
-                <SugarEntryForNew initial={{
-                    type: n.type,
-                    amount: initial.length>i?initial[i].amount:1.0, // TODO: ok?
-                    unit: initial.length>i?initial[i].unit:"g", // TODO: ok? // TODO: not working properly!!!!
-                }} updateParent={(updated: Sugar) => {
-                    doUpdate([...(current || [])].map((existing) => {
-                        return existing.type !== n.type ? existing : updated
-                    }))
-                }}/>
-                <RemoveButton txt={"Remove"} click={()=>{
-                    doUpdate([...(current || [])].filter((existing) => existing.type !== n.type))
-                }} />
-            </div>
-        })}
+        {current.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
+            {current.map((n, i) => {
+                return <div key={n.type} className={"contentsOnly"}>
+                    <SugarEntryForNew
+                        initial={n}
+                        updateParent={(updated: Sugar) => {
+                            doUpdate(current.map((existing, idx) => idx === i ? updated : existing))
+                        }}
+                    />
+                    <RemoveButton
+                        txt={"Remove"}
+                        click={() => {
+                            doUpdate(current.filter((_, idx) => idx !== i))
+                        }}
+                    />
+                </div>
+            })}
         </div>}
-        <SugarTypeSelectorForNew onSelect={(val)=>{val && handleSelect(val)}} blacklist={current.map((v)=>{return v.type})} readonly={false} />
+        <SugarTypeSelectorForNew
+            onSelect={(val) => { if (val) handleSelectType(val) }}
+            blacklist={current.map((v) => v.type)}
+            readonly={false}
+        />
     </div>
 }
 

@@ -7,10 +7,10 @@ import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AdditiveEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
+import {AdditiveEntryForNew, RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
 import {useEffect, useState} from "react";
-import {Sugar} from "@/app/components/formSubcomponents/sugars";
+import {Sugar, SugarTypeSelectorForNew} from "@/app/components/formSubcomponents/sugars";
 
 export interface Additive {
     additive: string
@@ -90,46 +90,51 @@ export function AdditivesAreaReadOnly({values}: {values?:Additive[]}) {
         })}
     </div>
 }
-
-export function AdditiveEntriesGroupForNew({initial, updateParent}: {
+export function AdditiveEntriesGroupForNew({
+                                            initial,
+                                            updateParent,
+                                        }: {
     initial: Additive[],
     updateParent: (l: Additive[]) => void
 }) {
-    const [current, setCurrent] = useState<Additive[]>(initial);
-    useEffect(()=>{
+    const [current, setCurrent] = useState<Additive[]>(initial)
+
+    useEffect(() => {
         setCurrent(initial)
-    },[initial])
-    const handleSelect = (v: string) => {
-        const data = [...(current || []), {additive: v, amount: 0, unit: ""}];
-        setCurrent(data)
-    }
-    const doUpdate = (upd:Additive[]) => {
+    }, [initial])
+
+    const doUpdate = (upd: Additive[]) => {
         setCurrent(upd)
         updateParent(upd)
     }
+
+    const handleSelectType = (v: string) => {
+        const data = [...current, { additive: v, amount: 1, unit: "g" }] // TODO: MODIFY ON OTHERS!
+        doUpdate(data)
+    }
+
     return <div>
         {current.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
             {current.map((n, i) => {
                 return <div key={n.additive} className={"contentsOnly"}>
-                    <AdditiveEntryForNew initial={{
-                        additive:n.additive,
-                        amount: initial.length>i?initial[i].amount:1.0, // TODO: ok?
-                        unit: initial.length>i?initial[i].unit:"g", // TODO: ok?
-                    }} updateParent={(updated: Additive) => {
-                        doUpdate([...(current || [])].map((existing) => {
-                            return existing.additive !== n.additive ? existing : updated
-                        }))
-                    }}/>
-                    <RemoveButton txt={"Remove"} click={() => {
-                        doUpdate([...(current || [])].filter((existing) => existing.additive !== n.additive))
-                    }}/>
+                    <AdditiveEntryForNew
+                        initial={n}
+                        updateParent={(updated: Additive) => {
+                            doUpdate(current.map((existing, idx) => idx === i ? updated : existing))
+                        }}
+                    />
+                    <RemoveButton
+                        txt={"Remove"}
+                        click={() => {
+                            doUpdate(current.filter((_, idx) => idx !== i))
+                        }}
+                    />
                 </div>
             })}
         </div>}
-        <AdditiveTypeSelectorForNew onSelect={(val) => {
-            val && handleSelect(val)
-        }} blacklist={current.map((v) => {
-            return v.additive
-        })}/>
+        <AdditiveTypeSelectorForNew
+            onSelect={(val) => { if (val) handleSelectType(val) }}
+            blacklist={current.map((v) => v.additive)}
+        />
     </div>
 }
