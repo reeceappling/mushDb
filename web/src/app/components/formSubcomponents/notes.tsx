@@ -214,28 +214,28 @@ export function NotesAreaViewSubcomponent({initial, updateParent, readonly, allo
 
         return <>
             {existing.map((n, i) => {
-                return <tr key={i}>
+                return <>
                 {/*// return <div key={i} className={"existingNote" + (n.disabled ? " disabled" : "")}>*/}
-                    <SingleNoteV3 initial={initial[i]} readonly={readonly}
+                    <SingleNoteV3 key={i+"sn"} initial={initial[i]} readonly={readonly}
                                   updateParent={nd => {
                                       const updated = structuredClone(existing)
                                       updated[i] = structuredClone(nd)
                                       updateExisting(updated)
                                   }}/>
-                    <td>{readonly || <RemoveNoteButton disabled={n.disabled} click={() => {// TODO: does this need to be in a div?
+                    <div key={i+"rnb"} >{readonly || <RemoveNoteButton disabled={n.disabled} click={() => {// TODO: does this need to be in a div?
                         const updated = structuredClone(existing)
                         updated[i].disabled = !n.disabled
                         updateExisting(updated)
-                    }}/>}</td>
-                </tr>
+                    }}/>}</div>
+                </>
             })}
         </>
     }
-    return <table className={"notesAreaV2"}>
+    return <div className={"notesAreaV2Grid"}>
         {existingArea()}
         <NewNotesSubArea count={reloadCount} readonly={readonly} updateParent={updateCreated}
                          allowLargeTextBox={allowLargeTextBox}/>
-    </table>
+    </div>
 }
 export function NotesAreaPicsViewSubcomponent({initial, updateParent, readonly, allowLargeTextBox}: {
     initial: Note[],
@@ -337,24 +337,24 @@ export function NewNotesSubArea({count, readonly, updateParent, allowLargeTextBo
             if (n.disabled) {
                 return null
             }
-            return <tr key={i}>
+            return <>
             {/*return <div key={i}>*/}
-                <SingleNoteV3 readonly={false} startEditing={true}
+                <SingleNoteV3 key={i+"sn"} readonly={false} startEditing={true}
                               updateParent={nd => {
                                   const updated = structuredClone(notes)
                                   updated[i].data = structuredClone(nd.data)
                                   propagateUpdate(updated)
                               }}/>
-                <td><RemoveNewNoteButton click={() => { // TODO: does this need to be in a div?
+                <RemoveNewNoteButton key={i+"rnnb"} click={() => { // TODO: does this need to be in a div?
                     const updated = structuredClone(notes)
                     updated[i].disabled = true
                     propagateUpdate(updated)
-                }}/></td>
-            </tr>
+                }}/>
+            </>
         })}
-        <tr>
+        <div className={"createNewNoteButton"}>
             <button className={"basicButtonSmall"} onClick={createNewNote}>{"Create New Note"}</button>
-        </tr>
+        </div>
     </>
 
 
@@ -393,7 +393,7 @@ export function NewNotesPicsSubArea({count, readonly, updateParent, allowLargeTe
                 return null
             }
             return <div key={i}>
-                <SingleNoteV2 readonly={false} startEditing={true} allowLargeBox={allowLargeTextBox}
+                <SingleNotePics readonly={false} startEditing={true} allowLargeBox={allowLargeTextBox}
                               updateParent={nd => {
                                   const updated = structuredClone(notes)
                                   updated[i].data = structuredClone(nd.data)
@@ -1022,19 +1022,19 @@ export function SingleNoteV3(
     }
 
     return <>
-        <td><DateArea readonly={readonly || !editing} when={val.data.time} updateParent={(newDate) => {
+        <div><DateArea readonly={readonly || !editing} when={val.data.time} updateParent={(newDate) => {
             const updated = structuredClone(val);
             updated.data.time = newDate
             handleChangeNote(updated)
-        }}/></td>
+        }}/></div>
         {(!readonly && editing) ? <>
-            <td>{largeNoteEditArea}</td>
-            <td>{/*empty button area*/}</td>
+            <div>{largeNoteEditArea}</div>
+            <div>{/*empty button area*/}</div>
         </> : <>
-            <td><div>{val.data.note}</div></td>
-            <td><button className={"basicButtonSmall"} onClick={() => {
+            <div>{val.data.note}</div>
+            <button className={"basicButtonSmall"} onClick={() => {
                 setEditing(!editing)
-            }}>{"Edit Note"}</button></td>
+            }}>{"Edit Note"}</button>
         </>}
     </>
 }

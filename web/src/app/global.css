@@ -910,4 +910,26 @@ a {
 
     /*display: TODO: FIX THIS AS NEEDED!*/
 }
+.createNewNoteButton{
+    grid-column-start: 1;
+    grid-column-end: 4;
+    justify-self: end;
+}
+.notesAreaV2Grid {
+    display: grid;
+    width: 100%;
+    grid-template-columns: min-content auto max-content max-content;
+    grid-auto-flow: row;
+    grid-row-gap: 1.5em; /* TODO: ok?*/
+    grid-column-gap: 1em; /* TODO: ok?*/
+    align-items: start;/* TODO: ok?*/
+    align-content: start;/* TODO: ok?*/
+    justify-content: center;/* TODO: ok?*/
+}
+.inputNumbersInline {
+    width: max-content;
+    & > * {
+        display: inline-block !important;
+    }
+}
 

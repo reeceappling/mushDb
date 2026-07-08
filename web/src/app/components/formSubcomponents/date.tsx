@@ -110,9 +110,11 @@ export default function DateArea(
             {(pre !== "" && pre !== undefined) && <div>{pre}</div> /* TODO: P OK? */}
             <div className={'dateEditable'}>
                 <div className={"inlineChildren"}>
-                    <InputNumber2 step={1} min={1} max={12} readonly={false} mode={"integer"} errorMessage={month.err} value={""+(month.n+1)}  onChange={(e)=>{updateMonth(e||"")}}/>
-                    <InputNumber2 step={1} min={1} max={31} readonly={false} mode={"integer"} errorMessage={day.err} value={""+day.n}  onChange={(e)=>{updateDay(e||"")}}/>
-                    <InputNumber4 step={1} min={2000} max={10000} readonly={false} mode={"integer"} errorMessage={year.err} value={""+year.n}  onChange={(e)=>{updateYear(e||"")}}/>
+                    <div className={"inlineChildren inputNumbersInline"}>{/*TODO: MAYBE DELETE THIS WRAPPER DIV*/}
+                        <InputNumber2 step={1} min={1} max={12} readonly={false} mode={"integer"} errorMessage={month.err} value={""+(month.n+1)}  onChange={(e)=>{updateMonth(e||"")}}/>
+                        <InputNumber2 step={1} min={1} max={31} readonly={false} mode={"integer"} errorMessage={day.err} value={""+day.n}  onChange={(e)=>{updateDay(e||"")}}/>
+                        <InputNumber4 step={1} min={2000} max={10000} readonly={false} mode={"integer"} errorMessage={year.err} value={""+year.n}  onChange={(e)=>{updateYear(e||"")}}/>
+                    </div>
                     {/*<input className={"monthInput"} type="text" value={month.n+1} onChange={(e)=>{updateMonth(e.currentTarget.value)}}/>*/}
                     {/*<input className={"dayInput"} type="text" value={day.n} onChange={(e)=>{updateDay(e.currentTarget.value)}}/>*/}
                     {/*<input className={"yearInput"} type="text" value={year.n} onChange={(e)=>{updateYear(e.currentTarget.value)}}/>*/}
