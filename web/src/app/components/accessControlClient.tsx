@@ -227,7 +227,7 @@ export function AclUsersDisplayInternal({readonly, initial, onClick, updateParen
                         const newUsrs = new Map(users).set(email, b)
                         update(newUsrs)
                     }}/>
-                    <text>{"Can " + (canWrite ? "edit" : "view")}</text>
+                    {/*<text>{"Can " + (canWrite ? "edit" : "view")}</text>TODO: consider re-adding*/}
                     <RemoveButton txt={"Remove user"} click={() => {
                         removeUsr(email)
                     }}/>

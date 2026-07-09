@@ -85,7 +85,7 @@ var SessionUserProjectsHandler http.HandlerFunc = func(w http.ResponseWriter, r 
 //		//GET ALL USERS FOR IDS (from db)
 //		results := make([]User, len(ssups.Ids))
 //		cursor, err := DbFrom(ctx).Collection(UserCollName).
-//			Find(ctx, bson.M{"_id": bson.M{"$in": ssups.Ids}})
+//			Find(ctx, bson.M{IDfld: bson.M{"$in": ssups.Ids}})
 //		if err != nil {
 //			return ClientSideUserPermsSubset{}, err
 //		}

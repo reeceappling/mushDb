@@ -309,7 +309,7 @@ type ResolvedUserPerms struct {
 func (perms ResolvedUserPerms) GetUser(ctx context.Context) (*User, error) {
 	var usr = &User{}
 	email := perms.Email
-	err := DbFrom(ctx).Collection(UserCollName).FindOne(ctx, BsonFindFilter("_id", email)).Decode(usr)
+	err := DbFrom(ctx).Collection(UserCollName).FindOne(ctx, BsonFindFilter(IDfld, email)).Decode(usr)
 	return usr, err
 }
 func (perms ResolvedUserPerms) HasPermissionToEdit(item Permissioned) bool {

@@ -503,7 +503,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(LCCollectionName)
 	// go get current LC
 	existing := LiquidCulture{}
-	err = coll.FindOne(ctx, BsonFindByIdFilterOrdered(*mainCollId) /*BsonFindFilter("_id", *mainCollId)*/).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindByIdFilterOrdered(*mainCollId) /*BsonFindFilter(IDfld, *mainCollId)*/).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

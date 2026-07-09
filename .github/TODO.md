@@ -17,6 +17,7 @@
   - [x] All others should be horizontal?
 - [ ] SPECIES LIST NOT WORKING FOR GUESTS! (NOT SHOWING ANYTHING!)
 - [ ] When trying to edit a large note that already exists, clicking the edit button causes the textArea to be very large comparably to its contents!
+- [ ] Pagination on list pages. Use query params (or path) to determine which item to use bson.M{"_id":bson.M{"$gt": lastId}}
 
 # In Progress
 ## Actively Working On

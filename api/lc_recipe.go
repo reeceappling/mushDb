@@ -33,7 +33,7 @@ type LcRecipeField struct {
 
 func (field LcRecipeField) Get(ctx context.Context) (out LcRecipe, err error) {
 	err = DbFrom(ctx).Collection(LcRecipesCollectionName).FindOne(ctx, bson.M{
-		"_id": field.Recipe,
+		IDfld: field.Recipe,
 	}).Decode(&out)
 	return out, err
 }

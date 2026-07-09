@@ -387,7 +387,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(SlantsCollectionName)
 	// go get current plate
 	existing := Slant{}
-	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

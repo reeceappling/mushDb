@@ -80,7 +80,7 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 // Perms have not been checked yet
 func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out MainCollectionItem, err error) {
 	println("reading mcitem from " + resultItemType.CollectionName())
-	encodedResult := DbFrom(ctx).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id))
+	encodedResult := DbFrom(ctx).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter(IDfld, id))
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -100,7 +100,7 @@ func GetMainCollectionItem[T MainCollectionItem](ctx context.Context, id MainCol
 // Perms have not been checked yet // TODO: validate works
 func GetMainCollectionItemSpecific[T MainCollectionItem](ctx context.Context, id MainCollectionId, resultItemType T) (out T, err error) {
 	println("B reading mcitem from " + resultItemType.CollectionName())
-	encodedResult := DbFrom(ctx).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id))
+	encodedResult := DbFrom(ctx).Collection(resultItemType.CollectionName()).FindOne(ctx, BsonFindFilter(IDfld, id))
 	if encodedResult.Err() != nil {
 		return resultItemType, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -123,7 +123,7 @@ func GetMainCollectionItemSpecific[T MainCollectionItem](ctx context.Context, id
 //	if err != nil {
 //		return out, err
 //	}
-//	err = db.Collection(out.CollectionName()).FindOne(ctx, BsonFindFilter("_id", id)).Decode(&out)
+//	err = db.Collection(out.CollectionName()).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&out)
 //	if err != nil {
 //		return nil, err // mongo.ErrNoDocuments if 404
 //	}
@@ -140,7 +140,7 @@ func GetMainCollectionItemSpecific[T MainCollectionItem](ctx context.Context, id
 
 func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id U, item T) (out T, err error) {
 	err = DbFrom(ctx).Collection(item.CollectionName()).
-		FindOne(ctx, BsonFindFilter("_id", id)).Decode(item)
+		FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(item)
 	return item, err
 }
 
@@ -149,7 +149,7 @@ func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdTyp
 	out = item
 	encodedResult := DbFrom(ctx).
 		Collection(item.CollectionName()).
-		FindOne(ctx, BsonFindFilter("_id", id))
+		FindOne(ctx, BsonFindFilter(IDfld, id))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -178,7 +178,7 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 	out = Species{}
 	encodedResult := DbFrom(ctx).
 		Collection(SpeciesCollectionName).
-		FindOne(ctx, BsonFindFilter("_id", name))
+		FindOne(ctx, BsonFindFilter(IDfld, name))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}
@@ -208,7 +208,7 @@ func GetSubspeciesByNameInTxn(ctx context.Context, name string) (out Subspecies,
 	out = Subspecies{}
 	encodedResult := DbFrom(ctx).
 		Collection(SubspeciesCollectionName).
-		FindOne(ctx, BsonFindFilter("_id", name))
+		FindOne(ctx, BsonFindFilter(IDfld, name))
 	if encodedResult.Err() != nil {
 		return out, encodedResult.Err() // mongo.ErrNoDocuments if 404
 	}

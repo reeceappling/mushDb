@@ -295,10 +295,11 @@ type NutrientMeasurement struct {
 type Nutrient string
 
 // TODO: add all of these to autogenned
-var nutrients = []Nutrient{LME, Potato}
+var nutrients = []Nutrient{LME, Potato, BRF}
 var (
 	LME    Nutrient = "LME"
 	Potato Nutrient = "potato flakes"
+	BRF    Nutrient = "Brown rice flour"
 )
 
 // TODO: add all of these to autogenned
@@ -402,7 +403,7 @@ func ValidColor(c Colorant) bool {
 }
 
 type Additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
-var additives = []Additive{Vermiculite, Perlite, Gypsum, YeastNutrient}
+var additives = []Additive{Vermiculite, Perlite, Gypsum, YeastNutrient, CoffeeGrounds}
 
 // TODO: add all of these to autogenned
 var (
@@ -410,6 +411,7 @@ var (
 	Perlite       Additive = "perlite"
 	Gypsum        Additive = "gypsum"
 	YeastNutrient Additive = "yeast nutrient"
+	CoffeeGrounds Additive = "Coffee Grounds"
 )
 
 type Antibiotic string

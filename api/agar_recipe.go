@@ -317,7 +317,7 @@ type AgarRecipeField struct {
 
 func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error) {
 	err = DbFrom(ctx).Collection(AgarRecipesCollectionName).FindOne(ctx, bson.M{
-		"_id": field.AgarRecipe,
+		IDfld: field.AgarRecipe,
 	}).Decode(&out)
 	return out, err
 }
@@ -350,7 +350,7 @@ func deleteAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete if not found elsewhere!
-	deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
 	if err != nil {
 		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
 		return

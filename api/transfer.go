@@ -285,7 +285,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		fromType, err = getEntryTypeForId(ctx, parentId)
 	}
 	// Get parent and child items
-	err = DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": childId}).Decode(&childMapEntry)
+	err = DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{IDfld: childId}).Decode(&childMapEntry)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			http.Error(w, "child not found in id db: "+err.Error(), http.StatusNotFound)

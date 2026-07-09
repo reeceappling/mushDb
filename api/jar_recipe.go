@@ -30,7 +30,7 @@ func (field JarRecipeRequiredField) Get(ctx context.Context) (out JarRecipe, err
 	println("searching for recipe: ", field.Recipe.AsBase58(), string(field.Recipe[:]))
 	out = JarRecipe{}
 	coll := DbFrom(ctx).Collection(JarRecipesCollectionName)
-	findFilter := BsonFindByIdFilterUnordered(field.Recipe) // TODO: BsonFindByIdFilterOrdered(field.Recipe) /* TODO: ??? bson.M{"_id": field.Recipe}*/
+	findFilter := BsonFindByIdFilterUnordered(field.Recipe) // TODO: BsonFindByIdFilterOrdered(field.Recipe) /* TODO: ??? bson.M{IDfld: field.Recipe}*/
 	err = coll.FindOne(ctx, findFilter).Decode(&out)
 	return out, err
 }
@@ -51,7 +51,7 @@ func checkIdTypeWithRaw[T bson.M | bson.D](ctx context.Context, collection *mong
 	}
 
 	// Lookup looks up an element in the raw document by key
-	idElement, err := rawDoc.LookupErr("_id")
+	idElement, err := rawDoc.LookupErr(IDfld)
 	if err != nil {
 		fmt.Println("_id field does not exist in this document")
 		return
@@ -71,7 +71,7 @@ func checkIdTypeWithRawOnCursor(cursor *mongo.Cursor) error {
 	}
 
 	// Lookup looks up an element in the raw document by key
-	idElement, err := rawDoc.LookupErr("_id")
+	idElement, err := rawDoc.LookupErr(IDfld)
 	if err != nil {
 		println("_id field does not exist in this document: " + err.Error())
 		return errors.Join(err, errors.New("_id field does not exist in this document"))
@@ -320,7 +320,7 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(JarRecipesCollectionName)
 	existing := JarRecipe{}
-	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

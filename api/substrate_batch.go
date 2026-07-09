@@ -165,7 +165,7 @@ type SubstrateBatchField struct {
 
 func (field SubstrateBatchField) Get(ctx context.Context) (out SubstrateBatch, err error) {
 	err = DbFrom(ctx).Collection(SubstrateBatchCollectionName).FindOne(ctx, bson.M{
-		"_id": field.SubstrateBatch,
+		IDfld: field.SubstrateBatch,
 	}).Decode(&out)
 	return out, err
 }
@@ -224,7 +224,7 @@ func deleteSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete if not found elsewhere!
-	deleteResult, err := db.Collection(SubstrateBatchCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	deleteResult, err := db.Collection(SubstrateBatchCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
 	if err != nil {
 		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
 		return

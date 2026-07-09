@@ -352,7 +352,7 @@ func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(SalesCollectionName)
 	existing := Sale{}
-	err = coll.FindOne(ctx, bson.M{"_id": id}).Decode(&existing)
+	err = coll.FindOne(ctx, bson.M{IDfld: id}).Decode(&existing)
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {

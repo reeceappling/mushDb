@@ -65,7 +65,7 @@ type WaterJarField struct {
 }
 
 func (field WaterJarField) Get(ctx context.Context) (out WaterJar, err error) {
-	err = DbFrom(ctx).Collection(WaterJarsCollectionName).FindOne(ctx, BsonFindFilter("_id", field.WaterSource)).Decode(&out)
+	err = DbFrom(ctx).Collection(WaterJarsCollectionName).FindOne(ctx, BsonFindFilter(IDfld, field.WaterSource)).Decode(&out)
 	return out, err
 }
 
@@ -245,7 +245,7 @@ func deleteWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete if not found elsewhere!
-	deleteResult, err := db.Collection(WaterJarsCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	deleteResult, err := db.Collection(WaterJarsCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
 	if err != nil {
 		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
 		return

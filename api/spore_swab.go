@@ -263,7 +263,7 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 
 	// go get current sporeSwab
 	existing := SporeSwab{}
-	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
@@ -363,7 +363,7 @@ func deleteSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 
 func DeleteCollectionItem[U CollectionId](ctx context.Context, collName string, id U, w http.ResponseWriter) {
 	idStr := string(id.AsBase58())
-	deleteResult, err := DbFrom(ctx).Collection(collName).DeleteOne(ctx, BsonFindFilter("_id", id)) // TODO: _id always ok here?
+	deleteResult, err := DbFrom(ctx).Collection(collName).DeleteOne(ctx, BsonFindFilter(IDfld, id)) // TODO: _id always ok here?
 	if err != nil {
 		http.Error(w, "failed to delete item "+idStr+" from "+collName+": "+err.Error(), http.StatusInternalServerError)
 		return

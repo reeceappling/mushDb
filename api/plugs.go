@@ -515,7 +515,7 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: overh
 
 	existing := &PlugsJar{}
 	db := DbFrom(ctx)
-	err = db.Collection(PlugsCollectionName).FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
+	err = db.Collection(PlugsCollectionName).FindOne(ctx, BsonFindFilter(IDfld, *mainCollId)).Decode(existing)
 	if err != nil {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

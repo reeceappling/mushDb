@@ -33,7 +33,7 @@ func (u *User) Reload(ctx context.Context) error {
 	}
 	return DbFrom(ctx).
 		Collection(UserCollName).
-		FindOne(ctx, BsonFindFilter("_id", u.Email)).
+		FindOne(ctx, BsonFindFilter(IDfld, u.Email)).
 		Decode(u) // TODO: ensure works!
 }
 
@@ -91,7 +91,7 @@ func initializeUsers(ctx context.Context) error {
 			}
 			testUser.Perms.Projects = utils.SetFrom(allProjects...).ToSlice() // TODO: ensure ok that we do not overwrite the Admin field
 		}
-		//err := coll.FindOne(ctx, BsonFindFilter("_id", testUserEmailGoogleNormal)).Decode(&testUser)
+		//err := coll.FindOne(ctx, BsonFindFilter(IDfld, testUserEmailGoogleNormal)).Decode(&testUser)
 		//if err != nil {
 		//	if !errors.Is(err, mongo.ErrNoDocuments) {
 		//		return errors.Join(errors.New("failed to find possibly existing user"), err)
@@ -105,7 +105,7 @@ func initializeUsers(ctx context.Context) error {
 		//	testUser.Perms.Projects = testUserProjectsFinal.ToSlice() // TODO: ensure ok that we do not overwrite the Admin field
 		//}
 		// Create user
-		_, err := coll.ReplaceOne(ctx, BsonFindFilter("_id", testUser.Email), testUser, options.Replace().SetUpsert(true))
+		_, err := coll.ReplaceOne(ctx, BsonFindFilter(IDfld, testUser.Email), testUser, options.Replace().SetUpsert(true))
 		if err != nil {
 			return err
 		}
@@ -145,7 +145,7 @@ func initializeUsers(ctx context.Context) error {
 		}
 		models := sliceutils.Map(testUsers, func(u User) mongo.WriteModel {
 			return mongo.NewReplaceOneModel().
-				SetFilter(bson.M{"_id": u.Email}).
+				SetFilter(bson.M{IDfld: u.Email}).
 				SetReplacement(u).
 				SetUpsert(true)
 		})
@@ -217,7 +217,7 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 
 	// Resolve project perms // TODO: MAKE SURE THIS WORKS
 	cursor, err := DbFrom(ctx).Collection(ProjectsCollectionName).
-		Find(ctx, bson.M{"_id": bson.M{"$in": u.Perms.Projects}}) // TODO: not sure I like this. Means that more projects will need to be on more users??
+		Find(ctx, bson.M{IDfld: bson.M{"$in": u.Perms.Projects}}) // TODO: not sure I like this. Means that more projects will need to be on more users??
 	if err != nil {
 		return out, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
 	}

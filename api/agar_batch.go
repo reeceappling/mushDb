@@ -36,7 +36,7 @@ func (field AgarBatchField) Get(ctx context.Context) (out AgarBatch, err error) 
 		return out, ErrMissingOptionalField
 	}
 	err = DbFrom(ctx).Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{
-		"_id": *field.AgarBatch,
+		IDfld: *field.AgarBatch,
 	}).Decode(&out)
 	return out, err
 }
@@ -198,7 +198,7 @@ func deleteAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// Delete if not found elsewhere!
-	deleteResult, err := db.Collection(AgarBatchCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	deleteResult, err := db.Collection(AgarBatchCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
 	if err != nil {
 		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
 		return

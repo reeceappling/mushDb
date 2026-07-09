@@ -296,7 +296,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 	email = oauthUser.Email
 	adminEmail := os.Getenv("ADMIN_GMAIL") // TODO: del! This would allow an attacker with server access to just change an env var!
 	coll := DbFrom(ctx).Collection(UserCollName)
-	err = coll.FindOne(ctx, BsonFindFilter("_id", email)).Decode(&u)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, email)).Decode(&u)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
 			err = errors.Join(errors.New("failed to get user. May exist?"), err)
@@ -339,7 +339,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 		}
 		if adminEmail != "" && email == adminEmail {
 			println("checking admin user")                                                    // TODO; del
-			if err = coll.FindOne(ctx, BsonFindFilter("_id", email)).Decode(&u); err != nil { // TODO: remove?
+			if err = coll.FindOne(ctx, BsonFindFilter(IDfld, email)).Decode(&u); err != nil { // TODO: remove?
 				println("failed to check Admin user")
 				return "", email, err
 			}

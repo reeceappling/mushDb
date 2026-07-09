@@ -34,8 +34,8 @@ type ListResponse[T any] struct {
 	Standard []T `json:"standard,omitempty"`
 }
 
-func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated bool, maxResults int, doStandardToo bool, temp T, allowDisposed bool) (bs []byte, err error) {
-	latestEntries, err := getLastNEntries(ctx, updated, maxResults, doStandardToo, temp, allowDisposed)
+func listEntriesHandlerInternal[T CollectionItem, U any](ctx context.Context, updated bool, maxResults int, doStandardToo bool, temp T, disposed *bool, startAfterId *U) (bs []byte, err error) {
+	latestEntries, err := getLastNEntries(ctx, updated, maxResults, doStandardToo, temp, disposed, startAfterId)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
 			println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
@@ -99,7 +99,7 @@ func ListUsersHandler(ctx context.Context, removeGuests bool) ([]byte, error) {
 	// TODO: pagination?
 	opts := options.Find().
 		//SetLimit(int64(nresults)). // no limit because user can be unable to view some items
-		SetSort(bson.D{{"_id", 1}}) // 1 = Ascending, -1 = Descending
+		SetSort(bson.D{{IDfld, 1}}) // 1 = Ascending, -1 = Descending
 	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
 	cursor, err := DbFrom(ctx).
 		Collection(UserCollName).
@@ -117,9 +117,25 @@ func ListUsersHandler(ctx context.Context, removeGuests bool) ([]byte, error) {
 
 var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	// TODO: DEPENDING ON VARIANT, EITHER DO LATEST OR LATEST AND STANDARD!!!!!
-	allowDisposed := true
-	allowDisposed = r.URL.Query().Get("hideDisposed") != "true"
-	var maxResults int = 10 // TODO: extend where needed?
+	// TODO: handle disposedFilter
+	var disposedFilter *bool = nil
+	disposedParam := r.URL.Query().Get("disposed")
+	var tempDisposed = false
+	switch disposedParam {
+	case "only": // TODO: USE THIS!
+		tempDisposed = true
+		disposedFilter = &tempDisposed
+	case "hide": // TODO: USE THIS!
+		disposedFilter = &tempDisposed
+	default:
+		disposedFilter = nil
+	}
+	startAfterParam := r.URL.Query().Get("startAfter")
+	if startAfterParam != "" {
+		// TODO: THIS!
+	}
+	//allowDisposed = r.URL.Query().Get("hideDisposed") != "true" // TODO: REMOVE IF USED
+	var maxResults = 10 // TODO: extend where needed?
 	requested := r.PathValue("variant")
 	doStandardToo := strings.Contains(requested, "Recipe") // "agarRecipe", "jarRecipe", "lcRecipe", "substrateRecipe"
 
@@ -135,83 +151,230 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 	// TODO: parallelize?
 	var bs []byte
 	var err error
+	getAcid := func(sap string, w http.ResponseWriter) (*AlternateCollectionId, error) {
+		if startAfterParam == "" {
+			return nil, nil
+		}
+		acid, err := Base58Str(startAfterParam).toAltCollectionId()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest) // TODO: fix
+			return nil, err
+		}
+		return &acid, nil
+	}
+	getMcid := func(sap string, w http.ResponseWriter) (*MainCollectionId, error) {
+		if startAfterParam == "" {
+			return nil, nil
+		}
+		mcid, err := Base58Str(startAfterParam).ToMainCollectionId()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest) // TODO: fix
+			return nil, err
+		}
+		return &mcid, nil
+	}
+	getParamStringDecoded := func(sap string, w http.ResponseWriter) (*string, error) {
+		if startAfterParam == "" {
+			return nil, nil
+		}
+		decoded, err := UrlDecodeString(startAfterParam)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest) // TODO: fix
+			return nil, err
+		}
+		return &decoded, nil
+
+	}
 	switch strings.ToLower(requested) {
 	case "agarbatch", "agar batch",
 		"agarbatches", "agar batches":
-		bs, err = listEntriesHandlerInternal[*AgarBatch](r.Context(), true, maxResults, doStandardToo, &AgarBatch{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*AgarBatch, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &AgarBatch{}, disposedFilter, acid)
 	case "agarrecipe", "agar recipe",
 		"agarrecipes", "agar recipes":
-		bs, err = listEntriesHandlerInternal[*AgarRecipe](r.Context(), true, maxResults, doStandardToo, &AgarRecipe{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*AgarRecipe, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &AgarRecipe{}, disposedFilter, acid)
 	case "bag",
 		"bags":
-		bs, err = listEntriesHandlerInternal[*Bag](r.Context(), true, maxResults, doStandardToo, &Bag{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Bag, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Bag{}, disposedFilter, mcid)
 	case "fruit",
 		"fruits":
-		bs, err = listEntriesHandlerInternal[*Fruit](r.Context(), true, maxResults, doStandardToo, &Fruit{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Fruit, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Fruit{}, disposedFilter, mcid)
 	case "fruitingchamber", "box", "chamber", "fruiting chamber",
 		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
-		bs, err = listEntriesHandlerInternal[*FruitingChamber](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*FruitingChamber, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{}, disposedFilter, mcid)
 	case "grainbatch", "grainbatches":
-		bs, err = listEntriesHandlerInternal[*GrainBatch](r.Context(), true, maxResults, doStandardToo, &GrainBatch{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*GrainBatch, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &GrainBatch{}, disposedFilter, acid)
 	case "jar", "grainjar", "grain jar",
 		"jars", "grainjars", "grain jars":
-		bs, err = listEntriesHandlerInternal[*GrainJar](r.Context(), true, maxResults, doStandardToo, &GrainJar{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*GrainJar, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &GrainJar{}, disposedFilter, mcid)
 	case "jarrecipe", "jar recipe",
 		"jarrecipes", "jar recipes":
-		bs, err = listEntriesHandlerInternal[*JarRecipe](r.Context(), true, maxResults, doStandardToo, &JarRecipe{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*JarRecipe, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &JarRecipe{}, disposedFilter, acid)
 	case "lc", "liquidculture", "liquid culture",
 		"lcs", "liquidcultures", "liquid cultures":
-		bs, err = listEntriesHandlerInternal[*LiquidCulture](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*LiquidCulture, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{}, disposedFilter, mcid)
 	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
 		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
-		bs, err = listEntriesHandlerInternal[*LcRecipe](r.Context(), true, maxResults, doStandardToo, &LcRecipe{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*LcRecipe, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &LcRecipe{}, disposedFilter, acid)
 	case "lcsyringe", "lcsyringes":
-		bs, err = listEntriesHandlerInternal[*LcSyringe](r.Context(), true, maxResults, doStandardToo, &LcSyringe{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*LcSyringe, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &LcSyringe{}, disposedFilter, mcid)
 	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
 		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
-		bs, err = listEntriesHandlerInternal[*MSS](r.Context(), true, maxResults, doStandardToo, &MSS{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*MSS, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &MSS{}, disposedFilter, mcid)
 	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
 		"pcruns", "pc runs", "pcRuns", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
-		bs, err = listEntriesHandlerInternal[*PCRun](r.Context(), true, maxResults, doStandardToo, &PCRun{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*PCRun, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &PCRun{}, disposedFilter, acid)
 	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
 		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
-		bs, err = listEntriesHandlerInternal[*Plate](r.Context(), true, maxResults, doStandardToo, &Plate{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Plate, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Plate{}, disposedFilter, mcid)
 	case "plugs", "plug", "peg", "pegs":
-		bs, err = listEntriesHandlerInternal[*PlugsJar](r.Context(), true, maxResults, doStandardToo, &PlugsJar{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*PlugsJar, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &PlugsJar{}, disposedFilter, mcid)
 	case "project", "projects":
+		// TODO: projects list after!
 		bs, err = listProjectsHandlerInternal(r.Context(), true) // TODO: true ok here? TEST HEAVILY!
-		//bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{}, allowDisposed)
+		//bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{}, disposedFilter)
 	case "sale", "sales":
-		bs, err = listEntriesHandlerInternal[*Sale](r.Context(), true, maxResults, doStandardToo, &Sale{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Sale, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &Sale{}, disposedFilter, acid)
 	case "slant", "slants":
-		bs, err = listEntriesHandlerInternal[*Slant](r.Context(), true, maxResults, doStandardToo, &Slant{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Slant, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Slant{}, disposedFilter, mcid)
 	case "species":
-		bs, err = listEntriesHandlerInternal[*Species](r.Context(), true, -1, doStandardToo, &Species{}, allowDisposed) // TODO: ensure showing all species (that can be viewed) instead of just 10
+		// TODO: species probably don't paginate
+		startAfterName, err := getParamStringDecoded(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Species, string](r.Context(), true, -1, doStandardToo, &Species{}, disposedFilter, startAfterName) // TODO: ensure showing all species (that can be viewed) instead of just 10
 	case "sporeprint", "spore print", "print",
 		"sporeprints", "spore prints", "prints":
-		bs, err = listEntriesHandlerInternal[*SporePrint](r.Context(), true, maxResults, doStandardToo, &SporePrint{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*SporePrint, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &SporePrint{}, disposedFilter, mcid)
 	case "sporeswab", "sporeswabs", "swab", "swabs":
-		bs, err = listEntriesHandlerInternal[*SporeSwab](r.Context(), true, maxResults, doStandardToo, &SporeSwab{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*SporeSwab, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &SporeSwab{}, disposedFilter, mcid)
 	case "stasistube", "stasis tube", "stasis", "tube",
 		"stasistubes", "stasis tubes", "tubes":
-		bs, err = listEntriesHandlerInternal[*StasisTube](r.Context(), true, maxResults, doStandardToo, &StasisTube{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*StasisTube, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &StasisTube{}, disposedFilter, mcid)
 	case "subspecies":
-		bs, err = listEntriesHandlerInternal[*Subspecies](r.Context(), true, -1, doStandardToo, &Subspecies{}, allowDisposed) // TODO: ensure showing all subspecies (that can be viewed) instead of just 10
+		// TODO: string ok?
+		startAfterName, err := getParamStringDecoded(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Subspecies, string](r.Context(), true, -1, doStandardToo, &Subspecies{}, disposedFilter, startAfterName) // TODO: ensure showing all subspecies (that can be viewed) instead of just 10
 	case "substrate", "substraterecipe", "substrate recipe",
 		"substrates", "substraterecipes", "substrate recipes":
-		bs, err = listEntriesHandlerInternal[*SubstrateRecipe](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*SubstrateRecipe, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{}, disposedFilter, acid)
 	case "substratebatch", "substratebatches":
-		bs, err = listEntriesHandlerInternal[*SubstrateBatch](r.Context(), true, maxResults, doStandardToo, &SubstrateBatch{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*SubstrateBatch, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &SubstrateBatch{}, disposedFilter, acid)
 	case "transfer", "xfer",
 		"transfers", "xfers":
-		bs, err = listEntriesHandlerInternal[*Transfer](r.Context(), true, maxResults, doStandardToo, &Transfer{}, allowDisposed)
+		acid, err := getAcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Transfer, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &Transfer{}, disposedFilter, acid)
 	case "user", "users":
-		bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{}, allowDisposed)
+		// TODO: string ok?
+		startAfterEmail, err := getParamStringDecoded(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*User, string](r.Context(), true, maxResults, doStandardToo, &User{}, disposedFilter, startAfterEmail)
 	case "nonguest", "nonguests":
+		// TODO: start after handler?
 		bs, err = ListUsersHandler(r.Context(), true) // TODO: validate working!
 		//bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
 	case "waterjar", "waterjars", "water jar", "water jars", "sterilizedwater", "sterilizedwaterjar", "sterilewater", "sterilewaterjar":
-		bs, err = listEntriesHandlerInternal[*WaterJar](r.Context(), true, maxResults, doStandardToo, &WaterJar{}, allowDisposed)
+		mcid, err := getMcid(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*WaterJar, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &WaterJar{}, disposedFilter, mcid)
 	default:
 		http.Error(w, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name")).Error(), http.StatusBadRequest)
 	}
@@ -247,7 +410,7 @@ var ListSubspeciesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http
 		http.Error(w, "failed to list subspecies. "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	subspecs, err := getCollectionItemsFromCursor[Subspecies](ctx, cursor, nil, true)
+	subspecs, err := getCollectionItemsFromCursor[Subspecies](ctx, cursor, nil)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			_, err = w.Write([]byte("[]"))
@@ -378,7 +541,7 @@ func addTestAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx contex
 		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(testItems[0].CollectionName())
 		return coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
 			// TODO: bson.M vs bson.D?
-			return mongo.NewReplaceOneModel().SetReplacement(item).SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
+			return mongo.NewReplaceOneModel().SetReplacement(item).SetFilter(bson.M{IDfld: item.DbId()}).SetUpsert(true)
 		}))
 		// TODO: do something with the result?
 	})

@@ -438,7 +438,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi").
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
-		SetTimeout(15 * time.Second) // TODO: no?
+		SetTimeout(15 * time.Second)         // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
@@ -525,8 +525,8 @@ func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[str
 			}
 
 			// get these ids from the map collection???
-			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter("_id", newId)).Err()
-			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, BsonFindFilter("_id", newId)).Err()
+			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter(IDfld, newId)).Err()
+			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, BsonFindFilter(IDfld, newId)).Err()
 			if err != nil {
 				if errors.Is(err, mongo.ErrNoDocuments) {
 					found.Add(string(newId[:]))
@@ -554,29 +554,48 @@ func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
 	if err != nil {
 		return nil, err
 	}
-	return getCollectionItemsFromCursor[T](ctx, cursor, nil, true)
+	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
 }
 
-func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T, allowDisposed bool) ([]T, error) {
-	findBson := bson.D{{}}
-	println("getting latest from " + temp.CollectionName())
-	if filterOutStandard {
-		findBson = BsonFindFilter("standard", false)
-	} else {
-		//println("trying to find ANY items") // TODO: ???
-	}
+func getLastNEntries[T CollectionItem, U any](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T, disposed *bool, startAfterId *U) ([]T, error) {
 	sortField := "$natural"
 	if updated {
 		sortField = "lastUpdated"
 	}
+	sortBson := bson.D{{Key: sortField, Value: -1}}
+	// disposed: true means show only the disposed, false meens only show the undisposed, nil means do not filter based on disposed!
+	findBson := bson.D{}
+	//println("getting latest from " + temp.CollectionName()) // TODO: del
+	// Create search filter
+	if filterOutStandard {
+		findBson = BsonFindFilter("standard", false)
+	}
+	if startAfterId != nil {
+		// TODO: bson.D vs bson.M?
+		valueGreaterThan := bson.E{"$gt", *startAfterId}
+		idGreaterThan := bson.E{"_id", bson.D{valueGreaterThan}} // TODO: validate works
+		//valueGreaterThan := bson.M{"$gt": *startAfterId}
+		//idGreaterThan := bson.E{Key: "_id", Value: valueGreaterThan}
+		findBson = append(findBson, idGreaterThan)
+	}
+	if disposed != nil {
+		// Using bson.D (Ordered document - Recommended for performance and readability)
+		existenceFilter := bson.E{"disposed", bson.D{{"$exists", *disposed}}} // TODO: validate works!
+		//// Using bson.M (shorter syntax
+		//valueExists := bson.M{"$exists": *disposed}
+		//existenceFilter := bson.E{Key: "disposed", Value: valueExists} // TODO: validate works!
+		findBson = append(findBson, existenceFilter)
+	}
+	if len(findBson) == 0 {
+		findBson = bson.D{{}} // TODO: necessary? probably not
+	}
+
 	// TODO: pagination?
 	opts := options.Find().
 		//SetLimit(int64(nresults)). // no limit because user can be unable to view some items
-		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural and that natural works with non-default IDs
+		SetSort(sortBson) // Descending (latest first) // TODO: ensure -1 works with natural and that natural works with non-default IDs
 	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
-	cursor, err := DbFrom(ctx).
-		Collection(temp.CollectionName()).
-		Find(ctx, findBson, opts)
+	cursor, err := DbFrom(ctx).Collection(temp.CollectionName()).Find(ctx, findBson, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -584,12 +603,12 @@ func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresul
 	if nresults > 0 {
 		finalNumResults = &nresults
 	}
-	return getCollectionItemsFromCursor[T](ctx, cursor, finalNumResults, allowDisposed)
+	return getCollectionItemsFromCursor[T](ctx, cursor, finalNumResults)
 }
 
 func FindItemTypeForId(ctx context.Context, id MainCollectionId) (MainCollectionItem, error) {
 	mapEntry := &idMapEntry{}
-	err := DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": id}).Decode(mapEntry)
+	err := DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{IDfld: id}).Decode(mapEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -654,7 +673,7 @@ var GetPageForIdHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	}
 	out := &idMapEntry{}
 	err := DbFrom(ctx).
-		Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(out)
+		Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(out)
 	if err != nil {
 		http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
 		return

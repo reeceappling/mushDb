@@ -326,7 +326,7 @@ const maxMultipartRequestSize = 32<<25 + 1024 //32<<20 + 1024 // TODO: is this m
 //func getBag(ctx context.Context, id MainCollectionId) (*Bag, error) {
 //	// go get current plate
 //	existing := &Bag{}
-//	err := DbFrom(ctx).Collection(BagsCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(existing)
+//	err := DbFrom(ctx).Collection(BagsCollectionName).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing)
 //	return existing, err
 //}
 
@@ -376,7 +376,7 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	coll := DbFrom(ctx).Collection(BagsCollectionName)
 	existing := &Bag{}
-	err = coll.FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

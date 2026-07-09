@@ -22,7 +22,7 @@ type SubstrateRecipeField struct {
 
 func (field SubstrateRecipeField) Get(ctx context.Context) (out SubstrateRecipe, err error) {
 	err = DbFrom(ctx).Collection(SubstrateRecipesCollectionName).FindOne(ctx, bson.M{
-		"_id": field.Substrate,
+		IDfld: field.Substrate,
 	}).Decode(&out)
 	return out, err
 }
@@ -133,7 +133,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	// TODO: count instead?
 	projColl := client.Database(dbName).Collection(ProjectsCollectionName)
 	for projName, _ := range requestPerms.ProjectPerms {
-		err := projColl.FindOne(ctx, BsonFindFilter("_id", projName)).Err()
+		err := projColl.FindOne(ctx, BsonFindFilter(IDfld, projName)).Err()
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return AclField{}, errors.New(string("could not find project " + projName))
@@ -145,7 +145,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	// TODO: count instead?
 	userColl := client.Database(dbName).Collection(UserCollName)
 	for userEmail, _ := range requestPerms.UserPerms {
-		err := userColl.FindOne(ctx, BsonFindFilter("_id", userEmail)).Err()
+		err := userColl.FindOne(ctx, BsonFindFilter(IDfld, userEmail)).Err()
 		if err != nil {
 			if err == mongo.ErrNoDocuments {
 				return AclField{}, errors.New(string("could not find email " + userEmail))
@@ -306,7 +306,7 @@ func deleteSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delete if not found elsewhere!
-	deleteResult, err := db.Collection(SubstrateRecipesCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	deleteResult, err := db.Collection(SubstrateRecipesCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
 	if err != nil {
 		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
 		return

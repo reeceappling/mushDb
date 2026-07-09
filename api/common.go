@@ -98,7 +98,7 @@ func GetEnv(ctx context.Context) bool {
 //	coll := db.Collection(FruitsCollName)
 //	_, err := coll.Find(ctx, bson.D{}, opts)
 //	return err
-//	//coll.UpdateByID(ctx, bson.D{bson.E{Key: "_id": "someId"}}, ) // TODO: use this
+//	//coll.UpdateByID(ctx, bson.D{bson.E{Key: IDfld: "someId"}}, ) // TODO: use this
 //}
 
 func withUpdateNow() primitive.E { // TODO: FIXME!
@@ -452,7 +452,7 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 	return getCollectionItemsFromCursor[T](ctx, cursor, nil, true)
 }
 
-func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int, allowDisposed bool) ([]T, error) {
+func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
 	defer cursor.Close(ctx)       // TODO; ensure ok
 	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
 	if err != nil {
@@ -490,13 +490,13 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 					continue
 				}
 			}
-			if !allowDisposed {
-				disposableItem, ok := interface{}(result).(Disposable)
-				if ok && disposableItem.DisposalInfo() != nil {
-					// Skip this entry
-					continue
-				}
-			}
+			//if !allowDisposed { // TODO: reenable if disposed isnt filtered out in query
+			//	disposableItem, ok := interface{}(result).(Disposable)
+			//	if ok && disposableItem.DisposalInfo() != nil {
+			//		// Skip this entry
+			//		continue
+			//	}
+			//}
 
 			results = append(results, result)
 			continue
@@ -626,16 +626,44 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 	return notesWereModified(existing.Notes, updated.Notes)
 }
 
+const IDfld = "_id" // TODO: use everywhere
+
 func BsonFindFilter(key string, value any) bson.D {
 	return bson.D{bson.E{Key: key, Value: value}}
 }
-
 func BsonFindByIdFilterOrdered[T CollectionId](id T) bson.D { // TODO: ensure ok
-	return BsonFindFilter("_id", id)
+	return bson.D{bson.E{Key: IDfld, Value: id}}
 }
 
 func BsonFindByIdFilterUnordered[T CollectionId](id T) bson.M { // TODO: ensure ok
-	return bson.M{"_id": id}
+	return bson.M{IDfld: id}
+}
+
+func BsonItemsAfterFilter(key string, prevValue any) bson.M { // TODO: use and validate ok
+	return bson.M{key: bson.M{"$gt": prevValue}}
+}
+func BsonItemsStartingWithFilter(key string, prevValue any) bson.M { // TODO: use and validate ok
+	return bson.M{key: bson.M{"$gte": prevValue}}
+}
+func BsonItemsUntilIncludingFilter(key string, prevValue any) bson.M { // TODO: use and validate ok
+	return bson.M{key: bson.M{"$lte": prevValue}}
+}
+func BsonItemsUntilExcludingFilter(key string, prevValue any) bson.M { // TODO: use and validate ok
+	return bson.M{key: bson.M{"$lt": prevValue}}
+}
+func BsonPredicateFilter(predicate string, value any) bson.M { // TODO: use and validate ok
+	/* Predicate options:
+	https://www.mongodb.com/docs/manual/reference/mql/query-predicates/
+	"$X" where X in one of the following arrays.
+		comparison: [eq, ne, gt,gte,lt,lte, in, nin]
+		logical: [and, nor, not, or]
+		array queries: [all, elemMatch, size]
+		bitwise: [bitsAllClear,bitsAllSet,bitsAnyClear,bitsAnySet]
+		data types:  [exists, type]
+		misc: [expr, jsonSchema, mod, regex, where]
+		geo: [geoIntersects, geoWithin, near, nearSphere]
+	*/
+	return bson.M{predicate: value}
 }
 
 //func setUnsetUnequalPointers[T comparable](key string, update *T, current *T, modsIn bson.D) bson.D {
@@ -889,7 +917,7 @@ func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection {
 }
 
 //func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item T) error {
-//	return CollectionFor(item, db).FindOne(ctx, bson.D{{Key: "_id", Value: item.IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
+//	return CollectionFor(item, db).FindOne(ctx, bson.D{{Key: IDfld, Value: item.IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
 //}
 
 func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {

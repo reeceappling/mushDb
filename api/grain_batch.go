@@ -37,7 +37,7 @@ type GrainBatchField struct {
 func (field GrainBatchField) Get(ctx context.Context) (out GrainBatch, err error) {
 	var result GrainBatch
 	err = DbFrom(ctx).Collection(GrainBatchCollectionName).FindOne(ctx, bson.M{
-		"_id": field.GrainBatch,
+		IDfld: field.GrainBatch,
 	}).Decode(&result)
 	return result, err
 }

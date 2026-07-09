@@ -66,7 +66,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 			return mongo.NewReplaceOneModel().SetReplacement(idMapEntry{
 				Id:        item.DbId(),
 				EntryType: item.EntryType(),
-			}).SetFilter(BsonFindFilter("_id", item.DbId())).SetUpsert(true)
+			}).SetFilter(BsonFindFilter(IDfld, item.DbId())).SetUpsert(true)
 		}))
 		if err != nil {
 			return nil, errors.Join(errors.New("failed to bulk write id maps"), err)
@@ -77,7 +77,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 			BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
 				return mongo.NewReplaceOneModel().
 					SetReplacement(item).
-					SetFilter(bson.M{"_id": item.DbId()}).
+					SetFilter(bson.M{IDfld: item.DbId()}).
 					SetUpsert(true)
 			}))
 		if err != nil {
@@ -96,7 +96,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 func getTransferById(ctx context.Context, xferColl *mongo.Collection, id AlternateCollectionId) (*Transfer, error) {
 	var xfer Transfer
 	out := &xfer
-	xferResult := xferColl.FindOne(ctx, BsonFindFilter("_id", id))
+	xferResult := xferColl.FindOne(ctx, BsonFindFilter(IDfld, id))
 	if err := xferResult.Err(); err != nil {
 		return nil, errors.Join(errors.New("failed to retrieve transfer by id"), err)
 	}

@@ -148,7 +148,7 @@ type PcRunField struct {
 
 func (field PcRunField) Get(ctx context.Context) (out PCRun, err error) {
 	err = DbFrom(ctx).Collection(PcRunCollectionName).FindOne(ctx, bson.M{
-		"_id": field.PcRun,
+		IDfld: field.PcRun,
 	}).Decode(&out)
 	return out, err
 }

@@ -137,7 +137,7 @@ func (j GrainJar) Collection(ctx mongo.SessionContext) *mongo.Collection {
 
 func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err error) {
 	j = &GrainJar{}
-	err = DbFrom(ctx).Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter("_id", id)).Decode(j)
+	err = DbFrom(ctx).Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(j)
 	return j, err
 }
 
@@ -224,7 +224,7 @@ func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testI
 	if res == nil {
 		return errors.New("result should not be nil")
 	}
-	err = coll.FindOne(ctx, BsonFindFilter("_id", testId)).Decode(&existingEntry)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, testId)).Decode(&existingEntry)
 	if err != nil {
 		return errors.New("not found at specified id. " + err.Error())
 	}
@@ -571,7 +571,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	// go get current
 	existing := &GrainJar{}
 	err = DbFrom(ctx).
-		Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
+		Collection(GrainJarCollectionName).FindOne(ctx, BsonFindFilter(IDfld, *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return

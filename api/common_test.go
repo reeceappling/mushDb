@@ -26,11 +26,11 @@ func TestCommon(t *testing.T) {
 		})
 		t.Run("Sub/Species", func(t *testing.T) {
 			spec := Species{}
-			amt, err := db.Collection(SpeciesCollectionName).CountDocuments(ctx, bson.D{}) //.FindOne(ctx, bson.D{bson.E{Key: "_id", Value: "maitake"}})
+			amt, err := db.Collection(SpeciesCollectionName).CountDocuments(ctx, bson.D{}) //.FindOne(ctx, bson.D{bson.E{Key: IDfld, Value: "maitake"}})
 			assert.NoError(t, err)
 			assert.NotEqual(t, int64(0), amt)
 
-			res := db.Collection(SpeciesCollectionName).FindOne(ctx, bson.D{bson.E{Key: "_id", Value: "maitake"}})
+			res := db.Collection(SpeciesCollectionName).FindOne(ctx, bson.D{bson.E{Key: IDfld, Value: "maitake"}})
 			assert.NotNil(t, res)
 			assert.NoError(t, res.Err())
 			assert.NoError(t, res.Decode(&spec))
@@ -63,7 +63,7 @@ func TestCommon(t *testing.T) {
 	//			{Time: nowUnix, Note: "NEW NOTE 2"},
 	//			{Time: nowUnix, Note: "NEW NOTE 3"},
 	//		}
-	//		idBson := BsonFindFilter("_id", id)
+	//		idBson := BsonFindFilter(IDfld, id)
 	//		var resA, resB, resC Plate
 	//		ress := coll.FindOneAndUpdate(ctx, idBson, pushToArray("notes", noteToAdd))
 	//		assert.NoError(t, ress.Decode(&resA))

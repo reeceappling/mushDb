@@ -158,7 +158,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 		// Update species with subspecies
 
-		bsonId := BsonFindFilter("_id", spec.Name)
+		bsonId := BsonFindFilter(IDfld, spec.Name)
 		err = db.Collection(SpeciesCollectionName).FindOneAndUpdate(ctx, bsonId, speciesUpdate).Err()
 		if err != nil {
 			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
@@ -279,7 +279,7 @@ func deleteSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	//
 	//
 	//// Delete if not found elsewhere!
-	//deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{"_id": id})
+	//deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
 	//if err != nil {
 	//	http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
 	//	return

@@ -565,14 +565,14 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(FruitingChamberCollectionName)
 	// go get current FC
 	existing := &FruitingChamber{}
-	err = coll.FindOne(ctx, BsonFindFilter("_id", *mainCollId)).Decode(existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, *mainCollId)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// TODO: ensure this is ok. Handle sales elsewhere????
 	//if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-	//	if err = db.Collection(SalesCollectionName).FindOne(ctx, BsonFindFilter("_id", out.Sale)).Err(); err != nil {
+	//	if err = db.Collection(SalesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, out.Sale)).Err(); err != nil {
 	//		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 	//		return
 	//	}

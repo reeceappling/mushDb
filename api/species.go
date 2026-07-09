@@ -282,7 +282,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Validate substrate exists if changed
 	if existing.StandardSubstrate.AsBase58() != req.Substrate.AsBase58() {
-		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, BsonFindFilter("_id", req.Substrate)).Err()
+		err = db.Collection(SubstrateRecipesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, req.Substrate)).Err()
 		if err != nil {
 			dbErr(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -300,7 +300,7 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspeciesName *string) (Species, *Subspecies, error) {
 	sp := Species{}
 	db := DbFrom(ctx)
-	err := db.Collection(SpeciesCollectionName).FindOne(ctx, BsonFindFilter("_id", speciesName)).Decode(&sp)
+	err := db.Collection(SpeciesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, speciesName)).Decode(&sp)
 	if err != nil {
 		return sp, nil, err
 	}
@@ -308,7 +308,7 @@ func getSpeciesAndSubspecies(ctx context.Context, speciesName string, subspecies
 		return sp, nil, nil
 	}
 	subsp := Subspecies{}
-	err = db.Collection(SubspeciesCollectionName).FindOne(ctx, BsonFindFilter("_id", *subspeciesName)).Decode(&subsp)
+	err = db.Collection(SubspeciesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, *subspeciesName)).Decode(&subsp)
 	if err != nil {
 		return sp, nil, err
 	}
@@ -341,7 +341,7 @@ func (s SpeciesOptionalField) Get(ctx context.Context) (*Species, error) {
 	var out *Species = nil
 	var err error = nil
 	if s.HasSpecies() {
-		err = DbFrom(ctx).Collection(SpeciesCollectionName).FindOne(ctx, BsonFindFilter("_id", *s.Species)).Decode(out)
+		err = DbFrom(ctx).Collection(SpeciesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, *s.Species)).Decode(out)
 	} else {
 		err = ErrMissingOptionalField
 	}
@@ -378,7 +378,7 @@ func deleteSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, err := DbFrom(ctx).Collection(SpeciesCollectionName).DeleteOne(ctx, bson.M{"_id": speciesName})
+	result, err := DbFrom(ctx).Collection(SpeciesCollectionName).DeleteOne(ctx, bson.M{IDfld: speciesName})
 	if err != nil {
 		http.Error(w, "failed to delete species "+speciesName+". "+err.Error(), http.StatusInternalServerError)
 		return

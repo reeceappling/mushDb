@@ -540,7 +540,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	client := GetMongoClient(ctx)
 	coll := client.Database(dbName).Collection(PlatesCollectionName)
 	existing := &Plate{}
-	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing)
 	if err != nil {
 		// TODO: an issue here?
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
@@ -560,7 +560,7 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		return
 	}
 	// write updates to db
-	bsonId := BsonFindFilter("_id", id)
+	bsonId := BsonFindFilter(IDfld, id)
 	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 	if err != nil {
 		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
@@ -594,7 +594,7 @@ func handleUpdateModsInTxn[T any, U MainCollectionId | AlternateCollectionId | s
 		return errors.New("no changes made")
 	}
 	// write updates to db
-	bsonId := BsonFindFilter("_id", id)
+	bsonId := BsonFindFilter(IDfld, id)
 	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
 	if err != nil {
 		return err

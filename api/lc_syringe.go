@@ -158,7 +158,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	// Validate inputs and grab parent
 	parent := &LiquidCulture{}
-	err = db.Collection(LCCollectionName).FindOne(ctx, BsonFindFilter("_id", data.LC)).Decode(parent)
+	err = db.Collection(LCCollectionName).FindOne(ctx, BsonFindFilter(IDfld, data.LC)).Decode(parent)
 	if err != nil {
 		dbErr(w, "failed to get parent LC: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -286,7 +286,7 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(LcSyringeCollectionName)
 	// go get current LcSyringe
 	existing := LcSyringe{}
-	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
@@ -321,7 +321,7 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 //	coll := db.Collection(existing.CollectionName())
 //	// go get current LcSyringe
 //
-//	err = coll.FindOne(ctx, BsonFindFilter("_id", id)).Decode(existing)
+//	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing)
 //	if err != nil {
 //		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 //		return
