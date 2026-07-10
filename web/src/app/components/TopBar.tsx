@@ -1,20 +1,22 @@
 "use client"
 
 import ReaderWriterSelector, {
+    ClearRFIDButton,
     ReadRfidTag,
-    ReadTagFunc,
+    ReadTagFunc, rfidSelectorProps,
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
     ActionTypes,
     useRfidReaderContext
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
 import * as React from "react";
-import {JSX, useState} from "react";
+import {JSX, SyntheticEvent, useState} from "react";
 import Button from "@mui/material/Button"
 import Menu from "@mui/material/Menu"
 import MenuItem from "@mui/material/MenuItem"
 import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getPathFor, webUrl} from "@/app/components/common";
+import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 
 
 const buttonProps = {
@@ -100,43 +102,50 @@ export default function TopBar() {
         <TopBarViewMenu/>
         <TopBarImportMenu/>
         <TopBarCreateMenu/>
-        <div id={"rfidTopArea"}>
-            <LastReadTag/>
-            <ReadTagButton/>
-            <ReaderWriterSelector onSelect={onReaderSelect}/>
-        </div>
+        <RfidTopArea onSelect={onReaderSelect}/>
     </div>
 }
 
-// function CopyLatestReadTagButton() {
-//     const {state, dispatch} = useRfidReaderContext()
-//     if (state.lastReadTag == undefined) {
-//         return null
-//     }
-//     const onClick = () => {
-//         if (state.lastReadTag != undefined) {
-//             navigator.clipboard.writeText(state.lastReadTag).catch((err) => {
-//                 let toWrite = "failed to copy tag value to clipboard: " + err
-//                 console.error(toWrite)
-//                 dispatch({
-//                     type: ActionTypes.SET_ERROR,
-//                     payload: toWrite,
-//                 })
-//             })
-//         }
-//     }
-//     return <button className={"basicButtonSmall"} onClick={onClick}>{"Copy last read tag value"}</button>
-// }
+export function RfidTopArea(props:rfidSelectorProps){
+    const {state} = useRfidReaderContext()
+    const [err, setErr] = React.useState<string | undefined>(undefined);
+    return <div id={"rfidTopArea"}>
+        <LastReadTag/>
+        <ReadTagButton/>
+        <ReaderWriterSelector onSelect={props.onSelect}/>
+        <ErrorDisplay err={err} />
+        {state.selected && <ClearRFIDButton props={{
+            handleTagClear:()=>{setErr(undefined)},
+            handleTagClearError:setErr,
+            handleTagClearCancel:()=>{setErr(undefined)}
+        }}/>}
+    </div>
+}
 
 function LastReadTag() {
     const {state} = useRfidReaderContext()
+    const [isCopied, setIsCopied] = useState(false);
+    const handleCopy = async () => {
+        try {
+            // Use the native Clipboard API to copy text
+            state.lastReadTag && await navigator.clipboard.writeText(state.lastReadTag)
+            setIsCopied(true);
+
+            // Revert the icon back to the copy symbol after 2 seconds
+            setTimeout(() => {
+                setIsCopied(false);
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    };
     if (state.lastReadTag !== undefined) {
         return <div>
-            <div className={"centerH"}>{"Last read tag value: "}</div>
+            <div className={"centerH"}>{"Last read: "}</div>
             <div className={"centerH"}>{state.lastReadTag}
-                <button className={"basicButtonSmall"} onClick={() => {
-                    state.lastReadTag && navigator.clipboard.writeText(state.lastReadTag)
-                }}>{"Copy"}</button>
+                <button className={"basicButtonSmall"}
+                        aria-label={isCopied ? "Copied!" : "Copy to clipboard"}
+                        onClick={handleCopy}>{isCopied ? '✅' : '📋'}</button>
             </div>
         </div>
     }
@@ -145,24 +154,23 @@ function LastReadTag() {
     </div>
 }
 
-export function Makeid(length: number) { // TODO: DELETEME
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-        counter += 1;
-    }
-    return result;
-}
+// export function Makeid(length: number) { // TODO: DELETEME
+//     let result = '';
+//     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+//     const charactersLength = characters.length;
+//     let counter = 0;
+//     while (counter < length) {
+//         result += characters.charAt(Math.floor(Math.random() * charactersLength));
+//         counter += 1;
+//     }
+//     return result;
+// }
 
 function UseLatestReadTagButton({onClick}: { onClick: (id?: string) => void }) {
-    const {state, dispatch} = useRfidReaderContext()
-    const onButtonClick = () => {
+    const {state} = useRfidReaderContext()
+    return <button className={"basicButtonSmall"} onClick={() => {
         onClick(state.lastReadTag)
-    }
-    return <button className={"basicButtonSmall"} onClick={onButtonClick}>{"Use latest read tag"}</button>
+    }}>{"Use latest read tag"}</button>
 }
 
 

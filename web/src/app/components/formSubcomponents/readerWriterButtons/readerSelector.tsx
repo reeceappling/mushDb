@@ -6,13 +6,13 @@ import {
     ActionTypes,
     useRfidReaderContext
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
-import {Makeid} from "@/app/components/TopBar";
 import {OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {Subform} from "@/app/components/common";
-import {BaseExternalUrl, BaseInternalUrl} from "@/app/components/Constants";
+import {BaseExternalUrl} from "@/app/components/Constants";
+import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
 
 
-interface rfidSelectorProps {
+export interface rfidSelectorProps {
     defaultOption?: string,
     txt?: string,
     onSelect?: (s?: string) => void,
@@ -92,10 +92,9 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, se
             return
         }
         const readerName = selectedReader
-        let tagVal = Makeid(5)
         console.log("current reader name: "+readerName)// TODO: del!
         if (readerName === "goodTestRfid"){ // TODO: comment out
-            tagVal = "4Wj8HxCMmcs" // TODO: Test empty plate id
+            const tagVal = "4Wj8HxCMmcs" // TODO: Test empty plate id
             dispatch({
                 type: ActionTypes.SET_LAST_READ_TAG,
                 payload: tagVal,
@@ -114,7 +113,7 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, se
             return
         }
         ReadRfidTag(readerName).then((id)=>{
-            console.log("got tag id: "+id) // TODO: del
+            // console.log("got tag id: "+id) // TODO: del
             dispatch({
                 type: ActionTypes.SET_LAST_READ_TAG,
                 payload: id,
@@ -133,6 +132,46 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, se
         })
     })
 }
+
+export function ClearTagFunc(dispatch: React.Dispatch<Actions>, readerName?: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+        if (!readerName) {
+            const toWrite = "no rfid reader selected"
+            dispatch({
+                type: ActionTypes.SET_ERROR,
+                payload: toWrite,
+            })
+            reject(toWrite)
+            return
+        }
+        if (readerName === "goodTestRfid") { // TODO: comment out
+            return resolve("Cleared")
+        } else if (readerName === "badTestRfid") {
+            return reject("failed to clear tag")
+        } else if (readerName === "" || readerName === "none"){
+            return reject("empty or 'none' writer name provided")
+        } else {
+            ClearRfidTag(readerName).then((responseString)=>{
+                dispatch({
+                    type: ActionTypes.SET_LAST_READ_TAG, // TODO: validate ok
+                })
+                dispatch({
+                    type: ActionTypes.CLEAR_ERROR,
+                })
+                resolve(responseString)
+            }).catch(e=>{
+                const errTxt = "failed to write tag: "+JSON.stringify(e)
+                console.error(errTxt); // TODO: del?
+                dispatch({
+                    type: ActionTypes.SET_ERROR,
+                    payload: errTxt,
+                })
+                reject(errTxt)
+            })
+        }
+    })
+}
+
 
 export function ReadRfidTag(readerName?: string):Promise<string> { // TODO: USE ME!!!
     if (!readerName) {
@@ -169,6 +208,26 @@ export async function WriteRfidTag(toWrite: string, writerName: string) { // TOD
             'Content-Type': 'application/json',
         },
         body: toWrite
+    })
+    if (resp.status != 200) {
+        throw "Error reading tag. Response status (" + resp.status + ")" + resp.statusText
+    }
+    const contentType = resp.headers.get('Content-Type')
+    if (contentType == null) {
+        throw "Response had no content type!"
+    }
+    if (contentType != 'text/html') {
+        throw "Unexpected response content type! " + contentType + " should be text/html"
+    }
+    return await resp.text()
+}
+export async function ClearRfidTag(writerName: string) {
+    const resp = await fetch(BaseExternalUrl + '/rfid/clear/' + writerName, {
+        method: 'DELETE',
+        headers: {
+            credentials: 'include',
+            'Accept': 'text/html',
+        },
     })
     if (resp.status != 200) {
         throw "Error reading tag. Response status (" + resp.status + ")" + resp.statusText
@@ -223,6 +282,36 @@ export function ReadRFIDButton(
     return <button className={"basicButtonSmall"} onClick={()=>{
         ReadTagFunc(dispatch, session, state.selected).then(handleTagRead)
     }}>{txt || "Read ID from RFID Reader"}</button>
+}
+
+export function ClearRFIDButton(
+    {
+        props
+    }:{
+        props: {
+            txt?:string,
+            handleTagClear:()=>void
+            handleTagClearError:(e:string)=>void
+            handleTagClearCancel:()=>void
+            session?: string
+        }
+    }) {
+    const {state, dispatch} = useRfidReaderContext()
+
+    return <button className={"removeButtonSmall"/* TODO: OK?*/}
+                   onClick={()=>{
+                       ConfirmOrCancel({
+                           txt: "Are you sure you want to clear the tag on the "+state.selected+" reader/writer?",
+                           onConfirm: ()=>{
+                               ClearTagFunc(dispatch, state.selected)
+                                   .then(props.handleTagClear)
+                                   .catch(e=>{
+                                       props.handleTagClearError("failed to clear tag on reader "+state.selected+": "+JSON.stringify(e))
+                                   })
+                           },
+                           onCancel: props.handleTagClearCancel
+                       })
+                   }}>{props.txt || "Clear tag on reader (dangerous)"}</button>
 }
 
 // TODO: TEST HEAVILY!

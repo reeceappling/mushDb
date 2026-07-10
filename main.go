@@ -97,6 +97,7 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 //var oauthConfig *oauth2.Config // TODO: ????
 
 const defaultHttpPort = 8080
+const loginPath = "/login"
 
 func main() {
 	ctx := context.Background()
@@ -235,7 +236,7 @@ func main() {
 	println("Creating Middlewares")
 	// TODO: NEXT.JS LOGS! WEBPACK IS GETTING TRAPPED BY MAIN SERVER! WEBSERVER ENV VARS!
 	// Setup middlewares
-	const loginPath = "/login"
+
 	cleanupFreq := 2 * time.Minute
 	// TODO: rfid sessions mock readers?
 	mgr := websocketSessions.NewSessionManager(&cleanupFreq, rfidRegistrySecret)
@@ -254,9 +255,10 @@ func main() {
 	// TODO: ADD OPTIONS method to all endpoints!
 	http.HandleFunc("/rfid/ws", Middlewares(ctxMiddleware, rfidMiddleware)(http.HandlerFunc(websocketSessions.ServerHandler)).ServeHTTP) // TODO: was /rfid/ws // TODO: OPTIONS
 	// Must be internal to docker network
-	http.HandleFunc("/rfid/read/{readerName}", Middlewares(ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidReadHandler).ServeHTTP)   // TODO: OPTIONS // TODO: internal only?   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/write/{writerName}", Middlewares(ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidWriteHandler).ServeHTTP) // TODO: OPTIONS // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/readers", Middlewares(ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(getRfidReaderNamesHandler).ServeHTTP) // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/read/{readerName}", Middlewares(ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidReadHandler).ServeHTTP)        // TODO: OPTIONS // TODO: internal only?   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/write/{writerName}", Middlewares(ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidWriteHandler).ServeHTTP)      // TODO: OPTIONS // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/readers", Middlewares(ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(getRfidReaderNamesHandler).ServeHTTP)      // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/clear/{writerName}", Middlewares(ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(clearRfidTagHandler).ServeHTTP) // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
 	webHostPort := 3000
@@ -996,7 +998,7 @@ var handleLogout = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "failed to log out of rfid session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Location", "/login") // TODO: set to login!
+	w.Header().Set("Location", loginPath) // TODO: set to login!
 	w.WriteHeader(http.StatusTemporaryRedirect)
 })
 
@@ -1715,6 +1717,52 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	_, err = w.Write([]byte(toWriteB58)) // TODO: is this still ok if incoming was base58? Probably want to unmarshal into a binary one instead
 	if err != nil {
 		println("failed to write internal result", err)
+	}
+}
+
+var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete { // TODO: implement
+		http.Error(w, unsupportedHttpMethod, http.StatusBadRequest)
+		return
+	}
+	if r.Header.Get("Accept") != "text/html" { // TODO: implement
+		http.Error(w, invalidAcceptHeader, http.StatusBadRequest)
+		return
+	}
+	ctx := r.Context()
+	toWriteBytes := [8]byte{0, 0, 0, 0, 0, 0, 0, 0} // TODO: ok?
+	writerName := shared.RfidReaderName(r.PathValue("writerName"))
+	validResponse := []byte("Cleared") // TODO: ok?
+	mgr := websocketSessions.GetSessionManager(ctx)
+	if mgr == nil {
+		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
+		return
+	}
+	err := env.IfNotProd(r.Context(), func() error { // TODO: del later?
+		if writerName == goodTestRfid {
+			_, err := w.Write(validResponse)
+			if err != nil {
+				println("failed write response", err)
+			}
+			return errors.New("wrote")
+		} else if writerName == badTestRfid {
+			http.Error(w, "bad test rfid reader/writer selected", http.StatusInternalServerError)
+			return errors.New("wrote")
+		}
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
+	if err := mgr.WriteRfid(ctx, writerName, toWriteBytes); err != nil {
+		http.Error(w, "failed to write rfid: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html")
+	_, err = w.Write(validResponse)
+	if err != nil {
+		println("failed to clear rfid tag on writer: "+writerName, err)
 	}
 }
 
