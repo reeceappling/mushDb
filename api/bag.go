@@ -28,17 +28,17 @@ type Bag struct {
 	FilterSize                        string `bson:"filterSize" json:"filterSize"`
 	CreationDateField                 `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
-	SealDate                          *unix.Time `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
-	WetnessField                      `bson:"inline"`                                                  // Initial wetness (refer to scale on field struct)
-	KnownFruitableField               `bson:"inline"`                                                  // set on transfer in, or once fruited
-	SpeciesOptionalField              `bson:"inline"`                                                  // set on transfer in
-	SubspeciesOptionalField           `bson:"inline"`                                                  // set on transfer in
-	InnocField                        `bson:"inline"`                                                  // Set on transfer in. Innoc from LC or grain jar only
-	TransfersOutField                 `bson:"inline"`                                                  // Set on transfer out
-	MainCollectionOptionalParentField `bson:"inline"`                                                  // Set on transfer in
-	ParentTypeField                   `bson:"inline"`                                                  // (main)lc, plate, or jar only (alt) can come from lcSyringe
-	PicsField                         `bson:"inline"`                                                  // Updated independently
-	ContaminationsField               `bson:"inline"`                                                  // Updated independently
+	SealDate                          *unix.Time      `bson:"sealDate,omitempty" json:"sealDate,omitempty"` // set on transfer in
+	WetnessField                      `bson:"inline"` // Initial wetness (refer to scale on field struct)
+	KnownFruitableField               `bson:"inline"` // set on transfer in, or once fruited
+	SpeciesOptionalField              `bson:"inline"` // set on transfer in
+	SubspeciesOptionalField           `bson:"inline"` // set on transfer in
+	InnocField                        `bson:"inline"` // Set on transfer in. Innoc from LC or grain jar only
+	TransfersOutField                 `bson:"inline"` // Set on transfer out
+	MainCollectionOptionalParentField `bson:"inline"` // Set on transfer in
+	ParentTypeField                   `bson:"inline"` // (main)lc, plate, or jar only (alt) can come from lcSyringe
+	PicsField                         `bson:"inline"` // Updated independently
+	ContaminationsField               `bson:"inline"` // Updated independently
 	MostRecentImageField              `bson:"inline"`
 	FlushesField                      `bson:"inline"` // Updated independently
 	SaleField                         `bson:"inline"`

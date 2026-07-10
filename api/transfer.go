@@ -51,6 +51,8 @@ var transferReasons = map[transferReason]string{
 
 var sporePrintColors = []SporePrintColor{
 	SpColorBlack,
+	SpColorBrown,
+	SpColorRed,
 	SpColorTanLight,
 	SpColorClear,
 }

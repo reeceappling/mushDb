@@ -45,6 +45,8 @@ type SporePrintColor string
 
 const (
 	SpColorBlack    SporePrintColor = "Black"
+	SpColorBrown    SporePrintColor = "Brown"
+	SpColorRed      SporePrintColor = "Red"
 	SpColorTanLight SporePrintColor = "LightTan"
 	SpColorClear    SporePrintColor = "Clear"
 )
