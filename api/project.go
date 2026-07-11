@@ -54,13 +54,13 @@ func initializeProjects(ctx context.Context) error {
 	coll := DbFrom(ctx).Collection(ProjectsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
-		//newSimpleIndex("completed", "creationDate", true, true, false), // TODO: ???
+		//newSimpleIndex("completed", "creationDate", true, true, false),
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		for _, testItem := range testProjects {
 			// If test item does not exist or does not match, then create/update it
 			_, errRep := coll.ReplaceOne(ctx, BsonFindFilter(IDfld, testItem.Name), testItem, options.Replace().SetUpsert(true))
@@ -230,7 +230,7 @@ type createProjectRequest struct {
 }
 
 func createProjectHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: update sessions with perm updates? // TODO: THIS!
+	// TODO: update sessions with perm updates?
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -244,7 +244,7 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := Project{
 		Name:              projectName(req.Name),
 		CreationDateField: CreationDateField{now},
@@ -501,7 +501,6 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //	return out, nil
 //}
 
-// TODO: MOVE!
 func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Project, upd bson.D, err error, updateUsers func(mongo.SessionContext) (any, error)) {
 	if err != nil {
 		println("mod creation failure: " + err.Error())
@@ -556,13 +555,13 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
 			return nil, errTxn
 		}
-		// TODO: move the write!
-		bsOut2, err2 := json.MarshalIndent(updated, "", " ") // TODO: delete later
-		if err2 != nil {
-			dbErr(w, err2.Error(), http.StatusInternalServerError)
-			return nil, err
-		}
-		println("Writing update:", string(bsOut2)) // TODO: del
+		//// TODO: move the write!
+		//bsOut2, err2 := json.MarshalIndent(updated, "", " ") // TODO: delete later
+		//if err2 != nil {
+		//	dbErr(w, err2.Error(), http.StatusInternalServerError)
+		//	return nil, err
+		//}
+		//println("Writing update:", string(bsOut2)) // TODO: del
 		_, err = w.Write(bsOut)
 		handleWriteErr(err, w)
 
