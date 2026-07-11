@@ -285,7 +285,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		//println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -427,7 +427,7 @@ type importStasisTubeRequest struct {
 	// Optional
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *Generation // TODO: make required for when innoculated!
+	Generation *Generation // required for when innoculated!
 	// pic as "img"
 	NotesField
 	WriteTagToField
@@ -561,7 +561,7 @@ func deleteStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*StasisTube](ctx, id, &StasisTube{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}
