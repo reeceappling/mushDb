@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
     output: "standalone",
-    crossOrigin: 'anonymous', // TODO: ok?
+    crossOrigin: 'anonymous', // TODO: ok? FIX?
     experimental: {
         serverActions: {
             allowedOrigins: ['appli.ng', 'mush.appli.ng', 'web', 'http://web:3000', 'web:3000', 'api'], // TODO: GET THESE FROM ELSEWHERE!
@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
 };
 
 module.exports = {
-    productionBrowserSourceMaps: true, // TODO: deleteme!
+    productionBrowserSourceMaps: false, // TODO: only enable for debugging! Allows console debugging...
     output: "standalone",
 };
 
