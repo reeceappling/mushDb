@@ -135,7 +135,7 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 		// TODO: THIS!
 	}
 	//allowDisposed = r.URL.Query().Get("hideDisposed") != "true" // TODO: REMOVE IF USED
-	var maxResults = 10 // TODO: extend where needed?
+	var maxResults = 30 // TODO: extend where needed?
 	requested := r.PathValue("variant")
 	doStandardToo := strings.Contains(requested, "Recipe") // "agarRecipe", "jarRecipe", "lcRecipe", "substrateRecipe"
 

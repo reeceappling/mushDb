@@ -25,5 +25,4 @@ services:
     networks:
       - mushNet
     depends_on:
-      # TODO: ensure ok, may not need
       - api

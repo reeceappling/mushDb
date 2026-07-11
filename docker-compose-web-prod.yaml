@@ -7,7 +7,7 @@ services:
       context: ./web
       dockerfile: ./Dockerfile
       args:
-        MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-https} # TODO: https?
+        MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-https}
         MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
         MAIN_API_EXTERNAL_PORT: ${MAIN_API_EXTERNAL_PORT:-443}
         GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID?error}
@@ -25,43 +25,4 @@ services:
     networks:
       - mushNet
     depends_on:
-      # TODO: ensure ok, may not need
       - api
-# TODO: https://github.com/offen/docker-volume-backup
-# TODO: config
-# TODO: automate restore
-#   TODO: DOWNLOAD IMAGES FROM S3 WHILE RUNNING AND SAVE LOCALLY?
-  # TODO: aws s3 sync to ensure local is up to date with s3 before startup?
-#  pics-backup:
-  # https://offen.github.io/docker-volume-backup/how-tos/define-different-retention-schedules.html
-  # TODO: pics backup. Allow saving of pics to s3 upon initial save! Ensure they are saved to low priority.
-#    image: offen/docker-volume-backup:v2
-#    environment:
-#      BACKUP_FILENAME: imgs-backup.tar.gz
-#      # TODO: consider using s3 tagging for lifecycle policies instead of encoding in the filename and using backup pruning. This would allow us to keep all backups in the same bucket and not have to worry about pruning logic in the backup container.
-#      # TODO: setup retention/lifecycle policies so that hourly backups exist for a day. Daily backups (1st hour) exist for a week. Monthly backups (28th of month) exist for a year. Yearly backups (last day of year) exist forever.
-#      # TODO: setup backup versioning via s3 to only keep a week of daily data, a month of weekly data, and a year of monthly data, plus one for each year?
-#      #BACKUP_FILENAME: imgs-backup-%Y-%m-%d.tar.gz
-##      BACKUP_PRUNING_PREFIX: imgs-backup-
-##      BACKUP_RETENTION_DAYS: '7'
-#      AWS_S3_BUCKET_NAME: backup-bucket
-#      AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
-#      AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-#    volumes:
-#      - pictures:/images:ro
-#      - /var/run/docker.sock:/var/run/docker.sock:ro
-#  db-backup:
-#    image: offen/docker-volume-backup:v2
-#    environment:
-#      #BACKUP_FILENAME: data-backup-%Y-%m-%d.tar.gz
-#      # TODO: consider using s3 tagging for lifecycle policies instead of encoding in the filename and using backup pruning. This would allow us to keep all backups in the same bucket and not have to worry about pruning logic in the backup container.
-#      # TODO: setup retention/lifecycle policies so that hourly backups exist for a day. Daily backups (1st hour) exist for a week. Monthly backups (28th of month) exist for a year. Yearly backups (last day of year) exist forever.
-#      # TODO: setup backup versioning via s3 to only keep a week of daily data, a month of weekly data, and a year of monthly data, plus one for each year?
-#
-#      BACKUP_FILENAME: data-backup.tar.gz
-#      AWS_S3_BUCKET_NAME: backup-bucket
-#      AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
-#      AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-#    volumes:
-#      - mongodb-data:/data/db:ro
-#      - /var/run/docker.sock:/var/run/docker.sock:ro

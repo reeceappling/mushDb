@@ -35,7 +35,7 @@ services:
     environment:
       ENVIRONMENT: ${ENVIRONMENT:?error}
       # TODO: CHANGE SECRETS TO ACTUAL SECRETS!
-      SESSION_SECRET: ${GOTHIC_SESSION_SECRET:-https} # TODO: ok?
+      SESSION_SECRET: ${GOTHIC_SESSION_SECRET:-https} # Must be in ENV for goth to work
       PICS_PATH: "/images"
       MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-https}
       MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
@@ -102,36 +102,6 @@ services:
       - ./etc/mongodb.key:/etc/mongodb.key:ro
     networks:
       - mushNet
-#  backup-sidecar: # TODO: FIXME!
-#    image: mongo:4.4
-#    container_name: backup_sidecar
-#    volumes:
-#      - ./scripts/backup.sh:/scripts/backup.sh
-#      - backups:/backups
-#    environment:
-#      - BACKUP_CRON_EXPRESSION=*/2 * * * *  # Every 2 mins
-#      # TODO: - BACKUP_CRON_EXPRESSION=0 2 * * *  # Daily at 2:00 AM
-#      - MONGO_HOST=${MONGO_INITDB_DATABASE:?error}
-#      - MONGO_PORT=27017
-#      - MONGO_USER=${MONGO_INITDB_BACKUP_USERNAME:?error}
-#      - MONGO_PASS=${MONGO_INITDB_BACKUP_PASSWORD:?error}
-#    entrypoint: /bin/bash
-#    command: >
-#      -c "printf '#!/bin/sh\nexit 0\n' > /usr/sbin/policy-rc.d &&
-#      apt-get update && apt-get install -y cron &&
-#      rm /usr/sbin/policy-rc.d &&
-#      rm -f /var/run/crond.pid /var/run/cron.pid &&
-#      printenv | grep -E 'MONGO_|BACKUP_' > /etc/environment &&
-#      chmod +x /scripts/backup.sh &&
-#      echo \"$$BACKUP_CRON_EXPRESSION . /etc/environment; /scripts/backup.sh >> /var/log/backup.log 2>&1\" > /etc/cron.d/backup-cron &&
-#      chmod 0644 /etc/cron.d/backup-cron &&
-#      crontab /etc/cron.d/backup-cron &&
-#      cron -f"
-#    #command: -c "printf '#!/bin/sh\nexit 0\n' > /usr/sbin/policy-rc.d && apt-get update && apt-get install -y cron && rm /usr/sbin/policy-rc.d && rm -f /var/run/crond.pid /var/run/cron.pid && chmod +x /scripts/backup.sh && echo \"$$BACKUP_CRON_EXPRESSION /scripts/backup.sh >> /var/log/backup.log 2>&1\" > /etc/cron.d/backup-cron && chmod 0644 /etc/cron.d/backup-cron && crontab /etc/cron.d/backup-cron && cron -f"
-#    networks:
-#      - mushNet
-#    depends_on:
-#      - mushdb
 
   # grafana service
 #  grafana:
