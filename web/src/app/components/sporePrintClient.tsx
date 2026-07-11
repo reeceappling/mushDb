@@ -67,7 +67,7 @@ import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {MssData} from "@/app/components/mssServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
-import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
@@ -147,6 +147,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
     const [species, setSpecies] = useState<SpeciesData | undefined>()
     const [subspecies, setSubspecies] = useState<string | undefined>()
     const [image, setImage] = useState<File | undefined>()
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
     const importEntry = (e: React.MouseEvent)=>{
@@ -164,6 +165,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
             // optional
             subspecies: subspecies,
             notes:notes,
+            writeTagTo: writeTagTo,
         }
         formData.set("data", JSON.stringify(dataObj))
         if(image!==undefined){
@@ -183,6 +185,7 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
             {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}
             <ImageSelector updateParent={setImage}/>
             <NewEntryNotes setNotes={setNotes} />
+            <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
             <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
         </ImportEntryFormWrapper>
 

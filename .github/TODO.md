@@ -22,6 +22,7 @@
 - [x] LcSyringes ADD PHOTOS
 - [x] Dates on import pages are not allowing January!
 - [ ] Update MostRecentImage everywhere, just like in LcSyringe!
+  - [ ] Test all places that use updateMostRecentImageIfNeeded
  
 # In Progress
 ## Actively Working On

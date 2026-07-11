@@ -530,6 +530,7 @@ type importSporePrintRequest struct {
 	SubspeciesOptionalField
 	NotesField
 	// pic as "img"
+	WriteTagToField
 }
 
 func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
@@ -641,11 +642,11 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
-	// TODO: THIS! //err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
-	//if err != nil {
-	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
