@@ -19,8 +19,10 @@
 - [ ] When trying to edit a large note that already exists, clicking the edit button causes the textArea to be very large comparably to its contents!
 - [ ] Pagination on list pages. Use query params (or path) to determine which item to use bson.M{"_id":bson.M{"$gt": lastId}}
 - [ ] mush.appli.ng should redirect to /login if not logged in?
-- [ ] LcSyringes ADD PHOTOS
-
+- [x] LcSyringes ADD PHOTOS
+- [x] Dates on import pages are not allowing January!
+- [ ] Update MostRecentImage everywhere, just like in LcSyringe!
+ 
 # In Progress
 ## Actively Working On
 - [x] Adding pics/flushes/contams images is not working when trying to view them after update

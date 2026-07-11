@@ -229,6 +229,7 @@ func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, e
 	return NewMods().
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
+		// TODO: pics?
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().

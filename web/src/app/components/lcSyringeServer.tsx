@@ -2,6 +2,7 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
+import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 
 export function TestLcSyringeOk(){
     return new LcSyringeData({
@@ -34,6 +35,8 @@ export interface LcSyringeData {
     knownFruitable?: boolean
     transfersOut?: string[]
     disposed?: number
+    pics?: PicWithNotesIncoming[]
+    mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
     acl: ACL

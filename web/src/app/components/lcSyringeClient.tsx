@@ -13,7 +13,7 @@ import {
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
-    DoGetRequest,
+    DoGetRequest, DoMultipartImportRequest, DoUpdateMultipartRequest,
     DoUpdateRequest,
     ErrHandler,
     ExistingRecentSelector,
@@ -28,9 +28,9 @@ import {
     NewColumn,
     NewEntryFormWrapper,
     NumberToDateStr,
-    OptionalArrayOfType,
+    OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
-    RequiredKey,
+    RequiredKey, resolveContamsFormData, resolvePicsFormData, setFormFull,
     viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
@@ -39,8 +39,8 @@ import ReaderWriterSelector, {
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
     ErrorDisplay,
-    GensFormDisplay,
-    ParentDisplay,
+    GensFormDisplay, MostRecentImageDisplay,
+    ParentDisplay, PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
 import {SpeciesData} from "@/app/components/speciesServer";
 import ID from "@/app/components/formSubcomponents/id";
@@ -49,7 +49,7 @@ import {
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
 import {LcSyringeData} from "@/app/components/lcSyringeServer";
-import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import TestAndValidate from "@/app/components/testing/untested";
@@ -65,6 +65,15 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {AssertLc} from "@/app/components/lcClient";
+import {
+    InitialPicsEntries,
+    IsValidPicWithNotesIncoming,
+    NewPicWithNotesForm,
+    PicWithNotesForm
+} from "@/app/components/formSubcomponents/picWithNotes";
+import {AssertPlate} from "@/app/components/plateClient";
+import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
+import {PlateData} from "@/app/components/plateServer";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
     if (typeof input !== 'object') {
@@ -109,11 +118,21 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
             throw new Error('LcSyringe assertion failure: required key ' + key + ' was not valid');
         }
     }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
+        if (!OptionalKey(key, input, validator)) {
+            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
+        }
+    }
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
+        ['pics', IsValidPicWithNotesIncoming],
         ['notes', IsValidNote],
     ])
     for (const [key, validator] of complexOptionalArrayKeys) {
@@ -137,14 +156,17 @@ export function LcSyringeImportDisplay() {
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(1)
+    const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const ImportLcSyringe = () => {
         if (species === undefined) {
             setErr("Species must be set!")
             return
         }
+        const formData = new FormData()
         const dataObj: any = {
             creationDate: created,
             species: species._id,
@@ -155,19 +177,24 @@ export function LcSyringeImportDisplay() {
             notes: notes,
             writeTagTo: writeTagTo,
         }
+        formData.set("data", JSON.stringify(dataObj))
+        if (imageFile !== undefined) {
+            formData.set("image", imageFile, "img")
+        }
+        DoMultipartImportRequest(formData, "lcSyringe", AssertLcSyringe, setErr, allCookies(cookies))
 
-        fetch(importApiUrlFor("lcSyringe"), {
-            method: 'Post',
-            body: JSON.stringify(dataObj),
-            headers: clientPostRequestHeaders,
-        })
-            .then(HandleJsonResponse)
-            .then((newItem) => {
-                AssertLcSyringe(newItem)
-                window.location.assign(viewUrlFor("lcSyringe", newItem._id))
-                // redirect(viewUrlFor("lcSyringe", newItem._id)) // TODO: del if working
-            })
-            .catch(ErrHandler(setErr));
+        // fetch(importApiUrlFor("lcSyringe"), {
+        //     method: 'Post',
+        //     body: JSON.stringify(dataObj),
+        //     headers: clientPostRequestHeaders,
+        // })
+        //     .then(HandleJsonResponse)
+        //     .then((newItem) => {
+        //         AssertLcSyringe(newItem)
+        //         window.location.assign(viewUrlFor("lcSyringe", newItem._id))
+        //         // redirect(viewUrlFor("lcSyringe", newItem._id)) // TODO: del if working
+        //     })
+        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"lcSyringe"}>
         {err != undefined && <div>{"Error: " + err}</div>}
@@ -179,8 +206,11 @@ export function LcSyringeImportDisplay() {
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <NewEntryNotes setNotes={setNotes}/>
-        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"greenButton bottomButton"} onClick={ImportLcSyringe}>{"Submit"}</button>
+        <div className={"centerH mt-2"}>
+            <ImageSelector updateParent={setImageFile}/>
+        </div>
+
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>        <button className={"greenButton bottomButton"} onClick={ImportLcSyringe}>{"Submit"}</button>
     </ImportEntryFormWrapper>
 }
 
@@ -188,6 +218,9 @@ export default function LcSyringeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<LcSyringeData>) {
+    const [initial, setInitial] = useState(data)
+    const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
+
     const [transfersOut, setTransfersOut] = useState<string[]>(data.transfersOut || [])
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(data.confirmedClean)
     const [knownFruitable, setKnownFruitable] = useState(data.knownFruitable)
@@ -195,13 +228,14 @@ export default function LcSyringeDisplay(
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
     const [acl, setAcl] = useState<ACL>(data.acl)
     const [err, setErr] = useState<string | undefined>()
-    const [initial, setInitial] = useState(data)
+
     const updateInitial = (updated: LcSyringeData) => {
         setInitial(updated)
         setTransfersOut(updated.transfersOut || [])
         setConfirmedClean(updated.confirmedClean)
         setKnownFruitable(updated.knownFruitable)
         setDisposed(updated.disposed)
+        setImages(InitialPicsEntries(updated.pics))
         setNotes(InitialNotesState(updated.notes))
         setAcl(updated.acl)
         setErr(undefined)
@@ -209,7 +243,8 @@ export default function LcSyringeDisplay(
 
     const cookies = useContext(CookiesContext)
     const lcSyringeSubmit = () => {
-        const body: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             disposed: disposed,
@@ -217,13 +252,34 @@ export default function LcSyringeDisplay(
             notes: notes,
             acl: MarshalAcl(acl),
         }
-        DoUpdateRequest("lcSyringe",initial._id, body, AssertLcSyringe, allCookies(cookies))
+        try {
+            // Pics
+            const picsInfo = resolvePicsFormData(images)
+            const newImages = picsInfo.images
+            dataObj.images = picsInfo.obj
+            // Set data on form
+            setFormFull(formData, dataObj, newImages, undefined, undefined)
+        } catch (caught: any) {
+            console.log("error in submit")
+            setErr(JSON.stringify(caught))
+            return
+        }
+        console.log("submitting update request")
+        DoUpdateMultipartRequest("lcSyringe",initial._id, formData, AssertLcSyringe, allCookies(cookies))
             .then(v=>{
                 updateInitial(new LcSyringeData(v))
+                console.log("updated initial state")
             })
             .catch(e=>{
-                setErr(JSON.stringify(e))
+                setErr("Error in parsing updated lcSyringe: "+JSON.stringify(e))
             })
+        // DoUpdateRequest("lcSyringe",initial._id, dataObj, AssertLcSyringe, allCookies(cookies))
+        //     .then(v=>{
+        //         updateInitial(new LcSyringeData(v))
+        //     })
+        //     .catch(e=>{
+        //         setErr(JSON.stringify(e))
+        //     })
     }
     const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
         const disp = initial.disposed !== undefined
@@ -235,6 +291,7 @@ export default function LcSyringeDisplay(
         <ErrorDisplay err={err}/>
         <ID props={{id:data._id, txt:"Liquid Culture Syringe", entryType:"lcSyringe"}}/>
         <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
+        <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
         <FlexedArea>
             <FlexedSinglesGroup>
                 <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
@@ -256,12 +313,15 @@ export default function LcSyringeDisplay(
         </FlexedArea>
         <TransfersOutDisplay thisId={initial._id} thisEntryType={"lcSyringe"} transfersOut={transfersOut}
                              allowNewTransferCreation={!readonly}/>
+        <PicsDisplay pix={initial.pics} readonly={readonly}
+                     headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
         <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
         <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
             <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl} />
         </TogglableAreaWithDepth>
         {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
             e.stopPropagation();
+            e.preventDefault()
             lcSyringeSubmit()
         }}>{"Update"}</button>}
     </DisplayFormWrapper>

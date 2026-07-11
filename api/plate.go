@@ -448,6 +448,38 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 	}
 }
 
+func loadMriPics(pics *SplitEntries[picWithNotesForm, PicWithNotes], contams *SplitEntries[contamForm, Contamination], flushes *SplitEntries[picWithNotesForm, PicWithNotes]) []PicWithNotes {
+	imagesForUpdateFunc := []PicWithNotes{}
+	if pics != nil {
+		for _, ex := range pics.Existing {
+			if !ex.Disabled {
+				imagesForUpdateFunc = append(imagesForUpdateFunc, ex.Data.convert())
+			}
+		}
+		imagesForUpdateFunc = append(imagesForUpdateFunc, pics.New...) // TODO: is this backwards???
+	}
+	if contams != nil {
+		for _, ex := range contams.Existing {
+			if !ex.Disabled {
+				imagesForUpdateFunc = append(imagesForUpdateFunc, *ex.Data.convert().getPicWithNotes())
+			}
+		}
+		for _, c := range contams.New {
+			imagesForUpdateFunc = append(imagesForUpdateFunc, *c.getPicWithNotes())
+		}
+	}
+
+	if flushes != nil {
+		for _, f := range flushes.Existing {
+			if !f.Disabled {
+				imagesForUpdateFunc = append(imagesForUpdateFunc, f.Data.convert())
+			}
+		}
+		imagesForUpdateFunc = append(imagesForUpdateFunc, flushes.New...) // TODO: is this backwards???
+	}
+	return imagesForUpdateFunc
+}
+
 func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateCondensationCoverageIfNeeded(req, existing).
@@ -459,6 +491,7 @@ func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
 		updateContamsIfNeeded(req.Contams, existing.Contaminations).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
@@ -481,18 +514,10 @@ type resolvedUpdatePlateRequest struct {
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	data := &updatePlateRequest{}
-	idStr, err := UrlDecodeString(r.PathValue("id"))
+	b58Id, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
-		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	mainCollId, err := StandardizeMainCollectionId(idStr)
-	if err != nil {
-		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id := *mainCollId
-	b58Id := mainCollId.AsBase58()
 	reqBs, err := json.MarshalIndent(data, "", " ")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

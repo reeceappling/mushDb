@@ -270,6 +270,7 @@ func (req resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclFiel
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
 		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()

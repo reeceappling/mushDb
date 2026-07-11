@@ -27,38 +27,22 @@ func main() {
 		return
 	}
 	if create {
-		zipName := time.Now().Format("2006-01-02_15-04-05") + ".zip"
+		zipName := "noCommit_backup_" + time.Now().Format("2006-01-02_15-04-05") + ".zip"
 		if zipFileName != nil && *zipFileName != "" {
 			zipName = *zipFileName
 		}
 
-		// TODO: allow a flag for naming the output file?
-		//envFiles := os.Args[2:] // TODO: ensure ok
-		envFiles := flag.Args() // TODO: ensure ok
+		envFiles := flag.Args()
 		imagesDir, dbDir := getDirs(envFiles...)
 		createBackup(zipName, imagesDir, dbDir)
 	} else {
-		//panic("load is not enabled!")
 		if zipFileName == nil || *zipFileName == "" {
 			log.Fatal("invalid zip file name, must be a valid existing file") // TODO; ensure file exists first
 		}
-		// TODO: allow a flag for naming the output file?
-		//envFiles := os.Args[2:] // TODO: ensure ok
 		envFiles := flag.Args() // TODO: ensure ok
 		imagesDir, dbDir := getDirs(envFiles...)
 		loadBackup(*zipFileName, imagesDir, dbDir)
 	}
-	//scriptArgs := os.Args[1:]
-	//createOrLoad := scriptArgs[0]
-	//switch createOrLoad {
-	//case "create":
-	//
-	////case "load": // TODO: REENABLE LATER!
-	//
-	//default:
-	//	panic("invalid arg in position 1, must be 'create' or 'load'")
-	//}
-	//// TODO: get args
 }
 
 const (
@@ -84,7 +68,7 @@ func getDirs(envFiles ...string) (imagesDir, dbDir string) {
 
 func createBackup(zipName, imagesDir, dbDir string) {
 	println("trying to create backup zip file at " + zipName)
-	zipDir := filepath.Dir(zipName) // TODO: ensure ok
+	zipDir := filepath.Dir(zipName)
 	// 0755 sets standard read/write/execute permissions for directories
 	err := os.MkdirAll(zipDir, 0777)
 	if err != nil {
@@ -138,7 +122,7 @@ func createBackup(zipName, imagesDir, dbDir string) {
 			}
 
 			// Ensure zip paths use forward slashes for cross-platform compatibility
-			zipPath := filepath.ToSlash(filepath.Join(zipRoot, relPath)) // TODO: ensure ok
+			zipPath := filepath.ToSlash(filepath.Join(zipRoot, relPath))
 
 			// Handle directories by appending a trailing slash
 			if d.IsDir() {
@@ -212,14 +196,14 @@ func loadBackup(zipPath, imagesDir, dbDir string) {
 		} else {
 			zipDir, parentTempDir = dbZipDir, dbTempDir
 		}
-		relativePath, err := filepath.Rel(zipDir, file.Name) // TODO: ensure ok
+		relativePath, err := filepath.Rel(zipDir, file.Name)
 		if err != nil {
 			log.Fatalf("failed to get relative path, %v", err)
 		}
 		if relativePath == "." {
 			continue
 		}
-		finalPath := filepath.Join(parentTempDir, relativePath) // TODO: ensure ok
+		finalPath := filepath.Join(parentTempDir, relativePath)
 		// Handle directories
 		if file.FileInfo().IsDir() {
 			// TODO: create this dir if it does not already exist outside of the zip!
@@ -230,7 +214,6 @@ func loadBackup(zipPath, imagesDir, dbDir string) {
 		}
 
 		// Process the target file
-		//fmt.Printf("\nFound file: %s (Size: %d bytes)\n", file.Name, file.UncompressedSize64)
 		outputFile, err := os.OpenFile(finalPath, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0666) // TODO: ensure ok
 		if err != nil {
 			log.Fatalf("failed to open file, %v", err)
@@ -252,7 +235,7 @@ func loadBackup(zipPath, imagesDir, dbDir string) {
 	}
 }
 
-func readZipFileContentToNewFile(src *zip.File, dst *os.File) error { // TODO: FIX!
+func readZipFileContentToNewFile(src *zip.File, dst *os.File) error {
 	// Open the specific file inside the zip
 	rc, err := src.Open()
 	if err != nil {
@@ -263,14 +246,4 @@ func readZipFileContentToNewFile(src *zip.File, dst *os.File) error { // TODO: F
 
 	_, err = dst.ReadFrom(rc) // TODO: ensure ok!
 	return err
-	//
-	//// Example: Read the first 100 bytes of the file content
-	//buffer := make([]byte, 100)
-	//n, err := rc.Read(buffer)
-	//if err != nil && err != io.EOF {
-	//	return err
-	//}
-	//
-	//fmt.Printf("Content preview: %s\n", string(buffer[:n]))
-	//return nil
 }

@@ -198,6 +198,19 @@ type LastUpdatedField struct {
 type NotesField struct {
 	Notes []Note `bson:"notes,omitempty" json:"notes,omitempty"`
 }
+
+func (field NotesField) EqualTo(other NotesField) bool {
+	if len(field.Notes) != len(other.Notes) {
+		return false
+	}
+	for i, _ := range field.Notes {
+		if !field.Notes[i].EqualTo(other.Notes[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 type HasNotesField interface {
 	GetNotes() []Note
 }

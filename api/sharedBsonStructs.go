@@ -81,6 +81,13 @@ type PicWithNotes struct {
 	Location                 ImageLocation `bson:"location" json:"location"`
 }
 
+func (pwn PicWithNotes) EqualTo(other PicWithNotes) bool {
+	if pwn.Location != other.Location || pwn.Time != other.Time {
+		return false
+	}
+	return pwn.NotesField.EqualTo(other.NotesField)
+}
+
 func newPicWithNotes(tim unix.Time, notes []Note, location ImageLocation) PicWithNotes {
 	return PicWithNotes{
 		PicWithNotesLessLocation: newPicWithNotesLessLocation(tim, notes),
@@ -249,6 +256,13 @@ func (f Fluid) AsLiquid(pct ...float64) Liquid {
 type Note struct {
 	RequiredTimeField `bson:"inline"`
 	Note              string `bson:"note" json:"note"`
+}
+
+func (n Note) EqualTo(other Note) bool {
+	if n.Time != other.Time || n.Note != other.Note {
+		return false
+	}
+	return true
 }
 
 func newNote(tim unix.Time, txt string) Note {
@@ -849,6 +863,45 @@ func (upd *Mods) updateTimeIfNoLongerNil(fieldName string, updated *int, existin
 
 func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
 	return upd.updatePwnIfNeeded("pics", updatedEntries, existing)
+}
+
+// Flatten takes a 2D slice and returns a flattened 1D slice
+func Flatten[T any](lists [][]T) []T {
+	var res []T
+	for _, list := range lists {
+		res = append(res, list...) // The ... unpacks the inner slice
+	}
+	return res
+}
+
+// TODO: ADD TO ALL PLACES!
+func (upd *Mods) updateMostRecentImageIfNeeded(existing *PicWithNotes, updatedPicsGroups ...[]PicWithNotes) *Mods { // TODO: make sure this works as anticipated!
+	updatedPics := Flatten(updatedPicsGroups)
+	if len(updatedPics) == 0 {
+		if existing != nil {
+			// TODO: if pic already exists, remove it
+			return upd.withMostRecentImage(nil)
+		}
+		return upd
+	}
+
+	getLatestPic := func(updated []PicWithNotes) PicWithNotes {
+		var latestPic PicWithNotes = updated[0]
+		for i := 1; i < len(updated); i++ {
+			candidate := updated[i]
+			if latestPic.Time < candidate.Time {
+				latestPic = candidate
+			}
+		}
+		return latestPic
+	}
+	latestPic := getLatestPic(updatedPics)
+	if existing != nil {
+		if existing.EqualTo(latestPic) {
+			return upd
+		}
+	}
+	return upd.withMostRecentImage(&latestPic)
 }
 
 func (upd *Mods) updateFlushesIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated

@@ -634,7 +634,7 @@ func getUserProjectsFromCursor(ctx context.Context, cursor *mongo.Cursor, numIte
 
 type picWithNotesForm struct {
 	Time unix.Time `json:"time"`
-	Img  string    `json:"img"`
+	Img  string    `json:"img"` // Same as Location on PicWithNotes
 	NotesUpdateField
 }
 

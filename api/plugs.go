@@ -460,6 +460,7 @@ func (req resolvedUpdatePlugsRequest) modsFor(existing *PlugsJar, acl AclField) 
 		updateDisposedIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
 		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }

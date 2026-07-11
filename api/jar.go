@@ -516,17 +516,18 @@ type resolvedUpdateJarRequest struct {
 
 func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
 	return NewMods(). // TODO: update more if needed
-				updateKnownFruitableIfNeeded(req, existing).
-				updateSaleIfNeeded(req.Sale, existing.Sale).
-				updateDisposedIfNeeded(req, existing).
-				updateNotesIfNeeded(req, existing).
-				updatePicsIfNeeded(req.Images, existing.Pics).
-				updateWetnessIfNeeded(req.Wetness, existing.Wetness).
-				updateBurstGrainsIfNeeded(req.BurstGrains, existing.BurstGrains).
-				updateContamsIfNeeded(req.Contams, existing.Contaminations).
-				updatePermsIfNeeded(aclField.ACL, existing.ACL).
-				updateLastUpdatedIfNeeded().
-				Finalized()
+		updateKnownFruitableIfNeeded(req, existing).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
+		updateWetnessIfNeeded(req.Wetness, existing.Wetness).
+		updateBurstGrainsIfNeeded(req.BurstGrains, existing.BurstGrains).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {

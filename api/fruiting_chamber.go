@@ -508,6 +508,7 @@ func (req resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChambe
 		updatePicsIfNeeded(req.Images, existing.Pics).
 		updateContamsIfNeeded(req.Contams, existing.Contaminations).
 		updateFlushesIfNeeded(req.Flushes, existing.Flushes).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, &req.Flushes)).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
