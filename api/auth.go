@@ -80,7 +80,9 @@ func NewAuthService(sessionsCleanupFreq, sessionTTL *time.Duration) *AuthService
 func GetAuthService(ctx context.Context) *AuthService {
 	svc, ok := ctx.Value(authServiceContextKey).(*AuthService)
 	if !ok || svc == nil {
-		svc = NewAuthService(utils.Pointer(time.Minute*2), utils.Pointer(time.Hour*1)) // TODO: FIX!!!!
+		sessionsCleanupFreq := time.Minute * 2
+		sessionTTL := time.Hour * 1
+		svc = NewAuthService(&sessionsCleanupFreq, &sessionTTL)
 		return svc
 	}
 	return svc
@@ -114,14 +116,6 @@ func (srv *AuthService) LogoutSession(sessId SessionId) error {
 	return nil
 }
 
-//	func (srv *AuthService) NewSessionIdForUser(email string) (SessionId, error) {
-//		if srv == nil {
-//			return "", errors.New("nil auth service")
-//		}
-//		srv.RLock()
-//		defer srv.RUnlock()
-//		return srv.newSessionIdForUserWithoutLock(email)
-//	}
 func (srv *AuthService) newSessionIdForUserWithoutLock(email string) (SessionId, error) {
 	if _, userHasSessionAlready := srv.UserSessionMap[email]; userHasSessionAlready {
 		return "", errors.New("email already has existing session") // TODO: dont like. Maybe remove the email and their old session?
@@ -138,7 +132,6 @@ func (srv *AuthService) newSessionIdForUserWithoutLock(email string) (SessionId,
 	return "", errors.New("failed to generate a new unused session id")
 }
 
-// TODO: ensure working
 func (srv *AuthService) clearOldSessions() {
 	srv.RLock()
 
@@ -175,14 +168,12 @@ func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[g
 		}()
 
 		wg.Wait()
-		// TODO; is this ok?
 		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](ErrExpired)
 	}
 	if refreshTTL {
 		result := genericsessions.Session[ResolvedUserPerms]{}
 		wg.Add(1)
 		go func() {
-			// TODO: FIXME!
 			result = srv.setRefreshedSession(id, sess)
 			wg.Done()
 		}()
@@ -193,7 +184,6 @@ func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[g
 
 }
 
-// TODO: ensure ok
 func (srv *AuthService) setRefreshedSession(id SessionId, sess genericsessions.Session[ResolvedUserPerms]) genericsessions.Session[ResolvedUserPerms] {
 	result := &genericsessions.Session[ResolvedUserPerms]{}
 	srv.Lock()
@@ -264,7 +254,7 @@ func (serv *AuthService) TryToReAuth(ctx context.Context, sessionKey SessionId) 
 		env.LogIfDev(ctx, "sessionKey is empty")
 		return genericsessions.Session[ResolvedUserPerms]{}, ErrBlankSessionKey
 	}
-	res := serv.GetSession(sessionKey, true) // TODO: needs update
+	res := serv.GetSession(sessionKey, true)
 	if res.Err != nil {
 		env.LogIfDev(ctx, "failed to get session in TryToReAuth")
 		return genericsessions.Session[ResolvedUserPerms]{}, utils.NotFound
@@ -337,16 +327,16 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 			println("Failed to add user for email: " + u.Email)   // TODO: del?
 			return "", email, err
 		}
-		if adminEmail != "" && email == adminEmail {
-			println("checking admin user")                                                    // TODO; del
-			if err = coll.FindOne(ctx, BsonFindFilter(IDfld, email)).Decode(&u); err != nil { // TODO: remove?
-				println("failed to check Admin user")
-				return "", email, err
-			}
-			if u.Perms.Admin == nil || !(*u.Perms.Admin) {
-				return "", email, errors.New("result does not show Admin")
-			}
-		}
+		//if adminEmail != "" && email == adminEmail {
+		//	println("checking admin user")                                                    // TODO; del
+		//	if err = coll.FindOne(ctx, BsonFindFilter(IDfld, email)).Decode(&u); err != nil { // TODO: remove?
+		//		println("failed to check Admin user")
+		//		return "", email, err
+		//	}
+		//	if u.Perms.Admin == nil || !(*u.Perms.Admin) {
+		//		return "", email, errors.New("result does not show Admin")
+		//	}
+		//}
 	}
 	//if u.Perms.Admin == nil { // TODO: del or reenable for testing
 	//	env.LogIfDev(ctx, "Admin on perms was nil when it should not have been!")
@@ -381,7 +371,7 @@ func (serv *AuthService) SigninGuestUser() (sessionId SessionId, err error) {
 		Expiry: time.Now().Add(serv.ttl),
 	}
 
-	println("creating new id without lock") // TODO: del
+	//println("creating new id without lock") // TODO: del
 	id, err := serv.newSessionIdForUserWithoutLock(email)
 	if err != nil {
 		return "", errors.Join(err, errors.New("session with that ID already exists"))
@@ -449,16 +439,16 @@ func (serv *AuthService) registerSessionAndResolvePerms(ctx context.Context, usr
 		serv.deleteSession(sessId, usr.Email)
 	}
 	// Resolve auth info
-	at := func(ac *AccountType) string { // TODO: del
-		if ac == nil {
-			return "guest"
-		}
-		if *ac {
-			return "admin"
-		}
-		return "normalUser"
-	}
-	println("registering session with account type: " + at(usr.Perms.Admin)) // TODO: del
+	//at := func(ac *AccountType) string { // TODO: del
+	//	if ac == nil {
+	//		return "guest"
+	//	}
+	//	if *ac {
+	//		return "admin"
+	//	}
+	//	return "normalUser"
+	//}
+	//println("registering session with account type: " + at(usr.Perms.Admin)) // TODO: del
 	var resolvedPerms = ResolvedUserPerms{
 		Email:       usr.Email,
 		AccountType: usr.Perms.Admin,
@@ -507,29 +497,29 @@ func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 			if err != nil {
 				handleNoSessionCookie.ServeHTTP(w, r)
 				return
-				//env.LogIfDev(ctx, "no session id found on request. Signing in as guest")
-				//sessionId, err = svc.SigninGuestUser()
+				////env.LogIfDev(ctx, "no session id found on request. Signing in as guest")
+				////sessionId, err = svc.SigninGuestUser()
+				////if err != nil {
+				////	env.LogIfDev(ctx, "Failed to sign in as guest: "+err.Error())
+				////	handleAuthErr(err).ServeHTTP(w, r)
+				////	return
+				////}
+				////var ok bool
+				////svc.RLock()
+				////sess, ok = svc.sessMap[sessionId]
+				////svc.RUnlock()
+				////if !ok {
+				////	env.LogIfDev(ctx, "guest not found in session map")
+				////	handleAuthErr(err).ServeHTTP(w, r)
+				////	return
+				////}
+				//err = gothic.StoreInSession(SessionIdKey, string(sessionId), r, w)
 				//if err != nil {
-				//	env.LogIfDev(ctx, "Failed to sign in as guest: "+err.Error())
+				//	e := errors.Join(errors.New("sessId storage fail"), err)
+				//	env.LogIfDev(ctx, e.Error())
 				//	handleAuthErr(err).ServeHTTP(w, r)
 				//	return
 				//}
-				//var ok bool
-				//svc.RLock()
-				//sess, ok = svc.sessMap[sessionId]
-				//svc.RUnlock()
-				//if !ok {
-				//	env.LogIfDev(ctx, "guest not found in session map")
-				//	handleAuthErr(err).ServeHTTP(w, r)
-				//	return
-				//}
-				err = gothic.StoreInSession(SessionIdKey, string(sessionId), r, w)
-				if err != nil {
-					e := errors.Join(errors.New("sessId storage fail"), err)
-					env.LogIfDev(ctx, e.Error())
-					handleAuthErr(err).ServeHTTP(w, r)
-					return
-				}
 			} else {
 				env.LogIfDev(ctx, string("Trying to reauth session ID "+sessionId))
 				sess, err = svc.TryToReAuth(r.Context(), sessionId)
@@ -615,16 +605,10 @@ func (serv *AuthService) necessaryFirstMiddleware(next http.Handler) http.Handle
 
 func (serv *AuthService) AuthOrRedirectMiddleware(redirectUrl string) func(http.Handler) http.Handler {
 	var redirectHandler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		finalQuery := r.URL.Query()                   // TODO: ensure ok!
-		finalQuery.Set("destination", r.URL.String()) // TODO: ENSURE OK!
-		// TODO: PUT PAGE FROM IN THE DATA SO WE CAN PULL IT LATER?
+		finalQuery := r.URL.Query()
+		finalQuery.Set("destination", r.URL.String())
 		http.Redirect(w, r, redirectUrl+"?"+finalQuery.Encode(), http.StatusTemporaryRedirect)
 	})
-
-	//var redirectHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//	// TODO: PUT PAGE FROM IN THE DATA SO WE CAN PULL IT LATER?
-	//	http.Redirect(w, r, redirectUrl, http.StatusSeeOther) // TODO: status ok?
-	//})
 	return func(nextHandler http.Handler) http.Handler {
 		return serv.necessaryFirstMiddleware(authSplitterMiddleware()(nextHandler, redirectHandler, customDenyHandler))
 	}

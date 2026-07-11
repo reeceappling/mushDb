@@ -33,13 +33,10 @@ func writeRfidTagIfNecessary(ctx context.Context, writeTagTo *string, id MainCol
 	}
 	err := mgr.WriteRfid(ctx, shared.RfidReaderName(*writeTagTo), id)
 	if err != nil {
-
 		println("failed to write tag! " + err.Error())
 		return err
-	} else {
-		println("successfully wrote tag!") // TODO: del!
-		return nil
 	}
+	return nil
 }
 
 func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
@@ -47,33 +44,21 @@ func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 		println("making ID 1!")
 		return utils.Pointer(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....
 	}
-	//var out MainCollectionId
-	//idBytes := []byte(id)
-	//if len(idBytes) == 8 { // TODO: unsure if base58 bytes should ever be len 8 in this case... Will likely cause bugs since we shouldnt be expecting base2 to come in from anywhere except the db...
-	//	out = MainCollectionId(idBytes)
-	//	return &out, nil
-	//}
-	println("ID BYTES NOT LENGTH 8! CONVERTING!") // TODO: del
+	//println("ID BYTES NOT LENGTH 8! CONVERTING!") // TODO: del
 	realId, err := Base58Str(id).ToMainCollectionId()
 	if err != nil {
 		return nil, err
 	}
-	println("CONVERTED", id, " TO", string(realId[:])) // TODO: del
+	//println("CONVERTED", id, " TO", string(realId[:])) // TODO: del
 	return &realId, nil
 }
 
 func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
-	//idBytes := []byte(id)
-	//var out AlternateCollectionId
-	//if len(idBytes) == 12 { // TODO: unsure if base58 bytes should ever be len 12 in this case...
-	//	out = [12]byte(idBytes)
-	//	return &out, nil
-	//}
 	realId, err := Base58Str(id).toAltCollectionId()
 	if err != nil {
 		return nil, err
 	}
-	println("CONVERTED", id, " TO", string(realId[:]))
+	//println("CONVERTED", id, " TO", string(realId[:])) // TODO: del
 	return &realId, nil
 }
 
@@ -117,34 +102,12 @@ func GetMainCollectionItemSpecific[T MainCollectionItem](ctx context.Context, id
 	return item, nil
 }
 
-//func GetCollectionItemInTxn(ctx context.Context, id MainCollectionId, sourceType string) (out MainCollectionItem, err error) {
-//	db := DbFrom(ctx)
-//	out, err = typeForSource(sourceType) // TODO: this should be sourceType instead
-//	if err != nil {
-//		return out, err
-//	}
-//	err = db.Collection(out.CollectionName()).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&out)
-//	if err != nil {
-//		return nil, err // mongo.ErrNoDocuments if 404
-//	}
-//	// TODO: auth info????
-//	//authinfo, err := GetAuthInfo(ctx)
-//	//if err != nil {
-//	//	return nil, err
-//	//}
-//	//if out.Permissions().PermissionFor(authinfo) == perms.None {
-//	//	err = errors.New("no perms on getMainCollItemInTxn")
-//	//}
-//	return
-//}
-
 func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id U, item T) (out T, err error) {
 	err = DbFrom(ctx).Collection(item.CollectionName()).
 		FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(item)
 	return item, err
 }
 
-// TODO: used to be in txn!
 func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id AlternateCollectionId, item T) (out T, err error) {
 	out = item
 	encodedResult := DbFrom(ctx).
@@ -157,20 +120,6 @@ func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdTyp
 	if err != nil {
 		return out, err
 	}
-	//authInfo, err := GetAuthInfo(ctx)
-	//if err != nil {
-	//	return out, err
-	//}
-	//if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
-	//	temp, ok := interface{}(out).(Permissioned)
-	//	if !ok {
-	//		return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
-	//	}
-	//
-	//	if temp.Permissions().PermissionFor(authInfo) == perms.None {
-	//		return out, errors.New("no permission")
-	//	}
-	//}
 	return out, nil
 }
 
@@ -186,21 +135,6 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 	if err != nil {
 		return out, err
 	}
-	//authInfo, err := GetAuthInfo(ctx)
-	//if err != nil {
-	//	return out, err
-	//}
-	//out.Permissions()
-	//if reflect.TypeOf(out).Implements(reflect.TypeOf((*Permissioned)(nil)).Elem()) {
-	//	temp, ok := interface{}(out).(Permissioned)
-	//	if !ok {
-	//		return out, errors.New("this should never happen, but a thing implements a thing but does not implement the thing")
-	//	}
-	//
-	//	if temp.Permissions().PermissionFor(authInfo) == perms.None {
-	//		return out, errors.New("no permission")
-	//	} // TODO: pull this out
-	//}
 	return out, nil
 }
 
@@ -312,6 +246,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
 			if errr != nil {
 				err = errr
+				println("failed to save a new picture", err.Error()) // TODO: del
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -321,6 +256,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "contam")
 			if errr != nil {
 				err = errr
+				println("failed to save a new contamination picture", err.Error()) // TODO: del
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -330,7 +266,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "flush")
 			if errr != nil {
 				err = errr
-				println("failed to save a new flush picture", errr.Error()) // TODO: del
+				println("failed to save a new flush picture", err.Error()) // TODO: del
 				http.Error(w, "failed to save new flush: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -374,7 +310,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 }
 
 // TODO: rename
-// TODO: only use when writeRFID is not between the two (on updates)
+// TODO: only use when writeRFID is not between the two (on updates) (should always be used)
 func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, prefixPath string, data *T, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) { // TODO USE THIS ALL OVER THE PLACE
 	defer r.Body.Close()
 	reader, err := multipartReaderForRequest(r, w, data)

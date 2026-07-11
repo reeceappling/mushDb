@@ -81,7 +81,7 @@ func initializeWaterJars(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		// If test agar batch does not exist, then create it
 		testItem := &WaterJar{
 			MainCollectionIdField: MainCollectionIdField{exWaterId},
@@ -103,7 +103,7 @@ type createWaterJarRequest struct {
 	// Default perms are allCanWrite
 }
 
-func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: THIS! test ts!
+func createWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -145,7 +145,7 @@ func createWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: TH
 type importWaterJarRequest struct {
 	CreationDateField
 	NotesField
-	WriteTagToField // TODO: USE THIS!
+	WriteTagToField
 }
 
 func importWaterJarHandler(w http.ResponseWriter, r *http.Request) {
@@ -162,9 +162,9 @@ func importWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 		PcRunField:            PcRunField{impPcRun}, // import pc run!
 		NotesField:            NotesField{req.Notes},
 		LastUpdatedField:      LastUpdatedField{now},
-		AclField:              allCanWriteAcl(), // TODO: ok?
+		AclField:              allCanWriteAcl(),
 	}
-	err := writeRfidTagIfNecessary(ctx, req.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err := writeRfidTagIfNecessary(ctx, req.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return

@@ -35,8 +35,8 @@ func allCanWriteAcl() AclField {
 
 // ACL being nil means anyone authenticated can do anything (read/write)
 type ACL struct { // ALWAYS REFERENCED AS A STRUCT AND NOT A POINTER!
-	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite // TODO: omitempty ok?
-	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite // TODO: omitempty ok?
+	Users       map[string] /*email*/ bool `bson:"users,omitempty" json:"users,omitempty"`             // bool is canWrite
+	Projects    map[projectName]bool       `bson:"projects,omitempty" json:"projects,omitempty"`       // bool is canWrite
 	BlanketPerm *ReadWritePerm             `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // empty is private, false is public can read by default. True means public can write by default.
 }
 
@@ -173,11 +173,11 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	// Handle blanket perm
 	var maxPerm = RWPermNothing()
 	if acl.BlanketPerm.CanRead() {
-		println("user can read") // TODO: del!
+		//println("user can read") // TODO: del!
 		maxPerm = RWPermRead()
 	}
 	if userPerms.isGuest() {
-		println("user was guest, returning perm: ", maxPerm) // TODO: del!
+		//println("user was guest, returning perm: ", maxPerm) // TODO: del!
 		return maxPerm
 	}
 
@@ -460,7 +460,6 @@ type UserPerms struct {
 	Projects []projectName `bson:"projects,omitempty" json:"projects,omitempty"`
 }
 
-// TODO: consider moving!
 var testAclStrings = []string{
 	"blanket write",
 	"blanket read",

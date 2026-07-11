@@ -410,7 +410,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		// No Perms here for basic plates
 		AclField: allCanWriteAcl(),
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return

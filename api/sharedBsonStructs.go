@@ -876,10 +876,11 @@ func Flatten[T any](lists [][]T) []T {
 
 // TODO: ADD TO ALL PLACES!
 func (upd *Mods) updateMostRecentImageIfNeeded(existing *PicWithNotes, updatedPicsGroups ...[]PicWithNotes) *Mods { // TODO: make sure this works as anticipated!
+	// TODO: CONSIDER USING getItemLatestImage from common.go
 	updatedPics := Flatten(updatedPicsGroups)
 	if len(updatedPics) == 0 {
 		if existing != nil {
-			// TODO: if pic already exists, remove it
+			// if pic already exists, remove it
 			return upd.withMostRecentImage(nil)
 		}
 		return upd
@@ -920,7 +921,7 @@ func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries
 	if !picsWereModified(existing, updatedEntries) {
 		return upd
 	}
-	// TODO: THIS IS NOT WORKING????
+	// TODO: THIS IS NOT WORKING???? I think this is working as of 7/11/26
 	finalPics := make([]PicWithNotes, 0, len(existing)+len(updatedEntries.New))
 	for _, final := range updatedEntries.Existing {
 		if !final.Disabled {
@@ -929,7 +930,7 @@ func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries
 	}
 	finalPics = append(finalPics, updatedEntries.New...)
 	// Set field
-	return upd.Set(fieldName, finalPics) // TODO: ensure ok
+	return upd.Set(fieldName, finalPics)
 
 }
 
@@ -942,11 +943,11 @@ func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, C
 		return upd
 	}
 	if !contamsWereModified(existing, updatedEntries) {
-		println("contams were NOT modified!------------------------")
+		//println("contams were NOT modified!------------------------") // TODO: del
 
 		return upd
 	}
-	println("CONTAMS WERE MODIFIED, SHOULD BE CHANGING!-------------------")
+	//println("CONTAMS WERE MODIFIED, SHOULD BE CHANGING!-------------------") // TODO: del
 	finalEntries := make([]Contamination, 0, len(existing)+len(updatedEntries.New))
 	for _, final := range updatedEntries.Existing {
 		if !final.Disabled {
@@ -955,7 +956,7 @@ func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, C
 	}
 	finalEntries = append(finalEntries, updatedEntries.New...)
 	// Set field
-	return upd.Set("contamination", finalEntries) // TODO: ensure ok
+	return upd.Set("contamination", finalEntries)
 }
 
 func (upd *Mods) updateSaleIfNeeded(future, existing *AlternateCollectionId) *Mods {
@@ -1026,7 +1027,7 @@ func (upd *Mods) withSpecies(species *string) *Mods {
 	return setPointerIfNonNil(upd, "species", species)
 }
 func (upd *Mods) withSubspecies(subsp *string) *Mods {
-	return setPointerIfNonNil(upd, "subspecies", subsp) // TODO: make sure string is correct!!!
+	return setPointerIfNonNil(upd, "subspecies", subsp)
 }
 
 func setPointerIfNonNil[T any](upd *Mods, fieldName string, val *T) *Mods {
@@ -1117,10 +1118,10 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	case "nutrients", "nutrient":
 		writeAsJson(w, nutrients)
 		return
-	case strings.ToLower("sporePrintColors"), strings.ToLower("sporePrintColor"): // TODO: validate works
+	case strings.ToLower("sporePrintColors"), strings.ToLower("sporePrintColor"):
 		writeAsJson(w, sporePrintColors)
 		return
-	case strings.ToLower("sporePrintDensities"), strings.ToLower("sporePrintDensity"): // TODO: validate works
+	case strings.ToLower("sporePrintDensities"), strings.ToLower("sporePrintDensity"):
 		writeAsJson(w, sporePrintDensities)
 		return
 	case "sugars", "sugar":
@@ -1132,7 +1133,6 @@ var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Req
 	case "woods", "wood":
 		writeAsJson(w, woods)
 		return
-		// TODO: any other cases???
 	default:
 		http.Error(w, fmt.Sprintf(`invalid option provided: "%s" is not one of [bagFilterSizes, color,liquid,nutrient,sugar,grain,additive,transferReason]`, opt), http.StatusBadRequest)
 		return

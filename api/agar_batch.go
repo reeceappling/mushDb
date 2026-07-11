@@ -111,7 +111,7 @@ func initializeAgarBatches(ctx context.Context) error {
 			Color:                      clearColor,
 			NotesField:                 NotesField{exampleNotes()},
 			LastUpdatedField:           LastUpdatedField{exampleTime},
-			AclField:                   allCanReadAcl(nil), // TODO: allCanWrite?
+			AclField:                   allCanReadAcl(nil),
 		}
 		println("test Agar Batch:", testAltId.AsBase58())
 		return addTestAltEntries(ctx, testItem)

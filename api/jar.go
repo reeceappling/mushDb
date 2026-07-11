@@ -304,7 +304,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:                allCanWriteAcl(),
 	}
 
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -468,7 +468,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -516,18 +516,18 @@ type resolvedUpdateJarRequest struct {
 
 func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
 	return NewMods(). // TODO: update more if needed
-		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
-		updateDisposedIfNeeded(req, existing).
-		updateNotesIfNeeded(req, existing).
-		updatePicsIfNeeded(req.Images, existing.Pics).
-		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
-		updateWetnessIfNeeded(req.Wetness, existing.Wetness).
-		updateBurstGrainsIfNeeded(req.BurstGrains, existing.BurstGrains).
-		updateContamsIfNeeded(req.Contams, existing.Contaminations).
-		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updateLastUpdatedIfNeeded().
-		Finalized()
+				updateKnownFruitableIfNeeded(req, existing).
+				updateSaleIfNeeded(req.Sale, existing.Sale).
+				updateDisposedIfNeeded(req, existing).
+				updateNotesIfNeeded(req, existing).
+				updatePicsIfNeeded(req.Images, existing.Pics).
+				updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
+				updateWetnessIfNeeded(req.Wetness, existing.Wetness).
+				updateBurstGrainsIfNeeded(req.BurstGrains, existing.BurstGrains).
+				updateContamsIfNeeded(req.Contams, existing.Contaminations).
+				updatePermsIfNeeded(aclField.ACL, existing.ACL).
+				updateLastUpdatedIfNeeded().
+				Finalized()
 }
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {

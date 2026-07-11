@@ -241,7 +241,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	// TODO: validate filter size
+	// validate filter size
 	if _, exists := bagFilterSizes[data.FilterSize]; !exists {
 		http.Error(w, "filter size validation failure", http.StatusBadRequest)
 		return
@@ -260,7 +260,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:            LastUpdatedField{now},
 		AclField:                    allCanWriteAcl(),
 	}
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -391,7 +391,7 @@ type importBagRequest struct {
 	FilterSize string
 	SpeciesOptionalField
 	SubspeciesOptionalField
-	Generation *Generation // TODO: make required when innoculated
+	Generation *Generation // required when innoculated
 	KnownFruitableField
 	WriteTagToField
 	// image as "img"
@@ -424,8 +424,8 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	var importedPic *PicWithNotes = nil
 	dataProcessed := false
 	filesProcessed := 0
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
-	for {                                     // TODO: FIX THIS MULTIPART READER? Unconfirmed that this even needs fixing as of 6/5/26
+	ctx, now := request.UnixTime(r.Context())
+	for { // TODO: FIX THIS MULTIPART READER? Unconfirmed that this even needs fixing as of 6/5/26
 		fileName := p.FileName()
 		defer p.Close()
 		if isFile := fileName != ""; isFile {
@@ -545,7 +545,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                finalPerms.AsField(),
 	}
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return

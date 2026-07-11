@@ -38,7 +38,7 @@ func listEntriesHandlerInternal[T CollectionItem, U any](ctx context.Context, up
 	latestEntries, err := getLastNEntries(ctx, updated, maxResults, doStandardToo, temp, disposed, startAfterId)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
-			println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
+			//println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
 			return nil, err
 		}
 		println("error getting entries: " + err.Error())
@@ -49,14 +49,14 @@ func listEntriesHandlerInternal[T CollectionItem, U any](ctx context.Context, up
 		bs, err = json.Marshal(latestEntries)
 	} else {
 		outObj := map[string][]T{"recent": latestEntries}
-		// TODO: do we want to also display repeats on standard entries?
+		// TODO: do we want to also display repeats on standard entries? NO
 		outObj["standard"], err = getStandardEntries(ctx, temp)
 		if err != nil {
 			if !errors.Is(err, mongo.ErrNoDocuments) {
-				println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
+				//println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
 				return nil, err
 			}
-			println("error getting std entries: " + err.Error()) // TODO: del
+			//println("error getting std entries: " + err.Error()) // TODO: del
 			outObj["standard"], err = []T{}, nil
 		}
 		// Standard is filtered out from latest already
@@ -116,7 +116,6 @@ func ListUsersHandler(ctx context.Context, removeGuests bool) ([]byte, error) {
 }
 
 var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-	// TODO: DEPENDING ON VARIANT, EITHER DO LATEST OR LATEST AND STANDARD!!!!!
 	// TODO: handle disposedFilter
 	var disposedFilter *bool = nil
 	disposedParam := r.URL.Query().Get("disposed")
@@ -168,7 +167,7 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 		}
 		mcid, err := Base58Str(startAfterParam).ToMainCollectionId()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest) // TODO: fix
+			http.Error(w, "invalid mainCollectionId: "+err.Error(), http.StatusBadRequest)
 			return nil, err
 		}
 		return &mcid, nil
@@ -179,7 +178,7 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 		}
 		decoded, err := UrlDecodeString(startAfterParam)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest) // TODO: fix
+			http.Error(w, "invalid altCollectionId: "+err.Error(), http.StatusBadRequest)
 			return nil, err
 		}
 		return &decoded, nil
@@ -305,12 +304,12 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 		}
 		bs, err = listEntriesHandlerInternal[*Slant, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Slant{}, disposedFilter, mcid)
 	case "species":
-		// TODO: species probably don't paginate
+		// Species are not paginated, we always return ALL OF THEM
 		startAfterName, err := getParamStringDecoded(startAfterParam, w)
 		if err != nil {
 			return // already wrote
 		}
-		bs, err = listEntriesHandlerInternal[*Species, string](r.Context(), true, -1, doStandardToo, &Species{}, disposedFilter, startAfterName) // TODO: ensure showing all species (that can be viewed) instead of just 10
+		bs, err = listEntriesHandlerInternal[*Species, string](r.Context(), true, -1, doStandardToo, &Species{}, disposedFilter, startAfterName)
 	case "sporeprint", "spore print", "print",
 		"sporeprints", "spore prints", "prints":
 		mcid, err := getMcid(startAfterParam, w)
@@ -337,7 +336,7 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 		if err != nil {
 			return // already wrote
 		}
-		bs, err = listEntriesHandlerInternal[*Subspecies, string](r.Context(), true, -1, doStandardToo, &Subspecies{}, disposedFilter, startAfterName) // TODO: ensure showing all subspecies (that can be viewed) instead of just 10
+		bs, err = listEntriesHandlerInternal[*Subspecies, string](r.Context(), true, -1, doStandardToo, &Subspecies{}, disposedFilter, startAfterName)
 	case "substrate", "substraterecipe", "substrate recipe",
 		"substrates", "substraterecipes", "substrate recipes":
 		acid, err := getAcid(startAfterParam, w)
@@ -402,7 +401,7 @@ var ListSubspeciesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http
 		Collection(SubspeciesCollectionName).
 		Find(ctx, findBson, opts)
 	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) { // TODO: NOT WORKING PROPERLY FOR BEECH!
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			_, err = w.Write([]byte("[]"))
 			handleWriteErr(err, w)
 			return
@@ -429,79 +428,11 @@ var ListSubspeciesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http
 	handleWriteErr(err, w)
 }
 
-//	func ListNewestEntriesHandler() http.Handler {
-//		handler := func(w http.ResponseWriter, r *http.Request) {
-//			var maxResults int = 10
-//			requested := r.PathValue("variant")
-//
-//			createdOrUpdated, ok := map[string]string{
-//				"":        "updated",
-//				"updated": "updated",
-//				"created": "created",
-//			}[r.URL.Query().Get("createdOrUpdated")]
-//			if !ok {
-//				http.Error(w, "param createdOrUpdated must be created, updated, or nonexistent", http.StatusBadRequest)
-//				return
-//			}
-//			if maxNum := r.URL.Query().Get("n"); maxNum != "" {
-//				n, err := strconv.Atoi(maxNum)
-//				if err != nil {
-//					http.Error(w, fmt.Sprintf(`param n must be a number, or nonexistent (defaults to %d)`, maxResults), http.StatusBadRequest)
-//					return
-//				}
-//				maxResults = n
-//			}
-//
-//			entries, err := getLastNEntries(r.Context(), requested, createdOrUpdated == "updated", maxResults)
-//			if err != nil {
-//				code := http.StatusInternalServerError
-//				if errors.Is(err, mongo.ErrNoDocuments) {
-//					code = http.StatusNotFound
-//				}
-//				http.Error(w, err.Error(), code)
-//				return
-//			}
-//			bs, err := json.Marshal(entries)
-//			if err != nil {
-//				http.Error(w, "Unexpected latest marshalling error: "+err.Error(), http.StatusInternalServerError)
-//				return
-//			}
-//			if _, err = w.Write(bs); err != nil {
-//				HandleHttpWriteError(err)
-//			}
-//		}
-//		return http.HandlerFunc(handler)
-//		//return GetPermsMiddleware(handler)
-//	}
 func HandleHttpWriteError(err error) {
 	if err != nil {
 		println("http write errors are currently unhandled! Err: " + err.Error())
 	}
 }
-
-//
-//func ListStandardEntriesHandler() http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		requested := r.PathValue("variant")
-//		entries, err := getStandardEntries(r.Context(), requested)
-//		if err != nil {
-//			code := http.StatusInternalServerError
-//			if errors.Is(err, mongo.ErrNoDocuments) {
-//				code = http.StatusNotFound
-//			}
-//			http.Error(w, err.Error(), code)
-//			return
-//		}
-//		bs, err := json.Marshal(entries)
-//		if err != nil {
-//			http.Error(w, "Unexpected latest marshalling error: "+err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//		if _, err = w.Write(bs); err != nil {
-//			HandleHttpWriteError(err)
-//		}
-//	}
-//}
 
 func PrintAltCollectionItemIds[T AltCollectionItem[U], U AltCollectionIdType](Prefix string, testItems []T) error {
 	if len(testItems) == 0 {
@@ -556,7 +487,6 @@ func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx conte
 	if err := PrintAltCollectionItemIds("Builtin", testItems); err != nil {
 		return err
 	}
-	// TODO: txn or no?
 	coll := DbFrom(ctx).Collection(testItems[0].CollectionName())
 	for _, item := range testItems {
 		_, err := coll.InsertOne(ctx, item, options.InsertOne())

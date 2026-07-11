@@ -378,7 +378,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			return nil, e
 		}
-		e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+		e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 		if e != nil {
 			return nil, errors.Join(e, errors.New("failed to write tag"))
 		}

@@ -162,7 +162,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 				return nil, e
 			}
 			// TODO: unsure if we want this to write!!!
-			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id) // TODO: this should always only occur right before the true writes
+			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id)
 			if e != nil {
 				return nil, errors.Join(e, errors.New("failed to write tag"))
 			}
@@ -177,7 +177,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			if e != nil {
 				return nil, e
 			}
-			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id) // TODO: this should always only occur right before the true writes
+			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id)
 			if e != nil {
 				return nil, errors.Join(e, errors.New("failed to write tag"))
 			}
@@ -191,7 +191,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			if e != nil {
 				return nil, e
 			}
-			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id) // TODO: this should always only occur right before the true writes
+			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id)
 			if e != nil {
 				return nil, errors.Join(e, errors.New("failed to write tag"))
 			}
@@ -276,6 +276,7 @@ type importSporeSwabRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
+	WriteTagToField // TODO: ADD THIS TO TYPESCRIPT!
 }
 
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
@@ -316,11 +317,11 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                finalPerms.AsField(),
 	}
-	//// TODO: THIS! err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
-	//if err != nil {
-	//	http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 

@@ -20,13 +20,13 @@ var (
 	_ MainCollectionItem = &MSS{}             // generally only goes to plate
 	_ MainCollectionItem = &SporePrint{}
 	_ MainCollectionItem = &LcSyringe{}
-	_ MainCollectionItem = &PlugsJar{} // TODO: has multiple sales
+	_ MainCollectionItem = &PlugsJar{} // TODO: has multiple sales...
 	_ MainCollectionItem = &SporeSwab{}
 	_ MainCollectionItem = &WaterJar{}
 )
 
-type CollectionId interface { // TODO; USE????
-	MainCollectionId | AlternateCollectionId // TODO: DELETEME
+type CollectionId interface {
+	MainCollectionId | AlternateCollectionId
 	AsBase58() Base58Str
 }
 

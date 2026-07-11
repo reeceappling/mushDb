@@ -33,7 +33,6 @@ var ErrNoParentModifiedForTransfer = errors.New("parent not found for transfer u
 var ErrMissingOptionalField = errors.New("missing optional field")
 var ErrFailedToFinalizeMods = errors.New("failed to finalize mods")
 
-// TODO: ALL CREATION ENDPOINTS
 // TODO: USE!
 func UrlEncodeString(toEncode string) string {
 	return url.QueryEscape(toEncode)
@@ -77,17 +76,17 @@ var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, fal
 
 var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false) // TODO: THIS DOES NOT ENFORCE UNIQUENESS!!!!!
 
-// TODO: USE!
-func SetEnv(ctx context.Context, isProd bool) context.Context {
-	return context.WithValue(ctx, "isProd", isProd)
-}
-func GetEnv(ctx context.Context) bool {
-	isProd, ok := ctx.Value("isProd").(bool)
-	if !ok {
-		panic("Env not found")
-	}
-	return isProd
-}
+//// TODO: USE!
+//func SetEnv(ctx context.Context, isProd bool) context.Context {
+//	return context.WithValue(ctx, "isProd", isProd)
+//}
+//func GetEnv(ctx context.Context) bool {
+//	isProd, ok := ctx.Value("isProd").(bool)
+//	if !ok {
+//		panic("Env not found")
+//	}
+//	return isProd
+//}
 
 //// TODO: searching in a specific index
 //func latestNUpdatedB(ctx context.Context) error { // TODO: fixMe
@@ -102,18 +101,16 @@ func GetEnv(ctx context.Context) bool {
 //	//coll.UpdateByID(ctx, bson.D{bson.E{Key: IDfld: "someId"}}, ) // TODO: use this
 //}
 
-func withUpdateNow() primitive.E { // TODO: FIXME!
+func withUpdateNow() primitive.E {
 	return primitive.E{
 		Key:   "lastUpdated",
-		Value: unix.TimeForNow(), // TODO: FIXME!
+		Value: unix.TimeForNow(), // TODO: change to get time from request context?
 	}
 }
 
 func updateTogether() bson.D {
 	return []primitive.E{withUpdateNow()}
 }
-
-// TODO: HOW TO SORT AND STUFF IS ABOVE
 
 func Initialize(ctx context.Context) error {
 	for i, initializer := range map[string]func(context.Context) error{
@@ -224,6 +221,13 @@ func getItemLatestImage(item CollectionItem) (*ImageLocation, unix.Time) { // TO
 			if contam.Location != nil && contam.Time > latest {
 				return contam.Location, contam.Time
 			}
+		}
+	}
+	// TODO: add getLatestFlush to Bags, FCs, etc...
+	if itemWithFlushesField, ok := item.(interface{ getLatestFlush() *PicWithNotes }); ok {
+		if pwn := itemWithFlushesField.getLatestFlush(); pwn != nil {
+			loc = &pwn.Location
+			latest = pwn.Time
 		}
 	}
 	return loc, latest

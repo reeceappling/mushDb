@@ -266,7 +266,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:            LastUpdatedField{now},
 		AclField:                    allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -444,7 +444,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad substrate recipe: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return

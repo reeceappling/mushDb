@@ -275,7 +275,7 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 		AclField: allCanWriteAcl(),
 	}
 
-	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id) // TODO: this should always only occur right before the true writes
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return

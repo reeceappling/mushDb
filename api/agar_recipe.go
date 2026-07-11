@@ -113,7 +113,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	}
 	// Add built-in entries
 	builtinTime := RequiredTimeField{Time: ogTime}
-	basicEntryAcl := allCanReadAcl(nil) // TODO: should admins be able to add to these basic entries?
+	basicEntryAcl := allCanReadAcl(nil)
 	basicEntries := []*AgarRecipe{
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
@@ -296,13 +296,13 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AntibioticsField:           req.AntibioticsField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
-		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)), // TODO: or write?
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 // TODO: USE!
-func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) { // TODO: USE ME
+func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) {
 	out := AgarRecipe{}
 	err := DbFrom(ctx).
 		Collection(AgarRecipesCollectionName).
