@@ -102,9 +102,8 @@ func initializeSporeSwabs(ctx context.Context) error {
 }
 
 type createSporeSwabRequest struct {
-	MainCollectionParentField // TODO; required
-	// TODO: DERIVE PARENT TYPE!
-	// SporePrintId MainCollectionId // TODO: make this just parentId, used to be SporePrintId. Ensure handled on ts side
+	MainCollectionParentField // required
+	// Parent type is retrieved
 	NotesField
 	WriteTagToField
 }
@@ -252,7 +251,7 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		//println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}

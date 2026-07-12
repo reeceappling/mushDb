@@ -343,7 +343,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
     const [parentType, setParentType] = useState<string | undefined>(parentTypeIn)
-    // Spore prints don't have rfid tags, although they have MainCollectionIDs
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
 
     const cookies = useContext(CookiesContext)
@@ -356,10 +356,11 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
         const doReq = ()=>{
             const formData = new FormData()
             const dataObj:any = {
-                parentType: parentType,
+                parentType: parentType, // TODO: may be deletable!
                 parent:fruit._id,
                 notes:notes,
                 // optional pics also here
+                writeTagTo:writeTagTo,
             }
             // Pics
             dataObj.pics = pics.map(p=>{return {time:p.time,notes:p.notes.new.map(n => {
@@ -397,6 +398,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
         {fruitIn === undefined && <FruitSelectorCloseable onSelect={setFruit} hideDisposed={true}/>}
         <PicsDisplay pix={[]} readonly={false} updateParent={(ps)=>{setPics(ps.new)}} headerLevel={headerLevel} offset={offset}/>
         <NewEntryNotes setNotes={setNotes} />
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
 }

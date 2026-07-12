@@ -78,7 +78,6 @@ func (sp SporePrint) CanTransferTo(dst geneticSource) error {
 func (sp SporePrint) createSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNotes NotesField) (*SporeSwab, error) {
 	ctx, now := request.UnixTimeInTxn(ctx)
 	idOut := NextMainCollectionId()
-	// TODO: how to write tag????
 	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 	swab := SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{idOut},
@@ -224,8 +223,8 @@ func initializeSporePrints(ctx context.Context) error {
 }
 
 type createSporePrintRequest struct {
-	ParentId   MainCollectionId `json:"parent"`
-	ParentType string           `json:"parentType"` // TODO: We will have to get parent anyways. No reason to add parentType...
+	ParentId MainCollectionId `json:"parent"`
+	// TODO: REMOVE THIS FROM THE TS SIDE! ParentType string           `json:"parentType"` // TODO: We will have to get parent anyways. No reason to add parentType...
 	NotesField
 	Pics            []PicWithNotesLessLocation //"newPic-1"
 	WriteTagToField                            // TODO: make sure this is on the ts side!
@@ -235,7 +234,6 @@ type createSporePrintRequest struct {
 func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
 	return resolvedCreateSporePrintRequest{
 		ParentId:   upr.ParentId,
-		ParentType: upr.ParentType,
 		NotesField: upr.NotesField,
 		PicsField: PicsField{slices.Map(upr.Pics, func(i PicWithNotesLessLocation) PicWithNotes {
 			return i.asPicWithNotes(nil)

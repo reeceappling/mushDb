@@ -139,8 +139,9 @@ const (
 
 type LengthUnit string
 
-var filterSizeUnits = []LengthUnit{um}          // TODO: use? can be 0.2 micron (not pc-able), 0.5 micron (pc-able), or 5 micron (pc-able)
-var dowelRadiusUnits = []LengthUnit{mm, cm, in} // TODO: use?
+var filterSizeUnits = []LengthUnit{um} // TODO: use? can be 0.2 micron (not pc-able), 0.5 micron (pc-able), or 5 micron (pc-able)
+var dowelRadiusUnits = []LengthUnit{mm, cm, in}
+
 // var dowelLengthUnits = []LengthUnit{mm, cm, in, ft} // TODO: use?
 // TODO: use?
 var lengthUnits = []LengthUnit{um, mm, cm, in, ft, meter} // TODO: use?
@@ -233,7 +234,7 @@ type createPlugsRequest struct {
 	WriteTagToField
 }
 
-func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully test!
+func createPlugsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	data := createPlugsRequest{}
 	id := NextMainCollectionId()
@@ -286,7 +287,7 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 
 type importPlugsRequest struct {
 	DowelTypes []Dowel     `json:"dowelTypes"`
-	Generation *Generation `json:"generation,omitempty"` // TODO: make required when innoculated!
+	Generation *Generation `json:"generation,omitempty"` // required when innoculated
 	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
@@ -507,12 +508,12 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: overh
 			println("no contam location for", i)
 		}
 	}
-	finalReqBs, err := json.MarshalIndent(out, "", " ")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	println("REQUEST BYTES: ", string(finalReqBs)) // TODO: del
+	//finalReqBs, err := json.MarshalIndent(out, "", " ")
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//println("REQUEST BYTES: ", string(finalReqBs)) // TODO: del
 
 	existing := &PlugsJar{}
 	db := DbFrom(ctx)
