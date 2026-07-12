@@ -31,10 +31,6 @@ func (f InnocField) RequireNoInnoculation() error {
 	return nil
 }
 
-//func (in InnocField) Innoculatable() bool { // TODO: probably get rid of...
-//	return in.Innoc == nil
-//}
-
 type transferReason string
 
 const xferReasonColonized transferReason = "colonized"
@@ -124,7 +120,7 @@ func initializeTransfers(ctx context.Context) error {
 	}
 	// If test agar batch does not exist, then create it
 	// TODO: also create many-to-one monotub test transfer
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		testItem := &Transfer{
 			AlternateCollectionIdField: exAltId.asIdField(),
 			From:                       exPlate,
@@ -153,10 +149,6 @@ type createTransferRequest struct {
 	NotesField
 	DisposeParent bool `json:"disposeParent"`
 }
-
-type CtxKey string
-
-const SessionCtxKey CtxKey = "mongoTxSession" // TODO: del if unneeded?
 
 func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error)) (any, error) {
 	sessionOptions := options.Session() // TODO: change?
@@ -309,7 +301,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// ensure child is innoculatable and parent is not disposed
-	if err = child.Innoculatable(); err != nil { // TODO; rename?
+	if err = child.Innoculatable(); err != nil {
 		http.Error(w, "child is not innoculatable. "+err.Error(), http.StatusBadRequest)
 		return
 	}

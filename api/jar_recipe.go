@@ -183,7 +183,7 @@ func initializeJarRecipes(ctx context.Context) error {
 		return err
 	}
 	// Add test entries
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		// If test jar recipe does not exist, then create it
 		testItem := &JarRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},

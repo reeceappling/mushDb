@@ -171,14 +171,14 @@ func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 
 type Contamination struct {
 	ContaminationLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Location                  *ImageLocation  `bson:"location,omitempty" json:"location,omitempty"`
+	Location                  *ImageLocation `bson:"location,omitempty" json:"location,omitempty"`
 }
 
 type ContaminationLessLocation struct {
 	PicWithNotesLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Confirmed                bool            `bson:"confirmed" json:"confirmed"`
-	Bacteria                 bool            `bson:"bacteria" json:"bacteria"`
-	Mold                     bool            `bson:"mold" json:"mold"`
+	Confirmed                bool `bson:"confirmed" json:"confirmed"`
+	Bacteria                 bool `bson:"bacteria" json:"bacteria"`
+	Mold                     bool `bson:"mold" json:"mold"`
 }
 
 func (c ContaminationLessLocation) asContamination(location *ImageLocation) Contamination {
@@ -847,7 +847,7 @@ func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesFiel
 	finalNotes = append(finalNotes, sliceutils.Map(updated.New, func(nt Data[Note]) Note { return nt.Data })...)
 	// Set notes
 	PrettyPrintJson("finalNotes", finalNotes) // TODO: delete later
-	return upd.Set("notes", finalNotes)       // TODO: ensure ok
+	return upd.Set("notes", finalNotes)
 }
 
 func (upd *Mods) updateTimeIfNoLongerNil(fieldName string, updated *int, existing *int) *Mods { // TODO: make sure this works as anticipated

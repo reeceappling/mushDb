@@ -38,7 +38,7 @@ func initializeSubstrateBatches(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		createdDate := CreationDateField{exampleTime}
 		err = addTestAltEntries(ctx, []SubstrateBatch{
 			// Coir

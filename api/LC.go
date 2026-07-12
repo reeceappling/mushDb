@@ -135,7 +135,7 @@ func initializeLCs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		// If test LC does not exist, then create it
 		testId := mainCollIdForint(idTestLC)
 		testItem := &LiquidCulture{

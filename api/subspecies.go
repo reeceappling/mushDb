@@ -44,14 +44,14 @@ func initializeSubspecies(ctx context.Context) error {
 		newSimpleIndex("species", "species", false, false, false),
 		aliasesIndexModel,
 		//Notes (no index) (maybe later with tags?)
-		//projectsIndexModel, // TODO: why are projects here? probably dont want this
+		//projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		basicEntries := []Subspecies{
 			// White Beech
 			{
@@ -125,7 +125,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := Subspecies{
 		NameIdField:      NameIdField{req.Name},
 		SpeciesField:     req.SpeciesField,
-		AliasesField:     req.AliasesField, // TODO: ensure none exist elsewhere (should just work via mongo)
+		AliasesField:     req.AliasesField, // TODO: ensure none exist elsewhere (should just work via mongo (actually it wont))
 		NotesField:       req.NotesField,
 		LastUpdatedField: LastUpdatedField{now},
 		AclField:         spec.AclField,   // Use parent perms
@@ -206,7 +206,7 @@ func (req updateSubspeciesRequest) modsFor(existing *Subspecies, aclField AclFie
 
 func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	urlEncodedSubspeciesName := r.PathValue("id")
-	subspeciesName, err := url.QueryUnescape(urlEncodedSubspeciesName) // TODO: ensure ok
+	subspeciesName, err := url.QueryUnescape(urlEncodedSubspeciesName)
 	if err != nil {
 		http.Error(w, "failed to decode subspecies name from url: "+err.Error(), http.StatusBadRequest)
 		return

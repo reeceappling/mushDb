@@ -52,7 +52,7 @@ func initializeSubstrates(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		basicEntries := []*SubstrateRecipe{
 			// Coir
 			{
@@ -125,7 +125,6 @@ func (requestPerms PermsOnRequest) DefaultAcl() ACL {
 	}
 }
 
-// TODO: use this everywhere needed?
 func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
 	client := GetMongoClient(ctx)
 

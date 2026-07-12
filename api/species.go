@@ -59,7 +59,7 @@ func initializeSpecies(ctx context.Context) error {
 	}
 
 	// Add test entry
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		woodPelletsId := altCollIdForint(idWoodPellets)
 		// TODO: ensure does not completely overwrite if there are changes....
 		basicEntries := []*Species{
@@ -141,7 +141,7 @@ func initializeSpecies(ctx context.Context) error {
 				ScientificName:    "Hypsizygus tessulatus",
 				AliasesField:      AliasesField{[]string{"Hypsizygus tessellatus", "Shimeji"}},
 				StandardSubstrate: woodPelletsId,
-				Subspecies:        []string{"White Beech", "Brown Beech"}, // TODO: ENSURE OK!
+				Subspecies:        []string{"White Beech", "Brown Beech"},
 				NotesField: NotesField{[]Note{
 					newNote(ogTime, "Fruiting conditions: 90-100RH, 50-60degF, plenty of light, cold shock to begin"),
 					newNote(ogTime, "50-60DegF, 80-90RH, FAE"),

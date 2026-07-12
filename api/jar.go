@@ -183,7 +183,7 @@ func initializeJars(ctx context.Context) error {
 			return err
 		}
 	}
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		// If test agar batch does not exist, then create it
 		testId := mainCollIdForint(idTestJar)
 		testItem := &GrainJar{

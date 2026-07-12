@@ -619,6 +619,7 @@ func finishCreateProject(ctx context.Context, toInsert CollectionItem, w http.Re
 
 func deleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: ensure no items have this project on it!
+	// TODO: search agarBatch, agarRecipe, bag, fruit, fc, grainBatch, jar, jarRecipe, lc, lcRecipe, lcSyringe, mss, pcRun, plate, plugs, sale, slant, species, sporePrint, sporeSwab, stasisTube, subspecies, substrateBatch, substrateRecipe, transfer, user(?), waterJar
 	http.Error(w, "delete project not implemented yet...", http.StatusNotImplemented)
 	return
 }

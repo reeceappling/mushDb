@@ -153,7 +153,7 @@ func initializeStasisTubes(ctx context.Context) error {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		testId := mainCollIdForint(idTestStasis)
 		testItem := &StasisTube{
 			MainCollectionIdField:   MainCollectionIdField{testId},
@@ -285,7 +285,6 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		//println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -568,11 +567,11 @@ func deleteStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if item.Innoc != nil {
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: statys and type ok?
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: status and type ok?
 		return
 	}
 

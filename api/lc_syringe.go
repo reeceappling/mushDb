@@ -122,7 +122,7 @@ func initializeSyringes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		// If test agar batch does not exist, then create it
 		testItem := &LcSyringe{
 			MainCollectionIdField:             MainCollectionIdField{Id: exLCS},

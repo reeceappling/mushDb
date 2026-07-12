@@ -96,7 +96,7 @@ func initializeLcRecipes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		// Add test entries
 		testItem := &LcRecipe{
 			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},

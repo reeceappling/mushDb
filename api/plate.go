@@ -200,7 +200,7 @@ func initializePlates(ctx context.Context) error {
 		lastUpdatedIndexModel,
 		projectsIndexModel,
 	})
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		if err != nil {
 			return err
 		}

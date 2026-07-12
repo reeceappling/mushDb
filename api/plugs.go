@@ -195,7 +195,7 @@ func initializePlugs(ctx context.Context) error {
 		return err
 	}
 	// Create test plugs
-	return env.IfNotProd(ctx, func() error { // TODO: ensure ok
+	return env.IfNotProd(ctx, func() error {
 		testItem := &PlugsJar{
 			MainCollectionIdField: MainCollectionIdField{exPlugId},
 			ParentTypeField: ParentTypeField{
