@@ -115,7 +115,7 @@ func (s Slant) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(SlantsCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
@@ -362,7 +362,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	newPics, newContams, _, err := getMultipartImages(ctx, "slant", w, reader, b58Id)
 	// TODO: SOME OTHER AREAS NEED TO DO THIS INSTEAD OF fullMultipartWithNoBreaks becaues rfid writer is in-between
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 

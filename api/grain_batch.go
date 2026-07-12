@@ -89,7 +89,7 @@ type createGrainBatchRequest struct {
 	PermsOnRequest `json:"acl"` // Nil means allCanWrite
 }
 
-// TODO: separate endpoints for updating soak, boil, and dry times
+// TODO: separate endpoints for updating soak, boil, and dry times?
 func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -115,14 +115,16 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "Jar Recipe validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	user, _ := GetAuthInfo(ctx)
-	acl, err := req.AclForUser(ctx, user) // TODO: is this ok? or do we want allCanRead?
-	if err != nil {
-		dbErr(w, "ACL creation failure: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+
+	acl := allCanReadAcl(GetUserEmailPtr(ctx))
+	//user, _ := GetAuthInfo(ctx)
+	//acl, err := req.AclForUser(ctx, user) // TODO: is this ok? or do we want allCanRead?
+	//if err != nil {
+	//	dbErr(w, "ACL creation failure: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 	// create new batch
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := &GrainBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		CreationDateField:          CreationDateField{now},
@@ -184,7 +186,7 @@ func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, PermsOnRequest{}) // TODO: fix perms!
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest) // TODO: ensure these perms are ok!
 }
 
 func deleteGrainBatchHandler(w http.ResponseWriter, r *http.Request) {

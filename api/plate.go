@@ -159,7 +159,7 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(PlatesCollectionName).UpdateByID(ctx, p.Id, upd)
 	if err != nil {
@@ -527,7 +527,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 
 	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plate", &data, b58Id)
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 

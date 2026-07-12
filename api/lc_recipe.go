@@ -214,7 +214,7 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest) // TODO: ensure perms allow the current user to write before allowing them to change the perms to remove themselves...
 }
 
 func deleteLcRecipeHandler(w http.ResponseWriter, r *http.Request) {

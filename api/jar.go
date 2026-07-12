@@ -119,7 +119,7 @@ func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(GrainJarCollectionName).UpdateByID(ctx, j.Id, upd)
 	if err != nil {

@@ -171,14 +171,14 @@ func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 
 type Contamination struct {
 	ContaminationLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Location                  *ImageLocation `bson:"location,omitempty" json:"location,omitempty"`
+	Location                  *ImageLocation  `bson:"location,omitempty" json:"location,omitempty"`
 }
 
 type ContaminationLessLocation struct {
 	PicWithNotesLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Confirmed                bool `bson:"confirmed" json:"confirmed"`
-	Bacteria                 bool `bson:"bacteria" json:"bacteria"`
-	Mold                     bool `bson:"mold" json:"mold"`
+	Confirmed                bool            `bson:"confirmed" json:"confirmed"`
+	Bacteria                 bool            `bson:"bacteria" json:"bacteria"`
+	Mold                     bool            `bson:"mold" json:"mold"`
 }
 
 func (c ContaminationLessLocation) asContamination(location *ImageLocation) Contamination {

@@ -152,6 +152,9 @@ func (sp SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, f
 	//	withPerms(from.Permissions()).
 	//	updateLastUpdatedIfNeeded().
 	//	Finalized()
+	// if err != nil {
+	//	return errors.Join(err, ErrFailedToFinalizeMods)
+	//}
 	//res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(sp.CollectionName()).UpdateByID(ctx, sp.Id, upd)
 	//if err != nil {
 	//	return err

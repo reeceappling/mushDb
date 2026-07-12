@@ -108,7 +108,7 @@ func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(StasisTubeCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {

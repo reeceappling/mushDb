@@ -73,7 +73,7 @@ func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fro
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(PlugsCollectionName).UpdateByID(ctx, pl.Id, upd)
 	if err != nil {
@@ -480,7 +480,7 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: overh
 	ctx := r.Context()
 	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plugs", &data, Base58Str(idStr))
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 

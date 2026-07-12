@@ -90,7 +90,7 @@ func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer,
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(LCCollectionName).UpdateByID(ctx, l.Id, upd)
 	if err != nil {
@@ -478,7 +478,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "lc", &data, mainCollId.AsBase58())
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 	env.LogIfDev(r.Context(), "CONFIRMED CLEAN: "+TernaryPtr(data.ConfirmedClean, "isClean", "isDirty", "empty"))

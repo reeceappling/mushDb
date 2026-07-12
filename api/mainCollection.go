@@ -105,3 +105,13 @@ func getTransferById(ctx context.Context, xferColl *mongo.Collection, id Alterna
 	}
 	return out, nil
 }
+
+type ImagesUpdateField struct {
+	Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"images"` //"newPic-1"
+}
+type ContamsUpdateField struct {
+	Contams SplitEntries[contamForm, ContaminationLessLocation] `json:"contams"` //"newContam-1"
+}
+type FlushesUpdateField struct {
+	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"flushes"` //"newFlush-1"
+}

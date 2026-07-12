@@ -255,7 +255,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	defer r.Body.Close()
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 	// CHECK THAT ALL NEW PICS EXIST

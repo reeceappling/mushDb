@@ -98,7 +98,7 @@ func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from gene
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(BagsCollectionName).UpdateByID(ctx, b.Id, upd)
 	if err != nil {
@@ -345,7 +345,7 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "bag", &data, mainCollId.AsBase58())
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 

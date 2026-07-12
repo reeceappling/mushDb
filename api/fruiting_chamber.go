@@ -110,7 +110,7 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 	upd, err := mods.
 		withInnoc(xfer).
 		withParentType(utils.Pointer(xfer.FromType)).
-		withParent(utils.Pointer(from.DbId())). // TODO: will this work for mainCollectionId?
+		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
 		withSubspecies(parentInfo.Subspecies).
@@ -119,7 +119,7 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return errors.New("failed to finalize") // TODO: ok?
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(FruitingChamberCollectionName).UpdateByID(ctx, f.Id, upd)
 	if err != nil {
@@ -248,7 +248,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, now := request.UnixTime(ctx) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(ctx)
 	batch, err := data.SubstrateBatchField.Get(ctx)
 	if err != nil {
 		http.Error(w, "invalid substrate batch: "+err.Error(), http.StatusBadRequest)
@@ -374,7 +374,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 	// Go to next part, if exists to get image
 	var importedPic *PicWithNotes = nil
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	p, err := reader.NextPart()
 	if err != nil {
 		if err != io.EOF {
@@ -394,7 +394,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SaveFile(r.Context(), fieldBytes, "fruitingChamber", string(b58id), "img")
+		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "fruitingChamber", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
@@ -464,17 +464,6 @@ type updateFruitingChamberRequest struct {
 	PermsOnRequest     `json:"acl"`
 }
 
-// TODO: MOVE THESE 3!!!!
-type ImagesUpdateField struct {
-	Images SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"images"` //"newPic-1"
-}
-type ContamsUpdateField struct {
-	Contams SplitEntries[contamForm, ContaminationLessLocation] `json:"contams"` //"newContam-1"
-}
-type FlushesUpdateField struct {
-	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"flushes"` //"newFlush-1"
-}
-
 func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRequest {
 	return resolvedUpdateFruitingChamberRequest{
 		KnownFruitableField: upr.KnownFruitableField,
@@ -523,14 +512,14 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
+		//println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "fruitingChamber", &data, mainCollId.AsBase58())
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 

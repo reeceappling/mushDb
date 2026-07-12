@@ -297,7 +297,7 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "lcSyringe", &data, b58Id)
 	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 	out := data.reform()
