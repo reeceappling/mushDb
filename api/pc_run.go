@@ -84,7 +84,7 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := newAlternateCollectionId()
 	ctx := r.Context()
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := PCRun{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		CreationDateField:          CreationDateField{now},

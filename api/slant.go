@@ -407,7 +407,7 @@ type importSlantRequest struct {
 }
 
 func importSlantHandler(w http.ResponseWriter, r *http.Request) {
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	data := importSlantRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
@@ -441,7 +441,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	picsSaved := []string{}
 	defer func() {
 		if err != nil {
-			err = pics.DeleteFiles(r.Context(), picsSaved...)
+			err = pics.DeleteFiles(ctx, picsSaved...)
 			if err != nil {
 				handleFileDeleteErr(err)
 			}
@@ -468,7 +468,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, errSave := pics.SaveFile(r.Context(), fieldBytes, "slant", string(b58id), "img")
+		newFileNameWithPrefixPath, errSave := pics.SaveFile(ctx, fieldBytes, "slant", string(b58id), "img")
 		if errSave != nil {
 			err = errSave
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
@@ -502,7 +502,7 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	if !innoculated {
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
+		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
 		if err != nil {
 			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return

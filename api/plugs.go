@@ -263,7 +263,7 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 	}
 	// TODO: validate dowels
 
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{id},
 		CreationDateField:     CreationDateField{now},
@@ -297,7 +297,7 @@ type importPlugsRequest struct {
 
 func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	data := importPlugsRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()

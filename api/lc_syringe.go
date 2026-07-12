@@ -176,7 +176,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO: CREATE PARENT TRANSFER? maybe not
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.LC},
@@ -412,7 +412,7 @@ type importLcSyringeRequest struct {
 
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	data, id := importLcSyringeRequest{}, NextMainCollectionId()
 	b58id := id.AsBase58()
 	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
@@ -470,7 +470,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
+	finalPerms, err := ImportFinalPerms(ctx, data.Species, data.Subspecies)
 	if err != nil {
 		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return

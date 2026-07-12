@@ -151,7 +151,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		dbErr(w, "failed to find sporePrint: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := &MSS{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		CreationDateField:                 CreationDateField{now},

@@ -289,7 +289,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := GrainJar{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		JarRecipeField:          JarRecipeField{&batch.Recipe},

@@ -305,7 +305,7 @@ func createSaleHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// TODO: HOW TO HANDLE PERMS? FOR NOW, JUST DO ONLY USER?
 
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	id := newAlternateCollectionId()
 	toInsert := &Sale{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},

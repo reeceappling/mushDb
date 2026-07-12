@@ -389,7 +389,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	agarBatchField := AgarBatchField{AgarBatch: &data.AgarBatch}
 	_, err = agarBatchField.Get(ctx)
 	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
@@ -410,7 +410,7 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		// No Perms here for basic plates
 		AclField: allCanWriteAcl(),
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -645,7 +645,7 @@ type importPlateRequest struct {
 
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	ctx, now := request.UnixTime(r.Context()) // TODO: no more r.Context below
+	ctx, now := request.UnixTime(r.Context())
 	data := importPlateRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
