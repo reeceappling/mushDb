@@ -38,6 +38,7 @@ func (p Project) DbId() string {
 	return string(p.Name)
 }
 
+// TODO: use?
 func (p Project) AddUser(u User, perm *ReadWritePerm) string {
 	// TODO: this!!!!
 	// TODO: update email entry

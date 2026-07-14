@@ -156,7 +156,7 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 		}
 		acid, err := Base58Str(startAfterParam).toAltCollectionId()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest) // TODO: fix
+			http.Error(w, "failed to convert base58 to altCollId: "+err.Error(), http.StatusBadRequest)
 			return nil, err
 		}
 		return &acid, nil
@@ -474,7 +474,6 @@ func addTestAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx contex
 			// TODO: bson.M vs bson.D?
 			return mongo.NewReplaceOneModel().SetReplacement(item).SetFilter(bson.M{IDfld: item.DbId()}).SetUpsert(true)
 		}))
-		// TODO: do something with the result?
 	})
 	wg.Wait()
 	if err := PrintAltCollectionItemIds("Test", testItems); err != nil {
@@ -501,4 +500,41 @@ func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx conte
 	}
 
 	return nil
+}
+
+func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id AlternateCollectionId, err error) {
+	var idStr string
+	idStr, err = UrlDecodeString(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "failed to url decode altCollId string: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	altCollId, err := StandardizeAltCollectionId(idStr)
+	if err != nil {
+		http.Error(w, "failed to standardize alt collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	b58id, id = altCollId.AsBase58(), *altCollId
+	return
+}
+
+func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) {
+	coll := DbFrom(ctx).Collection(toInsert.CollectionName())
+	_, err := coll.InsertOne(ctx, toInsert)
+	if err != nil {
+		http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		return
+	}
+	_, err = w.Write(bsOut)
+	if err != nil {
+		handleWriteErr(err, w)
+	}
+}
+
+func finishImportMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
+	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }

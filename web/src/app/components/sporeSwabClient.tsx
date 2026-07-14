@@ -53,7 +53,10 @@ import {
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SaleArea} from "@/app/components/saleClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    IdInput,
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
@@ -271,7 +274,7 @@ export function NewSporeSwabForm(
 
     return <NewEntryFormWrapper entryType={"sporeSwab"}>
         <ErrorDisplay err={err}/>
-        {(printIn || fruitIn) && <div>{"TODO: PARENT SELECTOR"/* TODO: THIS! PARENT SELECTOR IF NOT PROVIDED*/}</div>}
+        {(printIn || fruitIn) && <IdInput/>}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>

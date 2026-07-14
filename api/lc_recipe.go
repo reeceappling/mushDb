@@ -171,7 +171,7 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AdditivesField:             req.AdditivesField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
-		AclField:                   allCanWriteAcl(), // TODO: or allCanRead + user write
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }
@@ -214,7 +214,22 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest) // TODO: ensure perms allow the current user to write before allowing them to change the perms to remove themselves...
+	user, err := GetResolvedUserPerms(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !user.HasPermissionToEdit(existing) {
+		http.Error(w, "user not authorized to edit this entry: "+err.Error(), http.StatusForbidden)
+		return
+	}
+	// TODO: do the next block everywhere!
+	if !req.PermsOnRequest.DefaultAcl().HighestPermFor(user).CanWrite() {
+		http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+		return
+	}
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
+	// TODO: ensure perms allow the current user to write before allowing them to change the perms to remove themselves...
 }
 
 func deleteLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
@@ -241,7 +256,7 @@ func deleteLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// At least one item exists, fail
-			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict)
 			return
 		}
 	}

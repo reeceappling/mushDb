@@ -21,7 +21,7 @@ import (
 
 type Slant struct {
 	MainCollectionIdField `bson:"inline"`
-	AgarBatchField        `bson:"inline"` // TODO: will be empty for preexisting
+	AgarBatchField        `bson:"inline"` // will be empty for preexisting
 	// TODO: account for stickType field
 	StickType                         *slantStick `bson:"stickType,omitempty" json:"stickType,omitempty"` //If the slant includes a popsicle stick or tongue depressor // TODO: new! use!
 	CreationDateField                 `bson:"inline"`
@@ -30,7 +30,7 @@ type Slant struct {
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	ParentTypeField                   `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone!
 	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`
@@ -50,7 +50,7 @@ func (s Slant) CanTransferTo(dst geneticSource) error {
 	return nil
 }
 
-type slantStick string // TODO: rename // TODO: ALLOW TS TO VIEW STICK TYPES!
+type slantStick string // TODO: ALLOW TS TO VIEW STICK TYPES!
 var (
 	slantStickPopsicle        slantStick = "popsicle stick"
 	slantStickTongueDepressor slantStick = "tongue depressor"
@@ -220,7 +220,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 		CreationDateField:     CreationDateField{now},
 		NotesField:            data.NotesField,
 		LastUpdatedField:      LastUpdatedField{now},
-		AclField:              allCanWriteAcl(), // TODO: ok?
+		AclField:              allCanWriteAcl(),
 	}
 	_, err = toInsert.AgarBatchField.Get(ctx)
 	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
@@ -235,70 +235,7 @@ func createSlantHandler(w http.ResponseWriter, r *http.Request) {
 	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }
 
-// TODO: MOVE
-func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
-	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		return nil, createMainCollectionEntryInTxn(sessCtx, toInsert)
-	})
-	if err != nil {
-		http.Error(w, "failed to create main collection entry in txn:"+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	bsOut, err := json.Marshal(toInsert)
-	if err != nil {
-		http.Error(w, "failed to marshal result: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	bs, err := json.MarshalIndent(toInsert, "", "  ") // TODO; del
-	if err != nil {                                   // TODO; del
-		println(err.Error()) // TODO; del
-	} // TODO; del
-	println("imported: ", string(bs)) // TODO; del
-	_, err = w.Write(bsOut)
-	if err != nil {
-		handleWriteErr(err, w)
-	}
-	println("wrote response: ", string(bs)) // TODO; del
-}
-
-func createMainCollectionEntryInTxn(ctx mongo.SessionContext, toInsert MainCollectionItem) error {
-	err := addToIdMapCollection(ctx, toInsert)
-	if err != nil {
-		return errors.Join(errors.New("failed to insert in map collection"), err)
-	}
-	_, err = mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
-	if err != nil {
-		return errors.Join(errors.New("failed to insert main collection item"), err)
-	}
-	return nil
-}
-
 var ErrTxnWriteFail = errors.New("failed to write in transaction")
-
-// TODO: MOVE
-// TODO: used to be: finishCreateAlternateEntry(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter) {
-func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) {
-	coll := DbFrom(ctx).Collection(toInsert.CollectionName())
-	_, err := coll.InsertOne(ctx, toInsert)
-	if err != nil {
-		http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	bsOut, err := json.Marshal(toInsert)
-	if err != nil {
-		return
-	}
-	_, err = w.Write(bsOut)
-	if err != nil {
-		handleWriteErr(err, w)
-	}
-}
-
-// TODO: MOVE
-func finishImportMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
-	finishCreateMainCollectionEntry(ctx, toInsert, w)
-}
 
 type updateSlantRequest struct { // TODO: overhauled, validate still works
 	KnownFruitableField
@@ -346,7 +283,6 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -401,7 +337,7 @@ type importSlantRequest struct {
 	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *Generation // TODO: make required for when innoculated!
+	Generation *Generation // required when innoculated!
 	// pic as "img"
 	WriteTagToField
 }
@@ -558,11 +494,11 @@ func deleteSlantHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 

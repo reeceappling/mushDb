@@ -166,7 +166,7 @@ function LastReadTag() {
 //     return result;
 // }
 
-function UseLatestReadTagButton({onClick}: { onClick: (id?: string) => void }) {
+export function UseLatestReadTagButton({onClick}: { onClick: (id?: string) => void }) {
     const {state} = useRfidReaderContext()
     return <button className={"basicButtonSmall"} onClick={() => {
         onClick(state.lastReadTag)
@@ -174,7 +174,7 @@ function UseLatestReadTagButton({onClick}: { onClick: (id?: string) => void }) {
 }
 
 
-function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
+export function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
     const {state, dispatch} = useRfidReaderContext()
     const onClick = () => {
         if (state.selected != undefined) {

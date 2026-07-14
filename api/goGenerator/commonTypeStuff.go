@@ -75,9 +75,7 @@ func initializeDb(ctx context.Context) error {
 	}
 	return nil
 }
-// TODO: get rid of one of the following two?
 func typeForEntryType` + itemTypeFor + `}
-func typeForSource` + itemTypeFor + `}
 
 // Methods{{range $typ, $info := .MainCollTypes}}
 ` + setPermsMethodTpl + `

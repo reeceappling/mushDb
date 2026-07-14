@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/mongo"
 	"strings"
 )
 
@@ -122,7 +123,7 @@ func (acl ACL) Equivalent(other ACL) bool {
 	if acl.BlanketPerm != other.BlanketPerm {
 		return false
 	}
-	if acl.Users == nil {
+	if acl.Users == nil || len(acl.Users) == 0 {
 		if other.Users != nil || len(other.Users) != 0 {
 			return false
 		}
@@ -158,7 +159,7 @@ func (acl ACL) userIdPermission(email string) *ReadWritePerm {
 	if acl.BlanketPerm != nil && *acl.BlanketPerm {
 		return newPerm(true)
 	}
-	if acl.Users != nil {
+	if acl.Users != nil && len(acl.Users) != 0 {
 		if userPerm, exists := acl.Users[email]; exists {
 			return newPerm(userPerm)
 		}
@@ -564,4 +565,69 @@ var testAcls = []ACL{
 		// testUserEmailPNC cannot read CONFIRMED
 		// guest cannot read CONFIRMED
 	},
+}
+
+type PermsOnRequest struct {
+	UserPerms    map[string]bool      `json:"users,omitempty"` // Bool is canEdit
+	ProjectPerms map[projectName]bool `json:"projects,omitempty"`
+	BlanketPerm  *ReadWritePerm       `json:"blanketPerm,omitempty"` // If true then these entries are publicly writeable, if false then publicly readable
+}
+
+func (requestPerms PermsOnRequest) GetPermsOnRequest() PermsOnRequest {
+	return requestPerms
+}
+
+func (requestPerms PermsOnRequest) DefaultAcl() ACL {
+	return ACL{
+		Users:       requestPerms.UserPerms,
+		Projects:    requestPerms.ProjectPerms,
+		BlanketPerm: requestPerms.BlanketPerm,
+	}
+}
+
+func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
+	client := GetMongoClient(ctx)
+
+	// validate Projects
+	// TODO: count instead?
+	projColl := client.Database(dbName).Collection(ProjectsCollectionName)
+	for projName, _ := range requestPerms.ProjectPerms {
+		err := projColl.FindOne(ctx, BsonFindFilter(IDfld, projName)).Err()
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return AclField{}, errors.New(string("could not find project " + projName))
+			}
+			return AclField{}, err
+		}
+	}
+	// validate users
+	// TODO: count instead?
+	userColl := client.Database(dbName).Collection(UserCollName)
+	for userEmail, _ := range requestPerms.UserPerms {
+		err := userColl.FindOne(ctx, BsonFindFilter(IDfld, userEmail)).Err()
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return AclField{}, errors.New(string("could not find email " + userEmail))
+			}
+			return AclField{}, err
+		}
+	}
+
+	// Resolve acl
+	acl := ACL{
+		Users:       requestPerms.UserPerms,
+		Projects:    requestPerms.ProjectPerms,
+		BlanketPerm: requestPerms.BlanketPerm,
+	}
+	if acl.Users == nil {
+		acl.Users = map[string]bool{}
+	}
+	if acl.Projects == nil {
+		acl.Projects = map[projectName]bool{}
+	}
+	// If not blanket write, ensure the user who made the request can write
+	if !requestPerms.BlanketPerm.CanWrite() {
+		acl.Users[perms.Email] = true
+	}
+	return AclField{ACL: acl}, nil
 }

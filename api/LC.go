@@ -45,7 +45,7 @@ type LiquidCulture struct {
 }
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
-	canTransferTo := []string{GrainJarSourceType, PlateSourceType, SlantSourceType, StasisTubeSourceType, LcSourceType, BagSourceType} // TODO: validate this encompasses all...
+	canTransferTo := []string{GrainJarSourceType, PlateSourceType, SlantSourceType, StasisTubeSourceType, LcSourceType, BagSourceType}
 	if !slices.Contains(canTransferTo, dst.SourceType()) {
 		return errors.New("LC cannot transfer to " + dst.SourceType())
 	}
@@ -246,10 +246,10 @@ func createLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 type importLiquidCultureRequest struct {
 	CreationDateField
 	LcRecipeField
-	SpeciesOptionalField // TODO: made optional
+	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *Generation // TODO: make required for when innoculated!
+	Generation *Generation // required when innoculated!
 	ConfirmedCleanField
 	WriteTagToField
 	// image as "img"
@@ -300,7 +300,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	ctx, now := request.UnixTime(r.Context()) // TODO: ensure r.Context is not used anymore
+	ctx, now := request.UnixTime(r.Context())
 	// Go to next part, if exists to get image
 	var importedPic *PicWithNotes = nil
 	p, err := reader.NextPart()
@@ -323,7 +323,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		newFileNameWithPrefixPath, errr := pics.SaveFile(r.Context(), fieldBytes, "lc", string(b58id), "img")
+		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "lc", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
@@ -358,7 +358,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	if !innoculated {
 		finalPerms = allCanWriteAcl().ACL
 	} else {
-		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
+		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
 		if err != nil {
 			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -444,25 +444,6 @@ type resolvedUpdateLiquidCultureRequest struct {
 	PermsOnRequest `json:"acl"`
 }
 
-// TODO: MOVE ME
-func Ternary[T any](val bool, ifTrue, ifFalse T) T {
-	if val {
-		return ifTrue
-	}
-	return ifFalse
-}
-
-// TODO: MOVE
-func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
-	if val == nil {
-		return ifNil
-	}
-	if *val {
-		return ifTrue
-	}
-	return ifFalse
-}
-
 func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateLiquidCultureRequest{}
 	idStr, err := UrlDecodeString(r.PathValue("id"))
@@ -537,11 +518,11 @@ func deleteLcHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 

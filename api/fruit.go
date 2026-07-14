@@ -86,11 +86,9 @@ func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId)
 	}
 	return nil
 }
-func (f Fruit) createSporePrintInTxn(ctx mongo.SessionContext, pics PicsField, notes NotesField) (*SporePrint, error) {
-	id := NextMainCollectionId()
+func (f Fruit) createSporePrintInTxn(ctx mongo.SessionContext, pics PicsField, notes NotesField, id MainCollectionId) (*SporePrint, error) {
 	ctx, now := request.UnixTimeInTxn(ctx)
 
-	// TODO: writeTagTo?
 	var mri *PicWithNotes = nil
 	if len(pics.Pics) > 0 {
 		lastPic := pics.Pics[len(pics.Pics)-1]
@@ -126,8 +124,7 @@ func (f Fruit) createSporePrintInTxn(ctx mongo.SessionContext, pics PicsField, n
 	return &toInsert, nil
 }
 
-func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField) (*SporeSwab, error) {
-	id := NextMainCollectionId()
+func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, id MainCollectionId) (*SporeSwab, error) {
 	ctx, now := request.UnixTimeInTxn(ctx)
 	// TODO: writeTagTo?
 	toInsert := SporeSwab{
@@ -272,7 +269,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	}
 	ctx := r.Context()
 	db := DbFrom(ctx)
-	parent, err := typeForSource(data.ParentType)
+	parent, err := typeForEntryType(data.ParentType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -625,11 +622,11 @@ func deleteFruitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 

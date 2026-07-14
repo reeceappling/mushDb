@@ -116,11 +116,13 @@ func (srv *AuthService) LogoutSession(sessId SessionId) error {
 	return nil
 }
 
+const maxSessionIdGenerationTries = 5 // TODO: max num?
+
 func (srv *AuthService) newSessionIdForUserWithoutLock(email string) (SessionId, error) {
 	if _, userHasSessionAlready := srv.UserSessionMap[email]; userHasSessionAlready {
 		return "", errors.New("email already has existing session") // TODO: dont like. Maybe remove the email and their old session?
 	}
-	for i := 0; i < 5; i++ { // TODO: max num?
+	for i := 0; i < maxSessionIdGenerationTries; i++ {
 		temp, err := generateSessionId()
 		if err != nil {
 			return "", err
@@ -151,7 +153,7 @@ func (srv *AuthService) clearOldSessions() {
 	return
 }
 
-func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[genericsessions.Session[ResolvedUserPerms]] { // TODO: PUSH THIS UPDATE TO THE REPO
+func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[genericsessions.Session[ResolvedUserPerms]] {
 
 	srv.RLock()
 	sess, ok := srv.sessMap[id]
@@ -314,7 +316,7 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 			logging.GetLogger(ctx).Info("Admin user signed up with email " + email)
 			u.Perms = UserPerms{
 				Admin:    AcctTypeAdmin(),
-				Projects: []projectName{}, // TODO: ADD PROJECTS???
+				Projects: []projectName{},
 			}
 		} else {
 			log.Infow("Creating Non-Admin user for email: " + u.Email) // TODO: ensure sugared logger is properly set up!

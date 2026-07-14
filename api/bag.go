@@ -579,11 +579,11 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 //	}
 //	if item.Parent != nil { // TODO: FIX THIS!
 //		// TODO: what if we want to remove it from the parent as well?
-//		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+//		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 //		return
 //	}
 //	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-//		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+//		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 //		return
 //	}
 //
@@ -615,13 +615,13 @@ func deleteBagHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	if item.Parent != nil { // TODO: FIX THIS!
+	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 

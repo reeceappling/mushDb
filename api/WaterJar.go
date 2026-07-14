@@ -91,7 +91,7 @@ func initializeWaterJars(ctx context.Context) error {
 			LastUpdatedField:      LastUpdatedField{exampleTime},
 			AclField:              allCanWriteAcl(),
 		}
-		println("created waterJar with id: " + exWaterId.AsBase58()) // TODO: del?
+		//println("created waterJar with id: " + exWaterId.AsBase58()) // TODO: del?
 		return addTestMainEntries(ctx, testItem)
 	})
 }
@@ -239,7 +239,7 @@ func deleteWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// At least one item exists, fail
-			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict)
 			return
 		}
 	}

@@ -31,7 +31,7 @@ type SubstrateRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
 	StandardField              `bson:"inline"`
-	AliasesField               `bson:"inline"` // must be unique everywhere // TODO: probably get rid of? maybe not because of things like "SweetCorn and DrippyCorn"
+	AliasesField               `bson:"inline"` // must be unique everywhere
 	NotesField                 `bson:"inline"` // ingredients in notes
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
@@ -105,71 +105,6 @@ func initializeSubstrates(ctx context.Context) error {
 		}
 		return addTestAltEntries(ctx, testItem)
 	})
-}
-
-type PermsOnRequest struct {
-	UserPerms    map[string]bool      `json:"users,omitempty"` // Bool is canEdit
-	ProjectPerms map[projectName]bool `json:"projects,omitempty"`
-	BlanketPerm  *ReadWritePerm       `json:"blanketPerm,omitempty"` // If true then these entries are publicly writeable, if false then publicly readable
-}
-
-func (requestPerms PermsOnRequest) GetPermsOnRequest() PermsOnRequest {
-	return requestPerms
-}
-
-func (requestPerms PermsOnRequest) DefaultAcl() ACL {
-	return ACL{
-		Users:       requestPerms.UserPerms,
-		Projects:    requestPerms.ProjectPerms,
-		BlanketPerm: requestPerms.BlanketPerm,
-	}
-}
-
-func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
-	client := GetMongoClient(ctx)
-
-	// validate Projects
-	// TODO: count instead?
-	projColl := client.Database(dbName).Collection(ProjectsCollectionName)
-	for projName, _ := range requestPerms.ProjectPerms {
-		err := projColl.FindOne(ctx, BsonFindFilter(IDfld, projName)).Err()
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return AclField{}, errors.New(string("could not find project " + projName))
-			}
-			return AclField{}, err
-		}
-	}
-	// validate users
-	// TODO: count instead?
-	userColl := client.Database(dbName).Collection(UserCollName)
-	for userEmail, _ := range requestPerms.UserPerms {
-		err := userColl.FindOne(ctx, BsonFindFilter(IDfld, userEmail)).Err()
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return AclField{}, errors.New(string("could not find email " + userEmail))
-			}
-			return AclField{}, err
-		}
-	}
-
-	// Resolve acl
-	acl := ACL{
-		Users:       requestPerms.UserPerms,
-		Projects:    requestPerms.ProjectPerms,
-		BlanketPerm: requestPerms.BlanketPerm,
-	}
-	if acl.Users == nil {
-		acl.Users = map[string]bool{}
-	}
-	if acl.Projects == nil {
-		acl.Projects = map[projectName]bool{}
-	}
-	// If not blanket write, ensure the user who made the request can write
-	if !requestPerms.BlanketPerm.CanWrite() {
-		acl.Users[perms.Email] = true
-	}
-	return AclField{ACL: acl}, nil
 }
 
 type createSubstrateRecipeRequest struct {
@@ -282,7 +217,7 @@ func deleteSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// At least one item exists, fail
-		http.Error(w, "at least one species utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+		http.Error(w, "at least one species utilizes the item you are attempting to delete.", http.StatusConflict)
 		return
 	}
 	for collName, key := range map[string]string{
@@ -299,7 +234,7 @@ func deleteSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// At least one item exists, fail
-			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict)
 			return
 		}
 	}

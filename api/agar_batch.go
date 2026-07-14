@@ -18,7 +18,7 @@ import (
 
 type AgarBatch struct { // This is >=1 media bottles of the same recipe that went through the same PC cycle
 	AlternateCollectionIdField `bson:"inline"`
-	// CreationDate is assumed to be the same as on PcRun // TODO: also exists in the id
+	// CreationDate is assumed to be the same as on PcRun // Also exists in the ID
 	PcRunField       `bson:"inline"`
 	AgarRecipeField  `bson:"inline"`
 	Color            Colorant `bson:"color" json:"color"`
@@ -193,7 +193,7 @@ func deleteAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// At least one item exists, fail
-			http.Error(w, "at least one item in collection "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			http.Error(w, "at least one item in collection "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict)
 			return
 		}
 	}

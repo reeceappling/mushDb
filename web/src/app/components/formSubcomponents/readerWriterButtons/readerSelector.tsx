@@ -10,6 +10,8 @@ import {OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import {Subform} from "@/app/components/common";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
+import TextBox from "@/app/components/formSubcomponents/textbox";
+import {ReadTagButton, UseLatestReadTagButton} from "@/app/components/TopBar";
 
 
 export interface rfidSelectorProps {
@@ -354,6 +356,21 @@ export function WriteRFIDArea( // TODO: use this on each page that has writeable
             {"Write "+id+" to writer: "+(writer || "none selected")}
         </button>}
     </Subform>
+}
+
+export function IdInput({initial}:{initial?:string}){
+    //const [err, setErr] = React.useState<string | undefined>(undefined)
+    const [id, setId] = React.useState(initial)
+    const {state} = useRfidReaderContext()
+    return <div>
+    <div>{"Main Collection Item By ID"}</div>
+    <TextBox readonly={false} label={"ID"} value={id || ""} fieldName={"idInput"}
+             updateTextHandler={setId}/>
+    <ReadTagButton onResult={setId}/>
+    {state.lastReadTag && <UseLatestReadTagButton onClick={(v) => {
+        v && setId(v)
+    }}/>}
+</div>
 }
 
 export function RfidSelectorWithReadButton( // TODO: use????

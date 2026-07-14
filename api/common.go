@@ -50,7 +50,7 @@ var (
 type CollectionItem interface { // TODO: ADD USER TO THIS?
 	CollectionName() string
 	Decode(*mongo.SingleResult) (CollectionItem, error)
-	IdValue() any // binary string id?
+	IdValue() any // binary string id? DO NOT USE FOR ACTUALLY QUERYING THE DB DUE TO ANY TYPE
 }
 
 //var (
@@ -1130,4 +1130,45 @@ func MarshalAndReturn(ctx context.Context, w http.ResponseWriter, toReturn any) 
 	if err != nil {
 		handleWriteErr(err, w)
 	}
+}
+
+func ImportFinalPerms(ctx context.Context, spec string, subspec *string) (ACL, error) {
+	var finalPerms ACL
+	sp, subsp, err := getSpeciesAndSubspecies(ctx, spec, subspec)
+	if err != nil {
+		return ACL{}, errors.New("failed to get species or subspecies: " + err.Error())
+	}
+	if subsp != nil {
+		finalPerms = subsp.DefaultAcl.Clone()
+	} else {
+		finalPerms = sp.DefaultAcl.Clone()
+	}
+	userEmail := GetUserEmail(ctx)
+	if finalPerms.Users == nil {
+		finalPerms.Users = map[string]bool{}
+	}
+	finalPerms.Users[userEmail] = true
+
+	return finalPerms, nil
+}
+
+func TimeFromId(id AlternateCollectionId) time.Time { // TODO: USE AND MOVE
+	return primitive.ObjectID(id).Timestamp()
+}
+
+func Ternary[T any](val bool, ifTrue, ifFalse T) T {
+	if val {
+		return ifTrue
+	}
+	return ifFalse
+}
+
+func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
+	if val == nil {
+		return ifNil
+	}
+	if *val {
+		return ifTrue
+	}
+	return ifFalse
 }

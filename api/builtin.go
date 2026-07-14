@@ -75,6 +75,13 @@ func mainCollIdForint(i int) MainCollectionId { // TODO: FIX FOR uint8 overflow
 	return [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)}
 }
 
+// TODO: use in above
+func nextUint8(i int) (nextBit uint8, remainder int) { // TODO: FIX FOR uint8 overflow
+	nextBitInt := i % 8
+	nextBit = uint8(nextBitInt)
+	return nextBit, i / 8
+}
+
 func mainCollIdFieldForint(i int) MainCollectionIdField {
 	return MainCollectionIdField{mainCollIdForint(i)}
 }

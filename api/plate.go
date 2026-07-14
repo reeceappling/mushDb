@@ -34,7 +34,7 @@ type hasCondensCov interface {
 	condensationCoverage() *int
 }
 type CondensationCoverageAtPourTimeField struct {
-	CondensationCoverageAtPourTime *int `bson:"condensationCoverageAtPourTime,omitempty" json:"condensationCoverageAtPourTime,omitempty"` // TODO: (0-100), HANDLE EVERYWHERE, NEW!
+	CondensationCoverageAtPourTime *int `bson:"condensationCoverageAtPourTime,omitempty" json:"condensationCoverageAtPourTime,omitempty"` // 0-100 where 100 is ideal and default
 }
 
 func (cc CondensationCoverageAtPourTimeField) condensationCoveragePourTime() *int {
@@ -56,7 +56,7 @@ type hasPourCoverage interface {
 	pourCoverage() *int
 }
 type WetAtCooledTimeField struct {
-	WetAtCooledTime *bool `bson:"wetAtCooledTime,omitempty" json:"wetAtCooledTime,omitempty"` // WetAtCooledTime TODO: (nil==unknown or imported, false==known and not wet, true=known and wet)
+	WetAtCooledTime *bool `bson:"wetAtCooledTime,omitempty" json:"wetAtCooledTime,omitempty"` // WetAtCooledTime (nil==unknown or imported, false==known and not wet, true=known and wet)
 }
 
 func (f WetAtCooledTimeField) wetAtCool() *bool {
@@ -93,7 +93,7 @@ type Plate struct {
 	InnocField                          `bson:"inline"`
 	GenerationsFields                   `bson:"inline"`
 	TransfersOutField                   `bson:"inline"`
-	ParentTypeField                     `bson:"inline"` // nil == imported, otherwise entryType, what happens with clones?! // TODO: INDEX????
+	ParentTypeField                     `bson:"inline"` // nil == imported, otherwise entryType, what happens with clones?!
 	MainCollectionOptionalParentField   `bson:"inline"`
 	PicsField                           `bson:"inline"`
 	ContaminationsField                 `bson:"inline"`
@@ -277,7 +277,7 @@ func basicTestPlate() Plate {
 		MostRecentImageField:              MostRecentImageField{&exPics[0]},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          allCanWriteAcl(), // TODO: ok?
+		AclField:                          allCanWriteAcl(),
 	}
 }
 func emptyTestPlate() Plate {
@@ -303,7 +303,7 @@ func emptyTestPlate() Plate {
 		MostRecentImageField:              MostRecentImageField{},
 		NotesField:                        NotesField{},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          allCanWriteAcl(), // TODO: ok?
+		AclField:                          allCanWriteAcl(),
 	}
 }
 func testPlateFor(
@@ -518,12 +518,11 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	reqBs, err := json.MarshalIndent(data, "", " ")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	println("REQUEST BYTES: ", string(reqBs)) // TODO: del
+	//reqBs, err := json.MarshalIndent(data, "", " ") // TODO: del?
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 
 	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plate", &data, b58Id)
 	if err != nil {
@@ -554,12 +553,11 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 			println("no contam location for", i)
 		}
 	}
-	finalReqBs, err := json.MarshalIndent(out, "", " ")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	println("REQUEST BYTES: ", string(finalReqBs)) // TODO: del
+	//finalReqBs, err := json.MarshalIndent(out, "", " ") // TODO: del?
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 
 	ctx := r.Context()
 	client := GetMongoClient(ctx)
@@ -601,12 +599,12 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	bsOut2, err2 := json.MarshalIndent(existing, "", " ") // TODO: delete later
-	if err2 != nil {
-		dbErr(w, err2.Error(), http.StatusInternalServerError)
-		return
-	}
-	println("Writing update:", string(bsOut2)) // TODO: del
+	//bsOut2, err2 := json.MarshalIndent(existing, "", " ") // TODO: delete later
+	//if err2 != nil {
+	//	dbErr(w, err2.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//println("Writing update:", string(bsOut2)) // TODO: del
 	_, err = w.Write(bsOut)
 	handleWriteErr(err, w)
 }
@@ -636,7 +634,7 @@ type importPlateRequest struct {
 	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *Generation `json:"generation,omitempty"` // TODO: make required for when innoculated!
+	Generation *Generation `json:"generation,omitempty"` // required when innoculated!
 	PourCoverageField
 	CondensationCoverageAtPourTimeField
 	// pic as "img"
@@ -732,7 +730,6 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
 		if err != nil {
-			println("failed to get species and/or subspecies: " + err.Error()) // TODO: del
 			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -757,33 +754,11 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
-		println("failed to write tag: " + err.Error()) // TODO: del
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	println("trying to import the plate...")
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
-}
-
-// TODO: MOVE!
-func ImportFinalPerms(ctx context.Context, spec string, subspec *string) (ACL, error) {
-	var finalPerms ACL
-	sp, subsp, err := getSpeciesAndSubspecies(ctx, spec, subspec)
-	if err != nil {
-		return ACL{}, errors.New("failed to get species or subspecies: " + err.Error())
-	}
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	userEmail := GetUserEmail(ctx)
-	if finalPerms.Users == nil {
-		finalPerms.Users = map[string]bool{}
-	}
-	finalPerms.Users[userEmail] = true
-
-	return finalPerms, nil
 }
 
 func deletePlateHandler(w http.ResponseWriter, r *http.Request) {
@@ -811,11 +786,11 @@ func deletePlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 

@@ -75,12 +75,11 @@ func (sp SporePrint) CanTransferTo(dst geneticSource) error {
 	// TODO: allow transfer to plate????
 	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
-func (sp SporePrint) createSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNotes NotesField) (*SporeSwab, error) {
+func (sp SporePrint) createSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNotes NotesField, id MainCollectionId) (*SporeSwab, error) {
 	ctx, now := request.UnixTimeInTxn(ctx)
-	idOut := NextMainCollectionId()
 	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 	swab := SporeSwab{
-		MainCollectionIdField:             MainCollectionIdField{idOut},
+		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&sp.Id},
 		ParentTypeField:                   ParentTypeField{utils.Pointer("sporePrint")},
 		CreationDateField:                 CreationDateField{now},
@@ -93,7 +92,7 @@ func (sp SporePrint) createSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNo
 	xfer := Transfer{
 		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
 		From:                       sp.Id,
-		To:                         idOut,
+		To:                         id,
 		FromType:                   "sporePrint",
 		ToType:                     "sporeSwab",
 		CreationDateField:          CreationDateField{now},
@@ -375,7 +374,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, e.Error(), http.StatusBadRequest)
 			return nil, e
 		}
-		printOut, e = fr.createSporePrintInTxn(sessCtx, PicsField{}, NotesField{}) // TODO: pics and notes?
+		printOut, e = fr.createSporePrintInTxn(sessCtx, PicsField{}, NotesField{}, id) // TODO: pics and notes?
 		if e != nil {
 			return nil, e
 		}
@@ -475,7 +474,6 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -679,12 +677,12 @@ func deleteSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: ENSURE NOT USED ANYWHERE!
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	// TODO: transfers out???? Spore prints can go to swabs, or mss!
 	//if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-	//	http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+	//	http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 	//	return
 	//}
 

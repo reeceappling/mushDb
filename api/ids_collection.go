@@ -22,7 +22,6 @@ func initializeItemMapCollection(ctx context.Context) error { // TODO: USE!
 	return err
 }
 
-// TODO: USE
 func getEntryTypeForId(ctx context.Context, id MainCollectionId) (string, error) {
 	result := idMapEntry{}
 	err := DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&result)

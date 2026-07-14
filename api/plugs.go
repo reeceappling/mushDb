@@ -21,7 +21,7 @@ import (
 type PlugsJar struct {
 	MainCollectionIdField             `bson:"inline"`
 	ParentTypeField                   `bson:"inline"` // empty==bought
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: empty=bought. From plugs, jar, LC, plate/slant
+	MainCollectionOptionalParentField `bson:"inline"` // empty=bought. From plugs, jar, LC, plate/slant
 	CreationDateField                 `bson:"inline"`
 	DowelTypes                        []Dowel `bson:"dowelTypes" json:"dowelTypes"`
 	GenerationsFields                 `bson:"inline"`
@@ -293,7 +293,6 @@ type importPlugsRequest struct {
 	KnownFruitableField
 	NotesField
 	WriteTagToField
-	// TODO: perms should follow species/subspec if exists, otherwise all can write
 }
 
 func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
@@ -405,7 +404,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		SubspeciesOptionalField: SubspeciesOptionalField{data.Subspecies},
 		KnownFruitableField:     data.KnownFruitableField,
 		PicsField:               PicsField{pix},
-		ContaminationsField:     ContaminationsField{Contaminations: []Contamination{}}, // TODO: ok?
+		ContaminationsField:     ContaminationsField{Contaminations: []Contamination{}},
 		NotesField:              NotesField{data.Notes},
 		LastUpdatedField:        LastUpdatedField{now},
 		// No Perms here for basic plugs
@@ -558,11 +557,11 @@ func deletePlugsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 

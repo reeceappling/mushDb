@@ -25,7 +25,7 @@ type GeneticParentInfo struct {
 //	return &sp, subsp, err
 //}
 
-var ( // TODO: all used to be non-pointer. Ensure they all still work
+var (
 	_ geneticSource = &Bag{}
 	_ geneticSource = &Fruit{}
 	_ geneticSource = &FruitingChamber{}

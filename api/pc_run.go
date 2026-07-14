@@ -47,7 +47,7 @@ func initializePCRun(ctx context.Context) error {
 		return err
 	}
 	// If test run does not exist, then create it
-	testItem := &PCRun{ // TODO: this is a
+	testItem := &PCRun{
 		AlternateCollectionIdField: impPcRun.asIdField(),
 		CreationDateField:          CreationDateField{exampleTime},
 		RunTimeMinutes:             180,
@@ -184,7 +184,7 @@ func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) 
 }
 
 func deletePcRunHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id") // TODO: recipe by name?
+	idStr := r.PathValue("id")
 	if idStr == "" {
 		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
 		return
@@ -207,7 +207,7 @@ func deletePcRunHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// At least one item exists, fail
-			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict)
 			return
 		}
 	}

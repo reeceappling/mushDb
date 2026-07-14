@@ -23,7 +23,7 @@ type GrainBatch struct {
 	SoakTimeHours              *int            `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
 	BoilTimeMins               *int            `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
 	DryTimeHours               *int            `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
-	CreationDateField          `bson:"inline"` // Date of first hydration // TODO: also exists in the id
+	CreationDateField          `bson:"inline"` // Date of first hydration. also exists in the id
 	JarRecipeRequiredField     `bson:"inline"`
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
@@ -89,7 +89,6 @@ type createGrainBatchRequest struct {
 	PermsOnRequest `json:"acl"` // Nil means allCanWrite
 }
 
-// TODO: separate endpoints for updating soak, boil, and dry times?
 func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -117,12 +116,6 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	acl := allCanReadAcl(GetUserEmailPtr(ctx))
-	//user, _ := GetAuthInfo(ctx)
-	//acl, err := req.AclForUser(ctx, user) // TODO: is this ok? or do we want allCanRead?
-	//if err != nil {
-	//	dbErr(w, "ACL creation failure: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 	// create new batch
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := &GrainBatch{
@@ -131,7 +124,7 @@ func createGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		JarRecipeRequiredField:     req.JarRecipeRequiredField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
-		AclField:                   acl, // TODO: allCanWrite???
+		AclField:                   acl,
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }
@@ -169,7 +162,6 @@ func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//PrettyPrintJson("new notes!", req.Notes.New) // TODO: del
 	id, err := b58Id.toAltCollectionId()
 	if err != nil {
 		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
@@ -212,7 +204,7 @@ func deleteGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// At least one item exists, fail
-		http.Error(w, "at least one agarBatch utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+		http.Error(w, "at least one agarBatch utilizes the item you are attempting to delete.", http.StatusConflict)
 		return
 	}
 

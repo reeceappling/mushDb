@@ -32,7 +32,7 @@ type FruitingChamber struct { // TODO: SHOEBOX vs monotub!
 	InnocField                        `bson:"inline"`
 	GenerationsFields                 `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	ParentTypeField                   `bson:"inline"` // can be nil, most (main), or some (alt) like lcSyringe // nil == mainCollectionType (or purchased?), can also be MSS or clone! // TODO: INDEX????
+	ParentTypeField                   `bson:"inline"` // can be nil, most (main), or some (alt) like lcSyringe // nil == mainCollectionType (or purchased?), can also be MSS or clone!
 	MainCollectionOptionalParentField `bson:"inline"`
 	PicsField                         `bson:"inline"`
 	ContaminationsField               `bson:"inline"`
@@ -215,7 +215,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 }
 
 type createFruitingChamberRequest struct {
-	// TODO: removed: Recipe // substrate recipe (pull from batch)
+	// removed: Recipe // substrate recipe (pull from batch)
 	SubstrateBatchField
 	// TODO: do FCs only ever take jars? can any other parent types exist?
 	ParentJar          MainCollectionId // Parent jar // TODO: do we want this? // TODO: ALLOW USER TO INPUT PARENT AND CHAIN A TRANSFER CREATION AS WELL!
@@ -298,7 +298,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			return nil, e
 		}
-		// TODO: if jar, use all of jar? call it disposed?
+		// TODO: if jar, use all of jar. Call it disposed.
 		// TODO: handle disposal on transfer!?
 		return nil, e
 	})
@@ -322,10 +322,10 @@ type importFruitingChamberRequest struct {
 	GrainCups    float64
 	//MixedSubstrateCups      float64 // Substrate volume added to the grain and mixed
 	//CasingCups      float64
-	SubstrateRatio float64 // TODO: used to be optional
-	CasingRatio    float64 // TODO: used to be optional
+	SubstrateRatio float64
+	CasingRatio    float64
 	SubspeciesOptionalField
-	Generation Generation // TODO: make required!
+	Generation Generation // Required
 	KnownFruitableField
 	WriteTagToField
 	//PermsOnRequest `json:"acl"` // from spec/subspec
@@ -421,7 +421,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 
 	toInsert := &FruitingChamber{
 		MainCollectionIdField:       MainCollectionIdField{id},
-		SubstrateRecipeField:        data.SubstrateRecipeField,        // TODO: allow unknown substrate recipe???
+		SubstrateRecipeField:        data.SubstrateRecipeField,
 		SubstrateBatchOptionalField: SubstrateBatchOptionalField{nil}, // Unknown for imports
 		CreationDateField:           CreationDateField{data.CreationDate},
 		CupsGrain:                   data.GrainCups,
@@ -512,7 +512,6 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		//println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -595,11 +594,11 @@ func deleteFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 

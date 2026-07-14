@@ -2,10 +2,12 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"net/http"
 	"sync"
 )
 
@@ -20,7 +22,7 @@ var (
 	_ MainCollectionItem = &MSS{}             // generally only goes to plate
 	_ MainCollectionItem = &SporePrint{}
 	_ MainCollectionItem = &LcSyringe{}
-	_ MainCollectionItem = &PlugsJar{} // TODO: has multiple sales...
+	_ MainCollectionItem = &PlugsJar{} // has multiple sales...
 	_ MainCollectionItem = &SporeSwab{}
 	_ MainCollectionItem = &WaterJar{}
 )
@@ -71,8 +73,7 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 		if err != nil {
 			return nil, errors.Join(errors.New("failed to bulk write id maps"), err)
 		}
-		// TODO: do something with the result?
-		println("writing items to " + testItems[0].CollectionName())
+		println("writing items to " + testItems[0].CollectionName()) // TODO: del?
 		_, err = db.Collection(testItems[0].CollectionName()).
 			BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
 				return mongo.NewReplaceOneModel().
@@ -83,7 +84,6 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 		if err != nil {
 			return nil, errors.Join(errors.New("failed to bulk write"), err)
 		}
-		// TODO: do something with the result?
 		return nil, nil
 	})
 	wg.Wait()
@@ -114,4 +114,58 @@ type ContamsUpdateField struct {
 }
 type FlushesUpdateField struct {
 	Flushes SplitEntries[picWithNotesForm, PicWithNotesLessLocation] `json:"flushes"` //"newFlush-1"
+}
+
+func mainCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id MainCollectionId, err error) {
+	var idStr string
+	idStr, err = UrlDecodeString(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	mainCollId, err := StandardizeMainCollectionId(idStr)
+	if err != nil {
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	b58id, id = mainCollId.AsBase58(), *mainCollId
+	return
+}
+
+func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
+	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		return nil, createMainCollectionEntryInTxn(sessCtx, toInsert)
+	})
+	if err != nil {
+		http.Error(w, "failed to create main collection entry in txn:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		http.Error(w, "failed to marshal result: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	//bs, err := json.MarshalIndent(toInsert, "", "  ") // TODO; del
+	//if err != nil {                                   // TODO; del
+	//	println(err.Error()) // TODO; del
+	//} // TODO; del
+	//println("imported: ", string(bs)) // TODO; del
+	_, err = w.Write(bsOut)
+	if err != nil {
+		handleWriteErr(err, w)
+	}
+	//println("wrote response: ", string(bs)) // TODO; del
+}
+
+func createMainCollectionEntryInTxn(ctx mongo.SessionContext, toInsert MainCollectionItem) error {
+	err := addToIdMapCollection(ctx, toInsert)
+	if err != nil {
+		return errors.Join(errors.New("failed to insert in map collection"), err)
+	}
+	_, err = mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
+	if err != nil {
+		return errors.Join(errors.New("failed to insert main collection item"), err)
+	}
+	return nil
 }

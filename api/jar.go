@@ -13,7 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
-	"reflect"
 	slices2 "slices"
 	"strings"
 )
@@ -24,7 +23,7 @@ import (
 
 type GrainJar struct {
 	MainCollectionIdField   `bson:"inline"`
-	SizeCups                int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal // TODO: new! use!
+	SizeCups                int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
 	JarRecipeField          `bson:"inline"`
 	GrainBatchOptionalField `bson:"inline"`
 	// TODO: multiple grain batches????
@@ -51,7 +50,7 @@ type GrainJar struct {
 }
 
 type BurstGrainsField struct { // 0 is none, 10 is most or all
-	BurstGrains *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"` // TODO: HANDLE IN JAVASCRIPT
+	BurstGrains *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"`
 }
 
 func (j GrainJar) CanTransferTo(dst geneticSource) error {
@@ -141,11 +140,6 @@ func LookupGrainJar(ctx context.Context, id MainCollectionId) (j *GrainJar, err 
 	return j, err
 }
 
-//type innoculateJarFromRequest struct { // TODO: this
-//	parent MainCollectionId // TODO: can this be alt?
-//
-//}
-
 func initializeJars(ctx context.Context) error {
 	db := DbFrom(ctx)
 	coll := db.Collection(GrainJarCollectionName)
@@ -215,48 +209,47 @@ func initializeJars(ctx context.Context) error {
 	})
 }
 
-// TODO: RENAME AND MOVE!
-func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testId any, testItem T, existingEntry T) error {
-	res, err := coll.InsertOne(ctx, testItem)
-	if err != nil {
-		return err
-	}
-	if res == nil {
-		return errors.New("result should not be nil")
-	}
-	err = coll.FindOne(ctx, BsonFindFilter(IDfld, testId)).Decode(&existingEntry)
-	if err != nil {
-		return errors.New("not found at specified id. " + err.Error())
-	}
-	if !reflect.DeepEqual(existingEntry, testItem) {
-		ee, err := json.Marshal(existingEntry)
-		if err != nil {
-			println("bad existing json")
-		}
-		te, err := json.Marshal(testItem)
-		if err != nil {
-			println("bad test json")
-		}
-		println("-------------------")
-		println(string(te))
-		println(string(ee))
-		return errors.New("entries (as updated) were not equal")
-	}
-	return nil
-}
+//// TODO: RENAME AND MOVE!
+//func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testId any, testItem T, existingEntry T) error {
+//	res, err := coll.InsertOne(ctx, testItem)
+//	if err != nil {
+//		return err
+//	}
+//	if res == nil {
+//		return errors.New("result should not be nil")
+//	}
+//	err = coll.FindOne(ctx, BsonFindFilter(IDfld, testId)).Decode(&existingEntry)
+//	if err != nil {
+//		return errors.New("not found at specified id. " + err.Error())
+//	}
+//	if !reflect.DeepEqual(existingEntry, testItem) {
+//		ee, err := json.Marshal(existingEntry)
+//		if err != nil {
+//			println("bad existing json")
+//		}
+//		te, err := json.Marshal(testItem)
+//		if err != nil {
+//			println("bad test json")
+//		}
+//		println("-------------------")
+//		println(string(te))
+//		println(string(ee))
+//		return errors.New("entries (as updated) were not equal")
+//	}
+//	return nil
+//}
 
 type createJarRequest struct {
 	SizeCups int `json:"sizeCups"`
 	GrainBatchField
 	WetnessField
 	BurstGrainsField
-	PcRunOptionalField // TODO: MAKE OPTIONAL
+	PcRunOptionalField
 	NotesField
 	WriteTagToField
 }
 
 func createJarHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: create creation date
 	data := createJarRequest{}
 	id := NextMainCollectionId()
 	defer r.Body.Close()
@@ -313,13 +306,12 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importJarRequest struct {
-	// TODO: ALSO IMPORT WITH sizeCups!
 	SizeCups int                    `json:"sizeCups"`
 	Recipe   *AlternateCollectionId `json:"recipe,omitempty"` // Jar Recipe // TODO: optional for imports?
 	CreationDateField
 	SpeciesOptionalField // Only empty when non-innoc'd
 	SubspeciesOptionalField
-	Generation *Generation // TODO: make required for when innoculated!
+	Generation *Generation // required when innoculated
 	WetnessField
 	BurstGrainsField
 	KnownFruitableField
@@ -328,7 +320,6 @@ type importJarRequest struct {
 }
 
 func importJarHandler(w http.ResponseWriter, r *http.Request) {
-	println("attempting to import jar") // TODO: DELETE
 	data := importJarRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
@@ -515,19 +506,19 @@ type resolvedUpdateJarRequest struct {
 }
 
 func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
-	return NewMods(). // TODO: update more if needed
-				updateKnownFruitableIfNeeded(req, existing).
-				updateSaleIfNeeded(req.Sale, existing.Sale).
-				updateDisposedIfNeeded(req, existing).
-				updateNotesIfNeeded(req, existing).
-				updatePicsIfNeeded(req.Images, existing.Pics).
-				updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
-				updateWetnessIfNeeded(req.Wetness, existing.Wetness).
-				updateBurstGrainsIfNeeded(req.BurstGrains, existing.BurstGrains).
-				updateContamsIfNeeded(req.Contams, existing.Contaminations).
-				updatePermsIfNeeded(aclField.ACL, existing.ACL).
-				updateLastUpdatedIfNeeded().
-				Finalized()
+	return NewMods().
+		updateKnownFruitableIfNeeded(req, existing).
+		updateSaleIfNeeded(req.Sale, existing.Sale).
+		updateDisposedIfNeeded(req, existing).
+		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
+		updateWetnessIfNeeded(req.Wetness, existing.Wetness).
+		updateBurstGrainsIfNeeded(req.BurstGrains, existing.BurstGrains).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updateLastUpdatedIfNeeded().
+		Finalized()
 }
 
 func updateJarHandler(w http.ResponseWriter, r *http.Request) {
@@ -540,7 +531,6 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -610,11 +600,11 @@ func deleteJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 

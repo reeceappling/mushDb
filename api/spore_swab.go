@@ -113,6 +113,7 @@ type createSporeSwabRequest struct {
 func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: TEST ALL BRANCHES!
 	data := createSporeSwabRequest{}
 	defer r.Body.Close()
+	id := NextMainCollectionId()
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -156,53 +157,42 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			if e != nil {
 				return nil, e
 			}
-			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField)
+			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField, id)
 			if e != nil {
 				return nil, e
 			}
-			// TODO: unsure if we want this to write!!!
-			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id)
-			if e != nil {
-				return nil, errors.Join(e, errors.New("failed to write tag"))
-			}
-			return nil, e
 		case FruitSourceType:
 			var ok bool
 			fr, ok = parentItem.(*Fruit)
 			if !ok {
 				return nil, errors.New("fruit is not a Fruit?")
 			}
-			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField) // TODO: notes?
+			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField, id)
 			if e != nil {
 				return nil, e
 			}
-			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id)
-			if e != nil {
-				return nil, errors.Join(e, errors.New("failed to write tag"))
-			}
-			return nil, e
 		case SporePrintSourceType: // Goes directly to swab
 			parentPrint, ok := parentItem.(*SporePrint)
 			if !ok {
 				return nil, errors.New("print is not a print?")
 			}
-			swabOut, e = parentPrint.createSwabInTxn(sessCtx, data.NotesField, NotesField{}) // TODO: xferNotes
+			swabOut, e = parentPrint.createSwabInTxn(sessCtx, data.NotesField, NotesField{}, id) // TODO: xferNotes
 			if e != nil {
 				return nil, e
 			}
-			e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, swabOut.Id)
-			if e != nil {
-				return nil, errors.Join(e, errors.New("failed to write tag"))
-			}
-			return nil, e
 		default:
 			e := errors.New("invalid source type: " + parentItem.SourceType())
 			http.Error(w, e.Error(), http.StatusBadRequest)
 			return nil, e
 		}
+		e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+		if e != nil {
+			return nil, errors.Join(e, errors.New("failed to write tag"))
+		}
+		return nil, e
 	})
 	if er != nil {
-		http.Error(w, er.Error(), http.StatusInternalServerError)
+		http.Error(w, er.Error(), http.StatusInternalServerError) // TODO: will fail on invalid source type
 		return
 	}
 	bsOut, err := json.Marshal(swabOut)
@@ -251,7 +241,6 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		//println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -349,11 +338,11 @@ func deleteSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict) // TODO: type ok?
+		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
 		return
 	}
 
@@ -363,7 +352,7 @@ func deleteSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 
 func DeleteCollectionItem[U CollectionId](ctx context.Context, collName string, id U, w http.ResponseWriter) {
 	idStr := string(id.AsBase58())
-	deleteResult, err := DbFrom(ctx).Collection(collName).DeleteOne(ctx, BsonFindFilter(IDfld, id)) // TODO: _id always ok here?
+	deleteResult, err := DbFrom(ctx).Collection(collName).DeleteOne(ctx, BsonFindFilter(IDfld, id))
 	if err != nil {
 		http.Error(w, "failed to delete item "+idStr+" from "+collName+": "+err.Error(), http.StatusInternalServerError)
 		return

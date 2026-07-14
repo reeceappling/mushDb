@@ -203,7 +203,7 @@ func deleteSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// At least one item exists, fail
-		http.Error(w, "at least one species utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+		http.Error(w, "at least one species utilizes the item you are attempting to delete.", http.StatusConflict)
 		return
 	}
 	for _, collName := range []string{
@@ -218,7 +218,7 @@ func deleteSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// At least one item exists, fail
-			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict) // TODO: status ok?
+			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict)
 			return
 		}
 	}
