@@ -27,9 +27,10 @@ type SporeSwab struct {
 	SaleField                         `bson:"inline"` // TODO: was sales! singular now
 	DisposedField                     `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	NotesField                        `bson:"inline"`
-	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"`
+	// TODO: PICS?
+	NotesField       `bson:"inline"`
+	LastUpdatedField `bson:"inline"`
+	AclField         `bson:"inline"`
 }
 
 func (sw SporeSwab) Innoculatable() error {

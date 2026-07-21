@@ -32,9 +32,10 @@ type MSS struct {
 	TransfersOutField                 `bson:"inline"`
 	SaleField                         `bson:"inline"`
 	DisposedField                     `bson:"inline"`
-	NotesField                        `bson:"inline"`
-	LastUpdatedField                  `bson:"inline"`
-	AclField                          `bson:"inline"`
+	// TODO: ADD PICS?
+	NotesField       `bson:"inline"`
+	LastUpdatedField `bson:"inline"`
+	AclField         `bson:"inline"`
 }
 
 func (M MSS) Innoculatable() error {

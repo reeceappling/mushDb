@@ -23,6 +23,8 @@
 - [x] Dates on import pages are not allowing January!
 - [ ] Update MostRecentImage everywhere, just like in LcSyringe!
   - [ ] Test all places that use updateMostRecentImageIfNeeded
+- [ ] Add pics to MSS
+- [ ] Add pics to spore swabs
  
 # In Progress
 ## Actively Working On
