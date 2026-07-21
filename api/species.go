@@ -215,6 +215,13 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:          finalAcl,
 		DefaultAcl:        finalAcl.ACL,
 	}
+	// Validate new aliases
+	ctx, db := Db(r)
+	coll := db.Collection(SpeciesCollectionName) // TODO: validate working!
+	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil {
+		http.Error(w, "aliases or name already in use: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
@@ -230,7 +237,7 @@ func (req updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (b
 	return NewMods().
 		UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
 		updateNotesIfNeeded(req, existing).
-		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
+		updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: also take a context so we can modify as needed
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateDefaultAclIfNeeded(req.DefaultAcl, existing.DefaultAcl).
 		updateLastUpdatedIfNeeded().
@@ -287,6 +294,11 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 			dbErr(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+	err = validateAliasesUnused(ctx, coll, existing.Name, existing.Aliases, req.Aliases)
+	if err != nil {
+		http.Error(w, "At least one new alias already exists as an alias or name on another entry, or there was an error querying: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 	finishStringIdAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }

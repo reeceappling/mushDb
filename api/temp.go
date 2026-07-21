@@ -125,6 +125,8 @@ func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdTyp
 
 func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err error) { // TODO: make sure this works as intended!
 	out = Species{}
+	// TODO: not using a sessionContext! Probably not actually meant for in-txn...
+	// TODO: db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 	encodedResult := DbFrom(ctx).
 		Collection(SpeciesCollectionName).
 		FindOne(ctx, BsonFindFilter(IDfld, name))
@@ -140,6 +142,9 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 
 func GetSubspeciesByNameInTxn(ctx context.Context, name string) (out Subspecies, err error) { // TODO: make sure this works as intended!
 	out = Subspecies{}
+
+	// TODO: not using a sessionContext! Probably not actually meant for in-txn...
+	// TODO: db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 	encodedResult := DbFrom(ctx).
 		Collection(SubspeciesCollectionName).
 		FindOne(ctx, BsonFindFilter(IDfld, name))

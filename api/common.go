@@ -155,6 +155,11 @@ func Initialize(ctx context.Context) error {
 		}
 		println("completed initializing", i)
 	}
+	// TODO: REENABLE!
+	//if err := initializeAliasesCollection(ctx); err != nil { // TODO: when spec/subspec/subRec are created/modified/deleted, also update the aliases collection!
+	//	println("aliases collection failed to initialize", err.Error())
+	//	return errors.Join(errors.New("aliases initializer failed"), err)
+	//}
 	for name, b58IdStr := range map[string]string{
 		// Mains IDs
 		"plate":           string(exPlate.AsBase58()),
@@ -1171,4 +1176,60 @@ func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
 		return ifTrue
 	}
 	return ifFalse
+}
+
+// TODO: MOVE!
+func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existingName string, existingAliases, updatedAliases []string) error {
+	newAliases := utils.SetFrom(updatedAliases...)
+	for _, al := range existingAliases {
+		newAliases.Remove(al)
+	}
+	if newAliases.Contains(existingName) {
+		return errors.New("aliases cannot match name")
+	}
+	if len(newAliases) == 0 {
+		return nil // No alias changes, return early successfully
+	}
+	brandNewAliases := newAliases.ToSlice()
+	// TODO: VALIDATE WORKS!
+	aliasesFilter := bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
+		"$or": bson.A{
+			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list
+			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list
+		},
+	}
+
+	if err := coll.FindOne(ctx, aliasesFilter).Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			// Not found, success! unused aliases
+			return nil
+		}
+		return err
+	}
+	return errors.New("at least one entry contained a new alias the user was trying to add")
+}
+
+func validateAliasesNameUnused(ctx context.Context, coll *mongo.Collection, newName string, aliases []string) error {
+	newAliases := utils.SetFrom(aliases...)
+	newAliases.Add(newName)
+	if len(newAliases) == 0 {
+		return nil // No alias changes, return early successfully
+	}
+	brandNewAliases := newAliases.ToSlice()
+	// TODO: VALIDATE WORKS!
+	aliasesFilter := bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
+		"$or": bson.A{
+			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list
+			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list
+		},
+	}
+
+	if err := coll.FindOne(ctx, aliasesFilter).Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			// Not found, success! unused aliases
+			return nil
+		}
+		return err
+	}
+	return errors.New("at least one entry contained a new alias the user was trying to add")
 }

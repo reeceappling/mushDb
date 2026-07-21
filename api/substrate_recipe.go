@@ -122,20 +122,24 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	req := createSubstrateRecipeRequest{}
-	err = json.Unmarshal(body, &req)
-	if err != nil {
+	if err = json.Unmarshal(body, &req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	id := newAlternateCollectionId()
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := SubstrateRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
 		NameField:                  req.NameField,
 		AliasesField:               req.AliasesField,
 		StandardField:              req.StandardField,
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
+	}
+	ctx, db := Db(r)
+	coll := db.Collection(SubstrateRecipesCollectionName) // TODO: validate working!
+	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil {
+		http.Error(w, "aliases or name already in use: "+err.Error(), http.StatusBadRequest)
+		return
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }
@@ -187,6 +191,11 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			stat = http.StatusNotFound
 		}
 		dbErr(w, err.Error(), stat)
+		return
+	}
+	err = validateAliasesUnused(ctx, coll, existing.Name, existing.Aliases, req.Aliases)
+	if err != nil {
+		http.Error(w, "At least one new alias already exists as an alias or name on another entry, or there was an error querying: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)

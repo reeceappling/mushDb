@@ -95,6 +95,150 @@ func initializeSubspecies(ctx context.Context) error {
 	})
 }
 
+//const AliasesCollectionName = "aliasesEntries"
+//
+//type AliasItem struct {
+//	AlternateCollectionIdField `bson:"inline"`
+//	Alias                      string `bson:"alias" json:"alias"`
+//	Type                       string `bson:"entryType" json:"entryType"`
+//	Primary                    bool   `bson:"primary" json:"primary"`
+//}
+//
+//func initializeAliasesCollection(ctx context.Context) error {
+//	coll := DbFrom(ctx).Collection(AliasesCollectionName)
+//	indexModel := mongo.IndexModel{
+//		Keys: bson.D{
+//			{Key: "alias", Value: 1},     // Index alias in ascending order
+//			{Key: "entryType", Value: 1}, // Index entryType in ascending order
+//		},
+//		Options: options.Index().SetUnique(true),
+//	}
+//
+//	if _, err := coll.Indexes().CreateOne(ctx, indexModel); err != nil {
+//		return err
+//	}
+//	// Do for all existing species, subspecies, substrateRecipes
+//	loadAllItems := true // TODO: DONT DO THIS EVERYTIME! MAKE FALSE NORMALLY!
+//	if !loadAllItems {
+//		return nil
+//	}
+//	_, er := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+//		subCurs, err := DbFrom(sessCtx).Collection(SubspeciesCollectionName).Find(sessCtx, bson.D{})
+//		if err != nil {
+//			return nil, err
+//		}
+//		for subs, err := range cursorIterator[*Subspecies](sessCtx, subCurs) {
+//			if err != nil {
+//				return nil, err
+//			}
+//			err := coll.FindOne(sessCtx, bson.D{{Key: "alias", Value: subs.Name}, {Key: "entryType", Value: "subspecies"}}).Err()
+//			if err != nil {
+//				if errors.Is(err, mongo.ErrNoDocuments) {
+//					if _, err = coll.InsertOne(sessCtx, AliasItem{
+//						AlternateCollectionIdField: newAlternateCollectionId().asIdField(),
+//						Alias:                      subs.Name,
+//						Type:                       "subspecies",
+//						Primary:                    true,
+//					}); err != nil {
+//						return nil, err
+//					}
+//				}
+//			}
+//			for _, alias := range subs.Aliases {
+//				err := coll.FindOne(sessCtx, bson.D{{Key: "alias", Value: alias}, {Key: "entryType", Value: "subspecies"}}).Err()
+//				if err != nil {
+//					if errors.Is(err, mongo.ErrNoDocuments) {
+//						if _, err = coll.InsertOne(sessCtx, AliasItem{
+//							AlternateCollectionIdField: newAlternateCollectionId().asIdField(),
+//							Alias:                      alias,
+//							Type:                       "subspecies",
+//							Primary:                    false,
+//						}); err != nil {
+//							return nil, err
+//						}
+//					}
+//				}
+//			}
+//		}
+//		specCurs, err := DbFrom(ctx).Collection(SpeciesCollectionName).Find(ctx, bson.D{})
+//		if err != nil {
+//			return nil, err
+//		}
+//		for spec, err := range cursorIterator[*Species](ctx, specCurs) {
+//			if err != nil {
+//				return nil, err
+//			}
+//			err := coll.FindOne(sessCtx, bson.D{{Key: "alias", Value: spec.Name}, {Key: "entryType", Value: "species"}}).Err()
+//			if err != nil {
+//				if errors.Is(err, mongo.ErrNoDocuments) {
+//					if _, err = coll.InsertOne(sessCtx, AliasItem{
+//						AlternateCollectionIdField: newAlternateCollectionId().asIdField(),
+//						Alias:                      spec.Name,
+//						Type:                       "species",
+//						Primary:                    true,
+//					}); err != nil {
+//						return nil, err
+//					}
+//				}
+//			}
+//			for _, alias := range spec.Aliases {
+//				err := coll.FindOne(sessCtx, bson.D{{Key: "alias", Value: alias}, {Key: "entryType", Value: "species"}}).Err()
+//				if err != nil {
+//					if errors.Is(err, mongo.ErrNoDocuments) {
+//						if _, err = coll.InsertOne(sessCtx, AliasItem{
+//							AlternateCollectionIdField: newAlternateCollectionId().asIdField(),
+//							Alias:                      alias,
+//							Type:                       "species",
+//							Primary:                    false,
+//						}); err != nil {
+//							return nil, err
+//						}
+//					}
+//				}
+//			}
+//		}
+//		recCurs, err := DbFrom(ctx).Collection(SubstrateRecipesCollectionName).Find(ctx, bson.D{})
+//		if err != nil {
+//			return nil, err
+//		}
+//		for subRec, err := range cursorIterator[*SubstrateRecipe](ctx, recCurs) {
+//			if err != nil {
+//				return nil, err
+//			}
+//			err := coll.FindOne(sessCtx, bson.D{{Key: "alias", Value: subRec.Name}, {Key: "entryType", Value: "substrateRecipe"}}).Err()
+//			if err != nil {
+//				if errors.Is(err, mongo.ErrNoDocuments) {
+//					if _, err = coll.InsertOne(sessCtx, AliasItem{
+//						AlternateCollectionIdField: newAlternateCollectionId().asIdField(),
+//						Alias:                      subRec.Name,
+//						Type:                       "substrateRecipe",
+//						Primary:                    true,
+//					}); err != nil {
+//						return nil, err
+//					}
+//				}
+//			}
+//			for _, alias := range subRec.Aliases {
+//				err := coll.FindOne(sessCtx, bson.D{{Key: "alias", Value: alias}, {Key: "entryType", Value: "substrateRecipe"}}).Err()
+//				if err != nil {
+//					if errors.Is(err, mongo.ErrNoDocuments) {
+//						if _, err = coll.InsertOne(sessCtx, AliasItem{
+//							AlternateCollectionIdField: newAlternateCollectionId().asIdField(),
+//							Alias:                      alias,
+//							Type:                       "substrateRecipe",
+//							Primary:                    false,
+//						}); err != nil {
+//							return nil, err
+//						}
+//					}
+//				}
+//			}
+//		}
+//		return nil, nil
+//	})
+//	return er
+//}
+
 type createSubspeciesRequest struct {
 	NameField
 	SpeciesField
@@ -151,6 +295,13 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(speciesUpdate) == 0 {
 		http.Error(w, "no changes made to species, should be impossible!", http.StatusInternalServerError)
+		return
+	}
+	// Validate new aliases
+	ctx, db := Db(r)
+	coll := db.Collection(SubspeciesCollectionName) // TODO: validate working!
+	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil {
+		http.Error(w, "aliases or name already in use: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Do DB stuff
@@ -243,7 +394,12 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	// TODO: validate aliases are not replicas? (should be done by mongo)
+
+	err = validateAliasesUnused(ctx, coll, existing.Name, existing.Aliases, req.Aliases)
+	if err != nil {
+		http.Error(w, "At least one new alias already exists as an alias or name on another entry, or there was an error querying: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 	finishStringIdAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest) // TODO: use on species, project, user(?)
 }
 

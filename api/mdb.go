@@ -484,6 +484,12 @@ func mongoClientForURI(ctx context.Context, uri string) (context.Context, error)
 }
 
 func GetMongoClient(ctx context.Context) *mongo.Client {
+	//sessCtx := mongo.SessionFromContext(ctx) // TODO: consider using this!
+	//if sessCtx != nil {
+	//	if cli := sessCtx.Client(); cli != nil {
+	//		return cli
+	//	}
+	//}
 	val, exists := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	if !exists {
 		panic("no mongo client found on context")
