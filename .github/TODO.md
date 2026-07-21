@@ -24,7 +24,11 @@
 - [ ] Update MostRecentImage everywhere, just like in LcSyringe!
   - [ ] Test all places that use updateMostRecentImageIfNeeded
 - [ ] Add pics to MSS
+  - [ ] Go side
+  - [ ] TS side
 - [ ] Add pics to spore swabs
+  - [ ] Go side
+  - [ ] TS side
  
 # In Progress
 ## Actively Working On

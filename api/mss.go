@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
@@ -32,10 +33,11 @@ type MSS struct {
 	TransfersOutField                 `bson:"inline"`
 	SaleField                         `bson:"inline"`
 	DisposedField                     `bson:"inline"`
-	// TODO: ADD PICS?
-	NotesField       `bson:"inline"`
-	LastUpdatedField `bson:"inline"`
-	AclField         `bson:"inline"`
+	MostRecentImageField              `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
+	PicsField                         `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"`
 }
 
 func (M MSS) Innoculatable() error {
@@ -115,6 +117,7 @@ func initializeMSS(ctx context.Context) error {
 			TransfersOutField:                 TransfersOutField{exAlts},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
 			DisposedField:                     DisposedField{&exampleTime},
+			PicsField:                         PicsField{Pics: nil}, // TODO: ok?
 			NotesField:                        NotesField{exampleNotes()},
 			LastUpdatedField:                  LastUpdatedField{exampleTime},
 		}
@@ -126,11 +129,13 @@ type createMssRequest struct {
 	WaterJarOptionalField // TODO: HANDLE THIS! Allow creation with or without
 	SporePrintId          MainCollectionId
 	NotesField
+	// TODO: PICS!
 	WriteTagToField
 	// Uses parent perms, then email can modify if they have the perms for parent
 }
 
 func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called from spore print page
+	// TODO: change to multipart!
 	data := createMssRequest{}
 	id := NextMainCollectionId()
 	defer r.Body.Close()
@@ -182,6 +187,7 @@ type importMssRequest struct {
 }
 
 func importMssHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: CHANGE TO MULTIPART!
 	ctx, now := request.UnixTime(r.Context())
 	data := importMssRequest{}
 	defer r.Body.Close()
@@ -223,49 +229,101 @@ type updateMssRequest struct {
 	NotesUpdateField
 	DisposedField
 	SaleField
+	ImagesUpdateField // TODO: NEW!
+	PermsOnRequest    `json:"acl"`
+}
+
+func (upr updateMssRequest) reform() resolvedUpdateMssRequest {
+	return resolvedUpdateMssRequest{
+		SaleField:        upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		PermsOnRequest:   upr.PermsOnRequest,
+	}
+}
+
+// TODO: MAKE RESOLVED UPDATE SWAB REQUEST!
+type resolvedUpdateMssRequest struct {
+	SaleField
+	DisposedField
+	NotesUpdateField
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
 	PermsOnRequest `json:"acl"`
 }
 
-func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {
+func (req resolvedUpdateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
-		// TODO: pics?
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+		updatePicsIfNeeded(req.Images, existing.Pics).                                               // TODO: validate working!
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, nil, nil)). // TODO: validate working!
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
 
+//func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {
+//	imgs := imageUpdates(req.Images)
+//	return NewMods().
+//		updateSaleIfNeeded(req.Sale, existing.Sale).
+//		updateDisposedIfNeeded(req, existing).
+//		updateNotesIfNeeded(req, existing).
+//		updatePermsIfNeeded(aclField.ACL, existing.ACL).
+//		updatePicsIfNeeded(imgs, existing.Pics).                                               // TODO: validate working!
+//		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&imgs, nil, nil)). // TODO: validate working!
+//		updateLastUpdatedIfNeeded().
+//		Finalized()
+//}
+
 func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateMssRequest{}
 	defer r.Body.Close()
-	idStr, err := UrlDecodeString(r.PathValue("id"))
+	//idStr, err := UrlDecodeString(r.PathValue("id"))
+	//if err != nil {
+	//	http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//mainCollId, err := StandardizeMainCollectionId(idStr)
+	//if err != nil {
+	//	http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//bs, err := io.ReadAll(r.Body)
+	//if err != nil {
+	//	http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//err = json.Unmarshal(bs, &data)
+	//if err != nil {
+	//	http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	b58Id, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
-		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	mainCollId, err := StandardizeMainCollectionId(idStr)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "sporeSwab", &data, b58Id)
 	if err != nil {
-		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		// Already wrote
 		return
 	}
-	bs, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
-		return
+	out := data.reform()
+	for i, _ := range data.Images.New {
+		loc, exists := newPics[i]
+		if !exists {
+			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
+			return
+		}
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(MssCollectionName)
 
 	// go get current entry
 	existing := MSS{}
-	err = coll.FindOne(ctx, BsonFindFilter(IDfld, *mainCollId)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
@@ -277,7 +335,7 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	finishMainCollItemUpdate(ctx, w, data.modsFor, &existing, data.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, data.PermsOnRequest)
 }
 
 func deleteMssHandler(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
@@ -27,10 +28,11 @@ type SporeSwab struct {
 	SaleField                         `bson:"inline"` // TODO: was sales! singular now
 	DisposedField                     `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
-	// TODO: PICS?
-	NotesField       `bson:"inline"`
-	LastUpdatedField `bson:"inline"`
-	AclField         `bson:"inline"`
+	PicsField                         `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
+	MostRecentImageField              `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"`
 }
 
 func (sw SporeSwab) Innoculatable() error {
@@ -94,6 +96,7 @@ func initializeSporeSwabs(ctx context.Context) error {
 			SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
 			SaleField:                         SaleField{&exAltId},
 			DisposedField:                     DisposedField{&exampleTime},
+			PicsField:                         PicsField{Pics: nil},
 			NotesField:                        NotesField{exampleNotes()},
 			LastUpdatedField:                  LastUpdatedField{exampleTime},
 			AclField:                          allCanWriteAcl(),
@@ -105,6 +108,7 @@ func initializeSporeSwabs(ctx context.Context) error {
 type createSporeSwabRequest struct {
 	MainCollectionParentField // required
 	// Parent type is retrieved
+	// TODO: HANDLE PICS
 	NotesField
 	WriteTagToField
 }
@@ -206,46 +210,99 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 }
 
 type updateSporeSwabRequest struct {
+	SaleField         `json:"saleField"`
+	DisposedField     `json:"disposedField"`
+	NotesUpdateField  `json:"notesUpdateField"`
+	ImagesUpdateField `json:"imagesUpdateField"` // TODO: USE!
+	PermsOnRequest    `json:"acl" json:"permsOnRequest"`
+}
+
+func (upr updateSporeSwabRequest) reform() resolvedUpdateSporeSwabRequest {
+	return resolvedUpdateSporeSwabRequest{
+		SaleField:        upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		PermsOnRequest:   upr.PermsOnRequest,
+	}
+}
+
+type resolvedUpdateSporeSwabRequest struct {
 	SaleField
 	DisposedField
 	NotesUpdateField
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
 	PermsOnRequest `json:"acl"`
 }
 
-func (req updateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
+//	func (req updateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
+//		imgs := imageUpdates(req.Images)
+//		return NewMods().
+//			updateSaleIfNeeded(req.Sale, existing.Sale).
+//			updateDisposedIfNeeded(req, existing).
+//			updateNotesIfNeeded(req, existing).
+//			updatePicsIfNeeded(imgs, existing.Pics).
+//			updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&imgs, nil, nil)).
+//			updatePermsIfNeeded(aclField.ACL, existing.ACL).
+//			updateLastUpdatedIfNeeded().
+//			Finalized()
+//	}
+func (req resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, nil, nil)).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
 
 func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: CHANGE TO MULTIPART!
 	defer r.Body.Close()
-	req := updateSporeSwabRequest{}
-	bs, err := io.ReadAll(r.Body)
+	data := updateSporeSwabRequest{}
+
+	b58Id, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
-		http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = json.Unmarshal(bs, &req)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "sporeSwab", &data, b58Id)
 	if err != nil {
-		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
+		// Already wrote
 		return
 	}
-	idStr, err := UrlDecodeString(r.PathValue("id"))
-	if err != nil {
-		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
-		return
+	out := data.reform()
+	for i, _ := range data.Images.New {
+		loc, exists := newPics[i]
+		if !exists {
+			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
+			return
+		}
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
-	mainCollId, err := StandardizeMainCollectionId(idStr)
-	if err != nil {
-		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id := *mainCollId
+	//bs, err := io.ReadAll(r.Body)
+	//if err != nil {
+	//	http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//err = json.Unmarshal(bs, &data)
+	//if err != nil {
+	//	http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//idStr, err := UrlDecodeString(r.PathValue("id"))
+	//if err != nil {
+	//	http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//mainCollId, err := StandardizeMainCollectionId(idStr)
+	//if err != nil {
+	//	http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//id := *mainCollId
 
 	ctx, db := Db(r)
 	coll := db.Collection(SporeSwabCollectionName)
@@ -257,7 +314,7 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, req.modsFor, &existing, req.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, data.PermsOnRequest)
 }
 
 type importSporeSwabRequest struct {
