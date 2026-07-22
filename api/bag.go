@@ -322,8 +322,6 @@ func (req resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (b
 		Finalized()
 }
 
-const maxMultipartRequestSize = 32<<25 + 1024 //32<<20 + 1024 // TODO: is this max size ok?
-
 //func getBag(ctx context.Context, id MainCollectionId) (*Bag, error) {
 //	// go get current plate
 //	existing := &Bag{}
@@ -343,7 +341,7 @@ func updateBagHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "bag", &data, mainCollId.AsBase58())
+	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, &data, mainCollId.AsBase58())
 	if err != nil {
 		// Already wrote
 		return

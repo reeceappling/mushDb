@@ -56,11 +56,11 @@ export interface PlateData {
     transfersOut?: string[]
     parentType?: string
     parent?: string
-    pics?: PicWithNotesIncoming[]
     contamination?: Contamination[]
     knownFruitable?: boolean
     sale?: string
     disposed?: number
+    pics?: PicWithNotesIncoming[]
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number

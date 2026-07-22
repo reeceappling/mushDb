@@ -235,18 +235,6 @@ type resolvedUpdateSporeSwabRequest struct {
 	PermsOnRequest `json:"acl"`
 }
 
-//	func (req updateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
-//		imgs := imageUpdates(req.Images)
-//		return NewMods().
-//			updateSaleIfNeeded(req.Sale, existing.Sale).
-//			updateDisposedIfNeeded(req, existing).
-//			updateNotesIfNeeded(req, existing).
-//			updatePicsIfNeeded(imgs, existing.Pics).
-//			updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&imgs, nil, nil)).
-//			updatePermsIfNeeded(aclField.ACL, existing.ACL).
-//			updateLastUpdatedIfNeeded().
-//			Finalized()
-//	}
 func (req resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateSaleIfNeeded(req.Sale, existing.Sale).
@@ -260,7 +248,6 @@ func (req resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField 
 }
 
 func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: CHANGE TO MULTIPART!
 	defer r.Body.Close()
 	data := updateSporeSwabRequest{}
 
@@ -268,7 +255,7 @@ func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "sporeSwab", &data, b58Id)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
 		// Already wrote
 		return
@@ -325,6 +312,7 @@ type importSporeSwabRequest struct {
 	WriteTagToField // TODO: ADD THIS TO TYPESCRIPT!
 }
 
+// TODO: consider adding pics to these imports!
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporeSwabRequest{}
 	id := NextMainCollectionId()

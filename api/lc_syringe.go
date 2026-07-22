@@ -202,7 +202,7 @@ type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
 	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField       // TODO: handle in react
+	KnownFruitableField                                         // TODO: handle in react
 	ImagesUpdateField
 	NotesUpdateField
 	PermsOnRequest `json:"acl"`
@@ -261,7 +261,7 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "lcSyringe", &data, b58Id)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
 		// Already wrote
 		return

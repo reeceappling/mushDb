@@ -329,16 +329,6 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 			println("Failed to add user for email: " + u.Email)   // TODO: del?
 			return "", email, err
 		}
-		//if adminEmail != "" && email == adminEmail {
-		//	println("checking admin user")                                                    // TODO; del
-		//	if err = coll.FindOne(ctx, BsonFindFilter(IDfld, email)).Decode(&u); err != nil { // TODO: remove?
-		//		println("failed to check Admin user")
-		//		return "", email, err
-		//	}
-		//	if u.Perms.Admin == nil || !(*u.Perms.Admin) {
-		//		return "", email, errors.New("result does not show Admin")
-		//	}
-		//}
 	}
 	//if u.Perms.Admin == nil { // TODO: del or reenable for testing
 	//	env.LogIfDev(ctx, "Admin on perms was nil when it should not have been!")
@@ -373,7 +363,6 @@ func (serv *AuthService) SigninGuestUser() (sessionId SessionId, err error) {
 		Expiry: time.Now().Add(serv.ttl),
 	}
 
-	//println("creating new id without lock") // TODO: del
 	id, err := serv.newSessionIdForUserWithoutLock(email)
 	if err != nil {
 		return "", errors.Join(err, errors.New("session with that ID already exists"))
@@ -440,21 +429,10 @@ func (serv *AuthService) registerSessionAndResolvePerms(ctx context.Context, usr
 		// User already exists! Remove old one
 		serv.deleteSession(sessId, usr.Email)
 	}
-	// Resolve auth info
-	//at := func(ac *AccountType) string { // TODO: del
-	//	if ac == nil {
-	//		return "guest"
-	//	}
-	//	if *ac {
-	//		return "admin"
-	//	}
-	//	return "normalUser"
-	//}
-	//println("registering session with account type: " + at(usr.Perms.Admin)) // TODO: del
 	var resolvedPerms = ResolvedUserPerms{
 		Email:       usr.Email,
 		AccountType: usr.Perms.Admin,
-		Projects:    nil,
+		// Projects are set later for normal users
 	}
 	if usr.Perms.Admin.IsGuest() {
 		return serv.createSessionFor(ResolvedUserPerms{

@@ -250,7 +250,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 	id := NextMainCollectionId()
 	b58Id := id.AsBase58()
 	defer r.Body.Close()
-	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
 		// Already wrote
 		return
@@ -274,7 +274,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FO
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO: NEXT LINE IS FAILING BECAUSE IT CANNOT UNMARSHAL A MAIN COLLECTION ITEM!
+	// TODO: NEXT LINE IS FAILING BECAUSE IT CANNOT UNMARSHAL A MAIN COLLECTION ITEM! UNSURE IF STILL FAILING!
 	// parent is not a pointer because the interface's underlying types are each pointers
 	err = db.Collection(parent.CollectionName()).FindOne(ctx, BsonFindFilter(IDfld, data.ParentId)).Decode(parent)
 	if err != nil {
@@ -371,7 +371,7 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 	b58Id := mainCollId.AsBase58()
 	data := updateFruitRequest{}
 	id := *mainCollId
-	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "fruit", &data, b58Id)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
 		// Already written
 		return

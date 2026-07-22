@@ -49,7 +49,6 @@ func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 	if err != nil {
 		return nil, err
 	}
-	//println("CONVERTED", id, " TO", string(realId[:])) // TODO: del
 	return &realId, nil
 }
 
@@ -58,7 +57,6 @@ func StandardizeAltCollectionId(id string) (*AlternateCollectionId, error) {
 	if err != nil {
 		return nil, err
 	}
-	//println("CONVERTED", id, " TO", string(realId[:])) // TODO: del
 	return &realId, nil
 }
 
@@ -125,8 +123,7 @@ func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdTyp
 
 func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err error) { // TODO: make sure this works as intended!
 	out = Species{}
-	// TODO: not using a sessionContext! Probably not actually meant for in-txn...
-	// TODO: db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+	// TODO: validate that DbFrom properly uses txn when needed
 	encodedResult := DbFrom(ctx).
 		Collection(SpeciesCollectionName).
 		FindOne(ctx, BsonFindFilter(IDfld, name))
@@ -143,8 +140,7 @@ func GetSpeciesNameInTxn(ctx context.Context, name string) (out Species, err err
 func GetSubspeciesByNameInTxn(ctx context.Context, name string) (out Subspecies, err error) { // TODO: make sure this works as intended!
 	out = Subspecies{}
 
-	// TODO: not using a sessionContext! Probably not actually meant for in-txn...
-	// TODO: db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+	// TODO: validate that DbFrom properly uses txn when needed
 	encodedResult := DbFrom(ctx).
 		Collection(SubspeciesCollectionName).
 		FindOne(ctx, BsonFindFilter(IDfld, name))
@@ -177,19 +173,12 @@ func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, re
 		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//println("before", string(bs)) // TODO: del
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, result)
 	if err != nil {
 		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	//bs2, err := json.Marshal(result)
-	//if err != nil {
-	//	http.Error(w, "failed to marshal Data from form: "+err.Error(), http.StatusBadRequest)
-	//	return // TODO: del
-	//}
-	//println("after", string(bs2)) // TODO: del
 	return
 }
 
@@ -238,7 +227,6 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			http.Error(w, "failed to parse image number! "+errr.Error(), http.StatusBadRequest)
 			return
 		}
-		//println("getting field bytes", "Form: "+p.FormName(), "File: "+p.FileName()) // TODO: THIS
 		fieldBytes, errr := multipartToImageBytes(p, w)
 		if errr != nil {
 			err = errr
@@ -251,7 +239,6 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
 			if errr != nil {
 				err = errr
-				println("failed to save a new picture", err.Error()) // TODO: del
 				http.Error(w, "failed to save new picture: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -261,7 +248,6 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "contam")
 			if errr != nil {
 				err = errr
-				println("failed to save a new contamination picture", err.Error()) // TODO: del
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -271,7 +257,6 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "flush")
 			if errr != nil {
 				err = errr
-				println("failed to save a new flush picture", err.Error()) // TODO: del
 				http.Error(w, "failed to save new flush: "+err.Error(), http.StatusBadRequest)
 				return
 			}
@@ -284,40 +269,15 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			return
 		}
 	}
-
-	// TODO:?????
-	//// CHECK THAT ALL NEW PICS EXIST
-	//// PROCESS ALL NEW PICS AND CONTAMS
-	//out := Data.reform()
-	//for i, _ := range Data.Images.New {
-	//	loc, exists := newPics[i]
-	//	if !exists {
-	//		http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
-	//		return
-	//	}
-	//	out.Images.New[i].Location = imageLocation(loc)
-	//}
-	//for i, _ := range Data.Contams.New {
-	//	if loc, exists := newContams[i]; exists {
-	//		finalLoc := imageLocation(loc)
-	//		out.Contams.New[i].Location = &finalLoc
-	//	}
-	//}
-	//for i, _ := range Data.Flushes.New {
-	//	loc, exists := newFlushes[i]
-	//	if !exists {
-	//		http.Error(w, fmt.Sprintf("error, location for new flush index %d not found (should never happen)", i), http.StatusInternalServerError)
-	//		return
-	//	}
-	//	out.Flushes.New[i].Location = imageLocation(loc)
-	//}
 	return
 }
 
-// TODO: rename
-// TODO: only use when writeRFID is not between the two (on updates) (should always be used)
-func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, prefixPath string, data *T, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) { // TODO USE THIS ALL OVER THE PLACE
+func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, data *T, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) {
 	defer r.Body.Close()
+	prefixPath := r.PathValue("variant")
+	if prefixPath == "" {
+		return nil, nil, nil, errors.New("no prefix path 'variant' provided")
+	}
 	reader, err := multipartReaderForRequest(r, w, data)
 	if err != nil {
 		// Already wrote

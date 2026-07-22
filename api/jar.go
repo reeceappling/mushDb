@@ -535,7 +535,7 @@ func updateJarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "jar", &data, mainCollId.AsBase58())
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, &data, mainCollId.AsBase58())
 	if err != nil {
 		// Already wrote
 		return

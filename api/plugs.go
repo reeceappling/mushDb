@@ -478,7 +478,7 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: overh
 		return
 	}
 	ctx := r.Context()
-	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plugs", &data, Base58Str(idStr))
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, &data, Base58Str(idStr))
 	if err != nil {
 		// Already wrote
 		return

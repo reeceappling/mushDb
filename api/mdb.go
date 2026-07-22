@@ -133,8 +133,7 @@ func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
 		println("converting base58 string", b58str, "result", string(result[:]))
 		return result, nil
 	}
-	// TODO: what about too long?
-	panic("longer alts not handled yet")
+	panic("longer alts not handled yet") // TODO: what about too long?
 	return AlternateCollectionId(bs), nil
 }
 
@@ -205,10 +204,6 @@ func (id *BinaryCollectionId) UnmarshalJSON(bs []byte) (err error) {
 
 const RfidByteSize = 8
 
-//var _ bson.ValueMarshaler = MainCollectionId{}
-//var _ bson.ValueUnmarshaler = &MainCollectionId{}
-
-// type MainCollectionId string // TODO: WILL ALWAYS BE THE BINARY ID!!!!
 type MainCollectionId [RfidByteSize]byte
 
 type mcidNode struct {
@@ -220,7 +215,7 @@ type mcidNode struct {
 // newMcids is an internal channel holding new mainCollectionIds that have been pre-verified to not already exist
 var newMcids chan MainCollectionId
 
-// TODO: ctx should be cancellable here
+// ctx should be cancellable here
 // TODO: need to THOROUGHLY test this, ensure that it is generating properly, and that there are no duplicates across batches, and that it is properly cancelled when context is done, and that the channel is properly closed and drained when context is done
 func StartGeneratingMCIDs(ctx context.Context, batchSize int) {
 	if newMcids != nil {
@@ -260,10 +255,10 @@ func StartGeneratingMCIDs(ctx context.Context, batchSize int) {
 	return
 }
 
-func NextMainCollectionId() MainCollectionId { // TODO: use
+func NextMainCollectionId() MainCollectionId {
 	return <-newMcids
 }
-func NextMainCollectionIds(num int) []MainCollectionId { // TODO: use
+func NextMainCollectionIds(num int) []MainCollectionId {
 	out := make([]MainCollectionId, num)
 	for i := 0; i < num; i++ {
 		out[i] = <-newMcids
@@ -303,18 +298,11 @@ func (id MainCollectionId) ToBinaryCollectionId() BinaryCollectionId {
 }
 
 func (id MainCollectionId) MarshalJSON() ([]byte, error) {
-	//marshalling := [RfidByteSize]byte(id)
-	//println("Marshalling " + string(marshalling[0:]))
-	bs58 := id.AsBase58()
-	//println(bs58) // TODO: CLEANUP
-	out := []byte(`"` + string(bs58) + `"`)
-	//println("Marshalled: " + string(out))
-	return out, nil
+	return []byte(`"` + string(id.AsBase58()) + `"`), nil
 }
 
 func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
 	var b58Str Base58Str
-	// TODO: works with var b58Str string
 	if err := json.Unmarshal(bs, &b58Str); err != nil {
 		return err
 	}
@@ -329,8 +317,8 @@ func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
 func (id MainCollectionId) dbIdStr() string { // Returns Most efficient string
 	return string(id[:])
 }
-func (id MainCollectionId) AsBase58() Base58Str { // TODO: make sure that everywhere this is used, it is being used properly, and doesnt need to be in binary format
-	return id.ToBinaryCollectionId().AsBase58() // TODO: make sure ok
+func (id MainCollectionId) AsBase58() Base58Str {
+	return id.ToBinaryCollectionId().AsBase58()
 }
 func (id MainCollectionId) IdField() MainCollectionIdField { // Returns Most efficient string
 	return MainCollectionIdField{id}
@@ -420,11 +408,8 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		hostAndPort = fmt.Sprintf("%s:%d", dbHostName, dbPort)
 	}
 
-	//uri := fmt.Sprintf("mongodb://%s", hostAndPort)
-	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
 	hostPortAndParams := fmt.Sprintf("%s/?authSource=admin&replicaSet=rs0", hostAndPort)
 	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostPortAndParams)
-	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
 
 	println("trying to connect to database", usern, pass)
 	opts := options.Client().
@@ -434,8 +419,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetHosts([]string{hostAndPort}).
 		SetServerSelectionTimeout(time.Second * 20).
 		//SetAuth(options.Credential{Username: usern, Password: pass}). // TODO: get rid of?
-		//SetAuth(options.Credential{Username: usern, Password: pass}).
-		//SetAppName("mainApi").
+		//SetAppName("mainApi"). // TODO: ???
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
 		SetTimeout(15 * time.Second)         // TODO: no?
@@ -484,12 +468,11 @@ func mongoClientForURI(ctx context.Context, uri string) (context.Context, error)
 }
 
 func GetMongoClient(ctx context.Context) *mongo.Client {
-	//sessCtx := mongo.SessionFromContext(ctx) // TODO: consider using this!
-	//if sessCtx != nil {
-	//	if cli := sessCtx.Client(); cli != nil {
-	//		return cli
-	//	}
-	//}
+	if sessCtx := mongo.SessionFromContext(ctx); sessCtx != nil {
+		if cli := sessCtx.Client(); cli != nil {
+			return cli
+		}
+	}
 	val, exists := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	if !exists {
 		panic("no mongo client found on context")
@@ -501,18 +484,18 @@ func DbFrom(ctx context.Context) *mongo.Database {
 	return GetMongoClient(ctx).Database(dbName)
 }
 
-func chanWithPostSendHook[T any](out chan<- T, afterFinalSend func(T)) (inpC chan<- T) {
-	inp, out := make(chan T), make(chan T)
-	go func() {
-		defer close(out)
-		for val := range inp {
-			out <- val
-			// Once validated sent, do the onSend handler
-			afterFinalSend(val)
-		}
-	}()
-	return inp
-}
+//func chanWithPostSendHook[T any](out chan<- T, afterFinalSend func(T)) (inpC chan<- T) {
+//	inp, out := make(chan T), make(chan T)
+//	go func() {
+//		defer close(out)
+//		for val := range inp {
+//			out <- val
+//			// Once validated sent, do the onSend handler
+//			afterFinalSend(val)
+//		}
+//	}()
+//	return inp
+//}
 
 func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[string]) ([]MainCollectionId, utils.Set[string], error) {
 	client := GetMongoClient(ctx)
@@ -571,7 +554,6 @@ func getLastNEntries[T CollectionItem, U any](ctx context.Context, updated bool,
 	sortBson := bson.D{{Key: sortField, Value: -1}}
 	// disposed: true means show only the disposed, false meens only show the undisposed, nil means do not filter based on disposed!
 	findBson := bson.D{}
-	//println("getting latest from " + temp.CollectionName()) // TODO: del
 	// Create search filter
 	if filterOutStandard {
 		findBson = BsonFindFilter("standard", false)
@@ -727,14 +709,14 @@ var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 	handle(w, r)
 }
 
-func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
-
-	return handler // TODO: replace with old GetPermsMiddleware once perms are reenabled
-}
+//func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
+//
+//	return handler // TODO: replace with old GetPermsMiddleware once perms are reenabled
+//}
 
 func DenyGuestMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resolvedPerms, err := GetAuthInfo(r.Context()) // TODO: is err still needed here?
+		resolvedPerms, err := GetAuthInfo(r.Context())
 		if err != nil {
 			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
 			return
@@ -747,21 +729,22 @@ func DenyGuestMiddleware(handler http.Handler) http.Handler {
 	})
 
 }
-func AdminOnlyMiddleware(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resolvedPerms, err := GetAuthInfo(r.Context()) // TODO: is err still needed here?
-		if err != nil {
-			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
-			return
-		}
-		if !resolvedPerms.IsAdmin() {
-			http.Error(w, "non-admin users cannot delete entries", http.StatusUnauthorized)
-			return
-		}
-		handler.ServeHTTP(w, r)
-	})
 
-}
+//func AdminOnlyMiddleware(handler http.Handler) http.Handler {
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		resolvedPerms, err := GetAuthInfo(r.Context()) // TODO: is err still needed here?
+//		if err != nil {
+//			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
+//			return
+//		}
+//		if !resolvedPerms.IsAdmin() {
+//			http.Error(w, "non-admin users cannot delete entries", http.StatusUnauthorized)
+//			return
+//		}
+//		handler.ServeHTTP(w, r)
+//	})
+//
+//}
 
 var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	endpt := r.PathValue("endpt")
@@ -796,9 +779,7 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		http.Error(w, "failed to load permissions", http.StatusInternalServerError)
 		return
 	}
-	//bs, _ := json.Marshal(resolvedPerms)  // TODO; del
-	//println("resolved perms", string(bs)) // TODO: del
-	if resolvedPerms.isGuest() { // TODO: reenable
+	if resolvedPerms.isGuest() {
 		println("guest tried to edit")
 		http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
 		return

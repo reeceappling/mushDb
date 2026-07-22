@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"golang.org/x/exp/maps"
 	"strings"
 )
 
@@ -174,11 +176,9 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	// Handle blanket perm
 	var maxPerm = RWPermNothing()
 	if acl.BlanketPerm.CanRead() {
-		//println("user can read") // TODO: del!
 		maxPerm = RWPermRead()
 	}
 	if userPerms.isGuest() {
-		//println("user was guest, returning perm: ", maxPerm) // TODO: del!
 		return maxPerm
 	}
 
@@ -338,11 +338,12 @@ func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWriteP
 	// For standard users, rely on the user's project perms
 	var userProjPerm *UserProjectPerm = nil
 	var exists bool
-	if perms.Projects != nil {
-		userProjPerm, exists = perms.Projects[projName]
-		if !exists {
-			return RWPermNothing()
-		}
+	if perms.Projects == nil {
+		return RWPermNothing()
+	}
+	userProjPerm, exists = perms.Projects[projName]
+	if !exists {
+		return RWPermNothing()
 	}
 	// True is project admin
 	// False is can write on project items, but not project itself
@@ -394,7 +395,7 @@ func (pp ProjectPerms) ForUser(email string) *ProjectPerm {
 }
 
 type ProjectPerm string // "read", "write", or "admin". Used as a pointer, where nil == no perm on project
-var (                   // TODO: const?
+var (
 	// ProjectAdmin defines a ProjectPerm for a user that can write on entries for the specified project (if the project can write to the entry), as well as modify the project itself
 	ProjectAdmin ProjectPerm = "admin"
 	// TODO: next line
@@ -589,28 +590,38 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	client := GetMongoClient(ctx)
 
 	// validate Projects
-	// TODO: count instead?
-	projColl := client.Database(dbName).Collection(ProjectsCollectionName)
-	for projName, _ := range requestPerms.ProjectPerms {
-		err := projColl.FindOne(ctx, BsonFindFilter(IDfld, projName)).Err()
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return AclField{}, errors.New(string("could not find project " + projName))
-			}
-			return AclField{}, err
+	projectsToCheck := maps.Keys(requestPerms.ProjectPerms)
+	count, err := client.
+		Database(dbName).
+		Collection(ProjectsCollectionName).
+		CountDocuments(ctx, bson.M{
+			"_id": bson.M{"$in": projectsToCheck},
+		})
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return AclField{}, errors.New("could not find any of the projects")
 		}
+		return AclField{}, err
+	}
+	if int(count) != len(projectsToCheck) {
+		return AclField{}, errors.New("could not find at least one project")
 	}
 	// validate users
-	// TODO: count instead?
-	userColl := client.Database(dbName).Collection(UserCollName)
-	for userEmail, _ := range requestPerms.UserPerms {
-		err := userColl.FindOne(ctx, BsonFindFilter(IDfld, userEmail)).Err()
-		if err != nil {
-			if err == mongo.ErrNoDocuments {
-				return AclField{}, errors.New(string("could not find email " + userEmail))
-			}
-			return AclField{}, err
+	usersToCheck := maps.Keys(requestPerms.UserPerms)
+	count, err = client.
+		Database(dbName).
+		Collection(UserCollName).
+		CountDocuments(ctx, bson.M{
+			IDfld: bson.M{"$in": usersToCheck},
+		})
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return AclField{}, errors.New("could not find any of the users")
 		}
+		return AclField{}, err
+	}
+	if int(count) != len(usersToCheck) {
+		return AclField{}, errors.New("could not find at least one user")
 	}
 
 	// Resolve acl

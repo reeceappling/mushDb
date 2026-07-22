@@ -2,6 +2,7 @@ import {Note} from "@/app/components/formSubcomponents/notes";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {MssSelector, NewMssForm} from "@/app/components/mssClient";
+import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 
 
 export function TestMssOk(){
@@ -28,6 +29,8 @@ export interface MssData {
     transfersOut?: string[]
     sale?: string
     disposed?: number
+    pics?: PicWithNotesIncoming[]
+    mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
     acl: ACL

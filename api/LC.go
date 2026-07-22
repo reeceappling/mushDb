@@ -457,7 +457,7 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "lc", &data, mainCollId.AsBase58())
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, &data, mainCollId.AsBase58())
 	if err != nil {
 		// Already wrote
 		return

@@ -3,7 +3,9 @@
 import React, {JSX, useContext, useState} from "react";
 import {
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoUpdateRequest,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -12,18 +14,26 @@ import {
     IsString,
     ListPageItems,
     ListPageTable,
-    ListTableColumn, DoMultipartImportRequest,
+    ListTableColumn,
+    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NumberToDateStr,
     OptionalArrayOfType,
-    OptionalSimpleKey, RequiredKey,
-    setFormData, DoImportRequest
+    OptionalSimpleKey,
+    RequiredKey,
+    setFormData,
+    DoImportRequest,
+    resolvePicsFormData,
+    resolveContamsFormData,
+    setFormFull,
+    OptionalKey,
+    DoUpdateMultipartRequest
 } from "@/app/components/common";
 import {
     DisposedDisplay,
-    ErrorDisplay,
-    ParentDisplay,
+    ErrorDisplay, MostRecentImageDisplay,
+    ParentDisplay, PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     IsValidNote,
@@ -44,7 +54,7 @@ import ID from "@/app/components/formSubcomponents/id";
 import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
     ExistingSpeciesSubspeciesSelector,
@@ -60,6 +70,13 @@ import ReaderWriterSelector, {
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
+import {
+    InitialPicsEntries, IsValidPicWithNotesIncoming,
+    NewPicWithNotesForm,
+    PicWithNotesForm
+} from "@/app/components/formSubcomponents/picWithNotes";
+import {AssertPlate} from "@/app/components/plateClient";
+import {MssData} from "@/app/components/mssServer";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -103,8 +120,18 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
             throw new Error('Spore Swab assertion failure: required key ' + key + ' was not valid');
         }
     }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
+        if (!OptionalKey(key, input, validator)) {
+            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
+        }
+    }
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+        ['pics', IsValidPicWithNotesIncoming],
         ['transfersOut', IsString],
         ['notes', IsValidNote],
     ])
@@ -164,6 +191,8 @@ export default function SporeSwabDisplay(
     }: DisplayInput<SporeSwabData>) {
         const [initial, setInitial] = useState(data)
 
+        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
+
         const [sale, setSale] = useState(initial.sale)
         const [disposed, setDisposed] = useState(data.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
@@ -175,19 +204,32 @@ export default function SporeSwabDisplay(
             setSale(updated.sale)
             setDisposed(updated.disposed)
             setNotes(InitialNotesState(updated.notes))
+            setImages(InitialPicsEntries(updated.pics))
             setAcl(updated.acl)
             setErr(undefined)
             setTransfersOut(updated.transfersOut)
         }
         const cookies = useContext(CookiesContext)
         const submit = () => {
-            const body: any = {
+            const formData = new FormData()
+            const dataObj: any = {
                 sale: sale,
                 disposed: disposed,
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("sporeSwab",data._id, body, AssertSporeSwab, allCookies(cookies))
+            try {
+                // Pics
+                const picsInfo = resolvePicsFormData(images)
+                const newImages = picsInfo.images
+                dataObj.images = picsInfo.obj
+                // Set data on form
+                setFormFull(formData, dataObj, newImages, undefined, undefined)
+            } catch (caught: any) {
+                setErr(JSON.stringify(caught))
+                return
+            }
+            DoUpdateMultipartRequest("sporeSwab",initial._id, formData, AssertSporeSwab, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new SporeSwabData(v))
                 })
@@ -202,6 +244,7 @@ export default function SporeSwabDisplay(
             {/* TODO: AREA TO CREATE TRANSFER! */}
             <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/> {/*swab to agar and that's about it */}
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -219,7 +262,8 @@ export default function SporeSwabDisplay(
                                  transfersOut={transfersOut}
                                  allowNewTransferCreation={!readonly}
                 /*validTypesTo={["plate", "slant"TODO: any others?]} TODO: on go side*//>
-
+            <PicsDisplay pix={initial.pics} readonly={readonly}
+                         headerLevel={headerLevel} updateParent={setImages}/>
             <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl} />

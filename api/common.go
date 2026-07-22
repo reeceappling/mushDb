@@ -27,6 +27,8 @@ import (
 	"time"
 )
 
+const maxMultipartRequestSize = 32<<25 + 1024 //32<<20 + 1024 // TODO: is this max size ok?
+
 const GoodTestRfidTag = "goodTestRdfidItem"
 
 var ErrNoParentModifiedForTransfer = errors.New("parent not found for transfer update. Shouldnt occur")
@@ -113,6 +115,9 @@ func updateTogether() bson.D {
 }
 
 func Initialize(ctx context.Context) error {
+	if err := initializeItemMapCollection(ctx); err != nil { // TODO: ensure working ok
+		return err
+	}
 	for i, initializer := range map[string]func(context.Context) error{
 		"db": initializeDb,
 		// Initialize main collections

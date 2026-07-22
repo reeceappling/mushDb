@@ -479,7 +479,7 @@ func updateSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := *mainCollId
 	b58Id := mainCollId.AsBase58()
-	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "sporePrint", &data, b58Id)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
 		// Already wrote
 		return

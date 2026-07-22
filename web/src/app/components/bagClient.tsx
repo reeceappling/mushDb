@@ -237,10 +237,6 @@ export default function BagDisplay(
             dataObj.flushes = flushesInfo.obj
             // Set data on form
             setFormFull(formData, dataObj, newImages, newContams, newFlushes)
-            // formData.set("data", JSON.stringify(dataObj))
-            // setFormImages("newPic", formData, newImages)
-            // setFormImages("newContam", formData, newContams)
-            // setFormImages("newFlush", formData, newFlushes)
         } catch (caught: any) {
             setErr(JSON.stringify(caught))
             return

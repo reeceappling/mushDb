@@ -516,7 +516,7 @@ func updateFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "fruitingChamber", &data, mainCollId.AsBase58())
+	newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, &data, mainCollId.AsBase58())
 	if err != nil {
 		// Already wrote
 		return

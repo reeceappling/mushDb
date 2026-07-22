@@ -129,13 +129,13 @@ type createMssRequest struct {
 	WaterJarOptionalField // TODO: HANDLE THIS! Allow creation with or without
 	SporePrintId          MainCollectionId
 	NotesField
-	// TODO: PICS!
+	// TODO: PICS! similar to createFruitRequest? Pics            []PicWithNotesLessLocation // newPic-1
 	WriteTagToField
 	// Uses parent perms, then email can modify if they have the perms for parent
 }
 
 func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called from spore print page
-	// TODO: change to multipart!
+	// TODO: change to multipart only if added pics
 	data := createMssRequest{}
 	id := NextMainCollectionId()
 	defer r.Body.Close()
@@ -186,6 +186,7 @@ type importMssRequest struct {
 	// No ParentType/Parent because these are assumed to be from outside sources
 }
 
+// TODO: consider adding pics to these imports!
 func importMssHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: CHANGE TO MULTIPART!
 	ctx, now := request.UnixTime(r.Context())
@@ -264,47 +265,14 @@ func (req resolvedUpdateMssRequest) modsFor(existing *MSS, aclField AclField) (b
 		Finalized()
 }
 
-//func (req updateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {
-//	imgs := imageUpdates(req.Images)
-//	return NewMods().
-//		updateSaleIfNeeded(req.Sale, existing.Sale).
-//		updateDisposedIfNeeded(req, existing).
-//		updateNotesIfNeeded(req, existing).
-//		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-//		updatePicsIfNeeded(imgs, existing.Pics).                                               // TODO: validate working!
-//		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&imgs, nil, nil)). // TODO: validate working!
-//		updateLastUpdatedIfNeeded().
-//		Finalized()
-//}
-
 func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 	data := updateMssRequest{}
 	defer r.Body.Close()
-	//idStr, err := UrlDecodeString(r.PathValue("id"))
-	//if err != nil {
-	//	http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//mainCollId, err := StandardizeMainCollectionId(idStr)
-	//if err != nil {
-	//	http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	//bs, err := io.ReadAll(r.Body)
-	//if err != nil {
-	//	http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	//err = json.Unmarshal(bs, &data)
-	//if err != nil {
-	//	http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 	b58Id, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}
-	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, "sporeSwab", &data, b58Id)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
 		// Already wrote
 		return

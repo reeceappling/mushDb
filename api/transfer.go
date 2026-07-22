@@ -151,13 +151,13 @@ type createTransferRequest struct {
 }
 
 func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error)) (any, error) {
-	sessionOptions := options.Session() // TODO: change?
+	sessionOptions := options.Session()
 	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
 	if err != nil {
 		return nil, err
 	}
 	wc := writeconcern.Majority()
-	txnOptions := options.Transaction().SetWriteConcern(wc) // TODO: ok?
+	txnOptions := options.Transaction().SetWriteConcern(wc)
 	// Defers ending the session after the transaction is committed or ended
 	return sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
 		defer sess.EndSession(ctx)

@@ -4,7 +4,13 @@ import React, {JSX, useContext, useState} from "react";
 import {
     clientPostRequestHeaders,
     DisplayFormWrapper,
-    DisplayInput, DoCreateRequest, DoGetRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector,
+    DisplayInput,
+    DoCreateRequest,
+    DoGetRequest,
+    DoUpdateMultipartRequest,
+    DoUpdateRequest,
+    ErrHandler,
+    ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
     HandleJsonResponse,
@@ -12,19 +18,25 @@ import {
     ImportDisplayInput,
     ImportEntryFormWrapper,
     IsString,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
     NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalSimpleKey, RequiredKey, viewUrlFor,
+    NewEntryInput,
+    NumberToDateStr,
+    OptionalArrayOfType, OptionalKey,
+    OptionalSimpleKey,
+    RequiredKey, resolveContamsFormData, resolvePicsFormData, setFormFull,
+    viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     ReadRFIDButton,
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
-    ErrorDisplay,
-    ParentDisplay,
+    ErrorDisplay, MostRecentImageDisplay,
+    ParentDisplay, PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
@@ -37,7 +49,7 @@ import ID from "@/app/components/formSubcomponents/id";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import {SaleArea} from "@/app/components/saleClient";
-import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {
     AclDisplay,
     MarshalAcl,
@@ -56,6 +68,13 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {AssertSporePrint} from "@/app/components/sporePrintClient";
 import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {JarData} from "@/app/components/jarServer";
+import {PlateData} from "@/app/components/plateServer";
+import {AssertPlate} from "@/app/components/plateClient";
+import {
+    InitialPicsEntries, IsValidPicWithNotesIncoming,
+    NewPicWithNotesForm,
+    PicWithNotesForm
+} from "@/app/components/formSubcomponents/picWithNotes";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -96,9 +115,19 @@ export function AssertMss(input: any): asserts input is MssData {
             throw new Error('MSS assertion failure: required key ' + key + ' was not valid');
         }
     }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
+        if (!OptionalKey(key, input, validator)) {
+            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
+        }
+    }
 
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+        ['pics', IsValidPicWithNotesIncoming],
         ['transfersOut', IsString],
         ['notes', IsValidNote],
     ])
@@ -183,6 +212,8 @@ export default function MssDisplay(
     }: DisplayInput<MssData>) {
         const [initial, setInitial] = useState(data)
 
+        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
+
         const [sale, setSale] = useState(data.sale)
         const [disposed, setDisposed] = useState(data.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
@@ -198,24 +229,44 @@ export default function MssDisplay(
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
             setTransfersOut(updated.transfersOut || [])
+            setImages(InitialPicsEntries(updated.pics))
             setErr(undefined)
         }
         const cookies = useContext(CookiesContext)
         const mssSubmit = () => {
-            const body: any = {
+            const formData = new FormData()
+            const dataObj: any = {
                 sale:sale,
                 disposed:disposed,
                 writeTagTo:writeTagTo,
                 notes: notes,
                 acl:MarshalAcl(acl),
             }
-            DoUpdateRequest("mss",initial._id, body, AssertMss, allCookies(cookies))
+            try {
+                // Pics
+                const picsInfo = resolvePicsFormData(images)
+                const newImages = picsInfo.images
+                dataObj.images = picsInfo.obj
+                setFormFull(formData, dataObj, newImages, undefined, undefined)
+            } catch (caught: any) {
+                console.log("error in submit")
+                setErr(JSON.stringify(caught))
+                return
+            }
+            DoUpdateMultipartRequest("mss",initial._id, formData, AssertMss, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new MssData(v))
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
                 })
+            // DoUpdateRequest("mss",initial._id, dataObj, AssertMss, allCookies(cookies))
+            //     .then(v=>{
+            //         updateInitial(new MssData(v))
+            //     })
+            //     .catch(e=>{
+            //         setErr("failed to update initial: "+JSON.stringify(e))
+            //     })
         }
     const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
         const disp = initial.disposed !== undefined
@@ -227,6 +278,7 @@ export default function MssDisplay(
         return <DisplayFormWrapper entryType={"mss"}>
             <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Multispore Syringe", entryType:"mss"}}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
@@ -239,6 +291,8 @@ export default function MssDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={data._id} thisEntryType={"mss"} transfersOut={data.transfersOut} allowNewTransferCreation={!readonly}  /*validTypesTo={["plate","slant","jar","bag"]} TODO: on go side*//>
+            <PicsDisplay pix={initial.pics} readonly={readonly}
+                         headerLevel={headerLevel} updateParent={setImages}/>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes} />
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl} />

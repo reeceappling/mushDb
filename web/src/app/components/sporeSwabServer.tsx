@@ -3,6 +3,7 @@ import {TestNotes} from "@/app/components/formSubcomponents/contaminations";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
+import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 
 
 export function TestSporeSwabOk(){
@@ -30,6 +31,8 @@ export interface SporeSwabData {
     sale?: string
     disposed?: number
     transfersOut?: string[]
+    pics?: PicWithNotesIncoming[]
+    mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
     acl: ACL

@@ -524,7 +524,7 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 
-	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plate", &data, b58Id)
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
 		// Already wrote
 		return
