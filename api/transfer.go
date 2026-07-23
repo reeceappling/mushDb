@@ -184,10 +184,10 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	println("opened up multipart reader successfully")
 	p1, err := reader.NextPart()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		println("failed to go to next part: " + err.Error()) // TODO: ok?
+		http.Error(w, "failed to go to next part: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer p1.Close()
@@ -195,6 +195,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	bs, errr := io.ReadAll(p1)
 	if errr != nil {
 		err = errr
+		println("failed to read Data from form: " + err.Error()) // TODO: ok?
 		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -202,6 +203,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
+		println("failed to unmarshal Data from form: " + err.Error()) // TODO: ok?
 		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -379,7 +381,10 @@ func (req updateTransferRequest) modsFor(existing *Transfer, aclField AclField) 
 }
 
 func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -390,11 +395,6 @@ func updateTransferHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)

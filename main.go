@@ -1450,7 +1450,6 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		// ensure id is in correct format
 		mainCollId, err := rfid.StandardizeMainCollectionId(id)
 		if err != nil {
-			env.LogIfDev(ctx, "failed to standardize main collection id: "+err.Error())
 			http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 			return
 		}

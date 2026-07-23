@@ -316,20 +316,11 @@ type importSporeSwabRequest struct {
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporeSwabRequest{}
 	id := NextMainCollectionId()
-	defer r.Body.Close()
+	if err := ReadSimpleStructuredBody(r, w, &data); err != nil {
+		return
+	}
 
-	// Process text (or object)
-	bs, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	// DECIDE: can anyone who is not a guest import?
 	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return
@@ -376,7 +367,7 @@ func deleteSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*SporeSwab](ctx, id, &SporeSwab{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

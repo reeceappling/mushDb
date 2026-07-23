@@ -569,7 +569,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 //	item, err := GetMainCollectionItemSpecific[T](ctx, id, tempItem)
 //	if err != nil {
 //		if errors.Is(err, mongo.ErrNoDocuments) {
-//			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+//http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 //		} else {
 //			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 //		}
@@ -607,7 +607,7 @@ func deleteBagHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*Bag](ctx, id, &Bag{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

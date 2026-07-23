@@ -67,22 +67,6 @@ func (M MSS) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation
 	return utils.Pointer(Generation(0)), utils.Pointer(Generation(0))
 }
 
-//func (M MSS) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := DbFrom(ctx).Collection(MssCollectionName)
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, M.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
-
 func (M MSS) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	return errors.New("mss cannot be a child in a normal transfer. Must be created manually from spore print or imported")
 }
@@ -117,7 +101,7 @@ func initializeMSS(ctx context.Context) error {
 			TransfersOutField:                 TransfersOutField{exAlts},
 			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
 			DisposedField:                     DisposedField{&exampleTime},
-			PicsField:                         PicsField{Pics: nil}, // TODO: ok?
+			PicsField:                         PicsField{Pics: []PicWithNotes{}},
 			NotesField:                        NotesField{exampleNotes()},
 			LastUpdatedField:                  LastUpdatedField{exampleTime},
 		}
@@ -160,6 +144,7 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := &MSS{
 		MainCollectionIdField:             MainCollectionIdField{id},
+		WaterJarOptionalField:             data.WaterJarOptionalField,
 		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      SpeciesField{parent.Species},
 		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
@@ -188,18 +173,10 @@ type importMssRequest struct {
 
 // TODO: consider adding pics to these imports!
 func importMssHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: CHANGE TO MULTIPART!
+	// TODO: CHANGE TO MULTIPART IF PICS ADDED!
 	ctx, now := request.UnixTime(r.Context())
 	data := importMssRequest{}
-	defer r.Body.Close()
-	bs, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
+	if err := ReadSimpleStructuredBody(r, w, &data); err != nil {
 		return
 	}
 	id := NextMainCollectionId()
@@ -244,7 +221,6 @@ func (upr updateMssRequest) reform() resolvedUpdateMssRequest {
 	}
 }
 
-// TODO: MAKE RESOLVED UPDATE SWAB REQUEST!
 type resolvedUpdateMssRequest struct {
 	SaleField
 	DisposedField
@@ -323,7 +299,7 @@ func deleteMssHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*MSS](ctx, id, &MSS{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

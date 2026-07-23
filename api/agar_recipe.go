@@ -47,7 +47,10 @@ func (req updateAgarRecipeRequest) modsFor(existing *AgarRecipe, aclField AclFie
 }
 
 func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -58,11 +61,6 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)

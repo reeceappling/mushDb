@@ -91,7 +91,6 @@ func initializeWaterJars(ctx context.Context) error {
 			LastUpdatedField:      LastUpdatedField{exampleTime},
 			AclField:              allCanWriteAcl(),
 		}
-		//println("created waterJar with id: " + exWaterId.AsBase58()) // TODO: del?
 		return addTestMainEntries(ctx, testItem)
 	})
 }

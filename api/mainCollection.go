@@ -73,7 +73,6 @@ func addTestMainEntries[T MainCollectionItem](ctx context.Context, testItems ...
 		if err != nil {
 			return nil, errors.Join(errors.New("failed to bulk write id maps"), err)
 		}
-		println("writing items to " + testItems[0].CollectionName()) // TODO: del?
 		_, err = db.Collection(testItems[0].CollectionName()).
 			BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
 				return mongo.NewReplaceOneModel().
@@ -146,16 +145,10 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 		http.Error(w, "failed to marshal result: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//bs, err := json.MarshalIndent(toInsert, "", "  ") // TODO; del
-	//if err != nil {                                   // TODO; del
-	//	println(err.Error()) // TODO; del
-	//} // TODO; del
-	//println("imported: ", string(bs)) // TODO; del
 	_, err = w.Write(bsOut)
 	if err != nil {
 		handleWriteErr(err, w)
 	}
-	//println("wrote response: ", string(bs)) // TODO; del
 }
 
 func createMainCollectionEntryInTxn(ctx mongo.SessionContext, toInsert MainCollectionItem) error {

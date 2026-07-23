@@ -364,7 +364,6 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -614,7 +613,7 @@ func deleteFruitHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*Fruit](ctx, id, &Fruit{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

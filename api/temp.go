@@ -28,7 +28,7 @@ func writeRfidTagIfNecessary(ctx context.Context, writeTagTo *string, id MainCol
 	}
 	mgr := websocketSessions.GetSessionManager(ctx)
 	if mgr == nil {
-		println("no session mgr found?") // TODO: del
+		println("no session mgr found!") // TODO: del
 		return websocketSessions.ErrNoSessionManager
 	}
 	err := mgr.WriteRfid(ctx, shared.RfidReaderName(*writeTagTo), id)

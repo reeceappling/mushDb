@@ -45,7 +45,6 @@ type geneticSource interface {
 	SourceType() string
 	GeneticInfoAsParent() (GeneticParentInfo, error)
 	DbId() MainCollectionId
-	//setTransferParent(ctx context.Context, xfer Transfer) error
 	setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error
 	generation() (sinceSpore *Generation, sinceSporeOrClone *Generation)
 	Permissioned

@@ -332,6 +332,10 @@ func (req updateSaleRequest) modsFor(existing *Sale, aclField AclField) (bson.D,
 
 func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
@@ -341,12 +345,6 @@ func updateSaleHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	b58Id := Base58Str(r.PathValue("id"))
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "failed to convert id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)

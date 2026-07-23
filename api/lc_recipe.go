@@ -195,7 +195,7 @@ func (req updateLcRecipeRequest) modsFor(existing *LcRecipe, aclField AclField) 
 
 func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	req := updateLcRecipeRequest{}
-	_, id, err := altCollIdFromRequest(r, w) // TODO: use this everywhere
+	_, id, err := altCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}
@@ -220,16 +220,15 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !user.HasPermissionToEdit(existing) {
-		http.Error(w, "user not authorized to edit this entry: "+err.Error(), http.StatusForbidden)
+		http.Error(w, "user not authorized to edit this entry", http.StatusForbidden)
 		return
 	}
-	// TODO: do the next block everywhere!
+	// TODO: do the next block everywhere! Ensure user does not remove their own write perms!
 	if !req.PermsOnRequest.DefaultAcl().HighestPermFor(user).CanWrite() {
 		http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
-	// TODO: ensure perms allow the current user to write before allowing them to change the perms to remove themselves...
 }
 
 func deleteLcRecipeHandler(w http.ResponseWriter, r *http.Request) {

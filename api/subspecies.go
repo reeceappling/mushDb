@@ -269,7 +269,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	toInsert := Subspecies{
 		NameIdField:      NameIdField{req.Name},
 		SpeciesField:     req.SpeciesField,
-		AliasesField:     req.AliasesField, // TODO: ensure none exist elsewhere (should just work via mongo (actually it wont))
+		AliasesField:     req.AliasesField,
 		NotesField:       req.NotesField,
 		LastUpdatedField: LastUpdatedField{now},
 		AclField:         spec.AclField,   // Use parent perms
@@ -299,8 +299,8 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Validate new aliases
 	ctx, db := Db(r)
-	coll := db.Collection(SubspeciesCollectionName) // TODO: validate working!
-	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil {
+	coll := db.Collection(SubspeciesCollectionName)
+	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil { // TODO: validate working!
 		http.Error(w, "aliases or name already in use: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -385,7 +385,7 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 
 	ctx, db := Db(r)
 	coll := db.Collection(SubspeciesCollectionName)
-	existing, err := GetSubspeciesByNameInTxn(ctx, subspeciesName) // TODO; does this need to be in txn?
+	existing, err := GetSubspeciesByNameInTxn(ctx, subspeciesName)
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {

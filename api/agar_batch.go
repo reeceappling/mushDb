@@ -56,7 +56,10 @@ func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bs
 
 func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	req := updateAgarBatchRequest{}
 
 	bytes, err := io.ReadAll(r.Body)
@@ -66,11 +69,6 @@ func updateAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if err = json.Unmarshal(bytes, &req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)

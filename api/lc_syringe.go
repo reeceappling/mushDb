@@ -22,7 +22,6 @@ import (
 // TODO: newFromLC
 
 type LcSyringe struct {
-	// TODO: ADD PICTURES!
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either purchased (nil), LC, or LcSyringe
 	MainCollectionOptionalParentField `bson:"inline"` // won't exist for imported
@@ -52,23 +51,6 @@ func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
 	}
 	return nil
 }
-
-//func (sw LcSyringe) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	// TODO: can this even happen? // TODO: YES IT CAN! REVAMP!
-//	coll := DbFrom(ctx).Collection(sw.CollectionName())
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, sw.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
 
 func (sw LcSyringe) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	panic("does not happen")
@@ -114,7 +96,7 @@ func initializeSyringes(ctx context.Context) error {
 		//newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
 		//transfersOutIndexModel,
 		//newSimpleIndex("disposed", "disposed", false, true, false),
-		projectsIndexModel, // TODO: ensure ok and add on many other collections
+		projectsIndexModel,
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
@@ -201,8 +183,8 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 type updateSyringeRequest struct {
 	SaleField // TODO: validate?
 	DisposedField
-	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField                                         // TODO: handle in react
+	ConfirmedCleanField
+	KnownFruitableField // TODO: handle in react
 	ImagesUpdateField
 	NotesUpdateField
 	PermsOnRequest `json:"acl"`
@@ -216,7 +198,7 @@ func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
 	return resolvedUpdateSyringeRequest{
 		SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
-		ConfirmedClean:      upr.ConfirmedClean,
+		ConfirmedCleanField: upr.ConfirmedCleanField,
 		KnownFruitableField: upr.KnownFruitableField,
 		NotesUpdateField:    upr.NotesUpdateField,
 		Images:              imageUpdates(upr.Images),
@@ -227,7 +209,7 @@ func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
 type resolvedUpdateSyringeRequest struct {
 	SaleField
 	DisposedField
-	ConfirmedClean *bool `json:"confirmedClean,omitempty"`
+	ConfirmedCleanField
 	KnownFruitableField
 	Images SplitEntries[picWithNotesForm, PicWithNotes]
 	NotesUpdateField
@@ -235,7 +217,6 @@ type resolvedUpdateSyringeRequest struct {
 }
 
 func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField AclField) (bson.D, error) {
-	mds := NewMods()
 	imagesForUpdateFunc := []PicWithNotes{}
 	for _, ex := range req.Images.Existing {
 		if !ex.Disabled {
@@ -243,7 +224,8 @@ func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField Ac
 		}
 	}
 	imagesForUpdateFunc = append(imagesForUpdateFunc, req.Images.New...) // TODO: is this backwards???
-	return updatePointerIfNeeded(mds, "confirmedClean", req.ConfirmedClean, existing.ConfirmedClean).
+	return NewMods().
+		updateConfirmedCleanIfNeeded(req.ConfirmedClean, existing.ConfirmedClean).
 		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateKnownFruitableIfNeeded(req, existing).
@@ -419,7 +401,7 @@ func deleteLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*LcSyringe](ctx, id, &LcSyringe{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

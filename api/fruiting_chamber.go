@@ -76,22 +76,6 @@ func (f FruitingChamber) generation() (sinceSpore *Generation, sinceSporeOrClone
 	return f.GenSinceSpore, f.GenSinceFruitOrSpore
 }
 
-//func (f FruitingChamber) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := DbFrom(ctx).Collection(FruitingChamberCollectionName)
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, f.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
-
 // TODO: create box via jar instead? Probably want to do it that way...
 func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
@@ -586,7 +570,7 @@ func deleteFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*FruitingChamber](ctx, id, &FruitingChamber{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

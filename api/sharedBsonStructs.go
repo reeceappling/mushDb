@@ -38,19 +38,18 @@ type subdocWithImage interface {
 	getPicWithNotes() *PicWithNotes
 }
 
-// TODO: USE
-func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes { // TODO: use?
-	var out *PicWithNotes = nil
-	latestTime := unix.Time(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
-	for _, subdoc := range possibleSubdocs {
-		pwn := subdoc.getPicWithNotes()
-		if pwn.Time > latestTime {
-			latestTime = pwn.Time
-			out = pwn
-		}
-	}
-	return out
-}
+//func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes {
+//	var out *PicWithNotes = nil
+//	latestTime := unix.Time(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
+//	for _, subdoc := range possibleSubdocs {
+//		pwn := subdoc.getPicWithNotes()
+//		if pwn.Time > latestTime {
+//			latestTime = pwn.Time
+//			out = pwn
+//		}
+//	}
+//	return out
+//}
 
 type PicsField struct {
 	Pics []PicWithNotes `bson:"pics,omitempty" json:"pics,omitempty"`
@@ -170,15 +169,15 @@ func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 }
 
 type Contamination struct {
-	ContaminationLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Location                  *ImageLocation  `bson:"location,omitempty" json:"location,omitempty"`
+	ContaminationLessLocation `bson:"inline"`
+	Location                  *ImageLocation `bson:"location,omitempty" json:"location,omitempty"`
 }
 
 type ContaminationLessLocation struct {
-	PicWithNotesLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Confirmed                bool            `bson:"confirmed" json:"confirmed"`
-	Bacteria                 bool            `bson:"bacteria" json:"bacteria"`
-	Mold                     bool            `bson:"mold" json:"mold"`
+	PicWithNotesLessLocation `bson:"inline"`
+	Confirmed                bool `bson:"confirmed" json:"confirmed"`
+	Bacteria                 bool `bson:"bacteria" json:"bacteria"`
+	Mold                     bool `bson:"mold" json:"mold"`
 }
 
 func (c ContaminationLessLocation) asContamination(location *ImageLocation) Contamination {
@@ -230,9 +229,9 @@ func (l Liquid) withPct(pct float64) Liquid {
 
 type Fluid string
 
-var fluids = []Fluid{Water, DistilledWater, GrainWater}
+var fluids = []Fluid{Water, DistilledWater, GrainWater} // TODO: remove once autogen has been run again
 
-// TODO: add all of these to autogenned
+// TODO: remove once autogen has been run again
 var (
 	Water          = Fluid("water")
 	DistilledWater = Fluid("distilledWater")
@@ -468,6 +467,7 @@ func NewMods() *Mods {
 }
 
 type Mods struct {
+	// TODO: what is the ordering on these?
 	err    error    // SKIP WHEN THIS IS NON-NIL
 	unsets []bson.E // Key, "" // TODO: ?
 	sets   []bson.E // Key, value
@@ -498,10 +498,6 @@ func (upd *Mods) Set(key string, value interface{}) *Mods { // TODO: interface o
 func (upd *Mods) SetNew(key string, value interface{}) { // TODO: interface ok?
 	upd.sets = append(upd.sets, bson.E{Key: key, Value: value})
 }
-
-//func (upd *Mods) UpdatePointerIfNeeded(key string, future, current *interface{}) *Mods {
-//	return updatePointerIfNeeded(upd, key, future, current)
-//}
 
 func (upd *Mods) UpdateValueIfNeeded(key string, future, current interface{}) *Mods { // TODO: interface ok?
 	return updateValueIfNeeded(upd, key, future, current)
@@ -535,7 +531,7 @@ func (upd *Mods) IsEmpty() bool {
 	return upd == nil || len(upd.sets)+len(upd.unsets)+len(upd.pushes)+len(upd.pulls) == 0
 }
 
-func (upd *Mods) Finalized() (bson.D, error) { // TODO: validate this works as intended (is bson.D ok?)
+func (upd *Mods) Finalized() (bson.D, error) {
 	if upd.err != nil {
 		return nil, upd.err
 	}
@@ -585,12 +581,7 @@ func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 	if len(future) != len(existing) {
 		x := utils.Set[string]{}
 		x.Add(future...)
-		if len(x) != len(future) {
-			// TODO: validate no repeats in future
-			upd.err = errors.New("aliases cannot contain replica values")
-			return upd
-		}
-		return upd.Set("aliases", future)
+		return upd.Set("aliases", x.ToSlice())
 	}
 	return upd
 }
@@ -699,17 +690,7 @@ func (upd *Mods) updateProjectPermsIfNeeded(future, existing ProjectPerms) *Mods
 	if future.Equal(existing) { // TODO: validate works
 		return upd
 	}
-	// TODO: THIS IS NOT WORKING PROPERLY!!!!!
-	bs, err := json.MarshalIndent(existing, "", " ") // TODO: del
-	if err != nil {                                  // TODO: del
-		panic(err) // TODO; del // TODO: del
-	} // TODO: del
-	println("existing", string(bs))               // TODO: del
-	bs, err = json.MarshalIndent(future, "", " ") // TODO: del
-	if err != nil {                               // TODO: del
-		panic(err) // TODO; del
-	} // TODO: del
-	println("final", string(bs)) // TODO: del
+	// TODO: THIS IS NOT WORKING PROPERLY!!!!! (may be working properly 7/22/26)
 	return upd.Set("perms", future)
 }
 
@@ -750,9 +731,10 @@ func notesWereModified(existing []Note, updated AllEntries[Note]) (hasChanged bo
 		if finalExisting.Data.Note != existing[i].Note {
 			return true
 		}
-		if finalExisting.Data.Time != existing[i].Time { // TODO: do we even want this?
-			return true
-		}
+		// If only the time changed, we probably don't want to modify it
+		//if finalExisting.Data.Time != existing[i].Time {
+		//	return true
+		//}
 	}
 	return false
 }
@@ -763,8 +745,8 @@ func picsWereModified(existing []PicWithNotes, updated SplitEntries[picWithNotes
 	}
 	for i, finalExisting := range updated.Existing {
 		if finalExisting.Disabled ||
-			finalExisting.Data.Img != string(existing[i].Location) || // TODO: ensure ok
-			finalExisting.Data.Time != existing[i].Time || // TODO: do we even want this?
+			finalExisting.Data.Img != string(existing[i].Location) ||
+			// Probably dont want to modify if only time was changed... finalExisting.Data.Time != existing[i].Time ||
 			notesWereModified(existing[i].Notes, finalExisting.Data.Notes) {
 			return true
 		}
@@ -779,7 +761,7 @@ func contamsWereModified(existing []Contamination, updated SplitEntries[contamFo
 	}
 	for i, finalExisting := range updated.Existing {
 		if finalExisting.Disabled ||
-			finalExisting.Data.Time != existing[i].Time || // TODO: do we even want this?
+			// Probably dont want to modify i only times were changed... finalExisting.Data.Time != existing[i].Time ||
 			finalExisting.Data.Mold != existing[i].Mold ||
 			finalExisting.Data.Bacteria != existing[i].Bacteria ||
 			finalExisting.Data.Confirmed != existing[i].Confirmed ||
@@ -804,7 +786,7 @@ func PrettyPrintJson(prefix string, toPrint any) {
 	println(prefix, string(outBs))
 }
 
-func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesField) *Mods { // TODO: make sure this always works the way we want it to!!! // TODO: lower-down notes?
+func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesField) *Mods {
 	if upd.err != nil {
 		return upd
 	}
@@ -813,29 +795,27 @@ func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesFiel
 	updated := updatedIn.NoteChanges()
 	if len(updated.Existing) != len(existing) {
 		upd.err = errors.Join(errors.New("length of existing notes must match"), upd.err)
-		exNotesBs, err := json.Marshal(existing) // TODO: delete later
-		if err != nil {
-			println("failed to get bytes for existing notes")
-			return upd
-		}
-		upNotesBs, err := json.Marshal(updated.Existing)
-		if err != nil {
-			println("failed to get bytes for updated notes")
-			return upd
-		}
-		toOutput := struct {
-			Existing string
-			Updated  string
-		}{
-			Existing: string(exNotesBs),
-			Updated:  string(upNotesBs),
-		}
-		PrettyPrintJson("noteUpdDiscrepancy", toOutput) // TODO: delete later
+		//exNotesBs, err := json.Marshal(existing) // TODO: delete later
+		//if err != nil {
+		//	println("failed to get bytes for existing notes")
+		//	return upd
+		//}
+		//upNotesBs, err := json.Marshal(updated.Existing)
+		//if err != nil {
+		//	println("failed to get bytes for updated notes")
+		//	return upd
+		//}
+		//toOutput := struct {
+		//	Existing string
+		//	Updated  string
+		//}{
+		//	Existing: string(exNotesBs),
+		//	Updated:  string(upNotesBs),
+		//}
+		//PrettyPrintJson("noteUpdDiscrepancy", toOutput) // TODO: delete later
 		return upd
 	}
 	if !notesWereModified(existing, updated) {
-		println("notes not found to be modified...") // TODO: del
-
 		return upd
 	}
 	finalNotes := []Note{}
@@ -846,11 +826,10 @@ func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesFiel
 	}
 	finalNotes = append(finalNotes, sliceutils.Map(updated.New, func(nt Data[Note]) Note { return nt.Data })...)
 	// Set notes
-	PrettyPrintJson("finalNotes", finalNotes) // TODO: delete later
 	return upd.Set("notes", finalNotes)
 }
 
-func (upd *Mods) updateTimeIfNoLongerNil(fieldName string, updated *int, existing *int) *Mods { // TODO: make sure this works as anticipated
+func (upd *Mods) updateTimeIfNoLongerNil(fieldName string, updated *int, existing *int) *Mods {
 	if updated == nil {
 		return upd
 	}
@@ -861,7 +840,7 @@ func (upd *Mods) updateTimeIfNoLongerNil(fieldName string, updated *int, existin
 	return updateTimeIfWasNil(upd, fieldName, updated, existing)
 }
 
-func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods {
 	return upd.updatePwnIfNeeded("pics", updatedEntries, existing)
 }
 
@@ -905,16 +884,15 @@ func (upd *Mods) updateMostRecentImageIfNeeded(existing *PicWithNotes, updatedPi
 	return upd.withMostRecentImage(&latestPic)
 }
 
-func (upd *Mods) updateFlushesIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+func (upd *Mods) updateFlushesIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods {
 	return upd.updatePwnIfNeeded("flushes", updatedEntries, existing)
 }
 
-func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods {
 	if upd.err != nil {
 		return upd
 	}
 	if len(updatedEntries.Existing) != len(existing) {
-		// TODO: print this out????
 		upd.err = errors.Join(errors.New("length of existing "+fieldName+" must match"), upd.err)
 		return upd
 	}
@@ -943,11 +921,8 @@ func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, C
 		return upd
 	}
 	if !contamsWereModified(existing, updatedEntries) {
-		//println("contams were NOT modified!------------------------") // TODO: del
-
 		return upd
 	}
-	//println("CONTAMS WERE MODIFIED, SHOULD BE CHANGING!-------------------") // TODO: del
 	finalEntries := make([]Contamination, 0, len(existing)+len(updatedEntries.New))
 	for _, final := range updatedEntries.Existing {
 		if !final.Disabled {

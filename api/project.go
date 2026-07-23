@@ -281,7 +281,7 @@ func (req updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
 }
 
 func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
-	urlEncodedProjectName := r.PathValue("id") // TODO: NOT FINDING PROJECT!
+	urlEncodedProjectName := r.PathValue("id") // TODO: NOT FINDING PROJECT! VALIDATE PROPERLY FINDING!
 	println("project update url used: " + r.URL.String())
 	projNameStr, err := UrlDecodeString(urlEncodedProjectName)
 	if err != nil {
@@ -513,13 +513,13 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 		return
 	}
 
-	sessionOptions := options.Session() // TODO: change?
+	sessionOptions := options.Session()
 	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
 	if err != nil {
 		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	wc := writeconcern.Majority() // TODO: ok?
+	wc := writeconcern.Majority()
 	txnOptions := options.Transaction().SetWriteConcern(wc)
 	// Defers ending the session after the transaction is committed or ended
 	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
@@ -556,13 +556,7 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
 			return nil, errTxn
 		}
-		//// TODO: move the write!
-		//bsOut2, err2 := json.MarshalIndent(updated, "", " ") // TODO: delete later
-		//if err2 != nil {
-		//	dbErr(w, err2.Error(), http.StatusInternalServerError)
-		//	return nil, err
-		//}
-		//println("Writing update:", string(bsOut2)) // TODO: del
+		//// TODO: move the write!?
 		_, err = w.Write(bsOut)
 		handleWriteErr(err, w)
 
@@ -588,9 +582,9 @@ func finishCreateProject(ctx context.Context, toInsert CollectionItem, w http.Re
 			Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
 		if err != nil {
 			http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
-			return nil, errors.Join(err, ErrTxnWriteFail) // TODO: ok?
+			return nil, errors.Join(err, ErrTxnWriteFail)
 		}
-		// do the thing needed to be successful // TODO: UPDATE THE USER!
+		// do the thing needed to be successful // TODO: UPDATE THE USER(s)!
 		if e := inTxn(); e != nil {
 			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
 			http.Error(w, "failed to do post-insert call: "+errTxn.Error(), http.StatusInternalServerError)

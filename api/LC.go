@@ -259,7 +259,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLiquidCultureRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do the multipart reader differently
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do the multipart reader differently. Check importPlugsHandler
 	defer r.Body.Close()
 	reader, err := r.MultipartReader() // TODO: do streamlined
 	if err != nil {
@@ -453,7 +453,6 @@ func updateLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		env.LogIfDev(r.Context(), "failed to standardize main collection id: "+err.Error())
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -510,7 +509,7 @@ func deleteLcHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*LcSyringe](ctx, id, &LcSyringe{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

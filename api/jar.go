@@ -23,8 +23,8 @@ import (
 
 type GrainJar struct {
 	MainCollectionIdField   `bson:"inline"`
-	SizeCups                int `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
-	JarRecipeField          `bson:"inline"`
+	SizeCups                int             `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
+	JarRecipeField          `bson:"inline"` // TODO: always required? or optional?
 	GrainBatchOptionalField `bson:"inline"`
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
@@ -72,22 +72,6 @@ func (j GrainJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
 func (j GrainJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return j.GenSinceSpore, j.GenSinceFruitOrSpore
 }
-
-//func (j GrainJar) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := DbFrom(ctx).Collection(GrainJarCollectionName)
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, j.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
 
 func (j GrainJar) Innoculatable() error {
 	return errors.Join(
@@ -147,8 +131,8 @@ func initializeJars(ctx context.Context) error {
 		[]mongo.IndexModel{
 			creationDateIndexModel,
 			//newSimpleIndex("sizeCups", "sizeCups", true, false, false),
-			//newSimpleIndex("recipe", "recipe", false, true, false),
-			//newSimpleIndex("grainBatch", "grainBatch", false, true, false), // TODO: ????
+			newSimpleIndex("recipe", "recipe", false, true, false), // TODO: sparse or no?
+			newSimpleIndex("grainBatch", "grainBatch", false, true, false),
 			//newSimpleIndex("wetness", "wetness", false, true, false),
 			//newSimpleIndex("burstGrains", "burstGrains", false, true, false),
 			newSimpleIndex("pcRun", "pcRun", false, true, false), // TODO: ????
@@ -171,8 +155,7 @@ func initializeJars(ctx context.Context) error {
 			lastUpdatedIndexModel,
 		})
 	if err != nil {
-		// TODO: I dont like the second one here!
-		if !strings.Contains(err.Error(), "Identical index already exists:") && !strings.Contains(err.Error(), "Cannot build two identical indexes") {
+		if !(strings.Contains(err.Error(), "Identical index already exists:") || strings.Contains(err.Error(), "Cannot build two identical indexes")) {
 			println("failed to create indices", err.Error())
 			return err
 		}
@@ -208,36 +191,6 @@ func initializeJars(ctx context.Context) error {
 		return addTestMainEntries(ctx, testItem)
 	})
 }
-
-//// TODO: RENAME AND MOVE!
-//func testExistingEntry[T any](ctx context.Context, coll *mongo.Collection, testId any, testItem T, existingEntry T) error {
-//	res, err := coll.InsertOne(ctx, testItem)
-//	if err != nil {
-//		return err
-//	}
-//	if res == nil {
-//		return errors.New("result should not be nil")
-//	}
-//	err = coll.FindOne(ctx, BsonFindFilter(IDfld, testId)).Decode(&existingEntry)
-//	if err != nil {
-//		return errors.New("not found at specified id. " + err.Error())
-//	}
-//	if !reflect.DeepEqual(existingEntry, testItem) {
-//		ee, err := json.Marshal(existingEntry)
-//		if err != nil {
-//			println("bad existing json")
-//		}
-//		te, err := json.Marshal(testItem)
-//		if err != nil {
-//			println("bad test json")
-//		}
-//		println("-------------------")
-//		println(string(te))
-//		println(string(ee))
-//		return errors.New("entries (as updated) were not equal")
-//	}
-//	return nil
-//}
 
 type createJarRequest struct {
 	SizeCups int `json:"sizeCups"`
@@ -307,7 +260,7 @@ func createJarHandler(w http.ResponseWriter, r *http.Request) {
 
 type importJarRequest struct {
 	SizeCups int                    `json:"sizeCups"`
-	Recipe   *AlternateCollectionId `json:"recipe,omitempty"` // Jar Recipe // TODO: optional for imports?
+	Recipe   *AlternateCollectionId `json:"recipe,omitempty"` // Jar Recipe, optional for imports
 	CreationDateField
 	SpeciesOptionalField // Only empty when non-innoc'd
 	SubspeciesOptionalField
@@ -316,6 +269,7 @@ type importJarRequest struct {
 	BurstGrainsField
 	KnownFruitableField
 	WriteTagToField
+	// DECIDE: add notes? or should notes just be added on display page?
 	// image as "img"
 }
 
@@ -323,7 +277,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 	data := importJarRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do multipart streamlined way
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do multipart streamlined way, like in importPlugsHandler?
 	defer r.Body.Close()
 	reader, err := r.MultipartReader()
 	if err != nil {
@@ -592,7 +546,7 @@ func deleteJarHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*GrainJar](ctx, id, &GrainJar{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

@@ -19,6 +19,7 @@ import (
 // sometimes needed for transfers
 
 type PlugsJar struct {
+	// TODO: DO DOWELS NEED TO BE SOAKED? Nutrients?
 	MainCollectionIdField             `bson:"inline"`
 	ParentTypeField                   `bson:"inline"` // empty==bought
 	MainCollectionOptionalParentField `bson:"inline"` // empty=bought. From plugs, jar, LC, plate/slant
@@ -153,23 +154,6 @@ const (
 	ft    = "ft"
 	meter = "m"
 )
-
-//func (pl PlugsJar) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	// TODO: can this even occur?
-//	coll := DbFrom(ctx).Collection(pl.CollectionName())
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, pl.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
 
 func initializePlugs(ctx context.Context) error {
 	// Indices
@@ -549,7 +533,7 @@ func deletePlugsHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*PlugsJar](ctx, id, &PlugsJar{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}

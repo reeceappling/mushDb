@@ -110,9 +110,9 @@ func withUpdateNow() primitive.E {
 	}
 }
 
-func updateTogether() bson.D {
-	return []primitive.E{withUpdateNow()}
-}
+//func updateTogether() bson.D {
+//	return []primitive.E{withUpdateNow()}
+//}
 
 func Initialize(ctx context.Context) error {
 	if err := initializeItemMapCollection(ctx); err != nil { // TODO: ensure working ok
@@ -1021,6 +1021,11 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
+	// TODO: dont allow user to remove their own perms!
+	//if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+	//	return
+	//}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -1047,6 +1052,11 @@ func finishMainCollItemUpdateInTxn[T MainCollectionItem](ctx mongo.SessionContex
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return existing, err
 	}
+	// TODO: dont allow user to remove their own perms!
+	//if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+	//	return
+	//}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -1079,6 +1089,11 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		dbErr(w, "unauthorized to edit", http.StatusUnauthorized)
 		return
 	}
+	// TODO: ensure final perms allow user to write!
+	//if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+	//	return
+	//}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -1103,6 +1118,11 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
+	// TODO: dont allow user to remove their own perms!
+	//if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+	//	return
+	//}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -1115,14 +1135,14 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 
 func ReadSimpleStructuredBody[T any](r *http.Request, w http.ResponseWriter, req *T) error {
 	defer r.Body.Close()
-	bytes, err := io.ReadAll(r.Body)
+	bs, err := io.ReadAll(r.Body)
 	if err != nil {
 		println("failed to read body: " + err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
-	if err = json.Unmarshal(bytes, &req); err != nil {
-		println("bad body format: " + string(bytes))
+	if err = json.Unmarshal(bs, &req); err != nil {
+		println("bad body format: " + string(bs))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
@@ -1162,16 +1182,16 @@ func ImportFinalPerms(ctx context.Context, spec string, subspec *string) (ACL, e
 	return finalPerms, nil
 }
 
-func TimeFromId(id AlternateCollectionId) time.Time { // TODO: USE AND MOVE
-	return primitive.ObjectID(id).Timestamp()
-}
-
-func Ternary[T any](val bool, ifTrue, ifFalse T) T {
-	if val {
-		return ifTrue
-	}
-	return ifFalse
-}
+//func TimeFromId(id AlternateCollectionId) time.Time { // TODO: USE AND MOVE
+//	return primitive.ObjectID(id).Timestamp()
+//}
+//
+//func Ternary[T any](val bool, ifTrue, ifFalse T) T {
+//	if val {
+//		return ifTrue
+//	}
+//	return ifFalse
+//}
 
 func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
 	if val == nil {
@@ -1183,7 +1203,6 @@ func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
 	return ifFalse
 }
 
-// TODO: MOVE!
 func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existingName string, existingAliases, updatedAliases []string) error {
 	newAliases := utils.SetFrom(updatedAliases...)
 	for _, al := range existingAliases {

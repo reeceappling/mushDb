@@ -23,7 +23,7 @@ import (
 // needed for clones
 
 type CondensationCoverageAtSealTimeField struct {
-	CondensationCoverageAtSealTime *int `bson:"condensationCoverageAtSealTime,omitempty" json:"condensationCoverageAtSealTime,omitempty"` // TODO: (0-100), HANDLE EVERYWHERE, NEW!
+	CondensationCoverageAtSealTime *int `bson:"condensationCoverageAtSealTime,omitempty" json:"condensationCoverageAtSealTime,omitempty"` // (0-100)
 }
 
 func (cc CondensationCoverageAtSealTimeField) condensationCoverage() *int {
@@ -778,7 +778,7 @@ func deletePlateHandler(w http.ResponseWriter, r *http.Request) {
 	item, err := GetMainCollectionItemSpecific[*Plate](ctx, id, &Plate{})
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found: "+err.Error(), http.StatusNotFound) // TODO: ok?
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
 		}
