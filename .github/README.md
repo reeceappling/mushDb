@@ -173,21 +173,24 @@ Install cloc
 ```
 Run cloc
 ```bash
+# From the root of the project
 cloc . --exclude-dir=node_modules,.github,.noCommit,.next --exclude-list-file=cypress.config.ts,eslint.config.mjs,next-env.d.ts,next.config.ts,package-lock.json,postcss.config.mjs,tailwind.config.ts,tsconfig.json,LICENSE,CODEOWNERS --exclude_ext=ico,svg,jpg,lock,png,env
 ```
 
 # Misc. Repo Links
-- [Acknowledgements](ACKNOWLEDGEMENTS.md) Still a template
-- [Authors](AUTHORS.md)
-- [Changelog](CHANGELOG.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md) Still a template
-- [CODEOWNERS](CODEOWNERS)
-- [Contributing](CONTRIBUTING.md)
-- [Contributors](CONTRIBUTORS.md)
-- [Funding](FUNDING.md) Still a template
-- [Issue Template](ISSUE_TEMPLATE.md) Still a template
-- [LICENSE](LICENSE) Still a template
-- [Pull Request Template](pull_request_template.md) Still a template
-- [Security](SECURITY.md) Still a template
-- [Support](SUPPORT.md) Still a template
-- [TODO](TODO.md) It's a lot...
+| Item                                              | Note             |
+|---------------------------------------------------|------------------|
+| [Acknowledgements](ACKNOWLEDGEMENTS.md)           | Still a template |
+| [Authors](AUTHORS.md)                             | Row 2, Col 2     |
+| [Changelog](CHANGELOG.md)                         |                  |
+| [Code of Conduct](CODE_OF_CONDUCT.md)             | Still a template |
+| [CODEOWNERS](CODEOWNERS)                          |                  |                
+| [Contributing](CONTRIBUTING.md)                   |                  |         
+| [Contributors](CONTRIBUTORS.md)                   |                  |      
+| [Funding](FUNDING.md)                             | Still a template |
+| [Issue Template](ISSUE_TEMPLATE.md)               | Still a template |
+| [LICENSE](LICENSE)                                | Still a template |
+| [Pull Request Template](pull_request_template.md) | Still a template |
+| [Security](SECURITY.md)                           | Still a template |
+| [Support](SUPPORT.md)                             | Still a template |
+| [TODO](TODO.md)                                   | It's a lot...    |
