@@ -1,5 +1,4 @@
 # TODOs found while using
-- [ ] Upgrade Next.js to >16
 - [ ] Jar import is not working properly (maybe only on mobile?), giving 500s when submitting 10/27/25 quart using Rye. Wav, unknown KF, gen 4 undefined undefined with pic, no writeTo
   - [ ] I believe this is fixed!  
 - [ ] Species selector is not showing all species in plugs import...
@@ -727,6 +726,9 @@
   - [x] Reading
   - [x] Writing
   - [x] LISTING
+- [x] Upgrade Next.js to >16
+- [x] Upgrade Node to >26.5
+- [x] Start using turbopack instead of webpack to speed up builds
 
 # Other
 ## mongo backups
