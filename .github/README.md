@@ -124,22 +124,26 @@ prep_dir $PICS_DIR
 ```
 
 #### With force recreate
+
 ```bash
+# replace env file with your own
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up --build --force-recreate
 ```
 #### Without force recreate
 ```bash
-
+# replace env file with your own
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up --build
 ```
 #### Without rebuilding
 ```bash
+# replace env file with your own
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up
 ```
 
 ## Viewing Logs
 For each service, only the last 50 lines
 ```bash
+# replace env file with your own
 docker compose --env-file env/.env.devhttps logs --tail 50 api
 docker compose logs --tail 50 web
 docker compose logs --tail 50 mushdb
