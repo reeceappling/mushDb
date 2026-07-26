@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
-# Omit --production flag for TypeScript devDependencies # TODO: ?????????
+# Omit --production flag for TypeScript devDependencies # TODO: used to be just: npm ci, could be npm ci --omit=dev
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci; \
@@ -85,7 +85,7 @@ ENV NEXT_PUBLIC_BASE_API_URL=${MAIN_API_EXTERNAL_PROTOCOL}://${MAIN_API_EXTERNAL
 # Uncomment the following line to disable telemetry at run time
 # ENV NEXT_TELEMETRY_DISABLED 1
 
-# Note: Don't expose ports here, Compose will handle that for us # TODO: SEE IF THIS WORKS WITHOUT EXPOSURE
+# Note: Don't expose ports here, Compose will handle that for us # TODO: if not working reenable
 EXPOSE 3000
 
 # TODO: ENSURE WEB NOT WEIRD
