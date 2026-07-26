@@ -747,7 +747,7 @@ func DenyGuestMiddleware(handler http.Handler) http.Handler {
 //}
 
 var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-	endpt := r.PathValue("endpt")
+	endpt := r.PathValue("variant")
 	handler, exists := map[string]http.HandlerFunc{
 		"bag":             importBagHandler,
 		"lc":              importLiquidCultureHandler,
@@ -784,7 +784,7 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
 		return
 	}
-	endpt := r.PathValue("endpt")
+	endpt := r.PathValue("variant")
 	handler, exists := map[string]http.HandlerFunc{
 		"agarBatch":       updateAgarBatchHandler,
 		"agarRecipe":      updateAgarRecipeHandler,
@@ -817,13 +817,15 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		"waterJar": updateWaterJarHandler,
 	}[endpt]
 	if !exists {
+		println("no handler for endpoint: " + endpt) // TODO: del
 		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
 	}
+	println("using " + endpt + " handler")
 	handler.ServeHTTP(w, r)
 }
 
 //var DeleteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-//	endpt := r.PathValue("endpt")
+//	endpt := r.PathValue("variant")
 //	if r.Method != http.MethodDelete {
 //		http.Error(w, "invalid method for endpoint", http.StatusMethodNotAllowed)
 //		return

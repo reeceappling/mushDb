@@ -119,11 +119,13 @@ func mainCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58
 	var idStr string
 	idStr, err = UrlDecodeString(r.PathValue("id"))
 	if err != nil {
+		println("failed to url decode string: " + err.Error())
 		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
+		println("failed to standardize main collection id: " + err.Error())
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}

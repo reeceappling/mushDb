@@ -430,17 +430,19 @@ var (
 type Antibiotic string
 
 // TODO: add all of these to autogenned
-var antibiotics = []Antibiotic{HydrogenPeroxide, Doxycycline}
+var antibiotics = []Antibiotic{HydrogenPeroxide, Doxycycline, Cefazolin}
 
 var (
 	HydrogenPeroxide Antibiotic = "HydrogenPeroxide"
 	Doxycycline      Antibiotic = "Doxycycline"
+	Cefazolin        Antibiotic = "Cefazolin" // RX only, not available normally
 )
 
 // TODO: use
 var antibioticDosages = map[Antibiotic]string{ // TODO: USE THIS!
 	Doxycycline:      "unknown as of right now", // TODO: figure out measurements
 	HydrogenPeroxide: "unknown as of right now", // TODO: figure out measurements
+	Cefazolin:        "unknown as of right now", // TODO: figure out measurements
 }
 
 type Generation int

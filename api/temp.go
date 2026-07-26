@@ -276,6 +276,8 @@ func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, da
 	defer r.Body.Close()
 	prefixPath := r.PathValue("variant")
 	if prefixPath == "" {
+		println("variant missing from path")
+		http.Error(w, "variant missing from path", http.StatusBadRequest)
 		return nil, nil, nil, errors.New("no prefix path 'variant' provided")
 	}
 	reader, err := multipartReaderForRequest(r, w, data)

@@ -1,4 +1,6 @@
 # TODOs found while using
+- [x] Plate display changing wetAtCooledTime from unknown to yes and updating causes error (fixed)
+- [x] A newly imported plate without species is failing to add a new note (fixed)
 - [ ] Jar import is not working properly (maybe only on mobile?), giving 500s when submitting 10/27/25 quart using Rye. Wav, unknown KF, gen 4 undefined undefined with pic, no writeTo
   - [ ] I believe this is fixed!  
 - [ ] Species selector is not showing all species in plugs import...

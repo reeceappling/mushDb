@@ -518,11 +518,6 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	//reqBs, err := json.MarshalIndent(data, "", " ") // TODO: del?
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 
 	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
