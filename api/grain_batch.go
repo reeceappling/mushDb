@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
@@ -176,35 +175,35 @@ func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest) // TODO: ensure these perms are ok!
+	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
 
-func deleteGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id") // TODO: recipe by name?
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	db := DbFrom(ctx)
-	// ensure batch not used by any jars first
-	err = db.Collection(GrainJarCollectionName).FindOne(ctx, bson.M{"grainBatch": id}).Err()
-	if err != nil {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "failed to check for agarRecipe usage in agarBatch collection. "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		// At least one item exists, fail
-		http.Error(w, "at least one agarBatch utilizes the item you are attempting to delete.", http.StatusConflict)
-		return
-	}
-
-	DeleteCollectionItem(ctx, GrainBatchCollectionName, id, w)
-}
+//func deleteGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id") // TODO: recipe by name?
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	// ensure batch not used by any jars first
+//	err = db.Collection(GrainJarCollectionName).FindOne(ctx, bson.M{"grainBatch": id}).Err()
+//	if err != nil {
+//		if !errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "failed to check for agarRecipe usage in agarBatch collection. "+err.Error(), http.StatusInternalServerError)
+//			return
+//		}
+//	} else {
+//		// At least one item exists, fail
+//		http.Error(w, "at least one grainJar utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	DeleteCollectionItem(ctx, GrainBatchCollectionName, id, w)
+//}

@@ -348,7 +348,7 @@ func deleteJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			// At least one item exists, fail
-			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusConflict)
+			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
 			return
 		}
 	}

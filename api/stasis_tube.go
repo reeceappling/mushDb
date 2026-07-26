@@ -552,11 +552,11 @@ func deleteStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if item.Innoc != nil {
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
+		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
 		return
 	}
 	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
+		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
 		return
 	}
 

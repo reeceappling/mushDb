@@ -40,7 +40,13 @@ const nextConfig: NextConfig = {
         ]
     }
 };
+// // Dev exports
+// module.exports = {
+//     productionBrowserSourceMaps: true, // TODO: only enable for debugging! Allows console debugging...
+//     output: "standalone",
+// };
 
+// Prod Exports
 module.exports = {
     productionBrowserSourceMaps: false, // TODO: only enable for debugging! Allows console debugging...
     output: "standalone",

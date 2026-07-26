@@ -472,13 +472,13 @@ func cursorIterator[T CollectionItem](ctx context.Context, cursor *mongo.Cursor)
 		defer cursor.Close(ctx) // TODO; ensure ok
 		yieldCount := 0
 		var tempResult T
-		user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
+		user, err := GetAuthInfo(ctx)
 		if err != nil {
 			if !yield(tempResult, err) {
 				return
 			}
 			return
-		} // TODO: del if unneeded
+		}
 		for {
 			var result T
 			if cursor.TryNext(ctx) {
@@ -533,11 +533,11 @@ func cursorIterator[T CollectionItem](ctx context.Context, cursor *mongo.Cursor)
 }
 
 func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
-	defer cursor.Close(ctx)       // TODO; ensure ok
-	user, err := GetAuthInfo(ctx) // TODO: unsure if needed anymore
+	defer cursor.Close(ctx) // TODO; ensure ok
+	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		return nil, err
-	} // TODO: del if unneeded
+	}
 	results := []T{}
 	if numItems != nil && *numItems > 0 {
 		results = make([]T, 0, *numItems)
@@ -712,7 +712,7 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 	return notesWereModified(existing.Notes, updated.Notes)
 }
 
-const IDfld = "_id" // TODO: use everywhere
+const IDfld = "_id"
 
 func BsonFindFilter(key string, value any) bson.D {
 	return bson.D{bson.E{Key: key, Value: value}}
@@ -998,12 +998,8 @@ func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {
 	return
 }
 
-func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection {
-	return db.Collection(item.CollectionName())
-}
-
-//func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item T) error {
-//	return CollectionFor(item, db).FindOne(ctx, bson.D{{Key: IDfld, Value: item.IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
+//func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection {
+//	return db.Collection(item.CollectionName())
 //}
 
 func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
@@ -1081,19 +1077,18 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if user.isGuest() { // TODO: isnt this done elsewhere?
-		dbErr(w, "guests cannot edit", http.StatusUnauthorized)
-		return
-	}
+	//if user.isGuest() { // TODO: isnt this done elsewhere? (UpdateHandler)
+	//	dbErr(w, "guests cannot edit", http.StatusUnauthorized)
+	//	return
+	//}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusUnauthorized)
 		return
 	}
-	// TODO: ensure final perms allow user to write!
-	//if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
-	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
-	//	return
-	//}
+	if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+		http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+		return
+	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)

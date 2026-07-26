@@ -822,48 +822,48 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 	handler.ServeHTTP(w, r)
 }
 
-var DeleteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-	endpt := r.PathValue("endpt")
-	if r.Method != http.MethodDelete {
-		http.Error(w, "invalid method for endpoint", http.StatusMethodNotAllowed)
-		return
-	}
-
-	handler, exists := map[string]http.HandlerFunc{
-		"agarBatch":       deleteAgarBatchHandler,
-		"agarRecipe":      deleteAgarRecipeHandler,
-		"bag":             deleteBagHandler,
-		"fruit":           deleteFruitHandler,
-		"fruitingChamber": deleteFruitingChamberHandler,
-		"grainBatch":      deleteGrainBatchHandler,
-		"jar":             deleteJarHandler,
-		"jarRecipe":       deleteJarRecipeHandler,
-		"lc":              deleteLcHandler,
-		"lcRecipe":        deleteLcRecipeHandler,
-		"lcSyringe":       deleteLcSyringeHandler,
-		"mss":             deleteMssHandler,
-		"pcRun":           deletePcRunHandler,
-		"plate":           deletePlateHandler,
-		"plugs":           deletePlugsHandler,
-		"project":         deleteProjectHandler,
-		"sale":            deleteSaleHandler,
-		"slant":           deleteSlantHandler,
-		"species":         deleteSpeciesHandler,
-		"sporePrint":      deleteSporePrintHandler,
-		"sporeSwab":       deleteSporeSwabHandler,
-		"stasisTube":      deleteStasisTubeHandler,
-		"subspecies":      deleteSubspeciesHandler,
-		"substrateBatch":  deleteSubstrateBatchHandler,
-		"substrateRecipe": deleteSubstrateRecipeHandler,
-		"transfer":        deleteTransferHandler,
-		"waterJar":        deleteWaterJarHandler,
-	}[endpt]
-	if !exists {
-		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
-		return
-	}
-	handler.ServeHTTP(w, r)
-}
+//var DeleteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+//	endpt := r.PathValue("endpt")
+//	if r.Method != http.MethodDelete {
+//		http.Error(w, "invalid method for endpoint", http.StatusMethodNotAllowed)
+//		return
+//	}
+//
+//	handler, exists := map[string]http.HandlerFunc{
+//		"agarBatch":       deleteAgarBatchHandler,
+//		"agarRecipe":      deleteAgarRecipeHandler,
+//		"bag":             deleteBagHandler,
+//		"fruit":           deleteFruitHandler,
+//		"fruitingChamber": deleteFruitingChamberHandler,
+//		"grainBatch":      deleteGrainBatchHandler,
+//		"jar":             deleteJarHandler,
+//		"jarRecipe":       deleteJarRecipeHandler,
+//		"lc":              deleteLcHandler,
+//		"lcRecipe":        deleteLcRecipeHandler,
+//		"lcSyringe":       deleteLcSyringeHandler,
+//		"mss":             deleteMssHandler,
+//		"pcRun":           deletePcRunHandler,
+//		"plate":           deletePlateHandler,
+//		"plugs":           deletePlugsHandler,
+//		"project":         deleteProjectHandler,
+//		"sale":            deleteSaleHandler,
+//		"slant":           deleteSlantHandler,
+//		"species":         deleteSpeciesHandler,
+//		"sporePrint":      deleteSporePrintHandler,
+//		"sporeSwab":       deleteSporeSwabHandler,
+//		"stasisTube":      deleteStasisTubeHandler,
+//		"subspecies":      deleteSubspeciesHandler,
+//		"substrateBatch":  deleteSubstrateBatchHandler,
+//		"substrateRecipe": deleteSubstrateRecipeHandler,
+//		"transfer":        deleteTransferHandler,
+//		"waterJar":        deleteWaterJarHandler,
+//	}[endpt]
+//	if !exists {
+//		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
+//		return
+//	}
+//	handler.ServeHTTP(w, r)
+//}
 
 func dbErr(w http.ResponseWriter, txt string, status int) {
 	println("txnErr " + txt)

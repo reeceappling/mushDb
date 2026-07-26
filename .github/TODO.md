@@ -1,6 +1,7 @@
 # TODOs found while using
+- [ ] Upgrade Next.js to >16
 - [ ] Jar import is not working properly (maybe only on mobile?), giving 500s when submitting 10/27/25 quart using Rye. Wav, unknown KF, gen 4 undefined undefined with pic, no writeTo
-  - [ ] I believe this is fixed! 
+  - [ ] I believe this is fixed!  
 - [ ] Species selector is not showing all species in plugs import...
   - [ ] Should be fixed. Ensure spec and subspec lists are showing all (which can be viewed by the user)
 - [ ] Adding pictures on mobile on jar view page is not adding new pictures if they have no notes....
@@ -46,6 +47,7 @@
 
 
 # Wishlist
+- [ ] Switch from Webpack to Turbopack to speed up builds
 - [ ] Biometric authentication
   - https://freedium-mirror.cfd/https://towardsdev.com/building-a-react-app-with-biometric-authentication-cc69d210a416
 - [ ] Backups of both DB and pictures!

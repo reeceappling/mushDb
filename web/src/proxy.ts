@@ -54,7 +54,7 @@ const corsOrigins =
         'accounts.google.com',
     ]
     //: ['*'];
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
     const headers = new Headers(req.headers);
     // Handle internal requests from webserver actions
     if (req.headers.get("x-forwarded-host") === 'web:3000') {

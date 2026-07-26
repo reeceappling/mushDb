@@ -126,7 +126,7 @@ func (f Fruit) createSporePrintInTxn(ctx mongo.SessionContext, pics PicsField, n
 
 func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, id MainCollectionId) (*SporeSwab, error) {
 	ctx, now := request.UnixTimeInTxn(ctx)
-	// TODO: writeTagTo?
+	// writeTagTo is done after this func is called
 	toInsert := SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Id},
@@ -157,19 +157,9 @@ func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, 
 	return &toInsert, nil
 }
 
-func (f Fruit) addSale(ctx mongo.SessionContext, printId AlternateCollectionId) error {
-	// TODO; get rid of?
-	// update fruit
-	//res, err := f.Collection(ctx).UpdateByID(ctx, f.Email, pushToArrayInline("prints", printId)) // TODO: ADD A SALE IF POSSIBLE
-	//if err != nil {
-	//	return err
-	//}
-	//if res.ModifiedCount != 1 {
-	//	return errors.New("invalid result") // TODO: ok?
-	//}
-	//return nil
-	return errors.New("not implemented, implement me")
-}
+//func (f Fruit) addSale(ctx mongo.SessionContext, printId AlternateCollectionId) error {
+//	return errors.New("not implemented, implement me")
+//}
 
 func initializeFruits(ctx context.Context) error {
 	// Indices
@@ -245,7 +235,7 @@ type createFruitResolved struct {
 	PicsField // newPic-1
 }
 
-func createFruitHandler(w http.ResponseWriter, r *http.Request) { // TODO: DO FORMAT WITH DATA FIRST!
+func createFruitHandler(w http.ResponseWriter, r *http.Request) {
 	data := createFruitRequest{}
 	id := NextMainCollectionId()
 	b58Id := id.AsBase58()
@@ -388,7 +378,7 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 		out.Images.New[i].Location = ImageLocation(loc)
 	}
 	ctx := r.Context()
-	existing := &Fruit{MainCollectionIdField: MainCollectionIdField{id}} // TODO: FAILING HERE!
+	existing := &Fruit{MainCollectionIdField: MainCollectionIdField{id}} // TODO: FAILING HERE! (double-check, unsure when this was failing as of 7/25/26)
 	err = DbFrom(ctx).Collection(FruitsCollName).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
@@ -398,7 +388,7 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importFruitRequest struct {
-	ParentType string // "store" or "outside" // TODO: FIX?
+	ParentType string // "store" or "outside" // TODO: ? FIX?
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
@@ -525,7 +515,6 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 	finishImportMainCollectionEntry(ctx, toInsert, w)
 }
 
-// TODO: is this ok or should we actually add createFruit as a method on each entry?
 func FruitFromSourceInTxn(ctx mongo.SessionContext, parent geneticSource) (*Fruit, error) {
 	id := NextMainCollectionId()
 	ctx, now := request.UnixTimeInTxn(ctx)
@@ -568,11 +557,11 @@ func FruitFromSourceInTxn(ctx mongo.SessionContext, parent geneticSource) (*Frui
 		To:                         id,
 		FromType:                   parent.SourceType(),
 		ToType:                     "fruit",
-		CreationDateField:          CreationDateField{now}, // TODO: also exists in the id
-		Reason:                     xferReasonColonized,    // TODO: what here?
-		FromImage:                  nil,                    // TODO: ?????
-		ToImage:                    nil,                    // TODO: ?????
-		NotesField:                 NotesField{},           // TODO: ?????
+		CreationDateField:          CreationDateField{now},
+		Reason:                     xferReasonReady, // TODO: what here? This is only used when going from non-fruit to print/swab
+		FromImage:                  nil,             // TODO: ?????
+		ToImage:                    nil,             // TODO: ?????
+		NotesField:                 NotesField{},    // TODO: ?????
 		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   parent.Permissions().AsField(),
 	}
@@ -596,39 +585,39 @@ func FruitFromSourceInTxn(ctx mongo.SessionContext, parent geneticSource) (*Frui
 	return newFruit, nil
 }
 
-func deleteFruitHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).ToMainCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	// ensure item does not have any transfers in or out
-	item, err := GetMainCollectionItemSpecific[*Fruit](ctx, id, &Fruit{})
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
-		} else {
-			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
-		}
-		return
-	}
-	if item.Parent != nil {
-		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
-		return
-	}
-	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
-		return
-	}
-
-	// Delete if not found elsewhere!
-	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
-}
+//func deleteFruitHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).ToMainCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	// ensure item does not have any transfers in or out
+//	item, err := GetMainCollectionItemSpecific[*Fruit](ctx, id, &Fruit{})
+//	if err != nil {
+//		if errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+//		} else {
+//			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//	if item.Parent != nil {
+//		// TODO: what if we want to remove it from the parent as well?
+//		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+//		return
+//	}
+//	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+//		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+//}

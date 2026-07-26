@@ -677,12 +677,12 @@ func deleteSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: ENSURE NOT USED ANYWHERE!
 	if item.Parent != nil {
 		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusConflict)
+		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
 		return
 	}
 	// TODO: transfers out???? Spore prints can go to swabs, or mss!
 	//if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-	//	http.Error(w, "Cannot delete items with transfers out", http.StatusConflict)
+	//	http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
 	//	return
 	//}
 

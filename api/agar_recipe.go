@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -314,43 +313,43 @@ func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error
 	return out, err
 }
 
-func deleteAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id") // TODO: recipe by name?
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	db := DbFrom(ctx)
-	// ensure recipe not used by any batches first
-	err = db.Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{"agarRecipe": id}).Err()
-	if err != nil {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "failed to check for agarRecipe usage in agarBatch collection. "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else {
-		// At least one item exists, fail
-		http.Error(w, "at least one agarBatch utilizes the item you are attempting to delete.", http.StatusConflict)
-		return
-	}
-
-	// Delete if not found elsewhere!
-	deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
-	if err != nil {
-		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if deleteResult.DeletedCount == 0 {
-		http.Error(w, "failed to delete id "+idStr+" from agar recipes. Id not found", http.StatusNotFound)
-		return
-	}
-	_, err = w.Write([]byte(idStr))
-	handleWriteErr(err, w)
-}
+//func deleteAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id") // TODO: recipe by name?
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	// ensure recipe not used by any batches first
+//	err = db.Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{"agarRecipe": id}).Err()
+//	if err != nil {
+//		if !errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "failed to check for agarRecipe usage in agarBatch collection. "+err.Error(), http.StatusInternalServerError)
+//			return
+//		}
+//	} else {
+//		// At least one item exists, fail
+//		http.Error(w, "at least one agarBatch utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
+//	if err != nil {
+//		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	if deleteResult.DeletedCount == 0 {
+//		http.Error(w, "failed to delete id "+idStr+" from agar recipes. Id not found", http.StatusNotFound)
+//		return
+//	}
+//	_, err = w.Write([]byte(idStr))
+//	handleWriteErr(err, w)
+//}
