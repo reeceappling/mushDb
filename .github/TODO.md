@@ -48,7 +48,15 @@
 
 
 # Wishlist
-- [ ] Switch from Webpack to Turbopack to speed up builds
+- [ ] TODO: Add env secrets to repo via ansible vault? Add mongo key to repo via ansible vault? I'd rather not lose those...
+- [ ] PROTECT THE REPO! No outside collaborators except me for now. Must fork to edit for now. Any secrets in the actions must be put in a specific env.
+- [ ] Secrets manager? OpenBao?
+- [ ] OTel for logs, tracing, and metrics, storing those could be prometheus (look at options other than prometheus...) SigNoz?
+  - [ ] FluentBit telemetry forwarding agent (sidecar)? (Another option is otel-collector, but fluentBit appears to be more performant...)
+  - [ ] OpenObserve for traces/metrics/logs?
+  - [ ] Grafana for dashboards? Grafana: Requires a multi-component ecosystem (the LGTM stack: Loki for logs, Mimir for metrics, Tempo for traces) which adds maintenance overhead.
+  - [ ] Prometheus for metrics storage?
+- [x] Switch from Webpack to Turbopack to speed up builds
 - [ ] Biometric authentication
   - https://freedium-mirror.cfd/https://towardsdev.com/building-a-react-app-with-biometric-authentication-cc69d210a416
 - [ ] Backups of both DB and pictures!
