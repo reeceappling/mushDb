@@ -3,20 +3,21 @@ FROM golang:latest AS builder
 
 WORKDIR /app
 COPY bin/mushApi server
-# TODO: enable the following to stop needing the main_run script all the time...
+# TODO: enable the following to stop needing the main_run script all the time... (will need fixing)
 #COPY ./go.mod go.mod
 #COPY ./go.sum go.sum
 #COPY ./api /api/
 #COPY ./main.go main.go
-#
-## TODO: ensure next line ok
 #RUN GOOS=linux GOARCH=arm64 go build -o server .
+#RUN chmod 777 server
+
 
 FROM alpine:latest
 #FROM --platform=linux/arm64 alpine:latest
 
 WORKDIR /root/s
 COPY --from=builder /app/server .
+# TODO: remove next line if done in prev step?
 RUN chmod 777 server
 EXPOSE 443
 CMD ["./server"]

@@ -1,5 +1,7 @@
 'use server'
-import {BaseInternalUrl} from "@/app/components/Constants"; // TODO: ensure works
+//import {BaseInternalUrl} from "@/app/components/Constants"; // TODO: ensure works
+
+import {BaseInternalUrl} from "@/app/components/ConstantsServer";
 
 const secret = process.env.MAIN_API_SECRET || ""
 
@@ -10,7 +12,8 @@ interface writeTagRequest {
 
 // TODO: USE!
 export async function GetReaderWriterNames() {
-    const resp = await fetch(BaseInternalUrl + '/rfid/readers'/*, {
+    const biurl = await BaseInternalUrl()
+    const resp = await fetch(biurl+ '/rfid/readers'/*, {
         method: 'GET',
         headers: { // TODO: change?
             credentials: 'include',

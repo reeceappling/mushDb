@@ -1,9 +1,11 @@
 "use server";
 
-import {BaseInternalUrl} from "@/app/components/Constants";
+//import {BaseInternalUrl} from "@/app/components/Constants";
+
+import {BaseInternalUrl} from "@/app/components/ConstantsServer";
 
 export async function GetTransferReasons():Promise<Map<string,string>>{
-    const resp = await fetch(BaseInternalUrl + "/options/transferReasons") // TODO: validate internal works here. Do we need any headers?
+    const resp = await fetch(await BaseInternalUrl() + "/options/transferReasons") // TODO: validate internal works here. Do we need any headers?
     if (!resp.ok){
         throw new Error("response not ok: "+(await resp.text()))
     }
@@ -13,7 +15,7 @@ export async function GetTransferReasons():Promise<Map<string,string>>{
 }
 
 export async function GetFilterSizes():Promise<Map<string,string>>{ // TODO: validate working
-    const resp = await fetch(BaseInternalUrl + "/options/bagFilterSizes") // TODO: validate internal works here. Do we need any headers?
+    const resp = await fetch(await BaseInternalUrl() + "/options/bagFilterSizes") // TODO: validate internal works here. Do we need any headers?
     if (!resp.ok){
         throw new Error("response not ok: "+(await resp.text()))
     }
@@ -32,7 +34,7 @@ function convertObjectToStringMap(obj: { [key: string]: string }): Map<string, s
 
 // TODO: ensure this is a server action
 export async function getOptionsResponse(variant: string):Promise<string[]> {
-    const resp = await fetch(BaseInternalUrl+"/options/"+variant) // TODO: validate works with internal. Do we need headers?
+    const resp = await fetch(await BaseInternalUrl()+"/options/"+variant) // TODO: validate works with internal. Do we need headers?
     if (!resp.ok){
         throw new Error("response for options not ok: "+resp.statusText);
     }
@@ -49,7 +51,7 @@ export async function getOptionsResponse(variant: string):Promise<string[]> {
 //     // const data = await response.json();
 //     // return data;
 //     // TODO: variant can be nutrients, colors, transferReason etc
-//     return fetch(BaseInternalUrl + "/options/"+variant).then(HandleJsonResponse).then((resJson)=>{ // TODO: is internal url ok?
+//     return fetch(await BaseInternalUrl() + "/options/"+variant).then(HandleJsonResponse).then((resJson)=>{ // TODO: is internal url ok?
 //         switch(variant){
 //             case "additives":
 //             case "antibiotics":
