@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     crossOrigin: 'anonymous', // TODO: ok? FIX?
     experimental: {
         serverActions: {
+            // TODO: go over these! figure out what is actually needed!
             allowedOrigins: ['appli.ng', 'mush.appli.ng', 'web', 'http://web:3000', 'web:3000', 'api'], // TODO: GET THESE FROM ELSEWHERE!
         },
     },

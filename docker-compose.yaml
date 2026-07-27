@@ -34,7 +34,6 @@ services:
       - RFID_SECRET
     environment:
       ENVIRONMENT: ${ENVIRONMENT:?error}
-      # TODO: CHANGE SECRETS TO ACTUAL SECRETS!
       SESSION_SECRET: ${GOTHIC_SESSION_SECRET:-https} # Must be in ENV for goth to work
       PICS_PATH: "/images"
       MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-https}
@@ -92,13 +91,8 @@ services:
       timeout: 5s
       retries: 5
     volumes:
-      # TODO: ensure key exists next to docker-compose file. If not:
-      # openssl rand -base64 741 > mongodb.key
-      # chmod 666 mongodb.key
-      # chown mongodb:mongodb mongodb.key
       - mongodb-data:/data/db
       - ./initDB:/docker-entrypoint-initdb.d
-#      - ./etc:/etc:ro
       - ./etc/mongodb.key:/etc/mongodb.key:ro
     networks:
       - mushNet
