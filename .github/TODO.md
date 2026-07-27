@@ -49,6 +49,7 @@
 
 # Wishlist
 - [ ] TODO: Add env secrets to repo via ansible vault? Add mongo key to repo via ansible vault? I'd rather not lose those...
+  - [ ] Add sops key? add my private key? public key?
 - [ ] PROTECT THE REPO! No outside collaborators except me for now. Must fork to edit for now. Any secrets in the actions must be put in a specific env.
 - [ ] Secrets manager? OpenBao?
 - [ ] OTel for logs, tracing, and metrics, storing those could be prometheus (look at options other than prometheus...) SigNoz?
