@@ -79,4 +79,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Uncomment the following line to disable telemetry at run time # TODO: this?
 # ENV NEXT_TELEMETRY_DISABLED 1
 
+# TODO: where does server.js come from? can we rename it?
+# TODO: port dynamic? -H=web dynamic?
 CMD ["node", "server.js", "-p", "3000", "-H", "web"]

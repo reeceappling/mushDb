@@ -138,7 +138,6 @@ secrets:
     RFID_SECRET:
         environment: RFID_SECRET
 volumes:
-#  mongo_repl_config:
   pictures:
     labels:
       com.example.description: "Persistent volume for images"

@@ -40,4 +40,5 @@ COPY tsconfig.json .
 # Uncomment the following line to disable telemetry at build time # TODO: CONSIDER
 # ENV NEXT_TELEMETRY_DISABLED 1
 
+# TODO: port dynamic? -H=web dynamic?
 CMD ["npm", "run", "dev"]
