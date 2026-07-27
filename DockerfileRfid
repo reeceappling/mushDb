@@ -1,6 +1,6 @@
 #FROM --platform=linux/arm64 golang:latest AS builder
 #
-## TODO: THIS IS UNUSED IN THIS PROJECT!!!!
+## TODO: THIS IS UNUSED IN THIS PROJECT!!!! PROBABLY REMOVE!
 #WORKDIR /app
 #COPY rfidServer server
 #
