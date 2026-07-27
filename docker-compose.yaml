@@ -54,19 +54,6 @@ services:
       - mushdb
     depends_on:
       - mushdb
-#  salesdb:
-#    image: postgres:16-alpine
-#    container_name: postgres_db
-#    restart: always
-#    environment:
-#      POSTGRES_USER: myuser # TODO: FIX!
-#      POSTGRES_PASSWORD: mysecretpassword # TODO: FIX!
-#      POSTGRES_DB: mydatabase # TODO: FIX!
-#    ports:
-#      - "5432:5432" # TODO: FIX!
-#    volumes:
-#      - postgres_data:/var/lib/postgresql/data
-
   mushdb: # fungi database container # TODO: different db container for dev vs prod...
     image: mongo:4.4
     restart: unless-stopped
@@ -96,8 +83,19 @@ services:
       - ./etc/mongodb.key:/etc/mongodb.key:ro
     networks:
       - mushNet
-
-  # grafana service
+#  salesdb:
+#    image: postgres:16-alpine
+#    container_name: postgres_db
+#    restart: always
+#    environment:
+#      POSTGRES_USER: myuser # TODO: FIX!
+#      POSTGRES_PASSWORD: mysecretpassword # TODO: FIX!
+#      POSTGRES_DB: mydatabase # TODO: FIX!
+#    ports:
+#      - "5432:5432" # TODO: FIX!
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+# grafana service
 #  grafana:
 #    image: grafana/grafana:latest
 #    restart: unless-stopped
