@@ -827,7 +827,7 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 	}
 	endpt := r.PathValue("variant")
 	var handler http.HandlerFunc
-	switch endpt { // TODO: switch other things to switches rather than maps too!
+	switch endpt {
 	case "agarBatch":
 		handler = updateAgarBatchHandler
 	case "agarRecipe":

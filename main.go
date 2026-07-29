@@ -1310,10 +1310,22 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		}
 		env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "species", "subspecies": // Items with possible spaces in names but which have normal perms
-		out, err := rfid.GetAltCollectionItem[rfid.PermissionedAltCollectionItem[string]](ctx, id, map[string]rfid.PermissionedAltCollectionItem[string]{
-			"species":    &rfid.Species{},
-			"subspecies": &rfid.Subspecies{},
-		}[strings.ToLower(entryType)])
+		var blankItem rfid.PermissionedAltCollectionItem[string]
+		switch strings.ToLower(entryType) {
+		case "species":
+			blankItem = &rfid.Species{}
+		case "subspecies":
+			blankItem = &rfid.Subspecies{}
+		default:
+			panic("spsubsp neither, should never happen!")
+		}
+
+		out, err := rfid.GetAltCollectionItem[rfid.PermissionedAltCollectionItem[string]](ctx, id, blankItem)
+		// TODO: if prev works then delete this comment!
+		// out, err := rfid.GetAltCollectionItem[rfid.PermissionedAltCollectionItem[string]](ctx, id, map[string]rfid.PermissionedAltCollectionItem[string]{
+		//	"species":    &rfid.Species{},
+		//	"subspecies": &rfid.Subspecies{},
+		//}[strings.ToLower(entryType)])
 		if err != nil {
 			http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 			return
