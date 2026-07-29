@@ -422,7 +422,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi"). // TODO: ???
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
-		SetTimeout(15 * time.Second)         // TODO: no?
+		SetTimeout(15 * time.Second) // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
@@ -672,41 +672,68 @@ var GetPageForIdHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 
 var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	endpt := r.PathValue("variant")
-	handle, exists := map[string]http.HandlerFunc{
-		"agarBatch":       createAgarBatchHandler,
-		"agarRecipe":      createAgarRecipeHandler,
-		"bag":             createBagHandler,
-		"lc":              createLiquidCultureHandler,
-		"lcSyringe":       createSyringeHandler,
-		"lcRecipe":        createLcRecipeHandler,
-		"fruit":           createFruitHandler,
-		"fruitingChamber": createFruitingChamberHandler,
-		"grainBatch":      createGrainBatchHandler,
-		"jar":             createJarHandler,
-		"jarRecipe":       createJarRecipeHandler,
-		"mss":             createMssHandler,
-		"pcRun":           createPcRunHandler,
-		"plate":           createPlateHandler,
-		"plugs":           createPlugsHandler,
-		"project":         createProjectHandler,
-		"sale":            createSaleHandler,
-		"slant":           createSlantHandler,
-		"species":         createSpeciesHandler,
-		"sporePrint":      createSporePrintHandler,
-		"sporeSwab":       createSporeSwabHandler,
-		"stasisTube":      createStasisTubeHandler,
-		"subspecies":      createSubspeciesHandler,
-		"substrateRecipe": createSubstrateRecipeHandler,
-		"substrateBatch":  createSubstrateBatchHandler,
-		"transfer":        createTransferHandler,
-		//"user":"", // TODO: probably don't need
-		"waterJar": createWaterJarHandler,
-	}[endpt]
-	if !exists {
+	var handler http.HandlerFunc
+	switch endpt {
+	case "agarBatch":
+		handler = createAgarBatchHandler
+	case "agarRecipe":
+		handler = createAgarRecipeHandler
+	case "bag":
+		handler = createBagHandler
+	case "lc":
+		handler = createLiquidCultureHandler
+	case "lcSyringe":
+		handler = createSyringeHandler
+	case "lcRecipe":
+		handler = createLcRecipeHandler
+	case "fruit":
+		handler = createFruitHandler
+	case "fruitingChamber":
+		handler = createFruitingChamberHandler
+	case "grainBatch":
+		handler = createGrainBatchHandler
+	case "jar":
+		handler = createJarHandler
+	case "jarRecipe":
+		handler = createJarRecipeHandler
+	case "mss":
+		handler = createMssHandler
+	case "pcRun":
+		handler = createPcRunHandler
+	case "plate":
+		handler = createPlateHandler
+	case "plugs":
+		handler = createPlugsHandler
+	case "project":
+		handler = createProjectHandler
+	case "sale":
+		handler = createSaleHandler
+	case "slant":
+		handler = createSlantHandler
+	case "species":
+		handler = createSpeciesHandler
+	case "sporePrint":
+		handler = createSporePrintHandler
+	case "sporeSwab":
+		handler = createSporeSwabHandler
+	case "stasisTube":
+		handler = createStasisTubeHandler
+	case "subspecies":
+		handler = createSubspeciesHandler
+	case "substrateRecipe":
+		handler = createSubstrateRecipeHandler
+	case "substrateBatch":
+		handler = createSubstrateBatchHandler
+	case "transfer":
+		handler = createTransferHandler
+	//case "user": handler = createUserHandler // TODO: probably don't need
+	case "waterJar":
+		handler = createWaterJarHandler
+	default:
 		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
 		return
 	}
-	handle(w, r)
+	handler(w, r)
 }
 
 //func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
@@ -748,23 +775,37 @@ func DenyGuestMiddleware(handler http.Handler) http.Handler {
 
 var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	endpt := r.PathValue("variant")
-	handler, exists := map[string]http.HandlerFunc{
-		"bag":             importBagHandler,
-		"lc":              importLiquidCultureHandler,
-		"lcSyringe":       importLcSyringeHandler,
-		"plugs":           importPlugsHandler,
-		"fruit":           importFruitHandler,
-		"fruitingChamber": importFruitingChamberHandler,
-		"jar":             importJarHandler,
-		"mss":             importMssHandler,
-		"plate":           importPlateHandler,
-		"slant":           importSlantHandler,
-		"sporePrint":      importSporePrintHandler,
-		"sporeSwab":       importSporeSwabHandler,
-		"stasisTube":      importStasisTubeHandler,
-		"waterJar":        importWaterJarHandler,
-	}[endpt]
-	if !exists {
+	var handler http.HandlerFunc
+	switch endpt {
+	case "bag":
+		handler = importBagHandler
+	case "lc":
+		handler = importLiquidCultureHandler
+	case "lcSyringe":
+		handler = importLcSyringeHandler
+	case "plugs":
+		handler = importPlugsHandler
+	case "fruit":
+		handler = importFruitHandler
+	case "fruitingChamber":
+		handler = importFruitingChamberHandler
+	case "jar":
+		handler = importJarHandler
+	case "mss":
+		handler = importMssHandler
+	case "plate":
+		handler = importPlateHandler
+	case "slant":
+		handler = importSlantHandler
+	case "sporePrint":
+		handler = importSporePrintHandler
+	case "sporeSwab":
+		handler = importSporeSwabHandler
+	case "stasisTube":
+		handler = importStasisTubeHandler
+	case "waterJar":
+		handler = importWaterJarHandler
+	default:
 		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
 		return
 	}
@@ -785,42 +826,71 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		return
 	}
 	endpt := r.PathValue("variant")
-	handler, exists := map[string]http.HandlerFunc{
-		"agarBatch":       updateAgarBatchHandler,
-		"agarRecipe":      updateAgarRecipeHandler,
-		"bag":             updateBagHandler,
-		"grainBatch":      updateGrainBatchHandler,
-		"lc":              updateLiquidCultureHandler,
-		"lcRecipe":        updateLcRecipeHandler,
-		"lcSyringe":       updateSyringeHandler,
-		"plugs":           updatePlugsHandler,
-		"fruit":           updateFruitHandler,
-		"fruitingChamber": updateFruitingChamberHandler,
-		"jar":             updateJarHandler,
-		"jarRecipe":       updateJarRecipeHandler,
-		"mss":             updateMssHandler,
-		"pcRun":           updatePcRunHandler,
-		"plate":           updatePlateHandler,
-		"plug":            updatePlugsHandler,
-		"project":         updateProjectHandler,
-		"sale":            updateSaleHandler,
-		"slant":           updateSlantHandler,
-		"species":         updateSpeciesHandler,
-		"sporePrint":      updateSporePrintHandler,
-		"sporeSwab":       updateSporeSwabHandler,
-		"stasisTube":      updateStasisTubeHandler,
-		"subspecies":      updateSubspeciesHandler,
-		"substrateRecipe": updateSubstrateRecipeHandler,
-		"substrateBatch":  updateSubstrateBatchHandler,
-		"transfer":        updateTransferHandler,
-		//"user":             updateUserHandler,
-		"waterJar": updateWaterJarHandler,
-	}[endpt]
-	if !exists {
+	var handler http.HandlerFunc
+	switch endpt { // TODO: switch other things to switches rather than maps too!
+	case "agarBatch":
+		handler = updateAgarBatchHandler
+	case "agarRecipe":
+		handler = updateAgarRecipeHandler
+	case "bag":
+		handler = updateBagHandler
+	case "grainBatch":
+		handler = updateGrainBatchHandler
+	case "lc":
+		handler = updateLiquidCultureHandler
+	case "lcRecipe":
+		handler = updateLcRecipeHandler
+	case "lcSyringe":
+		handler = updateSyringeHandler
+	case "plugs":
+		handler = updatePlugsHandler
+	case "fruit":
+		handler = updateFruitHandler
+	case "fruitingChamber":
+		handler = updateFruitingChamberHandler
+	case "jar":
+		handler = updateJarHandler
+	case "jarRecipe":
+		handler = updateJarRecipeHandler
+	case "mss":
+		handler = updateMssHandler
+	case "pcRun":
+		handler = updatePcRunHandler
+	case "plate":
+		handler = updatePlateHandler
+	case "plug":
+		handler = updatePlugsHandler
+	case "project":
+		handler = updateProjectHandler
+	case "sale":
+		handler = updateSaleHandler
+	case "slant":
+		handler = updateSlantHandler
+	case "species":
+		handler = updateSpeciesHandler
+	case "sporePrint":
+		handler = updateSporePrintHandler
+	case "sporeSwab":
+		handler = updateSporeSwabHandler
+	case "stasisTube":
+		handler = updateStasisTubeHandler
+	case "subspecies":
+		handler = updateSubspeciesHandler
+	case "substrateRecipe":
+		handler = updateSubstrateRecipeHandler
+	case "substrateBatch":
+		handler = updateSubstrateBatchHandler
+	case "transfer":
+		handler = updateTransferHandler
+	//case "user":             handler = updateUserHandler
+	case "waterJar":
+		handler = updateWaterJarHandler
+	default:
 		println("no handler for endpoint: " + endpt) // TODO: del
 		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
+		return
 	}
-	println("using " + endpt + " handler")
+	println("using " + endpt + " handler") // TODO: del
 	handler.ServeHTTP(w, r)
 }
 
