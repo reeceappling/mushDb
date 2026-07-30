@@ -24,7 +24,7 @@ type Species struct {
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
 	AclField          `bson:"inline"`
-	DefaultAcl        ACL `bson:"defaultAcl" json:"defaultAcl"` // TODO: Only used when importing other entry types or creating a subspecies?
+	DefaultAcl        ACL `bson:"defaultAcl" json:"defaultAcl"` // Only used when importing main entry types or creating a subspecies
 
 }
 
@@ -62,6 +62,7 @@ func initializeSpecies(ctx context.Context) error {
 	return env.IfNotProd(ctx, func() error {
 		woodPelletsId := altCollIdForint(idWoodPellets)
 		// TODO: ensure does not completely overwrite if there are changes....
+		defaultAcl := allCanWriteAcl().ACL // TODO: ensure correct...
 		basicEntries := []*Species{
 			// King Oyster
 			{
@@ -76,7 +77,7 @@ func initializeSpecies(ctx context.Context) error {
 					newNote(ogTime, "Best Agar: LMEA"),
 				}},
 				AclField:   allCanWriteAcl(),
-				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+				DefaultAcl: defaultAcl,
 			},
 
 			// Pink Oyster
@@ -92,7 +93,7 @@ func initializeSpecies(ctx context.Context) error {
 					newNote(ogTime, "Best Agar: LMEA"),
 				}},
 				AclField:   allCanWriteAcl(),
-				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+				DefaultAcl: defaultAcl,
 			},
 			// Enoki
 			{
@@ -107,7 +108,7 @@ func initializeSpecies(ctx context.Context) error {
 					newNote(ogTime, "Best Agar: LMEA"),
 				}},
 				AclField:   allCanWriteAcl(),
-				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+				DefaultAcl: defaultAcl,
 			},
 			// Shiitake
 			{
@@ -118,7 +119,7 @@ func initializeSpecies(ctx context.Context) error {
 				Subspecies:        []string{}, // TODO: FIX!
 				NotesField:        shiitakeNotes,
 				AclField:          allCanWriteAcl(),
-				DefaultAcl:        allCanWriteAcl().ACL, // TODO: ensure this is right
+				DefaultAcl:        defaultAcl,
 			},
 			// Maitake, Hen of the Woods
 			{
@@ -133,7 +134,7 @@ func initializeSpecies(ctx context.Context) error {
 					newNote(ogTime, "Best Agar: LMEA"),
 				}},
 				AclField:   allCanWriteAcl(),
-				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+				DefaultAcl: defaultAcl,
 			},
 			// Beech
 			{
@@ -149,10 +150,10 @@ func initializeSpecies(ctx context.Context) error {
 					newNote(ogTime, "Can be white (patented) subspecies or brown"),
 				}},
 				AclField:   allCanWriteAcl(),
-				DefaultAcl: allCanWriteAcl().ACL, // TODO: ensure this is right
+				DefaultAcl: defaultAcl,
 			},
 		}
-		err = addBasicAltEntries(ctx, basicEntries...) // TODO: return here if we dont want test entries
+		err = addBasicAltEntries(ctx, basicEntries...) // return here if we dont want test entries
 		if err != nil {
 			return err
 		}
@@ -193,7 +194,6 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, now := request.UnixTime(r.Context())
 	// Validate
-	// TODO: Aliases?
 	_, err = req.SubstrateRecipeField.Get(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -237,7 +237,7 @@ func (req updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (b
 	return NewMods().
 		UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
 		updateNotesIfNeeded(req, existing).
-		updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: also take a context so we can modify as needed
+		updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: also take a context so we can modify as needed?
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateDefaultAclIfNeeded(req.DefaultAcl, existing.DefaultAcl).
 		updateLastUpdatedIfNeeded().
@@ -246,7 +246,7 @@ func (req updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (b
 
 func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	urlEncodedSpeciesName := r.PathValue("id")
-	speciesName, err := url.QueryUnescape(urlEncodedSpeciesName) // TODO: make sure we are doing this right!
+	speciesName, err := url.QueryUnescape(urlEncodedSpeciesName)
 	if err != nil {
 		http.Error(w, "failed to decode species name from url: "+err.Error(), http.StatusBadRequest)
 		return
@@ -276,7 +276,6 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, db := Db(r)
 	coll := db.Collection(SpeciesCollectionName)
 
-	// TODO: ensure next line works
 	existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically. Outside txn?
 	if err != nil {
 		stat := http.StatusInternalServerError

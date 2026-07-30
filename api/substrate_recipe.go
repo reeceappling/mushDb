@@ -191,7 +191,7 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	err = validateAliasesUnused(ctx, coll, existing.Name, existing.Aliases, req.Aliases)
+	err = validateAliasesUnused(ctx, coll, existing.Name, existing.Aliases, req.Aliases) // TODO: validate working
 	if err != nil {
 		http.Error(w, "At least one new alias already exists as an alias or name on another entry, or there was an error querying: "+err.Error(), http.StatusBadRequest)
 		return

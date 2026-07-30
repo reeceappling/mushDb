@@ -1214,7 +1214,7 @@ func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existing
 	aliasesFilter := bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
 		"$or": bson.A{
 			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list
-			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list
+			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list // TODO: ensure ok
 		},
 	}
 
@@ -1239,7 +1239,7 @@ func validateAliasesNameUnused(ctx context.Context, coll *mongo.Collection, newN
 	aliasesFilter := bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
 		"$or": bson.A{
 			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list
-			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list
+			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list // TODO: ensure ok
 		},
 	}
 
