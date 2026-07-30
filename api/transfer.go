@@ -172,7 +172,6 @@ func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error
 	}, txnOptions)
 }
 
-// TODO: validate completely working the way I want
 func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	data := createTransferRequest{}
 	id := newAlternateCollectionId()
