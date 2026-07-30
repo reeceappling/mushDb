@@ -26,7 +26,7 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	SpeciesField            `bson:"inline"`
 	SubspeciesOptionalField `bson:"inline"`
 	GenSporeField           `bson:"inline"`
-	TransfersOutField       `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	TransfersOutField       `bson:"inline"` // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
 	Prints                  []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
 	ParentTypeField         `bson:"inline"`
 	// parent can be "store, outside, or a mainCollectionId (box/bag)"
@@ -65,7 +65,7 @@ func (f Fruit) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return f.GenSinceSpore, (*Generation)(utils.Pointer(0))
 }
 
-func (f Fruit) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
+func (f Fruit) setTransferChild(_ mongo.SessionContext, _ Transfer, _ geneticSource) error {
 	// Transferring TO a fruit is not a thing
 	return errors.New("fruits are invalid transfer children, must be created from a fruiter, or imported")
 }
@@ -147,7 +147,7 @@ func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, 
 	// Update fruit with new print id
 	//err = parent.addSporeSwab(ctx, id)
 	//if err != nil {
-	//	return nil, errors.Join(errors.New("failed to add spore print to parent fruit"), err)
+	//	return nil, errors.Join(errors.New("failed to add spore swab to parent fruit"), err)
 	//}
 	// TODO: add transfer to parent for swab! should swabs have their own field on fruits?
 	_, err = db.Collection(SporeSwabCollectionName).InsertOne(ctx, toInsert)
@@ -532,7 +532,7 @@ func FruitFromSourceInTxn(ctx mongo.SessionContext, parent geneticSource) (*Frui
 		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      SpeciesField{*genetics.Species},
 		SubspeciesOptionalField:           SubspeciesOptionalField{genetics.Subspecies},
-		GenSporeField:                     GenSporeField{genetics.GenSinceSpore.Next()}, // TODO: next ok?
+		GenSporeField:                     GenSporeField{genetics.GenSinceSpore.Next()},
 		TransfersOutField:                 TransfersOutField{},
 		Prints:                            nil,
 		ParentTypeField:                   ParentTypeField{utils.Pointer(parent.SourceType())},

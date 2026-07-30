@@ -87,7 +87,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 	db := DbFrom(ctx)
 	coll := db.Collection(AgarRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, true), // TODO: unique (last) may need to be true (do we want names to be unique or not?)
+		newSimpleIndex("name", "name", false, false, true), // TODO: probably false for last one? Different people could have different recipes with the same name... // TODO: unique (last) may need to be true (do we want names to be unique or not?)
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("agar", "agar", true, false, false),
 		standardIndexModel,
@@ -230,7 +230,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		}
 
 		// Add test entries
-		return addTestAltEntries(ctx, testItem) // TODO: remove once done testing...
+		return addTestAltEntries(ctx, testItem)
 	})
 }
 

@@ -48,7 +48,7 @@ func listEntriesHandlerInternal[T CollectionItem, U any](ctx context.Context, up
 		bs, err = json.Marshal(latestEntries)
 	} else {
 		outObj := map[string][]T{"recent": latestEntries}
-		// TODO: do we want to also display repeats on standard entries? NO
+		// TODO: do we want to also display repeats on standard entries? NO?
 		outObj["standard"], err = getStandardEntries(ctx, temp)
 		if err != nil {
 			if !errors.Is(err, mongo.ErrNoDocuments) {

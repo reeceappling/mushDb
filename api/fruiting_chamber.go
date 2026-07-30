@@ -115,18 +115,6 @@ func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfe
 	return nil
 }
 
-//func (f FruitingChamber) basicFruit() Fruit {
-//	return Fruit{
-//		MainCollectionIdField:        MainCollectionIdField{MainCollectionId(primitive.NewObjectID())},
-//		SpeciesField:                      SpeciesField{*f.Species}, // TODO: ensure pointer is not nil
-//		SubspeciesOptionalField:           f.SubspeciesOptionalField,
-//		GenSporeField:                     GenSporeField{f.GenSinceSpore.Next()},
-//		ParentTypeField:                   ParentTypeField{utils.Pointer(FruitingChamberSourceType)},
-//		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Email},
-//		LastUpdatedField:                  LastUpdatedField{now},
-//	}
-//}
-
 func initializeFruitingChamber(ctx context.Context) error {
 	db := DbFrom(ctx)
 	coll := db.Collection(FruitingChamberCollectionName)
@@ -169,10 +157,10 @@ func initializeFruitingChamber(ctx context.Context) error {
 
 			MainCollectionIdField:       MainCollectionIdField{testId},
 			SubstrateRecipeField:        SubstrateRecipeField{exAltId},
-			SubstrateBatchOptionalField: SubstrateBatchOptionalField{}, // TODO: ADD ME
-			CupsGrain:                   4,                             // quart
-			MixedSubstratePerGrain:      1.0,                           // 1:1 grain:subsMixed
-			CasingPerGrain:              0.5,                           // Half casing per grain
+			SubstrateBatchOptionalField: SubstrateBatchOptionalField{},
+			CupsGrain:                   4,   // quart
+			MixedSubstratePerGrain:      1.0, // 1:1 grain:subsMixed
+			CasingPerGrain:              0.5, // Half casing per grain
 			CreationDateField:           CreationDateField{exampleTime},
 			GenerationsFields: GenerationsFields{
 				GenSporeField:        GenSporeField{&exGenSinceSpore},
@@ -190,7 +178,7 @@ func initializeFruitingChamber(ctx context.Context) error {
 			MostRecentImageField:              MostRecentImageField{&exPics[0]},
 			FlushesField:                      FlushesField{exPics},
 			SaleField:                         SaleField{utils.Pointer(exAltId)},
-			DisposedField:                     DisposedField{}, // TODO: dispose of it in tests?
+			DisposedField:                     DisposedField{},
 			NotesField:                        NotesField{exampleNotes()},
 			LastUpdatedField:                  LastUpdatedField{exampleTime},
 		}

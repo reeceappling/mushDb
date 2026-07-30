@@ -1302,13 +1302,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
-		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
-		if err != nil {
-			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
-			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		env.LogIfDev(ctx, "returning item: "+string(tempBs))
+		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		//if err != nil {
+		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+		//	return
+		//}
+		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "species", "subspecies": // Items with possible spaces in names but which have normal perms
 		var blankItem rfid.PermissionedAltCollectionItem[string]
 		switch strings.ToLower(entryType) {
@@ -1346,13 +1346,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
-		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
-		if err != nil {
-			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
-			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		env.LogIfDev(ctx, "returning item: "+string(tempBs))
+		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		//if err != nil {
+		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+		//	return
+		//}
+		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "user": // User (can have @)
 		// TODO: ensure admin?????
 		decodedId, err := rfid.UrlDecodeString(id)
@@ -1371,13 +1371,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
-		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
-		if err != nil {
-			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
-			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		env.LogIfDev(ctx, "returning item: "+string(tempBs))
+		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		//if err != nil {
+		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+		//	return
+		//}
+		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	// Cases which are alt colls with base58->binary ids
 	case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
 		// TODO: maybe de-urlencode here to account for named recipes?
@@ -1446,13 +1446,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
-		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
-		if err != nil {
-			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
-			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		env.LogIfDev(ctx, "returning item: "+string(tempBs))
+		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		//if err != nil {
+		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+		//	return
+		//}
+		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	default: // Main collection ids
 		mainCollItem, err := rfid.MainCollItemForEntryType(entryType)
 		if err != nil {
@@ -1481,23 +1481,23 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "item requested cannot be read by this user", http.StatusForbidden)
 			return
 		}
-		can := "read"
-		if *userPermOnEntry == true {
-			can = "write"
-		}
-		env.LogIfDev(ctx, "user "+user.Email+" got item and can "+can) // TODO: del?
+		//can := "read" // TODO: del if unused
+		//if *userPermOnEntry == true {
+		//	can = "write"
+		//}
+		//env.LogIfDev(ctx, "user "+user.Email+" got item and can "+can) // TODO: del?
 		bytes, err = json.Marshal(out)
 		if err != nil {
 			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
-		if err != nil {
-			env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
-			http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		env.LogIfDev(ctx, "returning item: "+string(tempBs))
+		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
+		//if err != nil {
+		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
+		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
+		//	return
+		//}
+		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	}
 	_, err = w.Write(bytes)
 	if err != nil {
@@ -1517,7 +1517,7 @@ var whitelistUserHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.
 		http.Error(w, "failed to unmarshal email: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO: whitelist the user!
+	// whitelist the user!
 	rfid.UserWhitelist.Add(email)
 }
 

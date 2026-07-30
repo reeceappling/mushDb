@@ -48,6 +48,9 @@
 
 
 # Wishlist
+- [ ] Use an external kanidm server for auth and user management.
+- [ ] Use external openBao server for secrets management.
+- [ ] Switch policy management to Open Policy Agent? (Probably not because this would be a very heavy lift)
 - [ ] TODO: Add env secrets to repo via ansible vault? Add mongo key to repo via ansible vault? I'd rather not lose those...
   - [ ] Add sops key? add my private key? public key?
 - [ ] PROTECT THE REPO! No outside collaborators except me for now. Must fork to edit for now. Any secrets in the actions must be put in a specific env.

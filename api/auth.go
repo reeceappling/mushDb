@@ -329,6 +329,10 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 			println("Failed to add user for email: " + u.Email)   // TODO: del?
 			return "", email, err
 		}
+		// TODO: remove user from account creation whitelist?
+		if email != adminEmail {
+			UserWhitelist.Remove(email) // TODO: ensure ok
+		}
 	}
 	//if u.Perms.Admin == nil { // TODO: del or reenable for testing
 	//	env.LogIfDev(ctx, "Admin on perms was nil when it should not have been!")

@@ -43,6 +43,159 @@ type ACL struct { // ALWAYS REFERENCED AS A STRUCT AND NOT A POINTER!
 	BlanketPerm *ReadWritePerm             `bson:"blanketPerm,omitempty" json:"blanketPerm,omitempty"` // empty is private, false is public can read by default. True means public can write by default.
 }
 
+//TODO: consider trying out!
+//var updatePolicyCompiled, viewPolicyCompiled, createPolicyCompiled rego.PreparedEvalQuery
+//
+//func init() {
+//	defaultDeny := `# Default decision if no rules match
+//default decision := "deny"
+//
+//# Main decision logic: deny takes absolute precedence
+//topArea := `package authz
+//`
+//decision := "deny" {
+//    deny
+//}
+//else := "allow" {
+//    allow
+//}
+//`
+//	helpers := `has_acl {
+//		has_key(input, "acl")
+//	}
+//	has_acl_projects {
+//		has_acl
+//		has_key(input.acl, "projects")
+//	}
+//	has_acl_users {
+//		has_acl
+//		has_key(input.acl, "users")
+//	}
+//	has_user_projects {
+//		has_key(input.user, "projects")
+//	}
+//	# Helper to check if a key exists in an object
+//	has_key(obj, key) {
+//		_ = obj[key]
+//	}`
+//	updatePolicyString := topArea+defaultDeny+`
+//# Deny if accountType is missing (guest)
+//deny["Guests cannot edit"] {
+//   not object.get(input.user, "accountType", false)
+//   # Check specifically if the key is absent
+//   not has_key(input.user, "accountType")
+//}
+//# Allow admins
+//allow if {
+//   input.user.accountType == true
+//}
+//# Allow if blanketPerm is true
+//allow if {
+//	has_key(input, "blanketPerm")
+//	input.blanketPerm == true
+//}
+//# allow users where the user is in the acl specifically
+//allow if {
+//	has_acl_users
+//	input.acl.users[input.user.email]
+//}
+//# allow users who are part of groups that are allowed to write by the acl
+//allow if {
+//	has_acl_projects
+//	has_user_projects
+//	userWriteableProjects := {proj | k, v in input.user.projects; v == true; proj := k}
+//	projectsThatCanWriteOnItem := {proj | k, v in input.acl.projects; v == true; proj := k}
+//	some common_value in userWriteableProjects & projectsThatCanWriteOnItem
+//}
+//`+helpers
+//	viewPolicyString := topArea+defaultDeny+`
+//# Allow admins
+//allow if {
+//   input.user.accountType == true
+//}
+//# Allow if blanketPerm is non-nil
+//allow if {
+//	has_key(input, "blanketPerm")
+//}
+//# allow users where the user is in the acl specifically
+//allow if {
+//	has_acl_users
+//	{k | k, v in input.acl.users} in input.user.email
+//}
+//# allow users who are part of groups that are allowed to read or write by the acl
+//allow if {
+//	has_acl_projects
+//	has_user_projects
+//	userReadableProjects := {proj | k, v in input.user.projects; proj := k}
+//	projectsThatCanReadItem := {proj | k, v in input.acl.projects; proj := k}
+//	some common_value in userReadableProjects & projectsThatCanReadItem
+//	# TODO: also handle cases where the item itself is not innoculated???????0----------------------------
+//}
+//`+helpers
+//	createPolicyString := topArea+defaultDeny+`
+//deny["Guests cannot create"] {
+//   not object.get(input.user, "accountType", false)
+//   # Check specifically if the key is absent
+//   not has_key(input.user, "accountType")
+//}
+//# Allow admins and normal users
+//allow if {
+//	has_key(input.user, "accountType")
+//}
+//`+helpers
+//	var err error = nil
+//	updatePolicyCompiled, err = rego.New(
+//		rego.Query("data.authz.decision"),
+//		rego.Module("policy.rego", updatePolicyString),
+//	).PrepareForEval(context.Background())
+//	if err != nil {
+//		panic("failed to create update policy compiled query: " + err.Error())
+//	}
+//	viewPolicyCompiled, err = rego.New(
+//		rego.Query("data.authz.decision"),
+//		rego.Module("policy.rego", viewPolicyString),
+//	).PrepareForEval(context.Background())
+//	if err != nil {
+//		panic("failed to create view policy compiled query: " + err.Error())
+//	}
+//	createPolicyCompiled, err = rego.New(
+//		rego.Query("data.authz.decision"),
+//		rego.Module("policy.rego", createPolicyString),
+//	).PrepareForEval(context.Background())
+//	if err != nil {
+//		panic("failed to create create policy compiled query: " + err.Error())
+//	}
+//}
+//
+//func updatePolicy(ctx context.Context, acl *ACL) error { // TODO: USE THIS????!!!!
+//	return checkPolicy(ctx, acl, updatePolicyCompiled)
+//}
+//func viewPolicy(ctx context.Context, acl *ACL) error { // TODO: USE THIS????!!!!
+//	return checkPolicy(ctx, acl, viewPolicyCompiled)
+//}
+//func createPolicy(ctx context.Context, acl *ACL) error { // TODO: USE THIS????!!!!
+//	return checkPolicy(ctx, acl, createPolicyCompiled)
+//}
+//func checkPolicy(ctx context.Context, acl *ACL, compiledPolicy rego.PreparedEvalQuery) error {
+//	user, err := GetAuthInfo(ctx)
+//	if err != nil {
+//		return errors.Join(errors.New("failed to get auth info"), err)
+//	}
+//	input := rego.EvalInput(map[string]interface{}{ // TODO: ensure inserting these is ok
+//		"user": user,
+//		"acl":  acl,
+//	})
+//	results, err := compiledPolicy.Eval(ctx, input)
+//	if err != nil {
+//		return errors.Join(errors.New("failed to eval"), err)
+//	}
+//
+//	if len(results) == 0 || !results.Allowed() {
+//		return errors.New("Access Denied. " + results[0].Expressions[0].String())
+//	}
+//	return nil
+//}
+
 func (acl ACL) AsPermsOnRequest() PermsOnRequest {
 	return PermsOnRequest{
 		UserPerms:    cloneMap(acl.Users),
@@ -303,8 +456,8 @@ func AcctTypeGuest() *AccountType {
 
 type ResolvedUserPerms struct {
 	Email       string                           `bson:"email" json:"email"`
-	AccountType *AccountType                     `bson:"accountType" json:"accountType"`               // nil is guest (never write), false is normal email, true is admin
-	Projects    map[projectName]*UserProjectPerm `bson:"projects,omitempty" json:"projects,omitempty"` // nil is readonly, false is canWrite, true is admin of project
+	AccountType *AccountType                     `bson:"accountType,omitempty" json:"accountType,omitempty"` // nil is guest (never write), false is normal email, true is admin
+	Projects    map[projectName]*UserProjectPerm `bson:"projects,omitempty" json:"projects,omitempty"`       // nil is readonly, false is canWrite, true is admin of project
 }
 
 func (perms ResolvedUserPerms) GetUser(ctx context.Context) (*User, error) {
