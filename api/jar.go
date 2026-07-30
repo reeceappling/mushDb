@@ -17,19 +17,19 @@ import (
 	"strings"
 )
 
-// TODO: needed for transfers
+// needed for transfers
 
 // TODO: new (PC is created first, so it can be referenced)
 
 type GrainJar struct {
 	MainCollectionIdField   `bson:"inline"`
 	SizeCups                int             `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
-	JarRecipeField          `bson:"inline"` // TODO: always required? or optional?
+	JarRecipeField          `bson:"inline"` // Always required except on imports when it is optional
 	GrainBatchOptionalField `bson:"inline"`
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
 	BurstGrainsField                  `bson:"inline"` // 0 is ideal, 1-2 is common, everything above that is oof
-	PcRunOptionalField                `bson:"inline"` // Imports default, can be created without a run!
+	PcRunOptionalField                `bson:"inline"` // Imports default, can be created without a run! // TODO: make required!
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -131,11 +131,11 @@ func initializeJars(ctx context.Context) error {
 		[]mongo.IndexModel{
 			creationDateIndexModel,
 			//newSimpleIndex("sizeCups", "sizeCups", true, false, false),
-			newSimpleIndex("recipe", "recipe", false, true, false), // TODO: sparse or no?
+			newSimpleIndex("recipe", "recipe", false, true, false), // sparse because imports may not have recipe
 			newSimpleIndex("grainBatch", "grainBatch", false, true, false),
 			//newSimpleIndex("wetness", "wetness", false, true, false),
 			//newSimpleIndex("burstGrains", "burstGrains", false, true, false),
-			newSimpleIndex("pcRun", "pcRun", false, true, false), // TODO: ????
+			newSimpleIndex("pcRun", "pcRun", false, true, false), // TODO: required, but old values may not have it... See if we can fix this...
 			newSimpleIndex("species", "species", false, true, false),
 			newSimpleIndex("subspecies", "subspecies", false, true, false),
 			//newSimpleIndex("innoc", "innoc", false, true, false),
