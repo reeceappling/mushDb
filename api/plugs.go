@@ -491,12 +491,6 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: overh
 			println("no contam location for", i)
 		}
 	}
-	//finalReqBs, err := json.MarshalIndent(out, "", " ")
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	//println("REQUEST BYTES: ", string(finalReqBs)) // TODO: del
 
 	existing := &PlugsJar{}
 	db := DbFrom(ctx)
@@ -505,7 +499,7 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: overh
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if data.PcRun != nil { // TODO: ONLY CHECK THIS IF THE RUN CHANGED!!!!
+	if existing.PcRun == nil && data.PcRun != nil { // only check this if the run changed
 		_, err = data.PcRunOptionalField.Get(ctx)
 		if err != nil {
 			http.Error(w, "invalid pc run: "+err.Error(), http.StatusBadRequest)

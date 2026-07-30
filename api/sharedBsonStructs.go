@@ -516,7 +516,7 @@ func (upd *Mods) Push(key string, value interface{}) *Mods { // TODO: interface 
 }
 
 // TODO: write what this actually does here!
-func (upd *Mods) pushBson(pushValues ...bson.E) *Mods { // TODO: make sure ok
+func (upd *Mods) pushBson(pushValues ...bson.E) *Mods {
 	if len(pushValues) == 0 {
 		return upd
 	}

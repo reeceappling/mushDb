@@ -16,8 +16,7 @@ import (
 	"slices"
 )
 
-// TODO: sometimes needed for transfers
-// TODO: needed for clones
+// sometimes needed for: transfers, clones
 
 type Slant struct {
 	MainCollectionIdField `bson:"inline"`
@@ -132,7 +131,7 @@ func initializeSlants(ctx context.Context) error {
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 
 		//Pics (no index)
-		// TODO: Contams
+		// TODO: Contams?
 		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		//saleIndexModel,
 		//disposedIndexModel,
@@ -273,7 +272,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	id := *mainCollId
 	b58Id := mainCollId.AsBase58()
 	ctx, db := Db(r)
-	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: overhaul and use normal reader multipart strat?
 	if err != nil {
 		// Already written
 		return

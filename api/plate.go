@@ -191,7 +191,7 @@ func initializePlates(ctx context.Context) error {
 		//newSimpleIndex("parentType", "parentType", false, true, false),
 		//
 		////Pics (no index)
-		//// TODO: Contams
+		//// TODO: Contams?
 		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		//saleIndexModel,
 		//disposedIndexModel,
@@ -548,11 +548,6 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 			println("no contam location for", i)
 		}
 	}
-	//finalReqBs, err := json.MarshalIndent(out, "", " ") // TODO: del?
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 
 	ctx := r.Context()
 	client := GetMongoClient(ctx)
@@ -594,12 +589,6 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//bsOut2, err2 := json.MarshalIndent(existing, "", " ") // TODO: delete later
-	//if err2 != nil {
-	//	dbErr(w, err2.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//println("Writing update:", string(bsOut2)) // TODO: del
 	_, err = w.Write(bsOut)
 	handleWriteErr(err, w)
 }
@@ -697,12 +686,10 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	var gen *Generation = nil
 	if data.Species != nil {
 		if data.Generation == nil {
-			println("innoculated must have generation") // TODO: del
 			http.Error(w, "innoculated must have generation", http.StatusBadRequest)
 			return
 		}
 		if *data.Generation < 1 {
-			println("gen must be positive") // TODO: del
 			http.Error(w, "gen must be positive", http.StatusBadRequest)
 			return
 		}

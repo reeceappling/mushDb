@@ -502,6 +502,13 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //	return out, nil
 //}
 
+func sessOpts() *options.SessionOptions {
+	return options.Session() // TODO: change?
+}
+func writeConc() *writeconcern.WriteConcern {
+	return writeconcern.Majority() // TODO: ok?
+}
+
 func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Project, upd bson.D, err error, updateUsers func(mongo.SessionContext) (any, error)) {
 	if err != nil {
 		println("mod creation failure: " + err.Error())
@@ -513,13 +520,13 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 		return
 	}
 
-	sessionOptions := options.Session()
+	sessionOptions := sessOpts()
 	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
 	if err != nil {
 		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	wc := writeconcern.Majority()
+	wc := writeConc()
 	txnOptions := options.Transaction().SetWriteConcern(wc)
 	// Defers ending the session after the transaction is committed or ended
 	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
@@ -556,7 +563,7 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
 			return nil, errTxn
 		}
-		//// TODO: move the write!?
+		// TODO: move the write?!?
 		_, err = w.Write(bsOut)
 		handleWriteErr(err, w)
 
@@ -566,13 +573,13 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 }
 
 func finishCreateProject(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter, inTxn func() error) {
-	sessionOptions := options.Session() // TODO: change?
+	sessionOptions := sessOpts()
 	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
 	if err != nil {
 		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	wc := writeconcern.Majority() // TODO: ok?
+	wc := writeConc()
 	txnOptions := options.Transaction().SetWriteConcern(wc)
 	// Defers ending the session after the transaction is committed or ended
 	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
