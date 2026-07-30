@@ -235,7 +235,7 @@ func (req resolvedUpdateMssRequest) modsFor(existing *MSS, aclField AclField) (b
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updatePicsIfNeeded(req.Images, existing.Pics). // TODO: validate working!
+		updatePicsIfNeeded(req.Images, existing.Pics).                                               // TODO: validate working!
 		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, nil, nil)). // TODO: validate working!
 		updateLastUpdatedIfNeeded().
 		Finalized()
