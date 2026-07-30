@@ -314,7 +314,7 @@ func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error
 }
 
 //func deleteAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
-//	idStr := r.PathValue("id") // TODO: recipe by name?
+//	idStr := r.PathValue("id") // recipe by name?
 //	if idStr == "" {
 //		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
 //		return

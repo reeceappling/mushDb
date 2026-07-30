@@ -283,7 +283,7 @@ func (serv *AuthService) SessionForEmail(email string) (session SessionId, err e
 var UserWhitelist = utils.Set[string]{}
 
 func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser goth.User) (sessionId SessionId, email string, err error) {
-	log := logging.GetSugaredLogger(ctx)
+	log := logging.GetSugaredLogger(ctx) // TODO: ensure sugared logger is properly set up
 	var u User
 	email = oauthUser.Email
 	adminEmail := os.Getenv("ADMIN_GMAIL") // TODO: del! This would allow an attacker with server access to just change an env var!
@@ -311,25 +311,21 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 		}
 
 		if adminEmail != "" && email == adminEmail {
-			log.Infow("Creating Admin user for email: " + adminEmail) // TODO: ensure sugared logger is properly set up!
-			println("Creating Admin user for email: " + adminEmail)   // TODO; del
-			logging.GetLogger(ctx).Info("Admin user signed up with email " + email)
+			log.Infow("Creating Admin user for email: " + adminEmail)
 			u.Perms = UserPerms{
 				Admin:    AcctTypeAdmin(),
 				Projects: []projectName{},
 			}
 		} else {
-			log.Infow("Creating Non-Admin user for email: " + u.Email) // TODO: ensure sugared logger is properly set up!
-			println("Creating Non-Admin user for email: " + u.Email)   // TODO: del?
+			log.Infow("Creating Non-Admin user for email: " + u.Email)
 		}
 
 		_, err = coll.InsertOne(ctx, u)
 		if err != nil {
-			log.Infow("Failed to add user for email: " + u.Email) // TODO: ensure sugared logger is properly set up!
-			println("Failed to add user for email: " + u.Email)   // TODO: del?
+			log.Infow("Failed to add user for email: " + u.Email)
 			return "", email, err
 		}
-		// TODO: remove user from account creation whitelist?
+		// remove user from account creation whitelist
 		if email != adminEmail {
 			UserWhitelist.Remove(email) // TODO: ensure ok
 		}
