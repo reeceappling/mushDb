@@ -13,7 +13,6 @@ import (
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/exp/maps"
@@ -74,48 +73,16 @@ var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, f
 var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
 var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false) // TODO: do we even need to use this?
 var creationDateIndexModel = newSimpleIndex("creationDate", "creationDate", true, false, false)
-var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false)
+var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false) // TODO: USE?
 
-var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false) // TODO: THIS DOES NOT ENFORCE UNIQUENESS!!!!!
-
-//// TODO: USE!
-//func SetEnv(ctx context.Context, isProd bool) context.Context {
-//	return context.WithValue(ctx, "isProd", isProd)
-//}
-//func GetEnv(ctx context.Context) bool {
-//	isProd, ok := ctx.Value("isProd").(bool)
-//	if !ok {
-//		panic("Env not found")
-//	}
-//	return isProd
-//}
-
-//// TODO: searching in a specific index
-//func latestNUpdatedB(ctx context.Context) error { // TODO: fixMe
-//	db := DbFrom(ctx)
-//	//indx := // TODO: use correct index
-//	opts := options.Find().SetHint(
-//		mongo.IndexModel{Keys: bson.D{{"transfersOut", 1}}}, // TODO: ????????????
-//		)
-//	coll := db.Collection(FruitsCollName)
-//	_, err := coll.Find(ctx, bson.D{}, opts)
-//	return err
-//	//coll.UpdateByID(ctx, bson.D{bson.E{Key: IDfld: "someId"}}, ) // TODO: use this
-//}
-
-func withUpdateNow() primitive.E {
-	return primitive.E{
-		Key:   "lastUpdated",
-		Value: unix.TimeForNow(), // TODO: change to get time from request context?
-	}
-}
+var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false) // THIS DOES NOT ENFORCE UNIQUENESS!!!!!
 
 //func updateTogether() bson.D {
 //	return []primitive.E{withUpdateNow()}
 //}
 
 func Initialize(ctx context.Context) error {
-	if err := initializeItemMapCollection(ctx); err != nil { // TODO: ensure working ok
+	if err := initializeItemMapCollection(ctx); err != nil {
 		return err
 	}
 	for i, initializer := range map[string]func(context.Context) error{
@@ -382,79 +349,6 @@ func indicesSame(a, b mongo.IndexModel) bool { // TODO: use?
 }
 
 var ErrInvalidEntryType = errors.New("invalid entry type")
-
-//func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work for Projects?
-//	switch strings.ToLower(inp) {
-//	case "agarbatch", "agar batch",
-//		"agarbatches", "agar batches":
-//		return &AgarBatch{}, nil
-//	case "agarrecipe", "agar recipe",
-//		"agarrecipes", "agar recipes":
-//		return &AgarRecipe{}, nil
-//	case "bag",
-//		"bags":
-//		return &Bag{}, nil
-//	case "fruit",
-//		"fruits":
-//		return &Fruit{}, nil
-//	case "fruitingchamber", "box", "chamber", "fruiting chamber",
-//		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
-//		return &FruitingChamber{}, nil
-//	case "jar", "grainjar", "grain jar",
-//		"jars", "grainjars", "grain jars":
-//		return &GrainJar{}, nil
-//	case "jarrecipe", "jar recipe",
-//		"jarrecipes", "jar recipes":
-//		return &JarRecipe{}, nil
-//	case "lc", "liquidculture", "liquid culture",
-//		"lcs", "liquidcultures", "liquid cultures":
-//		return &LiquidCulture{}, nil
-//	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
-//		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
-//		return &LcRecipe{}, nil
-//	case "lcSyringe", "lcSyringes":
-//		return &LcSyringe{}, nil
-//	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
-//		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
-//		return &MSS{}, nil
-//	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
-//		"pcruns", "pc runs", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
-//		return &PCRun{}, nil
-//	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
-//		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
-//		return &Plate{}, nil
-//	case "plugs", "plug", "peg", "pegs":
-//		return &PlugsJar{}, nil
-//	case "project", "Projects":
-//		return &Project{}, nil
-//	case "sale", "sales":
-//		return &Sale{}, nil
-//	case "slant", "slants":
-//		return &Slant{}, nil
-//	case "species":
-//		return &Species{}, nil
-//	case "sporeprint", "spore print", "print",
-//		"sporeprints", "spore prints", "prints":
-//		return &SporePrint{}, nil
-//	case "stasistube", "stasis tube", "stasis", "tube",
-//		"stasistubes", "stasis tubes", "tubes":
-//		return &StasisTube{}, nil
-//	case "subspecies":
-//		return &Subspecies{}, nil
-//	case "substrate", "substraterecipe", "substrate recipe",
-//		"substrates", "substraterecipes", "substrate recipes":
-//		return &SubstrateRecipe{}, nil
-//	case "transfer", "xfer",
-//		"transfers", "xfers":
-//		return &Transfer{}, nil
-//	case "user", "users":
-//		return &User{}, nil
-//	case "waterJar", "waterJars":
-//		return &WaterJar{}, nil
-//	default:
-//		return nil, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name"))
-//	}
-//}
 
 func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T, err error) {
 	cursor, err := GetMongoClient(ctx).
@@ -1077,10 +971,6 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//if user.isGuest() { // TODO: isnt this done elsewhere? (UpdateHandler)
-	//	dbErr(w, "guests cannot edit", http.StatusUnauthorized)
-	//	return
-	//}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusUnauthorized)
 		return
@@ -1220,7 +1110,7 @@ func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existing
 
 	if err := coll.FindOne(ctx, aliasesFilter).Err(); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			// Not found, success! unused aliases
+			// Not found, success! all unused aliases
 			return nil
 		}
 		return err
@@ -1245,7 +1135,7 @@ func validateAliasesNameUnused(ctx context.Context, coll *mongo.Collection, newN
 
 	if err := coll.FindOne(ctx, aliasesFilter).Err(); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			// Not found, success! unused aliases
+			// Not found, success! all unused aliases
 			return nil
 		}
 		return err
