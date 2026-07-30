@@ -123,13 +123,13 @@ func initializeStasisTubes(ctx context.Context) error {
 		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//Pics (no index)
-		// TODO: Contams
+		// Contams
 		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		//saleIndexModel,
 		//disposedIndexModel,
 		// MostRecentImage
 		//Notes (no index) (maybe later with tags?)
-		// TODO: waterJar?
+		// waterJar?
 		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})

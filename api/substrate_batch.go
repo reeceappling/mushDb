@@ -178,7 +178,7 @@ type SubstrateBatchOptionalField struct {
 
 func deleteSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	// used in batch, species, box, bag!
-	idStr := r.PathValue("id") // TODO: recipe by name?
+	idStr := r.PathValue("id") // recipe by name?
 	if idStr == "" {
 		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
 		return
