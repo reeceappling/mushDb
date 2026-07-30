@@ -26,7 +26,7 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	SpeciesField            `bson:"inline"`
 	SubspeciesOptionalField `bson:"inline"`
 	GenSporeField           `bson:"inline"`
-	TransfersOutField       `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	TransfersOutField       `bson:"inline"` // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
 	Prints                  []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
 	ParentTypeField         `bson:"inline"`
 	// parent can be "store, outside, or a mainCollectionId (box/bag)"
@@ -82,7 +82,7 @@ func (f Fruit) addSporePrint(ctx mongo.SessionContext, printId MainCollectionId)
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("invalid result") // TODO: ok?
+		return errors.New("invalid result, fruit not modified to add print")
 	}
 	return nil
 }
