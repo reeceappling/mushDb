@@ -31,6 +31,15 @@ const ( // MainCollection test ints
 	idTestPlateAdminOnly // No blanket permission, no users, no projects
 )
 
+func init() { // TODO: remove this block!
+	if idTestPlateAdminOnly >= 255 {
+		panic("test values 1 go too high")
+	}
+	if idTestGrainBatch >= 255 {
+		panic("test values 2 go too high")
+	}
+}
+
 const (
 	idTestingOnly = iota
 	idLmea

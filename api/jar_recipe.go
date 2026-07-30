@@ -97,10 +97,10 @@ type JarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
 	NameField                  `bson:"inline"`
 	Grains                     []GrainPercentage `bson:"grains" json:"grains"`
-	StandardField              `bson:"inline"`   // If this is a standard recipe
-	NutrientsField             `bson:"inline"`   // Per grain jar?
-	SugarsField                `bson:"inline"`   // Per grain jar?
-	AdditivesField             `bson:"inline"`   // Per grain jar?
+	StandardField              `bson:"inline"` // If this is a standard recipe
+	NutrientsField             `bson:"inline"` // Per grain jar?
+	SugarsField                `bson:"inline"` // Per grain jar?
+	AdditivesField             `bson:"inline"` // Per grain jar?
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
@@ -325,7 +325,7 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id") // TODO: recipe by name?
+	idStr := r.PathValue("id") // recipe by name?
 	if idStr == "" {
 		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
 		return

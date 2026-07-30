@@ -19,7 +19,7 @@ import (
 // needed for
 // transfers sometimes, creating lcSyringes
 
-// TODO: new (PC is created first, so it can be referenced)?
+// new (PC is created first, so it can be referenced)?
 
 type LiquidCulture struct {
 	MainCollectionIdField             `bson:"inline"`
@@ -261,7 +261,7 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do the multipart reader differently. Check importPlugsHandler
 	defer r.Body.Close()
-	reader, err := r.MultipartReader() // TODO: do streamlined
+	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
 		return

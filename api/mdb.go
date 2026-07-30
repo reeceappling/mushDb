@@ -91,7 +91,7 @@ func (b58str Base58Str) ToMainCollectionId() (MainCollectionId, error) {
 	}
 	//if string(b58str) == "1" {
 	//	return [8]byte{0, 0, 0, 0, 0, 0, 0, 0}, nil
-	//} // TODO: fix this for
+	//} // TODO: fix this for alts?
 	out := [RfidByteSize]byte{}
 	bs, err := b58str.Base2Bytes()
 	if err != nil {
@@ -615,43 +615,6 @@ type InMemoryCacheItem[T any] struct {
 // TODO: CHANGESTREAMS to track most recently used/updated items in each collection!
 // TODO: also want to track recipe ids and names in a cache, and invalidate the cache when additions happen
 
-//type idNamePairCache struct {
-//	*sync.RWMutex
-//	timeout time.Time
-//	IdNamePairArray
-//}
-//type IdNamePairArray struct {
-//	names []string
-//	ids   []string
-//}
-//func (arr IdNamePairArray) asMap() map[string]string{
-//	out := map[string]string{}
-//	for i, id := range arr.ids {
-//		out[id] = arr.names[i]
-//	}
-//	return out
-//}
-//
-//type RecipeCache struct {
-//	Agar      *idNamePairCache
-//	Jar       *idNamePairCache ``
-//	LC        *idNamePairCache ``
-//	Substrate *idNamePairCache ``
-//}
-//
-//func (cache RecipeCache) GetAgarRecipes(ctx context.Context) map[string]string {
-//	now := time.Now()
-//	subcache := cache.Agar
-//	if cache.Agar.timeout.Before(now) {
-//		// TODO: go get them from the db
-//		// TODO: update the cache
-//	} else {
-//		subcache.RLock()
-//		defer subcache.RUnlock()
-//		return cache.Agar.IdNamePairArray.asMap()
-//	}
-//}
-
 var GetPageForIdHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id := r.PathValue("id")
@@ -735,11 +698,6 @@ var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 	}
 	handler(w, r)
 }
-
-//func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
-//
-//	return handler // TODO: replace with old GetPermsMiddleware once perms are reenabled
-//}
 
 func DenyGuestMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -890,7 +848,6 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
 		return
 	}
-	println("using " + endpt + " handler") // TODO: del
 	handler.ServeHTTP(w, r)
 }
 

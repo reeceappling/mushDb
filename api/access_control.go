@@ -731,7 +731,7 @@ func (requestPerms PermsOnRequest) GetPermsOnRequest() PermsOnRequest {
 	return requestPerms
 }
 
-func (requestPerms PermsOnRequest) DefaultAcl() ACL {
+func (requestPerms PermsOnRequest) AsACL() ACL {
 	return ACL{
 		Users:       requestPerms.UserPerms,
 		Projects:    requestPerms.ProjectPerms,
@@ -739,6 +739,7 @@ func (requestPerms PermsOnRequest) DefaultAcl() ACL {
 	}
 }
 
+// AclForUser turns request perms into an ACL where the current user is ensured to be able to write!
 func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
 	client := GetMongoClient(ctx)
 

@@ -711,7 +711,7 @@ func (upd *Mods) updatePermsIfNeeded(next, current ACL) *Mods {
 }
 
 func (upd *Mods) updateDefaultAclIfNeeded(nextReq PermsOnRequest, current ACL) *Mods {
-	next := nextReq.DefaultAcl()
+	next := nextReq.AsACL()
 	if current.Equivalent(next) {
 		return upd
 	}

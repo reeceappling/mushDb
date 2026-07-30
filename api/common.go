@@ -1018,7 +1018,7 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 		return
 	}
 	// TODO: dont allow user to remove their own perms!
-	//if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+	//if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
 	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 	//	return
 	//}
@@ -1049,7 +1049,7 @@ func finishMainCollItemUpdateInTxn[T MainCollectionItem](ctx mongo.SessionContex
 		return existing, err
 	}
 	// TODO: dont allow user to remove their own perms!
-	//if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+	//if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
 	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 	//	return
 	//}
@@ -1085,7 +1085,7 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		dbErr(w, "unauthorized to edit", http.StatusUnauthorized)
 		return
 	}
-	if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
 		http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return
 	}
@@ -1114,7 +1114,7 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 		return
 	}
 	// TODO: dont allow user to remove their own perms!
-	//if !reqPerms.DefaultAcl().HighestPermFor(user).CanWrite() {
+	//if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
 	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 	//	return
 	//}

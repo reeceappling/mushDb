@@ -145,7 +145,7 @@ func initializeJars(ctx context.Context) error {
 			//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
 			//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 			//Pics (no index)
-			//TODO: Contams
+			//TODO: Contams?
 			//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 			//saleIndexModel,
 			//newSimpleIndex("disposed", "disposed", false, true, false),

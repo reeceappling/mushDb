@@ -156,7 +156,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "Parent LC must be innoculated", http.StatusInternalServerError)
 		return
 	}
-	// TODO: CREATE PARENT TRANSFER? maybe not
+	// TODO: CREATE PARENT TRANSFER?
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: id},
@@ -257,11 +257,6 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		out.Images.New[i].Location = ImageLocation(loc)
 	}
-	//finalReqBs, err := json.MarshalIndent(out, "", " ") // TODO: del
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 	ctx := r.Context()
 	client := GetMongoClient(ctx)
 	coll := client.Database(dbName).Collection(LcSyringeCollectionName)

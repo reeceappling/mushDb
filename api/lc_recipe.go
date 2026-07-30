@@ -199,7 +199,7 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
+	if err = ReadSimpleStructuredBody(r, w, &req); err != nil {
 		return // Writes already if err
 	}
 
@@ -224,7 +224,7 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO: do the next block everywhere! Ensure user does not remove their own write perms!
-	if !req.PermsOnRequest.DefaultAcl().HighestPermFor(user).CanWrite() {
+	if !req.PermsOnRequest.AsACL().HighestPermFor(user).CanWrite() {
 		http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return
 	}
@@ -232,7 +232,7 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id") // TODO: recipe by name?
+	idStr := r.PathValue("id") // recipe by name?
 	if idStr == "" {
 		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
 		return
