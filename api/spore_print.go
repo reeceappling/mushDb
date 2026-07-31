@@ -420,7 +420,7 @@ func MainCollItemForEntryType(entryType string) (MainCollectionItem, error) {
 }
 
 type updateSporePrintRequest struct {
-	SaleField // TODO: validate?
+	SaleField // TODO: validate? or delete...
 	DisposedField
 	SporePrintColorField
 	SporePrintDensityField

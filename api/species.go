@@ -17,7 +17,7 @@ import (
 
 type Species struct {
 	NameIdField       `bson:"inline"` // THIS IS THE COMMON NAME
-	ScientificName    string          `bson:"scientificName" json:"scientificName"`
+	ScientificName    string `bson:"scientificName" json:"scientificName"`
 	AliasesField      `bson:"inline"`
 	StandardSubstrate AlternateCollectionId `bson:"standardSubstrate" json:"standardSubstrate"`
 	Subspecies        []string              `bson:"subspecies,omitempty" json:"subspecies,omitempty"`
@@ -116,7 +116,7 @@ func initializeSpecies(ctx context.Context) error {
 				ScientificName:    shiitakeSciName,
 				AliasesField:      AliasesField{}, // TODO: FIX!
 				StandardSubstrate: woodPelletsId,
-				Subspecies:        []string{}, // TODO: FIX!
+				Subspecies:        []string{},
 				NotesField:        shiitakeNotes,
 				AclField:          allCanWriteAcl(),
 				DefaultAcl:        defaultAcl,
@@ -162,7 +162,7 @@ func initializeSpecies(ctx context.Context) error {
 			NameIdField:       NameIdField{TestSpeciesName},
 			ScientificName:    "examplius speciesus",
 			AliasesField:      AliasesField{[]string{"testSpecies", "example species"}},
-			Subspecies:        []string{}, // TODO: ADD EXAMPLE SUBSPECIES!
+			Subspecies:        []string{},
 			StandardSubstrate: exAltId,
 			NotesField:        NotesField{exampleNotes()},
 			LastUpdatedField:  LastUpdatedField{exampleTime},
@@ -264,17 +264,16 @@ func updateSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	ctx, db := Db(r)
+	coll := db.Collection(SpeciesCollectionName)
 	// Add user to acls as needed // TODO: ensure ok!
-	user, _ := GetAuthInfo(r.Context())
-	finalDefaultAcl, err := req.DefaultAcl.AclForUser(r.Context(), user)
+	user, _ := GetAuthInfo(ctx)
+	finalDefaultAcl, err := req.DefaultAcl.AclForUser(ctx, user)
 	if err != nil {
 		http.Error(w, "failed to create default acl: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	req.DefaultAcl = finalDefaultAcl.ACL.AsPermsOnRequest()
-
-	ctx, db := Db(r)
-	coll := db.Collection(SpeciesCollectionName)
 
 	existing, err := GetSpeciesNameInTxn(ctx, speciesName) // TODO: get species specifically. Outside txn?
 	if err != nil {

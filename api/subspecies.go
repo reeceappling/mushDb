@@ -388,7 +388,7 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	existing, err := GetSubspeciesByNameInTxn(ctx, subspeciesName)
 	if err != nil {
 		stat := http.StatusInternalServerError
-		if err == mongo.ErrNoDocuments {
+		if errors.Is(err, mongo.ErrNoDocuments) {
 			stat = http.StatusNotFound
 		}
 		dbErr(w, err.Error(), stat)
