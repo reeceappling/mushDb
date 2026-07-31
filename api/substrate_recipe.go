@@ -155,7 +155,7 @@ type updateSubstrateRecipeRequest struct {
 func (req updateSubstrateRecipeRequest) modsFor(existing *SubstrateRecipe, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateNameIfNeeded(req.Name, existing.Name).
-		updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: make sure no duplicates
+		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
 		updateStandardIfNeeded(req.Standard, existing.Standard).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
@@ -191,7 +191,7 @@ func updateSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	err = validateAliasesUnused(ctx, coll, existing.Name, existing.Aliases, req.Aliases) // TODO: validate working
+	err = validateAliasesUnused(ctx, coll, existing.Name, existing.Aliases, req.Aliases)
 	if err != nil {
 		http.Error(w, "At least one new alias already exists as an alias or name on another entry, or there was an error querying: "+err.Error(), http.StatusBadRequest)
 		return

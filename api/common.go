@@ -1088,6 +1088,7 @@ func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
 	return ifFalse
 }
 
+// TODO: validate working
 func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existingName string, existingAliases, updatedAliases []string) error {
 	newAliases := utils.SetFrom(updatedAliases...)
 	for _, al := range existingAliases {
@@ -1118,6 +1119,7 @@ func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existing
 	return errors.New("at least one entry contained a new alias the user was trying to add")
 }
 
+// TODO: validate working
 func validateAliasesNameUnused(ctx context.Context, coll *mongo.Collection, newName string, aliases []string) error {
 	newAliases := utils.SetFrom(aliases...)
 	newAliases.Add(newName)
@@ -1125,7 +1127,6 @@ func validateAliasesNameUnused(ctx context.Context, coll *mongo.Collection, newN
 		return nil // No alias changes, return early successfully
 	}
 	brandNewAliases := newAliases.ToSlice()
-	// TODO: VALIDATE WORKS!
 	aliasesFilter := bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
 		"$or": bson.A{
 			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list

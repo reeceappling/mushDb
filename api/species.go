@@ -237,7 +237,7 @@ func (req updateSpeciesRequest) modsFor(existing *Species, aclField AclField) (b
 	return NewMods().
 		UpdateValueIfNeeded("standardSubstrate", req.Substrate, existing.StandardSubstrate). // TODO: validate ok
 		updateNotesIfNeeded(req, existing).
-		updateAliasesIfNeeded(req.Aliases, existing.Aliases). // TODO: also take a context so we can modify as needed?
+		updateAliasesIfNeeded(req.Aliases, existing.Aliases).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateDefaultAclIfNeeded(req.DefaultAcl, existing.DefaultAcl).
 		updateLastUpdatedIfNeeded().

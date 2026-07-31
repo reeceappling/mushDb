@@ -159,6 +159,13 @@ docker compose logs -f  api
 Most of the building is done when you run docker compose for the project, but you can also build each part separately for development purposes.
 ### API
 TODO: THIS
+
+#### Regenerating Mocks
+
+```bash
+# Run from the project root
+mockery --log-level=debug
+```
 #### Regenerating Go Files
 
 ```bash

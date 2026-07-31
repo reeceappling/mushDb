@@ -81,14 +81,17 @@ func altCollIdFieldForint(i int) AlternateCollectionIdField {
 }
 
 func mainCollIdForint(i int) MainCollectionId { // TODO: FIX FOR uint8 overflow
-	return [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)}
-}
-
-// TODO: use in above
-func nextUint8(i int) (nextBit uint8, remainder int) { // TODO: FIX FOR uint8 overflow
-	nextBitInt := i % 8
-	nextBit = uint8(nextBitInt)
-	return nextBit, i / 8
+	//temp := i // TODO: switch and check if we start going above 255!
+	//out := [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, 0}
+	//for j := 0; j<RfidByteSize; j++ {
+	//	out[8-j] = byte(temp % 8)
+	//	temp = temp/8
+	//	if temp == 0 {
+	//		return out
+	//	}
+	//}
+	//return out
+	return [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)} // TODO: reenable if the above does not work! TODO: ENSURE TO REENABLE IF NEEDED!
 }
 
 func mainCollIdFieldForint(i int) MainCollectionIdField {

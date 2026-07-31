@@ -1594,12 +1594,6 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	mgr := websocketSessions.GetSessionManager(ctx)
-	if mgr == nil {
-		println("no session mgr found?") // TODO: del
-		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
-		return
-	}
 	if r.Method != http.MethodGet {
 		println("invalid method") // TODO: del
 		http.Error(w, unsupportedHttpMethod, http.StatusBadRequest)
@@ -1617,18 +1611,8 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		http.Error(w, invalidAcceptHeader, http.StatusBadRequest)
 		return
 	}
-
-	//bodyIn, err := io.ReadAll(r.Body)
-	//if err != nil {
-	//	http.Error(w, "unable to read request body: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	//if !mgr.SecretValid(string(bodyIn)) {
-	//	http.Error(w, "forbidden", http.StatusForbidden)
-	//	return
-	//}
 	println("trying to read rfid") // TODO: del
-	binaryUID, err := mgr.ReadRfid(ctx, readerName)
+	binaryUID, err := rfid.GetService().ReadRfid(ctx, readerName)
 	if err != nil {
 		println("read error " + err.Error()) // TODO: del
 		// TODO: what type of error?
@@ -1699,27 +1683,8 @@ var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	mgr := websocketSessions.GetSessionManager(r.Context())
-	if mgr == nil {
-		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
-		return
-	}
-	//// TODO: fix to either use secret and internal, or no secret but external auth!
-	//// TODO: what if this is something like id==1????
-	//if len(toWri) != shared.RfidByteSize { // TODO: use constant for length! // TODO: this is a base58 string, shouldnt it always be that?
-	//	// could be base58str
-	//	req.Data, err = rfid.Base58Str(toWrite).Base2Bytes()
-	//	if err != nil || len(req.Data) != shared.RfidByteSize {
-	//		http.Error(w, "invalid request body data: "+string(req.Data), http.StatusBadRequest)
-	//		return
-	//	}
-	//}
-	//if !mgr.SecretValid(req.Secret) {
-	//	http.Error(w, "forbidden", http.StatusForbidden)
-	//	return
-	//}
-
-	if err = mgr.WriteRfid(ctx, writerName, toWriteBytes); err != nil {
+	err = rfid.GetService().WriteRfid(ctx, writerName, toWriteBytes)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1743,12 +1708,7 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	toWriteBytes := [8]byte{0, 0, 0, 0, 0, 0, 0, 0} // TODO: ok?
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	validResponse := []byte("Cleared") // TODO: ok?
-	mgr := websocketSessions.GetSessionManager(ctx)
-	if mgr == nil {
-		http.Error(w, websocketSessions.ErrNoSessionManager.Error(), http.StatusInternalServerError)
-		return
-	}
+	validResponse := []byte("Cleared")               // TODO: ok?
 	err := env.IfNotProd(r.Context(), func() error { // TODO: del later?
 		if writerName == goodTestRfid {
 			_, err := w.Write(validResponse)
@@ -1765,8 +1725,8 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return
 	}
-
-	if err := mgr.WriteRfid(ctx, writerName, toWriteBytes); err != nil {
+	readWriter := rfid.GetService()
+	if err := readWriter.WriteRfid(ctx, writerName, toWriteBytes); err != nil {
 		http.Error(w, "failed to write rfid: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

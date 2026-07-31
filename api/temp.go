@@ -26,12 +26,7 @@ func writeRfidTagIfNecessary(ctx context.Context, writeTagTo *string, id MainCol
 	if writeTagTo == nil {
 		return nil // Don't write
 	}
-	mgr := websocketSessions.GetSessionManager(ctx)
-	if mgr == nil {
-		println("no session mgr found!") // TODO: del
-		return websocketSessions.ErrNoSessionManager
-	}
-	err := mgr.WriteRfid(ctx, shared.RfidReaderName(*writeTagTo), id)
+	err := GetService().WriteRfid(ctx, shared.RfidReaderName(*writeTagTo), id)
 	if err != nil {
 		println("failed to write tag! " + err.Error())
 		return err
@@ -39,12 +34,101 @@ func writeRfidTagIfNecessary(ctx context.Context, writeTagTo *string, id MainCol
 	return nil
 }
 
+var globalRfidReadWriter ReadWriteService = readWriteSvc{}
+
+func SetService(rw ReadWriteService) { // TODO: USE THIS IN TESTS!
+	globalRfidReadWriter = rw
+}
+func GetService() ReadWriteService { // TODO: USE THIS IN TESTS!
+	return globalRfidReadWriter
+}
+
+//TODO: for other mocks? mockery:structname: ReadWriteService
+
+//mockery:generate: true
+type ReadWriteService interface {
+	WriteRfid(ctx context.Context, readerName shared.RfidReaderName, id MainCollectionId) error
+	ReadRfid(ctx context.Context, readerName shared.RfidReaderName) ([8]byte, error)
+}
+type readWriteSvc struct{}
+
+func (rw readWriteSvc) WriteRfid(ctx context.Context, readerName shared.RfidReaderName, id MainCollectionId) error {
+	mgr := websocketSessions.GetSessionManager(ctx)
+	if mgr == nil {
+		println("no session mgr found?") // TODO: del
+		return websocketSessions.ErrNoSessionManager
+	}
+	return mgr.WriteRfid(ctx, readerName, id) // TODO: handle manager nil check within this!
+}
+func (rw readWriteSvc) ReadRfid(ctx context.Context, readerName shared.RfidReaderName) ([8]byte, error) {
+	mgr := websocketSessions.GetSessionManager(ctx)
+	if mgr == nil {
+		println("no session mgr found?") // TODO: del
+		return [8]byte{}, websocketSessions.ErrNoSessionManager
+	}
+	return mgr.ReadRfid(ctx, readerName) // TODO: handle manager nil check within this!
+}
+
+type MockRfidSvc struct {
+	writeResults map[shared.RfidReaderName]map[string]error
+	readResults  map[shared.RfidReaderName]mockRfidReadResult
+}
+
+type mockRfidReadResult struct {
+	Out [8]byte
+	Err error
+}
+
+func NewMockRfidService() *MockRfidSvc { // TODO: USE IN TESTING!
+	return &MockRfidSvc{}
+}
+
+func (rw *MockRfidSvc) WithTestWrite(readerName shared.RfidReaderName, id MainCollectionId, result error) {
+	if rw.writeResults == nil {
+		rw.writeResults = map[shared.RfidReaderName]map[string]error{}
+	}
+	if _, exists := rw.writeResults[readerName]; !exists {
+		rw.writeResults[readerName] = make(map[string]error)
+	}
+	rw.writeResults[readerName][string(id[:])] = result
+}
+
+func (rw *MockRfidSvc) WithTestRead(readerName shared.RfidReaderName, result MainCollectionId, err error) {
+	if rw.readResults == nil {
+		rw.readResults = map[shared.RfidReaderName]mockRfidReadResult{}
+	}
+	if _, exists := rw.readResults[readerName]; !exists {
+		rw.writeResults[readerName] = make(map[string]error)
+	}
+	rw.readResults[readerName] = mockRfidReadResult{
+		Out: result,
+		Err: err,
+	}
+}
+func (rw *MockRfidSvc) WriteRfid(ctx context.Context, readerName shared.RfidReaderName, id MainCollectionId) error {
+	writerResults, ok := rw.writeResults[readerName]
+	if !ok {
+		return errors.New("writer not found")
+	}
+	finalErr, ok := writerResults[string(id[:])]
+	if !ok {
+		return errors.New("id not found for mock writer")
+	}
+	return finalErr
+}
+func (rw *MockRfidSvc) ReadRfid(ctx context.Context, readerName shared.RfidReaderName) ([8]byte, error) {
+	results, ok := rw.readResults[readerName]
+	if !ok {
+		return [8]byte{}, errors.New("writer not found")
+	}
+	return results.Out, results.Err
+}
+
 func StandardizeMainCollectionId(id string) (*MainCollectionId, error) {
 	if id == "1" { // TODO: DO THIS ELSEWHERE!
 		println("making ID 1!")
 		return utils.Pointer(MainCollectionId([]byte{0, 0, 0, 0, 0, 0, 0, 0})), nil // TODO: not sure we actually want this....
 	}
-	//println("ID BYTES NOT LENGTH 8! CONVERTING!") // TODO: del
 	realId, err := Base58Str(id).ToMainCollectionId()
 	if err != nil {
 		return nil, err
