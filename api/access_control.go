@@ -227,8 +227,10 @@ func (acl ACL) Clone() ACL {
 	}
 }
 
+// func (acl ACL) MarshalJSON()(bs []byte, err error) is not custom
+// UnmarshalJSON unmarshals bytes into an access control list
 func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
-	out := &ACL{}
+	out := ACL{} // TODO: out := &ACL{}
 	temp := map[string]any{}
 	if err = json.Unmarshal(bs, &temp); err != nil {
 		return err
@@ -245,11 +247,11 @@ func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
 			return errors.New("ACL projects is not a map[string]bool or nil")
 		}
 	}
-	blanketPermIfc, ok := temp["blanketPerm"]
+	blanketPermIfc, ok := temp["blanketPerm"] // TODO: validate ok! blanket perm may be missing!
 	if !ok {
 		return errors.New("ACL blanketPerm must be a present boolean field v1")
 	}
-	*out.BlanketPerm, ok = blanketPermIfc.(ReadWritePerm)
+	*out.BlanketPerm, ok = blanketPermIfc.(ReadWritePerm) // TODO: validate ok! blanket perm may be missing!
 	if !ok {
 		return errors.New("ACL blanketPerm must be a present boolean field v2")
 	}
@@ -257,13 +259,12 @@ func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
 	return nil
 }
 
-// func (acl ACL) MarshalJSON()(bs []byte, err error) is not custom
-
 func (acl ACL) simplified() ACL {
 	if acl.BlanketPerm == nil {
 		// If admin or default permission is no permission, return self
 		return acl
 	}
+	// TODO: PROBABLY DONT WANT TO REMOVE USERS WHEN BLANKET CHANGES? DECIDE!
 	// If blanketPerm is read or write, then remove all users that can only read? // TODO: I DONT LIKE THIS, WHAT IF BLANKET CHANGES LATER?
 	if acl.Users != nil { // TODO: necessary? try disabling this
 		for user, canWrite := range acl.Users {

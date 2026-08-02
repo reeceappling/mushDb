@@ -32,6 +32,9 @@ type CompensatingAction struct {
 }
 
 func (ca *CompensatingAction) Do() error {
+	if ca == nil {
+		return nil
+	}
 	thisErr := ca.onRollback()
 	if ca.next == nil {
 		return thisErr
