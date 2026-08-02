@@ -65,7 +65,7 @@ func GetFilePath(ctx context.Context) string {
 }
 
 func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, error) {
-	// TODO: save file to s3 if needed
+	// TODO: save file to s3 if needed (probably not)
 	filePath := GetFilePath(ctx)
 	if filePath == "" {
 		filePath = "/images" // TODO: FIXME!!!!
@@ -81,24 +81,25 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 		}
 		fileNameWithPrefixPath := resolvedPrefix + name.String()
 		whereToWrite := filePath + "/" + fileNameWithPrefixPath
-		if err = os.MkdirAll(filePath+"/"+resolvedPrefix, 777); err != nil {
+		if err = os.MkdirAll(filePath+"/"+resolvedPrefix, 777); err != nil { // TODO: 666 instead of 777?
 			fmt.Printf("Error creating directory: %s\n", err)
 			return fileNameWithPrefixPath, err
 		}
 		if _, err = os.Stat(whereToWrite); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				println("filePath" + filePath)
+				println("filePath" + filePath)             // TODO: del
 				println("writing file to " + whereToWrite) // TODO: del
-				err = os.WriteFile(whereToWrite, bs, 777)
+				err = os.WriteFile(whereToWrite, bs, 777)  // TODO: 666 instead of 777?
 				if err != nil {
 					println("failed to write file", err.Error())
 				}
 				return fileNameWithPrefixPath, err
 			}
-			println("file exists already!", err.Error()) // TODO: continue???
-			return "", err
+			println("file exists already!", err.Error())
+			return "", err // TODO: PROBABLY CONTINUE INSTEAD OF RETURN HERE
 		} else {
-			continue
+			println("file exists already!", err.Error()) // TODO: continue???
+			return "", err                               // TODO: PROBABLY CONTINUE INSTEAD OF RETURN HERE
 		}
 	}
 	return "", errors.New("failed to find a new fileName")
