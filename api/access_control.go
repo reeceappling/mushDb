@@ -247,15 +247,25 @@ func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
 			return errors.New("ACL projects is not a map[string]bool or nil")
 		}
 	}
-	blanketPermIfc, ok := temp["blanketPerm"] // TODO: validate ok! blanket perm may be missing!
-	if !ok {
-		return errors.New("ACL blanketPerm must be a present boolean field v1")
+	if blanketPermIfc, exists := temp["blanketPerm"]; exists { // TODO: validate ok! blanket perm may be missing!
+		var blanketPermIsValid = false
+		*out.BlanketPerm, blanketPermIsValid = blanketPermIfc.(ReadWritePerm) // TODO: validate ok! blanket perm may be missing!
+		if !blanketPermIsValid {
+			return errors.New("ACL blanketPerm must be a present boolean field v2")
+		}
+	} else {
+		return errors.New("ACL blanketPerm must be a present boolean field v1") // TODO: maybe that should just make blanketPerm nil?
 	}
-	*out.BlanketPerm, ok = blanketPermIfc.(ReadWritePerm) // TODO: validate ok! blanket perm may be missing!
-	if !ok {
-		return errors.New("ACL blanketPerm must be a present boolean field v2")
-	}
-	*acl = out.simplified()
+	//blanketPermIfc, ok := temp["blanketPerm"] // TODO: Reenable if new does not work
+	//if !ok {
+	//	return errors.New("ACL blanketPerm must be a present boolean field v1")
+	//}
+	//*out.BlanketPerm, ok = blanketPermIfc.(ReadWritePerm)
+	//if !ok {
+	//	return errors.New("ACL blanketPerm must be a present boolean field v2")
+	//}
+
+	*acl = out.simplified() // TODO: ok to simplify here?
 	return nil
 }
 
