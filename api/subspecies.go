@@ -51,6 +51,7 @@ func initializeSubspecies(ctx context.Context) error {
 		return err
 	}
 
+	// Create basic entries, does not overwrite already-existing species.
 	return env.IfNotProd(ctx, func() error {
 		basicEntries := []Subspecies{
 			// White Beech

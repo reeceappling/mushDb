@@ -58,10 +58,9 @@ func initializeSpecies(ctx context.Context) error {
 		return err
 	}
 
-	// Add test entry
+	// Add test entry - Does not replace entries
 	return env.IfNotProd(ctx, func() error {
 		woodPelletsId := altCollIdForint(idWoodPellets)
-		// TODO: ensure does not completely overwrite if there are changes....
 		defaultAcl := allCanWriteAcl().ACL // TODO: ensure correct...
 		basicEntries := []*Species{
 			// King Oyster
