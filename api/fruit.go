@@ -127,7 +127,7 @@ func (f Fruit) createSporePrintInTxn(ctx mongo.SessionContext, pics PicsField, n
 func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, id MainCollectionId) (*SporeSwab, error) {
 	ctx, now := request.UnixTimeInTxn(ctx)
 	// writeTagTo is done after this func is called
-	toInsert := SporeSwab{
+	toInsert := &SporeSwab{
 		MainCollectionIdField:             MainCollectionIdField{id},
 		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&f.Id},
 		ParentTypeField:                   ParentTypeField{utils.Pointer("fruit")},
@@ -140,7 +140,7 @@ func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, 
 		AclField: f.AclField,
 	}
 	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
-	err := addToIdMapCollection(ctx, &toInsert)
+	err := addToIdMapCollection(ctx, toInsert)
 	if err != nil {
 		return nil, err
 	}
@@ -149,12 +149,31 @@ func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, 
 	//if err != nil {
 	//	return nil, errors.Join(errors.New("failed to add spore swab to parent fruit"), err)
 	//}
-	// TODO: add transfer to parent for swab! should swabs have their own field on fruits?
+	// TODO: add transfer to parent for swab? should swabs have their own field on fruits?
+	// TODO: may just not want to do this. Fruit page could have an endpoint to load swabs???
+	//newXferId := newAlternateCollectionId()
+	//err = createTransferInTxn(ctx, f, toInsert, Transfer{
+	//	AlternateCollectionIdField: AlternateCollectionIdField{Id:newXferId},
+	//	From:                       f.Id,
+	//	To:                         toInsert.Id,
+	//	FromType:                   f.EntryType(),
+	//	ToType:                     toInsert.EntryType(),
+	//	CreationDateField:          toInsert.CreationDateField,
+	//	Reason:                     "", // TODO: fix
+	//	FromImage:                  nil, // TODO: fix
+	//	ToImage:                    nil, // TODO: fix
+	//	NotesField:                 toInsert.NotesField,
+	//	LastUpdatedField:           toInsert.LastUpdatedField,
+	//	AclField:                   f.AclField,
+	//}, false) // TODO: false ok?
+	//if err != nil {
+	//	return nil, err // TODO: ok?
+	//}
 	_, err = db.Collection(SporeSwabCollectionName).InsertOne(ctx, toInsert)
 	if err != nil {
 		return nil, errors.Join(errors.New("failed to insert new spore print"), err)
 	}
-	return &toInsert, nil
+	return toInsert, nil
 }
 
 //func (f Fruit) addSale(ctx mongo.SessionContext, printId AlternateCollectionId) error {

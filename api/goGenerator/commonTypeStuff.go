@@ -65,66 +65,66 @@ const (
 	{{end}}
 )
 ` + /*var (
-		// Main collection entry constants
-		additives = []Additive{ {{- $first := true -}}{{- range $nm, $val := .Additives }}{{- if not $first }}, {{ end }}{{$nm}}{{- $first = false -}}{{- end }} }
-		fluids = []Fluid{ {{- $isFirst := true }}
-	{{- range $name, $val := .FluidTypes }}
-	  {{- if not $isFirst }}, {{ end }}
-	  {{- $name }}
-	  {{- $isFirst = false }}
-	{{- end }} }
-		nutrients = []Nutrient{ {{- $isFirst := true }}
-	{{- range $name, $val := .Nutrients }}
-	  {{- if not $isFirst }}, {{ end }}
-	  {{- $name }}
-	  {{- $isFirst = false }}
-	{{- end }} }
-		sugars = []Sugar{ {{- $isFirst := true }}
-	{{- range $name, $val := .Sugars }}
-	  {{- if not $isFirst }}, {{ end }}
-	  {{- $name }}
-	  {{- $isFirst = false }}
-	{{- end }} }
-		grains = []Grain{ {{- $isFirst := true }}
-	{{- range $name, $val := .Grains }}
-	  {{- if not $isFirst }}, {{ end }}
-	  {{- $name }}
-	  {{- $isFirst = false }}
-	{{- end }} }
-		colorants = []Colorant{ {{- $isFirst := true }}
-	{{- range $name, $val := .Colorants }}
-	  {{- if not $isFirst }}, {{ end }}
-	  {{- $name }}
-	  {{- $isFirst = false }}
-	{{- end }} }
-		additives = []Additive{ {{- $isFirst := true }}
-	{{- range $name, $val := .Additives }}
-	  {{- if not $isFirst }}, {{ end }}
-	  {{- $name }}
-	  {{- $isFirst = false }}
-	{{- end }} }
-	)
-	const (
-		// Fluid Types
-	{{range $nm, $val := .FluidTypes}}{{$nm}} Fluid = "{{$val}}"
-	{{end}}
-		// Nutrients
-	{{range $nm, $val := .Nutrients}}{{$nm}} Nutrient = "{{$val}}"
-	{{end}}
-		// Sugars
-	{{range $nm, $val := .Sugars}}{{$nm}} Sugar = "{{$val}}"
-	{{end}}
-		// Grains
-	{{range $nm, $val := .Grains}}{{$nm}} Grain = "{{$val}}"
-	{{end}}
-		// Colorants (note: most reds are fungicidal)
-	{{range $nm, $val := .Colorants}}{{$nm}} Colorant = "{{$val}}"
-	{{end}}
-		// Additives
-	{{range $nm, $val := .Additives}}{{$nm}} Additive = "{{$val}}"
-	{{end}}
-		// TODO: add colors, antibiotics?
-	)*/"" + `
+			// Main collection entry constants
+			additives = []Additive{ {{- $first := true -}}{{- range $nm, $val := .Additives }}{{- if not $first }}, {{ end }}{{$nm}}{{- $first = false -}}{{- end }} }
+			fluids = []Fluid{ {{- $isFirst := true }}
+		{{- range $name, $val := .FluidTypes }}
+		  {{- if not $isFirst }}, {{ end }}
+		  {{- $name }}
+		  {{- $isFirst = false }}
+		{{- end }} }
+			nutrients = []Nutrient{ {{- $isFirst := true }}
+		{{- range $name, $val := .Nutrients }}
+		  {{- if not $isFirst }}, {{ end }}
+		  {{- $name }}
+		  {{- $isFirst = false }}
+		{{- end }} }
+			sugars = []Sugar{ {{- $isFirst := true }}
+		{{- range $name, $val := .Sugars }}
+		  {{- if not $isFirst }}, {{ end }}
+		  {{- $name }}
+		  {{- $isFirst = false }}
+		{{- end }} }
+			grains = []Grain{ {{- $isFirst := true }}
+		{{- range $name, $val := .Grains }}
+		  {{- if not $isFirst }}, {{ end }}
+		  {{- $name }}
+		  {{- $isFirst = false }}
+		{{- end }} }
+			colorants = []Colorant{ {{- $isFirst := true }}
+		{{- range $name, $val := .Colorants }}
+		  {{- if not $isFirst }}, {{ end }}
+		  {{- $name }}
+		  {{- $isFirst = false }}
+		{{- end }} }
+			additives = []Additive{ {{- $isFirst := true }}
+		{{- range $name, $val := .Additives }}
+		  {{- if not $isFirst }}, {{ end }}
+		  {{- $name }}
+		  {{- $isFirst = false }}
+		{{- end }} }
+		)
+		const (
+			// Fluid Types
+		{{range $nm, $val := .FluidTypes}}{{$nm}} Fluid = "{{$val}}"
+		{{end}}
+			// Nutrients
+		{{range $nm, $val := .Nutrients}}{{$nm}} Nutrient = "{{$val}}"
+		{{end}}
+			// Sugars
+		{{range $nm, $val := .Sugars}}{{$nm}} Sugar = "{{$val}}"
+		{{end}}
+			// Grains
+		{{range $nm, $val := .Grains}}{{$nm}} Grain = "{{$val}}"
+		{{end}}
+			// Colorants (note: most reds are fungicidal)
+		{{range $nm, $val := .Colorants}}{{$nm}} Colorant = "{{$val}}"
+		{{end}}
+			// Additives
+		{{range $nm, $val := .Additives}}{{$nm}} Additive = "{{$val}}"
+		{{end}}
+			// TODO: add colors, antibiotics?
+		)*/"" + `
 
 // Functions
 func mainCollMap(name string) (item MainCollectionItem, exists bool) {

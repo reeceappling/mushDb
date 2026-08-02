@@ -20,6 +20,10 @@ func (field AclField) Permissions() ACL {
 }
 
 func allCanReadAcl(owner *string) AclField {
+	//var users map[string]bool = nil // TODO: consider!
+	//if owner != nil {
+	//	users = map[string]bool{*owner: true}
+	//}
 	out := ACL{
 		BlanketPerm: RWPermRead(),
 		Users:       map[string]bool{},
@@ -261,7 +265,7 @@ func (acl ACL) simplified() ACL {
 		return acl
 	}
 	// If blanketPerm is read, then remove all users that can only read
-	if acl.Users != nil {
+	if acl.Users != nil { // TODO: necessary?
 		for user, canWrite := range acl.Users {
 			if !canWrite {
 				delete(acl.Users, user)
@@ -785,7 +789,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 		BlanketPerm: requestPerms.BlanketPerm,
 	}
 	if acl.Users == nil {
-		acl.Users = map[string]bool{}
+		acl.Users = map[string]bool{} // TODO: do we even want this?
 	}
 	if acl.Projects == nil {
 		acl.Projects = map[projectName]bool{}
