@@ -375,7 +375,8 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// TODO: ensure ok! updating perms to allow for creating user as well...
+	// TODO: ensure ok! updating perms to allow for creating user as well... UNSURE WHAT THE SECOND PART OF THIS IS REFERRING TO!
+	// User perms are checked against existing before writing later.
 	user, _ := GetAuthInfo(r.Context())
 	finalDefaultAcl, err := req.DefaultAcl.AclForUser(r.Context(), user)
 	if err != nil {
@@ -401,7 +402,7 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "At least one new alias already exists as an alias or name on another entry, or there was an error querying: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishStringIdAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest) // TODO: use on species, project, user(?)
+	finishStringIdAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
 func deleteSubspeciesHandler(w http.ResponseWriter, r *http.Request) {

@@ -53,26 +53,17 @@ type CollectionItem interface { // TODO: ADD USER TO THIS?
 	IdValue() any // binary string id? DO NOT USE FOR ACTUALLY QUERYING THE DB DUE TO ANY TYPE
 }
 
-//var (
-//	_ fruiter = FruitingChamber{}
-//	_ fruiter = Bag{}
-//)
-//
-//type fruiter interface {
-//	basicFruit() Fruit
-//	Permissioned
-//}
-
 var lastUpdatedIndexModel = mongo.IndexModel{
 	Keys:    bson.D{{Key: "lastUpdated", Value: -1}},
 	Options: options.Index().SetName("lastUpdated"),
 }
 var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
 var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, false, false) // TODO: ensure actually indexes the correct thing! // TODO: this is a wildcard index!!!!
-var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
+// var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false) // TODO: del?
 var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false) // TODO: do we even need to use this?
 var creationDateIndexModel = newSimpleIndex("creationDate", "creationDate", true, false, false)
-var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false) // TODO: USE?
+
+// var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false) // TODO: USE?
 
 var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false) // THIS DOES NOT ENFORCE UNIQUENESS!!!!!
 
@@ -209,7 +200,7 @@ func Initialize(ctx context.Context) error {
 	//} {
 	//	println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
 	//}
-	// TODO: validateDbEntries(ctx)
+	// TODO: validateDbEntries(ctx) like ensuring pc runs exist on all appropriate things?
 
 	return nil
 }
@@ -1138,6 +1129,15 @@ func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
 	return ifFalse
 }
 
+func aliasesFilter(brandNewAliases []string) bson.M {
+	return bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
+		"$or": bson.A{
+			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list
+			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list // TODO: ensure ok
+		},
+	}
+}
+
 // TODO: validate working
 func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existingName string, existingAliases, updatedAliases []string) error {
 	newAliases := utils.SetFrom(updatedAliases...)
@@ -1151,15 +1151,7 @@ func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existing
 		return nil // No alias changes, return early successfully
 	}
 	brandNewAliases := newAliases.ToSlice()
-	// TODO: VALIDATE WORKS!
-	aliasesFilter := bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
-		"$or": bson.A{
-			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list
-			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list // TODO: ensure ok
-		},
-	}
-
-	if err := coll.FindOne(ctx, aliasesFilter).Err(); err != nil {
+	if err := coll.FindOne(ctx, aliasesFilter(brandNewAliases)).Err(); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			// Not found, success! all unused aliases
 			return nil
@@ -1177,14 +1169,8 @@ func validateAliasesNameUnused(ctx context.Context, coll *mongo.Collection, newN
 		return nil // No alias changes, return early successfully
 	}
 	brandNewAliases := newAliases.ToSlice()
-	aliasesFilter := bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
-		"$or": bson.A{
-			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list
-			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list // TODO: ensure ok
-		},
-	}
 
-	if err := coll.FindOne(ctx, aliasesFilter).Err(); err != nil {
+	if err := coll.FindOne(ctx, aliasesFilter(brandNewAliases)).Err(); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			// Not found, success! all unused aliases
 			return nil

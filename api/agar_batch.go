@@ -166,45 +166,45 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
-func deleteAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// TODO: ensure batches not used anywhere else first
-
-	// Validate not used in other places...
-	ctx := r.Context()
-	db := DbFrom(ctx)
-	for _, collName := range []string{PlatesCollectionName, SlantsCollectionName} {
-		err = db.Collection(collName).FindOne(ctx, bson.M{"agarBatch": id}).Err()
-		if err != nil {
-			if !errors.Is(err, mongo.ErrNoDocuments) {
-				http.Error(w, "failed to check for agarBatch usage in collection "+collName+". "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			// At least one item exists, fail
-			http.Error(w, "at least one item in collection "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
-			return
-		}
-	}
-	// Delete if not found elsewhere!
-	deleteResult, err := db.Collection(AgarBatchCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
-	if err != nil {
-		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if deleteResult.DeletedCount == 0 {
-		http.Error(w, "failed to delete id "+idStr+" from agarBatch collection. Id not found", http.StatusNotFound)
-		return
-	}
-	_, err = w.Write([]byte(idStr))
-	handleWriteErr(err, w)
-}
+//func deleteAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// TODO: ensure batches not used anywhere else first
+//
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	for _, collName := range []string{PlatesCollectionName, SlantsCollectionName} {
+//		err = db.Collection(collName).FindOne(ctx, bson.M{"agarBatch": id}).Err()
+//		if err != nil {
+//			if !errors.Is(err, mongo.ErrNoDocuments) {
+//				http.Error(w, "failed to check for agarBatch usage in collection "+collName+". "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//		} else {
+//			// At least one item exists, fail
+//			http.Error(w, "at least one item in collection "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//			return
+//		}
+//	}
+//	// Delete if not found elsewhere!
+//	deleteResult, err := db.Collection(AgarBatchCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
+//	if err != nil {
+//		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	if deleteResult.DeletedCount == 0 {
+//		http.Error(w, "failed to delete id "+idStr+" from agarBatch collection. Id not found", http.StatusNotFound)
+//		return
+//	}
+//	_, err = w.Write([]byte(idStr))
+//	handleWriteErr(err, w)
+//}

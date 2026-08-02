@@ -264,50 +264,37 @@ func (acl ACL) simplified() ACL {
 		// If admin or default permission is no permission, return self
 		return acl
 	}
-	// If blanketPerm is read, then remove all users that can only read
-	if acl.Users != nil { // TODO: necessary?
+	// If blanketPerm is read or write, then remove all users that can only read? // TODO: I DONT LIKE THIS, WHAT IF BLANKET CHANGES LATER?
+	if acl.Users != nil { // TODO: necessary? try disabling this
 		for user, canWrite := range acl.Users {
 			if !canWrite {
-				delete(acl.Users, user)
+				delete(acl.Users, user) // TODO: unsure if I like this...
 			}
 		}
 	}
 	if len(acl.Users) == 0 {
 		acl.Users = nil // TODO: ensure ok!
 	}
+	// Do not remove projects because projects need to be associated with the item
 	return acl
 }
-
+func mapsMatch[A comparable, B comparable](a, b map[A]B) bool { // TODO: test. should be fine but probably needs a test around it.
+	if len(a) == 0 {
+		return len(b) == 0
+	}
+	for k, va := range a {
+		vb, exists := b[k]
+		if !exists || va != vb {
+			return false
+		}
+	}
+	return true
+}
 func (acl ACL) Equivalent(other ACL) bool {
 	if acl.BlanketPerm != other.BlanketPerm {
 		return false
 	}
-	if acl.Users == nil || len(acl.Users) == 0 {
-		if other.Users != nil || len(other.Users) != 0 {
-			return false
-		}
-	} else {
-		for user, perm := range acl.Users {
-			otherPerm, exists := other.Users[user]
-			if !exists || otherPerm != perm {
-				return false
-			}
-		}
-	}
-	if acl.Projects == nil {
-		if other.Projects != nil || len(other.Projects) != 0 {
-			return false
-		}
-	} else {
-		for proj, perm := range acl.Projects {
-			otherPerm, exists := other.Projects[proj]
-			if !exists || otherPerm != perm {
-				return false
-			}
-		}
-	}
-
-	return true
+	return mapsMatch(acl.Users, other.Users) && mapsMatch(acl.Projects, other.Projects)
 }
 
 func (acl ACL) AsField() AclField {
@@ -511,20 +498,12 @@ func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWriteP
 func (user ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permissioned) *ReadWritePerm {
 	var out ReadWritePerm = true
 	for _, item := range entryPermsets {
-		perm := item.Permissions()
-
-		thisPerm := perm.HighestPermFor(user)
+		thisPerm := item.Permissions().HighestPermFor(user)
 		if thisPerm == nil {
 			// At least one permission was nil. Return nil early
 			return nil
 		}
-		// TODO: variation 1, test against variation 2
 		out = out && *thisPerm
-		// TODO: variation 2, test against variation 1
-		//if *thisPerm || !out  {
-		//	continue
-		//}
-		//out = false
 	}
 	return &out
 }
@@ -747,7 +726,7 @@ func (requestPerms PermsOnRequest) AsACL() ACL {
 func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms ResolvedUserPerms) (AclField, error) {
 	client := GetMongoClient(ctx)
 
-	// validate Projects
+	// validate Projects // TODO: check the existing ones first please....
 	projectsToCheck := maps.Keys(requestPerms.ProjectPerms)
 	count, err := client.
 		Database(dbName).
@@ -764,7 +743,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	if int(count) != len(projectsToCheck) {
 		return AclField{}, errors.New("could not find at least one project")
 	}
-	// validate users
+	// validate users // TODO: only check new ones not on the existing item...
 	usersToCheck := maps.Keys(requestPerms.UserPerms)
 	count, err = client.
 		Database(dbName).
