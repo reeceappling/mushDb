@@ -22,7 +22,7 @@ ENV NEXT_PUBLIC_BASE_API_URL=${MAIN_API_EXTERNAL_PROTOCOL}://${MAIN_API_EXTERNAL
 
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
-# Omit --production flag for TypeScript devDependencies # TODO: ?????????
+# Omit --production flag for TypeScript devDependencies # TODO: try out npm ci --omit=dev
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci; \

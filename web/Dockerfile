@@ -15,7 +15,7 @@ FROM base AS builder
 
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
-# Omit --production flag for TypeScript devDependencies # TODO: used to be just: npm ci, could be npm ci --omit=dev
+# Omit --production flag for TypeScript devDependencies # TODO: try out npm ci --omit=dev
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci; \
@@ -64,7 +64,7 @@ FROM base AS runner
 
 RUN apk --no-cache add curl lsof
 
-# Don't run production as root, # TODO: ensure ok!
+# Don't run production as root
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 USER nextjs
