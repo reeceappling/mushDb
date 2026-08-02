@@ -75,7 +75,7 @@ func mainCollMap(name string) (item MainCollectionItem, exists bool) {
 		return &MSS{}, true
 	case "plate":
 		return &Plate{}, true
-	case "plug", "plugs":
+	case "plug":
 		return &PlugsJar{}, true
 	case "slant":
 		return &Slant{}, true
@@ -140,7 +140,6 @@ func initializeDb(ctx context.Context) error {
 	}
 	return nil
 }
-
 func typeForEntryType(src string) (MainCollectionItem, error) {
 	out, exists := map[string]MainCollectionItem{
 		BagSourceType:             &Bag{},

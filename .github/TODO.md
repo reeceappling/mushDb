@@ -48,6 +48,7 @@
 
 
 # Wishlist
+- [ ] mongodb mocks using mtest (import "go.mongodb.org/mongo-driver/mongo/integration/mtest")
 - [ ] Use an external kanidm server for auth and user management.
 - [ ] Use external openBao server for secrets management.
 - [ ] Switch policy management to Open Policy Agent? (Probably not because this would be a very heavy lift)

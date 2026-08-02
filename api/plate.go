@@ -1,5 +1,7 @@
 package api
 
+//go:generate goGenerator/buildAndGenerate.sh
+
 // TODO: newFromAgarBatch (post-PC) typical
 
 import (
@@ -204,7 +206,7 @@ func initializePlates(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		testPlateIds := []int{
+		testPlateIds := [6]int{
 			idTestPlateBlanketWrite,
 			idTestPlateBlanketRead,
 			idTestPlateAdminOnly,

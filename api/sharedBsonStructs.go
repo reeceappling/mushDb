@@ -94,7 +94,7 @@ func newPicWithNotes(tim unix.Time, notes []Note, location ImageLocation) PicWit
 	}
 }
 
-func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes {
+func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes { // TODO: use?
 	out := make([]PicWithNotes, len(inp))
 	for i, pic := range inp {
 		out[i] = PicWithNotes{
@@ -229,14 +229,13 @@ func (l Liquid) withPct(pct float64) Liquid {
 
 type Fluid string
 
-var fluids = []Fluid{Water, DistilledWater, GrainWater} // TODO: remove once autogen has been run again
-
-// TODO: remove once autogen has been run again
 var (
 	Water          = Fluid("water")
 	DistilledWater = Fluid("distilledWater")
 	GrainWater     = Fluid("grain water")
 )
+var fluids = []Fluid{Water, DistilledWater, GrainWater} // TODO: remove once autogen has been run again
+// TODO: remove once autogen has been run again
 
 func (f Fluid) AsLiquid(pct ...float64) Liquid {
 	val := 100.0
@@ -307,13 +306,14 @@ type NutrientMeasurement struct {
 
 type Nutrient string
 
-// TODO: add all of these to autogenned
-var nutrients = []Nutrient{LME, Potato, BRF}
 var (
 	LME    Nutrient = "LME"
 	Potato Nutrient = "potato flakes"
 	BRF    Nutrient = "Brown rice flour"
 )
+
+// TODO: add all of these to autogenned
+var nutrients = []Nutrient{LME, Potato, BRF}
 
 // TODO: add all of these to autogenned
 type SugarMeasurement struct {
@@ -388,7 +388,7 @@ func newAdditiveMeasurement(add Additive, amount float64, unit string) AdditiveM
 
 type Colorant string
 
-var colorants = []Colorant{clearColor, black, blue, yellow, orange, red}
+var colorants = []Colorant{clearColor, black, blue, green, yellow, orange, red, purple}
 
 // TODO: add all of these to autogenned
 var (
@@ -399,24 +399,22 @@ var (
 	yellow     Colorant = "Yellow"
 	orange     Colorant = "Orange"
 	red        Colorant = "Red" // MOST REDS ARE FUNGICIDAL
+	purple     Colorant = "Purple"
 )
 
-var colors = map[string]Colorant{
-	string(clearColor): clearColor,
-	string(black):      black,
-	string(blue):       blue,
-	string(green):      green,
-	string(yellow):     yellow,
-	string(orange):     orange,
-}
+var colors = sliceutils.MapToMap(colorants, func(inp Colorant) (string, Colorant) {
+	return string(inp), inp
+})
 
 func ValidColor(c Colorant) bool {
-	_, ok := colors[string(c)]
-	return ok
+	return slices.Contains(colorants, c)
+	// TODO: if len(colorants)>10, use the following:
+	// _, ok := colors[string(c)]
+	// return ok
 }
 
 type Additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
-var additives = []Additive{Vermiculite, Perlite, Gypsum, YeastNutrient, CoffeeGrounds}
+var additives = []Additive{Vermiculite, Perlite, Gypsum, YeastNutrient, CoffeeGrounds, Mica}
 
 // TODO: add all of these to autogenned
 var (
@@ -425,25 +423,31 @@ var (
 	Gypsum        Additive = "gypsum"
 	YeastNutrient Additive = "yeast nutrient"
 	CoffeeGrounds Additive = "Coffee Grounds"
+	Mica          Additive = "Mica"
 )
 
 type Antibiotic string
 
 // TODO: add all of these to autogenned
-var antibiotics = []Antibiotic{HydrogenPeroxide, Doxycycline, Cefazolin}
-
 var (
 	HydrogenPeroxide Antibiotic = "HydrogenPeroxide"
 	Doxycycline      Antibiotic = "Doxycycline"
 	Cefazolin        Antibiotic = "Cefazolin" // RX only, not available normally
 )
 
-// TODO: use
-var antibioticDosages = map[Antibiotic]string{ // TODO: USE THIS!
-	Doxycycline:      "unknown as of right now", // TODO: figure out measurements
-	HydrogenPeroxide: "unknown as of right now", // TODO: figure out measurements
-	Cefazolin:        "unknown as of right now", // TODO: figure out measurements
+var antibioticsWithDosages = []Tuple[Antibiotic, string]{
+	newTuple(HydrogenPeroxide, "unknown as of right now"), // TODO: figure out measurements
+	newTuple(Doxycycline, "unknown as of right now"),      // TODO: figure out measurements
+	newTuple(Cefazolin, "unknown as of right now"),        // TODO: figure out measurements
 }
+var antibiotics = sliceutils.Map(antibioticsWithDosages, func(awd Tuple[Antibiotic, string]) Antibiotic {
+	return awd.a
+})
+
+//// TODO: use next line?
+//var antibioticDosages = sliceutils.Map(antibioticsWithDosages, func(awd Tuple[Antibiotic, string]) string {
+//	return awd.b
+//})
 
 type Generation int
 
@@ -493,41 +497,39 @@ func (upd *Mods) Add(sets, unsets, pushes, pulls []bson.E) *Mods {
 	return upd
 }
 
-func (upd *Mods) Set(key string, value interface{}) *Mods { // TODO: interface ok?
+func (upd *Mods) Set(key string, value interface{}) *Mods {
 	upd.sets = append(upd.sets, bson.E{Key: key, Value: value})
 	return upd
 }
-func (upd *Mods) SetNew(key string, value interface{}) { // TODO: interface ok?
-	upd.sets = append(upd.sets, bson.E{Key: key, Value: value})
-}
 
+// TODO: ensure ok
 func (upd *Mods) UpdateValueIfNeeded(key string, future, current interface{}) *Mods { // TODO: interface ok?
 	return updateValueIfNeeded(upd, key, future, current)
 }
 
-func (upd *Mods) Unset(key string) *Mods {
+func (upd *Mods) Unset(key string) *Mods { // TODO: ensure works
 	upd.unsets = append(upd.unsets, bson.E{Key: key, Value: ""}) // TODO: "" ok here?
 	return upd
 }
 
-func (upd *Mods) Push(key string, value interface{}) *Mods { // TODO: interface ok? or slice?
+func (upd *Mods) Push(key string, value interface{}) *Mods { // TODO: interface ok, or should be slice?
 	upd.pushes = append(upd.pushes, bson.E{Key: key, Value: value})
 	return upd
 }
 
-// TODO: write what this actually does here!
-func (upd *Mods) pushBson(pushValues ...bson.E) *Mods {
-	if len(pushValues) == 0 {
-		return upd
-	}
-	upd.pushes = append(upd.pushes, pushValues...)
-	return upd
-}
+//// TODO: write what this actually does here!
+//func (upd *Mods) pushBson(pushValues ...bson.E) *Mods {
+//	if len(pushValues) == 0 {
+//		return upd
+//	}
+//	upd.pushes = append(upd.pushes, pushValues...)
+//	return upd
+//}
 
-func (upd *Mods) Pull(key string, value interface{}) *Mods { // TODO: interface ok? or slice?
-	upd.pulls = append(upd.pulls, bson.E{Key: key, Value: value})
-	return upd
-}
+//func (upd *Mods) Pull(key string, value interface{}) *Mods { // TODO: interface ok? or slice?
+//	upd.pulls = append(upd.pulls, bson.E{Key: key, Value: value})
+//	return upd
+//}
 
 func (upd *Mods) IsEmpty() bool {
 	return upd == nil || len(upd.sets)+len(upd.unsets)+len(upd.pushes)+len(upd.pulls) == 0
@@ -557,14 +559,14 @@ func (upd *Mods) addTransferOut(xferId AlternateCollectionId) *Mods {
 	return upd.Push("transfersOut", xferId) // TODO: will this work for nonexisting field?
 }
 
-func (upd *Mods) addSaleToSales(saleId AlternateCollectionId, currentSales []AlternateCollectionId) *Mods { // TODO; USE!
-	// TODO: ENSURE NOT ALREADY EXISTS
-	return upd.Push("sales", saleId) // TODO: will this work for nonexisting field?
-}
-func (upd *Mods) addOnlySale(saleId AlternateCollectionId) *Mods { // TODO; USE!
-	// TODO: ensure the sale did not already exist first
-	return upd.Push("sale", saleId) // TODO: will this work for nonexisting field?
-}
+//func (upd *Mods) addSaleToSales(saleId AlternateCollectionId, currentSales []AlternateCollectionId) *Mods { // TODO; USE!
+//	// TODO: ENSURE NOT ALREADY EXISTS
+//	return upd.Push("sales", saleId) // TODO: will this work for nonexisting field?
+//}
+//func (upd *Mods) addOnlySale(saleId AlternateCollectionId) *Mods { // TODO; USE!
+//	// TODO: ensure the sale did not already exist first
+//	return upd.Push("sale", saleId) // TODO: will this work for nonexisting field?
+//}
 
 func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 	futureIsEmpty := future == nil || len(future) == 0

@@ -22,13 +22,12 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"reflect"
 	"time"
 )
 
 const maxMultipartRequestSize = 32<<25 + 1024 //32<<20 + 1024 // TODO: is this max size ok?
 
-const GoodTestRfidTag = "goodTestRdfidItem"
+//const GoodTestRfidTag = "goodTestRdfidItem"
 
 var ErrNoParentModifiedForTransfer = errors.New("parent not found for transfer update. Shouldnt occur")
 var ErrMissingOptionalField = errors.New("missing optional field")
@@ -81,84 +80,135 @@ var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false)
 //	return []primitive.E{withUpdateNow()}
 //}
 
-func Initialize(ctx context.Context) error {
-	if err := initializeItemMapCollection(ctx); err != nil {
-		return err
+type Tuple[A any, B any] struct {
+	a A
+	b B
+}
+
+func newTuple[A any, B any](a A, b B) Tuple[A, B] {
+	return Tuple[A, B]{
+		a: a,
+		b: b,
 	}
-	for i, initializer := range map[string]func(context.Context) error{
-		"db": initializeDb,
+}
+func (t Tuple[A, B]) values() (A, B) {
+	return t.a, t.b
+}
+
+type initializer Tuple[string, func(context.Context) error]
+
+func (item initializer) Name() string {
+	return item.a
+}
+func (item initializer) initialize(ctx context.Context) error {
+	return item.b(ctx)
+}
+func newInitializer(name string, f func(context.Context) error) initializer {
+	return initializer(Tuple[string, func(context.Context) error]{a: name, b: f})
+}
+
+func Initialize(ctx context.Context) error {
+	for _, item := range [30]initializer{
+		newInitializer("itemMapCollection", initializeItemMapCollection),
+		newInitializer("db", initializeDb),
 		// Initialize main collections
-		"bags":             initializeBags,
-		"fruiting chamber": initializeFruitingChamber,
-		"jars":             initializeJars,
-		"LCs":              initializeLCs,
-		"LcSyringes":       initializeSyringes,
-		"mss":              initializeMSS,
-		"plate":            initializePlates,
-		"slant":            initializeSlants,
-		"stasis tube":      initializeStasisTubes,
-		"spore swabs":      initializeSporeSwabs,
-		// Initialize new main collections
-		"fruit":       initializeFruits,
-		"spore print": initializeSporePrints,
-		"plugs":       initializePlugs,
-		"waterJar":    initializeWaterJars,
-		//Initialize Collections with predefined items
-		"agar Recipe":      initializeAgarRecipes,
-		"jar Recipe":       initializeJarRecipes,
-		"lc Recipe":        initializeLcRecipes,
-		"substrate Recipe": initializeSubstrates,
-		"species":          initializeSpecies,
-		"subspecies":       initializeSubspecies,
+		newInitializer("bags", initializeBags),
+		newInitializer("fruiting chambers", initializeFruitingChamber),
+		newInitializer("jars", initializeJars),
+		newInitializer("LCs", initializeLCs),
+		newInitializer("lcSyringes", initializeSyringes),
+		newInitializer("mss", initializeMSS),
+		newInitializer("plates", initializePlates),
+		newInitializer("slants", initializeSlants),
+		newInitializer("stasis tubes", initializeStasisTubes),
+		newInitializer("spore swabs", initializeSporeSwabs),
+		newInitializer("fruits", initializeFruits),
+		newInitializer("spore prints", initializeSporePrints),
+		newInitializer("plugs", initializePlugs),
+		newInitializer("waterJars", initializeWaterJars),
+		//Initialize Alt Collections with predefined items
+		newInitializer("agar Recipes", initializeAgarRecipes),
+		newInitializer("jar Recipes", initializeJarRecipes),
+		newInitializer("lc Recipes", initializeLcRecipes),
+		newInitializer("substrate Recipes", initializeSubstrates),
+		newInitializer("species", initializeSpecies),
+		newInitializer("subspecies", initializeSubspecies),
 		// Initialize other alt collections
-		"agar batch":        initializeAgarBatches,
-		"grain batch":       initializeGrainBatches,
-		"pc run":            initializePCRun,
-		"sales":             initializeSales,
-		"transfer":          initializeTransfers,
-		"projects":          initializeProjects,
-		"substrate batches": initializeSubstrateBatches,
+		newInitializer("agar batches", initializeAgarBatches),
+		newInitializer("grain batches", initializeGrainBatches),
+		newInitializer("pc runs", initializePCRuns),
+		newInitializer("sales", initializeSales),
+		newInitializer("transfer", initializeTransfers),
+		newInitializer("projects", initializeProjects),
+		newInitializer("substrate batches", initializeSubstrateBatches),
 		// initialize users
-		"users": initializeUsers,
+		newInitializer("users", initializeUsers),
 	} {
-		println("trying", i, "initializer")
-		if err := initializer(ctx); err != nil {
-			return errors.Join(fmt.Errorf(`%s initializer failed`, i), err)
+		if err := item.initialize(ctx); err != nil {
+			return errors.Join(fmt.Errorf(`%s initializer failed`, item.Name()), err)
 		}
-		println("completed initializing", i)
 	}
 	// TODO: REENABLE!
 	//if err := initializeAliasesCollection(ctx); err != nil { // TODO: when spec/subspec/subRec are created/modified/deleted, also update the aliases collection!
 	//	println("aliases collection failed to initialize", err.Error())
 	//	return errors.Join(errors.New("aliases initializer failed"), err)
 	//}
-	for name, b58IdStr := range map[string]string{
+	for _, item := range []Tuple[string, string]{
 		// Mains IDs
-		"plate":           string(exPlate.AsBase58()),
-		"bag":             string(exBag.AsBase58()),
-		"fruitingChamber": string(exFC.AsBase58()),
-		"jar":             string(exJar.AsBase58()),
-		"mss":             string(exMSS.AsBase58()),
-		"slant":           string(exSlant.AsBase58()),
-		"stasisTube":      string(exStasis.AsBase58()),
-		"fruit":           string(exFruitId.AsBase58()),
-		"sporePrint":      string(exSporePrint.AsBase58()),
-		"waterJar":        string(exWaterId.AsBase58()),
+		newTuple("plate", string(exPlate.AsBase58())),
+		newTuple("bag", string(exBag.AsBase58())),
+		newTuple("fruitingChamber", string(exFC.AsBase58())),
+		newTuple("jar", string(exJar.AsBase58())),
+		newTuple("mss", string(exMSS.AsBase58())),
+		newTuple("slant", string(exSlant.AsBase58())),
+		newTuple("stasisTube", string(exStasis.AsBase58())),
+		newTuple("fruit", string(exFruitId.AsBase58())),
+		newTuple("sporePrint", string(exSporePrint.AsBase58())),
+		newTuple("waterJar", string(exWaterId.AsBase58())),
 		// Standard Alt IDs
-		"agarBatch":       string(exAltId.AsBase58()),
-		"agarRecipe":      string(exAltId.AsBase58()),
-		"jarRecipe":       string(exAltId.AsBase58()),
-		"lcRecipe":        string(exAltId.AsBase58()),
-		"sale":            string(exAltId.AsBase58()),
-		"substrateRecipe": string(exAltId.AsBase58()),
-		"transfer":        string(exAltId.AsBase58()),
+		newTuple("agarBatch", string(exAltId.AsBase58())),
+		newTuple("agarRecipe", string(exAltId.AsBase58())),
+		newTuple("jarRecipe", string(exAltId.AsBase58())),
+		newTuple("lcRecipe", string(exAltId.AsBase58())),
+		newTuple("sale", string(exAltId.AsBase58())),
+		newTuple("substrateRecipe", string(exAltId.AsBase58())),
+		newTuple("transfer", string(exAltId.AsBase58())),
 		// String Alt IDs
-		"project":    testEntryStringId,
-		"species":    testEntryStringId,
-		"subspecies": testEntryStringId,
+		newTuple("project", testEntryStringId),
+		newTuple("species", testEntryStringId),
+		newTuple("subspecies", testEntryStringId),
 	} {
+		name, b58IdStr := item.values()
 		println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
 	}
+	//// TODO: is map ok here or would a slice of tuples be better?
+	//for name, b58IdStr := range map[string]string{
+	//	// Mains IDs
+	//	"plate":           string(exPlate.AsBase58()),
+	//	"bag":             string(exBag.AsBase58()),
+	//	"fruitingChamber": string(exFC.AsBase58()),
+	//	"jar":             string(exJar.AsBase58()),
+	//	"mss":             string(exMSS.AsBase58()),
+	//	"slant":           string(exSlant.AsBase58()),
+	//	"stasisTube":      string(exStasis.AsBase58()),
+	//	"fruit":           string(exFruitId.AsBase58()),
+	//	"sporePrint":      string(exSporePrint.AsBase58()),
+	//	"waterJar":        string(exWaterId.AsBase58()),
+	//	// Standard Alt IDs
+	//	"agarBatch":       string(exAltId.AsBase58()),
+	//	"agarRecipe":      string(exAltId.AsBase58()),
+	//	"jarRecipe":       string(exAltId.AsBase58()),
+	//	"lcRecipe":        string(exAltId.AsBase58()),
+	//	"sale":            string(exAltId.AsBase58()),
+	//	"substrateRecipe": string(exAltId.AsBase58()),
+	//	"transfer":        string(exAltId.AsBase58()),
+	//	// String Alt IDs
+	//	"project":    testEntryStringId,
+	//	"species":    testEntryStringId,
+	//	"subspecies": testEntryStringId,
+	//} {
+	//	println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
+	//}
 	// TODO: validateDbEntries(ctx)
 
 	return nil
@@ -168,47 +218,47 @@ func Initialize(ctx context.Context) error {
 //	for _, _ = range map[string]
 //}
 
-func simplifyUpdates(elementsGroup ...bson.E) bson.D { // TODO: USE THIS
-	return elementsGroup
-}
+//func simplifyUpdates(elementsGroup ...bson.E) bson.D { // TODO: USE THIS
+//	return elementsGroup
+//}
+//
+//func simpleUpdate(key string, value interface{}) bson.E { // TODO: use or delete
+//	return bson.E{Key: key, Value: value}
+//}
+//
+//func simplePointerUpdate[T any](mods []bson.E, key string, ptr *T) []bson.E { // TODO: use or delete
+//	if ptr == nil {
+//		return mods
+//	}
+//	out := append(mods, simpleUpdate(key, ptr))
+//	return out
+//}
 
-func simpleUpdate(key string, value interface{}) bson.E {
-	return bson.E{Key: key, Value: value}
-}
-
-func simplePointerUpdate[T any](mods []bson.E, key string, ptr *T) []bson.E {
-	if ptr == nil {
-		return mods
-	}
-	out := append(mods, simpleUpdate(key, ptr))
-	return out
-}
-
-func getItemLatestImage(item CollectionItem) (*ImageLocation, unix.Time) { // TODO: consider using?
-	var loc *ImageLocation = nil
-	var latest unix.Time = 0
-	if itemWithPicsField, ok := item.(interface{ getLatestPicFromPicsField() *PicWithNotes }); ok {
-		if pwn := itemWithPicsField.getLatestPicFromPicsField(); pwn != nil {
-			loc = &pwn.Location
-			latest = pwn.Time
-		}
-	}
-	if contamItem, ok := item.(interface{ getContamsLatestImage() *Contamination }); ok {
-		if contam := contamItem.getContamsLatestImage(); contam != nil {
-			if contam.Location != nil && contam.Time > latest {
-				return contam.Location, contam.Time
-			}
-		}
-	}
-	// TODO: add getLatestFlush to Bags, FCs, etc...
-	if itemWithFlushesField, ok := item.(interface{ getLatestFlush() *PicWithNotes }); ok {
-		if pwn := itemWithFlushesField.getLatestFlush(); pwn != nil {
-			loc = &pwn.Location
-			latest = pwn.Time
-		}
-	}
-	return loc, latest
-}
+//func getItemLatestImage(item CollectionItem) (*ImageLocation, unix.Time) { // TODO: consider using?
+//	var loc *ImageLocation = nil
+//	var latest unix.Time = 0
+//	if itemWithPicsField, ok := item.(interface{ getLatestPicFromPicsField() *PicWithNotes }); ok {
+//		if pwn := itemWithPicsField.getLatestPicFromPicsField(); pwn != nil {
+//			loc = &pwn.Location
+//			latest = pwn.Time
+//		}
+//	}
+//	if contamItem, ok := item.(interface{ getContamsLatestImage() *Contamination }); ok {
+//		if contam := contamItem.getContamsLatestImage(); contam != nil {
+//			if contam.Location != nil && contam.Time > latest {
+//				return contam.Location, contam.Time
+//			}
+//		}
+//	}
+//	// TODO: add getLatestFlush to Bags, FCs, etc...
+//	if itemWithFlushesField, ok := item.(interface{ getLatestFlush() *PicWithNotes }); ok {
+//		if pwn := itemWithFlushesField.getLatestFlush(); pwn != nil {
+//			loc = &pwn.Location
+//			latest = pwn.Time
+//		}
+//	}
+//	return loc, latest
+//}
 
 // TODO: USE THIS IN UPDATES!
 //func latestPicUpdate(latestPicPtrsForEachGroup []*PicWithNotes) []bson.E {
@@ -246,31 +296,31 @@ func getItemLatestImage(item CollectionItem) (*ImageLocation, unix.Time) { // TO
 //	}
 //}
 
-func pushToArrayInline[T any](fieldName string, vals ...T) bson.D {
-	switch len(vals) {
-	case 1:
-		return bson.D{{
-			Key: "$push",
-			Value: bson.D{{
-				Key:   fieldName,
-				Value: vals[0],
-			}},
-		}}
-	case 0:
-		return bson.D{}
-	default:
-		return bson.D{{
-			Key: "$push",
-			Value: bson.D{{
-				Key: fieldName,
-				Value: bson.D{{
-					Key:   "$each",
-					Value: vals,
-				}},
-			}},
-		}} // TODO: ensure this works
-	}
-}
+//func pushToArrayInline[T any](fieldName string, vals ...T) bson.D {
+//	switch len(vals) {
+//	case 1:
+//		return bson.D{{
+//			Key: "$push",
+//			Value: bson.D{{
+//				Key:   fieldName,
+//				Value: vals[0],
+//			}},
+//		}}
+//	case 0:
+//		return bson.D{}
+//	default:
+//		return bson.D{{
+//			Key: "$push",
+//			Value: bson.D{{
+//				Key: fieldName,
+//				Value: bson.D{{
+//					Key:   "$each",
+//					Value: vals,
+//				}},
+//			}},
+//		}} // TODO: ensure this works
+//	}
+//}
 
 //func pushToArrayNew[T any](fieldName string, vals ...T) bson.D { // TODO: rename
 //	switch len(vals) {
@@ -344,9 +394,9 @@ func newSimpleIndex(indexName, key string, descending, sparse, unique bool) mong
 	}
 }
 
-func indicesSame(a, b mongo.IndexModel) bool { // TODO: use?
-	return (a.Keys.(bson.D)[0].Key == b.Keys.(bson.D)[0].Key) && reflect.DeepEqual(a.Options, b.Options)
-}
+//func indicesSame(a, b mongo.IndexModel) bool { // TODO: use?
+//	return (a.Keys.(bson.D)[0].Key == b.Keys.(bson.D)[0].Key) && reflect.DeepEqual(a.Options, b.Options)
+//}
 
 var ErrInvalidEntryType = errors.New("invalid entry type")
 

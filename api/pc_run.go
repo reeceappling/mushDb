@@ -33,7 +33,7 @@ type PCRun struct {
 
 var impPcRun = exAltId
 
-func initializePCRun(ctx context.Context) error {
+func initializePCRuns(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(PcRunCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
