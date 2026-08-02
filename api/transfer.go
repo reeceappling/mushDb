@@ -36,7 +36,7 @@ type transferReason string
 const xferReasonColonized transferReason = "colonized"
 const xferReasonReady transferReason = "ready"
 
-var transferReasons = map[transferReason]string{
+var transferReasons = map[transferReason]string{ // TODO: move these to autogenned?
 	"outgrew":           "outgrew plate", // TODO: is colonized just this?
 	"contaminated":      "parent was contaminated",
 	"sectoring":         "transferring a specific sector",
@@ -45,7 +45,7 @@ var transferReasons = map[transferReason]string{
 	xferReasonReady:     "ready", // TODO: ?????
 }
 
-var sporePrintColors = []SporePrintColor{
+var sporePrintColors = []SporePrintColor{ // TODO: move these to autogenned?
 	SpColorBlack,
 	SpColorBrown,
 	SpColorRed,
@@ -53,7 +53,7 @@ var sporePrintColors = []SporePrintColor{
 	SpColorClear,
 }
 
-var sporePrintDensities = []SporePrintDensity{
+var sporePrintDensities = []SporePrintDensity{ // TODO: move these to autogenned?
 	SpDensityHeavy,
 	SpDensityAvg,
 	SpDensitySparse,
