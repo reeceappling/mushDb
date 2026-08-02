@@ -132,6 +132,7 @@ secrets:
 volumes:
   pictures:
     labels:
+      # TODO: different label key?
       com.example.description: "Persistent volume for images"
     driver: local
     driver_opts:
@@ -140,12 +141,15 @@ volumes:
       o: bind
   mongodb-data:
     driver: local
+    # TODO: labels for volume description?
     driver_opts:
       type: none
       device: ${LOCAL_DB_DIR:?error}
       o: bind
   backups:
+    # TODO: consider removing backups volume!
     driver: local
+    # TODO: labels for volume description?
     driver_opts:
       type: none
       device: ${LOCAL_DB_BACKUPS_DIR:?error}
