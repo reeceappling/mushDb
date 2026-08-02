@@ -21,7 +21,7 @@ import (
 	"time"
 )
 
-//func newOauthConfig() *oauth2.Config { // TODO: CHANGE
+//func newOauthConfig() *oauth2.Config { // TODO: CHANGE OR DELETE
 //	return &oauth2.Config{
 //		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 //		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -92,7 +92,7 @@ type AuthService struct {
 	sessMap        map[SessionId]genericsessions.Session[ResolvedUserPerms]
 	UserSessionMap map[string]SessionId
 	ttl            time.Duration
-	*sync.RWMutex  // This struct MUST be used as a pointer // TODO: HATE how the mutexes are used in here
+	*sync.RWMutex  // This struct MUST be used as a pointer // TODO: HATE how the mutexes are used in here..
 }
 
 var (

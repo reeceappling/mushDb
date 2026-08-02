@@ -31,7 +31,7 @@ const ( // MainCollection test ints
 	idTestPlateAdminOnly // No blanket permission, no users, no projects
 )
 
-func init() { // TODO: remove this block!
+func init() { // TODO: remove this block!!!!!
 	if idTestPlateAdminOnly >= 255 {
 		panic("test values 1 go too high")
 	}
@@ -73,6 +73,16 @@ func builtInNote(note string) Note {
 	}
 }
 func altCollIdForint(i int) AlternateCollectionId { // TODO: FIX FOR uint8 overflow
+	//temp := i // TODO: switch and check if we start going above 255!
+	//out := [12]byte{0, 0, 0, 0, 0, 0, 0, 0}
+	//for j := 0; j<12; j++ {
+	//	out[12-j] = byte(temp % 8)
+	//	temp = temp/8
+	//	if temp == 0 {
+	//		return out
+	//	}
+	//}
+	//return out
 	return [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, uint8(i)}
 }
 
@@ -92,8 +102,4 @@ func mainCollIdForint(i int) MainCollectionId { // TODO: FIX FOR uint8 overflow
 	//}
 	//return out
 	return [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)} // TODO: reenable if the above does not work! TODO: ENSURE TO REENABLE IF NEEDED!
-}
-
-func mainCollIdFieldForint(i int) MainCollectionIdField {
-	return MainCollectionIdField{mainCollIdForint(i)}
 }
