@@ -552,11 +552,9 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	client := GetMongoClient(ctx)
-	coll := client.Database(dbName).Collection(PlatesCollectionName)
+	coll := GetMongoClient(ctx).Database(dbName).Collection(PlatesCollectionName)
 	existing := &Plate{}
-	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing)
-	if err != nil {
+	if err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing); err != nil {
 		// TODO: an issue here?
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
@@ -576,13 +574,11 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 	}
 	// write updates to db
 	bsonId := BsonFindFilter(IDfld, id)
-	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-	if err != nil {
+	if err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err(); err != nil {
 		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = coll.FindOne(ctx, bsonId).Decode(&existing)
-	if err != nil {
+	if err = coll.FindOne(ctx, bsonId).Decode(&existing); err != nil {
 		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -604,15 +600,10 @@ func handleUpdateModsInTxn[T any, U MainCollectionId | AlternateCollectionId | s
 	}
 	// write updates to db
 	bsonId := BsonFindFilter(IDfld, id)
-	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-	if err != nil {
+	if err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err(); err != nil {
 		return err
 	}
-	err = coll.FindOne(ctx, bsonId).Decode(&existing)
-	if err != nil {
-		return err
-	}
-	return nil
+	return coll.FindOne(ctx, bsonId).Decode(&existing)
 }
 
 type importPlateRequest struct {

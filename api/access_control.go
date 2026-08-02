@@ -492,8 +492,8 @@ func (perms ResolvedUserPerms) PermsForProject(projName projectName) *ReadWriteP
 	}
 	// True is project admin
 	// False is can write on project items, but not project itself
-	// Nil is can only read
-	return userProjPerm.RWPerm() // TODO: validate that nil==read is ok here!
+	// Nil is can only read // TODO: validate that nil==read is ok here!
+	return userProjPerm.RWPerm()
 }
 
 func (user ResolvedUserPerms) lowestPermBetweenEntries(entryPermsets ...Permissioned) *ReadWritePerm {

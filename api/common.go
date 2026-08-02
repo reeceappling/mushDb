@@ -944,26 +944,26 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if user.isGuest() {
-		dbErr(w, "guests cannot edit", http.StatusForbidden)
-		return
-	}
+	//if user.isGuest() { // TODO: handled elsewhere!
+	//	dbErr(w, "guests cannot edit", http.StatusForbidden)
+	//	return
+	//}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
 	// TODO: dont allow user to remove their own perms!
-	//if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
-	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
-	//	return
-	//}
+	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
+		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+		return
+	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	upd, err := modsFor(existing, aclField)
-	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err) // TODO: switch to inTxn?
 	return
 }
 
@@ -975,19 +975,19 @@ func finishMainCollItemUpdateInTxn[T MainCollectionItem](ctx mongo.SessionContex
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return existing, err
 	}
-	if user.isGuest() { // TODO: do we even need this here?
-		dbErr(w, "guests cannot edit", http.StatusForbidden)
-		return existing, err
-	}
+	//if user.isGuest() { // TODO: I think this is handled elsewhere...
+	//	dbErr(w, "guests cannot edit", http.StatusForbidden)
+	//	return existing, err
+	//}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return existing, err
 	}
 	// TODO: dont allow user to remove their own perms!
-	//if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
-	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
-	//	return
-	//}
+	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
+		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+		return existing, err
+	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
@@ -1013,7 +1013,7 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		return
 	}
 	if !user.HasPermissionToEdit(existing) {
-		dbErr(w, "unauthorized to edit", http.StatusUnauthorized)
+		dbErr(w, "user not authorized to edit this entry", http.StatusUnauthorized)
 		return
 	}
 	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
@@ -1026,7 +1026,7 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		return
 	}
 	upd, err := modsFor(existing, aclField)
-	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err) // TODO: switch to inTxn?
 	return
 }
 
@@ -1036,26 +1036,26 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if user.isGuest() {
-		dbErr(w, "guests cannot edit", http.StatusForbidden)
-		return
-	}
+	//if user.isGuest() { // TODO: I think this is handled elsewhere...
+	//	dbErr(w, "guests cannot edit", http.StatusForbidden)
+	//	return
+	//}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
 	// TODO: dont allow user to remove their own perms!
-	//if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
-	//	http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
-	//	return
-	//}
+	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
+		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+		return
+	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	upd, err := modsFor(existing, aclField)
-	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err) // TODO: switch to inTxn?
 	return
 }
 

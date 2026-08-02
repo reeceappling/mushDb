@@ -42,7 +42,7 @@ func initializeLcRecipes(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(LcRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false),
+		newSimpleIndex("name", "name", false, false, false), // TODO: ok that these are not unique?
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
 		standardIndexModel,
@@ -212,20 +212,6 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 			stat = http.StatusNotFound
 		}
 		http.Error(w, err.Error(), stat)
-		return
-	}
-	user, err := GetResolvedUserPerms(ctx)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if !user.HasPermissionToEdit(existing) {
-		http.Error(w, "user not authorized to edit this entry", http.StatusForbidden)
-		return
-	}
-	// TODO: do the next block everywhere! Ensure user does not remove their own write perms!
-	if !req.PermsOnRequest.AsACL().HighestPermFor(user).CanWrite() {
-		http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
