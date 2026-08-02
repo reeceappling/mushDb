@@ -184,6 +184,11 @@ func UserProjectWrite() *UserProjectPerm {
 func UserProjectRead() *UserProjectPerm {
 	return nil
 }
+
+// func UserProjectModify() *UserProjectPerm { // TODO: fix!
+//
+//		return nil
+//	}
 func (upp *UserProjectPerm) ProjectPerm() ProjectPerm {
 	if upp == nil {
 		return ProjectRead

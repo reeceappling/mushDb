@@ -247,9 +247,9 @@ func (acl *ACL) UnmarshalJSON(bs []byte) (err error) {
 			return errors.New("ACL projects is not a map[string]bool or nil")
 		}
 	}
-	if blanketPermIfc, exists := temp["blanketPerm"]; exists { // TODO: validate ok! blanket perm may be missing!
+	if blanketInterface, exists := temp["blanketPerm"]; exists { // TODO: validate ok! blanket perm may be missing!
 		var blanketPermIsValid = false
-		*out.BlanketPerm, blanketPermIsValid = blanketPermIfc.(ReadWritePerm) // TODO: validate ok! blanket perm may be missing!
+		*out.BlanketPerm, blanketPermIsValid = blanketInterface.(ReadWritePerm) // TODO: validate ok! blanket perm may be missing!
 		if !blanketPermIsValid {
 			return errors.New("ACL blanketPerm must be a present boolean field v2")
 		}
@@ -343,7 +343,7 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	}
 	if userPerms.Projects != nil {
 		for proj, projCanWriteOnEntry := range acl.Projects {
-			if projPerm, exists := userPerms.Projects[proj]; exists {
+			if projPerm, exists := userPerms.Projects[proj]; exists { // TODO: account for project edit!?
 				userCanWriteOnProj := projPerm != nil
 				userCanWriteOnProjAndProjCanWriteOnEntry := userCanWriteOnProj && projCanWriteOnEntry
 				if userCanWriteOnProjAndProjCanWriteOnEntry {
@@ -547,7 +547,7 @@ var (
 	ProjectAdmin ProjectPerm = "admin"
 	// TODO: next line
 	//// ProjectModify defines a ProjectPerm for a user that can write and read on entries for the specified project, as well as modify everything on the project except permissions
-	//ProjectModify ProjectPerm = "modify"
+	// TODO: this! ProjectModify ProjectPerm = "modify"
 	// ProjectWrite defines a ProjectPerm for a user that can write (and read) on entries for the specified project (if the project can write to the entry)
 	ProjectWrite ProjectPerm = "write"
 	// ProjectRead defines a ProjectPerm for a user that can read entries for the specified project
@@ -563,6 +563,8 @@ func (pp ProjectPerm) UserProjectPerm() *UserProjectPerm {
 		return UserProjectWrite()
 	case ProjectRead:
 		return UserProjectRead()
+	//case ProjectModify:
+	//	return UserProjectModify() // TODO: FIX!
 	default:
 		panic("invalid user project perm string: " + string(pp))
 	}
@@ -582,8 +584,8 @@ func (pp *ProjectPerm) CanWrite() bool {
 	return pp != nil && *pp != ProjectRead
 }
 
-//func (pp *ProjectPerm) CanModify() bool { // TODO: this!
-//	return pp != nil && *pp != ProjectRead
+//func (pp *ProjectPerm) CanModifyProject() bool { // TODO: this!
+//	return pp != nil && *pp == ProjectModify
 //}
 
 func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) {
