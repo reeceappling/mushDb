@@ -564,7 +564,7 @@ func (pp ProjectPerm) UserProjectPerm() *UserProjectPerm {
 	case ProjectRead:
 		return UserProjectRead()
 	//case ProjectModify:
-	//	return UserProjectModify() // TODO: FIX!
+	//	return UserProjectModify() // TODO: FIX! May be physically impossible given UserProjectX is a *bool
 	default:
 		panic("invalid user project perm string: " + string(pp))
 	}
