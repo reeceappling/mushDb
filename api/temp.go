@@ -52,19 +52,21 @@ type ReadWriteService interface {
 }
 type readWriteSvc struct{}
 
-func (rw readWriteSvc) WriteRfid(ctx context.Context, readerName shared.RfidReaderName, id MainCollectionId) error {
+func (rw readWriteSvc) WriteRfid(ctx context.Context, readerName shared.RfidReaderName, id MainCollectionId) (err error) {
 	mgr := websocketSessions.GetSessionManager(ctx)
 	if mgr == nil {
-		println("no session mgr found?") // TODO: del
-		return websocketSessions.ErrNoSessionManager
+		err = websocketSessions.ErrNoSessionManager
+		println("no session mgr found") // TODO: del
+		return
 	}
 	return mgr.WriteRfid(ctx, readerName, id) // TODO: handle manager nil check within this!
 }
-func (rw readWriteSvc) ReadRfid(ctx context.Context, readerName shared.RfidReaderName) ([8]byte, error) {
+func (rw readWriteSvc) ReadRfid(ctx context.Context, readerName shared.RfidReaderName) (out [8]byte, err error) {
 	mgr := websocketSessions.GetSessionManager(ctx)
 	if mgr == nil {
+		err = websocketSessions.ErrNoSessionManager
 		println("no session mgr found?") // TODO: del
-		return [8]byte{}, websocketSessions.ErrNoSessionManager
+		return
 	}
 	return mgr.ReadRfid(ctx, readerName) // TODO: handle manager nil check within this!
 }
