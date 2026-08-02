@@ -27,7 +27,7 @@ func (u User) IdValue() any {
 	return u.Email
 }
 
-func (u *User) Reload(ctx context.Context) error {
+func (u *User) Reload(ctx context.Context) error { // TODO: del if unused?
 	if u == nil {
 		return errors.New("User is nil")
 	}
