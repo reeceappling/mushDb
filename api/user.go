@@ -15,7 +15,7 @@ import (
 
 type User struct {
 	Email string    `bson:"_id" json:"_id"`
-	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // TODO: PROJECTS COME FROM PERMS! So even projects with only read perms can be associated with an item!
+	Perms UserPerms `bson:"perms,omitempty" json:"perms,omitempty"` // PROJECTS COME FROM PERMS! So even projects with only read perms can be associated with an item!
 	// All can view?
 }
 
@@ -209,7 +209,6 @@ func (u User) ResolvePerms(ctx context.Context) (ResolvedUserPerms, error) {
 	}
 	// If not regular user (is guest or admin), return early
 	if !acctType.IsRegular() {
-		println("user is guest or admin") // TODO; del
 		return out, nil
 	}
 

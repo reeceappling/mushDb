@@ -231,34 +231,34 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
 
-func deleteLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id") // recipe by name?
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	db := DbFrom(ctx)
-	// ensure batch not used by any jars first
-	for _, collName := range []string{LCCollectionName} {
-		err = db.Collection(collName).FindOne(ctx, bson.M{"recipe": id}).Err()
-		if err != nil {
-			if !errors.Is(err, mongo.ErrNoDocuments) {
-				http.Error(w, "failed to check for lc recipe usage in "+collName+" collection. "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			// At least one item exists, fail
-			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
-			return
-		}
-	}
-
-	DeleteCollectionItem(ctx, LcRecipesCollectionName, id, w)
-}
+//func deleteLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id") // recipe by name?
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	// ensure batch not used by any jars first
+//	for _, collName := range []string{LCCollectionName} {
+//		err = db.Collection(collName).FindOne(ctx, bson.M{"recipe": id}).Err()
+//		if err != nil {
+//			if !errors.Is(err, mongo.ErrNoDocuments) {
+//				http.Error(w, "failed to check for lc recipe usage in "+collName+" collection. "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//		} else {
+//			// At least one item exists, fail
+//			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//			return
+//		}
+//	}
+//
+//	DeleteCollectionItem(ctx, LcRecipesCollectionName, id, w)
+//}

@@ -19,14 +19,15 @@ import (
 
 type GrainBatch struct {
 	AlternateCollectionIdField `bson:"inline"`
-	SoakTimeHours              *int            `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
-	BoilTimeMins               *int            `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
-	DryTimeHours               *int            `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
-	CreationDateField          `bson:"inline"` // Date of first hydration. also exists in the id
-	JarRecipeRequiredField     `bson:"inline"`
-	NotesField                 `bson:"inline"`
-	LastUpdatedField           `bson:"inline"`
-	AclField                   `bson:"inline"`
+	// TODO: what of different grains that have different timings? think over this.
+	SoakTimeHours          *int            `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
+	BoilTimeMins           *int            `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
+	DryTimeHours           *int            `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
+	CreationDateField      `bson:"inline"` // Date of first hydration. also exists in the id
+	JarRecipeRequiredField `bson:"inline"`
+	NotesField             `bson:"inline"`
+	LastUpdatedField       `bson:"inline"`
+	AclField               `bson:"inline"`
 }
 
 type GrainBatchField struct {

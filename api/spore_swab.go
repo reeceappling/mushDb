@@ -72,8 +72,8 @@ func initializeSporeSwabs(ctx context.Context) error {
 	coll := DbFrom(ctx).Collection(SporeSwabCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		//newSimpleIndex("parent", "parent", false, false, false),
-		// TODO: parentType?
-		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
+		// parentType?
+		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//saleIndexModel,
@@ -108,7 +108,7 @@ func initializeSporeSwabs(ctx context.Context) error {
 type createSporeSwabRequest struct {
 	MainCollectionParentField // required
 	// Parent type is retrieved
-	// TODO: HANDLE PICS
+	// TODO: HANDLE PICS, were pics added in ts?
 	NotesField
 	WriteTagToField
 }
@@ -320,7 +320,7 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// DECIDE: can anyone who is not a guest import?
+	// DECIDE: can anyone who is not a guest import? Guests are already denied
 	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return

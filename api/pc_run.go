@@ -38,7 +38,7 @@ func initializePCRuns(ctx context.Context) error {
 	coll := DbFrom(ctx).Collection(PcRunCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
-		// TODO: newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
+		// newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false), // TODO: index runtimes? probably not
 		//Notes (no index unless tags)
 		projectsIndexModel,
 		lastUpdatedIndexModel,

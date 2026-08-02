@@ -358,45 +358,45 @@ func (s SpeciesOptionalField) Get(ctx context.Context) (*Species, error) {
 	return out, err
 }
 
-func deleteSpeciesHandler(w http.ResponseWriter, r *http.Request) {
-	idEncoded := r.PathValue("id")
-	if idEncoded == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	speciesName, err := UrlDecodeString(idEncoded)
-	if err != nil {
-		http.Error(w, "failed to decode species name from url: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	db := DbFrom(ctx)
-	// TODO: ensure to also delete subspecies???!?!?!?!?
-	// ensure species not used anywhere else first
-	for _, collName := range []string{BagsCollectionName, FruitsCollName, FruitingChamberCollectionName, GrainJarCollectionName, LCCollectionName, LcSyringeCollectionName, MssCollectionName, PlatesCollectionName, PlugsCollectionName, SlantsCollectionName, StasisTubeCollectionName, WaterJarsCollectionName} {
-		err = db.Collection(collName).FindOne(ctx, bson.M{"species": speciesName}).Err()
-		if err != nil {
-			if !errors.Is(err, mongo.ErrNoDocuments) {
-				http.Error(w, "failed to check for species usage in "+collName+". "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			// At least one item exists, fail
-			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
-			return
-		}
-	}
-
-	result, err := DbFrom(ctx).Collection(SpeciesCollectionName).DeleteOne(ctx, bson.M{IDfld: speciesName})
-	if err != nil {
-		http.Error(w, "failed to delete species "+speciesName+". "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if result.DeletedCount == 0 {
-		http.Error(w, "species was not deleted, it was not found", http.StatusNotFound)
-		return
-	}
-	_, err = w.Write([]byte(speciesName)) // TODO: ok?
-	handleWriteErr(err, w)
-}
+//func deleteSpeciesHandler(w http.ResponseWriter, r *http.Request) {
+//	idEncoded := r.PathValue("id")
+//	if idEncoded == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	speciesName, err := UrlDecodeString(idEncoded)
+//	if err != nil {
+//		http.Error(w, "failed to decode species name from url: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	// TODO: ensure to also delete subspecies???!?!?!?!?
+//	// ensure species not used anywhere else first
+//	for _, collName := range []string{BagsCollectionName, FruitsCollName, FruitingChamberCollectionName, GrainJarCollectionName, LCCollectionName, LcSyringeCollectionName, MssCollectionName, PlatesCollectionName, PlugsCollectionName, SlantsCollectionName, StasisTubeCollectionName, WaterJarsCollectionName} {
+//		err = db.Collection(collName).FindOne(ctx, bson.M{"species": speciesName}).Err()
+//		if err != nil {
+//			if !errors.Is(err, mongo.ErrNoDocuments) {
+//				http.Error(w, "failed to check for species usage in "+collName+". "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//		} else {
+//			// At least one item exists, fail
+//			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//			return
+//		}
+//	}
+//
+//	result, err := DbFrom(ctx).Collection(SpeciesCollectionName).DeleteOne(ctx, bson.M{IDfld: speciesName})
+//	if err != nil {
+//		http.Error(w, "failed to delete species "+speciesName+". "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	if result.DeletedCount == 0 {
+//		http.Error(w, "species was not deleted, it was not found", http.StatusNotFound)
+//		return
+//	}
+//	_, err = w.Write([]byte(speciesName)) // TODO: ok?
+//	handleWriteErr(err, w)
+//}

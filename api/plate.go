@@ -83,7 +83,7 @@ type hasAgarOutside interface {
 type Plate struct {
 	MainCollectionIdField `bson:"inline"`
 	AgarBatchField        `bson:"inline"` // will be empty for preexisting
-	// TODO: do we want PC run on here too? and on others like it? (probably not due to data bloat?)
+	// TODO: do we want PC run on here too? and on others like it? (probably not due to data bloat?). we can use the agar batch to get the pc run or vise versa.
 	CreationDateField                   `bson:"inline"`
 	CondensationCoverageAtPourTimeField `bson:"inline"` // Percentage of condensation surface area coverage at pour time
 	CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
@@ -682,7 +682,8 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
+		importedPicNotes := []Note{} // TODO: ok?
+		importedPic = utils.Pointer(newPicWithNotes(now, importedPicNotes, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var condensCovSealed *int = nil
 	var gen *Generation = nil
@@ -745,39 +746,39 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
-func deletePlateHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).ToMainCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	// ensure item does not have any transfers in or out
-	item, err := GetMainCollectionItemSpecific[*Plate](ctx, id, &Plate{})
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
-		} else {
-			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
-		}
-		return
-	}
-	if item.Parent != nil {
-		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
-		return
-	}
-	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
-		return
-	}
-
-	// Delete if not found elsewhere!
-	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
-}
+//func deletePlateHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).ToMainCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	// ensure item does not have any transfers in or out
+//	item, err := GetMainCollectionItemSpecific[*Plate](ctx, id, &Plate{})
+//	if err != nil {
+//		if errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+//		} else {
+//			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//	if item.Parent != nil {
+//		// TODO: what if we want to remove it from the parent as well?
+//		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+//		return
+//	}
+//	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+//		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+//}

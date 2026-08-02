@@ -104,11 +104,11 @@ func initializeTransfers(ctx context.Context) error {
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		// TODO: ensure from index indexes all of the child ids
-		// TODO: newSimpleIndex("from", "from", true, false, false),
-		// TODO: newSimpleIndex("to", "to", true, false, false),
-		// TODO: newSimpleIndex("fromType", "fromType", false, false, false),
-		// TODO: newSimpleIndex("toType", "toType", false, false, false),
-		// TODO: newSimpleIndex("reason", "reason", false, false, false),
+		// TODO: ? newSimpleIndex("from", "from", true, false, false),
+		// TODO: ? newSimpleIndex("to", "to", true, false, false),
+		// newSimpleIndex("fromType", "fromType", false, false, false),
+		// newSimpleIndex("toType", "toType", false, false, false),
+		// TODO: ? newSimpleIndex("reason", "reason", false, false, false),
 		//FromImage (no index)
 		//ToImage (no index)
 		//Notes (no index unless tags)

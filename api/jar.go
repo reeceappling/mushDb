@@ -25,7 +25,7 @@ type GrainJar struct {
 	MainCollectionIdField   `bson:"inline"`
 	SizeCups                int             `bson:"sizeCups" json:"sizeCups"` // 1==1cup, 2 == pint, 4==quart, 16==gal
 	JarRecipeField          `bson:"inline"` // Always required except on imports when it is optional
-	GrainBatchOptionalField `bson:"inline"`
+	GrainBatchOptionalField `bson:"inline"` // Jar references batch which references recipe. Recipes can have multiple grains.
 	// TODO: multiple grain batches????
 	WetnessField                      `bson:"inline"` // 5 is ideal, 0 is ultra-dry, 10 is soaked
 	BurstGrainsField                  `bson:"inline"` // 0 is ideal, 1-2 is common, everything above that is oof
@@ -135,17 +135,17 @@ func initializeJars(ctx context.Context) error {
 			newSimpleIndex("grainBatch", "grainBatch", false, true, false),
 			//newSimpleIndex("wetness", "wetness", false, true, false),
 			//newSimpleIndex("burstGrains", "burstGrains", false, true, false),
-			newSimpleIndex("pcRun", "pcRun", false, true, false), // TODO: required, but old values may not have it... See if we can fix this...
+			newSimpleIndex("pcRun", "pcRun", false, true, false), // TODO: required, but old values may not have it... See if we can fix this... Maybe do a migration for it?
 			newSimpleIndex("species", "species", false, true, false),
 			newSimpleIndex("subspecies", "subspecies", false, true, false),
 			//newSimpleIndex("innoc", "innoc", false, true, false),
 			//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 			//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 			//transfersOutIndexModel,
-			//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-			//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
+			//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside? FINALIZE
+			//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside? FINALIZE
 			//Pics (no index)
-			//TODO: Contams?
+			//Contams?
 			//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 			//saleIndexModel,
 			//newSimpleIndex("disposed", "disposed", false, true, false),
@@ -529,39 +529,39 @@ func Db(r *http.Request) (context.Context, *mongo.Database) {
 	return ctx, DbFrom(ctx)
 }
 
-func deleteJarHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).ToMainCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	// ensure item does not have any transfers in or out
-	item, err := GetMainCollectionItemSpecific[*GrainJar](ctx, id, &GrainJar{})
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
-		} else {
-			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
-		}
-		return
-	}
-	if item.Parent != nil {
-		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
-		return
-	}
-	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
-		return
-	}
-
-	// Delete if not found elsewhere!
-	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
-}
+//func deleteJarHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).ToMainCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	// ensure item does not have any transfers in or out
+//	item, err := GetMainCollectionItemSpecific[*GrainJar](ctx, id, &GrainJar{})
+//	if err != nil {
+//		if errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+//		} else {
+//			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//	if item.Parent != nil {
+//		// TODO: what if we want to remove it from the parent as well?
+//		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+//		return
+//	}
+//	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+//		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+//}

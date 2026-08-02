@@ -707,7 +707,7 @@ func DenyGuestMiddleware(handler http.Handler) http.Handler {
 			return
 		}
 		if resolvedPerms.isGuest() {
-			http.Error(w, "guest users cannot utilize this endpoint", http.StatusUnauthorized) // TODO: forbidden?
+			http.Error(w, "guest users cannot utilize this endpoint", http.StatusUnauthorized)
 			return
 		}
 		handler.ServeHTTP(w, r)
