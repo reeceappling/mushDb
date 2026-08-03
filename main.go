@@ -487,7 +487,16 @@ func internalOnlyMiddlewareCreator(validDomain string, expectedPort int) func(ha
 func ReqTrackingMiddleWare(handler http.Handler) http.Handler { // TODO: USE OR DELETE
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+		// TODO: setup logger
+		//consoleLoggerCore := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentConfig().EncoderConfig), zapcore.AddSync(os.Stdout), zapcore.DebugLevel)
+		//otelLoggerCore := otelzap.NewCore("mush-api-go", otelzap.WithLoggerProvider(global.GetLoggerProvider()))
+		//core := zapcore.NewTee(
+		//	otelLoggerCore,
+		//	consoleLoggerCore,
+		//)
+		//sugar := zap.New(core).Sugar()
 		log := logging.GetLogger(ctx)
+
 		requestPath := r.URL.Path
 		var requestId string
 		// Set request path on request
