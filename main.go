@@ -14,7 +14,6 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 	rfid "github.com/reeceappling/mushDb/api"
 	"github.com/reeceappling/mushDb/api/env"
-	"github.com/reeceappling/mushDb/api/gotel"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
@@ -23,8 +22,6 @@ import (
 	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/oauth2"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
@@ -105,15 +102,15 @@ const loginPath = "/login"
 func main() {
 	ctx := context.Background()
 	// Set up OpenTelemetry.// TODO: DISABLE FOR NOW
-	otelShutdown, err := gotel.SetupSDK(ctx)
-	if err != nil {
-		fmt.Println("failed to setup telemetry: " + err.Error())
-		os.Exit(1)
-	}
-	// Handle shutdown properly so nothing leaks.
-	defer func() {
-		err = errors.Join(err, otelShutdown(context.Background()))
-	}()
+	//otelShutdown, err := gotel.SetupSDK(ctx)
+	//if err != nil {
+	//	fmt.Println("failed to setup telemetry: " + err.Error())
+	//	os.Exit(1)
+	//}
+	//// Handle shutdown properly so nothing leaks.
+	//defer func() {
+	//	err = errors.Join(err, otelShutdown(context.Background()))
+	//}()
 	// TODO: SETUP OTEL LOGGER!
 	//logProvOpts := []log2.LoggerOption{} // TODO: ok?
 	//logger := global.GetLoggerProvider().Logger("mush-api-go", logProvOpts...) // TODO: ok name?
@@ -261,14 +258,15 @@ func main() {
 	defer mgr.Cleanup()
 	// Start generating mainCollectionIds
 	rfid.StartGeneratingMCIDs(ctx, 12)
-	appTracer := otel.GetTracerProvider().Tracer("mush-api")
+	//appTracer := otel.GetTracerProvider().Tracer("mush-api")
 	tracerMiddleware := func(endpointName string) func(http.Handler) http.Handler {
 		return func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // TODO: re-disable next 3 lines if traces break things!
-				traceOpts := []trace.SpanStartOption{} // TODO: ???
-				newCtx, span := appTracer.Start(r.Context(), endpointName, traceOpts...)
-				defer span.End()
-				next.ServeHTTP(w, r.WithContext(newCtx))
+				//traceOpts := []trace.SpanStartOption{} // TODO: ???
+				//newCtx, span := appTracer.Start(r.Context(), endpointName, traceOpts...)
+				//defer span.End()
+				//next.ServeHTTP(w, r.WithContext(newCtx))
+				next.ServeHTTP(w, r)
 			})
 		}
 	}
