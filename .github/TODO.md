@@ -48,6 +48,7 @@
 
 
 # Wishlist
+- [ ] traceIDs for all requests going throughout the system, including the go side, ts side, and mongo side. This will allow us to trace requests through the system and see where things are failing.
 - [ ] mongodb mocks using mtest (import "go.mongodb.org/mongo-driver/mongo/integration/mtest")
 - [ ] Use an external kanidm server for auth and user management.
 - [ ] Use external openBao server for secrets management.

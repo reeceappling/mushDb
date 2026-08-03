@@ -14,6 +14,7 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 	rfid "github.com/reeceappling/mushDb/api"
 	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/gotel"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/mushDb/api/request"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
@@ -22,6 +23,8 @@ import (
 	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"golang.org/x/oauth2"
 	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
@@ -101,6 +104,22 @@ const loginPath = "/login"
 
 func main() {
 	ctx := context.Background()
+	// Set up OpenTelemetry.// TODO: DISABLE FOR NOW
+	otelShutdown, err := gotel.SetupSDK(ctx)
+	if err != nil {
+		fmt.Println("failed to setup telemetry: " + err.Error())
+		os.Exit(1)
+	}
+	// Handle shutdown properly so nothing leaks.
+	defer func() {
+		err = errors.Join(err, otelShutdown(context.Background()))
+	}()
+	// TODO: SETUP OTEL LOGGER!
+	//logProvOpts := []log2.LoggerOption{} // TODO: ok?
+	//logger := global.GetLoggerProvider().Logger("mush-api-go", logProvOpts...) // TODO: ok name?
+	//logger.Emit()
+	// telem.LogInfo("telemetry initialized") // TODO: LOG THIS!
+	// Setup everything else!
 	var envir string
 	switch os.Getenv("ENVIRONMENT") { // TODO: set this!
 	case "prod":
@@ -121,7 +140,6 @@ func main() {
 	if err := resolveGothicSessionSecret(); err != nil {
 		panic("failed to resolve gothic session secret: " + err.Error())
 	}
-	var err error
 	authSvc := rfid.NewAuthService(utils.Pointer(2*time.Minute), utils.Pointer(1*time.Hour))
 	ctx = authSvc.OnContext(ctx)
 
@@ -217,12 +235,12 @@ func main() {
 	goth.UseProviders(googleAuthProvider, guestAuthProvider)
 	//gothic.Store = customSessionStore{} // TODO: REENABLE????
 
-	http.HandleFunc("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
 		_, errr := w.Write([]byte("Hello World!"))
 		if errr != nil {
 			println("/test failure: " + errr.Error())
 		}
-	}))
+	})
 
 	//providersMap := map[string]string{
 	//	"google": "google",
@@ -243,6 +261,17 @@ func main() {
 	defer mgr.Cleanup()
 	// Start generating mainCollectionIds
 	rfid.StartGeneratingMCIDs(ctx, 12)
+	appTracer := otel.GetTracerProvider().Tracer("mush-api")
+	tracerMiddleware := func(endpointName string) func(http.Handler) http.Handler {
+		return func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // TODO: re-disable next 3 lines if traces break things!
+				traceOpts := []trace.SpanStartOption{} // TODO: ???
+				newCtx, span := appTracer.Start(r.Context(), endpointName, traceOpts...)
+				defer span.End()
+				next.ServeHTTP(w, r.WithContext(newCtx))
+			})
+		}
+	}
 	ctx, rateLimiter, rfidMiddleware, internalOnlyMiddleware, webAuthMiddleware, authOrDenyMiddleware, ctxMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, apiPort)
 	if err != nil {
 		panic("Error setting up middleware: " + err.Error())
@@ -253,12 +282,13 @@ func main() {
 	println("Defining RFID endpoints")
 	// Must be publicly available. (external)
 	// TODO: ADD OPTIONS method to all endpoints!
+	// TODO: NO TRACES ON /rfid/ws?
 	http.HandleFunc("/rfid/ws", Middlewares(ctxMiddleware, rfidMiddleware)(http.HandlerFunc(websocketSessions.ServerHandler)).ServeHTTP) // TODO: was /rfid/ws // TODO: OPTIONS
 	// Must be internal to docker network
-	http.HandleFunc("/rfid/read/{readerName}", Middlewares(ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidReadHandler).ServeHTTP)        // TODO: OPTIONS // TODO: internal only?   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/write/{writerName}", Middlewares(ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidWriteHandler).ServeHTTP)      // TODO: OPTIONS // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/readers", Middlewares(ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(getRfidReaderNamesHandler).ServeHTTP)      // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/clear/{writerName}", Middlewares(ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(clearRfidTagHandler).ServeHTTP) // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/read/{readerName}", Middlewares(tracerMiddleware("/rfid/read"), ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidReadHandler).ServeHTTP)         // TODO: OPTIONS // TODO: internal only?   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/write/{writerName}", Middlewares(tracerMiddleware("/rfid/write"), ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidWriteHandler).ServeHTTP)      // TODO: OPTIONS // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/readers", Middlewares(tracerMiddleware("/rfid/readers"), ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(getRfidReaderNamesHandler).ServeHTTP)    // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/clear/{writerName}", Middlewares(tracerMiddleware("/rfid/clear"), ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(clearRfidTagHandler).ServeHTTP) // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
 	webHostPort := 3000
@@ -280,6 +310,7 @@ func main() {
 
 	// Proxy combo middlewares
 	webAuthAdminMiddleware := rfid.GetAuthService(ctx).AuthAdminOrDenyMiddleware
+
 	webProxyHandler := newPassthroughHandler(passthroughConfig)
 	unAuthedProxied := ctxMiddleware(webProxyHandler)
 	authedProxied := ctxMiddleware(webAuthMiddleware(webProxyHandler))
@@ -296,12 +327,12 @@ func main() {
 		return rateLimiter(ctxMiddleware(next))
 	}
 	corsAuthRateLimit := Middlewares(CorsAuthMiddleware, rateLimitCtxMiddleware)
-	http.Handle(loginPath /* /login */, Middlewares(OptionsGetPost, corsAuthRateLimit, handleLoginMiddleware)(webProxyHandler))
-	http.Handle("/logout", Middlewares(OptionsGetOnly, corsAuthRateLimit)(handleLogout)) // TODO: make logout button in ts!
-	http.Handle("/guestLogin", Middlewares(OptionsPostOnly, rateLimitCtxMiddleware)(handleGuestLogin))
+	http.Handle(loginPath /* /login */, Middlewares(tracerMiddleware(loginPath), OptionsGetPost, corsAuthRateLimit, handleLoginMiddleware)(webProxyHandler))
+	http.Handle("/logout", Middlewares(tracerMiddleware("/logout"), OptionsGetOnly, corsAuthRateLimit)(handleLogout)) // TODO: make logout button in ts!
+	http.Handle("/guestLogin", Middlewares(tracerMiddleware("/guestLogin"), OptionsPostOnly, rateLimitCtxMiddleware)(handleGuestLogin))
 	// TODO: reenable for testing only! http.Handle("/testLogin/{emailEncoded}", rateLimitCtxMiddleware(OptionsPostOnly(handleTestLogin))) // TODO: remove later
-	http.Handle("/auth/{provider}", Middlewares(OptionsGetOnly, corsAuthRateLimit)(authProviderHandler)) // TODO: getOnly ok?
-	http.Handle("/auth/{provider}/callback", Middlewares(corsAuthRateLimit)(authCallbackHandler))        // TODO: GET or POST?
+	http.Handle("/auth/{provider}", Middlewares(tracerMiddleware("/auth/{provider}"), OptionsGetOnly, corsAuthRateLimit)(authProviderHandler))   // TODO: getOnly ok?
+	http.Handle("/auth/{provider}/callback", Middlewares(tracerMiddleware("/auth/{provider}/callback"), corsAuthRateLimit)(authCallbackHandler)) // TODO: GET or POST?
 	// Biometrics endpoints TODO: (maybe add biometric provider?)
 	//http.Handle("/biometrics/fingerprint/register-start", CorsAuthMiddleware(rateLimitCtxMiddleware(http.HandlerFunc(BeginFingerprintRegistration))))   // TODO: change middlewares and handler
 	//http.Handle("/biometrics/fingerprint/register-end", CorsAuthMiddleware(rateLimitCtxMiddleware(http.HandlerFunc(FinishFingerprintRegistration))))    // TODO: change middlewares and handler
@@ -310,19 +341,19 @@ func main() {
 
 	// Proxied to react
 	// Generalized react endpoints
-	http.Handle("/_next", unAuthedProxied)
-	http.Handle("/", unAuthedProxied)
+	http.Handle("/_next", Middlewares(tracerMiddleware("/_next"))(unAuthedProxied))
+	http.Handle("/", Middlewares(tracerMiddleware("/"))(unAuthedProxied))
 
 	// Specific React/Next pages
-	http.Handle("/import/{variant}", authedProxied)         // GET import is here (import item page)
-	http.Handle("/new/{variant}", authedProxied)            // GET new item is here (new item page)
-	http.Handle("/view/{variant}/{entryId}", authedProxied) // GET view item is here (view item page)
-	http.Handle("/list/{variant}", authedProxied)           // GET list is here (list items page)
+	http.Handle("/import/{variant}", Middlewares(tracerMiddleware("/import/{variant}"))(authedProxied))                 // GET import is here (import item page)
+	http.Handle("/new/{variant}", Middlewares(tracerMiddleware("/new/{variant}"))(authedProxied))                       // GET new item is here (new item page)
+	http.Handle("/view/{variant}/{entryId}", Middlewares(tracerMiddleware("/view/{variant}/{entryId}"))(authedProxied)) // GET view item is here (view item page)
+	http.Handle("/list/{variant}", Middlewares(tracerMiddleware("/list/{variant}"))(authedProxied))                     // GET list is here (list items page)
 	// Error and test pages
-	http.Handle("/error/{errTxt}", webProxyHandler) // TODO: rate limit???? ctx middleware? auth middleware?
-	http.Handle("/testpage", webProxyHandler)       // GET testpage is here (test page)       // TODO: REMOVE
+	http.Handle("/error/{errTxt}", Middlewares(tracerMiddleware("/err"))(webProxyHandler)) // TODO: rate limit???? ctx middleware? auth middleware?
+	http.Handle("/testpage", Middlewares(tracerMiddleware("/testpage"))(webProxyHandler))  // GET testpage is here (test page)       // TODO: REMOVE
 	// Admin pages
-	http.Handle("/whitelistUser", adminProxied) // TODO: THIS!
+	http.Handle("/whitelistUser", Middlewares(tracerMiddleware("/whitelistUser"))(adminProxied)) // TODO: THIS!
 
 	println("Defining sensor data endpoints")
 	// TODO: this
@@ -332,7 +363,7 @@ func main() {
 	//http.Handle("/addSensorData/{nodeName}", rfid.AddSensorDataHandler())        // TODO: middleware?
 
 	println("Defining admin endpoints")
-	http.Handle("/admin/whitelistUser", Middlewares(ctxMiddleware, webAuthAdminMiddleware)(whitelistUserHandler))
+	http.Handle("/admin/whitelistUser", Middlewares(tracerMiddleware("/admin/whitelistUser"), ctxMiddleware, webAuthAdminMiddleware)(whitelistUserHandler))
 
 	// TODO: ADMIN STUFF
 	// TODO: user-viewer/editor for admin
@@ -341,28 +372,28 @@ func main() {
 	println("Defining db interaction endpoints")
 	// TODO: CORS db middlewares?
 	// Resolving Types
-	http.Handle("/db/pathFor/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.GetPageForIdHandler)) // TODO: DenyGuestMiddleware?
+	http.Handle("/db/pathFor/{id}", Middlewares(tracerMiddleware("/db/pathFor"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.GetPageForIdHandler)) // TODO: DenyGuestMiddleware?
 	// Get handlers
 	// TODO: ??? http.Handle("/db/get/rfid/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getRfidHandler()) // TODO: DenyGuestMiddleware?             // TODO: GET RID OF???             // TODO: ensure this works for base58s
 	// TODO: ??? http.Handle("/db/get/rfid/{id}", rateLimitedWithCtxAndInternalAuth(getRfidHandler()) // TODO: DenyGuestMiddleware?             // TODO: GET RID OF???             // TODO: ensure this works for base58s
-	http.Handle("/db/get/{variant}/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getAnyCollectionHandler))
-	http.Handle("/db/images/{imageSubPath...}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getImageHandler)) // TODO: rate limiter ok here?
+	http.Handle("/db/get/{variant}/{id}", Middlewares(tracerMiddleware("/db/get"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getAnyCollectionHandler))
+	http.Handle("/db/images/{imageSubPath...}", Middlewares(tracerMiddleware("/db/images"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getImageHandler)) // TODO: rate limiter ok here?
 	// Creation handlers
-	http.Handle("/db/create/{variant}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.CreateHandler))
+	http.Handle("/db/create/{variant}", Middlewares(tracerMiddleware("/db/create/{variant}"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.CreateHandler))
 	// TODO: chain spore print handler?
 	// update handlers
-	http.Handle("/db/update/{variant}/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.UpdateHandler)) // TODO: no rfid?
+	http.Handle("/db/update/{variant}/{id}", Middlewares(tracerMiddleware("/db/update"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.UpdateHandler)) // TODO: no rfid?
 	// import handlers
-	http.Handle("/db/import/{variant}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.ImportHandler))
+	http.Handle("/db/import/{variant}", Middlewares(tracerMiddleware("/db/import"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.ImportHandler))
 
 	// delete handlers
 	// TODO: enable! http.Handle("/db/delete/{endpt}/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.AdminOnlyMiddleware)(rfid.DeleteHandler))
 	// List handlers
-	http.Handle("/db/list/{variant}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListEntriesHandler))
-	http.Handle("/subspeciesFor/{variant}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))
-	http.Handle("/sessionUserProjects", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.SessionUserProjectsHandler)) // TODO: DenyGuestMiddleware? Will guests only have public projects???
+	http.Handle("/db/list/{variant}", Middlewares(tracerMiddleware("/db/list"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListEntriesHandler))
+	http.Handle("/subspeciesFor/{variant}", Middlewares(tracerMiddleware("/subspeciesFor"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))
+	http.Handle("/sessionUserProjects", Middlewares(tracerMiddleware("/sessionUserProjects"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.SessionUserProjectsHandler)) // TODO: DenyGuestMiddleware? Will guests only have public projects???
 	// Next endpt needs no authorization, but does have a rate limiter?? // TODO: rl?
-	http.Handle("/options/{optionsType}", Middlewares(rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything...
+	http.Handle("/options/{optionsType}", Middlewares(tracerMiddleware("/options"), rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything...
 
 	if err = srv.ListenAndServe(); err != nil {
 		panic("failed to listen and serve for http: " + err.Error())
@@ -462,15 +493,15 @@ func ReqTrackingMiddleWare(handler http.Handler) http.Handler { // TODO: USE OR 
 		requestPath := r.URL.Path
 		var requestId string
 		// Set request path on request
-
-		ctx = request.SetPath(ctx, requestPath)
 		log = log.WithStringKVP(request.Path, requestPath)
 		// Set request and trace ids (trace only if span exists)
 		log, requestId = log.Fork(request.Id)
+		ctx = request.SetPath(ctx, requestPath)
+		ctx = request.WithId(ctx, &requestId)
 		if span, ok := tracer.SpanFromContext(ctx); ok {
 			span.SetTag(request.Id, requestId)
 			span.SetBaggageItem(request.Id, requestId)
-			traceId := span.Context().TraceID()
+			traceId := span.Context().TraceID() // TODO: get traceId from elsewhere?
 			log = log.WithTraceId(ctx, strconv.Itoa(int(traceId)))
 		}
 
@@ -530,6 +561,47 @@ type ProviderIndex struct {
 //	w.internal.WriteHeader(statusCode) // TODO: handle 1XX/2XX/???
 //}
 
+type DualContext struct { // TODO: MOVE THIS AND ENSURE newDualContext is working properly in the context middleware!
+	a, b context.Context
+}
+
+func newDualContext(a, b context.Context) context.Context {
+	return DualContext{a: a, b: b}
+}
+func (ctx DualContext) Deadline() (deadline time.Time, ok bool) {
+	aDl, ok := ctx.a.Deadline()
+	if !ok {
+		return aDl, ok
+	}
+	bDl, ok := ctx.b.Deadline()
+	if aDl.Before(bDl) {
+		return aDl, ok
+	}
+	return bDl, ok
+}
+func (ctx DualContext) Done() <-chan struct{} {
+	out := make(chan struct{})
+	go func() {
+		defer close(out)
+		select {
+		case val := <-ctx.a.Done():
+			out <- val
+		case val := <-ctx.b.Done():
+			out <- val
+		}
+	}()
+	return out
+}
+func (ctx DualContext) Err() error {
+	return errors.Join(ctx.a.Err(), ctx.b.Err())
+}
+func (ctx DualContext) Value(key any) any {
+	if val := ctx.a.Value(key); val != nil {
+		return val
+	}
+	return ctx.b.Value(key)
+}
+
 func CorsAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*") // TODO: fix?
@@ -551,7 +623,9 @@ func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManag
 	ctx = pics.SetFilePath(ctxIn, picsPath)
 	ctxMiddleware = func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r.WithContext(ctx)) // TODO: ok?
+			comboContext := newDualContext(ctx, r.Context())
+			updatedRequest := r.WithContext(comboContext)
+			next.ServeHTTP(w, updatedRequest) // TODO: ok?
 		})
 	}
 	rfidMiddleware = mgr.Middleware()
