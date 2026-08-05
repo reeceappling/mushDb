@@ -23,7 +23,7 @@ import (
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/oauth2"
-	"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
+	//"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
 	"net/http"
 	"net/url"
@@ -505,12 +505,12 @@ func ReqTrackingMiddleWare(handler http.Handler) http.Handler { // TODO: USE OR 
 		log, requestId = log.Fork(request.Id)
 		ctx = request.SetPath(ctx, requestPath)
 		ctx = request.WithId(ctx, &requestId)
-		if span, ok := tracer.SpanFromContext(ctx); ok {
-			span.SetTag(request.Id, requestId)
-			span.SetBaggageItem(request.Id, requestId)
-			traceId := span.Context().TraceID() // TODO: get traceId from elsewhere?
-			log = log.WithTraceId(ctx, strconv.Itoa(int(traceId)))
-		}
+		//if span, ok := tracer.SpanFromContext(ctx); ok {
+		//	span.SetTag(request.Id, requestId)
+		//	span.SetBaggageItem(request.Id, requestId)
+		//	traceId := span.Context().TraceID() // TODO: get traceId from elsewhere?
+		//	log = log.WithTraceId(ctx, strconv.Itoa(int(traceId)))
+		//}
 
 		defer log.Sync() //nolint:errcheck
 

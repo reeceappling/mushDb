@@ -1,4 +1,5 @@
 # TODOs found while using
+- [ ] Creating sporeprints from fruits and providing an image is not putting image on the final spore print
 - [x] Plate display changing wetAtCooledTime from unknown to yes and updating causes error (fixed)
 - [x] A newly imported plate without species is failing to add a new note (fixed)
 - [ ] Jar import is not working properly (maybe only on mobile?), giving 500s when submitting 10/27/25 quart using Rye. Wav, unknown KF, gen 4 undefined undefined with pic, no writeTo
@@ -46,7 +47,8 @@
 
 # Changes made that need to be tested
 
-
+# Random links
+- [ ] https://medium.com/@mfsilv/kubernetes-a-gentle-introduction-9d23de7f00e0
 # Wishlist
 - [ ] Link shortener?
 - [ ] traceIDs for all requests going throughout the system, including the go side, ts side, and mongo side. This will allow us to trace requests through the system and see where things are failing.
