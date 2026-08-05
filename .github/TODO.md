@@ -48,6 +48,7 @@
 
 
 # Wishlist
+- [ ] Link shortener?
 - [ ] traceIDs for all requests going throughout the system, including the go side, ts side, and mongo side. This will allow us to trace requests through the system and see where things are failing.
 - [ ] mongodb mocks using mtest (import "go.mongodb.org/mongo-driver/mongo/integration/mtest")
 - [ ] Use an external kanidm server for auth and user management.
@@ -56,7 +57,7 @@
 - [ ] TODO: Add env secrets to repo via ansible vault? Add mongo key to repo via ansible vault? I'd rather not lose those...
   - [ ] Add sops key? add my private key? public key?
 - [ ] PROTECT THE REPO! No outside collaborators except me for now. Must fork to edit for now. Any secrets in the actions must be put in a specific env.
-- [ ] Secrets manager? OpenBao?
+- [ ] Secrets manager? OpenBao? https://openbao.org/docs/platform/k8s/helm/run/
 - [ ] OTel for logs, tracing, and metrics, storing those could be prometheus (look at options other than prometheus...) SigNoz?
   - [ ] FluentBit telemetry forwarding agent (sidecar)? (Another option is otel-collector, but fluentBit appears to be more performant...)
   - [ ] OpenObserve for traces/metrics/logs?
