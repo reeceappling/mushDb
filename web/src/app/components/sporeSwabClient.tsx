@@ -344,19 +344,19 @@ export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwabD
     return <SporeSwabListPageTable data={data} onClick={onClick} withLink={true} />
 }
 
-export function SporeSwabSelector(
-    {
-        doSelect,
-        hideDisposed = false
-    }: {
-        doSelect: (val: SporeSwabData | undefined) => void,
-        hideDisposed?: boolean
-    }) {
-    const table = (items: SporeSwabData[]):JSX.Element=>{
-        return <SporeSwabSelectorTable data={items} onClick={doSelect}/>
-    }
-
-    return <ExistingRecentSelector entryType={"sporeSwab"} entryTypes={"sporeSwabs"} doSelect={doSelect} asserter={AssertSporeSwab}
-                                   table={table} hideDisposed={hideDisposed}>
-    </ExistingRecentSelector>
-}
+// export function SporeSwabSelector(
+//     {
+//         doSelect,
+//         hideDisposed = false
+//     }: {
+//         doSelect: (val: SporeSwabData | undefined) => void,
+//         hideDisposed?: boolean
+//     }) {
+//     const table = (items: SporeSwabData[]):JSX.Element=>{
+//         return <SporeSwabSelectorTable data={items} onClick={doSelect}/>
+//     }
+//
+//     return <ExistingRecentSelector entryType={"sporeSwab"} entryTypes={"sporeSwabs"} doSelect={doSelect} asserter={AssertSporeSwab}
+//                                    table={table} hideDisposed={hideDisposed}>
+//     </ExistingRecentSelector>
+// }

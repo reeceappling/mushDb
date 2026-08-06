@@ -373,22 +373,22 @@ export function StasisTubeListPageTable({data, onClick, withLink}: ListPageItems
 export function StasisTubeSelectorTable({data, onClick}: ListPageItems<StasisTubeData>) {
     return <StasisTubeListPageTable data={data} onClick={onClick} withLink={true} />
 }
-export function StasisTubeSelector(
-    {
-        doSelect,
-        allowCreate,
-        hideDisposed
-    }: {
-        doSelect: (val: StasisTubeData | undefined) => void,
-        allowCreate?: boolean,
-        hideDisposed?:boolean
-    }) {
-    const table = (items: StasisTubeData[]):JSX.Element=>{
-        return <StasisTubeSelectorTable data={items} onClick={doSelect}/>
-    }
-
-    return <ExistingRecentSelector entryType={"stasisTube"} entryTypes={"stasisTubes"} doSelect={doSelect} asserter={AssertStasisTube}
-                                   table={table} hideDisposed={hideDisposed}>
-        {allowCreate && <NewStasisTubeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
-    </ExistingRecentSelector>
-}
+// export function StasisTubeSelector(
+//     {
+//         doSelect,
+//         allowCreate,
+//         hideDisposed
+//     }: {
+//         doSelect: (val: StasisTubeData | undefined) => void,
+//         allowCreate?: boolean,
+//         hideDisposed?:boolean
+//     }) {
+//     const table = (items: StasisTubeData[]):JSX.Element=>{
+//         return <StasisTubeSelectorTable data={items} onClick={doSelect}/>
+//     }
+//
+//     return <ExistingRecentSelector entryType={"stasisTube"} entryTypes={"stasisTubes"} doSelect={doSelect} asserter={AssertStasisTube}
+//                                    table={table} hideDisposed={hideDisposed}>
+//         {allowCreate && <NewStasisTubeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+//     </ExistingRecentSelector>
+// }

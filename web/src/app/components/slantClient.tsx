@@ -264,15 +264,17 @@ export default function SlantDisplay(
                 })
         }
         // TODO: DIFFERENTIATE BETWEEN UNINNOCULATED AND INNOCULATED DISPLAY
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
     const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
         const disp = initial.disposed !== undefined
         return !disp ? [
             WriteRfidOvcArea(initial._id),
+            // TODO: any others?
         ]:[]
     }
-    const isInnoculated = ()=>{
-        return initial.species !== undefined
-    }
+
     return (
             <DisplayFormWrapper entryType={"slant"}>
                 <ErrorDisplay err={err}/>

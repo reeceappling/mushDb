@@ -69,30 +69,30 @@ export class SlantData {
     }
 }
 
-export function SlantSelectorCloseable(sp: SelectorProps<SlantData>) { // TODO: use
-    const doSel = (val?: SlantData):void=>{
-        if (!val){
-            return
-        }
-        sp.doSelect(val)
-    }
-    return <CloseableSelector<SlantData> props={{
-        allowCreation: sp.allowCreation,
-        doSelect: doSel, // For selecting normally
-        closeTxt: "Close Slant List",
-        //createTxt: "Create Bag",// TODO: ???
-        lowercase: "slant",
-        //creatorInPage: sp.creatorInPage,// TODO: ???
-        //createEndpt: "bag",// TODO: ???
-        createSelector:(selHdl: (onSelect: SlantData) => void)=>{
-            return <SlantSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
-                v && selHdl(v)
-            }}/>
-        },
-        // TODO: ok?
-        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
-    }}/>
-}
+// export function SlantSelectorCloseable(sp: SelectorProps<SlantData>) { // TODO: use
+//     const doSel = (val?: SlantData):void=>{
+//         if (!val){
+//             return
+//         }
+//         sp.doSelect(val)
+//     }
+//     return <CloseableSelector<SlantData> props={{
+//         allowCreation: sp.allowCreation,
+//         doSelect: doSel, // For selecting normally
+//         closeTxt: "Close Slant List",
+//         //createTxt: "Create Bag",// TODO: ???
+//         lowercase: "slant",
+//         //creatorInPage: sp.creatorInPage,// TODO: ???
+//         //createEndpt: "bag",// TODO: ???
+//         createSelector:(selHdl: (onSelect: SlantData) => void)=>{
+//             return <SlantSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+//                 v && selHdl(v)
+//             }}/>
+//         },
+//         // TODO: ok?
+//         // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+//         //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+//         // },
+//     }}/>
+// }
 

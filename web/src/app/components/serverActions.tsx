@@ -12,16 +12,14 @@ interface writeTagRequest {
 
 // TODO: USE!
 export async function GetReaderWriterNames() {
-    const biurl = await BaseInternalUrl()
-    const resp = await fetch(biurl+ '/rfid/readers'/*, {
+    const resp = await fetch((await BaseInternalUrl())+ '/rfid/readers'/*, {
         method: 'GET',
         headers: { // TODO: change?
             credentials: 'include',
             'Accept': 'text/html',
         },
     }*/)
-    const data = await resp.json()
-    return data as string[]
+    return (await resp.json()) as string[]
 }
 
 // export async function WriteRfidTag(toWrite: string, writerName: string) { // TODO: USE ME! NEEDS sessionInfo
