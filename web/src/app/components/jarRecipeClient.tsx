@@ -371,7 +371,7 @@ export const JarRecipeArea = ({recipeId}: { recipeId?: string, headerLevel?: num
         const b58id = recipeId
         linkArea = <EntryLinkForId
             props={{
-                displayId: b58id,
+                displayId: b58id, // TODO: button to load name?
                 linkId: b58id,
                 entryType: "jarRecipe",
                 openInNewTab: false, // TODO: ok?

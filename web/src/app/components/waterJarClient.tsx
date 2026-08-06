@@ -25,7 +25,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalSimpleKey,
-    RequiredKey, Subform,
+    RequiredKey,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea

@@ -80,7 +80,6 @@ import {InputDecimal, InputNumber} from "@/app/components/formSubcomponents/nume
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
@@ -253,8 +252,6 @@ export default function FruitingChamberDisplay(
         // TODO: create new print (creates intermediate fruit)
         // TODO: create new swab (creates intermediate fruit)
         // TODO: xfers? OvcForXfers(data._id, "fruit", ["plate","slant","jar","stasisTube"], "Clone/Transfer Fruit"), // TODO: ensure list correct //OVC for clone to plate? (transfer)
-        // TODO: spore swab directly from box? (should also create a fruit in the interim)
-        // TODO: spore print directly from box? (should also create a fruit in the interim)
     }
     return (
         <DisplayFormWrapper entryType={"fruitingChamber"}>

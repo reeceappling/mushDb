@@ -40,8 +40,6 @@ import {
     TogglableAreaWithDepth, NewAllCanWriteAcl
 } from "@/app/components/accessControlClient";
 import { ACL } from "./accessControlServer";
-import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
-import {AgarRecipeData} from "@/app/components/agarRecipeServer";
 
 // TODO: list users also not working (all of this as of 5/7/26)
 

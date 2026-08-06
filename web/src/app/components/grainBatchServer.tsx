@@ -43,7 +43,7 @@ export class GrainBatchData {
     }
 }
 
-export function GrainBatchSelectorCloseable(sp: SelectorProps<GrainBatchData>) { // TODO: use
+export function GrainBatchSelectorCloseable(sp: SelectorProps<GrainBatchData>) {
     const doSel = (val?: GrainBatchData):void=>{
         if (!val){
             return

@@ -385,7 +385,7 @@ export function ProjectPermsAreaNew({initial, setPerms, readonly}: {
 }) {
     // Current users are stored locally
     const defaultState = (upd?: Map<string, string>): Map<string, Data<string>> => {
-        let out = new Map<string, Data<string>>()
+        const out = new Map<string, Data<string>>()
         if (upd === undefined || upd.size === 0) {
             return out
         }
@@ -421,7 +421,7 @@ export function ProjectPermsAreaNew({initial, setPerms, readonly}: {
         propagateUpdate(existing, newNew)
     }
     const propagateUpdate = (ex: Map<string, Data<string>>, nw: Map<string, string>) => {
-        let upd = new Map<string, string>()
+        const upd = new Map<string, string>()
         // ex.entries().forEach(([k, v]) => {
         //     if (!v.disabled) {
         //         upd.set(k, v.data)

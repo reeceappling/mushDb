@@ -197,13 +197,13 @@ export function NotesAreaViewSubcomponent({initial, updateParent, readonly, allo
     }
     const updateExisting = (updated: Data<Note>[]) => {
         setExisting(updated)
-        let out = currentClone()
+        const out = currentClone()
         out.existing = updated
         deliverUpdatesToParent(out)
     }
     const updateCreated = (updated: Data<Note>[]) => {
         setCreated(updated)
-        let out = currentClone()
+        const out = currentClone()
         out.new = updated
         deliverUpdatesToParent(out)
     }
@@ -266,13 +266,13 @@ export function NotesAreaPicsViewSubcomponent({initial, updateParent, readonly, 
     }
     const updateExisting = (updated: Data<Note>[]) => {
         setExisting(updated)
-        let out = currentClone()
+        const out = currentClone()
         out.existing = updated
         deliverUpdatesToParent(out)
     }
     const updateCreated = (updated: Data<Note>[]) => {
         setCreated(updated)
-        let out = currentClone()
+        const out = currentClone()
         out.new = updated
         deliverUpdatesToParent(out)
     }

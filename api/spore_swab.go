@@ -181,7 +181,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			if !ok {
 				return nil, errors.New("print is not a print?")
 			}
-			swabOut, e = parentPrint.createSwabInTxn(sessCtx, data.NotesField, NotesField{}, id) // TODO: xferNotes
+			swabOut, e = parentPrint.createSporeSwabInTxn(sessCtx, data.NotesField, NotesField{}, id) // TODO: xferNotes
 			if e != nil {
 				return nil, e
 			}

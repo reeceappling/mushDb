@@ -75,7 +75,64 @@ func (sp SporePrint) CanTransferTo(dst geneticSource) error {
 	// TODO: allow transfer to plate????
 	return errors.New("sporePrints cannot transfer. Only be made into mss or swab")
 }
-func (sp SporePrint) createSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNotes NotesField, id MainCollectionId) (*SporeSwab, error) {
+
+//	func createSporeSwabInTxn(ctx mongo.SessionContext, parent MainCollectionItem, swabNotes, xferNotes NotesField, swabId MainCollectionId)(*SporeSwab, error){
+//		// TODO: unsure about xfer notes
+//		ctx, now := request.UnixTimeInTxn(ctx)
+//		db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+//		parentId := parent.DbId()
+//		genetics, err := parent.GeneticInfoAsParent()
+//		if err != nil {
+//			return nil, err
+//		}
+//		swab := SporeSwab{
+//			MainCollectionIdField:             MainCollectionIdField{swabId},
+//			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parentId},
+//			ParentTypeField:                   ParentTypeField{utils.Pointer(parent.EntryType())},
+//			CreationDateField:                 CreationDateField{now},
+//			SpeciesField:                      SpeciesField{Species: *genetics.Species},
+//			SubspeciesOptionalField:           SubspeciesOptionalField{Subspecies: genetics.Subspecies},
+//			NotesField:                        swabNotes,
+//			LastUpdatedField:                  LastUpdatedField{now},
+//			AclField:                          parent.Permissions().AsField(),
+//		}
+//		xfer := Transfer{
+//			AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
+//			From:                       parent.DbId(),
+//			To:                         swabId,
+//			FromType:                   parent.EntryType(),
+//			ToType:                     "sporeSwab",
+//			CreationDateField:          CreationDateField{now},
+//			Reason:                     xferReasonReady, // TODO:L ????
+//			NotesField:                 xferNotes,
+//			LastUpdatedField:           LastUpdatedField{now},
+//			AclField:                   parent.Permissions().AsField(),
+//		}
+//		err = addToIdMapCollection(ctx, &swab)
+//		if err != nil {
+//			return nil, err
+//		}
+//		// Update print with new swab id
+//		// Update xfers out and lastUpdated on parent
+//		upd, err := NewMods().Push("transfersOut", xfer.Id).withLastUpdated(now).Finalized()
+//		if err != nil {
+//			return nil, err
+//		}
+//		_, err = db.Collection(SporePrintCollectionName).UpdateByID(ctx, sp.Id, upd)
+//		if err != nil {
+//			return nil, err
+//		}
+//		_, err = db.Collection(SporeSwabCollectionName).InsertOne(ctx, &swab)
+//		if err != nil {
+//			return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+//		}
+//		_, err = db.Collection(TransfersCollName).InsertOne(ctx, &xfer)
+//		if err != nil {
+//			return nil, errors.Join(errors.New("failed to insert new spore print"), err)
+//		}
+//		return &swab, nil
+//	}
+func (sp SporePrint) createSporeSwabInTxn(ctx mongo.SessionContext, swabNotes, xferNotes NotesField, id MainCollectionId) (*SporeSwab, error) {
 	ctx, now := request.UnixTimeInTxn(ctx)
 	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 	swab := SporeSwab{
@@ -356,7 +413,8 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		var e error = nil
 		switch mcItem.SourceType() {
 		case FruitingChamberSourceType, BagSourceType, PlateSourceType, SlantSourceType, PlugSourceType, GrainJarSourceType:
-			fr, e = FruitFromSourceInTxn(sessCtx, mcItem)
+			// indirect creation, create fruit then continue!
+			//fr, e = FruitFromSourceInTxn(sessCtx, mcItem)
 			if e != nil {
 				return nil, e
 			}
@@ -367,14 +425,14 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return nil, errors.New("fruit is not a Fruit?")
 			}
-			// TODO: DIRECT! continue!
+			// direct creation, continue!
 			break
 		default:
 			e := errors.New("invalid source type: " + mcItem.SourceType())
 			http.Error(w, e.Error(), http.StatusBadRequest)
 			return nil, e
 		}
-		printOut, e = fr.createSporePrintInTxn(sessCtx, PicsField{}, NotesField{}, id) // TODO: pics and notes?
+		printOut, e = fr.createSporePrintInTxn(sessCtx, out.PicsField, out.NotesField, id) // TODO: set mostRecentImage? // TODO: pics and notes?
 		if e != nil {
 			return nil, e
 		}

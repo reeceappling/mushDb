@@ -388,7 +388,7 @@ func main() {
 	// TODO: enable! http.Handle("/db/delete/{endpt}/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.AdminOnlyMiddleware)(rfid.DeleteHandler))
 	// List handlers
 	http.Handle("/db/list/{variant}", Middlewares(tracerMiddleware("/db/list"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListEntriesHandler))                                                 // TODO: options middleware?
-	http.Handle("/subspeciesFor/{variant}", Middlewares(tracerMiddleware("/subspeciesFor"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))                                  // TODO: options middleware?
+	http.Handle("/db/subspeciesFor/{variant}", Middlewares(tracerMiddleware("/db/subspeciesFor"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))                            // TODO: options middleware?
 	http.Handle("/sessionUserProjects", Middlewares(tracerMiddleware("/sessionUserProjects"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.SessionUserProjectsHandler)) // TODO: DenyGuestMiddleware? Will guests only have public projects??? // TODO: options middleware?
 	// Next endpt needs no authorization, but does have a rate limiter?? // TODO: rl?
 	http.Handle("/options/{optionsType}", Middlewares(tracerMiddleware("/options"), rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything... // TODO: options middleware?

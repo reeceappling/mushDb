@@ -1,7 +1,7 @@
 // non-client even though it uses state?
 
 import {AllEntries, Data, InitialToAllEntries, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
-import {IsValidNote, Note, NotesFormArea, NotesFormAreaPics} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, Note, NotesFormAreaPics} from "@/app/components/formSubcomponents/notes";
 import {ImageLocationFor, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";

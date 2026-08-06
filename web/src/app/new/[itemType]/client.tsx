@@ -18,7 +18,6 @@ import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {NewWaterJarForm} from "@/app/components/waterJarClient";
 import {WaterJarData} from "@/app/components/waterJarServer";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {TopPageHeaderLevel} from "@/app/components/Constants";
 import React, {JSX, useState} from "react";
 import EntryLinkForId from "@/app/components/formSubcomponents/entryLink";
 import { NewPlugsForm } from "@/app/components/plugsClient";

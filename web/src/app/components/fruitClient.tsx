@@ -71,7 +71,6 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {TransferData} from "@/app/components/transferServer";
 import {SelectorFor} from "@/app/components/selector";
-import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -295,6 +294,7 @@ export default function FruitDisplay(
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
                                  allowNewTransferCreation={false}/>{/* TODO: validTypesTo*/}
             <FruitPrintsDisplay prints={sporePrints}/>
+            {/* TODO: SWABS DISPLAY?*/}
             <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
@@ -449,74 +449,74 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
     </ImportEntryFormWrapper>
 }
 
-export function CreateCloneArea( // TODO: this vs NewFruitForm
-    {
-        fruitId, headerLevel, onCloneCreated, readonly,
-    }: {
-        fruitId: string,
-        headerLevel?: number,
-        onCloneCreated: (f: FruitData) => void,
-        readonly: boolean,
-    }) {
-    if (readonly) {
-        return null
-    }
-    const [typeTo, setTypeTo] = useState("plate")
-    const [idTo, setIdTo] = useState<string | undefined>()
-    const [notes, setNotes] = useState<Note[]>([])
-    const [err, setErr] = useState<string | undefined>()
-
-    const cookies = useContext(CookiesContext)
-    const handleCreate = () => {
-        const body: any = {
-            idFrom: fruitId,
-            typeFrom: "fruit",
-            typeTo: typeTo,
-            idTo: idTo,
-            notes: notes,
-            // TODO: writeTagTo?
-        }
-        DoCreateRequest("clone", body, AssertFruit, allCookies(cookies))
-            .then(c => {
-                onCloneCreated(new FruitData(c))
-            })
-            .catch(e => {
-                setErr("failed to create/get new clone: " + JSON.stringify(e))
-            })
-    }
-    return <div>
-        <ErrorDisplay err={err} />
-        <div>
-            <div>{"Create Clone:"}</div>
-            <div>
-                <TestAndValidate todos={["no need for type?"]}>
-                    <div>{"TYPE TO:"}</div>
-                </TestAndValidate>
-                <select className={"tailwindSelector"} value={typeTo} onSelect={e => {
-                    setTypeTo(e.currentTarget.value)
-                }} onChange={() => {
-                }}>
-                    {["plate", "jar", "slant"].map((opt, i) => {
-                        return <option value={opt} key={i}>{opt}</option>
-                    })}
-                </select>
-            </div>
-            <div>
-                <TestAndValidate
-                    todos={["validate that this is working properly in typing as well as reading from rfid"]}>
-                    <NameArea currentName={idTo} setName={setIdTo} headerTxt={"Select ID: "} readonly={false}
-                              headerLevel={headerLevel}/>
-                </TestAndValidate>
-                <ReadRFIDButton handleTagRead={setIdTo}/>
-            </div>
-        </div>
-        <NewEntryNotes setNotes={setNotes}/>
-        <button className={"basicButton"} onClick={e => {
-            e.preventDefault()
-            handleCreate()
-        }}>{"Submit new Clone"}</button>
-    </div>
-}
+// export function CreateCloneArea( // TODO: this vs NewFruitForm
+//     {
+//         fruitId, headerLevel, onCloneCreated, readonly,
+//     }: {
+//         fruitId: string,
+//         headerLevel?: number,
+//         onCloneCreated: (f: FruitData) => void,
+//         readonly: boolean,
+//     }) {
+//     if (readonly) {
+//         return null
+//     }
+//     const [typeTo, setTypeTo] = useState("plate")
+//     const [idTo, setIdTo] = useState<string | undefined>()
+//     const [notes, setNotes] = useState<Note[]>([])
+//     const [err, setErr] = useState<string | undefined>()
+//
+//     const cookies = useContext(CookiesContext)
+//     const handleCreate = () => {
+//         const body: any = {
+//             idFrom: fruitId,
+//             typeFrom: "fruit",
+//             typeTo: typeTo,
+//             idTo: idTo,
+//             notes: notes,
+//             // TODO: writeTagTo?
+//         }
+//         DoCreateRequest("clone", body, AssertFruit, allCookies(cookies))
+//             .then(c => {
+//                 onCloneCreated(new FruitData(c))
+//             })
+//             .catch(e => {
+//                 setErr("failed to create/get new clone: " + JSON.stringify(e))
+//             })
+//     }
+//     return <div>
+//         <ErrorDisplay err={err} />
+//         <div>
+//             <div>{"Create Clone:"}</div>
+//             <div>
+//                 <TestAndValidate todos={["no need for type?"]}>
+//                     <div>{"TYPE TO:"}</div>
+//                 </TestAndValidate>
+//                 <select className={"tailwindSelector"} value={typeTo} onSelect={e => {
+//                     setTypeTo(e.currentTarget.value)
+//                 }} onChange={() => {
+//                 }}>
+//                     {["plate", "jar", "slant"].map((opt, i) => {
+//                         return <option value={opt} key={i}>{opt}</option>
+//                     })}
+//                 </select>
+//             </div>
+//             <div>
+//                 <TestAndValidate
+//                     todos={["validate that this is working properly in typing as well as reading from rfid"]}>
+//                     <NameArea currentName={idTo} setName={setIdTo} headerTxt={"Select ID: "} readonly={false}
+//                               headerLevel={headerLevel}/>
+//                 </TestAndValidate>
+//                 <ReadRFIDButton handleTagRead={setIdTo}/>
+//             </div>
+//         </div>
+//         <NewEntryNotes setNotes={setNotes}/>
+//         <button className={"basicButton"} onClick={e => {
+//             e.preventDefault()
+//             handleCreate()
+//         }}>{"Submit new Clone"}</button>
+//     </div>
+// }
 
 export function FruitListPageTable({data, onClick, withLink}: ListPageItems<FruitData>) {
     let cols: ListTableColumn<FruitData>[] = [

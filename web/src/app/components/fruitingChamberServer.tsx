@@ -84,31 +84,29 @@ export class FruitingChamberData {
     }
 }
 
-export function FruitingChamberSelectorCloseable(sp: SelectorProps<FruitingChamberData>) { // TODO: use
-    const doSel = (val?: FruitingChamberData):void=>{
-        if (!val){
-            return
-        }
-        sp.doSelect(val)
-    }
-    return <CloseableSelector<FruitingChamberData> props={{
-        allowCreation: sp.allowCreation,
-        doSelect: doSel, // For selecting normally
-        closeTxt: "Close Fruiting Chamber List",
-        //createTxt: "Create Bag",// TODO: ???
-        lowercase: "fruiting chamber",
-        //creatorInPage: sp.creatorInPage,// TODO: ???
-        //createEndpt: "bag",// TODO: ???
-        createSelector:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-            return <FruitingChamberSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
-                v && selHdl(v)
-            }}/>
-        },
-        // TODO: ok?
-        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
-    }}/>
-}
-
-// TODO: fruitingChamber selector?. RFID or text input selector
+// export function FruitingChamberSelectorCloseable(sp: SelectorProps<FruitingChamberData>) { // TODO: use
+//     const doSel = (val?: FruitingChamberData):void=>{
+//         if (!val){
+//             return
+//         }
+//         sp.doSelect(val)
+//     }
+//     return <CloseableSelector<FruitingChamberData> props={{
+//         allowCreation: sp.allowCreation,
+//         doSelect: doSel, // For selecting normally
+//         closeTxt: "Close Fruiting Chamber List",
+//         //createTxt: "Create Bag",// TODO: ???
+//         lowercase: "fruiting chamber",
+//         //creatorInPage: sp.creatorInPage,// TODO: ???
+//         //createEndpt: "bag",// TODO: ???
+//         createSelector:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+//             return <FruitingChamberSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+//                 v && selHdl(v)
+//             }}/>
+//         },
+//         // TODO: ok?
+//         // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+//         //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+//         // },
+//     }}/>
+// }

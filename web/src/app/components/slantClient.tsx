@@ -41,7 +41,6 @@ import {
     OptionalSimpleKey, RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData,
-    setFormData,
     setFormFull,
 } from "@/app/components/common";
 import ReaderWriterSelector, {

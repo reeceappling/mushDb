@@ -8,7 +8,6 @@ import {
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {NumbersOnlyFromText} from "@/app/components/formSubcomponents/date";
 import {Data, ListResult, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {NewPicWithNotesForm, PicWithNotesForm} from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
@@ -19,8 +18,7 @@ import {useRfidReaderContext} from "@/app/components/formSubcomponents/readerWri
 import {
     AssertSubstrateRecipe,
 } from "@/app/components/substrateRecipeClient";
-import TestAndValidate from "@/app/components/testing/untested";
-import {InputNumber, InputTextInlineTitle, Modes} from "@/app/components/formSubcomponents/numericInput";
+import { InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {AssertAgarRecipe} from "@/app/components/agarRecipeClient";
 import {AssertAgarBatch} from "@/app/components/agarBatchClient";
 import {AssertBag} from "@/app/components/bagClient";
@@ -1042,7 +1040,7 @@ export function SelectorWrapper<T>(props: React.PropsWithChildren<{
 }>) {
     const [isOpen, setIsOpen] = useState(!props.current);
     useEffect(() => {
-        setIsOpen(false)
+        setIsOpen(false) // TODO: it does not like that we are calling a setState in a useEffect
     }, [props.current])
     if (isOpen) {
         return <div>

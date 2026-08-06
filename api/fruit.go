@@ -151,6 +151,7 @@ func (f Fruit) createSporeSwabInTxn(ctx mongo.SessionContext, notes NotesField, 
 	//}
 	// TODO: add transfer to parent for swab? should swabs have their own field on fruits?
 	// TODO: may just not want to do this. Fruit page could have an endpoint to load swabs???
+	// TODO: consider adding these are transfers to the fruit...... -------------------------------------------
 	//newXferId := newAlternateCollectionId()
 	//err = createTransferInTxn(ctx, f, toInsert, Transfer{
 	//	AlternateCollectionIdField: AlternateCollectionIdField{Id:newXferId},

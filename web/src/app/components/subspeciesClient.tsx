@@ -24,7 +24,7 @@ import {
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {SpeciesData, SpeciesSelectorCloseable} from "@/app/components/speciesServer";
+import {SpeciesData} from "@/app/components/speciesServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
@@ -214,7 +214,7 @@ export function ExistingSubSpeciesSelector(
         }
         setSelected(undefined)
         setLoaded(false)
-        fetch(BaseExternalUrl + "/subspeciesFor/" + encodeURI(species), { // TODO: ensure endpoint ok
+        fetch(BaseExternalUrl + "/db/subspeciesFor/" + encodeURI(species), { // TODO: ensure endpoint ok
             method: "GET",
             headers: clientPostRequestHeaders,
         })

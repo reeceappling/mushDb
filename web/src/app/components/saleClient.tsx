@@ -26,7 +26,7 @@ import {
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {SaleData} from "@/app/components/saleServer";
-import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     AclDisplay,
     MarshalAcl,
@@ -34,7 +34,6 @@ import {
     UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 

@@ -5,9 +5,7 @@ import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/
 import {
     DisplayFormWrapper,
     DisplayInput,
-    DoCreateRequest,
-    DoImportRequest, DoMultipartImportRequest, DoUpdateMultipartRequest,
-    DoUpdateRequest,
+    DoCreateRequest, DoMultipartImportRequest, DoUpdateMultipartRequest,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
@@ -65,8 +63,6 @@ import {
     IsValidContamination, NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {AssertPlate} from "@/app/components/plateClient";
-import {PlateData} from "@/app/components/plateServer";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {

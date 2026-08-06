@@ -10,7 +10,6 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
 import {useEffect, useState} from "react";
-import {Grain} from "@/app/components/formSubcomponents/grains";
 
 interface NutrientsAreaProps {
     readonly: boolean,

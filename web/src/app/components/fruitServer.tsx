@@ -68,13 +68,10 @@ export function FruitSelectorCloseable({onSelect, hideDisposed}:{onSelect: (val?
         onSelect(val)
     }
     return <CloseableSelector<FruitData> props={{
-        allowCreation: false, // TODO: ok?
+        allowCreation: false,
         doSelect: doSel, // For selecting normally
         closeTxt: "Close Fruit List",
-        //createTxt: "Create Fruit", // TODO: ok?
         lowercase: "fruit",
-        //creatorInPage: sp.creatorInPage, // TODO: ok?
-        //createEndpt: "fruit", // TODO: ok?
         createSelector:(selHdl: (onSelect: FruitData) => void)=>{
             return <FruitSelector hideDisposed={hideDisposed} doSelect={(v)=>{
                 v && selHdl(v)

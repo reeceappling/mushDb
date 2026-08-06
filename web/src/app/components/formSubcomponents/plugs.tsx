@@ -4,10 +4,9 @@ import {useQuery} from "@tanstack/react-query";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {SelectorResetsOnSelectFor} from "@/app/components/selector";
 import * as React from "react";
-import {AdditiveEntryForNew, DowelEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
+import { DowelEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import {DowelType} from "@/app/components/plugsServer";
 import {useEffect, useState} from "react";
-import {Additive, AdditiveTypeSelectorForNew} from "@/app/components/formSubcomponents/additives";
 
 export function WoodTypeSelectorForNew(
     {onSelect, blacklist}: {

@@ -6,8 +6,6 @@ import {
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {StasisTubeSelector} from "@/app/components/stasisTubeClient";
 
 export function TestStasisTubeOk(){
     return new StasisTubeData({
@@ -72,29 +70,29 @@ export class StasisTubeData {
     }
 }
 
-export function StasisTubneSelectorCloseable(sp: SelectorProps<StasisTubeData>) { // TODO: use
-    const doSel = (val?: StasisTubeData):void=>{
-        if (!val){
-            return
-        }
-        sp.doSelect(val)
-    }
-    return <CloseableSelector<StasisTubeData> props={{
-        allowCreation: sp.allowCreation,
-        doSelect: doSel, // For selecting normally
-        closeTxt: "Close Stasis Tube List",
-        //createTxt: "Create Bag",// TODO: ???
-        lowercase: "stasis tube",
-        //creatorInPage: sp.creatorInPage,// TODO: ???
-        //createEndpt: "bag",// TODO: ???
-        createSelector:(selHdl: (onSelect: StasisTubeData) => void)=>{
-            return <StasisTubeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
-                v && selHdl(v)
-            }}/>
-        },
-        // TODO: ok?
-        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
-    }}/>
-}
+// export function StasisTubneSelectorCloseable(sp: SelectorProps<StasisTubeData>) { // TODO: use
+//     const doSel = (val?: StasisTubeData):void=>{
+//         if (!val){
+//             return
+//         }
+//         sp.doSelect(val)
+//     }
+//     return <CloseableSelector<StasisTubeData> props={{
+//         allowCreation: sp.allowCreation,
+//         doSelect: doSel, // For selecting normally
+//         closeTxt: "Close Stasis Tube List",
+//         //createTxt: "Create Bag",// TODO: ???
+//         lowercase: "stasis tube",
+//         //creatorInPage: sp.creatorInPage,// TODO: ???
+//         //createEndpt: "bag",// TODO: ???
+//         createSelector:(selHdl: (onSelect: StasisTubeData) => void)=>{
+//             return <StasisTubeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+//                 v && selHdl(v)
+//             }}/>
+//         },
+//         // TODO: ok?
+//         // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+//         //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+//         // },
+//     }}/>
+// }

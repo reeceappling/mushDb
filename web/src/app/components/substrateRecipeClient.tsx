@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -127,8 +127,8 @@ export default function SubstrateRecipeDisplay(
             })
     }
     const ovcs: OnViewCreatorTriCol[] = [
-        // TODO: bag creation area! (MAYBE MUCH LATER)
-        // TODO: box creation area! (MAYBE MUCH LATER)
+        // TODO: bag creation area! (MAYBE MUCH LATER), we probably want to just create bags from the substrateBatch
+        // TODO: box creation area! (MAYBE MUCH LATER), we probably want to just create boxes from the substrateBatch and/or jars
         {
             txt: "Create Substrate Batch",
             newCreationArea: (onCreate: AddCreatedTriColFunction) => {
@@ -219,30 +219,39 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
     )
 }
 
-export function SubstrateRecipeArea({id, txt, readonly, onSelect}: { // TODO: OVERHAUL!!!!
+export function SubstrateRecipeArea({id, txt, readonly, onSelect}: { // TODO: OVERHAUL!!!! Allow loading of name!
     id?: string,
     txt?: string,
     readonly: boolean,
     onSelect?: (d?: SubstrateRecipeData) => void
 }) {
-    const [val, setVal] = useState<string | undefined>(id)
+    const [recipeName, setRecipeName] = useState<string | undefined>(undefined)
+    const [recipeId, setRecipeId] = useState<string | undefined>(id)
+    useEffect(() => {
+        if(id!==undefined && recipeName===undefined){
+            // TODO: useEffect on mount if recipeName does not exist but ID does to load the name via the id
+        }
+    },[])
+
     const [open, setOpen] = React.useState(false)
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (open) {
         <SubstrateRecipeSelector doSelect={r => {
             if (r !== undefined) {
                 onSelect && onSelect(r)
-                setVal(r._id)
+                setRecipeName(r._id)
+                setRecipeId(r.name)
                 setOpen(false)
             }
         }} allowCreate={false}/>
     }
-    if (val !== undefined) {
+    if (recipeId !== undefined) {
+        // TODO: if name does not exist yet, then create a button to load the name!
         linkArea =
             <EntryLinkForId props={{
                 openInNewTab: false,
-                displayId: val,
-                linkId: val,
+                displayId: recipeName || recipeId,
+                linkId: recipeId,
                 entryType: "substrateRecipe"
             }}/>
         //     { // TODO: where does this go?
@@ -274,7 +283,7 @@ export function SubstrateRecipeArea({id, txt, readonly, onSelect}: { // TODO: OV
 export function SubstrateRecipeListPageTable({data, onClick, withLink}: ListPageItems<SubstrateRecipeData>) {
     let cols: ListTableColumn<SubstrateRecipeData>[] = [
         NewColumn("ID", (v) => v._id, true),
-        NewColumn("Name", (v) => v.name, true), // TODO: shortname?
+        NewColumn("Name", (v) => v.name, true), // TODO: shortname? or aliases?
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         })

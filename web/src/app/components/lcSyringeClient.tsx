@@ -7,20 +7,15 @@ import {LcData, LcSelectorCloseable} from "@/app/components/lcServer";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
-    clientPostRequestHeaders,
     ConfirmedCleanArea,
     ConfirmedCleanSelector,
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
     DoGetRequest, DoMultipartImportRequest, DoUpdateMultipartRequest,
-    DoUpdateRequest,
-    ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    HandleJsonResponse,
-    importApiUrlFor,
     ImportEntryFormWrapper,
     ListPageItems,
     ListPageTable,
@@ -30,8 +25,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
-    RequiredKey, resolveContamsFormData, resolvePicsFormData, setFormFull,
-    viewUrlFor,
+    RequiredKey, resolvePicsFormData, setFormFull,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     ReadRFIDButton,
@@ -52,7 +46,6 @@ import {LcSyringeData} from "@/app/components/lcSyringeServer";
 import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import TestAndValidate from "@/app/components/testing/untested";
 import {
     AclDisplay,
     MarshalAcl,
@@ -71,9 +64,7 @@ import {
     NewPicWithNotesForm,
     PicWithNotesForm
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {AssertPlate} from "@/app/components/plateClient";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
-import {PlateData} from "@/app/components/plateServer";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
     if (typeof input !== 'object') {

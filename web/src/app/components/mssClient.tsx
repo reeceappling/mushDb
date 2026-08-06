@@ -8,7 +8,6 @@ import {
     DoCreateRequest,
     DoGetRequest,
     DoUpdateMultipartRequest,
-    DoUpdateRequest,
     ErrHandler,
     ExistingRecentSelector,
     FlexedArea,
@@ -27,7 +26,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
-    RequiredKey, resolveContamsFormData, resolvePicsFormData, setFormFull,
+    RequiredKey, resolvePicsFormData, setFormFull,
     viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
@@ -67,9 +66,6 @@ import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/coo
 import TestAndValidate from "@/app/components/testing/untested";
 import {AssertSporePrint} from "@/app/components/sporePrintClient";
 import {AssertWaterJar} from "@/app/components/waterJarClient";
-import {JarData} from "@/app/components/jarServer";
-import {PlateData} from "@/app/components/plateServer";
-import {AssertPlate} from "@/app/components/plateClient";
 import {
     InitialPicsEntries, IsValidPicWithNotesIncoming,
     NewPicWithNotesForm,

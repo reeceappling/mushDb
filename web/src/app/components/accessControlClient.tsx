@@ -104,7 +104,7 @@ export function ProjectsDisplay({readonly, initial, onClick, updateParent, allow
     }
     const [current, setCurrent] = useState<Map<string, boolean>>(initial); // TODO: ensure new Map() not needed
     useEffect(()=>{
-        setCurrent(initial) // TODO: ensure new Map() not needed
+        setCurrent(initial) // TODO: ensure new Map() not needed! TODO: can we remove useEffect here?
     },[initial])
 
     const update = (newPs: Map<string, boolean>) => {
@@ -367,6 +367,12 @@ export function AclDisplay(inp: {
     // TODO: onUserClick???
 }) {
     const [current, setCurrent] = React.useState(inp.initial)
+    const mapFor = (inpMap?: Map<string, boolean>):Map<string, boolean> => {
+        if (inpMap === undefined || inpMap === null || inpMap.size === 0) {
+            return new Map<string, boolean>()
+        }
+        return new Map<string, boolean>(inpMap)
+    }
     useEffect(()=>{
         setCurrent({
             blanketPerm: inp.initial.blanketPerm,
@@ -406,15 +412,10 @@ export function AclDisplay(inp: {
         }
 
     }
-    const mapFor = (inpMap?: Map<string, boolean>):Map<string, boolean> => {
-        if (inpMap === undefined || inpMap === null || inpMap.size === 0) {
-            return new Map<string, boolean>()
-        }
-        return new Map<string, boolean>(inpMap)
-    }
+
     const depth = useContext(DepthContext)
     if (inp.readonly) {
-        return <div>{/* TODO: TURN INTO A TABLE!!!!*/}
+        return <div>{/* TODO: TURN INTO A TABLE?!!!!*/}
             <TestAndValidate todos={["if users or projects do not exist on existing ACLs, problems are caused..."]}>
                 <AclBlanketDisplay readonly={true} ACL={inp.initial} updateParent={()=>{}}/>
                 <AclUsersDisplayInternal readonly={true} initial={inp.initial.users || new Map<string, boolean>()}/>

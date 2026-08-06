@@ -10,7 +10,7 @@ import {
     useRfidReaderContext
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
 import * as React from "react";
-import {JSX, SyntheticEvent, useState} from "react";
+import {JSX, useState} from "react";
 import Button from "@mui/material/Button"
 import Menu from "@mui/material/Menu"
 import MenuItem from "@mui/material/MenuItem"

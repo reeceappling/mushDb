@@ -185,8 +185,6 @@ export function StasisTubeImportDisplay() {
         {err!=undefined && <div>{"Error: "+err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<ExistingSpeciesSelector doSelect={setSpecies}/>*/}{/* TODO: if works, then remove all of these from mainCollImports!*/}
-        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>

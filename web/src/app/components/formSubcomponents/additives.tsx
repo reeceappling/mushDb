@@ -1,16 +1,11 @@
 // no state in here!
 
-import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {useQuery} from "@tanstack/react-query";
 import {SelectorFor, SelectorResetsOnSelectFor} from "@/app/components/selector";
-import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
-import TextBox from "@/app/components/formSubcomponents/textbox";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
-import TestAndValidate from "@/app/components/testing/untested";
-import {AdditiveEntryForNew, RemoveButton, SugarEntryForNew} from "@/app/components/formSubcomponents/commonClient";
+import {AdditiveEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
 import {useEffect, useState} from "react";
-import {Sugar, SugarTypeSelectorForNew} from "@/app/components/formSubcomponents/sugars";
 
 export interface Additive {
     additive: string

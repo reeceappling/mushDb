@@ -5,8 +5,6 @@ import {SelectorResetsOnSelectFor} from "@/app/components/selector";
 import {useQuery} from "@tanstack/react-query";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {useEffect, useState} from "react";
-import {Additive} from "@/app/components/formSubcomponents/additives";
-import {Grain} from "@/app/components/formSubcomponents/grains";
 
 export type Antibiotic = "Doxycycline" | "Cefazolin" | "Amoxicillin";
 export const AntibioticsList: Antibiotic[] = ["Doxycycline", "Cefazolin", "Amoxicillin"]

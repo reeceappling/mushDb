@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedTriColFunction,
@@ -424,7 +424,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
 
 export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
     // Required
-    const [sealDate, setSealDate] = useState(Date.now())
+    const [sealDate, setSealDate] = useState<number>(0) // TODO: used to be useState(Date.now()), but something did not like that...
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [recipe, setRecipe] = useState<SubstrateRecipeData | undefined>(undefined)
     const [filterSize, setFilterSize] = useState<string | undefined>(undefined)
@@ -436,6 +436,10 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
+    useEffect(()=>{
+        // Set initial seal date on first load
+        setSealDate(Date.now())
+    },[])
     const submitImportBag = () => {
         const reqd = new Map<string, any>([
             ['recipe', recipe],
@@ -468,7 +472,7 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
     return <ImportEntryFormWrapper entryType={"bag"}>
         {/* Required Fields */}
         <ErrorDisplay err={err}/>
-        <DateArea pre={"Seal Date: "} when={Date.now()} updateParent={setSealDate}/>
+        <DateArea pre={"Seal Date: "} when={sealDate} updateParent={setSealDate} readonly={false}/>
         <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={false} creatorInPage={false}/>
         </SelectorWrapper>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useEffect, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -44,7 +44,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType,
     RequiredArrayOfType,
-    RequiredKey, Subform, viewApiUrlFor,
+    RequiredKey, Subform,
     ViewInNewTabButton
 } from "@/app/components/common";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -69,7 +69,6 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 
 export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     if (typeof input !== 'object') {
@@ -402,7 +401,7 @@ export function agarPer400mL(agar: number) {
     return <div>{"(" + (agar * 2.0 / 5.0) + " g/400mL)"}</div>
 }
 
-// TODO: validate working! changed on 6/15/26
+// TODO: validate working! changed on 6/15/26!!!!
 export const AgarRecipeArea = ({agarRecipeBinId,agarRecipe}: { agarRecipeBinId?: string, agarRecipe?:AgarRecipeData }) => {
     const [recipe, setRecipe] = useState<AgarRecipeData | undefined>(agarRecipe)
     const firstArea = ()=>{
@@ -412,28 +411,21 @@ export const AgarRecipeArea = ({agarRecipeBinId,agarRecipe}: { agarRecipeBinId?:
         return <div>{"Agar Recipe ID: "}</div>
     }
     const linkArea = ()=>{
-        if (recipe) {
-            return <EntryLinkForId props={{
-                displayId: recipe.name, // TODO: add id?
-                linkId: recipe._id,
-                entryType: "agarRecipe"
-            }}/>
-        }
         if (agarRecipeBinId) {
-            return <>
+            return <div>
                 <EntryLinkForId props={{
-                    displayId: agarRecipeBinId,
+                    displayId: recipe ? recipe.name : agarRecipeBinId, // TODO: add id?
                     linkId: agarRecipeBinId,
                     entryType: "agarRecipe"
                 }}/>
-                <button className={"basicButtonSmall"} onClick={e=>{
+                {(recipe===undefined) && <button className={"basicButtonSmall"} onClick={e=>{
                     e.stopPropagation()
                     // TODO: LOAD THE NAME! Validate works!
                     DoGetRequest("agarRecipe", agarRecipeBinId, AssertAgarRecipe, (e)=>{
                         console.error("failed to get agar recipe: "+JSON.stringify(e));
                     }).then(setRecipe)
-                }}>{"Load Name"}</button>
-            </>
+                }}>{"Load Name"}</button>}
+            </div>
         }
         return <div>{"unknown"}</div>
     }
@@ -522,7 +514,7 @@ export function AgarRecipeListPageTable({data, onClick, withLink}: ListPageItems
 
 export function AgarRecipeSelectorTable({data, onClick, withLink}: ListPageItems<AgarRecipeData>) {
     let cols: ListTableColumn<AgarRecipeData>[] = [
-        NewColumn("Name", (v) => v.name), // TODO: shortname?
+        NewColumn("Name", (v) => v.name),
         NewColumn("ID", (v) => v._id),
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)

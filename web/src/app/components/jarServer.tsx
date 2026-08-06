@@ -83,29 +83,29 @@ export class JarData {
     }
 }
 
-export function JarSelectorCloseable(sp: SelectorProps<JarData>) { // TODO: use
-    const doSel = (val?: JarData):void=>{
-        if (!val){
-            return
-        }
-        sp.doSelect(val)
-    }
-    return <CloseableSelector<JarData> props={{
-        allowCreation: sp.allowCreation,
-        doSelect: doSel, // For selecting normally
-        closeTxt: "Close Jar List",
-        //createTxt: "Create Bag",// TODO: ???
-        lowercase: "jar",
-        //creatorInPage: sp.creatorInPage,// TODO: ???
-        //createEndpt: "bag",// TODO: ???
-        createSelector:(selHdl: (onSelect: JarData) => void)=>{
-            return <JarSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
-                v && selHdl(v)
-            }}/>
-        },
-        // TODO: ok?
-        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
-    }}/>
-}
+// export function JarSelectorCloseable(sp: SelectorProps<JarData>) { // TODO: use
+//     const doSel = (val?: JarData):void=>{
+//         if (!val){
+//             return
+//         }
+//         sp.doSelect(val)
+//     }
+//     return <CloseableSelector<JarData> props={{
+//         allowCreation: sp.allowCreation,
+//         doSelect: doSel, // For selecting normally
+//         closeTxt: "Close Jar List",
+//         //createTxt: "Create Bag",// TODO: ???
+//         lowercase: "jar",
+//         //creatorInPage: sp.creatorInPage,// TODO: ???
+//         //createEndpt: "bag",// TODO: ???
+//         createSelector:(selHdl: (onSelect: JarData) => void)=>{
+//             return <JarSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
+//                 v && selHdl(v)
+//             }}/>
+//         },
+//         // TODO: ok?
+//         // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+//         //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+//         // },
+//     }}/>
+// }

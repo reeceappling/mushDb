@@ -78,7 +78,7 @@ import {
     TogglableAreaWithDepth, UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {InputNumber, InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
+import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import Box from "@mui/material/Box";
 import Slider from "@mui/material/Slider";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
@@ -86,7 +86,6 @@ import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc"
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
-import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {

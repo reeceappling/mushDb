@@ -3,12 +3,9 @@
 import {useQuery} from "@tanstack/react-query";
 import {getOptionsResponse} from "./server";
 import {SelectorResetsOnSelectFor} from "@/app/components/selector";
-import {AreaProps, Data, FormListArea, GroupProps} from "@/app/components/formSubcomponents/shared";
 import {LiquidEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
-import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
 import * as React from "react";
 import {useEffect, useState} from "react";
-import {Additive} from "@/app/components/formSubcomponents/additives";
 
 export interface Liquid {
     name: string,

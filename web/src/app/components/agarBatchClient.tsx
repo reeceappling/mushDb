@@ -139,7 +139,7 @@ export default function AgarBatchDisplay(
         },
         {
             // TODO: Slants are poured BEFORE PCing! The Agar batch will already have the PC Run on it though, so we shouldnt worry about it.
-            // TODO: also sticks should be BOILED BEFORE going in the PC!
+            // TODO: also sticks should be BOILED BEFORE going in the PC! HANDLE BOILING TIME ON STICKS?
             txt: "Create Slants (Before PC)",
             newCreationArea: (onCreate: AddCreatedTriColFunction) => {
                 return <NewSlantForm agarBatchIn={initial} handlers={{

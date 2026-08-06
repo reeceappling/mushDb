@@ -1,8 +1,8 @@
 'use client'
 
-import {JSX, useContext, useEffect, useState} from "react";
+import { useContext, useEffect, useState} from "react";
 import {Liquid} from "./liquids";
-import EntryLinkForId, {
+import {
     EntryLinkIdWrapper
 } from "@/app/components/formSubcomponents/entryLink";
 import {AllEntries, Data, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
@@ -17,20 +17,14 @@ import {
     InputDecimal,
     InputText,
     InputTextInlineTitle,
-    InputTextWithSmallTitle,
-    NumericalAreaWithAbsolutes
+    InputTextWithSmallTitle
 } from "./numericInput";
 import DateArea, {NumberToDate} from "./date";
-import {Note, NotesAreaMostRecentImage, NotesFormArea, NotesFormAreaPics, SingleNoteV2} from "./notes";
-import {SpeciesData} from "@/app/components/speciesServer";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
+import {Note, NotesAreaMostRecentImage, NotesFormAreaPics} from "./notes";
 import {NoSsr} from "@mui/material";
 import {useQuery} from "@tanstack/react-query";
 import {dataFor, viewUrlFor} from "@/app/components/common";
 import {SelectorFor} from "@/app/components/selector";
-import TextBoxArea from "@/app/components/formSubcomponents/singleTextBoxArea";
 import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
 import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Additive} from "@/app/components/formSubcomponents/additives";
@@ -38,7 +32,6 @@ import {DepthContext, DepthProvider} from "./depthContext/depth";
 import {DowelType} from "@/app/components/plugsServer";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
-import TestAndValidate from "@/app/components/testing/untested";
 import * as React from "react";
 
 // export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
@@ -888,7 +881,12 @@ export function AliasesArea(
     const [existing, setExisting] = useState<Data<string>[]>(initial ? initial.map(v=>{return {data:v,disabled:false}}) : [])
     const [created, setCreated] = useState<Data<string>[]>([])
     const [reloadCount, setReloadCount] = useState(0)
-
+    const deliverUpdatesToParent = (updated:AllEntries<string>) => {
+        const v = structuredClone(updated)
+        const existingToSend = v.existing.filter(v=>!v.disabled).map(v=>v.data)
+        const newToSend = v.new.filter(v=>{return !v.disabled&&v.data!==""}).map(v=>v.data)
+        updateParent && updateParent([...existingToSend, ...newToSend])
+    }
     useEffect(() => {
         const ex = initial ? initial.map(v=>{return {data:v,disabled:false}}) : []
         setExisting(ex)
@@ -901,12 +899,6 @@ export function AliasesArea(
             existing:structuredClone(existing),
             new: structuredClone(created)
         }
-    }
-    const deliverUpdatesToParent = (updated:AllEntries<string>) => {
-        const v = structuredClone(updated)
-        const existingToSend = v.existing.filter(v=>!v.disabled).map(v=>v.data)
-        const newToSend = v.new.filter(v=>{return !v.disabled&&v.data!==""}).map(v=>v.data)
-        updateParent && updateParent([...existingToSend, ...newToSend])
     }
     const updateExisting = (updated:Data<string>[])=>{
         setExisting(updated)

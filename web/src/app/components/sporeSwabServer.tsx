@@ -1,8 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {TestNotes} from "@/app/components/formSubcomponents/contaminations";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {SporeSwabSelector} from "@/app/components/sporeSwabClient";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 
 
@@ -52,29 +50,29 @@ export class SporeSwabData {
     }
 }
 
-export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwabData>) { // TODO: use
-    const doSel = (val?: SporeSwabData):void=>{
-        if (!val){
-            return
-        }
-        sp.doSelect(val)
-    }
-    return <CloseableSelector<SporeSwabData> props={{
-        allowCreation: sp.allowCreation,
-        doSelect: doSel, // For selecting normally
-        closeTxt: "Close Spore Swab List",
-        //createTxt: "Create Bag",// TODO: ???
-        lowercase: "spore swab",
-        //creatorInPage: sp.creatorInPage,// TODO: ???
-        //createEndpt: "bag",// TODO: ???
-        createSelector:(selHdl: (onSelect: SporeSwabData) => void)=>{
-            return <SporeSwabSelector doSelect={(v)=>{
-                v && selHdl(v)
-            }}/>
-        },
-        // TODO: ok?
-        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
-    }}/>
-}
+// export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwabData>) { // TODO: use
+//     const doSel = (val?: SporeSwabData):void=>{
+//         if (!val){
+//             return
+//         }
+//         sp.doSelect(val)
+//     }
+//     return <CloseableSelector<SporeSwabData> props={{
+//         allowCreation: sp.allowCreation,
+//         doSelect: doSel, // For selecting normally
+//         closeTxt: "Close Spore Swab List",
+//         //createTxt: "Create Bag",// TODO: ???
+//         lowercase: "spore swab",
+//         //creatorInPage: sp.creatorInPage,// TODO: ???
+//         //createEndpt: "bag",// TODO: ???
+//         createSelector:(selHdl: (onSelect: SporeSwabData) => void)=>{
+//             return <SporeSwabSelector doSelect={(v)=>{
+//                 v && selHdl(v)
+//             }}/>
+//         },
+//         // TODO: ok?
+//         // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
+//         //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
+//         // },
+//     }}/>
+// }

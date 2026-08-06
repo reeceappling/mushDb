@@ -3,8 +3,6 @@
 import React, {useEffect, useState} from "react";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {CredentialResponse, GoogleLogin} from "@react-oauth/google";
-import {SelectorFor} from "@/app/components/selector";
-import {SelectorWrapper} from "@/app/components/common";
 import {ReadonlyURLSearchParams, useSearchParams} from "next/navigation";
 
 // TODO: ADD LOGOUT BUTTON SOMEWHERE!

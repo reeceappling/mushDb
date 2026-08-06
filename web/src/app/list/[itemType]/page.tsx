@@ -2,7 +2,7 @@ import PageWrapper from "@/app/components/clientGeneric";
 import React from "react";
 import {GetReaderWriterNames} from "@/app/components/serverActions";
 import {cookies} from "next/headers";
-import {BaseExternalUrl, TopPageHeaderLevel} from "@/app/components/Constants";
+import {BaseExternalUrl} from "@/app/components/Constants";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import ListDisplay from "@/app/list/[itemType]/client";
 import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
