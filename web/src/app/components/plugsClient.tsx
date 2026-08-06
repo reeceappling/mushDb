@@ -30,7 +30,7 @@ import {DowelType, PlugsData} from "@/app/components/plugsServer";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "./formSubcomponents/readerWriterButtons/readerSelector";
-import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "./formSubcomponents/shared";
+import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "./formSubcomponents/shared";
 import {ACL} from "./accessControlServer";
 import {
     ErrorDisplay,
@@ -63,6 +63,7 @@ import {
     IsValidContamination, NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
@@ -259,11 +260,27 @@ export default function PlugsDisplay(
         const disp = initial.disposed !== undefined
         return !disp ? [
             WriteRfidOvcArea(initial._id),
+            // TODO: area to create fruit if innoculated
+            // ...[initial.species ? [{
+            //     txt: "Create Spore Print (+fruit)",
+            //     newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+            //         return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
+            //             <div>{"Not yet implemented!"}</div>{/* TODO: this! */}
+            //         </TestAndValidate>
+            //     },
+            //     needsTesting: true,
+            // },
+            //     {
+            //         txt: "Create Spore Swab (+fruit)",
+            //         newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+            //             return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
+            //                 <div>{"Not yet implemented!"}</div>{/* TODO: this! */}
+            //             </TestAndValidate>
+            //         },
+            //         needsTesting: true,
+            //     }]:[]]
         ] : []
     }
-    // TODO: fruit?
-    // TODO: create spore print
-    // TODO: creat spore swab
     const isInnoculated = () => {
         return initial.species !== undefined
     }
