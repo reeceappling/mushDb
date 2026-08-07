@@ -3,12 +3,12 @@
 
 import {BaseInternalUrl} from "@/app/components/ConstantsServer";
 
-const secret = process.env.MAIN_API_SECRET || ""
-
-interface writeTagRequest {
-    secret: string
-    data: string
-}
+// const secret = process.env.MAIN_API_SECRET || ""
+//
+// interface writeTagRequest {
+//     secret: string
+//     data: string
+// }
 
 // TODO: USE!
 export async function GetReaderWriterNames() {
