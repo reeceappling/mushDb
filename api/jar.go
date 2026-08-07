@@ -90,7 +90,7 @@ func (j GrainJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from
 		return err
 	}
 	upd, err := xfer.
-		PicsModsForChild().
+		PicsModsForChild(j).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).
@@ -425,7 +425,7 @@ type updateJarRequest struct {
 	NotesUpdateField
 	KnownFruitableField
 	DisposedField
-	SaleField
+	//SaleField
 	ImagesUpdateField  //"newPic-1"
 	ContamsUpdateField //"newContam-1"
 	WetnessField
@@ -436,20 +436,20 @@ type updateJarRequest struct {
 func (upr updateJarRequest) reform() resolvedUpdateJarRequest {
 	return resolvedUpdateJarRequest{
 		KnownFruitableField: upr.KnownFruitableField,
-		SaleField:           upr.SaleField,
-		DisposedField:       upr.DisposedField,
-		WetnessField:        upr.WetnessField,
-		BurstGrainsField:    upr.BurstGrainsField,
-		NotesUpdateField:    upr.NotesUpdateField,
-		Images:              imageUpdates(upr.Images),
-		Contams:             contamUpdates(upr.Contams),
-		PermsOnRequest:      upr.PermsOnRequest,
+		//SaleField:           upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		WetnessField:     upr.WetnessField,
+		BurstGrainsField: upr.BurstGrainsField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		Contams:          contamUpdates(upr.Contams),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateJarRequest struct {
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	WetnessField
 	BurstGrainsField
@@ -462,7 +462,7 @@ type resolvedUpdateJarRequest struct {
 func (req resolvedUpdateJarRequest) modsFor(existing *GrainJar, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).

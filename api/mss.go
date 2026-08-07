@@ -206,14 +206,14 @@ func importMssHandler(w http.ResponseWriter, r *http.Request) {
 type updateMssRequest struct {
 	NotesUpdateField
 	DisposedField
-	SaleField
+	//SaleField
 	ImagesUpdateField // TODO: NEW! ENSURE HANDLED IN TS
 	PermsOnRequest    `json:"acl"`
 }
 
 func (upr updateMssRequest) reform() resolvedUpdateMssRequest {
 	return resolvedUpdateMssRequest{
-		SaleField:        upr.SaleField,
+		//SaleField:        upr.SaleField,
 		DisposedField:    upr.DisposedField,
 		NotesUpdateField: upr.NotesUpdateField,
 		Images:           imageUpdates(upr.Images),
@@ -222,7 +222,7 @@ func (upr updateMssRequest) reform() resolvedUpdateMssRequest {
 }
 
 type resolvedUpdateMssRequest struct {
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
@@ -231,7 +231,7 @@ type resolvedUpdateMssRequest struct {
 
 func (req resolvedUpdateMssRequest) modsFor(existing *MSS, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
@@ -273,12 +273,12 @@ func updateMssHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//Validation
-	if data.Sale != nil && (existing.Sale == nil || *existing.Sale != *data.Sale) {
-		if err = db.Collection(SalesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, data.Sale)).Err(); err != nil {
-			dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-	}
+	//if data.Sale != nil && (existing.Sale == nil || *existing.Sale != *data.Sale) {
+	//	if err = db.Collection(SalesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, data.Sale)).Err(); err != nil {
+	//		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+	//		return
+	//	}
+	//}
 	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, data.PermsOnRequest)
 }
 

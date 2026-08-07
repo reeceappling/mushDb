@@ -48,6 +48,8 @@ type updateAgarBatchRequest struct {
 
 func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bson.D, error) {
 	return NewMods().
+		// TODO: can PC run be added late?
+		// TODO: can color be added late?
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(acl.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().

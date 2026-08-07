@@ -63,7 +63,7 @@ func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fro
 	if err != nil {
 		return err
 	}
-	upd, err := xfer.PicsModsForChild().
+	upd, err := xfer.PicsModsForChild(pl).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).

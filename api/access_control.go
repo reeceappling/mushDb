@@ -20,17 +20,13 @@ func (field AclField) Permissions() ACL {
 }
 
 func allCanReadAcl(owner *string) AclField {
-	//var users map[string]bool = nil // TODO: consider!
-	//if owner != nil {
-	//	users = map[string]bool{*owner: true}
-	//}
 	out := ACL{
 		BlanketPerm: RWPermRead(),
 		Users:       map[string]bool{},
 		Projects:    map[projectName]bool{},
 	}
 	if owner != nil {
-		out.Users = map[string]bool{*owner: true}
+		out.Users[*owner] = true
 	}
 	return AclField{ACL: out}
 }
@@ -460,6 +456,7 @@ type ResolvedUserPerms struct {
 	Email       string                           `bson:"email" json:"email"`
 	AccountType *AccountType                     `bson:"accountType,omitempty" json:"accountType,omitempty"` // nil is guest (never write), false is normal email, true is admin
 	Projects    map[projectName]*UserProjectPerm `bson:"projects,omitempty" json:"projects,omitempty"`       // nil is readonly, false is canWrite, true is admin of project
+	//CanEditProjects map[projectName]struct{}// TODO: for project editors, maybe have a separate map? I dont really like this...
 }
 
 func (perms ResolvedUserPerms) GetUser(ctx context.Context) (*User, error) {
@@ -564,7 +561,7 @@ func (pp ProjectPerm) UserProjectPerm() *UserProjectPerm {
 	case ProjectRead:
 		return UserProjectRead()
 	//case ProjectModify:
-	//	return UserProjectModify() // TODO: FIX! May be physically impossible given UserProjectX is a *bool
+	//	return UserProjectModify() // TODO: FIX! May be physically impossible without changing structs given UserProjectX is a *bool
 	default:
 		panic("invalid user project perm string: " + string(pp))
 	}
@@ -784,7 +781,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 		acl.Users = map[string]bool{} // TODO: do we even want this?
 	}
 	if acl.Projects == nil {
-		acl.Projects = map[projectName]bool{}
+		acl.Projects = map[projectName]bool{} // TODO: do we even want this?
 	}
 	// If not blanket write, ensure the user who made the request can write
 	if !requestPerms.BlanketPerm.CanWrite() {

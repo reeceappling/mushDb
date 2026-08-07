@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
@@ -181,7 +182,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSyringeRequest struct {
-	SaleField // TODO: validate?
+	//SaleField // TODO: validate?
 	DisposedField
 	ConfirmedCleanField
 	KnownFruitableField // TODO: handle in react
@@ -196,7 +197,7 @@ func (upr updateSyringeRequest) baseItem() *LcSyringe {
 
 func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
 	return resolvedUpdateSyringeRequest{
-		SaleField:           upr.SaleField,
+		//SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
 		ConfirmedCleanField: upr.ConfirmedCleanField,
 		KnownFruitableField: upr.KnownFruitableField,
@@ -207,7 +208,7 @@ func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
 }
 
 type resolvedUpdateSyringeRequest struct {
-	SaleField
+	//SaleField
 	DisposedField
 	ConfirmedCleanField
 	KnownFruitableField
@@ -223,10 +224,10 @@ func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField Ac
 			imagesForUpdateFunc = append(imagesForUpdateFunc, ex.Data.convert())
 		}
 	}
-	imagesForUpdateFunc = append(imagesForUpdateFunc, req.Images.New...) // TODO: is this backwards???
+	imagesForUpdateFunc = append(imagesForUpdateFunc, req.Images.New...) // TODO: is this backwards??? This is correct if we want new images to go to the end and not the start...
 	return NewMods().
 		updateConfirmedCleanIfNeeded(req.ConfirmedClean, existing.ConfirmedClean).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateKnownFruitableIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
@@ -264,7 +265,7 @@ func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing)
 	if err != nil {
 		// TODO: an issue here? UNSURE AS OF 8/2/26
-		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		dbErrCtx(ctx, w, errors.Join(errors.New("failed to find current entry"), err), http.StatusBadRequest)
 		return
 	}
 	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, out.PermsOnRequest)
@@ -286,11 +287,12 @@ type importLcSyringeRequest struct {
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	ctx, now := request.UnixTime(r.Context())
+	log := logging.GetSugaredLogger(ctx)
 	data, id := importLcSyringeRequest{}, NextMainCollectionId()
 	b58id := id.AsBase58()
 	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
 	if err != nil {
-		println("failed in multipart reader area: " + err.Error()) // TODO: del
+		env.LogIfDev(ctx, "failed in multipart reader area: "+err.Error())
 		// Already written
 		return
 	}
@@ -309,43 +311,40 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	p, err := reader.NextPart()
 	if err != nil {
 		if err != io.EOF {
-			println("failed in nextPart: " + err.Error()) // TODO: del
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			dbErrCtx(ctx, w, errors.Join(errors.New("failed in nextPart"), err), http.StatusInternalServerError)
 			return
 		}
 	} else {
 		fileName := p.FileName()
 		defer p.Close()
 		if fileName != "img" {
-			println("invalid image name: " + fileName) // TODO: del
-			http.Error(w, "invalid image name: "+fileName, http.StatusBadRequest)
+			dbErrCtx(ctx, w, errors.Join(errors.New("invalid image name"), err), http.StatusBadRequest)
 			return
 		}
 		// Process file
 		fieldBytes, err := multipartToImageBytes(p, w)
 		if err != nil {
 			// Already wrote
-			println("failed in multipartToImageBytes") // TODO: del
+			log.Error("failed in multipartToImageBytes")
 			return
 		}
 		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "lcSyringe", string(b58id), "img")
 		if errr != nil {
 			err = errr
-			println("failed to save file: " + err.Error()) // TODO: del
-			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
+			dbErrCtx(ctx, w, errors.Join(errors.New("failed to save file"), err), http.StatusBadRequest)
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	if data.Generation < 1 {
-		http.Error(w, "generation cannot be <=0 for a non-spore import", http.StatusBadRequest)
+		dbErrCtx(ctx, w, errors.New("generation cannot be <=0 for a non-spore import"), http.StatusBadRequest)
 		return
 	}
 
 	finalPerms, err := ImportFinalPerms(ctx, data.Species, data.Subspecies)
 	if err != nil {
-		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
+		dbErrCtx(ctx, w, errors.Join(errors.New("failed to get species and/or subspecies"), err), http.StatusInternalServerError)
 		return
 	}
 	pix := []PicWithNotes{}
@@ -373,7 +372,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		dbErrCtx(ctx, w, errors.Join(errors.New("failed to write tag"), err), http.StatusInternalServerError)
 		return
 	}
 	finishImportMainCollectionEntry(ctx, &toInsert, w)

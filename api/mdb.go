@@ -9,6 +9,7 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/goUtils/v2/utils/channels"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/env"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -24,6 +25,10 @@ import (
 const (
 	mongoClientContextKey = "mongoClient"
 )
+
+func changeItemSpeciesSubspecies[T MainCollectionItem](ctx context.Context, item T, newSpecies string, newSubspecies *string) {
+	// TODO: THIS! ONLY ALLOW ADMINS TO DO THIS?
+}
 
 var (
 	ErrInvalidByteLength = errors.New("invalid id bytes length")
@@ -897,5 +902,10 @@ var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request
 func dbErr(w http.ResponseWriter, txt string, status int) {
 	println("txnErr " + txt)
 	http.Error(w, txt, status)
+	return
+}
+func dbErrCtx(ctx context.Context, w http.ResponseWriter, err error, status int) {
+	env.LogIfDev(ctx, err.Error())
+	http.Error(w, err.Error(), status)
 	return
 }

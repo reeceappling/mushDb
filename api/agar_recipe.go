@@ -77,12 +77,6 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
 
-const LmeaName = "LMEA"
-const PdaName = "PDA"
-const WaterAgarName = "Water Agar"
-const GrainWaterAgarName = "Grainwater Agar"
-const AntibioticAgarName = "Antibiotic Agar"
-
 func initializeAgarRecipes(ctx context.Context) error {
 	db := DbFrom(ctx)
 	coll := db.Collection(AgarRecipesCollectionName)
@@ -151,7 +145,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idGrainWaterAgar)},
-			NameField:                  NameField{GrainWaterAgarName},
+			NameField:                  NameField{"Grainwater Agar"},
 			LiquidsField: LiquidsField{[]Liquid{
 				GrainWater.AsLiquid().withPct(50.0),
 				DistilledWater.AsLiquid().withPct(50.0),

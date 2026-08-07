@@ -79,7 +79,7 @@ func (l LiquidCulture) setTransferChild(ctx mongo.SessionContext, xfer Transfer,
 	if err != nil {
 		return err
 	}
-	upd, err := xfer.PicsModsForChild().
+	upd, err := xfer.PicsModsForChild(l).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).

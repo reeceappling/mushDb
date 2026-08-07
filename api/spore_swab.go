@@ -210,7 +210,7 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 }
 
 type updateSporeSwabRequest struct {
-	SaleField         `json:"saleField"`
+	//SaleField         `json:"saleField"`
 	DisposedField     `json:"disposedField"`
 	NotesUpdateField  `json:"notesUpdateField"`
 	ImagesUpdateField `json:"imagesUpdateField"` // TODO: USE!
@@ -219,7 +219,7 @@ type updateSporeSwabRequest struct {
 
 func (upr updateSporeSwabRequest) reform() resolvedUpdateSporeSwabRequest {
 	return resolvedUpdateSporeSwabRequest{
-		SaleField:        upr.SaleField,
+		//SaleField:        upr.SaleField,
 		DisposedField:    upr.DisposedField,
 		NotesUpdateField: upr.NotesUpdateField,
 		Images:           imageUpdates(upr.Images),
@@ -228,7 +228,7 @@ func (upr updateSporeSwabRequest) reform() resolvedUpdateSporeSwabRequest {
 }
 
 type resolvedUpdateSporeSwabRequest struct {
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
@@ -237,7 +237,7 @@ type resolvedUpdateSporeSwabRequest struct {
 
 func (req resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).

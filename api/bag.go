@@ -85,7 +85,7 @@ func (b Bag) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from gene
 		return err
 	}
 	upd, err := xfer.
-		PicsModsForChild().
+		PicsModsForChild(b).
 		Set("sealDate", xfer.LastUpdated).
 		withInnoc(xfer).
 		withParentType(utils.Pointer(xfer.FromType)).
@@ -270,7 +270,7 @@ func createBagHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateBagRequest struct {
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	WetnessField
 	NotesUpdateField
@@ -283,20 +283,20 @@ type updateBagRequest struct {
 func (upr updateBagRequest) reform() resolvedUpdateBagRequest {
 	return resolvedUpdateBagRequest{
 		KnownFruitableField: upr.KnownFruitableField,
-		SaleField:           upr.SaleField,
-		WetnessField:        upr.WetnessField,
-		DisposedField:       upr.DisposedField,
-		NotesUpdateField:    upr.NotesUpdateField,
-		Images:              imageUpdates(upr.Images),
-		Contams:             contamUpdates(upr.Contams),
-		Flushes:             imageUpdates(upr.Flushes),
-		PermsOnRequest:      upr.PermsOnRequest,
+		//SaleField:           upr.SaleField,
+		WetnessField:     upr.WetnessField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		Contams:          contamUpdates(upr.Contams),
+		Flushes:          imageUpdates(upr.Flushes),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateBagRequest struct {
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	WetnessField
@@ -309,7 +309,7 @@ type resolvedUpdateBagRequest struct {
 func (req resolvedUpdateBagRequest) modsFor(existing *Bag, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateWetnessIfNeeded(req.Wetness, existing.Wetness).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).

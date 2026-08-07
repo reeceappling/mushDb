@@ -55,16 +55,24 @@ type geneticSource interface {
 	SetPerms(AclField) // MUST be a pointer reciever
 }
 
-func setTransferParent(ctx mongo.SessionContext, parent geneticSource, xfer Transfer, dispose bool) error {
+func setTransferParent[T MainCollectionItem](ctx mongo.SessionContext, parent T, xfer Transfer, dispose bool) error {
 	coll := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(parent.CollectionName())
 	ctx, now := request.UnixTimeInTxn(ctx)
-	mods := NewMods().addTransferOut(xfer.Id)
+	var temp any = parent // TODO: will this actually work with geneticSource rather than MainCollectionItem?
+	mods := &Mods{}
+	if xfer.FromImage != nil {
+		if parentWithPics, ok := temp.(HasPicsField); ok {
+			mods = xfer.PicsModsForParent(parentWithPics) // TODO: VALIDATE WORKS!
+		}
+	}
+
+	mods.addTransferOut(xfer.Id)
 	doDispose := dispose || parent.SourceType() == StasisTubeSourceType // TODO: Validate stasis tube source type ok here
 	if doDispose {
 		mods = mods.updateDisposedIfNeeded(DisposedField{Disposed: &now}, parent)
 	}
+
 	upd, err := mods.updateLastUpdatedIfNeeded().Finalized()
-	// TODO: if transfer has a fromPic on it, can we add it to the parent?
 	if err != nil {
 		return err
 	}

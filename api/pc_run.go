@@ -38,7 +38,7 @@ func initializePCRuns(ctx context.Context) error {
 	coll := DbFrom(ctx).Collection(PcRunCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
-		// newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false), // TODO: index runtimes? probably not
+		// newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
 		//Notes (no index unless tags)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
@@ -181,34 +181,34 @@ func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) 
 	return PcRunField{*field.PcRun}.Get(ctx)
 }
 
-func deletePcRunHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	db := DbFrom(ctx)
-	// ensure batch not used by any jars first
-	for _, collName := range []string{AgarBatchCollectionName, BagsCollectionName, GrainJarCollectionName, LCCollectionName, PlugsCollectionName, StasisTubeCollectionName, WaterJarsCollectionName} {
-		err = db.Collection(collName).FindOne(ctx, bson.M{"pcRun": id}).Err()
-		if err != nil {
-			if !errors.Is(err, mongo.ErrNoDocuments) {
-				http.Error(w, "failed to check for pc run usage in "+collName+". "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			// At least one item exists, fail
-			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
-			return
-		}
-	}
-
-	DeleteCollectionItem(ctx, PcRunCollectionName, id, w)
-}
+//func deletePcRunHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	// ensure batch not used by any jars first
+//	for _, collName := range []string{AgarBatchCollectionName, BagsCollectionName, GrainJarCollectionName, LCCollectionName, PlugsCollectionName, StasisTubeCollectionName, WaterJarsCollectionName} {
+//		err = db.Collection(collName).FindOne(ctx, bson.M{"pcRun": id}).Err()
+//		if err != nil {
+//			if !errors.Is(err, mongo.ErrNoDocuments) {
+//				http.Error(w, "failed to check for pc run usage in "+collName+". "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//		} else {
+//			// At least one item exists, fail
+//			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//			return
+//		}
+//	}
+//
+//	DeleteCollectionItem(ctx, PcRunCollectionName, id, w)
+//}

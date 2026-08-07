@@ -147,9 +147,8 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 	if err != nil {
 		return err
 	}
-	// TODO: if xfer has a pic on it for the to, can we add it to the child?
 	upd, err := xfer.
-		PicsModsForChild().
+		PicsModsForChild(p).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).
@@ -192,8 +191,8 @@ func initializePlates(ctx context.Context) error {
 		//newSimpleIndex("parent", "parent", false, true, false),
 		//newSimpleIndex("parentType", "parentType", false, true, false),
 		//
-		////Pics (no index)
-		//// TODO: Contams?
+		// Pics (no index)
+		// Contams?
 		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		//saleIndexModel,
 		//disposedIndexModel,
@@ -426,7 +425,7 @@ type updatePlateRequest struct {
 	WetAtCooledTimeField
 	AgarOnOutsideAtPourTimeField
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	ImagesUpdateField
@@ -441,12 +440,12 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 		WetAtCooledTimeField:                upr.WetAtCooledTimeField,
 		AgarOnOutsideAtPourTimeField:        upr.AgarOnOutsideAtPourTimeField,
 		KnownFruitableField:                 upr.KnownFruitableField,
-		SaleField:                           upr.SaleField,
-		DisposedField:                       upr.DisposedField,
-		NotesUpdateField:                    upr.NotesUpdateField,
-		Images:                              imageUpdates(upr.Images),
-		Contams:                             contamUpdates(upr.Contams),
-		PermsOnRequest:                      upr.PermsOnRequest,
+		//SaleField:                           upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		Contams:          contamUpdates(upr.Contams),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
@@ -458,7 +457,7 @@ func loadMriPics(pics *SplitEntries[picWithNotesForm, PicWithNotes], contams *Sp
 				imagesForUpdateFunc = append(imagesForUpdateFunc, ex.Data.convert())
 			}
 		}
-		imagesForUpdateFunc = append(imagesForUpdateFunc, pics.New...) // TODO: is this backwards???
+		imagesForUpdateFunc = append(imagesForUpdateFunc, pics.New...) // TODO: is this backwards??? This is correct if we want new images to go to the end and not the start...
 	}
 	if contams != nil {
 		for _, ex := range contams.Existing {
@@ -477,7 +476,7 @@ func loadMriPics(pics *SplitEntries[picWithNotesForm, PicWithNotes], contams *Sp
 				imagesForUpdateFunc = append(imagesForUpdateFunc, f.Data.convert())
 			}
 		}
-		imagesForUpdateFunc = append(imagesForUpdateFunc, flushes.New...) // TODO: is this backwards???
+		imagesForUpdateFunc = append(imagesForUpdateFunc, flushes.New...) // TODO: is this backwards??? This is correct if we want new images to go to the end and not the start...
 	}
 	return imagesForUpdateFunc
 }
@@ -489,7 +488,7 @@ func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField
 		updateWetAtCooledTimeIfNeeded(req, existing).
 		updateAgarOnOutsideAtPourTimeIfNeeded(req, existing).
 		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
@@ -506,7 +505,7 @@ type resolvedUpdatePlateRequest struct {
 	WetAtCooledTimeField
 	AgarOnOutsideAtPourTimeField
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]

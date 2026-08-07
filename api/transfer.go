@@ -75,18 +75,27 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	AclField                   `bson:"inline"`
 }
 
-func (t Transfer) PicsModsForChild() *Mods {
+func (t Transfer) PicsModsForChild(child HasPicsField) *Mods {
 	if t.ToImage == nil {
 		return NewMods()
 	}
-	pic := newPicWithNotes(t.CreationDate, []Note{}, *t.ToImage)
+	pic := newPicWithNotes(t.CreationDate, []Note{}, *t.ToImage) // TODO: note?
 	return NewMods().
 		withMostRecentImage(&pic).
-		withPics([]PicWithNotes{pic})
+		withPics(child.currentPics().addPic(pic).Pics) // TODO: ensure works as expected
+}
+func (t Transfer) PicsModsForParent(parent HasPicsField) *Mods {
+	if t.FromImage == nil {
+		return NewMods()
+	}
+	pic := newPicWithNotes(t.CreationDate, []Note{}, *t.FromImage) // TODO: note?
+	return NewMods().
+		withMostRecentImage(&pic).
+		withPics(parent.currentPics().addPic(pic).Pics) // TODO: ensure works as expected
 }
 
 // Perms have not been checked when this runs yet
-func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) (geneticSource, error) {
+func getGeneticItem(ctx context.Context, entryType string, id MainCollectionId) (MainCollectionItem, error) {
 	tempItem, exists := mainCollMap(entryType)
 	if !exists {
 		return nil, errors.New("invalid entry type: " + entryType)
@@ -175,6 +184,7 @@ func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error
 func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	data := createTransferRequest{}
 	id := newAlternateCollectionId()
+	ctx, now := request.UnixTime(r.Context())
 	b58id := id.AsBase58()
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
@@ -202,8 +212,10 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		println("failed to unmarshal Data from form: " + err.Error()) // TODO: ok?
-		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
+		dbErr()
+		err = errors.Join(errors.New("failed to unmarshal Data from form"), err)
+		env.LogIfDev(ctx, err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Get any images
@@ -270,7 +282,6 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	parentId := data.From
 	childId := data.To
-	ctx, now := request.UnixTime(r.Context())
 	childMapEntry := idMapEntry{}
 	var fromType string
 	if data.FromType != nil {
@@ -289,14 +300,13 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error getting child from id db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var parent, child geneticSource
 
-	parent, err = getGeneticItem(ctx, fromType, data.From)
+	parent, err := getGeneticItem(ctx, fromType, data.From)
 	if err != nil {
 		http.Error(w, "failed to get parent item: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	child, err = getGeneticItem(ctx, childMapEntry.EntryType, data.To)
+	child, err := getGeneticItem(ctx, childMapEntry.EntryType, data.To)
 	if err != nil {
 		http.Error(w, "failed to get child item: "+err.Error(), http.StatusBadRequest)
 		return
@@ -350,7 +360,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func createTransferInTxn(ctx mongo.SessionContext, parent, child geneticSource, xfer Transfer, dispose bool) error {
+func createTransferInTxn[T MainCollectionItem, U MainCollectionItem](ctx mongo.SessionContext, parent T, child U, xfer Transfer, dispose bool) error {
 	db := mongo.SessionFromContext(ctx).
 		Client().Database(dbName)
 	_, err := db.Collection(TransfersCollName).InsertOne(ctx, xfer)

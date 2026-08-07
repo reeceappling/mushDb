@@ -80,7 +80,7 @@ func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 		return err
 	}
 	upd, err := xfer.
-		PicsModsForChild().
+		PicsModsForChild(s). // TODO: ensure this exists everywhere that might have it
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).
@@ -217,7 +217,7 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateStasisTubeRequest struct {
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	ImagesUpdateField
@@ -228,18 +228,18 @@ type updateStasisTubeRequest struct {
 func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 	return resolvedUpdateStasisTubeRequest{
 		KnownFruitableField: upr.KnownFruitableField,
-		SaleField:           upr.SaleField,
-		DisposedField:       upr.DisposedField,
-		NotesUpdateField:    upr.NotesUpdateField,
-		Images:              imageUpdates(upr.Images),
-		Contams:             contamUpdates(upr.Contams),
-		PermsOnRequest:      upr.PermsOnRequest,
+		//SaleField:           upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		Contams:          contamUpdates(upr.Contams),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateStasisTubeRequest struct {
 	KnownFruitableField
-	SaleField // TODO: validate exists?
+	//SaleField // TODO: validate exists?
 	DisposedField
 	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
@@ -250,7 +250,7 @@ type resolvedUpdateStasisTubeRequest struct {
 func (req resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
@@ -396,12 +396,12 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Validation
-	if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-		if err = db.Collection(SalesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, out.Sale)).Err(); err != nil {
-			dbErr(w, "failed to find new sale entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed? or get rid of the sale...
-			return
-		}
-	}
+	//if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
+	//	if err = db.Collection(SalesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, out.Sale)).Err(); err != nil {
+	//		dbErr(w, "failed to find new sale entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed? or get rid of the sale...
+	//		return
+	//	}
+	//}
 	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.PermsOnRequest)
 }
 

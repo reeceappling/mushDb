@@ -429,7 +429,7 @@ type updateFruitingChamberRequest struct {
 	NotesUpdateField
 	KnownFruitableField
 	DisposedField
-	SaleField
+	//SaleField
 	ImagesUpdateField  //"newPic-1"
 	ContamsUpdateField //"newContam-1"
 	FlushesUpdateField //"newFlush-1"
@@ -439,19 +439,19 @@ type updateFruitingChamberRequest struct {
 func (upr updateFruitingChamberRequest) reform() resolvedUpdateFruitingChamberRequest {
 	return resolvedUpdateFruitingChamberRequest{
 		KnownFruitableField: upr.KnownFruitableField,
-		SaleField:           upr.SaleField,
-		DisposedField:       upr.DisposedField,
-		NotesUpdateField:    upr.NotesUpdateField,
-		Images:              imageUpdates(upr.Images),
-		Contams:             contamUpdates(upr.Contams),
-		Flushes:             imageUpdates(upr.Flushes),
-		PermsOnRequest:      upr.PermsOnRequest,
+		//SaleField:           upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		Contams:          contamUpdates(upr.Contams),
+		Flushes:          imageUpdates(upr.Flushes),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateFruitingChamberRequest struct {
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
@@ -463,7 +463,7 @@ type resolvedUpdateFruitingChamberRequest struct {
 func (req resolvedUpdateFruitingChamberRequest) modsFor(existing *FruitingChamber, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).

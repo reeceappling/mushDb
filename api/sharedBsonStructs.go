@@ -38,21 +38,39 @@ type subdocWithImage interface {
 	getPicWithNotes() *PicWithNotes
 }
 
-//func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes {
-//	var out *PicWithNotes = nil
-//	latestTime := unix.Time(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
-//	for _, subdoc := range possibleSubdocs {
-//		pwn := subdoc.getPicWithNotes()
-//		if pwn.Time > latestTime {
-//			latestTime = pwn.Time
-//			out = pwn
+//	func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes {
+//		var out *PicWithNotes = nil
+//		latestTime := unix.Time(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
+//		for _, subdoc := range possibleSubdocs {
+//			pwn := subdoc.getPicWithNotes()
+//			if pwn.Time > latestTime {
+//				latestTime = pwn.Time
+//				out = pwn
+//			}
 //		}
+//		return out
 //	}
-//	return out
-//}
+type HasPicsField interface {
+	currentPics() PicsField
+	addPic(newPic PicWithNotes) PicsField
+}
 
 type PicsField struct {
 	Pics []PicWithNotes `bson:"pics,omitempty" json:"pics,omitempty"`
+}
+
+func (pics PicsField) currentPics() PicsField {
+	return pics
+}
+
+func (pics PicsField) addPic(newPic PicWithNotes) PicsField {
+	if pics.Pics == nil {
+		return PicsField{Pics: []PicWithNotes{newPic}}
+	}
+	newPics := make([]PicWithNotes, 0, len(pics.Pics)+1)
+	newPics = append(newPics, pics.Pics...)
+	newPics = append(newPics, newPic) // TODO: is this backwards?
+	return PicsField{Pics: newPics}
 }
 
 func (pics PicsField) getLatestPicFromPicsField() *PicWithNotes {

@@ -491,18 +491,18 @@ func (upr updateSporePrintRequest) reform() resolvedUpdateSporePrintRequest {
 	return resolvedUpdateSporePrintRequest{
 		SporePrintColorField:   upr.SporePrintColorField,
 		SporePrintDensityField: upr.SporePrintDensityField,
-		SaleField:              upr.SaleField,
-		DisposedField:          upr.DisposedField,
-		NotesUpdateField:       upr.NotesUpdateField,
-		Images:                 imageUpdates(upr.Images),
-		PermsOnRequest:         upr.PermsOnRequest,
+		//SaleField:              upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateSporePrintRequest struct {
 	SporePrintColorField
 	SporePrintDensityField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	Images         SplitEntries[picWithNotesForm, PicWithNotes]
@@ -513,7 +513,7 @@ func (req resolvedUpdateSporePrintRequest) modsFor(existing *SporePrint, aclFiel
 	return NewMods().
 		updateSporePrintColorIfNeeded(req.Color, existing.Color).
 		updateSporePrintDensityIfNeeded(req.Density, existing.Density).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).

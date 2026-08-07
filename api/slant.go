@@ -86,7 +86,7 @@ func (s Slant) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 		return err
 	}
 	upd, err := xfer.
-		PicsModsForChild().
+		PicsModsForChild(s).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).
@@ -222,7 +222,7 @@ var ErrTxnWriteFail = errors.New("failed to write in transaction")
 
 type updateSlantRequest struct { // TODO: overhauled, validate still works
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	ImagesUpdateField
@@ -233,12 +233,12 @@ type updateSlantRequest struct { // TODO: overhauled, validate still works
 func (upr updateSlantRequest) reform() resolvedUpdateSlantRequest {
 	return resolvedUpdateSlantRequest{
 		KnownFruitableField: upr.KnownFruitableField,
-		SaleField:           upr.SaleField,
-		DisposedField:       upr.DisposedField,
-		NotesUpdateField:    upr.NotesUpdateField,
-		Images:              imageUpdates(upr.Images),
-		Contams:             contamUpdates(upr.Contams),
-		PermsOnRequest:      upr.PermsOnRequest,
+		//SaleField:           upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		Contams:          contamUpdates(upr.Contams),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
@@ -247,7 +247,7 @@ type resolvedUpdateSlantRequest resolvedUpdatePlateRequest
 func (req resolvedUpdateSlantRequest) modsFor(existing *Slant, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale). // TODO: update to a different endpoint if possible
+		//updateSaleIfNeeded(req.Sale, existing.Sale). // TODO: update to a different endpoint if possible
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
