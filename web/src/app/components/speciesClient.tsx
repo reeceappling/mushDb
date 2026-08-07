@@ -135,10 +135,9 @@ export default function SpeciesDisplay(
     }
     const cookies = useContext(CookiesContext)
     const update = () => {
-        // TODO: validate substrate?
         // Notes, aliases, substrate recipe, and have only
         const body: any = {
-            substrate: substrate, // TODO: something is going wrong with this?
+            substrate: substrate, // TODO: something is going wrong with this? validate serverside
             notes: notes,
             aliases: aliases,
             acl: MarshalAcl(acl),
@@ -160,7 +159,7 @@ export default function SpeciesDisplay(
                     onCreate: (v: SubspeciesData) => {
                         setSubspecies([...(subspecies || []), v._id])
                         const toAdd: CreatedLinkTriCol[] = []
-                        // const toAdd = [{
+                        // const toAdd = [{ // TODO: ???
                         //     typeText: "Subspecies",
                         //     node: <CreatedLinkFor
                         //         linkText={v._id}
@@ -237,8 +236,8 @@ export function NewSpeciesForm(
             aliases: aliases,
             recipe: sub._id, // substrate recipe
             notes: notes,
-            acl: MarshalAcl(acl), // TODO: add this!
-            // defaultAcl starts same as ACL... //defaultAcl: defaultAcl, // TODO: add this! optional because it will keep ACL? Species starts with default ACL being equal to the species ACL
+            acl: MarshalAcl(acl),
+            // defaultAcl starts same as ACL...
         }
         DoCreateRequest("species", body, AssertSpecies, allCookies(cookies))
             .then(v => {
@@ -256,7 +255,7 @@ export function NewSpeciesForm(
                   setName={setSciName}/>
         </Subform>
         <Subform>
-        <AliasesArea updateParent={setAliases} readonly={false}/> {/* TODO: initial as just aliases?*/}
+        <AliasesArea updateParent={setAliases} readonly={false}/>
         </Subform>
         <Subform>
         <SelectorWrapper current={sub} title={"Standard Substrate"} nameFunc={(v: SubstrateRecipeData) => v._id}>
@@ -269,39 +268,6 @@ export function NewSpeciesForm(
         <CreateNewEntryButton onSubmit={submitNewSpecies}/>
     </NewEntryFormWrapper>
 }
-
-
-// // TODO: get rid of?
-// export function SpeciesInline({
-//                                   data,
-//                                   expandByDefault,
-//                                   onClick,
-//                                   showMainPageButton,
-//                                   idIsLink
-//                               }: InlineProps<SpeciesData>) {
-//     const [expanded, setExpanded] = useState(expandByDefault)
-//     return <InlineEntry onClick={onClick}>
-//         <InlineSubArea props={{}}>
-//             <TestAndValidate todos={["BOLD THIS SO THAT WE KNOW TO CLICK IT"]}>
-//                 <ID props={{
-//                     id: data._id,
-//                     txt: "Species",
-//                     entryType: "species",
-//                     allowOpenMainPage: showMainPageButton,
-//                     linkPage: idIsLink
-//                 }}/>
-//             </TestAndValidate>
-//             <NameArea headerTxt={"Scientific Name: "} readonly={true} currentName={data.scientificName}/>
-//             <AliasesArea aliases={data.aliases} readonly={true}/>
-//             <SubstrateRecipeArea id={data.standardSubstrate} readonly={true}/>
-//         </InlineSubArea>
-//         <InlineExpansionArea props={{expanded: expanded}}>
-//             <NotesAreaInline notes={data.notes} offset={-1}/>
-//             <DateArea pre={"Last Updated: "} when={data.lastUpdated} readonly={true}/>
-//         </InlineExpansionArea><InlineExpansionButton data-cy-id="InlineSubAreaButton" setExpanded={setExpanded}
-//                                                      expanded={expanded}/>
-//     </InlineEntry>
-// }
 
 export function SpeciesSubspeciesArea({species, subspecies}: {
     subspecies?: string,
@@ -332,13 +298,13 @@ export function ExistingSpeciesSelector(
     //const cookies = useContext(CookiesContext)
     //const [expandedAfterSelected, setExpandedAfterSelected] = useState<boolean>(false)
     const [isLoaded, setLoaded] = useState(false)
-    const [speciesList, setSpeciesList] = useState<SpeciesData[]>([]); // TODO: add subspecies to species data!!!!!
+    const [speciesList, setSpeciesList] = useState<SpeciesData[]>([]); // TODO: add subspecies to species data?!!!!!
     const [selectorOpen, setSelectorOpen] = useState(false)
     // TODO: REFRESH WHEN NEEDED????
     const [selected, setSelected] = useState<SpeciesData | undefined>()
     const [err, setErr] = useState<string | undefined>(undefined)
     useEffect(() => {
-        fetch(BaseExternalUrl + "/db/list/species", { // TODO: simplify?
+        fetch(BaseExternalUrl + "/db/list/species", {
             method: "GET",
             headers: clientPostRequestHeaders,
         })
@@ -397,20 +363,8 @@ export function ExistingSpeciesSelector(
             <div>
                 {"Currently Selected species: "/* TODO: OVERHAUL*/}
                 <div>{selected._id}</div>
-                {/*{expandedAfterSelected ?*/}
-                {/*<div>*/}
-                {/*    <SpeciesInline data={selected} headerLevel={headerLevel}/>/!* TODO: GET RID OF?*!/*/}
-                {/*    <button className={"basicButtonSmall"} onClick={() => {*/}
-                {/*        setExpandedAfterSelected(false)*/}
-                {/*    }}>{"Show ID only"}</button>*/}
-                {/*</div> : <div>{selected._id}*/}
-                {/*    <button className={"basicButtonSmall"} onClick={() => {*/}
-                {/*        setExpandedAfterSelected(true)*/}
-                {/*    }}>{"Show More"}</button>*/}
-                {/*</div>}*/}
                 <button className={"basicButtonSmall"} onClick={() => {
                     setSelectorOpen(true)
-                    //setExpandedAfterSelected(false)
                 }}>{"Choose a different species"}</button>
             </div>
         </div>

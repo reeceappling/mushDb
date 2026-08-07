@@ -188,8 +188,6 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
         <ErrorDisplay err={err}/>
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
-        {/*{species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>:null}*/}
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
@@ -201,7 +199,7 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
 
 export default function SlantDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel
     }: DisplayInput<SlantData>) {
         const [initial, setInitial] = useState(data)
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
@@ -263,7 +261,6 @@ export default function SlantDisplay(
                     setErr("failed to update initial: "+JSON.stringify(e))
                 })
         }
-        // TODO: DIFFERENTIATE BETWEEN UNINNOCULATED AND INNOCULATED DISPLAY
     const isInnoculated = ()=>{
         return initial.species !== undefined
     }

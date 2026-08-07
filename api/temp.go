@@ -50,7 +50,7 @@ type ReadWriteService interface {
 	WriteRfid(ctx context.Context, readerName shared.RfidReaderName, id MainCollectionId) error
 	ReadRfid(ctx context.Context, readerName shared.RfidReaderName) ([8]byte, error)
 }
-type readWriteSvc struct{}
+type readWriteSvc struct{} // TODO: TEST THIS!
 
 func (rw readWriteSvc) WriteRfid(ctx context.Context, readerName shared.RfidReaderName, id MainCollectionId) (err error) {
 	mgr := websocketSessions.GetSessionManager(ctx)

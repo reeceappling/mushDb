@@ -257,7 +257,7 @@ export default function FruitDisplay(
         {
             txt: "Create Spore Print",
             newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                return <NewSporePrintForm fruitIn={data} parentTypeIn={"fruit"}
+                return <NewSporePrintForm parentId={data._id} parentTypeIn={"fruit"}
                                           onCreate={(item: SporePrintData) => {
                                               setSporePrints([...(sporePrints || []), item._id])
                                               onCreate([{

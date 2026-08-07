@@ -22,7 +22,12 @@ import {
     ListPageTable,
     ExistingRecentSelector,
     CreatedLinkFor,
-    DoMultipartImportRequest, DoCreateRequestMultipart, DoUpdateMultipartRequest, setFormFull
+    DoMultipartImportRequest,
+    DoCreateRequestMultipart,
+    DoUpdateMultipartRequest,
+    setFormFull,
+    NewEntryInput,
+    DoCreateRequest
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -71,6 +76,7 @@ import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubco
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
+import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -104,7 +110,7 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
         }
     }
     // complex required keys
-    const complexOptionalKeys = new Map<string, (v: any) => boolean>([ // TODO: used to be required
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
     ])
     for (const [key, validator] of complexOptionalKeys) {
@@ -259,7 +265,6 @@ export default function SporePrintDisplay(
         return !disp ? [
             // TODO: test heavily for all
             // TODO: print transfer to agar?
-            // TODO: Chain spore print (do not allow after too long) ---------------------------- TODO!!!!
             {
                 txt: "Create Spore Swab",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
@@ -283,6 +288,18 @@ export default function SporePrintDisplay(
                             }], false)
                         }
                     }} />
+                },
+            },
+            {
+                // TODO: do not allow after too long! Maybe dont allow after the print has existed for a week?
+                txt: "Chain Print (Create another)", // TODO: validate works properly!!! Created on 8/7/26
+                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                    return <NewSporePrintForm onCreate={(item: SporePrintData)=>{
+                        onCreate([{
+                            typeText: "Spore Print",
+                            node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
+                        }], true)
+                    }} parentId={initial._id} parentTypeIn={"sporePrint"} headerLevel={undefined} offset={undefined}/>
                 },
             },
             WriteRfidOvcArea(initial._id),
@@ -332,32 +349,32 @@ export default function SporePrintDisplay(
 // Should only be accessible from a fruit's page
 // TODO: FIX THIS! We should be able to make spore prints firectly from fruit, or indirectly from many others!
 export function NewSporePrintForm( // TODO: currently do not like this one...
-    {fruitIn, headerLevel, offset, onCreate, parentTypeIn}: {
-        fruitIn?: FruitData
+    {parentId, headerLevel, offset, onCreate, parentTypeIn}: {
+        parentId?: string
         headerLevel?: number
         offset?: number
         onCreate:(sp: SporePrintData)=>void
         parentTypeIn?:string
 }){
-    const [fruit, setFruit] = useState<FruitData | undefined>(fruitIn)
+    const [parent, setParent] = useState<string | undefined>(parentId)
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
-    const [parentType, setParentType] = useState<string | undefined>(parentTypeIn)
+    //const [parentType, setParentType] = useState<string | undefined>(parentTypeIn)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
 
     const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent)=>{
         e.preventDefault()
-        if(!fruit){
+        if(!parent){
             setErr("Fruit must be selected")
             return
         }
         const doReq = ()=>{
             const formData = new FormData()
             const dataObj:any = {
-                parentType: parentType, // TODO: may be deletable!
-                parent:fruit._id,
+                // parentType: parentType, // TODO: may be deletable!
+                parent:parent,
                 notes:notes,
                 // optional pics also here
                 writeTagTo:writeTagTo,
@@ -395,7 +412,9 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
 
     return <NewEntryFormWrapper entryType={"sporePrint"}>
         <ErrorDisplay err={err}/>
-        {fruitIn === undefined && <FruitSelectorCloseable onSelect={setFruit} hideDisposed={true}/>}
+        {parentId === undefined && <FruitSelectorCloseable onSelect={(f)=>{
+            setParent(f?._id)
+        }} hideDisposed={true}/>}
         <PicsDisplay pix={[]} readonly={false} updateParent={(ps)=>{setPics(ps.new)}} headerLevel={headerLevel} offset={offset}/>
         <NewEntryNotes setNotes={setNotes} />
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

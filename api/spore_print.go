@@ -183,7 +183,6 @@ func (sp SporePrint) createSporeSwabInTxn(ctx mongo.SessionContext, swabNotes, x
 	return &swab, nil
 }
 
-// TODO: createSporePrint should be its own endpoint which accepts a fruit. It can also be called from other spore print pages to do "chaining"
 func (sp SporePrint) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	return errors.New("spore prints cannot be the destination of a transfer")
 	//// TODO: can this happen????? should always be from a fruit right?
@@ -298,8 +297,8 @@ func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
 }
 
 type resolvedCreateSporePrintRequest struct {
-	ParentId   MainCollectionId `json:"parent"`
-	ParentType string           `json:"parentType"`
+	ParentId MainCollectionId `json:"parent"`
+	//ParentType string           `json:"parentType"`
 	NotesField
 	PicsField
 }
@@ -407,6 +406,20 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to find main collection item via id", http.StatusBadRequest)
 		return
 	}
+	// Chaining spore prints when given a spore print as the input
+	// TODO: handle chaining! When do we want to dispose of the parent fruit?
+	if mcItem.SourceType() == SporePrintSourceType {
+		mcItem, err = GetMainCollectionItemSpecific(ctx, mcItem.DbId(), &SporePrint{})
+		if err != nil {
+			http.Error(w, "failed to get fruit from existing print", http.StatusInternalServerError)
+			return
+		}
+		// If parent fruit already disposed, fail! // TODO: VALIDATE!
+		if mcItem.DisposalInfo() != nil {
+			http.Error(w, "parent fruit already disposed!", http.StatusBadRequest)
+			return
+		}
+	}
 	var fr *Fruit
 	var printOut *SporePrint
 	_, er := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
@@ -414,7 +427,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		switch mcItem.SourceType() {
 		case FruitingChamberSourceType, BagSourceType, PlateSourceType, SlantSourceType, PlugSourceType, GrainJarSourceType:
 			// indirect creation, create fruit then continue!
-			//fr, e = FruitFromSourceInTxn(sessCtx, mcItem)
+			fr, e = FruitFromSourceInTxn(sessCtx, mcItem)
 			if e != nil {
 				return nil, e
 			}
@@ -478,7 +491,7 @@ func MainCollItemForEntryType(entryType string) (MainCollectionItem, error) {
 }
 
 type updateSporePrintRequest struct {
-	SaleField // TODO: validate? or delete...
+	//SaleField // TODO: validate? or delete...
 	DisposedField
 	SporePrintColorField
 	SporePrintDensityField
@@ -668,14 +681,13 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	// validate spore print color and density inputs
 	if data.Color != nil {
 		if !slices2.Contains(sporePrintColors, *data.Color) {
-			println("invalid spore print color: " + string(*data.Color)) // TODO: del
-			http.Error(w, "invalid spore print color: "+string(*data.Color), http.StatusBadRequest)
+			dbErrCtx(ctx, w, errors.New("invalid spore print color: "+string(*data.Color)), http.StatusBadRequest)
 			return
 		}
 	}
 	if data.Density != nil {
 		if !slices2.Contains(sporePrintDensities, *data.Density) {
-			http.Error(w, "invalid spore print density: "+string(*data.Density), http.StatusBadRequest)
+			dbErrCtx(ctx, w, errors.New("invalid spore print density: "+string(*data.Density)), http.StatusBadRequest)
 			return
 		}
 	}

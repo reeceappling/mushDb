@@ -53,7 +53,7 @@ export class SpeciesData {
 }
 
 // TODO: there is an alternative to this, so we may not want this or to use it
-export function SpeciesSelectorCloseable(sp: SelectorProps<SpeciesData>) { // TODO: use
+export function SpeciesSelectorCloseable(sp: SelectorProps<SpeciesData>) {
     const doSel = (val?: SpeciesData):void=>{
         if (!val){
             return
@@ -64,18 +64,11 @@ export function SpeciesSelectorCloseable(sp: SelectorProps<SpeciesData>) { // TO
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
         closeTxt: "Close Species List",
-        //createTxt: "Create Species",// TODO: ???
         lowercase: "species",
-        //creatorInPage: sp.creatorInPage,// TODO: ???
-        //createEndpt: "species",// TODO: ???
         createSelector:(selHdl: (onSelect: SpeciesData) => void)=>{
             return <SpeciesSelector doSelect={(v)=>{
                 v && selHdl(v)
             }}/>
         },
-        // TODO: ok?
-        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
     }}/>
 }
