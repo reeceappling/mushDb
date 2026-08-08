@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	"github.com/reeceappling/goUtils/v2/logging"
@@ -60,10 +61,12 @@ type SessionId string
 
 func NewAuthService(sessionsCleanupFreq, sessionTTL *time.Duration) *AuthService {
 	out := &AuthService{
-		sessMap:        map[SessionId]genericsessions.Session[ResolvedUserPerms]{},
-		UserSessionMap: map[string]SessionId{},
-		ttl:            utils.Default(sessionTTL, 2*time.Hour),
-		RWMutex:        &sync.RWMutex{},
+		store: statefulSessionStore{ // TODO: switch to stateless if we need to scale!
+			sessMap:        map[SessionId]genericsessions.Session[ResolvedUserPerms]{},
+			UserSessionMap: map[string]SessionId{},
+		},
+		ttl:     utils.Default(sessionTTL, 2*time.Hour),
+		RWMutex: &sync.RWMutex{},
 	}
 	// Start cleanup thread
 	t := time.NewTicker(utils.Default(sessionsCleanupFreq, 5*time.Minute))
@@ -88,11 +91,111 @@ func GetAuthService(ctx context.Context) *AuthService {
 	return svc
 }
 
-type AuthService struct {
+type sessionStoreNotFoundError struct {
+	typ string
+}
+
+func (e sessionStoreNotFoundError) Error() string {
+	return fmt.Sprintf(e.typ+" not found in storage", e.typ)
+}
+func isStoreNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errors.As(err, &sessionStoreNotFoundError{})
+}
+
+var ErrUserSessionNonexistent = sessionStoreNotFoundError{typ: "user session"}
+var ErrSessNonexistentSession = sessionStoreNotFoundError{typ: "session id"}
+
+type sessionStore interface {
+	SetSession(SessionId, genericsessions.Session[ResolvedUserPerms]) error
+	GetSessionMap(SessionId) (genericsessions.Session[ResolvedUserPerms], error)
+	SetSessionMap(SessionId, genericsessions.Session[ResolvedUserPerms]) error
+	DeleteSessionMap(SessionId) error
+	GetUserSessionMap(email string) (genericsessions.Session[ResolvedUserPerms], error)
+	GetUserSessionMapId(email string) (s SessionId, err error)
+	SetUserSessionMap(email string, id SessionId) error
+	DeleteUserSessionMap(email string) error
+	DeleteSession(email string) error
+	SessionsToDelete() (out utils.Set[string], err error)
+}
+
+type statefulSessionStore struct {
 	sessMap        map[SessionId]genericsessions.Session[ResolvedUserPerms]
 	UserSessionMap map[string]SessionId
-	ttl            time.Duration
-	*sync.RWMutex  // This struct MUST be used as a pointer // TODO: HATE how the mutexes are used in here..
+}
+
+func (storage statefulSessionStore) GetSessionMap(id SessionId) (s genericsessions.Session[ResolvedUserPerms], err error) {
+	var ok bool
+	s, ok = storage.sessMap[id]
+	if ok {
+		return s, nil
+	}
+	return s, ErrSessNonexistentSession
+}
+func (storage statefulSessionStore) GetUserSessionMap(email string) (s genericsessions.Session[ResolvedUserPerms], err error) {
+	id, err := storage.GetUserSessionMapId(email)
+	if err != nil {
+		return s, err
+	}
+	return storage.GetSessionMap(id)
+}
+func (storage statefulSessionStore) GetUserSessionMapId(email string) (s SessionId, err error) {
+	if id, ok := storage.UserSessionMap[email]; ok {
+		return id, nil
+	}
+	return s, ErrUserSessionNonexistent
+}
+func (storage statefulSessionStore) SetSessionMap(id SessionId, s genericsessions.Session[ResolvedUserPerms]) error {
+	storage.sessMap[id] = s
+	return nil
+}
+func (storage statefulSessionStore) SetUserSessionMap(email string, id SessionId) error {
+	storage.UserSessionMap[email] = id
+	return nil
+}
+func (storage statefulSessionStore) DeleteSessionMap(id SessionId) error {
+	delete(storage.sessMap, id)
+	return nil
+}
+func (storage statefulSessionStore) DeleteUserSessionMap(email string) error {
+	delete(storage.UserSessionMap, email)
+	return nil
+}
+func (storage statefulSessionStore) DeleteSession(email string) error {
+	id, ok := storage.UserSessionMap[email]
+	if !ok {
+		return errors.New("user email not found in storage")
+	}
+	return errors.Join(
+		storage.DeleteUserSessionMap(email),
+		storage.DeleteSessionMap(id),
+	)
+}
+func (storage statefulSessionStore) SessionsToDelete() (out utils.Set[string], err error) {
+	out = utils.Set[string]{}
+	now := time.Now()
+	for _, sess := range storage.sessMap {
+		if sess.Expiry.Before(now) {
+			out.Add(sess.Data.Email)
+		}
+	}
+	return out, nil
+}
+func (storage statefulSessionStore) SetSession(id SessionId, updatedSess genericsessions.Session[ResolvedUserPerms]) error {
+	storage.sessMap[id] = updatedSess
+	storage.UserSessionMap[updatedSess.Data.Email] = id
+	return nil
+}
+
+type AuthService struct {
+	store sessionStore
+	// TODO: this is currently stateful, if we ever need multiple servers we need it to be stateless, so offload to a centralized (or read-replica?) db or redis instance.
+	//sessMap        map[SessionId]genericsessions.Session[ResolvedUserPerms] // TODO: this is currently stateful, if we ever need multiple servers we need it to be stateless, so offload to a centralized (or read-replica?) db or redis instance.
+	//UserSessionMap map[string]SessionId                                     // TODO: this is currently stateful, if we ever need multiple servers we need it to be stateless, so offload to a centralized (or read-replica?) db or redis instance.
+	ttl           time.Duration
+	*sync.RWMutex // This struct MUST be used as a pointer // TODO: HATE how the mutexes are used in here..
 }
 
 var (
@@ -111,7 +214,7 @@ func (srv *AuthService) LogoutSession(sessId SessionId) error {
 	if res.Item.Data.Email == GuestEmail() {
 		srv.deleteGuestSession(sessId)
 	} else {
-		srv.deleteSession(sessId, res.Item.Data.Email)
+		srv.deleteSession(res.Item.Data.Email)
 	}
 	return nil
 }
@@ -119,35 +222,48 @@ func (srv *AuthService) LogoutSession(sessId SessionId) error {
 const maxSessionIdGenerationTries = 5 // TODO: max num?
 
 func (srv *AuthService) newSessionIdForUserWithoutLock(email string) (SessionId, error) {
-	if _, userHasSessionAlready := srv.UserSessionMap[email]; userHasSessionAlready {
+	_, err := srv.store.GetUserSessionMap(email)
+	if err == nil {
 		return "", errors.New("email already has existing session") // TODO: dont like. Maybe remove the email and their old session?
 	}
-	for i := 0; i < maxSessionIdGenerationTries; i++ {
-		temp, err := generateSessionId()
+	if !isStoreNotFoundError(err) {
+		// failed to get session but unsure if exists!
+		return "", errors.Join(err, errors.New("failed to check session with email"))
+	}
+
+	for i := 0; i < maxSessionIdGenerationTries; i++ { // TODO: num ok?
+		var temp SessionId
+		temp, err = generateSessionId()
 		if err != nil {
 			return "", err
 		}
-		if _, exists := srv.sessMap[temp]; !exists {
-			return temp, nil
+		_, err = srv.store.GetSessionMap(temp)
+		if err == nil {
+			err = errors.New("session already exists")
+		} else {
+			if isStoreNotFoundError(err) {
+				// Does not exist yet, return
+				return temp, nil
+			}
+			err = errors.Join(err, errors.New("failed to check new session id"))
 		}
+		continue
 	}
-	return "", errors.New("failed to generate a new unused session id")
+	return "", errors.Join(errors.New("failed to generate a new unused session id"), err)
 }
 
 func (srv *AuthService) clearOldSessions() {
 	srv.RLock()
-
-	toDelete := map[SessionId]string{}
-	now := time.Now()
-	for sessid, sess := range srv.sessMap {
-		if sess.Expiry.Before(now) {
-			toDelete[sessid] = sess.Data.Email
-		}
-	}
+	toDelete, err := srv.store.SessionsToDelete()
 	srv.RUnlock()
+	if err != nil {
+		// TODO: what here?
+		panic(err)
+	}
+	err = nil
 	if len(toDelete) > 0 {
-		for id, user := range toDelete {
-			srv.deleteSession(id, user)
+		for user, _ := range toDelete {
+			err = errors.Join(err, srv.deleteSession(user))
 		}
 	}
 	return
@@ -156,16 +272,22 @@ func (srv *AuthService) clearOldSessions() {
 func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[genericsessions.Session[ResolvedUserPerms]] {
 
 	srv.RLock()
-	sess, ok := srv.sessMap[id]
+	sess, err := srv.store.GetSessionMap(id)
 	srv.RUnlock()
-	if !ok {
-		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](ErrSessionNotFound)
+	if err != nil {
+		if isStoreNotFoundError(err) {
+			return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](ErrSessionNotFound)
+		}
+		return utils.ErroredResult[genericsessions.Session[ResolvedUserPerms]](errors.Join(err, errors.New("storage retrieval error")))
 	}
 	wg := &sync.WaitGroup{}
 	if sess.Expiry.Before(time.Now()) {
 		wg.Add(1)
 		go func() {
-			srv.deleteSession(id, sess.Data.Email)
+			err := srv.deleteSession(sess.Data.Email)
+			if err != nil {
+				// TODO; what here?
+			}
 			wg.Done()
 		}()
 
@@ -192,8 +314,10 @@ func (srv *AuthService) setRefreshedSession(id SessionId, sess genericsessions.S
 	defer srv.Unlock()
 	updatedSess := sess.WithUpdatedExpiry(srv.ttl)
 	*result = updatedSess
-	srv.sessMap[id] = updatedSess
-	srv.UserSessionMap[updatedSess.Data.Email] = id
+	err := srv.store.SetSession(id, updatedSess)
+	if err != nil {
+		// TODO: what here?
+	}
 	return *result
 }
 
@@ -213,9 +337,8 @@ func (srv *AuthService) createSessionFor(authinf ResolvedUserPerms) (SessionId, 
 	if err != nil {
 		return "", sess, errors.Join(err, errors.New("session with that ID already exists"))
 	}
-	srv.sessMap[id] = sess
-	srv.UserSessionMap[email] = id
-	return id, sess, nil
+	err = srv.store.SetSession(id, sess)
+	return id, sess, err
 }
 
 func (srv *AuthService) newFakeEmail() (string, error) {
@@ -226,27 +349,28 @@ func (srv *AuthService) newFakeEmail() (string, error) {
 			return "", err
 		}
 		email := "g-" + string(fakeEmailBytes)
-		if _, exists := srv.UserSessionMap[email]; exists {
+		_, err = srv.store.GetUserSessionMap(email)
+		if err == nil {
 			continue
+		}
+		if !isStoreNotFoundError(err) {
+			return "", errors.Join(err, errors.New("storage retrieval error"))
 		}
 		return email, nil
 	}
 	return "", errors.New("failed to generate fake email")
 }
 
-func (srv *AuthService) deleteSession(id SessionId, email string) {
+func (srv *AuthService) deleteSession(email string) error {
 	srv.Lock()
 	defer srv.Unlock()
-	delete(srv.UserSessionMap, email)
-	delete(srv.sessMap, id)
-	return
+	return srv.store.DeleteSession(email)
 }
 
-func (srv *AuthService) deleteGuestSession(id SessionId) {
+func (srv *AuthService) deleteGuestSession(id SessionId) error {
 	srv.Lock()
 	defer srv.Unlock()
-	delete(srv.sessMap, id)
-	return
+	return srv.store.DeleteSessionMap(id)
 }
 
 // TODO: function to add/remove email project perms if they exist
@@ -272,12 +396,16 @@ func (serv *AuthService) TryToReAuth(ctx context.Context, sessionKey SessionId) 
 
 func (serv *AuthService) SessionForEmail(email string) (session SessionId, err error) {
 	serv.RLock()
-	sess, exists := serv.UserSessionMap[email]
+	id, err := serv.store.GetUserSessionMapId(email)
 	serv.RUnlock()
-	if !exists {
-		return "", utils.NotFound
+	if err != nil {
+		if isStoreNotFoundError(err) {
+			return "", utils.NotFound
+		} else {
+			return "", errors.Join(err, errors.New("failed to get session with email"))
+		}
 	}
-	return sess, nil
+	return id, err
 }
 
 var UserWhitelist = utils.Set[string]{}
@@ -367,9 +495,8 @@ func (serv *AuthService) SigninGuestUser() (sessionId SessionId, err error) {
 	if err != nil {
 		return "", errors.Join(err, errors.New("session with that ID already exists"))
 	}
-	serv.sessMap[id] = sess
-	serv.UserSessionMap[email] = id
-	return id, nil
+	err = serv.store.SetSession(id, sess)
+	return id, err
 }
 func (serv *AuthService) SigninTestUser(email string) (sessionId SessionId, err error) {
 	if serv == nil {
@@ -411,9 +538,8 @@ func (serv *AuthService) SigninTestUser(email string) (sessionId SessionId, err 
 	if err != nil {
 		return "", errors.Join(err, errors.New("session with that ID already exists"))
 	}
-	serv.sessMap[id] = sess
-	serv.UserSessionMap[email] = id
-	return id, nil
+	err = serv.store.SetSession(id, sess)
+	return id, err
 }
 
 func generateSessionId() (SessionId, error) {
@@ -424,10 +550,13 @@ func generateSessionId() (SessionId, error) {
 
 func (serv *AuthService) registerSessionAndResolvePerms(ctx context.Context, usr User) (sessionId SessionId, sess genericsessions.Session[ResolvedUserPerms], err error) {
 	// Check if email already has a session
-	sessId, err := serv.SessionForEmail(usr.Email)
+	_, err = serv.SessionForEmail(usr.Email)
 	if err == nil {
 		// User already exists! Remove old one
-		serv.deleteSession(sessId, usr.Email)
+		err = serv.deleteSession(usr.Email)
+		if err != nil {
+			return "", sess, err
+		}
 	}
 	var resolvedPerms = ResolvedUserPerms{
 		Email:       usr.Email,

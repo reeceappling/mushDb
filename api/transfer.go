@@ -212,10 +212,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 	// PARSE INTO CORRECT DATA FORMAT
 	err = json.Unmarshal(bs, &data)
 	if err != nil {
-		dbErr()
-		err = errors.Join(errors.New("failed to unmarshal Data from form"), err)
-		env.LogIfDev(ctx, err.Error())
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		dbErrCtx(ctx, w, errors.Join(errors.New("failed to unmarshal Data from form"), err), http.StatusBadRequest)
 		return
 	}
 	// Get any images
