@@ -370,20 +370,10 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 				return nil, e
 			}
 			// remove the project from the user in the session stuff!
-			sessId, err := authSvc.store.GetUserSessionMapId(u)
-			if err != nil {
+			if err = authSvc.store.RemoveProjectFromUserSession(u, projName); err != nil {
 				return nil, err
 			}
-			existingSess, err := authSvc.store.GetSessionMap(sessId)
-			if err == nil {
-				// Delete project from the session and re-save the session in storage
-				delete(existingSess.Data.Projects, projName)
-				return nil, authSvc.store.SetSessionMap(sessId, existingSess)
-			} else {
-				if !isStoreNotFoundError(err) {
-					return nil, err
-				}
-			}
+
 		}
 		// Add project with perm to user, or change the project perm  // TODO: VALIDATE WORKING PROPERLY
 		for _, subset := range []map[string]ProjectPerm{usersWithProjectChanged, usersWithProjectAdded} {
@@ -392,23 +382,8 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 				if e != nil {
 					return nil, e
 				}
-				// TODO: add the project to the user in the session stuff!
-				sessId, err := authSvc.store.GetUserSessionMapId(u)
-				if err != nil {
-					return nil, err
-				}
-				sess, err := authSvc.store.GetSessionMap(sessId)
-				if err != nil {
-					return nil, err
-				}
-				tempProjects := sess.Data.Projects
-				if tempProjects == nil {
-					tempProjects = map[projectName]*UserProjectPerm{}
-				}
-				tempProjects[projName] = userPerm.UserProjectPerm()
-				sess.Data.Projects = tempProjects
-				err = authSvc.store.SetSessionMap(sessId, sess)
-				if err != nil {
+				// add the project to the user in the session stuff!
+				if err = authSvc.store.AddProjectToUserSession(u, projName, userPerm); err != nil {
 					return nil, err
 				}
 			}

@@ -119,6 +119,8 @@ type sessionStore interface {
 	DeleteUserSessionMap(email string) error
 	DeleteSession(email string) error
 	SessionsToDelete() (out utils.Set[string], err error)
+	AddProjectToUserSession(email string, project projectName, userPerm ProjectPerm) error
+	RemoveProjectFromUserSession(email string, project projectName) error
 }
 
 type statefulSessionStore struct {
@@ -187,6 +189,39 @@ func (storage statefulSessionStore) SetSession(id SessionId, updatedSess generic
 	storage.sessMap[id] = updatedSess
 	storage.UserSessionMap[updatedSess.Data.Email] = id
 	return nil
+}
+func (storage statefulSessionStore) AddProjectToUserSession(email string, project projectName, userPerm ProjectPerm) error {
+	sessId, err := storage.GetUserSessionMapId(email)
+	if err != nil {
+		return err
+	}
+	sess, err := storage.GetSessionMap(sessId)
+	if err != nil {
+		return err
+	}
+	tempProjects := sess.Data.Projects
+	if tempProjects == nil {
+		tempProjects = map[projectName]*UserProjectPerm{}
+	}
+	tempProjects[project] = userPerm.UserProjectPerm()
+	sess.Data.Projects = tempProjects
+	return storage.SetSessionMap(sessId, sess)
+}
+func (storage statefulSessionStore) RemoveProjectFromUserSession(email string, project projectName) error {
+	sessId, err := storage.GetUserSessionMapId(email)
+	if err != nil {
+		return err
+	}
+	existingSess, err := storage.GetSessionMap(sessId)
+	if err != nil {
+		if isStoreNotFoundError(err) {
+			return nil
+		}
+		return err
+	}
+	// Delete project from the session and re-save the session in storage
+	delete(existingSess.Data.Projects, project)
+	return storage.SetSessionMap(sessId, existingSess)
 }
 
 type AuthService struct {
