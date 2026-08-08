@@ -244,21 +244,27 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx, now := request.UnixTime(r.Context())
+	userEmail, projName := GetUserEmail(ctx), projectName(req.Name)
 	toInsert := Project{
-		Name:              projectName(req.Name),
+		Name:              projName,
 		CreationDateField: CreationDateField{now},
 		Private:           req.Private,
 		NotesField:        req.NotesField,
 		LastUpdatedField:  LastUpdatedField{now},
 		Perms: ProjectPerms(map[string]ProjectPerm{
-			GetUserEmail(ctx): ProjectAdmin,
+			userEmail: ProjectAdmin,
 		}),
 	}
 	// TODO: try to add project to user!
-	finishCreateProject(ctx, toInsert, w, func() error {
-		// TODO: add project to the user session, both in db and mem
-		return nil
-	}) // TODO: handle create project that is different
+
+	updateUser := func() error {
+		// add project to the user session in mem
+		authSvc := GetAuthService(ctx)
+		authSvc.Lock()
+		defer authSvc.Unlock()
+		return authSvc.store.AddProjectToUserSession(userEmail, projName, ProjectAdmin)
+	}
+	finishCreateProject(ctx, toInsert, w, updateUser)
 }
 
 type updateProjectRequest struct {
@@ -562,7 +568,7 @@ func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Pr
 	return
 }
 
-func finishCreateProject(ctx context.Context, toInsert CollectionItem, w http.ResponseWriter, inTxn func() error) {
+func finishCreateProject(ctx context.Context, toInsert Project, w http.ResponseWriter, inTxn func() error) {
 	sessionOptions := sessOpts()
 	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
 	if err != nil {
@@ -574,12 +580,27 @@ func finishCreateProject(ctx context.Context, toInsert CollectionItem, w http.Re
 	// Defers ending the session after the transaction is committed or ended
 	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
 		defer sess.EndSession(ctx)
-		// do the insert
-		_, err := mongo.SessionFromContext(sessCtx).Client().
-			Database(dbName).Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
+		sessDb := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
+		// TODO: get user currently in db, add project to the user's perms, re-save
+		// TODO: add project to user in db?
+		// do the inserts
+		_, err := sessDb.Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
 		if err != nil {
 			http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
-			return nil, errors.Join(err, ErrTxnWriteFail)
+			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
+		}
+		// Get current user and update
+		user := User{}
+		err = sessDb.Collection(UserCollName).FindOne(sessCtx, BsonFindFilter(IDfld, GetUserEmail(ctx))).Decode(&user)
+		if err != nil {
+			http.Error(w, "failed to get user in db: "+err.Error(), http.StatusInternalServerError)
+			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
+		}
+		user.Perms.Projects = append(user.Perms.Projects, toInsert.Name)
+		_, err = sessDb.Collection(UserCollName).InsertOne(ctx, user) // TODO: ENSURE THIS OVERWRITES AND NOT INSERTS NEW USER
+		if err != nil {
+			http.Error(w, "failed to update user: "+err.Error(), http.StatusInternalServerError)
+			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
 		}
 		// do the thing needed to be successful // TODO: UPDATE THE USER(s)!
 		if e := inTxn(); e != nil {
