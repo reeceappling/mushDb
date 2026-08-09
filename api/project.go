@@ -581,7 +581,7 @@ func finishCreateProject(ctx context.Context, toInsert Project, w http.ResponseW
 	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
 		defer sess.EndSession(ctx)
 		sessDb := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
-		// TODO: get user currently in db, add project to the user's perms, re-save
+		// TODO:
 		// TODO: add project to user in db?
 		// do the inserts
 		_, err := sessDb.Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
@@ -590,13 +590,19 @@ func finishCreateProject(ctx context.Context, toInsert Project, w http.ResponseW
 			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
 		}
 		// Get current user and update
+		// get user currently in db
 		user := User{}
 		err = sessDb.Collection(UserCollName).FindOne(sessCtx, BsonFindFilter(IDfld, GetUserEmail(ctx))).Decode(&user)
 		if err != nil {
 			http.Error(w, "failed to get user in db: "+err.Error(), http.StatusInternalServerError)
 			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
 		}
+		// add project to the user's perms, re-save
 		user.Perms.Projects = append(user.Perms.Projects, toInsert.Name)
+		if !isUniqueSlice(user.Perms.Projects...) {
+			http.Error(w, "final user projects contained duplicates", http.StatusInternalServerError)
+			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
+		}
 		_, err = sessDb.Collection(UserCollName).InsertOne(ctx, user) // TODO: ENSURE THIS OVERWRITES AND NOT INSERTS NEW USER
 		if err != nil {
 			http.Error(w, "failed to update user: "+err.Error(), http.StatusInternalServerError)
@@ -628,6 +634,10 @@ func finishCreateProject(ctx context.Context, toInsert Project, w http.ResponseW
 		handleWriteErr(err, w)
 		return
 	}
+}
+
+func isUniqueSlice[T comparable](items ...T) bool {
+	return len(utils.SetOf(items)) == len(items)
 }
 
 //func deleteProjectHandler(w http.ResponseWriter, r *http.Request) {

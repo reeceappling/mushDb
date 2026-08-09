@@ -78,7 +78,7 @@ func initializeMSS(ctx context.Context) error {
 		creationDateIndexModel,
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
-		//newSimpleIndex("parent", "parent", false, true, false),
+		newSimpleIndex("parent", "parent", false, true, false), // TODO: ensure ok!
 		//transfersOutIndexModel,
 		//saleIndexModel,
 		//disposedIndexModel,

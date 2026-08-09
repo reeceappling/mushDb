@@ -42,7 +42,10 @@ export async function getOptionsResponse(variant: string):Promise<string[]> {
     if (variant==="transferReasons"){
         throw new Error("getOptionsResponse does not support transferReasons. See TransferReasonSelector");
     }
-    return jsn as string[]
+    let out = jsn as string[]
+    console.log(JSON.stringify(jsn)) // TODO: del!
+    console.log(JSON.stringify(out)) // TODO: del!
+    return out
 }
 
 // export async function getOptionsResponse(variant: string) {

@@ -98,7 +98,7 @@ export function AssertJar(input: any): asserts input is JarData {
     // required simple keys
     const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
-        ['recipe', 'string'],
+        //['recipe', 'string'],
         ['sizeCups', 'number'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
@@ -112,6 +112,7 @@ export function AssertJar(input: any): asserts input is JarData {
     // optional simple keys
     const optionalSimpleKeys = new Map<string, string>([
         ['pcRun', 'string'],
+        ['recipe', 'string'], // TODO: Should be required, but some old ones have it missing
         ['burstGrains', 'number'],
         ['wetness', 'number'],
         ['species', 'string'],

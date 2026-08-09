@@ -1,6 +1,11 @@
 import React, {Suspense} from "react";
 import PageWrapper from "@/app/components/clientGeneric";
 import AuthArea from "@/app/components/authClient";
+import {Metadata} from "next";
+import {mushDbTitle} from "@/app/components/Constants";
+export const metadata: Metadata = {
+    title: "login "+mushDbTitle, // TODO: reverse?
+};
 
 export default async function Page({
                                        params,

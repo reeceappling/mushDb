@@ -71,7 +71,7 @@ func initializeSporeSwabs(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(SporeSwabCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		//newSimpleIndex("parent", "parent", false, false, false),
+		newSimpleIndex("parent", "parent", false, true, false), // TODO: ensure ok!
 		// parentType?
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		newSimpleIndex("species", "species", false, false, false),

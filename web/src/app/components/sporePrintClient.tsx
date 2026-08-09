@@ -3,47 +3,44 @@
 import React, {JSX, useContext, useState} from "react";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {
-    OptionalArrayOfType,
-    OptionalSimpleKey,
-    RequiredKey,
-    DisplayInput,
-    ImportDisplayInput,
-    resolvePicsFormData,
-    OptionalKey,
-    ListPageItems,
-    ImportEntryFormWrapper,
+    CreatedLinkFor,
     DisplayFormWrapper,
+    DisplayInput,
+    DoCreateRequestMultipart,
+    DoMultipartImportRequest,
+    DoUpdateMultipartRequest,
+    ExistingRecentSelector,
     FlexedArea,
     FlexedSinglesGroup,
-    NewEntryFormWrapper,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
     ListTableColumn,
     NewColumn,
+    NewEntryFormWrapper,
     NumberToDateStr,
-    ListPageTable,
-    ExistingRecentSelector,
-    CreatedLinkFor,
-    DoMultipartImportRequest,
-    DoCreateRequestMultipart,
-    DoUpdateMultipartRequest,
-    setFormFull,
-    NewEntryInput,
-    DoCreateRequest
+    OptionalArrayOfType,
+    OptionalKey,
+    OptionalSimpleKey,
+    RequiredKey,
+    resolvePicsFormData,
+    setFormFull
 } from "@/app/components/common";
 import {
     DisposedDisplay,
     ErrorDisplay,
     MostRecentImageDisplay,
-    PicsDisplay, SporePrintColorArea, SporePrintDensityArea,
+    PicsDisplay,
+    SporePrintColorArea,
+    SporePrintDensityArea,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     InitialPicsEntries,
     IsValidPicWithNotesIncoming,
     NewPicWithNotesForm,
 } from "@/app/components/formSubcomponents/picWithNotes";
-import {
-    IsValidNote, NewEntryNotes,
-    Note, NotesFormArea
-} from "@/app/components/formSubcomponents/notes";
+import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SpeciesData} from "@/app/components/speciesServer";
@@ -56,27 +53,20 @@ import {
     OnViewCreatorQuadCol
 } from "@/app/components/formSubcomponents/shared";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {
-    ExistingSpeciesSubspeciesSelector,
-    SpeciesSubspeciesArea
-} from "@/app/components/speciesClient";
-import {NewMssForm} from "@/app/components/mssClient";
-import {FruitData, FruitSelectorCloseable} from "@/app/components/fruitServer";
-import {
-    AclDisplay,
-    MarshalAcl,
-    TogglableAreaWithDepth,
-    UnmarshalAcl
-} from "@/app/components/accessControlClient";
-import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
+import {ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {ChildMssArea, NewMssForm} from "@/app/components/mssClient";
+import {FruitSelectorCloseable} from "@/app/components/fruitServer";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
+import {ChildSwabArea, NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {MssData} from "@/app/components/mssServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
-import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
-import TestAndValidate from "@/app/components/testing/untested";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -145,7 +135,7 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
     return
 }
 
-export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
+export function SporePrintImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
     const [printDate, setPrintDate] = useState<number>(Date.now())
     const [color, setColor] = useState<string | undefined>()
     const [density, setDensity] = useState<string | undefined>()
@@ -156,44 +146,44 @@ export function SporePrintImportDisplay({headerLevel}:ImportDisplayInput) { // T
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
-    const importEntry = (e: React.MouseEvent)=>{
+    const importEntry = (e: React.MouseEvent) => {
         e.preventDefault()
-        if(!species){
+        if (!species) {
             setErr("A species must be selected")
             return
         }
         const formData = new FormData()
-        const dataObj:any = {
-            creationDate:printDate,
+        const dataObj: any = {
+            creationDate: printDate,
             color: color,
             density: density,
-            species:species._id,
+            species: species._id,
             // optional
             subspecies: subspecies,
-            notes:notes,
+            notes: notes,
             writeTagTo: writeTagTo,
         }
         formData.set("data", JSON.stringify(dataObj))
-        if(image!==undefined){
-            formData.set("img",image,"img")
+        if (image !== undefined) {
+            formData.set("img", image, "img")
         }
 
         DoMultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies))
     }
     //no parent because we couldn't possibly know it
-        return <ImportEntryFormWrapper entryType={"sporePrint"}>
-            <ErrorDisplay err={err}/>
-            <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
-            <SporePrintColorArea readonly={false} setColor={setColor} />
-            <SporePrintDensityArea readonly={false} setDensity={setDensity} />
-            <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-            {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
-            {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}
-            <ImageSelector updateParent={setImage}/>
-            <NewEntryNotes setNotes={setNotes} />
-            <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-            <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
-        </ImportEntryFormWrapper>
+    return <ImportEntryFormWrapper entryType={"sporePrint"}>
+        <ErrorDisplay err={err}/>
+        <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
+        <SporePrintColorArea readonly={false} setColor={setColor}/>
+        <SporePrintDensityArea readonly={false} setDensity={setDensity}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}
+        <ImageSelector updateParent={setImage}/>
+        <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
+        <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
+    </ImportEntryFormWrapper>
 
 }
 
@@ -202,148 +192,165 @@ export default function SporePrintDisplay(
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SporePrintData>) {
     const [initial, setInitial] = useState(data)
-        const initNotes: Data<Note>[] = (data.notes || []).map((n)=>{
-            return {data: n,disabled:false}
-        })
-        const [color, setColor] = useState<string | undefined>()
-        const [density, setDensity] = useState<string | undefined>()
-        const [pics, setPics] = useState(InitialPicsEntries(data.pics))
-        const [sale, setSale] = useState(data.sale)
-        const [disposed, setDisposed] = useState(data.disposed)
-        const [notes, setNotes] = useState<AllEntries<Note>>({existing: initNotes,new:[]})
-        const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL>(data.acl)
-        const updateInitial= (updated: SporePrintData)=>{
-            setInitial(updated)
-            setColor(updated.color)
-            setDensity(updated.density)
-            setPics(InitialPicsEntries(updated.pics))
-            setSale(updated.sale)
-            setDisposed(updated.disposed)
-            setNotes(InitialNotesState(updated.notes))
-            setAcl(updated.acl)
-            setErr(undefined)
+    const initNotes: Data<Note>[] = (data.notes || []).map((n) => {
+        return {data: n, disabled: false}
+    })
+    const [color, setColor] = useState<string | undefined>()
+    const [density, setDensity] = useState<string | undefined>()
+    const [pics, setPics] = useState(InitialPicsEntries(data.pics))
+    const [sale, setSale] = useState(data.sale)
+    const [disposed, setDisposed] = useState(data.disposed)
+    const [notes, setNotes] = useState<AllEntries<Note>>({existing: initNotes, new: []})
+    const [err, setErr] = useState<string | undefined>()
+    const [acl, setAcl] = useState<ACL>(data.acl)
+    const updateInitial = (updated: SporePrintData) => {
+        setInitial(updated)
+        setColor(updated.color)
+        setDensity(updated.density)
+        setPics(InitialPicsEntries(updated.pics))
+        setSale(updated.sale)
+        setDisposed(updated.disposed)
+        setNotes(InitialNotesState(updated.notes))
+        setAcl(updated.acl)
+        setErr(undefined)
+    }
+    const cookies = useContext(CookiesContext)
+    const submit = () => {
+        // sale disposed, project, pics, notes
+        const formData = new FormData()
+        const dataObj: any = {
+            // All optional but acl
+            color: color,
+            density: density,
+            sale: sale,
+            disposed: disposed,
+            notes: notes,
+            acl: MarshalAcl(acl),
         }
-        const cookies = useContext(CookiesContext)
-        const submit = ()=>{
-            // sale disposed, project, pics, notes
-            const formData = new FormData()
-            const dataObj:any={
-                // All optional but acl
-                color: color,
-                density: density,
-                sale:sale,
-                disposed:disposed,
-                notes: notes,
-                acl:MarshalAcl(acl),
-            }
-            try {
-                // Pics
-                const picsInfo = resolvePicsFormData(pics)
-                const newImages = picsInfo.images
-                dataObj.images = picsInfo.obj
-                // Set data on form
-                setFormFull(formData, dataObj, newImages, undefined, undefined)
-                // formData.set("data", JSON.stringify(dataObj))
-                // setFormImages("newPic", formData, newImages)
-            } catch (caught: any) {
-                setErr(JSON.stringify(caught))
-                return
-            }
+        try {
+            // Pics
+            const picsInfo = resolvePicsFormData(pics)
+            const newImages = picsInfo.images
+            dataObj.images = picsInfo.obj
+            // Set data on form
+            setFormFull(formData, dataObj, newImages, undefined, undefined)
+            // formData.set("data", JSON.stringify(dataObj))
+            // setFormImages("newPic", formData, newImages)
+        } catch (caught: any) {
+            setErr(JSON.stringify(caught))
+            return
+        }
 
-            DoUpdateMultipartRequest("sporePrint",data._id, formData, AssertSporePrint, allCookies(cookies))
-                .then(v=>{
-                    updateInitial(new SporePrintData(v))
-                })
-                .catch(e=>{
-                    setErr("failed to update initial: "+JSON.stringify(e))
-                })
-        }
-    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        DoUpdateMultipartRequest("sporePrint", data._id, formData, AssertSporePrint, allCookies(cookies))
+            .then(v => {
+                updateInitial(new SporePrintData(v))
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+            })
+    }
+    const Nowdate = new Date()
+    const innoculated = true // Spore prints are always considered innoculated
+    const ovcs: () => OnViewCreatorQuadCol[] = () => {
         const disp = initial.disposed !== undefined
-
-        return !disp ? [
+        const daysCutoff = 10 // TODO: ensure cutoff ok
+        const createdAtLeastNDaysAgo = Nowdate.getTime() - initial.creationDate > (1000 * 60 * 60 * 24 * daysCutoff)
+        return [
             // TODO: test heavily for all
-            // TODO: print transfer to agar?
-            {
-                txt: "Create Spore Swab",
-                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                    return <NewSporeSwabForm printIn={data} onCreate={(item: MssData)=>{ // TODO: switch to handlers{{}} format
-                        onCreate([{
-                            typeText: "Spore Swab",
-                            node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
-                        }], false)
-                    }}/>
-                },
-            },
-            {
-                txt: "Create MultiSpore Syringe",
-                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                    return <NewMssForm sporePrintIn={data} handlers={{
-                        isTopLevel: false,
-                        onCreate: (item: MssData)=>{
+            // OVC for chaining prints
+            ...(innoculated && !createdAtLeastNDaysAgo && initial.parent!==undefined?[
+                {
+                    txt: "Create another print from parent", // TODO: validate works properly!!! Created on 8/7/26
+                    newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                        return <NewSporePrintForm onCreate={(item: SporePrintData) => {
                             onCreate([{
-                                typeText: "Multispore Syringe",
-                                node: <CreatedLinkFor linkId={item._id} typ={"mss"}/>,
+                                typeText: "Spore Print",
+                                node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
+                            }], true)
+                        }} parentId={initial._id} parentTypeIn={"sporePrint"}/>
+                    },
+                }
+            ]:[]),
+            ...(innoculated && !disp ?[
+                {
+                    txt: "Create Spore Swab",
+                    newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                        return <NewSporeSwabForm printIn={data} onCreate={(item: MssData) => { // TODO: switch to handlers{{}} format
+                            onCreate([{
+                                typeText: "Spore Swab",
+                                node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
                             }], false)
-                        }
-                    }} />
+                        }}/>
+                    },
                 },
-            },
-            {
-                // TODO: do not allow after too long! Maybe dont allow after the print has existed for a week?
-                txt: "Chain Print (Create another)", // TODO: validate works properly!!! Created on 8/7/26
-                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                    return <NewSporePrintForm onCreate={(item: SporePrintData)=>{
-                        onCreate([{
-                            typeText: "Spore Print",
-                            node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
-                        }], true)
-                    }} parentId={initial._id} parentTypeIn={"sporePrint"} headerLevel={undefined} offset={undefined}/>
+                {
+                    txt: "Create MultiSpore Syringe",
+                    newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                        return <NewMssForm sporePrintIn={data} handlers={{
+                            isTopLevel: false,
+                            onCreate: (item: MssData) => {
+                                onCreate([{
+                                    typeText: "Multispore Syringe",
+                                    node: <CreatedLinkFor linkId={item._id} typ={"mss"}/>,
+                                }], false)
+                            }
+                        }}/>
+                    },
                 },
-            },
+                // TODO: print transfer to agar?
+                // TODO: TRANSFERS SKIPPING SWABS/SYRINGES?! Probably not...
+            ]:[]),
+            // OVCs that always exist
             WriteRfidOvcArea(initial._id),
-            // TODO: TRANSFERS SKIPPING SWABS/SYRINGES?! Probably not...
-        ]:[]
+        ]
     }
 
-        return <DisplayFormWrapper entryType={"sporePrint"}>
-            <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Spore Print", entryType:"sporePrint"}}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
-            <MostRecentImageDisplay data={data.mostRecentImage}/>
-            <FlexedArea>
-                <FlexedSinglesGroup>
-                    <DateArea pre={"Print Date: "} readonly={true} when={data.creationDate}/>
-                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                    <DisposedDisplay readonly={false} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
-                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    <div>
-                        <div>{"Parent: "}</div>
-                        {data.parent?
-                            <EntryLinkForId props={{displayId:data.parent,linkId:data.parent,entryType:"fruit",openInNewTab:true}}/>
-                            :"Store"}
-                    </div>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
-                    <SporePrintColorArea readonly={true} color={data.color}/>
-                    <SporePrintDensityArea readonly={true} density={data.density}/>
-                    <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}/>
-                </FlexedSinglesGroup>
-            </FlexedArea>
-            {/* TODO: area where we can display all the child MSS of this print? */}
-            <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
-            <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
-            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl} />
-            </TogglableAreaWithDepth>
-            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
-                e.stopPropagation();
-                submit()
-            }}>{"Update"}</button>}
-        </DisplayFormWrapper>
+    return <DisplayFormWrapper entryType={"sporePrint"}>
+        <ErrorDisplay err={err}/>
+        <ID props={{id: data._id, txt: "Spore Print", entryType: "sporePrint"}}/>
+        <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
+        <MostRecentImageDisplay data={data.mostRecentImage}/>
+        <FlexedArea>
+            <FlexedSinglesGroup>
+                <DateArea pre={"Print Date: "} readonly={true} when={data.creationDate}/>
+                <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                <DisposedDisplay readonly={false} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
+            </FlexedSinglesGroup>
+            <FlexedSinglesGroup>
+                <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                <div>
+                    <div>{"Parent: "}</div>
+                    {data.parent ?
+                        <EntryLinkForId props={{
+                            displayId: data.parent,
+                            linkId: data.parent,
+                            entryType: "fruit",
+                            openInNewTab: true
+                        }}/>
+                        : "Store"}
+                </div>
+            </FlexedSinglesGroup>
+            <FlexedSinglesGroup>
+                <SporePrintColorArea readonly={readonly || data.color !== undefined || data.disposed !== undefined}
+                                     color={initial.color} setColor={setColor}/>
+                <SporePrintDensityArea readonly={readonly || data.density !== undefined || data.disposed !== undefined}
+                                       density={initial.density} setDensity={setDensity}/>
+                <SaleArea readonly={readonly} canCreateSale={true} sale={sale} setSale={setSale}/>
+            </FlexedSinglesGroup>
+        </FlexedArea>
+        <ChildMssArea parent={initial._id}/>{/* TODO: area where we can display all the child MSS of this print? */}
+        <ChildSwabArea parent={initial._id}/>{/* TODO: area where we can display all the child swabs of this print? */}
+        <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}
+                     headerLevel={headerLevel}/>{/* Pics */}
+        <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
+        <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+            <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
+        </TogglableAreaWithDepth>
+        {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
+            e.stopPropagation();
+            submit()
+        }}>{"Update"}</button>}
+    </DisplayFormWrapper>
 }
 
 // Should only be accessible from a fruit's page
@@ -353,9 +360,9 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
         parentId?: string
         headerLevel?: number
         offset?: number
-        onCreate:(sp: SporePrintData)=>void
-        parentTypeIn?:string
-}){
+        onCreate: (sp: SporePrintData) => void
+        parentTypeIn?: string
+    }) {
     const [parent, setParent] = useState<string | undefined>(parentId)
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
@@ -364,25 +371,29 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
     const [err, setErr] = useState<string | undefined>(undefined)
 
     const cookies = useContext(CookiesContext)
-    const createEntry = (e: React.MouseEvent)=>{
+    const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
-        if(!parent){
+        if (!parent) {
             setErr("Fruit must be selected")
             return
         }
-        const doReq = ()=>{
+        const doReq = () => {
             const formData = new FormData()
-            const dataObj:any = {
+            const dataObj: any = {
                 // parentType: parentType, // TODO: may be deletable!
-                parent:parent,
-                notes:notes,
+                parent: parent,
+                notes: notes,
                 // optional pics also here
-                writeTagTo:writeTagTo,
+                writeTagTo: writeTagTo,
             }
             // Pics
-            dataObj.pics = pics.map(p=>{return {time:p.time,notes:p.notes.new.map(n => {
-                    return n.data
-                })}})
+            dataObj.pics = pics.map(p => {
+                return {
+                    time: p.time, notes: p.notes.new.map(n => {
+                        return n.data
+                    })
+                }
+            })
             // Perms
             formData.set("data", JSON.stringify(dataObj))
             for (let i = 0; i < pics.length; i++) {
@@ -395,16 +406,16 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
                 formData.set(fileName, toSend.img, fileName)
             }
             DoCreateRequestMultipart("sporePrint", formData, AssertSporePrint, allCookies(cookies))
-                .then(v=>{
+                .then(v => {
                     onCreate ? onCreate(v) : console.log("no onCreate provided")
                 })
-                .catch(e=>{
+                .catch(e => {
                     setErr(JSON.stringify(e))
                 })
         }
         // if both pics and notes are empty, do nothing
-        if(pics.length===0 && notes.length===0){
-            ConfirmOrCancel({txt: "No notes or pictures, did you mean to do that?",onConfirm:doReq})
+        if (pics.length === 0 && notes.length === 0) {
+            ConfirmOrCancel({txt: "No notes or pictures, did you mean to do that?", onConfirm: doReq})
         } else {
             doReq()
         }
@@ -412,11 +423,13 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
 
     return <NewEntryFormWrapper entryType={"sporePrint"}>
         <ErrorDisplay err={err}/>
-        {parentId === undefined && <FruitSelectorCloseable onSelect={(f)=>{
+        {parentId === undefined && <FruitSelectorCloseable onSelect={(f) => {
             setParent(f?._id)
         }} hideDisposed={true}/>}
-        <PicsDisplay pix={[]} readonly={false} updateParent={(ps)=>{setPics(ps.new)}} headerLevel={headerLevel} offset={offset}/>
-        <NewEntryNotes setNotes={setNotes} />
+        <PicsDisplay pix={[]} readonly={false} updateParent={(ps) => {
+            setPics(ps.new)
+        }} headerLevel={headerLevel} offset={offset}/>
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
@@ -424,28 +437,32 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
 
 export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems<SporePrintData>) {
     let cols: ListTableColumn<SporePrintData>[] = [
-        NewColumn("ID", (v)=>v._id, true),
-        NewColumn("Created", (v)=>{
+        NewColumn("ID", (v) => v._id, true),
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
         }, true),
-        NewColumn("Spec", (v)=>v.species||"", true),
-        NewColumn("Subspec", v=>v.subspecies||"", true),
-        NewColumn("Updated", (v)=>{
+        NewColumn("Spec", (v) => v.species || "", true),
+        NewColumn("Subspec", v => v.subspecies || "", true),
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }), // TODO: fit?
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: SporePrintData)=>{
-            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: SporePrintData) => {
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SporePrintData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new SporePrintData(v)
+    }}/>
 }
+
 export function SporePrintSelectorTable({data, onClick}: ListPageItems<SporePrintData>) {
-    return <SporePrintListPageTable data={data} onClick={onClick} withLink={true} />
+    return <SporePrintListPageTable data={data} onClick={onClick} withLink={true}/>
 }
+
 export function SporePrintSelector(
     {
         doSelect,
@@ -454,11 +471,12 @@ export function SporePrintSelector(
         doSelect: (val: SporePrintData | undefined) => void,
         hideDisposed?: boolean
     }) {
-    const table = (items: SporePrintData[]):JSX.Element=>{
+    const table = (items: SporePrintData[]): JSX.Element => {
         return <SporePrintSelectorTable data={items} onClick={doSelect}/>
     }
 
-    return <ExistingRecentSelector entryType={"sporePrint"} entryTypes={"sporePrints"} doSelect={doSelect} asserter={AssertSporePrint}
+    return <ExistingRecentSelector entryType={"sporePrint"} entryTypes={"sporePrints"} doSelect={doSelect}
+                                   asserter={AssertSporePrint}
                                    table={table} hideDisposed={hideDisposed}>
     </ExistingRecentSelector>
 }

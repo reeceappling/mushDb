@@ -651,12 +651,10 @@ export function SporePrintColorArea(
         setColor?: (s?: string) => void,
     }
 ) {
-    return <NoSsr>
-        <div className={"sporePrintColorArea"}>
+    return <NoSsr><div className={"sporePrintColorArea"}>
             <div className={"areaHeader"}>{"Color: "}</div>
-            {readonly ? <div>{color}</div> : <SporePrintColorSelector current={color} onSelect={setColor}/>}
-        </div>
-    </NoSsr>
+            {readonly ? <div>{color}</div> : <SporePrintColorSelector inputs={{current:color,onSelect:setColor}}/>}
+        </div></NoSsr>
 }
 
 export function SporePrintDensityArea(
@@ -689,7 +687,7 @@ export function StringOptionsSelector({queryKey, variant, current, onSelect}: {
     if (isPending || error !== null) {
         return <div>{isPending ? variant + " SELECTOR LOADING" : variant + " SELECTOR ERROR: " + error.message}</div>
     }
-    return <SelectorFor disabled={onSelect === undefined} options={["", ...data]} initial={current || ""}
+    return <SelectorFor disabled={false} options={["", ...data]} initial={current || ""}
                         updateParent={(s) => {
                             if (s === "") {
                                 onSelect && onSelect(undefined)
@@ -709,12 +707,12 @@ export function SporePrintDensitySelector(
 }
 
 export function SporePrintColorSelector(
-    {current, onSelect}: {
+    {inputs}: {inputs:{
         current?: string,
-        onSelect?: (ab?: string) => void
+        onSelect?: (ab?: string) => void},
     }) {
-    return <StringOptionsSelector queryKey={"spore print colors"} variant={"sporePrintColors"} current={current}
-                                  onSelect={onSelect}/>
+    return <StringOptionsSelector queryKey={"spore print colors"} variant={"sporePrintColors"} current={inputs.current}
+                                  onSelect={inputs.onSelect}/>
 }
 
 export function DisposedDisplay(

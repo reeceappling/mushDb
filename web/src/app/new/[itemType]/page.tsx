@@ -1,12 +1,31 @@
 import {GetReaderWriterNames} from "@/app/components/serverActions";
 import {AssertSpecies} from "@/app/components/speciesClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
+import {BaseExternalUrl, mushDbTitle} from "@/app/components/Constants";
 import React from "react";
 import PageWrapper from "@/app/components/clientGeneric";
 import {cookies} from "next/headers";
 import {SpeciesData} from "@/app/components/speciesServer";
 import {ClientNewPage} from "@/app/new/[itemType]/client";
 import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {Metadata} from "next";
+type Props = {
+    params: Promise<{
+        itemType: string,
+        species?: string[],
+    }>
+};
+// Next.js runs this first to set the tab title
+export async function generateMetadata({ params }: Props): Promise<Metadata> { // TODO: add generateMetadata on all pages!
+    const {itemType, species} = await params
+    if (species !== undefined && species.length > 0) {
+        return {
+            title: mushDbTitle+` new subspecies`,
+        };
+    }
+    return {
+        title: mushDbTitle+` new `+itemType
+    };
+}
 
 export default async function Page({
                                        params,

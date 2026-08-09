@@ -54,6 +54,11 @@ export const clientPostRequestHeaders = {
     'Content-type': "application/json",
     'Accept': "application/json", // TODO: ensure ok
 }
+export const clientGetRequestHeaders = {
+    credentials: 'include',
+    'Access-Control-Allow-Origin': BaseExternalUrl || "*", // TODO: FIXME! maybe "*"?
+    'Accept': "application/json", // TODO: ensure ok
+}
 
 export const clientPostRequestHeadersMultipart = {
     credentials: 'include',

@@ -39,7 +39,7 @@ import {
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
-    resolvePicsFormData,Subform, setFormFull,
+    resolvePicsFormData, Subform, setFormFull, viewUrlFor,
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -62,7 +62,7 @@ import {
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
+import {ChildSwabArea, NewSporeSwabForm, SporeSwabSelectorTable} from "@/app/components/sporeSwabClient";
 import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
@@ -71,6 +71,8 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {TransferData} from "@/app/components/transferServer";
 import {SelectorFor} from "@/app/components/selector";
+import {MssData} from "@/app/components/mssServer";
+import {MssSelectorTable} from "@/app/components/mssClient";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -294,7 +296,7 @@ export default function FruitDisplay(
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
                                  allowNewTransferCreation={false}/>{/* TODO: validTypesTo*/}
             <FruitPrintsDisplay prints={sporePrints}/>
-            {/* TODO: SWABS DISPLAY?*/}
+            <ChildSwabArea parent={initial._id}/>{/* TODO: SWABS DISPLAY?*/}
             <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>

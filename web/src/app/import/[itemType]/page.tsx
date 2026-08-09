@@ -4,6 +4,19 @@ import React, {Suspense} from "react";
 import {cookies} from "next/headers";
 import {ImportArea} from "@/app/import/[itemType]/client";
 import {CookiesProvider} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {Metadata} from "next";
+import {mushDbTitle} from "@/app/components/Constants";
+
+type Props = {
+    params: Promise<{ itemType: string }>
+};
+// Next.js runs this first to set the tab title
+export async function generateMetadata({ params }: Props): Promise<Metadata> { // TODO: add generateMetadata on all pages!
+    const {itemType} = await params
+    return {
+        title: mushDbTitle+` import `+itemType // TODO: good order?
+    };
+}
 export default async function Page({
                                        params,
                                    }: {

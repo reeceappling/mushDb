@@ -24,7 +24,7 @@ import {
     resolvePicsFormData,
     setFormFull,
     OptionalKey,
-    DoUpdateMultipartRequest
+    DoUpdateMultipartRequest, viewUrlFor, Subform
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -71,6 +71,7 @@ import {
     NewPicWithNotesForm,
     PicWithNotesForm
 } from "@/app/components/formSubcomponents/picWithNotes";
+import {MssData} from "@/app/components/mssServer";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -360,3 +361,76 @@ export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwabD
 //                                    table={table} hideDisposed={hideDisposed}>
 //     </ExistingRecentSelector>
 // }
+export function ChildSwabArea({parent}:{parent?:string}){
+    const [values, setValues] = useState<SporeSwabData[] | undefined>(undefined)
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const [collapsed, setCollapsed] = useState(false)
+    const loadValues = (e: React.MouseEvent<HTMLButtonElement,MouseEvent>)=>{
+        e.preventDefault()
+        e.stopPropagation()
+        getChildSwabsOf(parent).then((swabs:SporeSwabData[])=>{
+            setValues(swabs)
+            setErr(undefined)
+        }).catch(e=>{
+            setErr(JSON.stringify(e))
+        })
+    }
+    const redirectToSwab = (swab:SporeSwabData) => {
+        window.location.assign(viewUrlFor("sporeSwab", swab._id)) // TODO: ENSURE OK!
+    }
+    const toggleCollapsed = (e: React.MouseEvent<HTMLButtonElement,MouseEvent>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setCollapsed(!collapsed)
+    }
+    if(!parent){
+        return null
+    }
+    if(values===undefined){
+        return <Subform>
+            <ErrorDisplay err={err}/>
+            <button className={"basicButtonSmall"} onClick={loadValues}>{"Load child Spore Swabs"}</button>{/* TODO: ensure classes ok*/}
+        </Subform>
+    }
+    if(values.length===0){
+        // TODO: ensure if a swab is added and this is active it updates!
+        return <Subform>{"No child swabs in database"}</Subform>
+    }
+    const toggleCollapsedButton = ()=>{
+        return <button className={"basicButtonSmall"} onClick={toggleCollapsed}>{(collapsed?"Show":"Hide")+" spore swabs"}</button>
+    }
+    const toggleButton = toggleCollapsedButton() // TODO: ensure ok and updates text when hiding/showing
+    if(collapsed){
+        return <Subform>
+            {toggleButton}
+        </Subform>
+    }
+
+    return <Subform>
+        {toggleButton}
+        <SporeSwabSelectorTable data={values} onClick={redirectToSwab}/>
+        {toggleButton}
+    </Subform>
+}
+function getChildSwabsOf(parent?:string):Promise<SporeSwabData[]>{
+    return new Promise((resolve,reject) => {
+        reject("getChildSwabsOf not implemented yet!")
+    })
+    // TODO: FIX THIS WHOLE THING!
+    // return fetch(BaseExternalUrl+'/db/listChildSwab/'+parent, { // TODO: add endpoint!
+    //     method: 'Get',
+    //     credentials: 'include',
+    //     headers: clientGetRequestHeaders,
+    // }).then(res=> {
+    //     return res.json()
+    // }).then(json=>{
+    //     try {
+    //         return json as SporeSwabData[]
+    //     } catch (e) {
+    //         console.error(e)
+    //         throw e
+    //     }
+    // }).catch(err=>{
+    //     throw(err)
+    // })
+}

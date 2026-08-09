@@ -2,7 +2,8 @@
 
 import React, {JSX, useContext, useState} from "react";
 import {
-    clientPostRequestHeaders,
+    clientGetRequestHeaders,
+    clientPostRequestHeaders, clientPostRequestHeadersMultipart,
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
@@ -26,7 +27,7 @@ import {
     NumberToDateStr,
     OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
-    RequiredKey, resolvePicsFormData, setFormFull,
+    RequiredKey, resolvePicsFormData, setFormFull, Subform,
     viewUrlFor,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
@@ -71,6 +72,7 @@ import {
     NewPicWithNotesForm,
     PicWithNotesForm
 } from "@/app/components/formSubcomponents/picWithNotes";
+import {BaseExternalUrl} from "@/app/components/Constants";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -356,6 +358,80 @@ export function NewMssForm(
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
+}
+
+function getChildMssOf(parent?:string):Promise<MssData[]>{
+    return new Promise((resolve,reject) => {
+        reject("getChildMssOf not implemented yet!")
+    })
+    // TODO: FIX THIS WHOLE THING!
+    // return fetch(BaseExternalUrl+'/db/listChildMss/'+parent, { // TODO: add endpoint!
+    //     method: 'Get',
+    //     credentials: 'include',
+    //     headers: clientGetRequestHeaders,
+    // }).then(res=> {
+    //     return res.json()
+    // }).then(json=>{
+    //     try {
+    //         return json as MssData[]
+    //     } catch (e) {
+    //         console.error(e)
+    //         throw e
+    //     }
+    // }).catch(err=>{
+    //     throw(err)
+    // })
+}
+
+export function ChildMssArea({parent}:{parent?:string}){
+    const [values, setValues] = useState<MssData[] | undefined>(undefined)
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const [collapsed, setCollapsed] = useState(false)
+    const loadValues = (e: React.MouseEvent<HTMLButtonElement,MouseEvent>)=>{
+        e.preventDefault()
+        e.stopPropagation()
+        getChildMssOf(parent).then((syringes:MssData[])=>{
+            setValues(syringes)
+            setErr(undefined)
+        }).catch(e=>{
+            setErr(JSON.stringify(e))
+        })
+    }
+    const redirectToMss = (mss:MssData) => {
+        window.location.assign(viewUrlFor("mss", mss._id)) // TODO: ENSURE OK!
+    }
+    const toggleCollapsed = (e: React.MouseEvent<HTMLButtonElement,MouseEvent>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setCollapsed(!collapsed)
+    }
+    if(!parent){
+        return null
+    }
+    if(values===undefined){
+        return <Subform>
+            <ErrorDisplay err={err}/>
+            <button className={"basicButtonSmall"} onClick={loadValues}>{"Load child Spore Syringes"}</button>{/* TODO: ensure classes ok*/}
+        </Subform>
+    }
+    if(values.length===0){
+        // TODO: ensure if a mss is added and this is active it updates!
+        return <Subform>{"No child syringes in database"}</Subform>
+    }
+    const toggleCollapsedButton = ()=>{
+        return <button className={"basicButtonSmall"} onClick={toggleCollapsed}>{(collapsed?"Show":"Hide")+" child spore syringes"}</button>
+    }
+    const toggleButton = toggleCollapsedButton() // TODO: ensure ok and updates text when hiding/showing
+    if(collapsed){
+        return <Subform>
+            {toggleButton}
+        </Subform>
+    }
+    return <Subform>
+        {toggleButton}
+        <MssSelectorTable data={values} onClick={redirectToMss}/>
+        {toggleButton}
+    </Subform>
 }
 
 export function MssListPageTable({data, onClick, withLink}: ListPageItems<MssData>) {

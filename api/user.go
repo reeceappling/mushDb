@@ -27,14 +27,14 @@ func (u User) IdValue() any {
 	return u.Email
 }
 
-func (u *User) Reload(ctx context.Context) error { // TODO: del if unused?
+func (u *User) Reload(ctx context.Context) error {
 	if u == nil {
 		return errors.New("User is nil")
 	}
 	return DbFrom(ctx).
 		Collection(UserCollName).
 		FindOne(ctx, BsonFindFilter(IDfld, u.Email)).
-		Decode(u) // TODO: ensure works!
+		Decode(u)
 }
 
 //func (u User) WebAuthnID() []byte {

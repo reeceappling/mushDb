@@ -1,4 +1,10 @@
 # TODOs found while using
+- [ ] List jars page is not working!!!!!! says that recipe was undefined!
+- [ ] Add generateMetadata for titles on all pages
+  - [ ] Validate list, new, import, view, error, etc all have good titles
+  - [ ] Other metadata
+- [ ] Change icon
+- [ ] Update homepage
 - [x] Creating sporeprints from fruits and providing an image is not putting image on the final spore print
 - [x] Plate display changing wetAtCooledTime from unknown to yes and updating causes error (fixed)
 - [x] A newly imported plate without species is failing to add a new note (fixed)
