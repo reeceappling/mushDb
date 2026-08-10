@@ -1,14 +1,18 @@
 import type { MetadataRoute } from 'next'
 import {BaseExternalUrl} from "@/app/components/Constants";
 
+// TODO: use these maybe once fixed!
 export async function generateSitemaps() {
     // Fetch the total number of products and calculate the number of sitemaps needed
+    // TODO: FIX!
     return [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }]
 }
 
+// TODO: use these maybe once fixed!
 export default async function sitemap(props: {
     id: Promise<string>
 }): Promise<MetadataRoute.Sitemap> {
+    // TODO: FIX!
     const id = await props.id
     // Google's limit is 50,000 URLs per sitemap
     //const start = id * 50000

@@ -1,4 +1,3 @@
-// This function can be marked `async` if using `await` inside
 import {NextRequest, NextResponse} from "next/server";
 function protosFor(domain: string){
     return ["","http://","https://"].map(pr=>pr+domain)
