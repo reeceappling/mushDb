@@ -113,7 +113,7 @@ func ListUsersHandler(ctx context.Context, removeGuests bool) ([]byte, error) {
 }
 
 var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-	// TODO: handle disposedFilter
+	// TODO: handle disposedFilter on the client side
 	var disposedFilter *bool = nil
 	disposedParam := r.URL.Query().Get("disposed")
 	var tempDisposed = false
@@ -361,7 +361,7 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 			return // already wrote
 		}
 		bs, err = listEntriesHandlerInternal[*User, string](r.Context(), true, maxResults, doStandardToo, &User{}, disposedFilter, startAfterEmail)
-	case "nonguest", "nonguests":
+	case "nonguest", "nonguests": // TODO: do we even want this?
 		// TODO: start after handler?
 		bs, err = ListUsersHandler(r.Context(), true) // TODO: validate working!
 		//bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})

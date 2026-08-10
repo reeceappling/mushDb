@@ -18,7 +18,6 @@ import (
 	"golang.org/x/exp/maps"
 	"image/jpeg"
 	"io"
-	"iter"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -47,7 +46,7 @@ var (
 	_ CollectionItem = &Sale{}
 )
 
-type CollectionItem interface { // TODO: ADD USER TO THIS?
+type CollectionItem interface {
 	CollectionName() string
 	Decode(*mongo.SingleResult) (CollectionItem, error)
 	IdValue() any // binary string id? DO NOT USE FOR ACTUALLY QUERYING THE DB DUE TO ANY TYPE
@@ -402,70 +401,70 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
 }
 
-func cursorIterator[T CollectionItem](ctx context.Context, cursor *mongo.Cursor) iter.Seq2[T, error] { // TODO: consider using!
-	return func(yield func(T, error) bool) {
-		defer cursor.Close(ctx) // TODO; ensure ok
-		yieldCount := 0
-		var tempResult T
-		user, err := GetAuthInfo(ctx)
-		if err != nil {
-			if !yield(tempResult, err) {
-				return
-			}
-			return
-		}
-		for {
-			var result T
-			if cursor.TryNext(ctx) {
-				if err = cursor.Decode(&result); err != nil {
-					if !yield(result, err) {
-						return
-					}
-					return
-				}
-				//bs, err := json.Marshal(result)
-				//if err == nil {
-				//	println("CHECKING AN ITEM: " + string(bs)) // TODO: del
-				//}
-				// If item is permissioned, ensure the user can read it
-				permedItem, ok := interface{}(result).(Permissioned)
-				if ok {
-					acl := permedItem.Permissions()
-					// If user cannot read or write, do not add
-					if acl.HighestPermFor(user) == nil {
-						println("skipping entry, user does not have permission!") // TODO: del
-						// Skip this entry
-						continue
-					}
-				}
-				//if !allowDisposed { // TODO: reenable if disposed isnt filtered out in query
-				//	disposableItem, ok := interface{}(result).(Disposable)
-				//	if ok && disposableItem.DisposalInfo() != nil {
-				//		// Skip this entry
-				//		continue
-				//	}
-				//}
-				if !yield(result, nil) {
-					return
-				}
-				yieldCount++
-			}
-
-			cursorClosed := cursor.ID() == 0
-			if cursorClosed && yieldCount == 0 {
-				yield(result, mongo.ErrNoDocuments)
-				return
-			}
-			if err = cursor.Err(); err != nil {
-				yield(result, err)
-				return
-			}
-			if cursorClosed {
-				return
-			}
-		}
-	}
-}
+//func cursorIterator[T CollectionItem](ctx context.Context, cursor *mongo.Cursor) iter.Seq2[T, error] { // TODO: consider using!
+//	return func(yield func(T, error) bool) {
+//		defer cursor.Close(ctx) // TODO; ensure ok
+//		yieldCount := 0
+//		var tempResult T
+//		user, err := GetAuthInfo(ctx)
+//		if err != nil {
+//			if !yield(tempResult, err) {
+//				return
+//			}
+//			return
+//		}
+//		for {
+//			var result T
+//			if cursor.TryNext(ctx) {
+//				if err = cursor.Decode(&result); err != nil {
+//					if !yield(result, err) {
+//						return
+//					}
+//					return
+//				}
+//				//bs, err := json.Marshal(result)
+//				//if err == nil {
+//				//	println("CHECKING AN ITEM: " + string(bs)) // TODO: del
+//				//}
+//				// If item is permissioned, ensure the user can read it
+//				permedItem, ok := interface{}(result).(Permissioned)
+//				if ok {
+//					acl := permedItem.Permissions()
+//					// If user cannot read or write, do not add
+//					if acl.HighestPermFor(user) == nil {
+//						println("skipping entry, user does not have permission!") // TODO: del
+//						// Skip this entry
+//						continue
+//					}
+//				}
+//				//if !allowDisposed { // TODO: reenable if disposed isnt filtered out in query
+//				//	disposableItem, ok := interface{}(result).(Disposable)
+//				//	if ok && disposableItem.DisposalInfo() != nil {
+//				//		// Skip this entry
+//				//		continue
+//				//	}
+//				//}
+//				if !yield(result, nil) {
+//					return
+//				}
+//				yieldCount++
+//			}
+//
+//			cursorClosed := cursor.ID() == 0
+//			if cursorClosed && yieldCount == 0 {
+//				yield(result, mongo.ErrNoDocuments)
+//				return
+//			}
+//			if err = cursor.Err(); err != nil {
+//				yield(result, err)
+//				return
+//			}
+//			if cursorClosed {
+//				return
+//			}
+//		}
+//	}
+//}
 
 func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
 	defer cursor.Close(ctx) // TODO; ensure ok
@@ -944,15 +943,11 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//if user.isGuest() { // TODO: handled elsewhere!
-	//	dbErr(w, "guests cannot edit", http.StatusForbidden)
-	//	return
-	//}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
-	// TODO: dont allow user to remove their own perms!
+	// dont allow user to remove their own perms!
 	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
 		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return
@@ -975,15 +970,11 @@ func finishMainCollItemUpdateInTxn[T MainCollectionItem](ctx mongo.SessionContex
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return existing, err
 	}
-	//if user.isGuest() { // TODO: I think this is handled elsewhere...
-	//	dbErr(w, "guests cannot edit", http.StatusForbidden)
-	//	return existing, err
-	//}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return existing, err
 	}
-	// TODO: dont allow user to remove their own perms!
+	// dont allow user to remove their own perms!
 	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
 		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return existing, err
@@ -1036,15 +1027,11 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//if user.isGuest() { // TODO: I think this is handled elsewhere...
-	//	dbErr(w, "guests cannot edit", http.StatusForbidden)
-	//	return
-	//}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
 		return
 	}
-	// TODO: dont allow user to remove their own perms!
+	// dont allow user to remove their own perms!
 	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
 		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return

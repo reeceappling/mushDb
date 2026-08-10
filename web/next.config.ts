@@ -172,7 +172,7 @@ const nextConfig: NextConfig = {
 //     ignoreBuildErrors: false,
 //     tsconfigPath: 'tsconfig.json',
 // },
-//     productionBrowserSourceMaps: true, // TODO: only enable for debugging! Allows console debugging...
+//     productionBrowserSourceMaps: true,
 //     output: "standalone",
 // };
 

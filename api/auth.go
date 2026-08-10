@@ -225,10 +225,7 @@ func (storage statefulSessionStore) RemoveProjectFromUserSession(email string, p
 }
 
 type AuthService struct {
-	store sessionStore
-	// TODO: this is currently stateful, if we ever need multiple servers we need it to be stateless, so offload to a centralized (or read-replica?) db or redis instance.
-	//sessMap        map[SessionId]genericsessions.Session[ResolvedUserPerms] // TODO: this is currently stateful, if we ever need multiple servers we need it to be stateless, so offload to a centralized (or read-replica?) db or redis instance.
-	//UserSessionMap map[string]SessionId                                     // TODO: this is currently stateful, if we ever need multiple servers we need it to be stateless, so offload to a centralized (or read-replica?) db or redis instance.
+	store         sessionStore // TODO: this is currently stateful, if we ever need multiple servers we need it to be stateless, so offload to a centralized (or read-replica?) db or redis instance.
 	ttl           time.Duration
 	*sync.RWMutex // This struct MUST be used as a pointer // TODO: HATE how the mutexes are used in here..
 }
@@ -247,9 +244,15 @@ func (srv *AuthService) LogoutSession(sessId SessionId) error {
 		return res.Err
 	}
 	if res.Item.Data.Email == GuestEmail() {
-		srv.deleteGuestSession(sessId)
+		if err := srv.deleteGuestSession(sessId); err != nil {
+			// TODO: handle error!
+			println("failed to delete guest session: " + err.Error())
+		}
 	} else {
-		srv.deleteSession(res.Item.Data.Email)
+		if err := srv.deleteSession(res.Item.Data.Email); err != nil {
+			// TODO: handle error!
+			println("failed to delete session: " + err.Error())
+		}
 	}
 	return nil
 }
@@ -317,10 +320,12 @@ func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[g
 	}
 	wg := &sync.WaitGroup{}
 	if sess.Expiry.Before(time.Now()) {
+		var e error = nil
 		wg.Add(1)
-		go func() {
-			err := srv.deleteSession(sess.Data.Email)
-			if err != nil {
+		go func() { // TODO: seems unnecessary
+			e = srv.deleteSession(sess.Data.Email)
+			if e != nil {
+				println("failed to delete expired session: " + err.Error())
 				// TODO; what here?
 			}
 			wg.Done()
@@ -351,7 +356,7 @@ func (srv *AuthService) setRefreshedSession(id SessionId, sess genericsessions.S
 	*result = updatedSess
 	err := srv.store.SetSession(id, updatedSess)
 	if err != nil {
-		// TODO: what here?
+		panic("failed to set session: " + err.Error()) // TODO: what here?
 	}
 	return *result
 }

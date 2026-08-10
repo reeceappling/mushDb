@@ -987,15 +987,11 @@ export function SingleNoteV3(
     const [started, setStarted] = useState(false)
     const [editing, setEditing] = useState(startEditing ?? false)
     const maxSize = 12
-    const [small, setSmall] = useState(val.data.note.length < maxSize)
-    const smRef = useRef<HTMLInputElement | null>(null);
+    // TODO: const [small, setSmall] = useState(val.data.note.length < maxSize)
+    // TODO: const smRef = useRef<HTMLInputElement | null>(null);
     const lgRef = useRef<HTMLTextAreaElement | null>(null);
     useEffect(() => {
         setVal({data: initial || defaultInitialNote(), disabled: false})
-        // setEditing(!started && (startEditing || false)) // TODO: ???
-        // if (!started){
-        //     setStarted(true)
-        // }
         if (!started) {
             setEditing(startEditing || false)
             setStarted(true)

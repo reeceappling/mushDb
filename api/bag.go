@@ -122,12 +122,12 @@ func initializeBags(ctx context.Context) error {
 		//newSimpleIndex("recipe", "recipe", false, false, false),
 		//newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
 		//newSimpleIndex("pcRun", "pcRun", false, true, false),
-		//// TODO: filter size?
+		//// filter size?
 		//newSimpleIndex("creationDate", "creationDate", true, false, false),
 		//newSimpleIndex("genSinceSpore", "genSpore", true, true, false),
 		//newSimpleIndex("genSinceFruitOrSpore", "genFruitOrSpore", true, true, false),
 		//newSimpleIndex("sealDate", "sealDate", true, true, false), // BAG ONLY
-		//// TODO: wetness
+		//// wetness
 		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		//newSimpleIndex("species", "species", false, false, false),
 		//newSimpleIndex("subspecies", "subspecies", false, true, false),
@@ -136,10 +136,10 @@ func initializeBags(ctx context.Context) error {
 		//newSimpleIndex("parent", "parent", false, true, false),
 		//newSimpleIndex("parentType", "parentType", false, true, false),
 		////pics
-		////TODO: contams?
+		//// contams?
 		////flushes
-		// TODO: substrate recipe???
-		// TODO: substrate batch???
+		// substrate recipe???
+		// substrate batch???
 		//newSimpleIndex("sale", "sale", false, true, false),
 		//newSimpleIndex("disposed", "disposed", false, true, false),
 		//notes
@@ -193,7 +193,7 @@ const (
 )
 
 var bagFilterSizes = map[string]string{
-	filterSizetwoMic:       "Average large bag with filter", // Avg large bag // TODO; figure out which sizes apply to which bags
+	filterSizetwoMic:       "Average large bag with filter", // Avg large bag // TODO: figure out which sizes apply to which bags
 	filterSizeTwentyTwoMic: "Average filter patches",        // Avg patches
 	//"0.3 micron",
 	//"0.45 micron",
