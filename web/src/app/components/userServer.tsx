@@ -32,6 +32,9 @@ export class UserData {
     public entryType(): string {
         return "user"
     }
+    public description(): string {
+        return `This is a user's personal page. Information omitted for security reasons` // TODO: nutes, sugars, antibiotics, additives, liquids?
+    }
 }
 
 export interface UserPerms {

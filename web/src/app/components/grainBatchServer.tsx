@@ -41,6 +41,9 @@ export class GrainBatchData {
     public entryType(): string {
         return "grainBatch"
     }
+    public description(): string {
+        return `Grain Batch ${this._id}. Recipe ${this.recipe}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
+    }
 }
 
 export function GrainBatchSelectorCloseable(sp: SelectorProps<GrainBatchData>) {

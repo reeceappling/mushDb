@@ -66,6 +66,9 @@ export class ProjectData {
     public entryType(): string {
         return "project"
     }
+    public description(): string {
+        return `Project ${this._id}. ${this.completed!==undefined?`Completed on ${new Date(this.completed).toISOString()}`:"Ongoing"}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+    }
 }
 
 // Confirmed to be working without going to get data // TODO: delete if unused? Make closeable?

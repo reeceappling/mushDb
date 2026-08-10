@@ -48,6 +48,9 @@ export class MssData {
     public entryType(): string {
         return "mss"
     }
+    public description(): string {
+        return `Multispore syringe ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc? TRANSFERS?
+    }
 }
 
 export function MssSelectorCloseable(sp: SelectorProps<MssData>) {

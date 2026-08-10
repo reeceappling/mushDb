@@ -59,6 +59,9 @@ export class JarRecipeData {
     public entryType(): string {
         return "jarRecipe"
     }
+    public description(): string {
+        return `Jar ${this.standard?"standard ":""}recipe ${this.name} (${this._id}). Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+    }
 }
 
 export function JarRecipeSelectorCloseable(sp: SelectorProps<JarRecipeData>) { // TODO: use

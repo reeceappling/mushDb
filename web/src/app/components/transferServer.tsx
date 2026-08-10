@@ -47,6 +47,9 @@ export class TransferData {
     public entryType(): string {
         return "transfer"
     }
+    public description(): string {
+        return `Transfer ${this._id}. Done on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+    }
 }
 
 

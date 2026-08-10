@@ -48,6 +48,9 @@ export class SporeSwabData {
     public entryType(): string {
         return "sporeSwab"
     }
+    public description(): string {
+        return `Spore swab ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}`
+    }
 }
 
 // export function SporeSwabSelectorCloseable(sp: SelectorProps<SporeSwabData>) { // TODO: use

@@ -42,6 +42,9 @@ export class PcRunData {
     public entryType(): string {
         return "pcRun"
     }
+    public description(): string {
+        return `Pressure cooker run ${this._id}. ran for ${this.runtimeMinutes} minutes. Ran on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.`
+    }
 }
 
 export function PcRunSelectorCloseable(sp: SelectorProps<PcRunData>){

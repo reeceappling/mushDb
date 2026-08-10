@@ -50,6 +50,9 @@ export class SpeciesData {
     public entryType(): string {
         return "species"
     }
+    public description(): string {
+        return `${this._id}, or ${this.scientificName}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
+    }
 }
 
 // TODO: there is an alternative to this, so we may not want this or to use it

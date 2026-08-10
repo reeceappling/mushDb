@@ -58,6 +58,12 @@ export class FruitData {
     public entryType(): string {
         return "fruit"
     }
+    public description(): string {
+        if(this.species !== undefined){
+            return `Fruit ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Harvested on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
+        }
+        return `Fruit ${this._id}. Harvested on ${new Date(this.creationDate).toISOString()}. ${this.disposed!==undefined&&`Disposed on ${new Date(this.disposed).toISOString()}`}`
+    }
 }
 
 export function FruitSelectorCloseable({onSelect, hideDisposed}:{onSelect: (val?: FruitData)=>void,hideDisposed?:boolean}) {

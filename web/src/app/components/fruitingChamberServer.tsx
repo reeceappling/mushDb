@@ -82,6 +82,15 @@ export class FruitingChamberData {
     public entryType(): string {
         return "fruitingChamber"
     }
+    public description(): string {
+        if(this.species !== undefined){
+            return `Fruiting Chamber ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+        }
+        if(this.disposed !== undefined){
+            return `Fruiting Chamber ${this._id}. Disposed on ${new Date(this.disposed).toISOString()}`
+        }
+        return `Fruiting Chamber ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.`
+    }
 }
 
 // export function FruitingChamberSelectorCloseable(sp: SelectorProps<FruitingChamberData>) { // TODO: use

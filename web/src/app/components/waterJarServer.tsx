@@ -43,6 +43,12 @@ export class WaterJarData {
     public entryType(): string {
         return "waterJar"
     }
+    public description(): string {
+        if(this.disposed !== undefined) {
+            return `Water jar ${this._id}. Created on ${new Date(this.creationDate).toISOString()}. Disposed on ${new Date(this.disposed).toISOString()}`
+        }
+        return `Water jar ${this._id}. Last updated on ${new Date(this.lastUpdated).toISOString()}. Created on ${new Date(this.creationDate).toISOString()}. Pc Run ${this.pcRun}`
+    }
 }
 
 export function WaterJarSelectorCloseable(sp: SelectorProps<WaterJarData>) {

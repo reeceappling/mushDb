@@ -43,6 +43,9 @@ export class SaleData {
     public entryType(): string {
         return "sale"
     }
+    public description(): string {
+        return `Sale ${this._id}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+    }
 }
 
 // // TODO: NECESSARY?

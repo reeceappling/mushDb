@@ -39,6 +39,9 @@ export class SubstrateBatchData {
     public entryType(): string {
         return "substrateBatch"
     }
+    public description(): string {
+        return `Substrate Batch ${this._id}. Recipe ${this.recipe}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
+    }
 }
 
 // TODO: VALIDATE WORKS!

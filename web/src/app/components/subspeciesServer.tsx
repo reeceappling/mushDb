@@ -39,6 +39,9 @@ export class SubspeciesData {
     public entryType(): string {
         return "subspecies"
     }
+    public description(): string {
+        return `${this._id}, subspecies of ${this.species}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
+    }
 }
 
 // // TODO: there is an alternative to this, so we may not want this or to use it

@@ -1,4 +1,8 @@
 # TODOs found while using
+- [ ] description() in each server tsx file
+  - [x] Do all method declarations for descriptions after grainBatch
+    - [ ] Ensure all these methods work as expected!
+- [ ] Do not redirect non-logged-in users for publicly-available entries. We will need this for web scrapers.
 - [ ] Ensure error page is not indexed!
 - [ ] Layout.tsx (all from https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadata-fields)
   - [ ] Opengraph in metadata?

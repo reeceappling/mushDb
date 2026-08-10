@@ -45,6 +45,9 @@ export class SubstrateRecipeData {
     public entryType(): string {
         return "substrateRecipe"
     }
+    public description(): string {
+        return `Substrate ${this.standard?"standard ":""}recipe ${this.name} (${this._id}). Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+    }
 }
 
 // TODO: VALIDATE WORKS!

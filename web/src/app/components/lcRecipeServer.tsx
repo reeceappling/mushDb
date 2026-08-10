@@ -50,6 +50,9 @@ export class LcRecipeData {
     public entryType(): string {
         return "lcRecipe"
     }
+    public description(): string {
+        return `Liquid culture ${this.standard?"standard ":""}recipe ${this.name} (${this._id}). Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+    }
 }
 
 export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) { // TODO: use

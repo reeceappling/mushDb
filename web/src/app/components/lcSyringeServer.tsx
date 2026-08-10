@@ -54,6 +54,9 @@ export class LcSyringeData {
     public entryType(): string {
         return "lcSyringe"
     }
+    public description(): string {
+        return `Liquid culture syringe ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc? TRANSFERS?
+    }
 }
 
 export function LcSyringeSelectorCloseable(sp: SelectorProps<LcSyringeData>) { // TODO: use

@@ -81,6 +81,12 @@ export class JarData {
     public entryType(): string {
         return "jar"
     }
+    public description(): string {
+        if(this.species !== undefined){
+            return `Jar ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+        }
+        return `Jar ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}`
+    }
 }
 
 // export function JarSelectorCloseable(sp: SelectorProps<JarData>) { // TODO: use

@@ -55,6 +55,9 @@ export class AgarRecipeData {
     public entryType(): string {
         return "agarRecipe"
     }
+    public description(): string {
+        return `Agar ${this.standard?"standard ":""}recipe ${this.name} (${this._id}). Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+    }
 }
 
 export function AgarRecipeSelectorCloseable(sp: SelectorProps<AgarRecipeData>) {

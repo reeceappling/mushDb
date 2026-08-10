@@ -40,6 +40,9 @@ export class AgarBatchData {
     public entryType(): string {
         return "agarBatch"
     }
+    public description(): string {
+        return `Agar batch ${this._id}. Color: ${this.color} Recipe ID: ${this.agarRecipe}. PC Run ${this.pcRun}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
+    }
 }
 
 export function AgarBatchSelectorCloseable(sp: SelectorProps<AgarBatchData>) {

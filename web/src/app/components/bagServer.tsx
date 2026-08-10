@@ -77,6 +77,15 @@ export class BagData {
     public entryType(): string {
         return "bag"
     }
+    public description(): string {
+        if(this.species !== undefined){
+            return `Bag ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+        }
+        if(this.disposed !== undefined){
+            return `Bag ${this._id}. Disposed on ${new Date(this.disposed).toISOString()}`
+        }
+        return `Bag ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.`
+    }
 }
 
 export function BagSelectorCloseable(sp: SelectorProps<BagData>) { // TODO: use
