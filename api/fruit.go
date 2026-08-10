@@ -26,7 +26,7 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	SpeciesField            `bson:"inline"`
 	SubspeciesOptionalField `bson:"inline"`
 	GenSporeField           `bson:"inline"`
-	TransfersOutField       `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	TransfersOutField       `bson:"inline"` // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
 	Prints                  []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
 	ParentTypeField         `bson:"inline"`
 	// parent can be "store, outside, or a mainCollectionId (box/bag)"
@@ -187,7 +187,7 @@ func initializeFruits(ctx context.Context) error {
 	coll := db.Collection(FruitsCollName)
 	err := createIndexes(ctx, coll,
 		[]mongo.IndexModel{
-			creationDateIndexModel, // TODO: this is harvest date
+			creationDateIndexModel, // this is harvest date
 			newSimpleIndex("species", "species", false, false, false),
 			newSimpleIndex("subspecies", "subspecies", false, true, false),
 			//transfersOutIndexModel,
@@ -229,12 +229,13 @@ func initializeFruits(ctx context.Context) error {
 }
 
 type createFruitRequest struct {
-	ParentId   MainCollectionId
-	ParentType string
+	ParentId   MainCollectionId `json:"parentId"`
+	ParentType string           `json:"parentType"`
+	// TODO: harvestDate? or just always make it today
 	NotesField
-	Pics            []PicWithNotesLessLocation // newPic-1
-	PermsOnRequest  `json:"acl"`
-	WriteTagToField // TODO: add to typescript or delete!
+	Pics           []PicWithNotesLessLocation `json:"pics,omitempty"` // newPic-1
+	PermsOnRequest `json:"acl"`
+	WriteTagToField
 }
 
 func (req createFruitRequest) reform() createFruitResolved {
@@ -250,7 +251,7 @@ func (req createFruitRequest) reform() createFruitResolved {
 
 type createFruitResolved struct {
 	MainCollectionParentField
-	ParentType string // TODO: swap out for normal parentType?
+	ParentType string
 	NotesField
 	PicsField // newPic-1
 }

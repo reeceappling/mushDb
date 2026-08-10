@@ -54,7 +54,7 @@ import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {EntryLinkIdWrapper, EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import ReaderWriterSelector, {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
     ExistingSpeciesSubspeciesSelector,
     SpeciesSubspeciesArea
@@ -342,6 +342,7 @@ export function NewFruitForm(
     const [harvestDate, setHarvestDate] = useState(Date.now())
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>()
 
     const cookies = useContext(CookiesContext)
@@ -352,7 +353,7 @@ export function NewFruitForm(
             parentType: parentType,
             harvestDate: harvestDate,
             notes: notes,
-            // TODO: writeTagTo?
+            writeTagTo: writeTagTo,
         }
         if (pics.length > 0) {
             dataObj.pics = pics.map(p => {
@@ -387,7 +388,7 @@ export function NewFruitForm(
                 setPics(v.new)
             }} headerLevel={headerLevel} readonly={false}/>
             <NewEntryNotes setNotes={setNotes}/>
-
+            <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
             <button className={"greenButton"} onClick={e=>{
                 e.stopPropagation()
                 newFruitSubmit()
@@ -402,6 +403,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
     const submitImportFruit = () => {
@@ -424,7 +426,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
             notes: notes,
             // optional
             subspecies: subspecies,
-            // TODO: RFID?
+            writeTagTo: writeTagTo,
         }
         formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
@@ -446,6 +448,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         {/*                            headerLevel={headerLevel}/>*/}
         <ImageSelector updateParent={setImageFile}/>
         <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         {/* SUBMIT AREA */}
         <button className={"bottomButton greenButton"} onClick={submitImportFruit}>{"Import"}</button>
     </ImportEntryFormWrapper>
