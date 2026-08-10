@@ -1,5 +1,8 @@
 # TODOs found while using
-- [ ] List jars page is not working!!!!!! says that recipe was undefined!
+- [x] List jars page is not working!!!!!! says that recipe was undefined!
+  - [ ] Fix jars with undefined recipes
+- [ ] swap out web/public/next.svg and web/public/next-dark.svg with something more appropriate for the homepage
+  - [ ] Style the homepage to be more visually appealing
 - [ ] Add generateMetadata for titles on all pages
   - [ ] Validate list, new, import, view, error, etc all have good titles
   - [ ] Other metadata

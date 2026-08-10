@@ -15,7 +15,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> { // TODO: add generateMetadata on all pages!
     const {itemType} = await params
     return {
-        title: mushDbTitle+` list `+itemType // TODO: ok?
+        title: mushDbTitle+` `+itemType+` list`// TODO: ok?
     };
 }
 

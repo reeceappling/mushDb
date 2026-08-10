@@ -19,11 +19,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> { /
     const {itemType, species} = await params
     if (species !== undefined && species.length > 0) {
         return {
-            title: mushDbTitle+` new subspecies`,
+            title: mushDbTitle+` subspecies creator`,
         };
     }
     return {
-        title: mushDbTitle+` new `+itemType
+        title: mushDbTitle+` `+itemType+` creator`,
     };
 }
 
