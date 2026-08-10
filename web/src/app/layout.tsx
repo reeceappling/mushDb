@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     default: "MushDB",// TODO: ok?
   },
   description: "Fungus Database", // TODO: ok?
-  generator: 'Next.js',
+  generator: `Wouldn't you like to know, weather boy`, // TODO: used to be Next.js, but wanted to be funny
   applicationName: 'MushDb', // TODO: ok?
   //referrer: 'origin-when-cross-origin', // TODO: ok?
   keywords: ['MushDb', 'ReeceAppling', 'Reece Appling'], // TODO: ok?

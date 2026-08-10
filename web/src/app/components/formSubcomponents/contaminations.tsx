@@ -1,3 +1,5 @@
+"use client"
+// TODO: MAY WANT TO REMOVE USE CLIENT
 // non-client even though it uses state?
 
 import {AllEntries, Data, InitialToAllEntries, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
