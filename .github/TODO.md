@@ -1,6 +1,25 @@
 # TODOs found while using
+- [ ] Ensure error page is not indexed!
+- [ ] Layout.tsx (all from https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadata-fields)
+  - [ ] Opengraph in metadata?
+  - [ ] robots in metadata?
+  - [ ] icons in metadata?
+  - [ ] metadata alternates?
+  - [ ] fix metadata category! https://nextjs.org/docs/app/api-reference/functions/generate-metadata#category
+  - [ ] viewportconfiguration in metadata? https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+  - [ ] manifest in metadata? https://developer.mozilla.org/docs/Web/Manifest
+  - [ ] twitter cards in metadata?
+  - [ ] verification in metadata? 
+  - [ ] metadata appleWebApp and itunes?
+  - [ ] applinks https://nextjs.org/docs/app/api-reference/functions/generate-metadata#applinks
+  - [ ] archives? https://nextjs.org/docs/app/api-reference/functions/generate-metadata#archives
+  - [ ] assets? https://nextjs.org/docs/app/api-reference/functions/generate-metadata#assets
+  - [ ] bookmarks? https://nextjs.org/docs/app/api-reference/functions/generate-metadata#bookmarks
+  - [ ] pinterest rich pin?
+  - [ ] other (custom) metadata fields at bottom.
+- [ ] generateSitemaps? in sitemap.ts https://nextjs.org/docs/app/api-reference/functions/generate-sitemaps#example
 - [x] List jars page is not working!!!!!! says that recipe was undefined!
-  - [ ] Fix jars with undefined recipes
+  - [ ] Fix jars with undefined recipes with a migration
 - [ ] swap out web/public/next.svg and web/public/next-dark.svg with something more appropriate for the homepage
   - [ ] Style the homepage to be more visually appealing
 - [ ] Add generateMetadata for titles on all pages

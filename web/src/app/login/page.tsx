@@ -4,7 +4,8 @@ import AuthArea from "@/app/components/authClient";
 import {Metadata} from "next";
 import {mushDbTitle} from "@/app/components/Constants";
 export const metadata: Metadata = {
-    title: mushDbTitle+` login`, // TODO: reverse?
+    title: `login`, // TODO: reverse?
+    description: "Login page",
 };
 
 export default async function Page({

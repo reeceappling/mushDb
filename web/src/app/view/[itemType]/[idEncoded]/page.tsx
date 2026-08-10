@@ -16,13 +16,19 @@ type Props = {
 // Next.js runs this first to set the tab title
 export async function generateMetadata({ params }: Props): Promise<Metadata> { // TODO: add generateMetadata on all pages!
     const {itemType, idEncoded} = await params
-    if (itemType == "species") {
+    const decoded = decodeURI(idEncoded)
+    const desc = 'Viewpage for '+itemType+` `+decoded
+    if (itemType == "species" || itemType == "subspecies") {
         return {
-            title: decodeURI(idEncoded)+` `+mushDbTitle,
+            title: {
+                absolute: decoded,
+            },
+            description: desc,
         };
     }
     return {
-        title: itemType+` `+decodeURI(idEncoded)+` - `+mushDbTitle,
+        title: itemType+` `+decoded,
+        description: desc, // TODO: fix for things like MSS
     };
 }
 
