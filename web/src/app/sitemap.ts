@@ -11,8 +11,8 @@ export default async function sitemap(props: {
 }): Promise<MetadataRoute.Sitemap> {
     const id = await props.id
     // Google's limit is 50,000 URLs per sitemap
-    const start = id * 50000
-    const end = start + 50000
+    //const start = id * 50000
+    //const end = start + 50000
     // const products = await getProducts(
     //     `SELECT id, date FROM products WHERE id BETWEEN ${start} AND ${end}`
     // )

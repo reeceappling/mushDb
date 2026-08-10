@@ -17,7 +17,7 @@
   - [ ] bookmarks? https://nextjs.org/docs/app/api-reference/functions/generate-metadata#bookmarks
   - [ ] pinterest rich pin?
   - [ ] other (custom) metadata fields at bottom.
-- [ ] generateSitemaps? in sitemap.ts https://nextjs.org/docs/app/api-reference/functions/generate-sitemaps#example
+- [ ] generateSitemaps? in sitemap.ts (MOVE THIS TO WHEREVER IT NEEDS TO BE!) https://nextjs.org/docs/app/api-reference/functions/generate-sitemaps#example
 - [x] List jars page is not working!!!!!! says that recipe was undefined!
   - [ ] Fix jars with undefined recipes with a migration
 - [ ] swap out web/public/next.svg and web/public/next-dark.svg with something more appropriate for the homepage
