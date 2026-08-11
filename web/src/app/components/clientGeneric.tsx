@@ -59,9 +59,9 @@ export default function PageWrapper(
 }
 
 export function Footer() {
-    return <div className={"footerActual"}>
+    return <footer className={"footerActual"}>
         <div>{"TODO: FOOTER 1 HERE!"}</div>
         <div>{"TODO: FOOTER 2 HERE!"}</div>
         <div>{"TODO: FOOTER 3 HERE!"}</div>
-    </div>
+    </footer>
 }

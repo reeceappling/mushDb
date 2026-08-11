@@ -13,7 +13,6 @@ export default async function Page(){
   const session = cookieStore.get('_gothic_session')
   const readers = await GetReaderWriterNames() // TODO; ensure works
   return <PageWrapper props={{pageType: "view", readers: readers}}>
-    {/*<div className={"fullPage"}>*/}
       <div className={styles.page}>
         <main className={styles.main}>
           {/* TODO: if not logged in, redirect to login page!*/}
@@ -62,7 +61,6 @@ export default async function Page(){
           {/*  >*/}
           {/*    Read our docs*/}
           {/*  </a>*/}
-          {/*</div>*/}
         </main>
         <footer className={styles.footer}>
           <a
@@ -109,6 +107,5 @@ export default async function Page(){
           </a>
         </footer>
       </div>
-    {/*</div>*/}
   </PageWrapper>
 }
