@@ -182,7 +182,6 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type updateSyringeRequest struct {
-	//SaleField // TODO: validate?
 	DisposedField
 	ConfirmedCleanField
 	KnownFruitableField // TODO: handle in react

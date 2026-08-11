@@ -35,6 +35,7 @@ type transferReason string
 
 const xferReasonColonized transferReason = "colonized"
 const xferReasonReady transferReason = "ready"
+const xferReasonHarvest transferReason = "harvest"
 
 var transferReasons = map[transferReason]string{ // TODO: move these to autogenned?
 	"outgrew":           "outgrew plate", // TODO: is colonized just this?
@@ -42,7 +43,8 @@ var transferReasons = map[transferReason]string{ // TODO: move these to autogenn
 	"sectoring":         "transferring a specific sector",
 	"age":               "sample is very old",
 	xferReasonColonized: "fully colonized",
-	xferReasonReady:     "ready", // TODO: ?????
+	xferReasonReady:     "ready",   // TODO: ?????
+	xferReasonHarvest:   "harvest", // TODO: ONLY FOR HARVESTING!!!! NOT FOR NORMAL TRANSFERS!
 }
 
 var sporePrintColors = []SporePrintColor{ // TODO: move these to autogenned?
@@ -113,11 +115,11 @@ func initializeTransfers(ctx context.Context) error {
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
 		// TODO: ensure from index indexes all of the child ids (multiple only for very specific cases?)
-		// TODO: ? newSimpleIndex("from", "from", true, false, false), // TODO: do we want to search by source?
-		// TODO: ? newSimpleIndex("to", "to", true, false, false), // TODO: do we want to search by destination?
+		// newSimpleIndex("from", "from", true, false, false), // TODO: do we want to search by source?
+		// newSimpleIndex("to", "to", true, false, false), // TODO: do we want to search by destination?
 		// newSimpleIndex("fromType", "fromType", false, false, false),
 		// newSimpleIndex("toType", "toType", false, false, false),
-		// TODO: ? newSimpleIndex("reason", "reason", false, false, false),
+		// newSimpleIndex("reason", "reason", false, false, false),
 		//FromImage (no index)
 		//ToImage (no index)
 		//Notes (no index unless tags)

@@ -71,7 +71,7 @@ func initializeSporeSwabs(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(SporeSwabCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("parent", "parent", false, true, false), // TODO: ensure ok!
+		newSimpleIndex("parent", "parent", false, true, false),
 		// parentType?
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		newSimpleIndex("species", "species", false, false, false),
@@ -213,7 +213,7 @@ type updateSporeSwabRequest struct {
 	//SaleField         `json:"saleField"`
 	DisposedField     `json:"disposedField"`
 	NotesUpdateField  `json:"notesUpdateField"`
-	ImagesUpdateField `json:"imagesUpdateField"` // TODO: USE!
+	ImagesUpdateField `json:"imagesUpdateField"`
 	PermsOnRequest    `json:"acl" json:"permsOnRequest"`
 }
 
@@ -309,7 +309,7 @@ type importSporeSwabRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	WriteTagToField // TODO: ADD THIS TO TYPESCRIPT!
+	WriteTagToField
 }
 
 // TODO: consider adding pics to these imports!

@@ -1,4 +1,4 @@
-version: '3.8'
+version: '3.8'#TODO: REMOVE, DEPRECATED
 include:
   - docker-compose-web-prod.yaml
   # TODO: Use the next line instead to run the dev version instead of the prod webserver version. This is useful for local development and testing.

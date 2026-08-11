@@ -21,7 +21,7 @@ import (
 type Slant struct {
 	MainCollectionIdField `bson:"inline"`
 	AgarBatchField        `bson:"inline"` // will be empty for preexisting
-	// TODO: account for stickType field
+	// TODO: account for stickType field everywhere
 	StickType                         *slantStick `bson:"stickType,omitempty" json:"stickType,omitempty"` //If the slant includes a popsicle stick or tongue depressor // TODO: new! use!
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
@@ -49,7 +49,7 @@ func (s Slant) CanTransferTo(dst geneticSource) error {
 	return nil
 }
 
-type slantStick string // TODO: ALLOW TS TO VIEW STICK TYPES!
+type slantStick string // TODO: ALLOW TS TO VIEW STICK TYPES!!!!
 var (
 	slantStickPopsicle        slantStick = "popsicle stick"
 	slantStickTongueDepressor slantStick = "tongue depressor"
@@ -222,7 +222,6 @@ var ErrTxnWriteFail = errors.New("failed to write in transaction")
 
 type updateSlantRequest struct { // TODO: overhauled, validate still works
 	KnownFruitableField
-	//SaleField
 	DisposedField
 	NotesUpdateField
 	ImagesUpdateField
@@ -247,7 +246,6 @@ type resolvedUpdateSlantRequest resolvedUpdatePlateRequest
 func (req resolvedUpdateSlantRequest) modsFor(existing *Slant, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
-		//updateSaleIfNeeded(req.Sale, existing.Sale). // TODO: update to a different endpoint if possible
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).

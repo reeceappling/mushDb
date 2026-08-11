@@ -233,6 +233,7 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// validate dowels
 	for i, d := range data.DowelTypes {
 		if err = d.validate(); err != nil {
 			errTxt := fmt.Sprintf("failed to validate dowel type for entry #%d", i)
@@ -246,7 +247,6 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// TODO: validate dowels
 
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := PlugsJar{
@@ -327,7 +327,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 			// Already wrote
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "plugs", string(b58id), "img") // TODO: plugs ok?
+		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "plugs", string(b58id), "img")
 		if errr != nil {
 			err = errr
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
@@ -402,7 +402,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
-// TODO: new sale?
+// TODO: new sale? (plugs can have multiple)
 
 type updatePlugsRequest struct {
 	PcRunOptionalField // Can only be set once!

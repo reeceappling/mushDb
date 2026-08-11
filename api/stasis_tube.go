@@ -239,7 +239,6 @@ func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 
 type resolvedUpdateStasisTubeRequest struct {
 	KnownFruitableField
-	//SaleField // TODO: validate exists?
 	DisposedField
 	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
@@ -250,7 +249,6 @@ type resolvedUpdateStasisTubeRequest struct {
 func (req resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
-		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).

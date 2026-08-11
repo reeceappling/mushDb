@@ -435,7 +435,7 @@ func (req resolvedUpdateLiquidCultureRequest) modsFor(existing *LiquidCulture, a
 
 type resolvedUpdateLiquidCultureRequest struct {
 	KnownFruitableField
-	Sales []AlternateCollectionId // TODO: maybe do this via a "newSale" endpoint?
+	Sales []AlternateCollectionId // TODO: maybe do this via a "newSale" endpoint? PROBABLY REMOVE
 	DisposedField
 	NotesUpdateField
 	ConfirmedClean *bool

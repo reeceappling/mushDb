@@ -68,7 +68,6 @@ func initializeUsers(ctx context.Context) error {
 	//	return err
 	//}
 	// TODO: DELETE THIS AFTER TESTING!!!!
-	println("Adding test users that are not completely reset after every boot") // TODO: del!
 	return env.IfNotProd(ctx, func() error {
 		// resolve final test user projects list
 		testUserProjectsBase := []projectName{TestProjectNamePublic}

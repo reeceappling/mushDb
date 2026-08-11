@@ -121,8 +121,8 @@ func initializeFruitingChamber(ctx context.Context) error {
 	err := createIndexes(ctx, coll,
 		[]mongo.IndexModel{
 			creationDateIndexModel,
-			//newSimpleIndex("recipe", "recipe", false, false, false), // TODO: this is harvest date
-			// TODO: newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
+			//newSimpleIndex("recipe", "recipe", false, false, false),
+			// newSimpleIndex("substrateBatch", "substrateBatch", false, true, false),
 			//newSimpleIndex("cupsGrain","cupsGrain", false, false, false),
 			//newSimpleIndex("mixedSubstratePerGrain","mixedSubstratePerGrain", false, false, false),
 			//newSimpleIndex("casingPerGrain","casingPerGrain", false, false, false),
@@ -190,7 +190,7 @@ type createFruitingChamberRequest struct {
 	// removed: Recipe // substrate recipe (pull from batch)
 	SubstrateBatchField
 	// TODO: do FCs only ever take jars? can any other parent types exist?
-	ParentJar          MainCollectionId // Parent jar // TODO: do we want this? // TODO: ALLOW USER TO INPUT PARENT AND CHAIN A TRANSFER CREATION AS WELL!
+	ParentJar          MainCollectionId `json:"parentJar"` // TODO: do we want this? // TODO: ALLOW USER TO INPUT PARENT AND CHAIN A TRANSFER CREATION AS WELL?
 	GrainCups          float64
 	MixedSubstrateCups float64
 	CasingCups         float64
@@ -270,7 +270,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			return nil, e
 		}
-		// TODO: if jar, use all of jar. Call it disposed.
+		// TODO: if jar, use all of jar? Call it disposed?
 		// TODO: handle disposal on transfer!?
 		return nil, e
 	})
@@ -308,7 +308,7 @@ func importFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 	data := importFruitingChamberRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: REDO THIS MULTIPART READER? Old comment
+	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
 	defer r.Body.Close()
 	reader, err := r.MultipartReader()
 	if err != nil {

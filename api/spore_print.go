@@ -281,9 +281,9 @@ type createSporePrintRequest struct {
 	ParentId MainCollectionId `json:"parent"`
 	// TODO: REMOVE THIS FROM THE TS SIDE! ParentType string           `json:"parentType"` // TODO: We will have to get parent anyways. No reason to add parentType...
 	NotesField
-	Pics            []PicWithNotesLessLocation //"newPic-1"
-	WriteTagToField                            // TODO: make sure this is on the ts side!
-	// USEs PARENT PERMS
+	Pics []PicWithNotesLessLocation //"newPic-1"
+	WriteTagToField
+	// USES PARENT PERMS
 }
 
 func (upr createSporePrintRequest) reform() resolvedCreateSporePrintRequest {
@@ -407,7 +407,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Chaining spore prints when given a spore print as the input
-	// TODO: handle chaining! When do we want to dispose of the parent fruit?
+	// handle chaining! // TODO: When do we want to dispose of the parent fruit?
 	if mcItem.SourceType() == SporePrintSourceType {
 		mcItem, err = GetMainCollectionItemSpecific(ctx, mcItem.DbId(), &SporePrint{})
 		if err != nil {
@@ -491,7 +491,6 @@ func MainCollItemForEntryType(entryType string) (MainCollectionItem, error) {
 }
 
 type updateSporePrintRequest struct {
-	//SaleField // TODO: validate? or delete...
 	DisposedField
 	SporePrintColorField
 	SporePrintDensityField

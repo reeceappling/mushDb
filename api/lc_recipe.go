@@ -42,7 +42,7 @@ func initializeLcRecipes(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(LcRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false), // TODO: ok that these are not unique?
+		newSimpleIndex("name", "name", false, false, false), // TODO: ok that these are not unique? multiple users may have the same names for their own recipes
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
 		standardIndexModel,
