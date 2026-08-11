@@ -24,12 +24,12 @@ export default async function Page({
     params: Promise<{ itemType: string }>,
 }) {
     const itemType = (await params).itemType
-    const readers = await GetReaderWriterNames() // TODO: DO THIS ON SERVER
+    const readers = await GetReaderWriterNames() // Done on the server
     const cookieStore = await cookies()
     const session = cookieStore.get('_gothic_session')
     return <PageWrapper props={{pageType:"import",readers: readers}}>
         <Suspense fallback={<p>{"Loading..."}</p>}>
-            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
+            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}>
                 {/*<div className={"fullPage"}>*/}
                     <ImportArea itemType={itemType} />
                 {/*</div>*/}

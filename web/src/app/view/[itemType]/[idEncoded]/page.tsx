@@ -176,20 +176,16 @@ export default async function Page({
 
     try {
         const data = await getData(itemType, idEncoded, allCookies)
-        const readers = await GetReaderWriterNames()
+        const readers = await GetReaderWriterNames() // Done on the server
         return <PageWrapper props={{pageType: "view", readers: readers}}>
-            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
-                {/*<div className={"fullPage"}>*/}
+            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}>
                     <MainViewArea itemType={itemType} inpData={data}/>
-                {/*</div>*/}
             </CookiesProvider>
         </PageWrapper>
     } catch (e) {
         return <PageWrapper props={{pageType: "view", readers: []}}>
-            {/*<div className={"fullPage"}>*/}
                 <div>{"Page not loaded. Nonexistent or unauthorized entry: "}</div> {/* TODO: STYLING*/}
                 <div>{JSON.stringify(e)/* TODO: CHANGE!*/}</div>
-            {/*</div>*/}
         </PageWrapper>
     }
 

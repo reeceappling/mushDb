@@ -38,7 +38,7 @@ export default async function Page({
     }>,
 }) {
     const {itemType, species} = await params
-    const readers = await GetReaderWriterNames()
+    const readers = await GetReaderWriterNames() // Done on the server
     const cookieStore = await cookies()
     const session = cookieStore.get('_gothic_session')
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
@@ -68,7 +68,7 @@ export default async function Page({
         })
     }
     return <PageWrapper props={{pageType:"new",readers: readers}}>
-        <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
+        <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}>
             <ClientNewPage itemType={itemType} species={speciesData}/>{/*fullPage class contained within*/}
         </CookiesProvider>
     </PageWrapper>

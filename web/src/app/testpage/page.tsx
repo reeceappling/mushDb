@@ -61,14 +61,11 @@ export default async function Page({
         </Closeable>
         <Closeable title={"TestTransfersOut"}>
         <PageWrapper props={{pageType:"testPage",readers:[]}}>
-            {/*<div className={"fullPage"}>*/}
                 <DisplayFormWrapper entryType={"plate"}>
                     <TransfersOutDisplay headerTxt={"Transfers"} thisId={"1"} thisEntryType={"plate"}
                                          transfersOut={["exTransfer1","exTransfer2"]}
                                          allowNewTransferCreation={true}/>
                 </DisplayFormWrapper>
-
-            {/*</div>*/}
         </PageWrapper>
         </Closeable>
         {/*<Closeable title={"TestProjectWrite1"}>*/}

@@ -62,7 +62,7 @@ export default async function Page({
         const data = await getData(itemType)
 
         return <PageWrapper props={{pageType: "list", readers: readers}}>
-            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
+            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}>
                 {/*<div className={"fullPage"}>*/}
                     <ListDisplay itemType={itemType} inpData={data}/>
                 {/*</div>*/}
