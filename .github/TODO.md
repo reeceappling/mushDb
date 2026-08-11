@@ -1,4 +1,5 @@
 # TODOs found while using
+- [ ] FOOTER
 - [ ] description() in each server tsx file
   - [x] Do all method declarations for descriptions after grainBatch
     - [ ] Ensure all these methods work as expected!

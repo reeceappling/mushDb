@@ -62,7 +62,6 @@ export default async function Page(){
           {/*    Read our docs*/}
           {/*  </a>*/}
         </main>
-        <Footer/>
       </div>
   </PageWrapper>
 }
