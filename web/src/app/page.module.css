@@ -93,9 +93,13 @@ a.secondary {
 }
 
 .footer {
+  margin: 2em;
+  width: 100%;
   grid-row-start: 3;
   display: flex;
   gap: 24px;
+  align-items: center;
+  justify-content: center;
 }
 
 .footer a {

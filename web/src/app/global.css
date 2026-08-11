@@ -323,15 +323,15 @@ a {
         margin-top: auto
     }
 }
-.footerActual {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-    gap: 3em;
-    height: fit-content;
-    background-color: black; /* TODO: FIX!*/
-}
+/*.footerActual {*/
+/*    display: flex;*/
+/*    flex-direction: row;*/
+/*    align-items: center;*/
+/*    justify-content: center;*/
+/*    gap: 3em;*/
+/*    height: fit-content;*/
+/*    background-color: black; !* TODO: FIX!*!*/
+/*}*/
 
 .idHolder {
     width: 100%;
