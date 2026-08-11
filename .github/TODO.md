@@ -1,4 +1,5 @@
 # TODOs found while using
+- [ ] Creating a new project fails to update the user
 - [ ] FOOTER
 - [ ] description() in each server tsx file
   - [x] Do all method declarations for descriptions after grainBatch

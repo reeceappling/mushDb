@@ -250,12 +250,12 @@ export function NewProjectForm(
         </Subform>
         <Subform>
             <div className={"inlineChildren"}>
-                <div>{"Publicly viewable? "}</div>
+                <div>{"Private? "}</div>
                 <input type={"checkbox"} checked={isPrivate} onClick={e => {
                     e.stopPropagation()
                     setIsPrivate(!isPrivate)
                 }}/>
-                <div>{isPrivate ? "No, Private" : "Yes, Public"}</div>
+                <div>{isPrivate ? "Yes, Private" : "No, Public"}</div>
             </div>
         </Subform>
         <NewEntryNotes setNotes={setNotes}/>

@@ -785,7 +785,7 @@ func (requestPerms PermsOnRequest) AclForUser(ctx context.Context, perms Resolve
 	}
 	// If not blanket write, ensure the user who made the request can write
 	if !requestPerms.BlanketPerm.CanWrite() {
-		acl.Users[perms.Email] = true
+		acl.Users[perms.Email] = true // TODO: maybe add this regardless of the blanket perm?
 	}
 	return AclField{ACL: acl}, nil
 }

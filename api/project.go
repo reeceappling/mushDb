@@ -603,12 +603,18 @@ func finishCreateProject(ctx context.Context, toInsert Project, w http.ResponseW
 			http.Error(w, "final user projects contained duplicates", http.StatusInternalServerError)
 			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
 		}
-		_, err = sessDb.Collection(UserCollName).InsertOne(ctx, user) // TODO: ENSURE THIS OVERWRITES AND NOT INSERTS NEW USER
+		update := bson.M{
+			"$push": bson.M{
+				"perms.projects": toInsert.Name,
+			},
+		}
+		// TODO: I created some projects earlier that failed to update the user, make sure all projects are on all users that should have them...
+		_, err = sessDb.Collection(UserCollName).UpdateByID(ctx, user.Email, update) // TODO: ENSURE WORKING!
 		if err != nil {
 			http.Error(w, "failed to update user: "+err.Error(), http.StatusInternalServerError)
 			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
 		}
-		// do the thing needed to be successful // TODO: UPDATE THE USER(s)!
+		// do the thing needed to be successful
 		if e := inTxn(); e != nil {
 			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
 			http.Error(w, "failed to do post-insert call: "+errTxn.Error(), http.StatusInternalServerError)
