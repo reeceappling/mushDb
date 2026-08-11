@@ -50,8 +50,8 @@ export default function AuthArea( // TODO: any depth?????
         // })
         // TODO: redirect to correct area // see redirectToBasePage
     }
-    return (
-        <div className={"fullPage"}>
+    return (<>
+        {/*// <div className={"fullPage"}>*/}
             {/* TODO: ERROR FOR FAILED LOGIN */}
             <div className={"fixCenterScreen"}></div>
             <div className={"centerH"}>
@@ -64,7 +64,8 @@ export default function AuthArea( // TODO: any depth?????
             {/*<div className="loginRow">*/}
             {/*    <a href={"/guestLogin"}>{"Continue as guest"}</a>*/}
             {/*</div>*/}
-        </div>
+        {/*// </div>*/}
+        </>
     )
 }
 

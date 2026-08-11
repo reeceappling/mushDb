@@ -178,8 +178,8 @@ export function ClientNewPage({itemType, species}: { itemType: string, species?:
                 return <ErrorDisplay err={"Invalid new item type in path: " + itemType}/>
         }
     }
-    return <div className={"fullPage"}>
+    return <>
         {createdItemsArea()}
         {newForm()}
-    </div>
+    </>
 }

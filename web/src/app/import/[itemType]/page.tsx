@@ -30,9 +30,9 @@ export default async function Page({
     return <PageWrapper props={{pageType:"import",readers: readers}}>
         <Suspense fallback={<p>{"Loading..."}</p>}>
             <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}> {/* TODO: validate working*/}
-                <div className={"fullPage"}>
+                {/*<div className={"fullPage"}>*/}
                     <ImportArea itemType={itemType} />
-                </div>
+                {/*</div>*/}
             </CookiesProvider>
         </Suspense>
     </PageWrapper>

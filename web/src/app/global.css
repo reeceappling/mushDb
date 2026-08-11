@@ -311,8 +311,26 @@ a {
 
 .fullPage {
     width: 100%; /* TODO: was vw */
-    min-height: 100vh;
+    /*min-height: 100vh;*/
     height: fit-content;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    & > *:not(:last-child) {
+        position: relative
+    }
+    & > *:last-child {
+        margin-top: auto
+    }
+}
+.footerActual {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 3em;
+    height: fit-content;
+    background-color: black; /* TODO: FIX!*/
 }
 
 .idHolder {
@@ -867,11 +885,9 @@ a {
 }
 
 .fixCenterScreen {
-    position: fixed;
-    inset: 0;        /* Sets top, right, bottom, and left to 0 */
-    margin: auto;    /* Centers the element in the available space */
-    width: fit-content;
-    height: fit-content;
+    position: relative;
+    height: 20vh;
+    width: 100%;
 }
 
 .imageSelector .preview {
