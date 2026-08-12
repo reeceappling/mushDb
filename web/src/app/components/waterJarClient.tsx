@@ -42,6 +42,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
 import DateArea from "@/app/components/formSubcomponents/date";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -98,6 +99,7 @@ export default function WaterJarDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<WaterJarData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data as WaterJarData)
     const [disposed, setDisposed] = useState<number | undefined>(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
@@ -125,9 +127,19 @@ export default function WaterJarDisplay(
         DoUpdateRequest("waterJar", initial._id, body, AssertWaterJar, allCookies(cookies))
             .then(v => {
                 updateInitial(new WaterJarData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
@@ -183,6 +195,7 @@ export default function WaterJarDisplay(
 export function NewWaterJarForm(
     {handlers, pcRunIn}: { handlers: NewEntryInput<WaterJarData>, pcRunIn?: PcRunData }
 ) {
+    const {dispatch} = useModalContext();
     const [pcRun, setPCRun] = useState(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
@@ -218,6 +231,7 @@ export function NewWaterJarForm(
 }
 
 export function WaterJarImportDisplay({headerLevel}: ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     const [created, setCreated] = useState<number>(Date.now())
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()

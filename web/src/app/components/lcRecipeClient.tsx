@@ -61,6 +61,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
     if (typeof input !== 'object') {
@@ -123,6 +124,7 @@ export default function LcRecipeDisplay(
     {
         id, readonly, data, headerLevel
     }: DisplayInput<LcRecipeData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
 
     const [recName, setRecName] = useState(initial.name)
@@ -149,9 +151,19 @@ export default function LcRecipeDisplay(
         DoUpdateRequest("lcRecipe", initial._id, body, AssertLcRecipe, allCookies(cookies))
             .then(v => {
                 updateInitial(new LcRecipeData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
@@ -207,6 +219,7 @@ export default function LcRecipeDisplay(
 }
 
 export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeData> }) {
+    const {dispatch} = useModalContext();
     const [defaultLiquids, setDefaultLiquids] = useState<Liquid[]>([]);
     const [defaultNutrients, setDefaultNutrients] = useState<Nutrient[]>([]);
     const [defaultSugars, setDefaultSugars] = useState<Sugar[]>([]);

@@ -59,6 +59,7 @@ import {CreatedLinkTriCol, OnViewCreatorsTriColArea} from "@/app/components/form
 import {NewSubspeciesForm} from "@/app/components/subspeciesClient";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SelectorFor} from "@/app/components/selector";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertSpecies(input: any): asserts input is SpeciesData {
     if (typeof input !== 'object') {
@@ -114,6 +115,7 @@ export default function SpeciesDisplay(
     {
         id, readonly, data, headerLevel
     }: DisplayInput<SpeciesData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
 
     const [substrate, setSubstrate] = useState<string | undefined>(data.standardSubstrate)
@@ -146,9 +148,19 @@ export default function SpeciesDisplay(
         DoUpdateRequest("species", encodeURIComponent(data._id), body, AssertSpecies, allCookies(cookies))
             .then(v => {
                 updateInitial(new SpeciesData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const ovcs: OnViewCreatorTriCol[] = [
@@ -210,6 +222,7 @@ export function NewSpeciesForm(
     {handlers, substrateIn}:
     { handlers: NewEntryInput<SpeciesData>, substrateIn?: SubstrateRecipeData }
 ) {
+    const {dispatch} = useModalContext();
     const [name, setName] = useState("")
     const [sciName, setSciName] = useState("")
     const [aliases, setAliases] = useState<string[]>([])

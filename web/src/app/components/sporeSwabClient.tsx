@@ -72,6 +72,7 @@ import {
     PicWithNotesForm
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {MssData} from "@/app/components/mssServer";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -144,6 +145,7 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
 }
 
 export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
+    const {dispatch} = useModalContext();
     const [swabDate, setSwabDate] = useState<number>(Date.now())
     const [notes, setNotes] = useState<Note[]>([])
     const [species, setSpecies] = useState<SpeciesData | undefined>()
@@ -184,7 +186,8 @@ export default function SporeSwabDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SporeSwabData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
 
@@ -227,9 +230,19 @@ export default function SporeSwabDisplay(
             DoUpdateMultipartRequest("sporeSwab",initial._id, formData, AssertSporeSwab, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new SporeSwabData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
@@ -281,6 +294,7 @@ export function NewSporeSwabForm(
         offset?: number
         onCreate: (sp: SporeSwabData) => void
     }) {
+    const {dispatch} = useModalContext();
     // TODO: EITHER PRINT OR FRUIT!!!!!
 
     // TODO: THIS!

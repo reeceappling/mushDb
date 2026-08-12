@@ -73,7 +73,7 @@ import {TransferData} from "@/app/components/transferServer";
 import {SelectorFor} from "@/app/components/selector";
 import {MssData} from "@/app/components/mssServer";
 import {MssSelectorTable} from "@/app/components/mssClient";
-import {ActionTypes, SetModalInfoAction, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {Actions, ActionTypes, SetModalInfoAction, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -401,6 +401,7 @@ export function NewFruitForm(
     if (readonly) {
         return null
     }
+    const {dispatch} = useModalContext();
     const [harvestDate, setHarvestDate] = useState(Date.now())
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
@@ -437,9 +438,22 @@ export function NewFruitForm(
             }
         }
         DoCreateRequestMultipart("fruit", formData, AssertFruit, allCookies(cookies))
-            .then(onCreate)
+            .then((v)=>{
+                onCreate(v)
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation succeeded",
+                        text: "created",
+                        isErr: false
+                    }})
+            })
             .catch(e => {
-                setErr(JSON.stringify(e))
+                const newErr = JSON.stringify(e)
+                setErr(newErr)
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: newErr,
+                        isErr: true
+                    }})
             })
     }
     return (
@@ -460,6 +474,7 @@ export function NewFruitForm(
 }
 
 export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE ONLY FOR FRUITS PURCHASED OR FOUND
+    const {dispatch} = useModalContext();
     const [parentType, setParentType] = useState<string | undefined>(undefined) // TODO: ensure this is everywhere in ts and go. Also set parent type where needed
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
@@ -492,8 +507,22 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         }
         formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
-
-        DoMultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"fruit"}>
         <ErrorDisplay err={err}/>

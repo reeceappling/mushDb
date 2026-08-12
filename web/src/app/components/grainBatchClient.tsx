@@ -40,6 +40,7 @@ import {
     TogglableAreaWithDepth, NewAllCanWriteAcl
 } from "@/app/components/accessControlClient";
 import { ACL } from "./accessControlServer";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 // TODO: list users also not working (all of this as of 5/7/26)
 
@@ -102,6 +103,7 @@ export default function GrainBatchDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<GrainBatchData>) {
+        const {dispatch} = useModalContext();
         const [initial, setInitial] = useState(data)
 
         const [err, setErr] = useState<string | undefined>()
@@ -134,9 +136,19 @@ export default function GrainBatchDisplay(
             DoUpdateRequest("grainBatch", initial._id, body, AssertGrainBatch, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new GrainBatchData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
         const handleFormChangeBoil = (val?: string) => {
@@ -235,6 +247,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
     handlers: NewEntryInput<GrainBatchData>,
     recipe?: JarRecipeData
 }) {
+    const {dispatch} = useModalContext();
     const [jarRecipe, setJarRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [acl, setAcl] = useState<ACL>({blanketPerm:true})

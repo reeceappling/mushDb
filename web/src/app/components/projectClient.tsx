@@ -38,6 +38,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericInput";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 function requireObject(inp: any) {
     const typ = typeof inp
@@ -118,6 +119,7 @@ export default function ProjectDisplay(
     {
         id, readonly, data, headerLevel
     }: DisplayInput<ProjectData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
     const permsObjAsMap = (inp?: Map<string, string>): Map<string, string> => {
         if (inp === undefined || inp.size === 0) {
@@ -171,9 +173,19 @@ export default function ProjectDisplay(
         DoUpdateRequest("project", encodeURIComponent(data._id), body, AssertProject, allCookies(cookies))
             .then(v => {
                 updateInitial(new ProjectData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     return (
@@ -219,6 +231,7 @@ export default function ProjectDisplay(
 
 export function NewProjectForm(
     {handlers}: { handlers: NewEntryInput<ProjectData> }) {
+    const {dispatch} = useModalContext();
     const [name, setName] = useState<string | undefined>(undefined)
     const [isPrivate, setIsPrivate] = useState<boolean>(false)
     const [notes, setNotes] = useState<Note[]>([])

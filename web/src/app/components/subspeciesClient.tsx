@@ -28,6 +28,7 @@ import {SpeciesData} from "@/app/components/speciesServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
@@ -81,7 +82,8 @@ export default function SubspeciesDisplay(
     {
         id, readonly, data, headerLevel
     }: DisplayInput<SubspeciesData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
         const [aliases, setAliases] = useState(data.aliases || [])
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
@@ -107,9 +109,19 @@ export default function SubspeciesDisplay(
             DoUpdateRequest("subspecies",encodeURIComponent(initial._id), body, AssertSubspecies, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new SubspeciesData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
         return (
@@ -137,6 +149,7 @@ export function NewSubspeciesForm({handlers, species}: {
     handlers: NewEntryInput<SubspeciesData>,
     species?: SpeciesData
 }) {
+    const {dispatch} = useModalContext();
     const [name, setName] = useState<string | undefined>()
     const [selectedSpecies, setSelectedSpecies] = useState(species)
     const [aliases, setAliases] = useState<string[]>([])

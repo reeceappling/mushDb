@@ -47,6 +47,9 @@ import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
+import {FruitData} from "@/app/components/fruitServer";
+import {Actions, ActionTypes} from "@/app/components/formSubcomponents/modalContext/modal";
+import {allCookies} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export const clientPostRequestHeaders = {
     credentials: 'include',
@@ -784,11 +787,17 @@ export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string,
         });
 }
 
-export function DoMultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
+export function DoMultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string, dispatchUpdate:(isErr:boolean,text:string)=>void) {
     SendMultipartRequest(importApiUrlFor(typeStr), formData, cookies)
-        .then(ImportResponseHandler(asserter,typeStr, setErr))
+        .then((v)=>{
+            ImportResponseHandler(asserter,typeStr, setErr)
+            dispatchUpdate(false, "success")
+        }
+        )
         .catch(caughtErr=>{
-            setErr(JSON.stringify(caughtErr))
+            const newErr = JSON.stringify(caughtErr)
+            setErr(newErr)
+            dispatchUpdate(true, newErr)
     })
 }
 

@@ -64,6 +64,7 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import TestAndValidate from "@/app/components/testing/untested";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
@@ -185,6 +186,7 @@ export default function PlugsDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<PlugsData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
 
     const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
@@ -244,9 +246,19 @@ export default function PlugsDisplay(
             .then(v=>{
                 updateInitial(new PlugsData(v))
                 console.log("updated initial state")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 setErr("Error in parsing updated plugs: "+JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
         // DoUpdateRequest("plugs", initial._id, body, AssertPlugs, allCookies(cookies))
         //     .then(v => {
@@ -360,6 +372,7 @@ export function DowelTypesTable({data}: { data: DowelType[] }) {
 
 
 export function PlugsImportDisplay({}: ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     const cookies = useContext(CookiesContext)
     const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
     const [gen, setGen] = useState<number | undefined>(undefined)
@@ -386,7 +399,22 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
         if (imageFile !== undefined) {
             formData.set("image", imageFile, "img")
         }
-        DoMultipartImportRequest(formData, "plugs", AssertPlugs, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "plugs", AssertPlugs, setErr, allCookies(cookies), dispatchUpdate)
         //DoImportRequest(body, "plugs", AssertPlugs, setErr, allCookies(cookies))
     }
     return <ImportEntryFormWrapper entryType={"plugs"}>
@@ -414,6 +442,7 @@ export function PlugsImportDisplay({}: ImportDisplayInput) {
 export function NewPlugsForm(
     {handlers, pcRunIn}: { handlers: NewEntryInput<PlugsData>, pcRunIn?: PcRunData }
 ) {
+    const {dispatch} = useModalContext();
     /* TODO: DOWEL TYPES AND AN OPTIONAL PC RUN FIELD! */
     const [dowelTypes, setDowelTypes] = useState<DowelType[]>([])
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)

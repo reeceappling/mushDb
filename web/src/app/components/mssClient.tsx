@@ -73,6 +73,7 @@ import {
     PicWithNotesForm
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {BaseExternalUrl} from "@/app/components/Constants";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 
 export function AssertMss(input: any): asserts input is MssData {
@@ -143,6 +144,7 @@ export function AssertMss(input: any): asserts input is MssData {
 }
 
 export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR PURCHASED OR PRE-EXISTING MSS
+    const {dispatch} = useModalContext();
     const [createdDate, setCreatedDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>()
     // Non-required
@@ -208,7 +210,8 @@ export default function MssDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<MssData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
 
@@ -254,9 +257,19 @@ export default function MssDisplay(
             DoUpdateMultipartRequest("mss",initial._id, formData, AssertMss, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new MssData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
             // DoUpdateRequest("mss",initial._id, dataObj, AssertMss, allCookies(cookies))
             //     .then(v=>{
@@ -305,6 +318,7 @@ export default function MssDisplay(
 // this should only be used by the Spore Print Display Component
 export function NewMssForm(
     {handlers,sporePrintIn,waterJarIn}: {handlers: NewEntryInput<MssData>, sporePrintIn?:SporePrintData, waterJarIn?:WaterJarData}){
+    const {dispatch} = useModalContext();
     const [sporePrint, setSporePrint] = useState(sporePrintIn)
     const [waterJar, setWaterJar] = useState(waterJarIn)
     const [notes, setNotes] = useState<Note[]>([])

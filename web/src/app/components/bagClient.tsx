@@ -89,6 +89,7 @@ import {useQuery} from "@tanstack/react-query";
 import {GetFilterSizes} from "@/app/components/formSubcomponents/server";
 import {SelectorFor} from "@/app/components/selector";
 import {PcRunArea} from "@/app/components/pcRunClient";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
@@ -175,6 +176,7 @@ export default function BagDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<BagData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
 
     const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
@@ -244,9 +246,19 @@ export default function BagDisplay(
         DoUpdateMultipartRequest("bag", initial._id, formData, AssertBag, allCookies(cookies))
             .then(v => {
                 updateInitial(new BagData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const isInnoculated = ()=>{
@@ -354,6 +366,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     pcRunIn?: PcRunData,
     substrateBatchIn?: SubstrateBatchData,
 }) {
+    const {dispatch} = useModalContext();
     // Required defined
     const [substrateBatch, setSubstrateBatch] = useState(substrateBatchIn)
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
@@ -423,6 +436,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
 }
 
 export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     // Required
     const [sealDate, setSealDate] = useState<number>(0) // TODO: used to be useState(Date.now()), but something did not like that...
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
@@ -465,7 +479,22 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
         }
         formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
-        DoMultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies), dispatchUpdate)
         // TODO: redirect not working.
 
     }

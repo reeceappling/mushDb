@@ -80,6 +80,7 @@ import {InputDecimal, InputNumber} from "@/app/components/formSubcomponents/nume
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertFruitingChamber(input: any): asserts input is FruitingChamberData {
     if (typeof input !== 'object') {
@@ -165,6 +166,7 @@ export default function FruitingChamberDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<FruitingChamberData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
 
     const existingNotes: Note[] = initial.notes || []
@@ -358,6 +360,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
     substrateBatchIn?: SubstrateBatchData,
     parent?: string
 }) {
+    const {dispatch} = useModalContext();
     const [subBatch, setSubBatch] = useState<SubstrateBatchData | undefined>(substrateBatchIn)
     const [parentId, setParentId] = useState<string | undefined>() // TODO: do we even want this in the initial one? Keep it optional?
     const [volumeGrainCups, setVolumeGrainCups] = useState<number>(0)
@@ -447,6 +450,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
 }
 
 export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     const [recipe, setRecipe] = useState<SubstrateRecipeData | undefined>()
     const [creationDate, setCreationDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>()
@@ -534,8 +538,22 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
         //     setErr("request failed");
         // }
 
-
-        DoMultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "fruitingChamber", AssertFruitingChamber, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"fruitingChamber"}>
         <ErrorDisplay err={err}/>

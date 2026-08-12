@@ -14,6 +14,7 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 import {IsValidUserPerms, UserData, UserPerms} from "@/app/components/userServer";
 import {SelectorResetsOnSelectForCustom} from "@/app/components/selector";
 import { CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertUser(input: any): asserts input is UserData {
     if (typeof input !== 'object') {
@@ -64,7 +65,8 @@ export default function UserDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<UserData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
         const [err, setErr] = useState<string | undefined>()
         const [perms, setPerms] = useState<UserPerms>(initial.perms || {admin: true, projects: []}) // TODO: SETPERMS
         const updateInitial = (updated: UserData) => {

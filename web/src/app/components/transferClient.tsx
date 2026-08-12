@@ -44,6 +44,7 @@ import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/de
 import { GetTransferReasons} from "@/app/components/formSubcomponents/server";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 // TODO: list not working
 // TODO: ensure display is working and looks good
 
@@ -116,7 +117,8 @@ export default function TransferDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<TransferData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
@@ -159,9 +161,19 @@ export default function TransferDisplay(
             DoUpdateRequest("transfer",initial._id, body, AssertTransfer, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new TransferData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
         const b58idMain = initial._id
@@ -206,6 +218,7 @@ export function NewTransferArea({
     disposeAfter?: boolean, // nil is user choice (default false)
     requireConfirmation?:boolean,
 }) {
+    const {dispatch} = useModalContext();
     const [isOpen, setIsOpen] = useState(false)
 
     const [idTo, setIdTo] = useState<string | undefined>()
@@ -234,9 +247,20 @@ export function NewTransferArea({
         DoCreateRequestMultipart("transfer", formData, AssertTransfer, allCookies(cookies))
             .then(v=>{
                 onCreated ? onCreated(v) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation succeeded",
+                        text: "created",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
-                setErr("failed to create transfer: "+JSON.stringify(e))
+                const newErr = "failed to create transfer: "+JSON.stringify(e)
+                setErr(newErr)
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: newErr,
+                        isErr: true
+                    }})
             })
     }
     const submitNewTransfer = () => {

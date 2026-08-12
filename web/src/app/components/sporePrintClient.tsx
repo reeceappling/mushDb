@@ -67,6 +67,7 @@ import ReaderWriterSelector, {
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ConfirmOrCancel} from "@/app/components/formSubcomponents/moveOnceUsed";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertSporePrint(input: any): asserts input is SporePrintData {
     if (typeof input !== 'object') {
@@ -136,6 +137,7 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
 }
 
 export function SporePrintImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
+    const {dispatch} = useModalContext();
     const [printDate, setPrintDate] = useState<number>(Date.now())
     const [color, setColor] = useState<string | undefined>()
     const [density, setDensity] = useState<string | undefined>()
@@ -167,8 +169,22 @@ export function SporePrintImportDisplay({headerLevel}: ImportDisplayInput) { // 
         if (image !== undefined) {
             formData.set("img", image, "img")
         }
-
-        DoMultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies), dispatchUpdate)
     }
     //no parent because we couldn't possibly know it
     return <ImportEntryFormWrapper entryType={"sporePrint"}>
@@ -191,6 +207,7 @@ export default function SporePrintDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SporePrintData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
     const initNotes: Data<Note>[] = (data.notes || []).map((n) => {
         return {data: n, disabled: false}
@@ -244,9 +261,19 @@ export default function SporePrintDisplay(
         DoUpdateMultipartRequest("sporePrint", data._id, formData, AssertSporePrint, allCookies(cookies))
             .then(v => {
                 updateInitial(new SporePrintData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const Nowdate = new Date()
@@ -363,6 +390,7 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
         onCreate: (sp: SporePrintData) => void
         parentTypeIn?: string
     }) {
+    const {dispatch} = useModalContext();
     const [parent, setParent] = useState<string | undefined>(parentId)
     const [pics, setPics] = useState<NewPicWithNotesForm[]>([])
     const [notes, setNotes] = useState<Note[]>([])
@@ -408,9 +436,20 @@ export function NewSporePrintForm( // TODO: currently do not like this one...
             DoCreateRequestMultipart("sporePrint", formData, AssertSporePrint, allCookies(cookies))
                 .then(v => {
                     onCreate ? onCreate(v) : console.log("no onCreate provided")
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Creation succeeded",
+                            text: "created",
+                            isErr: false
+                        }})
                 })
                 .catch(e => {
-                    setErr(JSON.stringify(e))
+                    const newErr = JSON.stringify(e)
+                    setErr(newErr)
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Creation failed",
+                            text: newErr,
+                            isErr: true
+                        }})
                 })
         }
         // if both pics and notes are empty, do nothing

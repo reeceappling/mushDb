@@ -182,14 +182,14 @@ div {
 }
 .popupModal {
     position: fixed;
-    top: 0; /* TODO: FIX! */
-    left: 0; /* TODO: FIX! */
-    width: 100vw; /* TODO: FIX! */
-    height: 100vh; /* TODO: FIX! */
-    background-color: #000000A0; /* TODO: FIX! */
-    display: flex; /* TODO: FIX! */
-    justify-content: center; /* TODO: FIX! */
-    align-items: center; /* TODO: FIX! */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #000000A0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     z-index: 12;
     & > div {
         /*Modal content*/

@@ -65,6 +65,7 @@ import {
     PicWithNotesForm
 } from "@/app/components/formSubcomponents/picWithNotes";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
     if (typeof input !== 'object') {
@@ -140,6 +141,7 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
 }
 
 export function LcSyringeImportDisplay() {
+    const {dispatch} = useModalContext();
     // const cookies = useContext(CookiesContext)
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
@@ -172,7 +174,22 @@ export function LcSyringeImportDisplay() {
         if (imageFile !== undefined) {
             formData.set("image", imageFile, "img")
         }
-        DoMultipartImportRequest(formData, "lcSyringe", AssertLcSyringe, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "lcSyringe", AssertLcSyringe, setErr, allCookies(cookies), dispatchUpdate)
 
         // fetch(importApiUrlFor("lcSyringe"), {
         //     method: 'Post',
@@ -209,6 +226,7 @@ export default function LcSyringeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<LcSyringeData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
     const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
 
@@ -260,9 +278,19 @@ export default function LcSyringeDisplay(
             .then(v=>{
                 updateInitial(new LcSyringeData(v))
                 console.log("updated initial state")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 setErr("Error in parsing updated lcSyringe: "+JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
         // DoUpdateRequest("lcSyringe",initial._id, dataObj, AssertLcSyringe, allCookies(cookies))
         //     .then(v=>{
@@ -324,6 +352,7 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
     onCreate?: (newItem: LcSyringeData) => void,
     txt: string
 }) {
+    const {dispatch} = useModalContext();
     const cookies = useContext(CookiesContext)
     const [itemsCreated, setItemsCreated] = useState<string[]>([])
     const [parent, setParent] = useState<LcData | undefined>(parentLc) // TODO: this ok to not call set??

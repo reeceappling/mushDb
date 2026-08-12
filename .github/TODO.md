@@ -1,7 +1,7 @@
 # TODOs found while using
 - [ ] On update, make a popup to say completed successfully, or failed with error message
   - [ ] Add the popup to the full page component, and have it in a global context that the update functions can call to set the information...
-  - [ ] On all displays, make sure they affect the popup on update
+  - [ ] Handle const {dispatch} = useModalContext(); in all areas like Fruit Display. All should be done except non-multipart imports and creates
 - [ ] Creating a new project fails to update the user
 - [ ] FOOTER
 - [ ] description() in each server tsx file

@@ -62,6 +62,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {InputText} from "@/app/components/formSubcomponents/numericInput";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -133,6 +134,7 @@ export default function JarRecipeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<JarRecipeData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
     // grain non-changeable (base grain)
     // name non-changeable
@@ -159,9 +161,19 @@ export default function JarRecipeDisplay(
         DoUpdateRequest("jarRecipe", initial._id, body, AssertJarRecipe, allCookies(cookies))
             .then(v => {
                 updateInitial(new JarRecipeData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const jarGrainsArea = () => {
@@ -258,6 +270,7 @@ export function NameModifiable({readonly, initial, updateParent}: {
 }
 
 export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipeData> }) {
+    const {dispatch} = useModalContext();
     const [defaultGrains, setDefaultGrains] = useState<Grain[]>([]);
     const [defaultNutrients, setDefaultNutrients] = useState<Nutrient[]>([]);
     const [defaultSugars, setDefaultSugars] = useState<Sugar[]>([]);

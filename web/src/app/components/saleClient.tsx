@@ -36,6 +36,7 @@ import {
 import {ACL} from "@/app/components/accessControlServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
@@ -85,7 +86,8 @@ export default function SaleDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SaleData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
         
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
@@ -106,9 +108,19 @@ export default function SaleDisplay(
             DoUpdateRequest("sale",data._id, body, AssertSale, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new SaleData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
         return (
@@ -142,6 +154,7 @@ export function NewSaleForm( // TODO: overhaul! Need Id available?
     }: {
         onCreate?: (s: SaleData)=>void
     }) {
+    const {dispatch} = useModalContext();
     // id/lot, saleDate, lastUpdated are done on server
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()

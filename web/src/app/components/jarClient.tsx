@@ -90,6 +90,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {WetnessDisplay} from "@/app/components/bagClient";
 import {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -173,6 +174,7 @@ export function AssertJar(input: any): asserts input is JarData {
 }
 
 export function JarImportDisplay({}: ImportDisplayInput) {
+    const {dispatch} = useModalContext()
     const [created, setCreated] = useState<number>(Date.now())
     const [recipe, setRecipe] = useState<JarRecipeData | undefined>()
     const [sizeCups, setSizeCups] = useState<number>(4)
@@ -206,8 +208,22 @@ export function JarImportDisplay({}: ImportDisplayInput) {
             formData.set("img", imageFile, "img")
         }
 
-
-        DoMultipartImportRequest(formData, "jar", AssertJar, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "jar", AssertJar, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"jar"}>
         {err != undefined && <div>{"Error: " + err}</div>}
@@ -273,6 +289,7 @@ export default function JarDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<JarData>) {
+    const {dispatch} = useModalContext()
         const [initial, setInitial] = useState(data)
 
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
@@ -336,9 +353,19 @@ export default function JarDisplay(
             DoUpdateMultipartRequest("jar",initial._id, formData, AssertJar, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new JarData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
         const jarSizeArea = () => {

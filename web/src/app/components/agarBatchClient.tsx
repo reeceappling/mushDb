@@ -43,6 +43,7 @@ import {NewSlantForm} from "@/app/components/slantClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     if (typeof input !== 'object') {
@@ -94,6 +95,7 @@ export default function AgarBatchDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<AgarBatchData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
     const [err, setErr] = useState<string | undefined>()
@@ -105,7 +107,7 @@ export default function AgarBatchDisplay(
         setErr(undefined)
     }
     const cookies = useContext(CookiesContext)
-    const agarBatchSubmit = () => {
+    const agarBatchSubmit = async () => {
         if (notes.new.length === 0 && notes.existing === dataFor(initial.notes)) {
             setErr("No changes found")
             return
@@ -114,12 +116,23 @@ export default function AgarBatchDisplay(
             notes: notes,
             acl: MarshalAcl(acl),
         }
+
         DoUpdateRequest("agarBatch", initial._id, body, AssertAgarBatch, allCookies(cookies))
             .then(v => {
                 updateInitial(new AgarBatchData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
@@ -192,6 +205,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     pcRunInp?: PcRunData
 }) {
     const defaultColor = "Clear"
+    const {dispatch} = useModalContext();
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunInp)
     const [recipe, setRecipe] = useState<AgarRecipeData | undefined>(agarRecipeIn)
     const [color, setColor] = useState<string>(defaultColor)

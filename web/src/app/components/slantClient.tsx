@@ -79,6 +79,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import TestAndValidate from "@/app/components/testing/untested";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
@@ -156,6 +157,7 @@ export function AssertSlant(input: any): asserts input is SlantData {
 }
 
 export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     const [created, setCreated] = useState<number>(Date.now())
     const [stickType, setStickType] = useState<string | undefined>(undefined)
     const [species, setSpecies] = useState<SpeciesData | undefined>()
@@ -181,8 +183,22 @@ export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
         if(imageFile!==undefined){
             formData.set("image", imageFile, "img")
         }
-
-        DoMultipartImportRequest(formData, "slant", AssertSlant, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "slant", AssertSlant, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err}/>
@@ -201,7 +217,8 @@ export default function SlantDisplay(
     {
         readonly, data, headerLevel
     }: DisplayInput<SlantData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
@@ -256,9 +273,19 @@ export default function SlantDisplay(
             DoUpdateMultipartRequest("slant",initial._id, formData, AssertSlant, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new SlantData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
     const isInnoculated = ()=>{
@@ -317,6 +344,7 @@ export default function SlantDisplay(
 }
 
 export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<SlantData>, agarBatchIn?:AgarBatchData}){
+    const {dispatch} = useModalContext();
     const [agarBatch, setAgarBatch] = useState(agarBatchIn)
     const [stickType, setStickType] = useState<string | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])

@@ -43,6 +43,7 @@ import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
     if (typeof input !== 'object') {
@@ -93,7 +94,8 @@ export default function SubstrateBatchDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SubstrateBatchData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [acl, setAcl] = useState<ACL>(initial.acl)
@@ -113,9 +115,19 @@ export default function SubstrateBatchDisplay(
             DoUpdateRequest("substrateBatch", initial._id, body, AssertSubstrateBatch, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new SubstrateBatchData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
         const ovcs: OnViewCreatorTriCol[] = [
@@ -178,6 +190,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     recipe?: SubstrateRecipeData
 }) {
     // TODO: do we want the formOpen button outside of the component?
+    const {dispatch} = useModalContext();
     const [selectedRecipe, setSelectedRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()

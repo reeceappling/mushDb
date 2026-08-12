@@ -46,6 +46,7 @@ import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertPcRun(input: any): asserts input is PcRunData {
     if (typeof input !== 'object') {
@@ -93,6 +94,7 @@ export default function PcRunDisplay(
     {
         id, readonly, data, headerLevel
     }: DisplayInput<PcRunData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
 
     const [notes, setNotes] = useState<AllEntries<Note>>({existing: dataFor(data.notes || []), new: []})
@@ -113,9 +115,19 @@ export default function PcRunDisplay(
         DoUpdateRequest("pcRun", initial._id, body, AssertPcRun, allCookies(cookies))
             .then(v => {
                 updateInitial(new PcRunData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
@@ -258,6 +270,7 @@ export default function PcRunDisplay(
 
 export function NewPcRunForm(
     {handlers}: { handlers: NewEntryInput<PcRunData> }) {
+    const {dispatch} = useModalContext();
     const [runTime, setRunTime] = useState("60") // TODO: ok?
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()

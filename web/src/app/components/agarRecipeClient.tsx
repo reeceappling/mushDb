@@ -69,6 +69,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
     if (typeof input !== 'object') {
@@ -144,6 +145,7 @@ export default function AgarRecipeDisplay(
     }:
     DisplayInput<AgarRecipeData>
 ) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
     // Required
     const [name, setName] = useState(data.name)
@@ -176,9 +178,19 @@ export default function AgarRecipeDisplay(
         DoUpdateRequest("agarRecipe", initial._id, body, AssertAgarRecipe, allCookies(cookies))
             .then(v => {
                 updateInitial(new AgarRecipeData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const ovcs: OnViewCreatorQuadCol[] = [
@@ -258,6 +270,7 @@ export default function AgarRecipeDisplay(
 }
 
 export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarRecipeData> }) {
+    const {dispatch} = useModalContext();
     const [defaultLiquids, setDefaultLiquids] = useState<Liquid[]>([]);
     const [defaultNutrients, setDefaultNutrients] = useState<Nutrient[]>([]);
     const [defaultSugars, setDefaultSugars] = useState<Sugar[]>([]);

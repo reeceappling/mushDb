@@ -76,6 +76,7 @@ import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
@@ -153,6 +154,7 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
 }
 
 export function StasisTubeImportDisplay() {
+    const {dispatch} = useModalContext();
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
@@ -179,7 +181,22 @@ export function StasisTubeImportDisplay() {
         if(imageFile!==undefined){
             formData.set("image", imageFile, "img")
         }
-        DoMultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"stasisTube"}>
         {err!=undefined && <div>{"Error: "+err}</div>}
@@ -198,7 +215,8 @@ export default function StasisTubeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<StasisTubeData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
         const existingNotes: Note[] = initial.notes || []
         const initNotes: Data<Note>[] = existingNotes.map((n) => {
             return {data: n, disabled: false}
@@ -259,9 +277,19 @@ export default function StasisTubeDisplay(
             DoUpdateRequest("stasisTube",data._id, formData, AssertStasisTube, allCookies(cookies))
                 .then(v=>{
                     updateInitial(new StasisTubeData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
                 .catch(e=>{
                     setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
         }
     const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
@@ -314,6 +342,7 @@ export default function StasisTubeDisplay(
 }
 
 export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<StasisTubeData>, pcRunIn?: PcRunData}){
+    const {dispatch} = useModalContext();
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)

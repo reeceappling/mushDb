@@ -38,6 +38,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -92,6 +93,7 @@ export default function SubstrateRecipeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SubstrateRecipeData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
 
     const [name, setName] = useState(initial.name)
@@ -121,9 +123,19 @@ export default function SubstrateRecipeDisplay(
         DoUpdateRequest("substrateRecipe", initial._id, body, AssertSubstrateRecipe, allCookies(cookies))
             .then(v => {
                 updateInitial(new SubstrateRecipeData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     const ovcs: OnViewCreatorTriCol[] = [
@@ -175,6 +187,7 @@ export default function SubstrateRecipeDisplay(
 }
 
 export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<SubstrateRecipeData> }) {
+    const {dispatch} = useModalContext();
     const [name, setName] = useState("")
     const [aliases, setAliases] = useState<string[]>([])
     const [isStandard, setIsStandard] = useState(false)

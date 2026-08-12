@@ -20,6 +20,7 @@ import {
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest,
+    DoMultipartImportRequest,
     DoUpdateMultipartRequest,
     ExistingRecentSelector,
     FlexedArea,
@@ -29,14 +30,14 @@ import {
     ListPageItems,
     ListPageTable,
     ListTableColumn,
-    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NewEntryInput,
     NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
-    OptionalSimpleKey, RequiredKey,
+    OptionalSimpleKey,
+    RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData,
     setFormFull,
@@ -70,10 +71,7 @@ import {
 } from "@/app/components/formSubcomponents/shared";
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
-import {
-    ExistingSpeciesSubspeciesSelector,
-    SpeciesSubspeciesArea
-} from "@/app/components/speciesClient";
+import {ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
@@ -84,6 +82,7 @@ import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
 import {LcRecipeArea} from "@/app/components/lcRecipeClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertLc(input: any): asserts input is LcData {
     if (typeof input !== 'object') {
@@ -163,6 +162,7 @@ export function AssertLc(input: any): asserts input is LcData {
 }
 
 export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     const [recipe, setRecipe] = useState<LcRecipeData | undefined>(undefined)
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
@@ -196,12 +196,28 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
             formData.set("img", imageFile, "img")
         }
 
-        DoMultipartImportRequest(formData, "lc", AssertLc, setErr, allCookies(cookies))
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "lc", AssertLc, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"lc"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <LcRecipeSelectorCloseable doSelect={setRecipe} txt={"Recipe"} creatorInPage={false/* TODO: ok?*/} allowCreation={true} />
+        <LcRecipeSelectorCloseable doSelect={setRecipe} txt={"Recipe"} creatorInPage={false/* TODO: ok?*/}
+                                   allowCreation={true}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
         {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}*/}
@@ -219,75 +235,86 @@ export default function LcDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
     }: DisplayInput<LcData>) {
-        const [initial, setInitial] = useState(data)
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
-        const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(data.confirmedClean)
-        const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
-        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
-        const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
-        const [disposed, setDisposed] = useState(initial.disposed)
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
-        const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL>(initial.acl)
-        const updateInitial = (updated: LcData) => {
-            setInitial(updated)
-            setConfirmedClean(updated.confirmedClean)
-            setTransfersOut(updated.transfersOut || [])
-            setImages(InitialPicsEntries(updated.pics))
-            setContams(InitialContamState(updated.contamination))
-            setKnownFruitable(updated.knownFruitable)
-            setDisposed(updated.disposed)
-            setNotes(InitialNotesState(updated.notes))
-            setAcl(updated.acl)
-            setErr(undefined)
+    const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(data.confirmedClean)
+    const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
+    const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+    const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+    const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
+    const [disposed, setDisposed] = useState(initial.disposed)
+    const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
+    const [err, setErr] = useState<string | undefined>()
+    const [acl, setAcl] = useState<ACL>(initial.acl)
+    const updateInitial = (updated: LcData) => {
+        setInitial(updated)
+        setConfirmedClean(updated.confirmedClean)
+        setTransfersOut(updated.transfersOut || [])
+        setImages(InitialPicsEntries(updated.pics))
+        setContams(InitialContamState(updated.contamination))
+        setKnownFruitable(updated.knownFruitable)
+        setDisposed(updated.disposed)
+        setNotes(InitialNotesState(updated.notes))
+        setAcl(updated.acl)
+        setErr(undefined)
+    }
+    const cookies = useContext(CookiesContext)
+    const lcSubmit = () => {
+        const formData = new FormData()
+        const dataObj: any = {
+            notes: notes,
+            // Optionals
+            confirmedClean: confirmedClean,
+            knownFruitable: knownFruitable,
+            disposed: disposed,
+            writeTagTo: writeTagTo,
+            acl: MarshalAcl(acl),
         }
-        const cookies = useContext(CookiesContext)
-        const lcSubmit = () => {
-            const formData = new FormData()
-            const dataObj: any = {
-                notes: notes,
-                // Optionals
-                confirmedClean: confirmedClean,
-                knownFruitable: knownFruitable,
-                disposed: disposed,
-                writeTagTo: writeTagTo,
-                acl: MarshalAcl(acl),
-            }
-            try {
-                // Pics
-                const picsInfo = resolvePicsFormData(images)
-                const newImages = picsInfo.images
-                dataObj.images = picsInfo.obj
-                // Contams
-                const contamsInfo = resolveContamsFormData(contams)
-                const newContams = contamsInfo.images
-                dataObj.contams = contamsInfo.obj
-                // Set data on form
-                setFormFull(formData, dataObj, newImages, newContams, undefined)
-                // formData.set("data", JSON.stringify(dataObj))
-                // setFormImages("newPic", formData, newImages)
-                // setFormImages("newContam", formData, newContams)
-            } catch (caught: any) {
-                setErr(JSON.stringify(caught))
-                return
-            }
-
-            DoUpdateMultipartRequest("lc",initial._id, formData, AssertLc, allCookies(cookies))
-                .then(v=>{
-                    updateInitial(new LcData(v))
-                })
-                .catch(e=>{
-                    setErr("failed to update initial: "+JSON.stringify(e))
-                })
+        try {
+            // Pics
+            const picsInfo = resolvePicsFormData(images)
+            const newImages = picsInfo.images
+            dataObj.images = picsInfo.obj
+            // Contams
+            const contamsInfo = resolveContamsFormData(contams)
+            const newContams = contamsInfo.images
+            dataObj.contams = contamsInfo.obj
+            // Set data on form
+            setFormFull(formData, dataObj, newImages, newContams, undefined)
+            // formData.set("data", JSON.stringify(dataObj))
+            // setFormImages("newPic", formData, newImages)
+            // setFormImages("newContam", formData, newContams)
+        } catch (caught: any) {
+            setErr(JSON.stringify(caught))
+            return
         }
 
-    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        DoUpdateMultipartRequest("lc", initial._id, formData, AssertLc, allCookies(cookies))
+            .then(v => {
+                updateInitial(new LcData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
+    }
+
+    const ovcs: () => OnViewCreatorQuadCol[] = () => {
         const innoculated = initial.species !== undefined
         const disp = initial.disposed !== undefined
         return !disp ? [
-            ...(innoculated?[{
+            ...(innoculated ? [{
                 txt: "New Liquid Culture Syringe",
                 newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
                     return <NewLcSyringeForm txt={"Create New Liquid Culture Syringe"} parentLc={initial}
@@ -298,74 +325,74 @@ export default function LcDisplay(
                                                  }], false)
                                              }}/>
                 },
-            }]:[]),
+            }] : []),
             WriteRfidOvcArea(initial._id),
         ] : []
     }
-    const isInnoculated = ()=>{
+    const isInnoculated = () => {
         return initial.species !== undefined
     }
-        return <DisplayFormWrapper entryType={"lc"}>
-            <ID props={{id:data._id, txt:"Liquid Culture", entryType:"lc", linkPage:false, allowOpenMainPage:false}}/>
-            {readonly ||
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>}
-            <MostRecentImageDisplay data={initial.mostRecentImage}/>
-            <ErrorDisplay err={err} />
-            <FlexedArea>
-                <FlexedSinglesGroup>
-                    {/*3high,19wide fragmented*/}
-                    <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                initialDisposed={initial.disposed} setDisposedOnParent={setDisposed}
-                                                readonly={readonly}/>
-                </FlexedSinglesGroup>
-                {isInnoculated()&&<FlexedSinglesGroup>
-                    {/*1-2high (fragmented), extremely variable wide*/}
-                    <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
-                    {/*1high (13-25)wide */}
-                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
-                </FlexedSinglesGroup>}
-                {isInnoculated()&&<FlexedSinglesGroup>
-                    {/*3high 17-18 wide*/}
-                    <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
-                </FlexedSinglesGroup>}
-                {isInnoculated()&&<FlexedSinglesGroup>
-                    {/*1high (19-25 wide)*/}
-                    <ConfirmedCleanArea onSelect={setConfirmedClean} readonly={readonly}
-                                        initial={initial.confirmedClean}/>
-                    {/*1high (21-24 wide)*/}
-                    <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
-                </FlexedSinglesGroup>}
+    return <DisplayFormWrapper entryType={"lc"}>
+        <ID props={{id: data._id, txt: "Liquid Culture", entryType: "lc", linkPage: false, allowOpenMainPage: false}}/>
+        {readonly ||
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>}
+        <MostRecentImageDisplay data={initial.mostRecentImage}/>
+        <ErrorDisplay err={err}/>
+        <FlexedArea>
+            <FlexedSinglesGroup>
+                {/*3high,19wide fragmented*/}
+                <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
+                                            initialDisposed={initial.disposed} setDisposedOnParent={setDisposed}
+                                            readonly={readonly}/>
+            </FlexedSinglesGroup>
+            {isInnoculated() && <FlexedSinglesGroup>
+                {/*1-2high (fragmented), extremely variable wide*/}
+                <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
+                {/*1high (13-25)wide */}
+                <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
+            </FlexedSinglesGroup>}
+            {isInnoculated() && <FlexedSinglesGroup>
+                {/*3high 17-18 wide*/}
+                <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
+            </FlexedSinglesGroup>}
+            {isInnoculated() && <FlexedSinglesGroup>
+                {/*1high (19-25 wide)*/}
+                <ConfirmedCleanArea onSelect={setConfirmedClean} readonly={readonly}
+                                    initial={initial.confirmedClean}/>
+                {/*1high (21-24 wide)*/}
+                <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
+            </FlexedSinglesGroup>}
 
 
-                <FlexedSinglesGroup>
-                    {/*1high (18+altId)*/}
-                    {isInnoculated()&&<InnocDisplay innoc={initial.innoc}/>}
-                    {/*1high (26+altId)*/}
-                    <LcRecipeArea lcRecipeId={initial.recipe}/>
-                    {/*1high (10+(altId/7))*/}
-                    <PcRunArea binaryId={initial.pcRun}/>
-                </FlexedSinglesGroup>
-            </FlexedArea>
-            {isInnoculated()&&<TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"lc"}
-                                 transfersOut={initial.transfersOut}
-                                 allowNewTransferCreation={!readonly}/>}
-            <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly}
-                         headerLevel={headerLevel}/>{/* Pics */}
-            <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
-                            readonly={readonly} headerLevel={headerLevel}/>
+            <FlexedSinglesGroup>
+                {/*1high (18+altId)*/}
+                {isInnoculated() && <InnocDisplay innoc={initial.innoc}/>}
+                {/*1high (26+altId)*/}
+                <LcRecipeArea lcRecipeId={initial.recipe}/>
+                {/*1high (10+(altId/7))*/}
+                <PcRunArea binaryId={initial.pcRun}/>
+            </FlexedSinglesGroup>
+        </FlexedArea>
+        {isInnoculated() && <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"lc"}
+                                                 transfersOut={initial.transfersOut}
+                                                 allowNewTransferCreation={!readonly}/>}
+        <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly}
+                     headerLevel={headerLevel}/>{/* Pics */}
+        <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
+                        readonly={readonly} headerLevel={headerLevel}/>
 
 
-            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
-            </TogglableAreaWithDepth>
-            {readonly || <>
-                <button className={"bottomButton greenButton"} onClick={(e) => {
-                    e.stopPropagation();
-                    lcSubmit()
-                }}>{"Update"}</button>
-            </>}
-        </DisplayFormWrapper>
+        <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+        <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+            <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
+        </TogglableAreaWithDepth>
+        {readonly || <>
+            <button className={"bottomButton greenButton"} onClick={(e) => {
+                e.stopPropagation();
+                lcSubmit()
+            }}>{"Update"}</button>
+        </>}
+    </DisplayFormWrapper>
 }
 
 export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
@@ -373,6 +400,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
     lcRecipeIn?: LcRecipeData,
     pcRunIn?: PcRunData
 }) {
+    const {dispatch} = useModalContext();
     const [lcRecipe, setLcRecipe] = useState(lcRecipeIn)
     const [pcRun, setPcRun] = useState(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
@@ -398,10 +426,10 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             writeTagTo: writeTagTo,
         }
         DoCreateRequest("lc", body, AssertLc, allCookies(cookies))
-            .then(v=>{
+            .then(v => {
                 handlers.onCreate ? handlers.onCreate(new LcData(v)) : console.log("no onCreate provided")
             })
-            .catch(e=>{
+            .catch(e => {
                 setErr(JSON.stringify(e))
             })
     }
@@ -409,7 +437,8 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
     return <NewEntryFormWrapper entryType={"lc"}>
         <ErrorDisplay err={err}/>
         {lcRecipeIn === undefined && <LcRecipeSelectorCloseable doSelect={setLcRecipe}
-                                                       allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>} {/* TODO: isTopLevel? disallow ok? */}{/* TODO: closeable or no? */}
+                                                                allowCreation={handlers.isTopLevel}
+                                                                creatorInPage={handlers.isTopLevel}/>} {/* TODO: isTopLevel? disallow ok? */}{/* TODO: closeable or no? */}
         {pcRunIn === undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
                                                           creatorInPage={true}/>} {/* TODO: isTopLevel? disallow ok? */}
         <NewEntryNotes setNotes={setNotes}/>
@@ -433,12 +462,14 @@ export function LcListPageTable({data, onClick, withLink}: ListPageItems<LcData>
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcData) => {
-            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new LcData(v)
+    }}/>
 }
 
 export function LcSelectorTable({data, onClick}: ListPageItems<LcData>) {
@@ -454,12 +485,14 @@ export function LcSelectorTable({data, onClick}: ListPageItems<LcData>) {
             return NumberToDateStr(v.lastUpdated)
         }),
         NewColumn("Link", (v: LcData) => {
-            return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })
     ]
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new LcData(v)
+    }}/>
 }
 
 export function LcSelector(
@@ -470,7 +503,7 @@ export function LcSelector(
     }: {
         doSelect: (val: LcData | undefined) => void,
         allowCreate?: boolean,
-        hideDisposed?:boolean
+        hideDisposed?: boolean
     }) {
     const table = (items: LcData[]): JSX.Element => {
         return <LcSelectorTable data={items} onClick={doSelect}/>
