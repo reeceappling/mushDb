@@ -4,8 +4,6 @@
 import {JSX, useState} from "react";
 import {CreatedLinkQuadCol, CreatedLinkTriCol} from "@/app/components/formSubcomponents/ovc";
 
-// TODO: notes added to create for stasisTube, waterJar
-
 export type Data<Type> = {
     data: Type,
     disabled: boolean,
@@ -43,7 +41,7 @@ export function InitialToAllEntries<Type>(a?: Type[]):AllEntries<Type>{
 
 export interface RevertableAreaProps<Type> {
     readonly?: boolean,
-    current?: AllEntries<Type>, // TODO: ensure everywhere is using this properly
+    current?: AllEntries<Type>,
     updateParent?: (entries: AllEntries<Type>) => void,
 }
 

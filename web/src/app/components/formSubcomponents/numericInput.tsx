@@ -449,36 +449,6 @@ export const InputText: FC<TextInputOnlyProps> = (
     </>
 };
 
-export const InputNumberWithSmallTitle: FC<NumericInputProps> = (
-    {
-        readonly = false,
-        value,
-        step = 1,
-        max = Infinity,
-        min = -Infinity,
-        onChange = () => {
-        },
-        label = "input number",
-        mode = Modes.floating,
-        placeholder, // placeholder number
-        errorMessage = 'error!',
-    }) => {
-    const id = useId();
-    const handleChange = useCallback(
-        (event: ChangeEvent<HTMLInputElement>) => {
-            onChange(event.target.value);
-        },
-        [onChange]
-    );
-    return <div className={"relative"}>
-        <label
-            htmlFor={id}
-            className={labelClassAbsolute}
-        >{label}</label>
-        <InputNumber max={max} mode={mode} min={min} step={step} placeholder={placeholder} value={value} onChange={onChange} readonly={readonly} errorMessage={errorMessage}/>
-    </div>
-};
-
 export const InputNumber: FC<NumericInputOnlyProps> = (
     {
         readonly = false,

@@ -59,7 +59,7 @@ export function QuadColLastCol({dstType, id}: { dstType: string, id: string }) {
 }
 
 function OvcQuadRow({item, key}: { item: CreatedLinkQuadCol, key: number }) {
-    const emptyCell = "-" // TODO: ensure ok
+    const emptyCell = "-"
     return <OvcTriRow item={item} key={key}>
         <td>{item.lastNode || emptyCell}</td>
     </OvcTriRow>
@@ -67,7 +67,6 @@ function OvcQuadRow({item, key}: { item: CreatedLinkQuadCol, key: number }) {
 
 function OvcTriRow(props: React.PropsWithChildren<{ item: CreatedLinkTriCol, key: number }>) {
     return <tr key={props.key}>
-        {/* TODO: styling for table data (all rows)*/}
         <td>{props.item.typeText}</td>
         <td>{props.item.node}</td>
         {props.children}
@@ -77,7 +76,7 @@ function OvcTriRow(props: React.PropsWithChildren<{ item: CreatedLinkTriCol, key
 function OvcTableHidden({empty, unhide}: { empty: boolean, unhide: () => void }) {
     return <div className={empty ? "hidden" : ""/*hide button if no entries*/} onClick={unhide}>
         {"Show Created Entries Table"}
-    </div> // TODO: ensure hidden works
+    </div>
 }
 
 function OvcLinksTableWrapper(props: React.PropsWithChildren<{
@@ -168,7 +167,7 @@ export function OnViewCreatorsQuadColArea({OnViewCreators, readonly}: {
     const [created, setCreated] = useState<CreatedLinkQuadCol[]>([]);
     const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
     const addCreated: AddCreatedQuadColFunction = (newLinks: CreatedLinkQuadCol[], closeAfter:boolean) => {
-        setCreated(created.concat(newLinks)) // TODO: structuredClone not working here
+        setCreated(created.concat(newLinks)) // TODO: structuredClone not working here?
         if (closeAfter) {
             setActiveTab(undefined)
         }
@@ -216,7 +215,7 @@ export function OnViewCreatorsTriColArea({OnViewCreators, readonly}: {
     const [created, setCreated] = useState<CreatedLinkTriCol[]>([]);
     const [createdTableHidden, setCreatedTableHidden] = useState<boolean>(false);
     const addCreated = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => {
-        setCreated(created.concat(newLinks)) // TODO: structuredClone not working here
+        setCreated(created.concat(newLinks)) // TODO: structuredClone not working here?
         if (closeAfter) {
             setActiveTab(undefined)
         }

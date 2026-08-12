@@ -46,12 +46,12 @@ export type AllNutrients = {
 }
 
 
-export function NutrientTypeSelectorForNew( // TODO: USE THIS!!!!!
+export function NutrientTypeSelectorForNew(
     {current, onSelect, readonly, blacklist}:{
         readonly: boolean,
         current?: string,
         onSelect?: (ab?: string)=>void
-        blacklist?: string[], // TODO: use?
+        blacklist?: string[],
     }){
     if(readonly){
         return <div>{current || "FIXME"}</div> // TODO: div ok?
