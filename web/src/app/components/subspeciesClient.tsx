@@ -176,10 +176,20 @@ export function NewSubspeciesForm({handlers, species}: {
         DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
             .then(v=>{
                 handlers.onCreate ? handlers.onCreate(new SubspeciesData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 console.error("onCreate failed: "+JSON.stringify(e)) // TODO: del
                 setErr("onCreate failed: "+JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     return (

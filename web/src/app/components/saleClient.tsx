@@ -170,9 +170,19 @@ export function NewSaleForm( // TODO: overhaul! Need Id available?
         DoCreateRequest("sale", body, AssertSale, allCookies(cookies))
             .then(v=>{
                 onCreate ? onCreate(v) : window.location.assign(viewUrlFor("sale", v._id))/*redirect() TODO: ensure ok*/ // TODO: del if working
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     return <NewEntryFormWrapper entryType={"sale"}>

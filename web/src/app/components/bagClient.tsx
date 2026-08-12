@@ -401,9 +401,19 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
         DoCreateRequest("bag", body, AssertBag, allCookies(cookies))
             .then(v => {
                 handlers.onCreate ? handlers.onCreate(new BagData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     return (

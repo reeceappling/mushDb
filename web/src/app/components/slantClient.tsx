@@ -368,9 +368,19 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
         DoCreateRequest("slant", body, AssertSlant, allCookies(cookies))
             .then(v=>{
                 handlers.onCreate ? handlers.onCreate(new SlantData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     return <NewEntryFormWrapper entryType={"slant"}>

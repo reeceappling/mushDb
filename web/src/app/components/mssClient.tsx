@@ -191,7 +191,11 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
                 window.location.assign(viewUrlFor("mss", v._id))
                 // redirect(viewUrlFor("mss", newItem._id)) // TODO: del if working
             })
-            .catch(ErrHandler(setErr));
+            .catch(ErrHandler(setErr)); // TODO: dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+//         header: "Create Failure",
+//         text: "entry failed to create: " + JSON.stringify(e),
+//         isErr: true
+//     }})
     }
     return <ImportEntryFormWrapper entryType={"mss"}>
         <ErrorDisplay err={err}/>
@@ -346,9 +350,19 @@ export function NewMssForm(
         DoCreateRequest("mss", body, AssertMss, allCookies(cookies))
             .then(v=>{
                 handlers.onCreate ? handlers.onCreate(new MssData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
 

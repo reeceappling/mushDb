@@ -441,6 +441,7 @@ export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
     pcRunIn?: PcRunData,
     grainBatchIn?: GrainBatchData
 }) {
+    const {dispatch} = useModalContext()
     //const [creationDate, setCreationDate] = useState(Date.now()) // set serverside
     const [grainBatch, setGrainBatch] = useState<GrainBatchData | undefined>(grainBatchIn)
     // const [recipe, setRecipe] = useState<string | undefined>(recipeIn) // Gotten from batch serverside
@@ -477,9 +478,19 @@ export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
         DoCreateRequest("jar", body, AssertJar, allCookies(cookies))
             .then(v=>{
                 handlers.onCreate ? handlers.onCreate(new JarData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 setErr("failed on createJar post: "+JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     return <NewEntryFormWrapper entryType={"jar"}>

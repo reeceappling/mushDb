@@ -231,9 +231,19 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
         DoCreateRequest("agarBatch", body, AssertAgarBatch, allCookies(cookies))
             .then(v => {
                 handlers.onCreate ? handlers.onCreate(new AgarBatchData(v)) : console.warn("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr("onCreate handler failed: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     return <NewEntryFormWrapper entryType={"agarBatch"}>

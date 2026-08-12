@@ -389,9 +389,19 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             .then(v=>{
                 onCreate ? onCreate(v) : console.log("no onCreate function provided")
                 setItemsCreated([...itemsCreated, v._id])
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
 

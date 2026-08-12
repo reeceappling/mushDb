@@ -167,6 +167,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
             notes: notes,
         }
         DoImportRequest(dataObj, "sporeSwab", AssertSporeSwab, setErr, allCookies(cookies))
+        // TODO: on error dispatch the modal stuff!
     }
     //no parent because we couldn't possibly know it
     return <ImportEntryFormWrapper entryType={"sporeSwab"}>
@@ -319,9 +320,19 @@ export function NewSporeSwabForm(
         DoCreateRequest("sporeSwab", body, AssertSporeSwab, allCookies(cookies))
             .then(v=>{
                 onCreate ? onCreate(v) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
 

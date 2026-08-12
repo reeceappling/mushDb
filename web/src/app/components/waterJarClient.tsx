@@ -215,9 +215,19 @@ export function NewWaterJarForm(
         DoCreateRequest("waterJar", body, AssertWaterJar, allCookies(cookies))
             .then(v => {
                 handlers.onCreate ? handlers.onCreate(new WaterJarData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
     }
     return <NewEntryFormWrapper entryType={"waterJar"}>
@@ -245,6 +255,7 @@ export function WaterJarImportDisplay({headerLevel}: ImportDisplayInput) {
         }
 
         DoImportRequest(body, "waterJar", AssertWaterJar, setErr, allCookies(cookies))
+        // TODO: on error dispatch the modal stuff!
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
         <ErrorDisplay err={err}/>
