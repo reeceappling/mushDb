@@ -16,11 +16,11 @@ export function FullPage(
     }: {
         children: ReactNode,
     }) {
-    return <>
-        <div className="fullPage">
-            {children}
+    return <div className="fullPage">
+            <ModalContextProvider>
+                {children}
+            </ModalContextProvider>
         </div>
-    </>
 }
 
 
@@ -43,14 +43,13 @@ export default function PageWrapper(
         },
     })
     return <ReaderOptionsContextProvider initialState={{options: props.readers, selected: undefined}}>
-        <ModalContextProvider>
-        <CookiesProvider>
+        <CookiesProvider>{/* TODO: unsure if needed, we have a separate cookies provider already...*/}
             <GoogleOAuthProvider clientId={GoogleApiClient}>
                 <QueryClientProvider client={queryClient}>
                     <FullPage>
-                        <TopBar/>
-                        {children}
-                        <Footer/>
+                            <TopBar/>
+                            {children}
+                            <Footer/>
                     </FullPage>
 
                     {/* TODO: del? <PageTypeProvider pageType={props.pageType}>*/}
@@ -59,7 +58,6 @@ export default function PageWrapper(
                 </QueryClientProvider>
             </GoogleOAuthProvider>
         </CookiesProvider>
-        </ModalContextProvider>
     </ReaderOptionsContextProvider>
 }
 
@@ -114,8 +112,9 @@ export function Footer() {
         {/*    Go to nextjs.org →*/}
         {/*</a>*/}
         <div>
-            <div>{"© 2024-2026 "/* TODO: dynamic final year*/}<a href={"https://reece.appli.ng"}>{"Reece Appling."}</a></div>
-            <div style={{ float: 'right' }}>{" All Rights Reserved"}</div>
+            <div>{"© 2024-2026 "/* TODO: dynamic final year*/}<a href={"https://reece.appli.ng"}>{"Reece Appling."}</a>
+            </div>
+            <div style={{float: 'right'}}>{" All Rights Reserved"}</div>
         </div>
     </footer>
 }

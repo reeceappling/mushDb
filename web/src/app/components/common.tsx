@@ -47,7 +47,6 @@ import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {Note} from "@/app/components/formSubcomponents/notes";
 
 export const clientPostRequestHeaders = {
     credentials: 'include',
@@ -1104,9 +1103,8 @@ export function ImportEntryFormWrapper(props: React.PropsWithChildren<{ entryTyp
 export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: string, id?: string }>) { // TODO: USE THIS EVERYWHERE!
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div id={props.id}
-             className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
-            {props.children}
+        <div id={props.id} className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
+                {props.children}
         </div>
     </DepthProvider>
 }
