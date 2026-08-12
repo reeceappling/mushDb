@@ -1,4 +1,6 @@
 # TODOs found while using
+- [ ] lightbox for all pictures
+- [ ] Switch all images to use React's Image tag rather than <img...>
 - [x] On update, make a popup to say completed successfully, or failed with error message
   - [x] Add the popup to the full page component, and have it in a global context that the update functions can call to set the information...
   - [x] Handle const {dispatch} = useModalContext(); in all areas like Fruit Display. All should be done except non-multipart imports and creates
