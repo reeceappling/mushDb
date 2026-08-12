@@ -39,9 +39,6 @@
   - [ ] Other metadata
 - [ ] Change icon
 - [ ] Update homepage
-- [x] Creating sporeprints from fruits and providing an image is not putting image on the final spore print
-- [x] Plate display changing wetAtCooledTime from unknown to yes and updating causes error (fixed)
-- [x] A newly imported plate without species is failing to add a new note (fixed)
 - [ ] Jar import is not working properly (maybe only on mobile?), giving 500s when submitting 10/27/25 quart using Rye. Wav, unknown KF, gen 4 undefined undefined with pic, no writeTo
   - [ ] I believe this is fixed!  
 - [ ] Species selector is not showing all species in plugs import...
@@ -54,16 +51,10 @@
 - [ ] Disallow guests from even trying to modify things!
 - [NO] Allow not-logged-in users to view public entries without redirecting to the login page...
 - [ ] When a reference is used, the referenced item should also update its updated time? Idk, feels weird...
-- [x] SingleNoteV2 NEEDS SIZING CHANGES DURING EDITING FOR NORMAL NOTES AS WELL AS PICTURE AND CONTAM NOTES!
-- [x] Notes styling!
-  - [x] Pictures and Contams should be vertical?
-  - [x] All others should be horizontal?
 - [ ] SPECIES LIST NOT WORKING FOR GUESTS! (NOT SHOWING ANYTHING!)
 - [ ] When trying to edit a large note that already exists, clicking the edit button causes the textArea to be very large comparably to its contents!
 - [ ] Pagination on list pages. Use query params (or path) to determine which item to use bson.M{"_id":bson.M{"$gt": lastId}}
 - [ ] mush.appli.ng should redirect to /login if not logged in?
-- [x] LcSyringes ADD PHOTOS
-- [x] Dates on import pages are not allowing January!
 - [ ] Update MostRecentImage everywhere, just like in LcSyringe!
   - [ ] Test all places that use updateMostRecentImageIfNeeded
 - [ ] Add pics to MSS
@@ -75,8 +66,6 @@
  
 # In Progress
 ## Actively Working On
-- [x] Adding pics/flushes/contams images is not working when trying to view them after update
-  - [x] Switch from <Image> back to <img>
 - [x] Spore print and below Go TODOs
   - [ ] User, project, and sale Go TODOs
 - [ ] Project, sale, user tsx TODOs
@@ -788,6 +777,17 @@
 - [x] Upgrade Next.js to >16
 - [x] Upgrade Node to >26.5
 - [x] Start using turbopack instead of webpack to speed up builds
+- [x] Adding pics/flushes/contams images is not working when trying to view them after update
+  - [x] Switch from <Image> back to <img>
+- [x] LcSyringes ADD PHOTOS
+- [x] Dates on import pages are not allowing January!
+- - [x] SingleNoteV2 NEEDS SIZING CHANGES DURING EDITING FOR NORMAL NOTES AS WELL AS PICTURE AND CONTAM NOTES!
+- [x] Notes styling!
+  - [x] Pictures and Contams should be vertical?
+  - [x] All others should be horizontal?
+- [x] Creating sporeprints from fruits and providing an image is not putting image on the final spore print
+- [x] Plate display changing wetAtCooledTime from unknown to yes and updating causes error (fixed)
+- [x] A newly imported plate without species is failing to add a new note (fixed)
 
 # Other
 ## mongo backups
