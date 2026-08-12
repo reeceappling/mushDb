@@ -8,6 +8,7 @@ import {CookiesProvider} from "react-cookie";
 import {GoogleOAuthProvider} from "@react-oauth/google";
 import styles from "@/app/page.module.css";
 import Image from "next/image";
+import {ModalContextProvider} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function FullPage(
     {
@@ -42,6 +43,7 @@ export default function PageWrapper(
         },
     })
     return <ReaderOptionsContextProvider initialState={{options: props.readers, selected: undefined}}>
+        <ModalContextProvider>
         <CookiesProvider>
             <GoogleOAuthProvider clientId={GoogleApiClient}>
                 <QueryClientProvider client={queryClient}>
@@ -57,6 +59,7 @@ export default function PageWrapper(
                 </QueryClientProvider>
             </GoogleOAuthProvider>
         </CookiesProvider>
+        </ModalContextProvider>
     </ReaderOptionsContextProvider>
 }
 

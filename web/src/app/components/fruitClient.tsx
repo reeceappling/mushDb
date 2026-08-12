@@ -39,7 +39,7 @@ import {
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
-    resolvePicsFormData, Subform, setFormFull, viewUrlFor,
+    resolvePicsFormData, Subform, setFormFull, viewUrlFor, PopupApp, PopupInfo, DefaultPopupInfo,
 } from "@/app/components/common";
 import {
     ErrorDisplay,
@@ -73,6 +73,7 @@ import {TransferData} from "@/app/components/transferServer";
 import {SelectorFor} from "@/app/components/selector";
 import {MssData} from "@/app/components/mssServer";
 import {MssSelectorTable} from "@/app/components/mssClient";
+import {ActionTypes, SetModalInfoAction, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -156,6 +157,7 @@ export default function FruitDisplay(
         openSporesInNewTab?: boolean;
         allowPrintCreation?: boolean;
     }) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
 
     const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
@@ -166,6 +168,7 @@ export default function FruitDisplay(
     const [sporePrints, setSporePrints] = useState(data.prints) // TODO: use?
     const [err, setErr] = useState<string | undefined>()
     const [acl, setAcl] = useState<ACL>(initial.acl)
+    //const [popupInfo, setPopupInfo] = useState<PopupInfo>(DefaultPopupInfo)
     useEffect(() => {
         console.log("ACL set to: "+JSON.stringify(MarshalAcl(acl))) // TODO: del!
     }, [acl])
@@ -199,7 +202,7 @@ export default function FruitDisplay(
     //     </div>
     // }
     const cookies = useContext(CookiesContext)
-    const fruitSubmit = () => {
+    const fruitSubmit = async () => {
         // disposed, notes, existing pics
         const formData = new FormData()
         const dataObj: any = { // TODO: ensure const instead of let is ok here!
@@ -214,20 +217,79 @@ export default function FruitDisplay(
             dataObj.images = picsInfo.obj
             // Set data on form
             setFormFull(formData, dataObj, newImages, undefined, undefined)
-            // formData.set("data", JSON.stringify(dataObj))
-            // setFormImages("newPic", formData, newImages)
         } catch (caught: any) {
-            setErr(JSON.stringify(caught))
+            const newErr = JSON.stringify(caught)
+            setErr(newErr)
+            dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                    header: "Update Failed",
+                    text: "failed to set form values: "+newErr,
+                    isErr: true
+                }})
             return
         }
+        try {
+            const resp = await DoUpdateMultipartRequest("fruit", initial._id, formData, AssertFruit, allCookies(cookies))
+                .catch(e=>{
+                    const newErr = "failed to make request: "+JSON.stringify(e)
+                    setErr(newErr)
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: newErr,
+                            isErr: true
+                        }})
+                    throw newErr
+                })
+            try {
+                const temp = new FruitData(resp)
+                updateInitial(temp)
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
+                return
+            } catch (e){
+                const newErr = "failed to parse response: " + JSON.stringify(e)
+                setErr(newErr)
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                    header: "Update Failed",
+                    text: newErr,
+                    isErr: true
+                }})
+                return
+            }
+        } catch {
+            // do nothing, err already thrown
+        }
 
-        DoUpdateMultipartRequest("fruit", initial._id, formData, AssertFruit, allCookies(cookies))
-            .then(v => {
-                updateInitial(new FruitData(v))
-            })
-            .catch(e => {
-                setErr("failed to update initial: " + JSON.stringify(e))
-            })
+        // DoUpdateMultipartRequest("fruit", initial._id, formData, AssertFruit, allCookies(cookies))
+        //     .catch(e=>{
+        //         const newErr = JSON.stringify(e)
+        //         setErr("failed to make request: " + newErr)
+        //         setPopupInfo({
+        //             header: "Update Failed",
+        //             text: newErr,
+        //             isErr: true
+        //         })
+        //         throw newErr
+        //     })
+        //     .then(v => {
+        //         updateInitial(new FruitData(v))
+        //         setPopupInfo({
+        //             header: "Update Success",
+        //             text: "entry updated successfully",
+        //             isErr: false
+        //         })
+        //     })
+        //     .catch(e => {
+        //         const newErr = JSON.stringify(e)
+        //         setErr("failed to make request or parse response: " + newErr)
+        //         setPopupInfo({ // TODO: handle error parsing response
+        //             header: "Update Failed",
+        //             text: newErr,
+        //             isErr: true
+        //         })
+        //     })
     }
     const ovcs: ()=>OnViewCreatorQuadCol[] = ()=>{
         const disp = initial.disposed !== undefined

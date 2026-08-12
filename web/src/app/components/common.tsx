@@ -47,6 +47,7 @@ import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
+import {Note} from "@/app/components/formSubcomponents/notes";
 
 export const clientPostRequestHeaders = {
     credentials: 'include',
@@ -1596,3 +1597,43 @@ export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, fo
 //         throw "client speech synthesis not currently available"
 //     }
 // }
+export interface PopupInfo {
+    header: string
+    text?: string
+    isErr: boolean // TODO: use this!
+}
+
+export function PopupApp({info}: { info:PopupInfo }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [doneWithFirstLoad, setDoneWithFirstLoad] = useState<boolean>(false);
+    const [data, setData] = useState<PopupInfo>(info);
+    useEffect(() => {
+        if(doneWithFirstLoad){
+            setData(info)
+            setIsOpen(true)
+        }else{
+            setDoneWithFirstLoad(true);
+        }
+    }, [info]);
+    const close = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>)=>{
+        e.stopPropagation()
+        e.preventDefault()
+        setIsOpen(false)
+    }
+    if (isOpen) {
+        return <div className={"popupModal"}>
+            <div className={"popupModalContent"}>
+                <h3>{data.header}</h3>
+                <p className={data.isErr?"error":""}>{data.text || "no text set, you should never see this message"}</p>
+                <button className={"basicButton buttonFullWidth"} onClick={close}>{"Close"}</button>
+            </div>
+        </div>
+    }
+    return null
+}
+
+export const DefaultPopupInfo: PopupInfo = {
+    header: "initial header",
+    text: "you should never see this text",
+    isErr: false,
+}

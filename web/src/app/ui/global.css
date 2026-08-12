@@ -180,3 +180,32 @@ div {
         }
     }
 }
+.popupModal {
+    position: fixed;
+    top: 0; /* TODO: FIX! */
+    left: 0; /* TODO: FIX! */
+    width: 100%; /* TODO: FIX! */
+    height: 100%; /* TODO: FIX! */
+    background-color: #000000A0; /* TODO: FIX! */
+    display: flex; /* TODO: FIX! */
+    justify-content: center; /* TODO: FIX! */
+    align-items: center; /* TODO: FIX! */
+    z-index: 12;
+    & > div {
+        /*Modal content*/
+        width: fit-content;
+        margin-inline: auto;
+        background-color: var(--color-primary-0);
+        padding: 20px; /* TODO: FIX! */
+        border-radius: 5px; /* TODO: FIX! */
+        text-align: center;
+        transform: translateY(max(calc(50vh - 100%),100%));
+        & .error {
+            color: var(--color-danger)
+        }
+        & :not(.error) {
+            color: black;
+        }
+
+    }
+}
