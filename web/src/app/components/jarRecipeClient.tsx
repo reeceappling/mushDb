@@ -63,6 +63,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {InputText} from "@/app/components/formSubcomponents/numericInput";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {WaterJarData} from "@/app/components/waterJarServer";
 
 
 export function AssertJarRecipe(input: any): asserts input is JarRecipeData {
@@ -331,12 +332,16 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
         }
         DoCreateRequest("jarRecipe", body, AssertJarRecipe, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(new JarRecipeData(v)) : console.log("no onCreate provided")
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Create Success",
-                        text: "entry created successfully",
-                        isErr: false
-                    }})
+                if(handlers.onCreate!==undefined){
+                    handlers.onCreate(new JarRecipeData(v))
+                    handlers.isTopLevel && dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Create Success",
+                            text: "entry created successfully",
+                            isErr: false
+                        }})
+                } else {
+                    console.log("no onCreate provided")
+                }
             })
             .catch(e => {
                 setErr(JSON.stringify(e))

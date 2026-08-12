@@ -29,6 +29,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
@@ -175,12 +176,16 @@ export function NewSubspeciesForm({handlers, species}: {
             }
         DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(new SubspeciesData(v)) : console.log("no onCreate provided")
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Create Success",
-                        text: "entry created successfully",
-                        isErr: false
-                    }})
+                if(handlers.onCreate!==undefined){
+                    handlers.onCreate(new SubspeciesData(v))
+                    handlers.isTopLevel && dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Create Success",
+                            text: "entry created successfully",
+                            isErr: false
+                        }})
+                } else {
+                    console.log("no onCreate provided")
+                }
             })
             .catch(e=>{
                 console.error("onCreate failed: "+JSON.stringify(e)) // TODO: del

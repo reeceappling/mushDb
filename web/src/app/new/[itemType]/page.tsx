@@ -44,13 +44,13 @@ export default async function Page({
     const allCookies = cookieStore.getAll().map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
     let speciesData: SpeciesData | undefined = undefined
     if (species !== undefined){
-        speciesData = await fetch(BaseExternalUrl+"/db/get/species/"+species[0], { // TODO: this feels way incorrect? need to un-urlencode species? need only first entry of species?
+        speciesData = await fetch(BaseExternalUrl+"/db/get/species/"+species[0], {
             method: 'Get',
             credentials: 'include',
-            headers: { // TODO: use diff type?
+            headers: {
                 credentials: 'include',
                 'Accept': 'application/json',
-                'Cookie': allCookies, // TODO: ok?
+                'Cookie': allCookies,
             },
         }).then((res) => {
             if(!res.ok){

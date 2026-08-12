@@ -39,6 +39,7 @@ import {InputTextInlineTitle} from "@/app/components/formSubcomponents/numericIn
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
 
 function requireObject(inp: any) {
     const typ = typeof inp
@@ -250,12 +251,16 @@ export function NewProjectForm(
         }
         DoCreateRequest("project", body, AssertProject, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(new ProjectData(v)) : console.log("no onCreate provided")
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Create Success",
-                        text: "entry created successfully",
-                        isErr: false
-                    }})
+                if(handlers.onCreate!==undefined){
+                    handlers.onCreate(new ProjectData(v))
+                    handlers.isTopLevel && dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Create Success",
+                            text: "entry created successfully",
+                            isErr: false
+                        }})
+                } else {
+                    console.log("no onCreate provided")
+                }
             })
             .catch(e => {
                 setErr(JSON.stringify(e))

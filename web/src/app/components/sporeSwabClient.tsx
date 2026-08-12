@@ -287,11 +287,10 @@ export default function SporeSwabDisplay(
 // Should only be accessible from a fruit's page
 export function NewSporeSwabForm(
     // TODO: can also be made from bag, box
-    {printIn, fruitIn, otherParentIn, headerLevel, offset, onCreate}: {
+    {printIn, fruitIn, otherParentIn, offset, onCreate}: {
         printIn?: SporePrintData
         fruitIn?: FruitData
         otherParentIn?: string
-        headerLevel?: number
         offset?: number
         onCreate: (sp: SporeSwabData) => void
     }) {
@@ -325,6 +324,7 @@ export function NewSporeSwabForm(
                         text: "entry created successfully",
                         isErr: false
                     }})
+
             })
             .catch(e=>{
                 setErr(JSON.stringify(e))

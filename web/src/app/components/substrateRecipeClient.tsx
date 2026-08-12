@@ -39,6 +39,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {NameModifiable} from "@/app/components/jarRecipeClient";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
 
 export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRecipeData {
     if (typeof input !== 'object') {
@@ -207,12 +208,16 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
         }
         DoCreateRequest("substrateRecipe", body, AssertSubstrateRecipe, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(new SubstrateRecipeData(v)) : console.log("no onCreate provided")
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Create Success",
-                        text: "entry created successfully",
-                        isErr: false
-                    }})
+                if(handlers.onCreate!==undefined){
+                    handlers.onCreate(new SubstrateRecipeData(v))
+                    handlers.isTopLevel && dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Create Success",
+                            text: "entry created successfully",
+                            isErr: false
+                        }})
+                } else {
+                    console.log("no onCreate provided")
+                }
             })
             .catch(e => {
                 setErr(JSON.stringify(e))

@@ -139,7 +139,7 @@ const getData: (a1:string,a2:string,allCookies:string)=>Promise<any> = async (it
                 'Cookie': allCookies, // REQUIRED // TODO: can we drop this because we have included creds?
                 // TODO: set Origin header to web? or should this be BaseExternalUrl?
             },
-        }).then((res) => {
+        }).then(res => {
             console.log("got response " + JSON.stringify(res))
             if (!res.ok) {
                 return res.text().then(txt => {

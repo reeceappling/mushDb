@@ -789,11 +789,7 @@ export function DoGetRequest<T extends Entry>(itemType: string, typeStr: string,
 
 export function DoMultipartImportRequest<T extends Importable>(formData: FormData, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string, dispatchUpdate:(isErr:boolean,text:string)=>void) {
     SendMultipartRequest(importApiUrlFor(typeStr), formData, cookies)
-        .then((v)=>{
-            ImportResponseHandler(asserter,typeStr, setErr)
-            dispatchUpdate(false, "success")
-        }
-        )
+        .then(ImportResponseHandler(asserter,typeStr, setErr))
         .catch(caughtErr=>{
             const newErr = JSON.stringify(caughtErr)
             setErr(newErr)

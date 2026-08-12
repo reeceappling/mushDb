@@ -65,6 +65,7 @@ import {
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import TestAndValidate from "@/app/components/testing/untested";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
@@ -471,12 +472,16 @@ export function NewPlugsForm(
         }
         DoCreateRequest("plugs", body, AssertPlugs, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(new PlugsData(v)) : console.log("no onCreate provided")
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Create Success",
-                        text: "entry created successfully",
-                        isErr: false
-                    }})
+                if(handlers.onCreate!==undefined){
+                    handlers.onCreate(new PlugsData(v))
+                    handlers.isTopLevel && dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Create Success",
+                            text: "entry created successfully",
+                            isErr: false
+                        }})
+                } else {
+                    console.log("no onCreate provided")
+                }
             })
             .catch(e => {
                 setErr(JSON.stringify(e))

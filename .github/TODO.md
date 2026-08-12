@@ -1,4 +1,5 @@
 # TODOs found while using
+- [ ] On spore print, when trying to add a new photo, if you try to remove the photo before updating nothing happens
 - [ ] lightbox for all pictures
 - [ ] Switch all images to use React's Image tag rather than <img...>
 - [x] On update, make a popup to say completed successfully, or failed with error message

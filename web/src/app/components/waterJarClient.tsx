@@ -43,6 +43,7 @@ import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/coo
 import {MarshalAcl, UnmarshalAcl} from "@/app/components/accessControlClient";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
 
 export function AssertWaterJar(input: any): asserts input is WaterJarData {
     if (typeof input !== 'object') {
@@ -214,18 +215,23 @@ export function NewWaterJarForm(
         }
         DoCreateRequest("waterJar", body, AssertWaterJar, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(new WaterJarData(v)) : console.log("no onCreate provided")
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Create Success",
-                        text: "entry created successfully",
-                        isErr: false
-                    }})
+                if(handlers.onCreate!==undefined){
+                    handlers.onCreate(new WaterJarData(v))
+                    handlers.isTopLevel && dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Create Success",
+                            text: "entry created successfully",
+                            isErr: false
+                        }})
+                } else {
+                    console.log("no onCreate provided")
+                }
             })
             .catch(e => {
-                setErr(JSON.stringify(e))
+                const newErr = "entry failed to create: " + JSON.stringify(e)
+                setErr(newErr)
                 dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
                         header: "Create Failure",
-                        text: "entry failed to create: " + JSON.stringify(e),
+                        text: newErr,
                         isErr: true
                     }})
             })

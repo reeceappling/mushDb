@@ -741,7 +741,7 @@ func handleLoginMiddleware(viewHandler http.Handler) http.Handler {
 			viewHandler.ServeHTTP(w, r)
 		case http.MethodPost:
 			time.Sleep(1500 * time.Millisecond) // Make user wait for login, lower likelihood of attack
-			println("SHOULD NEVER BE HIT")
+			println("SHOULD NEVER BE HIT")      // TODO: THIS IS GETTING HIT!
 		default:
 			http.Error(w, "Unsupported http request method: "+http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		}

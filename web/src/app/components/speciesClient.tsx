@@ -60,6 +60,7 @@ import {NewSubspeciesForm} from "@/app/components/subspeciesClient";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SelectorFor} from "@/app/components/selector";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
 
 export function AssertSpecies(input: any): asserts input is SpeciesData {
     if (typeof input !== 'object') {
@@ -254,12 +255,16 @@ export function NewSpeciesForm(
         }
         DoCreateRequest("species", body, AssertSpecies, allCookies(cookies))
             .then(v => {
-                handlers.onCreate ? handlers.onCreate(new SpeciesData(v)) : console.log("no onCreate provided")
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Create Success",
-                        text: "entry created successfully",
-                        isErr: false
-                    }})
+                if(handlers.onCreate!==undefined){
+                    handlers.onCreate(new SpeciesData(v))
+                    handlers.isTopLevel && dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Create Success",
+                            text: "entry created successfully",
+                            isErr: false
+                        }})
+                } else {
+                    console.log("no onCreate provided")
+                }
             })
             .catch(e => {
                 setErr(JSON.stringify(e))
