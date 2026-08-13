@@ -294,7 +294,7 @@ export default function SporePrintDisplay(
                                 typeText: "Spore Print",
                                 node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
                             }], true)
-                        }} parentId={initial._id} parentTypeIn={"sporePrint"}/>
+                        }} parentId={initial._id}/>
                     },
                 }
             ]:[]),
@@ -380,15 +380,13 @@ export default function SporePrintDisplay(
     </DisplayFormWrapper>
 }
 
-// Should only be accessible from a fruit's page
-// TODO: FIX THIS! We should be able to make spore prints firectly from fruit, or indirectly from many others!
-export function NewSporePrintForm( // TODO: currently do not like this one...
-    {parentId, headerLevel, offset, onCreate, parentTypeIn}: {
+// Make spore prints directly from fruit, or indirectly from many others!
+export function NewSporePrintForm(
+    {parentId, headerLevel, offset, onCreate}: {
         parentId?: string
         headerLevel?: number
         offset?: number
         onCreate: (sp: SporePrintData) => void
-        parentTypeIn?: string
     }) {
     const {dispatch} = useModalContext();
     const [parent, setParent] = useState<string | undefined>(parentId)
