@@ -495,10 +495,10 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 			if err = cursor.Decode(&result); err != nil {
 				return nil, err
 			}
-			bs, err := json.Marshal(result)
-			if err == nil {
-				println("CHECKING AN ITEM: " + string(bs)) // TODO: del
-			}
+			//bs, err := json.Marshal(result)
+			//if err == nil {
+			//	println("CHECKING AN ITEM: " + string(bs)) // TODO: del
+			//}
 			// If item is permissioned, ensure the user can read it
 			permedItem, ok := interface{}(result).(Permissioned)
 			if ok {

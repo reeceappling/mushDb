@@ -17,6 +17,7 @@ import (
 	slices2 "slices"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // TODO: harvestFruit from bag/box page? How do I want to track which fruit without writing on them or tagging them? Create a flush collection?
@@ -406,20 +407,6 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to find main collection item via id", http.StatusBadRequest)
 		return
 	}
-	// Chaining spore prints when given a spore print as the input
-	// handle chaining! // TODO: When do we want to dispose of the parent fruit?
-	if mcItem.SourceType() == SporePrintSourceType {
-		mcItem, err = GetMainCollectionItemSpecific(ctx, mcItem.DbId(), &SporePrint{})
-		if err != nil {
-			http.Error(w, "failed to get fruit from existing print", http.StatusInternalServerError)
-			return
-		}
-		// If parent fruit already disposed, fail! // TODO: VALIDATE!
-		if mcItem.DisposalInfo() != nil {
-			http.Error(w, "parent fruit already disposed!", http.StatusBadRequest)
-			return
-		}
-	}
 	var fr *Fruit
 	var printOut *SporePrint
 	_, er := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
@@ -433,10 +420,27 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			break
 		case FruitSourceType:
-			var ok bool
-			fr, ok = mcItem.(*Fruit)
+			// Chaining spore prints when given a spore print as the input
+			// handle chaining! // TODO: When do we want to dispose of the parent fruit?
+			existingSp, ok := mcItem.(*SporePrint)
 			if !ok {
-				return nil, errors.New("fruit is not a Fruit?")
+				return nil, errors.New("failed to read mcItem as sporePrint")
+			}
+			if existingSp.Parent == nil {
+				return nil, errors.New("spore print did not have a parent")
+			}
+			const daysCutoff = 10 // TODO: ensure ok
+			if time.Now().Sub(existingSp.CreationDate.GoTime()) > (daysCutoff * 24 * time.Hour) {
+				return nil, errors.New("print too old to chain from")
+			}
+			// Does not matter if existing spore print is disposed. Parent may not be disposed
+			fr, err = GetMainCollectionItemSpecific(ctx, *existingSp.Parent, &Fruit{})
+			if err != nil {
+				return nil, errors.Join(errors.New("failed to get fruit from existing print"), err)
+			}
+			// If parent fruit already disposed, fail!
+			if fr.DisposalInfo() != nil {
+				return nil, errors.New("parent fruit already disposed (exclamation mark)")
 			}
 			// direct creation, continue!
 			break

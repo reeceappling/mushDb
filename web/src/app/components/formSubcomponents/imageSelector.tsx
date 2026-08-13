@@ -36,15 +36,17 @@ export default function ImageSelector({updateParent, buttonText}:{buttonText?:st
     if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices){
         console.error("no media devices found")
         setHasCamera(false)
+    } else {
+        navigator.mediaDevices.enumerateDevices().then(devices=>{
+            const cams = devices.filter(device => device.kind === 'videoinput')
+            setHasCamera(cams.length > 0)
+        }).catch(e=> {
+                console.error("failed to get media devices")
+                setHasCamera(false)
+            }
+        );
     }
-    navigator.mediaDevices.enumerateDevices().then(devices=>{
-        const cams = devices.filter(device => device.kind === 'videoinput')
-        setHasCamera(cams.length > 0)
-    }).catch(e=> {
-        console.error("failed to get media devices")
-            setHasCamera(false)
-        }
-    );
+
     return <div className={"imageSelector picLeft"}>
         {file !== undefined && <div className={"preview"}> {/* TODO: FIX SIZE!*/}
             <img className={"picDisplay"} src={URL.createObjectURL(file)} alt="image preview"/>
