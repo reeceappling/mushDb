@@ -164,3 +164,25 @@ func createMainCollectionEntryInTxn(ctx mongo.SessionContext, toInsert MainColle
 	}
 	return nil
 }
+
+func MainCollItemForEntryType(entryType string) (MainCollectionItem, error) {
+	if mainCollItem, exists := map[string]MainCollectionItem{
+		"bag":             &Bag{}, // can only go to fruits
+		"fruit":           &Fruit{},
+		"fruitingChamber": &FruitingChamber{}, // can only go to fruits
+		"jar":             &GrainJar{},        // can go anywhere (in theory) except MSS
+		"lc":              &LiquidCulture{},   // can go anywhere (in theory) except MSS
+		"lcSyringe":       &LcSyringe{},
+		"mss":             &MSS{},   // generally only goes to plate
+		"plate":           &Plate{}, // can go anywhere (in theory) except MSS
+		"plugs":           &PlugsJar{},
+		"slant":           &Slant{}, // generally only goes to plate
+		"sporePrint":      &SporePrint{},
+		"sporeSwab":       &SporeSwab{},
+		"stasisTube":      &StasisTube{}, // generally only goes to plate
+		"waterJar":        &WaterJar{},
+	}[entryType]; exists {
+		return mainCollItem, nil
+	}
+	return nil, errors.New("invalid entry type: " + entryType)
+}

@@ -48,8 +48,10 @@ const (
 	SpColorBlack    SporePrintColor = "Black"
 	SpColorBrown    SporePrintColor = "Brown"
 	SpColorRed      SporePrintColor = "Red"
+	SpColorOrange   SporePrintColor = "Orange"
 	SpColorTanLight SporePrintColor = "LightTan"
 	SpColorClear    SporePrintColor = "Clear"
+	SpColorYellow   SporePrintColor = "Yellow"
 )
 
 type SporePrintDensity string
@@ -470,28 +472,6 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = w.Write(bsOut)
 	handleWriteErr(err, w)
-}
-
-func MainCollItemForEntryType(entryType string) (MainCollectionItem, error) {
-	if mainCollItem, exists := map[string]MainCollectionItem{
-		"bag":             &Bag{}, // can only go to fruits
-		"fruit":           &Fruit{},
-		"fruitingChamber": &FruitingChamber{}, // can only go to fruits
-		"jar":             &GrainJar{},        // can go anywhere (in theory) except MSS
-		"lc":              &LiquidCulture{},   // can go anywhere (in theory) except MSS
-		"lcSyringe":       &LcSyringe{},
-		"mss":             &MSS{},   // generally only goes to plate
-		"plate":           &Plate{}, // can go anywhere (in theory) except MSS
-		"plugs":           &PlugsJar{},
-		"slant":           &Slant{}, // generally only goes to plate
-		"sporePrint":      &SporePrint{},
-		"sporeSwab":       &SporeSwab{},
-		"stasisTube":      &StasisTube{}, // generally only goes to plate
-		"waterJar":        &WaterJar{},
-	}[entryType]; exists {
-		return mainCollItem, nil
-	}
-	return nil, errors.New("invalid entry type: " + entryType)
 }
 
 type updateSporePrintRequest struct {

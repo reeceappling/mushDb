@@ -51,6 +51,8 @@ var sporePrintColors = []SporePrintColor{ // TODO: move these to autogenned?
 	SpColorBlack,
 	SpColorBrown,
 	SpColorRed,
+	SpColorOrange,
+	SpColorYellow,
 	SpColorTanLight,
 	SpColorClear,
 }
