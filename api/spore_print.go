@@ -50,6 +50,7 @@ const (
 	SpColorRed      SporePrintColor = "Red"
 	SpColorOrange   SporePrintColor = "Orange"
 	SpColorTanLight SporePrintColor = "LightTan"
+	SpColorWhite    SporePrintColor = "White"
 	SpColorClear    SporePrintColor = "Clear"
 	SpColorYellow   SporePrintColor = "Yellow"
 )
