@@ -6,8 +6,9 @@ type envKey string
 
 const envCtxKey envKey = "environment"
 const Prod = "prod"
-const Cert = "cert" // TODO: qual, cert?
-const Dev = "dev"   // TODO: qual, cert?
+const Cert = "cert"
+const Qual = "qual"
+const Dev = "dev"
 
 func GetEnv(ctx context.Context) string {
 	if out, exists := ctx.Value(envCtxKey).(string); exists {
@@ -19,7 +20,8 @@ func SetEnv(ctx context.Context, env string) context.Context {
 	return context.WithValue(ctx, envCtxKey, env)
 }
 func IfDev(ctx context.Context, doIfDev func() error) error {
-	if GetEnv(ctx) == Dev {
+	e := GetEnv(ctx)
+	if e == Dev || e == Qual {
 		return doIfDev()
 	}
 	return nil
@@ -43,9 +45,10 @@ func IfNotProd(ctx context.Context, doIfProd func() error) error {
 	return nil
 }
 func LogIfDev(ctx context.Context, toLog string) {
-	if GetEnv(ctx) == Dev {
+	_ = IfDev(ctx, func() error {
 		println(toLog)
-	}
+		return nil
+	})
 }
 func LogAlways(toLog string) {
 	println(toLog)

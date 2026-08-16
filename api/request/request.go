@@ -25,7 +25,7 @@ func GetPath(ctx context.Context) *string { // TODO: USE!
 	return &requestPath
 }
 
-func SetPath(ctx context.Context, requestPath string) context.Context { // TODO: USE!
+func SetPath(ctx context.Context, requestPath string) context.Context {
 	return context.WithValue(ctx, path, requestPath)
 }
 func GetId(ctx context.Context) *string { // TODO: USE!
@@ -36,7 +36,7 @@ func GetId(ctx context.Context) *string { // TODO: USE!
 	return &idFromCtx
 }
 
-func WithId(ctx context.Context, optionalId *string) context.Context { // TODO: USE!
+func WithId(ctx context.Context, optionalId *string) context.Context {
 	var newId string
 	if optionalId != nil {
 		newId = *optionalId

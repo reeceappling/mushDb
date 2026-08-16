@@ -10,50 +10,6 @@ import (
 	"path/filepath"
 )
 
-//	type Interactor interface {
-//		SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, error)
-//	}
-//
-//	type FileReadWriter interface {
-//		Read(fileSubPath string)([]byte, error)
-//		Save(bs []byte, path string) error
-//	}
-var ErrNotFound = errors.New("file not found")
-
-//type MultiWriterPriorityReader []FileReadWriter
-//func (rws MultiWriterPriorityReader) Read(path string)(out []byte, err error){
-//	for _, rw := range rws {
-//		out, err = rw.Read(path)
-//		if err != nil && errors.Is(err, ErrNotFound) {
-//			continue
-//		}
-//		return out, err
-//	}
-//	return nil, err
-//}
-//
-//func (rws MultiWriterPriorityReader) Save(bs []byte, subPath string) error{
-//	var err error = nil
-//	for _, rw := range rws {
-//		err = errors.Join(err, rw.Save(bs, subPath))
-//	}
-//	return err // TODO: ok?
-//}
-//
-//type LocalReadWriter struct {
-//	dir string
-//}
-//func (rw LocalReadWriter) Read(path string)([]byte, error){
-//	out, err := os.ReadFile(rw.dir+"/"+path)
-//	if err != nil && errors.Is(err, os.ErrNotExist) {
-//		return nil, ErrNotFound
-//	}
-//	return out, err
-//}
-//func (rw LocalReadWriter) Save(bs []byte, subPath string) error{
-//	return os.WriteFile(rw.dir+"/"+subPath, bs, 0666)
-//}
-
 const filePathCtxKey = "dbImageFilePath"
 
 func SetFilePath(ctx context.Context, filePath string) context.Context {
@@ -87,9 +43,9 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 		}
 		if _, err = os.Stat(whereToWrite); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				println("filePath" + filePath)             // TODO: del
-				println("writing file to " + whereToWrite) // TODO: del
-				err = os.WriteFile(whereToWrite, bs, 777)  // TODO: 666 instead of 777?
+				//println("filePath" + filePath)             // TODO: del
+				//println("writing file to " + whereToWrite) // TODO: del
+				err = os.WriteFile(whereToWrite, bs, 777) // TODO: 666 instead of 777?
 				if err != nil {
 					println("failed to write file", err.Error())
 				}
