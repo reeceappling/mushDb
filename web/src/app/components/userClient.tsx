@@ -63,7 +63,7 @@ export function AssertUser(input: any): asserts input is UserData {
 
 export default function UserDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<UserData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

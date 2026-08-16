@@ -92,7 +92,7 @@ export function AssertSubstrateRecipe(input: any): asserts input is SubstrateRec
 
 export default function SubstrateRecipeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SubstrateRecipeData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

@@ -174,7 +174,7 @@ export function AssertBag(input: any): asserts input is BagData {
 
 export default function BagDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<BagData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

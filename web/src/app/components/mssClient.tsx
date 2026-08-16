@@ -212,7 +212,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
 
 export default function MssDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<MssData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

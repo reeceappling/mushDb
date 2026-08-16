@@ -84,7 +84,7 @@ export function AssertSale(input: any): asserts input is SaleData {
 
 export default function SaleDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SaleData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

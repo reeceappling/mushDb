@@ -93,7 +93,7 @@ export function AssertPcRun(input: any): asserts input is PcRunData {
 
 export default function PcRunDisplay(
     {
-        id, readonly, data, headerLevel
+        readonly, data, headerLevel
     }: DisplayInput<PcRunData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

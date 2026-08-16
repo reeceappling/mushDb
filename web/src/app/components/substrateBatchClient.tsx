@@ -92,7 +92,7 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
 
 export default function SubstrateBatchDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SubstrateBatchData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

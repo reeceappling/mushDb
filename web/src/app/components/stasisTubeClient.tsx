@@ -155,7 +155,7 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
 
 export default function StasisTubeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<StasisTubeData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

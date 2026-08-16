@@ -81,7 +81,7 @@ export function AssertSubspecies(input: any): asserts input is SubspeciesData {
 
 export default function SubspeciesDisplay(
     {
-        id, readonly, data, headerLevel
+        readonly, data, headerLevel
     }: DisplayInput<SubspeciesData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

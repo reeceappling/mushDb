@@ -115,7 +115,7 @@ export function AssertTransfer(input: any): asserts input is TransferData {
 
 export default function TransferDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<TransferData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

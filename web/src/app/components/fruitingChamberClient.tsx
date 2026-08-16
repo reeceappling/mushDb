@@ -164,7 +164,7 @@ export function AssertFruitingChamber(input: any): asserts input is FruitingCham
 
 export default function FruitingChamberDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<FruitingChamberData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

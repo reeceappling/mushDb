@@ -123,7 +123,7 @@ export function AssertLcRecipe(input: any): asserts input is LcRecipeData {
 
 export default function LcRecipeDisplay(
     {
-        id, readonly, data, headerLevel
+        readonly, data, headerLevel
     }: DisplayInput<LcRecipeData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

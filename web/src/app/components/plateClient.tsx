@@ -187,7 +187,7 @@ export function PourCoverageSelectorRequired({value, setPourCoverage}: {
 
 export default function PlateDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<PlateData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data as PlateData)

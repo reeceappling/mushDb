@@ -114,7 +114,7 @@ export function AssertSpecies(input: any): asserts input is SpeciesData {
 
 export default function SpeciesDisplay(
     {
-        id, readonly, data, headerLevel
+        readonly, data, headerLevel
     }: DisplayInput<SpeciesData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

@@ -191,6 +191,11 @@ func GetAltCollectionItem[T AltCollectionItem[U], U AltCollectionIdType](ctx con
 		FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(item)
 	return item, err
 }
+func GetRecipeWithName[T AltCollectionItem[AlternateCollectionId]](ctx context.Context, name string, item T) (out T, err error) {
+	err = DbFrom(ctx).Collection(item.CollectionName()).
+		FindOne(ctx, BsonFindFilter("name", name)).Decode(item) // TODO: consider doing this as a FindMany since names could theoretically overlap
+	return item, err
+}
 
 func GetAltCollectionItemOutsideTxn[T AltCollectionItem[U], U AltCollectionIdType](ctx context.Context, id AlternateCollectionId, item T) (out T, err error) {
 	out = item

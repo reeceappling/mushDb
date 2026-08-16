@@ -93,7 +93,7 @@ export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
 
 export default function AgarBatchDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<AgarBatchData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

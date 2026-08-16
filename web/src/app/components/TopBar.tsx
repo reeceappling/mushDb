@@ -178,9 +178,6 @@ export function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
     const {state, dispatch} = useRfidReaderContext()
     const onClick = () => {
         if (state.selected != undefined) {
-            // const a = new Promise<string>((accept) => {// TODO: DELETE
-            //     accept(Makeid(5))
-            // })
             ReadRfidTag(state.selected).then(tagVal => {
                 onResult && onResult(tagVal)
                 dispatch({

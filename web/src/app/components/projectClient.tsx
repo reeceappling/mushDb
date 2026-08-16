@@ -118,7 +118,7 @@ export function UnmarshalProjectPermsField(input: any): Map<string, string> {
 
 export default function ProjectDisplay(
     {
-        id, readonly, data, headerLevel
+        readonly, data, headerLevel
     }: DisplayInput<ProjectData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

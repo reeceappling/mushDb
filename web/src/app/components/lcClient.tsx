@@ -233,7 +233,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
 
 export default function LcDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<LcData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

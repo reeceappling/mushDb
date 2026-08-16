@@ -98,7 +98,7 @@ export function AssertWaterJar(input: any): asserts input is WaterJarData {
 
 export default function WaterJarDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<WaterJarData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data as WaterJarData)

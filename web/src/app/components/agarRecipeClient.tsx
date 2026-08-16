@@ -142,7 +142,7 @@ export function AssertAgarRecipe(input: any): asserts input is AgarRecipeData {
 
 export default function AgarRecipeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }:
     DisplayInput<AgarRecipeData>
 ) {

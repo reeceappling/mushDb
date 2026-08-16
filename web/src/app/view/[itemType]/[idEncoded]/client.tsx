@@ -67,115 +67,115 @@ export function MainViewArea({inpData, itemType}: { inpData: any, itemType: stri
 
             case "agarBatch":
                 AssertAgarBatch(inpData)
-                return <AgarBatchDisplay data={new AgarBatchData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <AgarBatchDisplay data={new AgarBatchData(inpData)} readonly={false} isTopLevel={true}
                                          headerLevel={TopPageHeaderLevel}/>
             case "agarRecipe":
                 AssertAgarRecipe(inpData)
-                return <AgarRecipeDisplay data={new AgarRecipeData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <AgarRecipeDisplay data={new AgarRecipeData(inpData)} readonly={false}  isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel}/>
             case "bag":
                 AssertBag(inpData)
-                return <BagDisplay data={new BagData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <BagDisplay data={new BagData(inpData)} readonly={false}  isTopLevel={true}
                                    headerLevel={TopPageHeaderLevel}/>
             case "fruit":
                 AssertFruit(inpData)
-                return <FruitDisplay data={new FruitData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <FruitDisplay data={new FruitData(inpData)} readonly={false}  isTopLevel={true}
                                      headerLevel={TopPageHeaderLevel} allowPrintCreation={true}/>
             case "fruitingChamber":
                 AssertFruitingChamber(inpData)
-                return <FruitingChamberDisplay data={new FruitingChamberData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <FruitingChamberDisplay data={new FruitingChamberData(inpData)} readonly={false}  isTopLevel={true}
                                                headerLevel={TopPageHeaderLevel}/>
             case "grainBatch":
                 AssertGrainBatch(inpData)
-                return <GrainBatchDisplay data={new GrainBatchData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <GrainBatchDisplay data={new GrainBatchData(inpData)} readonly={false}  isTopLevel={true}
                                                headerLevel={TopPageHeaderLevel}/> // TODO: validate working
             case "jar":
                 AssertJar(inpData)
-                return <JarDisplay data={new JarData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <JarDisplay data={new JarData(inpData)} readonly={false}  isTopLevel={true}
                                    headerLevel={TopPageHeaderLevel}/>
             case "jarRecipe":
                 AssertJarRecipe(inpData)
-                return <JarRecipeDisplay data={new JarRecipeData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <JarRecipeDisplay data={new JarRecipeData(inpData)} readonly={false}  isTopLevel={true}
                                          headerLevel={TopPageHeaderLevel}/>
             case "lc":
                 AssertLc(inpData)
-                return <LcDisplay data={new LcData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <LcDisplay data={new LcData(inpData)} readonly={false}  isTopLevel={true}
                                   headerLevel={TopPageHeaderLevel}/>
             case "lcRecipe":
                 AssertLcRecipe(inpData)
-                return <LcRecipeDisplay data={new LcRecipeData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <LcRecipeDisplay data={new LcRecipeData(inpData)} readonly={false}  isTopLevel={true}
                                         headerLevel={TopPageHeaderLevel}/>
             case "lcSyringe":
                 AssertLcSyringe(inpData)
-                return <LcSyringeDisplay data={new LcSyringeData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <LcSyringeDisplay data={new LcSyringeData(inpData)} readonly={false}  isTopLevel={true}
                                          headerLevel={TopPageHeaderLevel}/>
             case "mss":
                 AssertMss(inpData)
-                return <MssDisplay data={new MssData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <MssDisplay data={new MssData(inpData)} readonly={false}  isTopLevel={true}
                                    headerLevel={TopPageHeaderLevel}/>
             case "pcRun":
                 AssertPcRun(inpData)
-                return <PcRunDisplay data={new PcRunData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <PcRunDisplay data={new PcRunData(inpData)} readonly={false}  isTopLevel={true}
                                      headerLevel={TopPageHeaderLevel}/>
             case "plate":
                 AssertPlate(inpData)
-                return <PlateDisplay data={new PlateData(inpData)} readonly={false} id={id} isTopLevel={true} // TODO: if acl works here, then use new X for all!
+                return <PlateDisplay data={new PlateData(inpData)} readonly={false}  isTopLevel={true} // TODO: if acl works here, then use new X for all!
                                      headerLevel={TopPageHeaderLevel}/>
             case "plugs":
                 AssertPlugs(inpData)
-                return <PlugsDisplay data={new PlugsData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <PlugsDisplay data={new PlugsData(inpData)} readonly={false}  isTopLevel={true}
                                      headerLevel={TopPageHeaderLevel}/>
             case "project":
                 AssertProject(inpData) // TODO; validate working! maps may need to be fiddled with!
-                return <ProjectDisplay data={new ProjectData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <ProjectDisplay data={new ProjectData(inpData)} readonly={false}  isTopLevel={true}
                                        headerLevel={TopPageHeaderLevel}/>
             case "sale":
                 AssertSale(inpData)
-                return <SaleDisplay data={new SaleData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <SaleDisplay data={new SaleData(inpData)} readonly={false}  isTopLevel={true}
                                     headerLevel={TopPageHeaderLevel}/>
             case "slant":
                 AssertSlant(inpData)
-                return <SlantDisplay data={new SlantData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <SlantDisplay data={new SlantData(inpData)} readonly={false}  isTopLevel={true}
                                      headerLevel={TopPageHeaderLevel}/>
             case "species":
                 AssertSpecies(inpData)
-                return <SpeciesDisplay data={new SpeciesData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <SpeciesDisplay data={new SpeciesData(inpData)} readonly={false}  isTopLevel={true}
                                        headerLevel={TopPageHeaderLevel}/>
             case "sporePrint":
                 AssertSporePrint(inpData)
-                return <SporePrintDisplay data={new SporePrintData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <SporePrintDisplay data={new SporePrintData(inpData)} readonly={false}  isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel}/>
             case "sporeSwab": // TODO: validate working
                 AssertSporeSwab(inpData)
-                return <SporeSwabDisplay data={new SporeSwabData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <SporeSwabDisplay data={new SporeSwabData(inpData)} readonly={false}  isTopLevel={true}
                                          headerLevel={TopPageHeaderLevel} />
             case "stasisTube":
                 AssertStasisTube(inpData)
-                return <StasisTubeDisplay data={new StasisTubeData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <StasisTubeDisplay data={new StasisTubeData(inpData)} readonly={false}  isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel} />
             case "subspecies":
                 AssertSubspecies(inpData)
-                return <SubspeciesDisplay data={new SubspeciesData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <SubspeciesDisplay data={new SubspeciesData(inpData)} readonly={false}  isTopLevel={true}
                                           headerLevel={TopPageHeaderLevel} />
             case "substrateRecipe":
                 AssertSubstrateRecipe(inpData)
-                return <SubstrateRecipeDisplay data={new SubstrateRecipeData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <SubstrateRecipeDisplay data={new SubstrateRecipeData(inpData)} readonly={false}  isTopLevel={true}
                                                headerLevel={TopPageHeaderLevel} />
             case "substrateBatch":
                 AssertSubstrateBatch(inpData)
-                return <SubstrateBatchDisplay data={new SubstrateBatchData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <SubstrateBatchDisplay data={new SubstrateBatchData(inpData)} readonly={false}  isTopLevel={true}
                                               headerLevel={TopPageHeaderLevel} />
             case "transfer":
                 AssertTransfer(inpData)
-                return <TransferDisplay data={new TransferData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <TransferDisplay data={new TransferData(inpData)} readonly={false}  isTopLevel={true}
                                         headerLevel={TopPageHeaderLevel} />
             case "user":
                 AssertUser(inpData) // TODO: maps may not be marshalling correctly
-                return <UserDisplay data={new UserData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <UserDisplay data={new UserData(inpData)} readonly={false}  isTopLevel={true}
                                     headerLevel={TopPageHeaderLevel} />
             case "waterJar":
                 AssertWaterJar(inpData)
-                return <WaterJarDisplay data={new WaterJarData(inpData)} readonly={false} id={id} isTopLevel={true}
+                return <WaterJarDisplay data={new WaterJarData(inpData)} readonly={false}  isTopLevel={true}
                                         headerLevel={TopPageHeaderLevel} />
             default:
                 return <ErrorDisplay err={"Invalid view item type: " + itemType}/>

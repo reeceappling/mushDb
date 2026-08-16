@@ -224,7 +224,7 @@ export function LcSyringeImportDisplay() {
 
 export default function LcSyringeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<LcSyringeData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

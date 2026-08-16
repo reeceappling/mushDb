@@ -185,7 +185,7 @@ export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // T
 
 export default function SporeSwabDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SporeSwabData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

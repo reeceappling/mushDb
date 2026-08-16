@@ -101,7 +101,7 @@ export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
 
 export default function GrainBatchDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<GrainBatchData>) {
         const {dispatch} = useModalContext();
         const [initial, setInitial] = useState(data)

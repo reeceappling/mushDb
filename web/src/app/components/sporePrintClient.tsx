@@ -205,7 +205,7 @@ export function SporePrintImportDisplay({headerLevel}: ImportDisplayInput) { // 
 
 export default function SporePrintDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<SporePrintData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

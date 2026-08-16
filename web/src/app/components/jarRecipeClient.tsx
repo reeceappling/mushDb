@@ -133,7 +133,7 @@ function dataFormatFor<T>(init: T[] | undefined): Data<T>[] {
 
 export default function JarRecipeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
+        readonly, data, headerLevel, isTopLevel
     }: DisplayInput<JarRecipeData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)

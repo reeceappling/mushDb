@@ -1378,6 +1378,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 	entryType := r.PathValue("variant")
 	var bytes []byte
 	env.LogIfDev(ctx, "getting "+entryType+" "+id)
+	isRecipe := strings.HasSuffix(entryType, "Recipe")
 	switch entryType {
 	case "project": // Items with possible spaces in names but abnormal perms
 		out, err := rfid.GetAltCollectionItem[*rfid.Project](ctx, id, &rfid.Project{})
@@ -1429,6 +1430,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		//}
 		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "species", "subspecies": // Items with possible spaces in names but which have normal perms
+		// TODO: handle alternate names? Return a link to the proper page?
 		var blankItem rfid.PermissionedAltCollectionItem[string]
 		switch strings.ToLower(entryType) {
 		case "species":
@@ -1499,44 +1501,78 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	// Cases which are alt colls with base58->binary ids
 	case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
-		// TODO: maybe de-urlencode here to account for named recipes?
+		var possibleName = id
+		var failedToGetAltId = false
 		altId, err := rfid.StandardizeAltCollectionId(id)
 		if err != nil {
-			http.Error(w, "failed to standardize alt coll id: "+err.Error(), http.StatusInternalServerError)
-			return
+			failedToGetAltId = true
+			if !isRecipe {
+				http.Error(w, "failed to standardize alt coll id: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+		tryGetItem := func(inputItem rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]) (rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId], error) {
+			if !failedToGetAltId {
+				if altId != nil {
+					outTemp, errTemp := rfid.GetAltCollectionItem(ctx, *altId, inputItem)
+					if errTemp == nil || (!isRecipe) {
+						return outTemp, errTemp
+					}
+				} else {
+					if !isRecipe {
+						return nil, errors.New("should never happen in tryGetItem")
+					}
+				}
+
+			}
+			tempOut, tempErr := rfid.GetRecipeWithName(ctx, possibleName, inputItem) // TODO: ensure name-overlap does not cause problems here!
+			if tempErr == nil {
+				// TODO: SET RESPONSE HEADERS SO THE USER CAN BE REDIRECTED?????
+			}
+			return tempOut, tempErr
 		}
 		var out rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]
 		switch entryType {
 		case "agarBatch":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarBatch{})
+			temp, errr := tryGetItem(&rfid.AgarBatch{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarBatch{})
 			out, err = temp, errr
 		case "agarRecipe":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarRecipe{}) // TODO: handle recipe name?
+			temp, errr := tryGetItem(&rfid.AgarRecipe{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarRecipe{}) // TODO: handle recipe name?
 			out, err = temp, errr
 		case "grainBatch":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.GrainBatch{})
+			temp, errr := tryGetItem(&rfid.GrainBatch{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.GrainBatch{})
 			out, err = temp, errr
 			//out = temp
 		case "jarRecipe":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.JarRecipe{}) // TODO: handle recipe name?
+			temp, errr := tryGetItem(&rfid.JarRecipe{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.JarRecipe{}) // TODO: handle recipe name?
 			out, err = temp, errr
 		case "lcRecipe":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.LcRecipe{}) // TODO: handle recipe name?
+			temp, errr := tryGetItem(&rfid.LcRecipe{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.LcRecipe{}) // TODO: handle recipe name?
 			out, err = temp, errr
 		case "pcRun":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.PCRun{})
+			temp, errr := tryGetItem(&rfid.PCRun{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.PCRun{})
 			out, err = temp, errr
 		case "sale":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Sale{})
+			temp, errr := tryGetItem(&rfid.Sale{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Sale{})
 			out, err = temp, errr
 		case "substrateBatch":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateBatch{})
+			temp, errr := tryGetItem(&rfid.SubstrateBatch{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateBatch{})
 			out, err = temp, errr
 		case "substrateRecipe":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateRecipe{}) // TODO: handle recipe name?
+			temp, errr := tryGetItem(&rfid.SubstrateRecipe{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateRecipe{}) // TODO: handle recipe name?
 			out, err = temp, errr
 		case "transfer":
-			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Transfer{})
+			temp, errr := tryGetItem(&rfid.Transfer{})
+			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Transfer{})
 			out, err = temp, errr
 		default:
 			env.LogIfDev(ctx, "invalid entry type in getAnyCollHandler: "+entryType)

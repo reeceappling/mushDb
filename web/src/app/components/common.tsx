@@ -475,7 +475,6 @@ export function ConfirmedCleanArea(
 }
 
 export type DisplayInput<T extends Entry> = {
-    id: string;
     readonly: boolean;
     data: T
     headerLevel?: number
@@ -485,96 +484,6 @@ export type DisplayInput<T extends Entry> = {
 export type ImportDisplayInput = {
     headerLevel: number
 }
-
-// export function DisposedContamArea( // TODO: THIS AND USE THIS WHEN NEEDED!!!
-//     {
-//         headerLevel, disposed, contams
-//     }: {
-//         disposed?: number
-//         contams?: Contamination[]
-//         headerLevel?: number
-//     }) {
-//     return <div>
-//         <TestAndValidate todos={["DisposedContamArea NOT IMPLEMENTED!"]}>
-//             {"DisposedContamArea NOT IMPLEMENTED!"}
-//         </TestAndValidate>
-//     </div> // TODO: THIS!
-// }
-//
-// export function DisposedSaleContamArea(
-//     {
-//         contams, sale, disposed, headerLevel
-//     }: {
-//         contams?: Contamination[]
-//         sale?: string
-//         disposed?: number
-//         headerLevel?: number
-//     }) {
-//     const sectionHeader = <div>{"Status: "}</div>
-//     if (sale) {
-//         const displayId = sale
-//         return <div>
-//             {sectionHeader}
-//             <div>{"Sold in sale "}
-//                 <EntryLinkForId props={{
-//                     displayId: displayId,
-//                     linkId: displayId,
-//                     entryType: "sale",
-//                     openInNewTab: true
-//                 }}/>
-//             </div>
-//         </div>
-//     }
-//     const contamToUse: Contamination = {time: 0, confirmed: false, mold: false, bacteria: false, location: ""}
-//     if (contams !== undefined && contams.length === 0) {
-//         contamToUse.time = contams[contams.length - 1].time
-//         for (let i = 0; i < contams.length; i++) {
-//             if (!contamToUse.confirmed && contams[i].confirmed) {
-//                 contamToUse.confirmed = true
-//             }
-//             if (!contamToUse.mold && contams[i].mold) {
-//                 contamToUse.mold = true
-//             }
-//             if (!contamToUse.bacteria && contams[i].bacteria) {
-//                 contamToUse.bacteria = true
-//             }
-//             if (contams[i].location) {
-//                 contamToUse.location = contams[i].location
-//             }
-//         }
-//     }
-//     let contamLine: JSX.Element | null = null
-//     if (contamToUse.mold || contamToUse.bacteria) {
-//         let contamType = contamToUse.mold ? "mold" : "bacteria"
-//         if (contamToUse.mold && contamToUse.bacteria) {
-//             contamType = "mold, bacteria"
-//         }
-//         const lastContamPart = (" last cited " + NumberToDate(new Date(contamToUse.time)))
-//         contamLine = <div>
-//             <div>{(contamToUse.confirmed ? "Confirmed" : "Unconfirmed") + " contamination (" + contamType + ")" + lastContamPart}</div>
-//         </div>
-//     }
-//     const disposedSection = <div>
-//         {disposed ? "Disposed on " + NumberToDate(new Date(disposed)) : "Available"}{/* TODO: DIFFERENT STYLING BASED ON ANSWER?*/}
-//     </div>
-//     return <div>
-//         <div>{sectionHeader}</div>
-//         {contamLine}
-//         {disposedSection}
-//     </div>
-// }
-
-// TODO: del if unused
-// export function SaleAndDisposedArea({sale, disposed, headerLevel, readonly}: { // TODO: USE THIS WHERE NEEDED!!!!
-//     sale?: string,
-//     disposed?: number,
-//     headerLevel?: number,
-//     readonly: boolean
-// }) {
-//     if (sale) {
-//         return <SaleArea sale={sale} readonly={true} canCreateSale={false}/>
-//     }
-// }
 
 export interface NewEntryInput<T> {
     isTopLevel: boolean
@@ -698,10 +607,9 @@ export function setFormImages(filePrefix: string, formData: FormData, pics: any[
     for (let i = 0; i < pics.length; i++) {
         const fileName = filePrefix + "-" + i
         if (pics[i] === undefined) {
-            console.log("Picture undefined, " + fileName) // TODO: DEL
+            console.error("Picture undefined, " + fileName) // TODO: DEL
             continue
         }
-        console.log("Picture set, " + fileName) // TODO: DEL
         formData.set(fileName, pics[i], fileName)
     }
 }
@@ -728,7 +636,7 @@ export function HandleJsonResponse(res: Response): Promise<any> {
     return res.json()
 }
 
-export interface Importable { // TODO: USED IN IMPORT PAGES
+export interface Importable {
     _id: string
 }
 
@@ -736,14 +644,14 @@ export function EntryUrlId(item: Entry){
     return (item && typeof (item as any).getIdUrlEncoded === "function") ? (item as any).getIdUrlEncoded() : item.getId()
 }
 
-export interface Entry { // TODO: USE!
+export interface Entry {
     getId(): string;
     entryType(): string;
 }
-export interface StringNameEntry extends Entry { // TODO: USE!
-    getIdUrlEncoded(): string;
-}
-type TypeAsserter<T> = (value: unknown) => asserts value is T; // TODO: USE THIS! MOVE THIS!
+// export interface StringNameEntry extends Entry { // TODO: USE?!
+//     getIdUrlEncoded(): string;
+// }
+type TypeAsserter<T> = (value: unknown) => asserts value is T;
 
 export function ImportResponseHandler<T extends Importable>(asserter: TypeAsserter<T>, typeStr: string, setErr: (e:any)=>void): (res: Response)=>void {
     return (res: Response)=>{
@@ -756,7 +664,6 @@ export function ImportResponseHandler<T extends Importable>(asserter: TypeAssert
     }
 }
 
-// TODO: use everywhere! validate working!
 export function DoImportRequest<T extends Importable>(body: any, typeStr: string, asserter: TypeAsserter<T>, setErr: (e:any)=>void, cookies: string) {
     fetch(importApiUrlFor(typeStr), {
         method: "POST",
@@ -767,7 +674,6 @@ export function DoImportRequest<T extends Importable>(body: any, typeStr: string
         .then(newItem => {
             asserter(newItem)
             window.location.assign(viewUrlFor(typeStr, newItem._id))
-            // redirect(viewUrlFor(typeStr, newItem._id)) // TODO: del if working
         })
         .catch(ErrHandler(setErr));
 }
@@ -1085,30 +991,30 @@ function depthAndEntryClasses(depth: number, entryType?: string) {
     return " depth" + depth + (entryType ? " " + entryType : "")
 }
 
-export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string, className?: string }>) { // TODO: USE THIS EVERYWHERE!
+export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string, className?: string }>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
         <div
-            className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType) + (props.className ? " " + props.className : "")}>{/* TODO: likely not working as expected. +1?*/}
+            className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType) + (props.className ? " " + props.className : "")}>
             {props.children}
         </div>
     </DepthProvider>
 }
 
-export function ImportEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string }>) { // TODO: USE THIS EVERYWHERE!
+export function ImportEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string }>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
         <div
-            className={"subForm importEntryForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
+            className={"subForm importEntryForm" + depthAndEntryClasses(depth, props.entryType)}>
             {props.children}
         </div>
     </DepthProvider>
 }
 
-export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: string, id?: string }>) { // TODO: USE THIS EVERYWHERE!
+export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: string, id?: string }>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div id={props.id} className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>{/* TODO: likely not working as expected. +1?*/}
+        <div id={props.id} className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>
                 {props.children}
         </div>
     </DepthProvider>
@@ -1135,7 +1041,7 @@ export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) =>
 
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
-        ['recent', validatorForAssertion(validateEntry)], // TODO: ensure ok
+        ['recent', validatorForAssertion(validateEntry)],
         ['standard', validatorForAssertion(validateEntry)],
     ])
     for (const [key, validator] of complexOptionalArrayKeys) {

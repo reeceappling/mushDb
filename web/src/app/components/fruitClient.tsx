@@ -147,9 +147,8 @@ export function AssertFruit(input: any): asserts input is FruitData {
 
 export default function FruitDisplay(
     {
-        id, readonly, data, headerLevel, openSporesInNewTab, allowPrintCreation, isTopLevel // TODO: change to regular display????
+        readonly, data, headerLevel, openSporesInNewTab, allowPrintCreation, isTopLevel // TODO: change to regular display????
     }: {
-        id: string;
         readonly: boolean;
         isTopLevel: boolean;
         data: FruitData;
