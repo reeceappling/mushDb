@@ -183,7 +183,7 @@ export default function BagDisplay(
     const [sale, setSale] = useState(initial.sale)
     const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
     const [disposed, setDisposed] = useState(initial.disposed)
-    const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
+    const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
     const [wetness, setWetness] = useState(initial.wetness) // TODO: new! handle on go side!
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     // ItemsWithPics
