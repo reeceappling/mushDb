@@ -1,6 +1,6 @@
 # mushDb
 
-This is a group of containers (a docker-compose project) I use to keep track and notes of various fungus-related things for my hobby of mycology. The codebase is likely still VERY messy.
+This is a group of containers (a docker-compose project) that I use to keep track and notes of various fungus-related things for my mycology hobby, both for finding fungi in the wild, as well as cultivating them. The codebase is likely still VERY messy.
 
 - The API acts as both a proxy to the webserver as well as the main api to interact with the database and RFID edge-services.
 - The Database is a mongodb database (single-node replica set so we have access to transactions).
