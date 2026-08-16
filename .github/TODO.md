@@ -1,4 +1,6 @@
 # TODOs found while using
+- [ ] Add an "needs ID" species, as well as a "pretty sure" species marker, so we can temporarily mark species we are not sure about, and confirm them later.
+  - [ ] Confirmation should crawl the dependency chain to ensure all parents get populated as well!
 - [ ] Will require a new table to house the biometric keys (which are related to the users), and also related to specific devices
 - [ ] On spore print, when trying to add a new photo, if you try to remove the photo before updating nothing happens
 - [ ] Chaining spore prints is failing!

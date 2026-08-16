@@ -28,7 +28,7 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	GenSporeField           `bson:"inline"`
 	TransfersOutField       `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
 	Prints                  []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
-	ParentTypeField         `bson:"inline"`
+	ParentTypeField         `bson:"inline"`    // EntryType, store, online, or outside
 	// parent can be "store, outside, or a mainCollectionId (box/bag)"
 	MainCollectionOptionalParentField `bson:"inline"` // NONEXISTENT MEANS FROM STORE or outside
 	PicsField                         `bson:"inline"`
@@ -409,7 +409,7 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importFruitRequest struct {
-	ParentType string // "store" or "outside" // TODO: ? FIX?
+	ParentType string // "online", "store", or "outside" // TODO: ? FIX? I don't think online is an option in tsx currently
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
@@ -521,7 +521,7 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 		SpeciesField:            data.SpeciesField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		GenSporeField:           GenSporeField{gen},
-		ParentTypeField:         ParentTypeField{&data.ParentType}, // TODO: is this ok?
+		ParentTypeField:         ParentTypeField{&data.ParentType}, // TODO: is this ok? REQUIRED?
 		PicsField:               PicsField{pix},
 		MostRecentImageField:    MostRecentImageField{importedPic},
 		NotesField:              NotesField{data.Notes},

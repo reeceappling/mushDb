@@ -136,73 +136,6 @@ export function AssertSporePrint(input: any): asserts input is SporePrintData {
     return
 }
 
-export function SporePrintImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
-    const {dispatch} = useModalContext();
-    const [printDate, setPrintDate] = useState<number>(Date.now())
-    const [color, setColor] = useState<string | undefined>()
-    const [density, setDensity] = useState<string | undefined>()
-    const [notes, setNotes] = useState<Note[]>([])
-    const [species, setSpecies] = useState<SpeciesData | undefined>()
-    const [subspecies, setSubspecies] = useState<string | undefined>()
-    const [image, setImage] = useState<File | undefined>()
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
-    const [err, setErr] = useState<string | undefined>()
-    const cookies = useContext(CookiesContext)
-    const importEntry = (e: React.MouseEvent) => {
-        e.preventDefault()
-        if (!species) {
-            setErr("A species must be selected")
-            return
-        }
-        const formData = new FormData()
-        const dataObj: any = {
-            creationDate: printDate,
-            color: color,
-            density: density,
-            species: species._id,
-            // optional
-            subspecies: subspecies,
-            notes: notes,
-            writeTagTo: writeTagTo,
-        }
-        formData.set("data", JSON.stringify(dataObj))
-        if (image !== undefined) {
-            formData.set("img", image, "img")
-        }
-        const dispatchUpdate = (isErr:boolean, text:string)=>{
-            if(isErr){
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Creation failed",
-                        text: text,
-                        isErr: true
-                    }})
-            } else {
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Creation successful",
-                        text: text,
-                        isErr: false
-                    }})
-            }
-        }
-        DoMultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies), dispatchUpdate)
-    }
-    //no parent because we couldn't possibly know it
-    return <ImportEntryFormWrapper entryType={"sporePrint"}>
-        <ErrorDisplay err={err}/>
-        <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
-        <SporePrintColorArea readonly={false} setColor={setColor}/>
-        <SporePrintDensityArea readonly={false} setDensity={setDensity}/>
-        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
-        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}
-        <ImageSelector updateParent={setImage}/>
-        <NewEntryNotes setNotes={setNotes}/>
-        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
-    </ImportEntryFormWrapper>
-
-}
-
 export default function SporePrintDisplay(
     {
         readonly, data, headerLevel, isTopLevel
@@ -470,6 +403,71 @@ export function NewSporePrintForm(
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
+}
+
+export function SporePrintImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
+    const {dispatch} = useModalContext();
+    const [printDate, setPrintDate] = useState<number>(Date.now())
+    const [color, setColor] = useState<string | undefined>()
+    const [density, setDensity] = useState<string | undefined>()
+    const [notes, setNotes] = useState<Note[]>([])
+    const [species, setSpecies] = useState<SpeciesData | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>()
+    const [image, setImage] = useState<File | undefined>()
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
+    const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
+    const importEntry = (e: React.MouseEvent) => {
+        e.preventDefault()
+        if (!species) {
+            setErr("A species must be selected")
+            return
+        }
+        const formData = new FormData()
+        const dataObj: any = {
+            creationDate: printDate,
+            color: color,
+            density: density,
+            species: species._id,
+            // optional
+            subspecies: subspecies,
+            notes: notes,
+            writeTagTo: writeTagTo,
+        }
+        formData.set("data", JSON.stringify(dataObj))
+        if (image !== undefined) {
+            formData.set("img", image, "img")
+        }
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "sporePrint", AssertSporePrint, setErr, allCookies(cookies), dispatchUpdate)
+    }
+    //no parent because we couldn't possibly know it
+    return <ImportEntryFormWrapper entryType={"sporePrint"}>
+        <ErrorDisplay err={err}/>
+        <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
+        {/* TODO: parent! store or online?*/}
+        <SporePrintColorArea readonly={false} setColor={setColor}/>
+        <SporePrintDensityArea readonly={false} setDensity={setDensity}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        <ImageSelector updateParent={setImage}/>
+        <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
+        <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
+    </ImportEntryFormWrapper>
 }
 
 export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems<SporePrintData>) {

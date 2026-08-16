@@ -452,7 +452,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, e.Error(), http.StatusBadRequest)
 			return nil, e
 		}
-		printOut, e = fr.createSporePrintInTxn(sessCtx, out.PicsField, out.NotesField, id) // TODO: set mostRecentImage? // TODO: pics and notes?
+		printOut, e = fr.createSporePrintInTxn(sessCtx, out.PicsField, out.NotesField, id)
 		if e != nil {
 			return nil, e
 		}

@@ -26,6 +26,7 @@ const (
 	mongoClientContextKey = "mongoClient"
 )
 
+// TODO: allow admins to do this!
 func changeItemSpeciesSubspecies[T MainCollectionItem](ctx context.Context, item T, newSpecies string, newSubspecies *string) {
 	// TODO: THIS! ONLY ALLOW ADMINS TO DO THIS?
 }
@@ -427,7 +428,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetAppName("mainApi"). // TODO: ???
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
-		SetTimeout(15 * time.Second)         // TODO: no?
+		SetTimeout(15 * time.Second) // TODO: no?
 	// TODO: ANY MORE?
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
