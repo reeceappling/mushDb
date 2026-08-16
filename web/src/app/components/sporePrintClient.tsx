@@ -336,7 +336,7 @@ export default function SporePrintDisplay(
         <ErrorDisplay err={err}/>
         <ID props={{id: data._id, txt: "Spore Print", entryType: "sporePrint"}}/>
         <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
-        <MostRecentImageDisplay data={data.mostRecentImage}/>
+        <MostRecentImageDisplay data={initial.mostRecentImage}/>
         <FlexedArea>
             <FlexedSinglesGroup>
                 <DateArea pre={"Print Date: "} readonly={true} when={data.creationDate}/>
@@ -347,10 +347,10 @@ export default function SporePrintDisplay(
                 <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
                 <div>
                     <div>{"Parent: "}</div>
-                    {data.parent ?
+                    {initial.parent ?
                         <EntryLinkForId props={{
-                            displayId: data.parent,
-                            linkId: data.parent,
+                            displayId: initial.parent,
+                            linkId: initial.parent,
                             entryType: "fruit",
                             openInNewTab: true
                         }}/>
@@ -358,9 +358,9 @@ export default function SporePrintDisplay(
                 </div>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
-                <SporePrintColorArea readonly={readonly || data.color !== undefined || data.disposed !== undefined}
+                <SporePrintColorArea readonly={readonly || initial.color !== undefined || initial.disposed !== undefined}
                                      color={initial.color} setColor={setColor}/>
-                <SporePrintDensityArea readonly={readonly || data.density !== undefined || data.disposed !== undefined}
+                <SporePrintDensityArea readonly={readonly || initial.density !== undefined || initial.disposed !== undefined}
                                        density={initial.density} setDensity={setDensity}/>
                 <SaleArea readonly={readonly} canCreateSale={true} sale={sale} setSale={setSale}/>
             </FlexedSinglesGroup>

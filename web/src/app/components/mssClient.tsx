@@ -302,7 +302,7 @@ export default function MssDisplay(
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                    <ParentDisplay parent={data.parent} parentType={"sporePrint"}/>
+                    <ParentDisplay parent={data.parent/* TODO: initial if parent can change on the fly*/} parentType={"sporePrint"}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={data._id} thisEntryType={"mss"} transfersOut={data.transfersOut} allowNewTransferCreation={!readonly}  /*validTypesTo={["plate","slant","jar","bag"]} TODO: on go side*//>

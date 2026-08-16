@@ -153,64 +153,6 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     return
 }
 
-export function StasisTubeImportDisplay() {
-    const {dispatch} = useModalContext();
-    const [created, setCreated] = useState<number>(Date.now())
-    const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
-    const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(1)
-    const [imageFile, setImageFile] = useState<File | undefined>(undefined)
-    const [notes, setNotes] = useState<Note[]>([])
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
-    const [err, setErr] = useState<string | undefined>(undefined)
-    const cookies = useContext(CookiesContext)
-    const importEntry = () => {
-        const formData = new FormData() // TODO: const ok?
-        const dataObj: any = {
-            creationDate:created,
-            // optional
-            species: species?._id,
-            subspecies: subspecies,
-            knownFruitable: knownFruitable,
-            generation: generation,
-            notes: notes,
-            writeTagTo: writeTagTo,
-        }
-        formData.set("data", JSON.stringify(dataObj))
-        if(imageFile!==undefined){
-            formData.set("image", imageFile, "img")
-        }
-        const dispatchUpdate = (isErr:boolean, text:string)=>{
-            if(isErr){
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Creation failed",
-                        text: text,
-                        isErr: true
-                    }})
-            } else {
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                        header: "Creation successful",
-                        text: text,
-                        isErr: false
-                    }})
-            }
-        }
-        DoMultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies), dispatchUpdate)
-    }
-    return <ImportEntryFormWrapper entryType={"stasisTube"}>
-        {err!=undefined && <div>{"Error: "+err}</div>}
-        <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        <KnownFruitableArea doSelect={setKnownFruitable}/>
-        <GenerationInput updateParent={setGeneration}/>
-        <ImageSelector updateParent={setImageFile}/>
-        <NewEntryNotes setNotes={setNotes}/>
-        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />
-        <button className={"greenButton"} onClick={importEntry}>{"Import Stasis Tube"}</button>
-    </ImportEntryFormWrapper>
-}
-
 export default function StasisTubeDisplay(
     {
         id, readonly, data, headerLevel, isTopLevel
@@ -386,6 +328,64 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />
         <button className={"greenButton"} onClick={createStasisTube}>{"Create"}</button>
     </NewEntryFormWrapper>
+}
+
+export function StasisTubeImportDisplay() {
+    const {dispatch} = useModalContext();
+    const [created, setCreated] = useState<number>(Date.now())
+    const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
+    const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
+    const [imageFile, setImageFile] = useState<File | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
+    const importEntry = () => {
+        const formData = new FormData() // TODO: const ok?
+        const dataObj: any = {
+            creationDate:created,
+            // optional
+            species: species?._id,
+            subspecies: subspecies,
+            knownFruitable: knownFruitable,
+            generation: generation,
+            notes: notes,
+            writeTagTo: writeTagTo,
+        }
+        formData.set("data", JSON.stringify(dataObj))
+        if(imageFile!==undefined){
+            formData.set("image", imageFile, "img")
+        }
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies), dispatchUpdate)
+    }
+    return <ImportEntryFormWrapper entryType={"stasisTube"}>
+        {err!=undefined && <div>{"Error: "+err}</div>}
+        <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        <KnownFruitableArea doSelect={setKnownFruitable}/>
+        <GenerationInput updateParent={setGeneration}/>
+        <ImageSelector updateParent={setImageFile}/>
+        <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />
+        <button className={"greenButton"} onClick={importEntry}>{"Import Stasis Tube"}</button>
+    </ImportEntryFormWrapper>
 }
 
 export function StasisTubeListPageTable({data, onClick, withLink}: ListPageItems<StasisTubeData>) {

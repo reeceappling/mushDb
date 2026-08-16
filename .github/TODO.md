@@ -819,3 +819,6 @@ fi
 #### Enforce a 7-day retention policy by removing old backups
 find /var/backups/mongodb/* -mtime +7 -exec rm -rf {} \;
 To schedule this script to execute nightly at midnight, add this entry via crontab -e:cron0 0 * * * /bin/bash /opt/mongo-backup.sh
+
+1hr vs 30 mins cutoff?
+not after 11:15pm?

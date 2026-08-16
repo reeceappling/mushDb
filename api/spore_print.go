@@ -422,7 +422,7 @@ func createSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 				return nil, e
 			}
 			break
-		case FruitSourceType:
+		case SporePrintSourceType, FruitSourceType:
 			// Chaining spore prints when given a spore print as the input
 			// handle chaining! // TODO: When do we want to dispose of the parent fruit?
 			existingSp, ok := mcItem.(*SporePrint)

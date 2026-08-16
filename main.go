@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
@@ -22,6 +24,7 @@ import (
 	"github.com/ulule/limiter/v3/drivers/middleware/stdlib"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	//"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
@@ -117,54 +120,19 @@ func main() {
 	//logger.Emit()
 	// telem.LogInfo("telemetry initialized") // TODO: LOG THIS!
 	// Setup everything else!
-	var envir string
-	switch os.Getenv("ENVIRONMENT") { // TODO: set this!
-	case "prod":
-		envir = env.Prod
-	case "cert":
-		envir = env.Cert
-	case "qual", "dev", "devl":
-		envir = env.Dev
-	default:
-		panic("invalid environment: " + os.Getenv("ENVIRONMENT"))
-	}
-	ctx = env.SetEnv(ctx, envir)
-	picsPath := os.Getenv("PICS_PATH")
-	if picsPath == "" {
-		panic("env var missing for PICS_PATH")
-	}
-	ctx = pics.SetFilePath(ctx, picsPath)
-	if err := resolveGothicSessionSecret(); err != nil {
-		panic("failed to resolve gothic session secret: " + err.Error())
-	}
-	authSvc := rfid.NewAuthService(utils.Pointer(2*time.Minute), utils.Pointer(1*time.Hour))
-	ctx = authSvc.OnContext(ctx)
+	ctx = setupEnvironment(ctx)
+	ctx = setupPics(ctx)
+	resolveGothicSessionSecret()
+	ctx = setupAuthSvc(ctx, utils.Pointer(2*time.Minute), utils.Pointer(1*time.Hour))
 
 	// adminEmail := os.Getenv("ADMIN_EMAIL") // TODO: use?
 
-	// TODO: make sure logger is set up correctly
-	log := logging.LoggerFactoryFor("mush-api-go") // TODO: ok name?
-	ctx = logging.SetLogger(ctx, log)
-	ctx = logging.SetSugaredLogger(ctx, log.Sugar())
+	// Setup logger
+	ctx = setupLogger(ctx)
 
 	// Get non-db env vars
-	rfidRegistrySecret, err := getSecret("RFID_SECRET")
-	if err != nil {
-		panic("failed to resolve secret RFID_SECRET: " + err.Error())
-	}
-	googId, err := getSecret("GOOGLE_CLIENT_ID")
-	if err != nil {
-		panic("failed to resolve secret GOOGLE_CLIENT_ID: " + err.Error())
-	}
-	googSecret, err := getSecret("GOOGLE_CLIENT_SECRET")
-	if err != nil {
-		panic("failed to resolve secret GOOGLE_CLIENT_SECRET: " + err.Error())
-	}
-	apiPort, err := strconv.Atoi(os.Getenv("API_PORT")) // TODO: ok?
-	if err != nil {
-		fmt.Printf(`No api port configured, defaulting to port %d`, defaultHttpPort)
-		apiPort = defaultHttpPort
-	}
+	rfidRegistrySecret, googId, googSecret, webHostName, apiPort := resolveOtherSecrets(ctx)
+
 	// TODO: api is hosted internally on 8080, but the actual site on cloudflare uses 443! Web is on 3000
 	//tempPortStr := ""
 	//if (extProto == "https" && apiPort != 443) || (extProto == "http" && (apiPort != 80 && apiPort != defaultHttpPort)) { // TODO: 80 AND 8080 ok here?
@@ -184,14 +152,12 @@ func main() {
 	if err != nil {
 		panic("Error setting up db: " + err.Error())
 	}
-	defer func() {
+	defer func() { // Disconnect on shutdown
 		err = client.Disconnect(ctx)
 		if err != nil {
 			panic("db failed to disconnect: " + err.Error()) // TODO: ok?
 		}
 	}()
-
-	webHostName := envVarOrDefault("WEB_HOST_INTERNAL", "web") // Can have port if not hosting on 80
 
 	// Set up server
 	srv := &http.Server{
@@ -262,15 +228,19 @@ func main() {
 	tracerMiddleware := func(endpointName string) func(http.Handler) http.Handler {
 		return func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // TODO: re-disable next 3 lines if traces break things!
+				f := zap.String("requestId", uuid.New().String())
+				newLogger := logging.GetLogger(r.Context()).With(f) // TODO: ensure ok!
+				newCtx := logging.SetLogger(r.Context(), newLogger)
+				newCtx = logging.SetSugaredLogger(newCtx, newLogger.Sugar())
 				//traceOpts := []trace.SpanStartOption{} // TODO: ???
 				//newCtx, span := appTracer.Start(r.Context(), endpointName, traceOpts...)
 				//defer span.End()
 				//next.ServeHTTP(w, r.WithContext(newCtx))
-				next.ServeHTTP(w, r)
+				next.ServeHTTP(w, r.WithContext(newCtx))
 			})
 		}
 	}
-	ctx, rateLimiter, rfidMiddleware, internalOnlyMiddleware, webAuthMiddleware, authOrDenyMiddleware, ctxMiddleware, err := setupMiddlewares(ctx, mgr, loginPath, apiPort)
+	ctx, rateLimiter, rfidMiddleware, internalOnlyMiddleware, webAuthMiddleware, authOrDenyMiddleware, ctxMiddleware, wrapWriter, err := setupMiddlewares(ctx, mgr, loginPath, apiPort)
 	if err != nil {
 		panic("Error setting up middleware: " + err.Error())
 	}
@@ -281,12 +251,12 @@ func main() {
 	// Must be publicly available. (external)
 	// TODO: ADD OPTIONS method to all endpoints!
 	// TODO: NO TRACES ON /rfid/ws?
-	http.HandleFunc("/rfid/ws", Middlewares(ctxMiddleware, rfidMiddleware)(http.HandlerFunc(websocketSessions.ServerHandler)).ServeHTTP) // TODO: was /rfid/ws // TODO: OPTIONS
+	http.HandleFunc("/rfid/ws", Middlewares(ctxMiddleware, wrapWriter, rfidMiddleware)(http.HandlerFunc(websocketSessions.ServerHandler)).ServeHTTP) // TODO: was /rfid/ws // TODO: OPTIONS
 	// Must be internal to docker network
-	http.HandleFunc("/rfid/read/{readerName}", Middlewares(tracerMiddleware("/rfid/read"), ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidReadHandler).ServeHTTP)         // TODO: OPTIONS // TODO: internal only?   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/write/{writerName}", Middlewares(tracerMiddleware("/rfid/write"), ctxMiddleware, rfidMiddleware, authOrDenyMiddleware)(rfidWriteHandler).ServeHTTP)      // TODO: OPTIONS // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/readers", Middlewares(tracerMiddleware("/rfid/readers"), ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(getRfidReaderNamesHandler).ServeHTTP)    // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
-	http.HandleFunc("/rfid/clear/{writerName}", Middlewares(tracerMiddleware("/rfid/clear"), ctxMiddleware, rfidMiddleware, internalOnlyMiddleware)(clearRfidTagHandler).ServeHTTP) // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/read/{readerName}", Middlewares(tracerMiddleware("/rfid/read"), ctxMiddleware, wrapWriter, rfidMiddleware, authOrDenyMiddleware)(rfidReadHandler).ServeHTTP)         // TODO: OPTIONS // TODO: internal only?   //  OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/write/{writerName}", Middlewares(tracerMiddleware("/rfid/write"), ctxMiddleware, wrapWriter, rfidMiddleware, authOrDenyMiddleware)(rfidWriteHandler).ServeHTTP)      // TODO: OPTIONS // INPUT IS BASE58. OUTPUT IS BASE 2! // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/readers", Middlewares(tracerMiddleware("/rfid/readers"), ctxMiddleware, wrapWriter, rfidMiddleware, internalOnlyMiddleware)(getRfidReaderNamesHandler).ServeHTTP)    // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
+	http.HandleFunc("/rfid/clear/{writerName}", Middlewares(tracerMiddleware("/rfid/clear"), ctxMiddleware, wrapWriter, rfidMiddleware, internalOnlyMiddleware)(clearRfidTagHandler).ServeHTTP) // TODO: OPTIONS // DONT ALLOW USERS TO DIRECTLY HIT THIS (req should come from webserver)
 
 	// SERVER HANDLERS! (PASSTHROUGH) view, new, import
 	webHostPort := 3000
@@ -325,6 +295,7 @@ func main() {
 		return rateLimiter(ctxMiddleware(next))
 	}
 	corsAuthRateLimit := Middlewares(CorsAuthMiddleware, rateLimitCtxMiddleware)
+	// TODO: none of these log requests/responses. Consider adding wrapWriter middleware.
 	http.Handle(loginPath /* /login */, Middlewares(tracerMiddleware(loginPath), OptionsGetPost, corsAuthRateLimit, handleLoginMiddleware)(webProxyHandler))
 	http.Handle("/logout", Middlewares(tracerMiddleware("/logout"), OptionsGetOnly, corsAuthRateLimit)(handleLogout)) // TODO: make logout button in ts!
 	http.Handle("/guestLogin", Middlewares(tracerMiddleware("/guestLogin"), OptionsPostOnly, rateLimitCtxMiddleware)(handleGuestLogin))
@@ -339,6 +310,7 @@ func main() {
 
 	// Proxied to react
 	// Generalized react endpoints
+	// TODO: add context middleware or tracer middleware?
 	http.Handle("/_next", Middlewares(tracerMiddleware("/_next"))(unAuthedProxied)) // TODO: options middleware?
 	http.Handle("/", Middlewares(tracerMiddleware("/"))(unAuthedProxied))           // TODO: options middleware?
 
@@ -361,7 +333,7 @@ func main() {
 	//http.Handle("/addSensorData/{nodeName}", rfid.AddSensorDataHandler())        // TODO: middleware?
 
 	println("Defining admin endpoints")
-	http.Handle("/admin/whitelistUser", Middlewares(tracerMiddleware("/admin/whitelistUser"), ctxMiddleware, webAuthAdminMiddleware)(whitelistUserHandler)) // TODO: options middleware?
+	http.Handle("/admin/whitelistUser", Middlewares(tracerMiddleware("/admin/whitelistUser"), ctxMiddleware, wrapWriter, webAuthAdminMiddleware)(whitelistUserHandler)) // TODO: options middleware?
 
 	// TODO: ADMIN STUFF
 	// TODO: user-viewer/editor for admin
@@ -370,26 +342,26 @@ func main() {
 	println("Defining db interaction endpoints")
 	// TODO: CORS db middlewares?
 	// Resolving Types
-	http.Handle("/db/pathFor/{id}", Middlewares(tracerMiddleware("/db/pathFor"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.GetPageForIdHandler)) // TODO: DenyGuestMiddleware? // TODO: options middleware?
+	http.Handle("/db/pathFor/{id}", Middlewares(tracerMiddleware("/db/pathFor"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.GetPageForIdHandler)) // TODO: DenyGuestMiddleware? // TODO: options middleware?
 	// Get handlers
-	// TODO: ??? http.Handle("/db/get/rfid/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getRfidHandler()) // TODO: DenyGuestMiddleware?             // TODO: GET RID OF???             // TODO: ensure this works for base58s
+	// TODO: ??? http.Handle("/db/get/rfid/{id}", Middlewares(rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(getRfidHandler()) // TODO: DenyGuestMiddleware?             // TODO: GET RID OF???             // TODO: ensure this works for base58s
 	// TODO: ??? http.Handle("/db/get/rfid/{id}", rateLimitedWithCtxAndInternalAuth(getRfidHandler()) // TODO: DenyGuestMiddleware?             // TODO: GET RID OF???             // TODO: ensure this works for base58s
-	http.Handle("/db/get/{variant}/{id}", Middlewares(tracerMiddleware("/db/get"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getAnyCollectionHandler))  // TODO: options middleware?
-	http.Handle("/db/images/{imageSubPath...}", Middlewares(tracerMiddleware("/db/images"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getImageHandler)) // TODO: rate limiter ok here? // TODO: options middleware?
+	http.Handle("/db/get/{variant}/{id}", Middlewares(tracerMiddleware("/db/get"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(getAnyCollectionHandler)) // TODO: options middleware?
+	http.Handle("/db/images/{imageSubPath...}", Middlewares(tracerMiddleware("/db/images"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getImageHandler))            // TODO: rate limiter ok here? // TODO: options middleware?
 	// Creation handlers
-	http.Handle("/db/create/{variant}", Middlewares(tracerMiddleware("/db/create/{variant}"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.CreateHandler)) // TODO: options middleware?
+	http.Handle("/db/create/{variant}", Middlewares(tracerMiddleware("/db/create/{variant}"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.CreateHandler)) // TODO: options middleware?
 	// TODO: chain spore print handler?
 	// update handlers
-	http.Handle("/db/update/{variant}/{id}", Middlewares(tracerMiddleware("/db/update"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.UpdateHandler)) // TODO: no rfid? // TODO: options middleware?
+	http.Handle("/db/update/{variant}/{id}", Middlewares(tracerMiddleware("/db/update"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.UpdateHandler)) // TODO: no rfid? // TODO: options middleware?
 	// import handlers
-	http.Handle("/db/import/{variant}", Middlewares(tracerMiddleware("/db/import"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.ImportHandler)) // TODO: options middleware?
+	http.Handle("/db/import/{variant}", Middlewares(tracerMiddleware("/db/import"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.ImportHandler)) // TODO: options middleware?
 
 	// delete handlers
 	// TODO: enable! http.Handle("/db/delete/{endpt}/{id}", Middlewares(rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfidMiddleware, rfid.AdminOnlyMiddleware)(rfid.DeleteHandler))
 	// List handlers
-	http.Handle("/db/list/{variant}", Middlewares(tracerMiddleware("/db/list"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListEntriesHandler))                                                 // TODO: options middleware?
-	http.Handle("/db/subspeciesFor/{variant}", Middlewares(tracerMiddleware("/db/subspeciesFor"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))                            // TODO: options middleware?
-	http.Handle("/sessionUserProjects", Middlewares(tracerMiddleware("/sessionUserProjects"), rateLimiter, ctxMiddleware, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.SessionUserProjectsHandler)) // TODO: DenyGuestMiddleware? Will guests only have public projects??? // TODO: options middleware?
+	http.Handle("/db/list/{variant}", Middlewares(tracerMiddleware("/db/list"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.ListEntriesHandler))                                                 // TODO: options middleware?
+	http.Handle("/db/subspeciesFor/{variant}", Middlewares(tracerMiddleware("/db/subspeciesFor"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))                            // TODO: options middleware?
+	http.Handle("/sessionUserProjects", Middlewares(tracerMiddleware("/sessionUserProjects"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.SessionUserProjectsHandler)) // TODO: DenyGuestMiddleware? Will guests only have public projects??? // TODO: options middleware?
 	// Next endpt needs no authorization, but does have a rate limiter?? // TODO: rl?
 	http.Handle("/options/{optionsType}", Middlewares(tracerMiddleware("/options"), rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything... // TODO: options middleware?
 
@@ -399,6 +371,59 @@ func main() {
 	if err != nil {
 		panic("ERROR CLOSING SERVER " + err.Error())
 	}
+}
+func setupEnvironment(ctxIn context.Context) context.Context {
+	var envir string
+	switch os.Getenv("ENVIRONMENT") { // TODO: set this!
+	case "prod":
+		envir = env.Prod
+	case "cert":
+		envir = env.Cert
+	case "qual", "dev", "devl":
+		envir = env.Dev
+	default:
+		panic("invalid environment: " + os.Getenv("ENVIRONMENT"))
+	}
+	return env.SetEnv(ctxIn, envir)
+}
+func setupPics(ctxIn context.Context) context.Context {
+	picsPath := os.Getenv("PICS_PATH")
+	if picsPath == "" {
+		panic("env var missing for PICS_PATH")
+	}
+	return pics.SetFilePath(ctxIn, picsPath)
+}
+func resolveOtherSecrets(ctx context.Context) (rfidRegistrySecret, googId, googSecret, webHostName string, apiPort int) {
+	var err error = nil
+	rfidRegistrySecret, err = getSecret("RFID_SECRET")
+	if err != nil {
+		panic("failed to resolve secret RFID_SECRET: " + err.Error())
+	}
+	googId, err = getSecret("GOOGLE_CLIENT_ID")
+	if err != nil {
+		panic("failed to resolve secret GOOGLE_CLIENT_ID: " + err.Error())
+	}
+	googSecret, err = getSecret("GOOGLE_CLIENT_SECRET")
+	if err != nil {
+		panic("failed to resolve secret GOOGLE_CLIENT_SECRET: " + err.Error())
+	}
+	webHostName = envVarOrDefault("WEB_HOST_INTERNAL", "web") // Can have port if not hosting on 80
+	apiPort, err = strconv.Atoi(os.Getenv("API_PORT"))        // TODO: ok?
+	if err != nil {
+		logging.GetLogger(ctx).Warn(fmt.Sprintf(`No api port configured, defaulting to port %d`, defaultHttpPort))
+		apiPort = defaultHttpPort
+	}
+	// TODO: api is hosted internally on 8080, but the actual site on cloudflare uses 443! Web is on 3000
+	return
+}
+func setupLogger(ctxIn context.Context) context.Context {
+	// TODO: make sure logger is set up correctly
+	log := logging.LoggerFactoryFor("mush-api") // TODO: ok name?
+	temp := logging.SetLogger(ctxIn, log)
+	return logging.SetSugaredLogger(temp, log.Sugar())
+}
+func setupAuthSvc(ctxIn context.Context, sessionsCleanupFreq *time.Duration, sessionTTL *time.Duration) context.Context {
+	return rfid.NewAuthService(sessionsCleanupFreq, sessionTTL).OnContext(ctxIn)
 }
 
 func getSecret(secretName string) (string, error) {
@@ -412,14 +437,17 @@ func getSecret(secretName string) (string, error) {
 	return string(payload), nil
 }
 
-func resolveGothicSessionSecret() error {
+func resolveGothicSessionSecret() {
 	sessionSecretName := "SESSION_SECRET"
 	sec, err := getSecret(sessionSecretName) // TODO: unnecessary, sessionsecret is pulled in during init of gothic
 	if err != nil {
-		return err
+		panic("failed to get goth secret: " + err.Error())
 	}
 	println("Gothic secret used: ", sec)
-	return os.Setenv(sessionSecretName, sec)
+	if err = os.Setenv(sessionSecretName, sec); err != nil {
+		panic("failed to set goth session secret env var: " + err.Error())
+
+	}
 }
 
 func OptionsMiddleware(acceptableMethods ...string) SingleMiddleware {
@@ -619,7 +647,7 @@ func CorsAuthMiddleware(next http.Handler) http.Handler {
 func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManager, loginPath string, apiPort int) (
 	ctx context.Context,
 	rateLimiter, rfidMiddleware, internalOnlyMiddleware, webAuthMiddleware, internalAuthMiddleware func(http.Handler) http.Handler,
-	ctxMiddleware func(http.Handler) http.Handler,
+	ctxMiddleware, wrapWriter func(http.Handler) http.Handler,
 	err error) {
 	// PicsPath and rfid middleware
 	// Pics path middleware
@@ -628,11 +656,21 @@ func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManag
 		panic("env var missing for PICS_PATH")
 	}
 	ctx = pics.SetFilePath(ctxIn, picsPath)
+	wrapWriter = func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			wrappedWriter := &WriterWrapper{
+				internal: w,
+				log:      logging.GetLogger(r.Context()).Logger, // TODO: with? sugared logger or no?
+			}
+			next.ServeHTTP(wrappedWriter, r)
+			wrappedWriter.FlushLog()
+		})
+	}
 	ctxMiddleware = func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			comboContext := newDualContext(ctx, r.Context())
 			updatedRequest := r.WithContext(comboContext)
-			next.ServeHTTP(w, updatedRequest) // TODO: ok?
+			next.ServeHTTP(w, updatedRequest)
 		})
 	}
 	rfidMiddleware = mgr.Middleware()
@@ -2203,3 +2241,33 @@ func Middlewares(mws ...SingleMiddleware) SingleMiddleware {
 }
 
 type SingleMiddleware func(http.Handler) http.Handler
+
+type WriterWrapper struct {
+	internal http.ResponseWriter
+	log      *zap.Logger
+	body     bytes.Buffer
+}
+
+func (w *WriterWrapper) Header() http.Header {
+	return w.internal.Header()
+}
+
+func (w *WriterWrapper) Write(bs []byte) (n int, err error) {
+	// Keep full response body in memory for one final log entry.
+	_, _ = w.body.Write(bs)
+	n, err = w.internal.Write(bs)
+	if err != nil {
+		w.log.Error("failed to write response bytes", zap.String("error", err.Error()))
+	} else {
+		w.log.Info("successfully wrote response bytes: " + string(bs))
+	}
+	return
+}
+func (w *WriterWrapper) WriteHeader(statusCode int) {
+	w.internal.WriteHeader(statusCode)
+	w.log.Info(fmt.Sprintf("wrote status code: %d", statusCode))
+	w.log = w.log.With(zap.Any("statusCodes", statusCode))
+}
+func (w *WriterWrapper) FlushLog() {
+	w.log.Info(string(w.body.Bytes()))
+}
