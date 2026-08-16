@@ -268,6 +268,7 @@ type importJarRequest struct {
 	WetnessField
 	BurstGrainsField
 	KnownFruitableField
+	NotesField
 	WriteTagToField
 	// DECIDE: add notes? or should notes just be added on display page?
 	// image as "img"
@@ -395,7 +396,7 @@ func importJarHandler(w http.ResponseWriter, r *http.Request) {
 		PicsField:            PicsField{pix},
 		KnownFruitableField:  data.KnownFruitableField,
 		MostRecentImageField: MostRecentImageField{importedPic},
-		NotesField:           NotesField{}, // TODO: fix?
+		NotesField:           NotesField{data.Notes}, // TODO: consider adding on the ts side!
 		LastUpdatedField:     LastUpdatedField{now},
 		AclField:             AclField{finalPerms},
 	}

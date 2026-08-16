@@ -290,7 +290,6 @@ func (req updateJarRecipeRequest) modsFor(existing *JarRecipe, aclField AclField
 		updateNameIfNeeded(req.Name, existing.Name).
 		updateStandardIfNeeded(req.Standard, existing.Standard).
 		updateNotesIfNeeded(req, existing).
-		// TODO: for perms updates, disallow removing self???
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
