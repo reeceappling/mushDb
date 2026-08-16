@@ -69,7 +69,7 @@ func (pics PicsField) addPic(newPic PicWithNotes) PicsField {
 	}
 	newPics := make([]PicWithNotes, 0, len(pics.Pics)+1)
 	newPics = append(newPics, pics.Pics...)
-	newPics = append(newPics, newPic) // TODO: is this backwards?
+	newPics = append(newPics, newPic)
 	return PicsField{Pics: newPics}
 }
 

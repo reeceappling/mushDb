@@ -457,7 +457,7 @@ func loadMriPics(pics *SplitEntries[picWithNotesForm, PicWithNotes], contams *Sp
 				imagesForUpdateFunc = append(imagesForUpdateFunc, ex.Data.convert())
 			}
 		}
-		imagesForUpdateFunc = append(imagesForUpdateFunc, pics.New...) // TODO: is this backwards??? This is correct if we want new images to go to the end and not the start...
+		imagesForUpdateFunc = append(imagesForUpdateFunc, pics.New...)
 	}
 	if contams != nil {
 		for _, ex := range contams.Existing {
@@ -476,7 +476,7 @@ func loadMriPics(pics *SplitEntries[picWithNotesForm, PicWithNotes], contams *Sp
 				imagesForUpdateFunc = append(imagesForUpdateFunc, f.Data.convert())
 			}
 		}
-		imagesForUpdateFunc = append(imagesForUpdateFunc, flushes.New...) // TODO: is this backwards??? This is correct if we want new images to go to the end and not the start...
+		imagesForUpdateFunc = append(imagesForUpdateFunc, flushes.New...)
 	}
 	return imagesForUpdateFunc
 }

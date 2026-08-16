@@ -223,7 +223,7 @@ func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField Ac
 			imagesForUpdateFunc = append(imagesForUpdateFunc, ex.Data.convert())
 		}
 	}
-	imagesForUpdateFunc = append(imagesForUpdateFunc, req.Images.New...) // TODO: is this backwards??? This is correct if we want new images to go to the end and not the start...
+	imagesForUpdateFunc = append(imagesForUpdateFunc, req.Images.New...)
 	return NewMods().
 		updateConfirmedCleanIfNeeded(req.ConfirmedClean, existing.ConfirmedClean).
 		//updateSaleIfNeeded(req.Sale, existing.Sale).
