@@ -143,6 +143,7 @@ func Initialize(ctx context.Context) error {
 	//	println("aliases collection failed to initialize", err.Error())
 	//	return errors.Join(errors.New("aliases initializer failed"), err)
 	//}
+	// List instead of map to ensure order...
 	for _, item := range []Tuple[string, string]{
 		// Mains IDs
 		newTuple("plate", string(exPlate.AsBase58())),
@@ -171,34 +172,6 @@ func Initialize(ctx context.Context) error {
 		name, b58IdStr := item.values()
 		println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
 	}
-	//// TODO: is map ok here or would a slice of tuples be better?
-	//for name, b58IdStr := range map[string]string{
-	//	// Mains IDs
-	//	"plate":           string(exPlate.AsBase58()),
-	//	"bag":             string(exBag.AsBase58()),
-	//	"fruitingChamber": string(exFC.AsBase58()),
-	//	"jar":             string(exJar.AsBase58()),
-	//	"mss":             string(exMSS.AsBase58()),
-	//	"slant":           string(exSlant.AsBase58()),
-	//	"stasisTube":      string(exStasis.AsBase58()),
-	//	"fruit":           string(exFruitId.AsBase58()),
-	//	"sporePrint":      string(exSporePrint.AsBase58()),
-	//	"waterJar":        string(exWaterId.AsBase58()),
-	//	// Standard Alt IDs
-	//	"agarBatch":       string(exAltId.AsBase58()),
-	//	"agarRecipe":      string(exAltId.AsBase58()),
-	//	"jarRecipe":       string(exAltId.AsBase58()),
-	//	"lcRecipe":        string(exAltId.AsBase58()),
-	//	"sale":            string(exAltId.AsBase58()),
-	//	"substrateRecipe": string(exAltId.AsBase58()),
-	//	"transfer":        string(exAltId.AsBase58()),
-	//	// String Alt IDs
-	//	"project":    testEntryStringId,
-	//	"species":    testEntryStringId,
-	//	"subspecies": testEntryStringId,
-	//} {
-	//	println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
-	//}
 	// TODO: validateDbEntries(ctx) like ensuring pc runs exist on all appropriate things?
 
 	return nil
@@ -467,7 +440,7 @@ func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T,
 //}
 
 func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
-	defer cursor.Close(ctx) // TODO; ensure ok
+	defer cursor.Close(ctx)
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		return nil, err
@@ -505,7 +478,7 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 				acl := permedItem.Permissions()
 				// If user cannot read or write, do not add
 				if acl.HighestPermFor(user) == nil {
-					println("skipping entry, user does not have permission!") // TODO: del
+					// TODO: println("skipping entry, user does not have permission!") // TODO: del
 					// Skip this entry
 					continue
 				}
@@ -537,7 +510,7 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 	return results, nil
 }
 func getUserProjectsFromCursor(ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]*Project, error) {
-	defer cursor.Close(ctx) // TODO; ensure ok
+	defer cursor.Close(ctx)
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		return nil, err
