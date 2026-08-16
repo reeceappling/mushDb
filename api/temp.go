@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/shared"
@@ -28,7 +30,7 @@ func writeRfidTagIfNecessary(ctx context.Context, writeTagTo *string, id MainCol
 	}
 	err := GetService().WriteRfid(ctx, shared.RfidReaderName(*writeTagTo), id)
 	if err != nil {
-		println("failed to write tag! " + err.Error())
+		logging.GetSugaredLogger(ctx).Errorw("failed to write tag", "error", err.Error())
 		return err
 	}
 	return nil
@@ -56,7 +58,7 @@ func (rw readWriteSvc) WriteRfid(ctx context.Context, readerName shared.RfidRead
 	mgr := websocketSessions.GetSessionManager(ctx)
 	if mgr == nil {
 		err = websocketSessions.ErrNoSessionManager
-		println("no session mgr found") // TODO: del
+		logging.GetSugaredLogger(ctx).Error("no session manager found")
 		return
 	}
 	return mgr.WriteRfid(ctx, readerName, id) // TODO: handle manager nil check within this!
@@ -65,7 +67,7 @@ func (rw readWriteSvc) ReadRfid(ctx context.Context, readerName shared.RfidReade
 	mgr := websocketSessions.GetSessionManager(ctx)
 	if mgr == nil {
 		err = websocketSessions.ErrNoSessionManager
-		println("no session mgr found?") // TODO: del
+		logging.GetSugaredLogger(ctx).Error("no session manager found")
 		return
 	}
 	return mgr.ReadRfid(ctx, readerName) // TODO: handle manager nil check within this!
@@ -274,11 +276,8 @@ func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, re
 }
 
 func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseWriter, reader *multipart.Reader, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) {
-
 	// Get any images
-	newPics = map[int]string{}
-	newContams = map[int]string{}
-	newFlushes = map[int]string{}
+	newPics, newContams, newFlushes = map[int]string{}, map[int]string{}, map[int]string{}
 	picsSaved := []string{}
 	defer func() {
 		if err != nil {
@@ -324,7 +323,7 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 			// Already wrote in the above func
 			return
 		}
-		println("checking parts")
+		env.LogAlways("checking parts") // TODO: del?
 		switch parts[0] {
 		case "newPic":
 			newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, prefixPath, string(b58id), "img")
@@ -373,8 +372,7 @@ func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, da
 	}
 	reader, err := multipartReaderForRequest(r, w, data)
 	if err != nil {
-		// Already wrote
-		return nil, nil, nil, err
+		return nil, nil, nil, err // Already wrote
 	}
 	return getMultipartImages(r.Context(), prefixPath, w, reader, b58id)
 }
