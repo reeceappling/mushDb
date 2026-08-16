@@ -1,4 +1,5 @@
 # TODOs found while using
+- [ ] Will require a new table to house the biometric keys (which are related to the users), and also related to specific devices
 - [ ] On spore print, when trying to add a new photo, if you try to remove the photo before updating nothing happens
 - [ ] Chaining spore prints is failing!
   - [ ] First attempt to fix is done, validate that it works now

@@ -6,6 +6,7 @@ import {Additive} from "@/app/components/formSubcomponents/additives";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {LcRecipeSelector, NewLcRecipeForm} from "@/app/components/lcRecipeClient";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {CapitalizeFirstLetter} from "@/app/components/commonServer";
 
 export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
     return new LcRecipeData({
@@ -51,7 +52,14 @@ export class LcRecipeData {
         return "lcRecipe"
     }
     public description(): string {
-        return `Liquid culture ${this.standard?"standard ":""}recipe ${this.name} (${this._id}). Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+        const standardPart = this.standard?`standard `:''
+        const firstSentence = CapitalizeFirstLetter(`${standardPart}LC recipe ${this.name}`)
+        const nuteSent = `${(this.nutrients===undefined||this.nutrients.length==0)?`no`:this.nutrients.length} nutrients`
+        const liqSent = (this.liquids.length==1)?`${this.liquids[0].name} based`:`${this.liquids.length} liquids`
+        const sugSent = `${(this.sugars===undefined||this.sugars.length==0)?`no`:this.sugars.length} sugars`
+        const addSent = `${(this.additives===undefined||this.additives.length==0)?`no`:this.additives.length} additives`
+        const lastSent = `Last updated on ${new Date(this.lastUpdated).toISOString()}`
+        return `${firstSentence}. ${nuteSent}. ${liqSent}. ${sugSent}. ${addSent}. ${lastSent}`
     }
 }
 

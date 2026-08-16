@@ -41,7 +41,7 @@ export class AgarBatchData {
         return "agarBatch"
     }
     public description(): string {
-        return `Agar batch ${this._id}. Color: ${this.color} Recipe ID: ${this.agarRecipe}. PC Run ${this.pcRun}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
+        return `Agar batch ${this._id}. Recipe: ${this.agarRecipe}. Color: ${this.color}. PC Run ${this.pcRun}. Last updated on ${new Date(this.lastUpdated).toISOString()}`
     }
 }
 

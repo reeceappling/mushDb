@@ -2,6 +2,7 @@ import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import {Note} from "@/app/components/formSubcomponents/notes";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {NewSubstrateRecipeForm, SubstrateRecipeSelector} from "@/app/components/substrateRecipeClient";
+import {CapitalizeFirstLetter} from "@/app/components/commonServer";
 
 export function TestSubstrateRecipeOkStd(std: boolean){
     const a: SubstrateRecipeData = TestSubstrateRecipeOk()
@@ -46,7 +47,10 @@ export class SubstrateRecipeData {
         return "substrateRecipe"
     }
     public description(): string {
-        return `Substrate ${this.standard?"standard ":""}recipe ${this.name} (${this._id}). Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+        const standardPart = this.standard?`standard `:''
+        const firstSentence = CapitalizeFirstLetter(`${standardPart}substrate recipe ${this.name}`)
+        const lastSent = `Last updated on ${new Date(this.lastUpdated).toISOString()}`
+        return `${firstSentence}. ${lastSent}`
     }
 }
 

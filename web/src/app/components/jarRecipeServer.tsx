@@ -6,6 +6,7 @@ import {Grain} from "@/app/components/formSubcomponents/grains";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {JarRecipeSelector, NewJarRecipeForm} from "@/app/components/jarRecipeClient";
+import {CapitalizeFirstLetter} from "@/app/components/commonServer";
 
 export function TestJarRecipeOK() {
     return new JarRecipeData({
@@ -60,7 +61,14 @@ export class JarRecipeData {
         return "jarRecipe"
     }
     public description(): string {
-        return `Jar ${this.standard?"standard ":""}recipe ${this.name} (${this._id}). Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+        const standardPart = this.standard?`standard `:''
+        const firstSentence = CapitalizeFirstLetter(`${standardPart}jar recipe ${this.name}`)
+        const nuteSent = `${(this.nutrients===undefined||this.nutrients.length==0)?`no`:this.nutrients.length} nutrients`
+        const liqSent = (this.grains.length==1)?`${this.grains[0].grain} based`:`${this.grains.length} grains`
+        const sugSent = `${(this.sugars===undefined||this.sugars.length==0)?`no`:this.sugars.length} sugars`
+        const addSent = `${(this.additives===undefined||this.additives.length==0)?`No additives`:(this.additives.length==1?`With ${this.additives[0].additive}`:`${this.additives.length} additives`)}`
+        const lastSent = `Last updated on ${new Date(this.lastUpdated).toISOString()}`
+        return `${firstSentence}. ${nuteSent}. ${liqSent}. ${sugSent}. ${addSent}. ${lastSent}`
     }
 }
 

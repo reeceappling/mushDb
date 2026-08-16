@@ -72,9 +72,14 @@ export class LcData {
     }
     public description(): string {
         if(this.species !== undefined){
-            return `Liquid culture ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+            const kfSent = this.knownFruitable!==undefined?"":(this.knownFruitable?"Known fruitable.":"Nonfruitable")
+            const contamsSent = (this.contamination!==undefined&&this.contamination.length!==0)?`${this.contamination.length} contam notes.`:"Not noted as contaminated."
+            return `Liquid culture ${this._id}. Species: ${this.species}. ${this.subspecies!==undefined&&`Subspecies: ${this.subspecies}`}. ${kfSent}. ${contamsSent} Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
         }
-        return `Liquid culture ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}`
+        if(this.disposed !== undefined){
+            return `Liquid culture ${this._id}. Disposed on ${new Date(this.disposed).toISOString()}.`
+        }
+        return `Liquid culture ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.`
     }
 }
 

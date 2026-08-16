@@ -7,6 +7,7 @@ import {Additive} from "@/app/components/formSubcomponents/additives";
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {AgarRecipeSelector, NewAgarRecipeForm} from "@/app/components/agarRecipeClient";
+import {CapitalizeFirstLetter} from "@/app/components/commonServer";
 
 export function TestAgarRecipeOk(){
     return new AgarRecipeData({
@@ -56,7 +57,22 @@ export class AgarRecipeData {
         return "agarRecipe"
     }
     public description(): string {
-        return `Agar ${this.standard?"standard ":""}recipe ${this.name} (${this._id}). Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: nutes, sugars, antibiotics, additives, liquids?
+        const ultraSoftCutoff = 15 // TODO; ensure ok
+        const softCutoff = 19 // TODO; ensure ok
+        const hardCutoff = 22 // TODO; ensure ok
+        const ultraHardCutoff = 24 // TODO; ensure ok
+        const isRegularSoftness = this.agar>=softCutoff && this.agar <hardCutoff
+        const isAntibiotic = this.antibiotics===undefined||this.antibiotics.length==0
+        const standardPart = this.standard?`standard `:''
+        const softnessPart = isRegularSoftness?``:(this.agar<softCutoff?(this.agar<ultraSoftCutoff?`ultrasoft `:`soft `):(this.agar<ultraHardCutoff?"hard ":"ultrahard "))
+        const antibioticsPart = (isAntibiotic)?"":"antibiotic "
+        const firstSentence = CapitalizeFirstLetter(`${standardPart}${softnessPart}${antibioticsPart}agar recipe ${this.name}`)
+        const nuteSent = `${(this.nutrients===undefined||this.nutrients.length==0)?`no`:this.nutrients.length} nutrients`
+        const liqSent = (this.liquids.length==1)?`${this.liquids[0].name} based`:`${this.liquids.length} liquids`
+        const sugSent = `${(this.sugars===undefined||this.sugars.length==0)?`no`:this.sugars.length} sugars`
+        const addSent = `${(this.additives===undefined||this.additives.length==0)?`no`:this.additives.length} additives`
+        const lastSent = `Last updated on ${new Date(this.lastUpdated).toISOString()}`
+        return `${firstSentence}. ${nuteSent}. ${liqSent}. ${sugSent}. ${addSent}. ${lastSent}`
     }
 }
 

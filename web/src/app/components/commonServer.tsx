@@ -13,6 +13,10 @@ import {DisposedDisplay} from "@/app/components/formSubcomponents/commonClient";
 export default function Centered({children}:{children:React.ReactNode}){
     return <div className={"centerH"}>{children}</div>
 }
+export function CapitalizeFirstLetter(str: string): string {
+    if (!str || str==="") return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 export function CreatedUpdatedDisposedArea(
     {created, updated, initialDisposed, readonly, setDisposedOnParent}: {

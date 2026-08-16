@@ -66,10 +66,11 @@ export class SlantData {
         return "slant"
     }
     public description(): string {
-        if(this.species !== undefined){
-            return `Slant ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
-        }
-        return `Slant ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}`
+        const firstSent = `Slant ${this._id}`
+        // TODO: plugs types?
+        const secondSent = this.species !== undefined?`Species ${this.species}${this.subspecies!==undefined&&`. Subspecies ${this.subspecies}`}`:` Not innoculated`
+        const lastSent = `Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed !== undefined && ` Disposed on ${new Date(this.disposed).toISOString()}`}`
+        return `${firstSent}. ${secondSent}. ${lastSent}`
     }
 }
 

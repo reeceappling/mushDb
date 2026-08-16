@@ -44,10 +44,9 @@ export class WaterJarData {
         return "waterJar"
     }
     public description(): string {
-        if(this.disposed !== undefined) {
-            return `Water jar ${this._id}. Created on ${new Date(this.creationDate).toISOString()}. Disposed on ${new Date(this.disposed).toISOString()}`
-        }
-        return `Water jar ${this._id}. Last updated on ${new Date(this.lastUpdated).toISOString()}. Created on ${new Date(this.creationDate).toISOString()}. Pc Run ${this.pcRun}`
+        const firstSent = `Water jar ${this._id}`
+        const lastSent = `Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed !== undefined && ` Disposed on ${new Date(this.disposed).toISOString()}`}`
+        return `${firstSent}. ${lastSent}`
     }
 }
 

@@ -79,10 +79,14 @@ export class BagData {
     }
     public description(): string {
         if(this.species !== undefined){
-            return `Bag ${this._id}. Species ${this.species}. ${this.subspecies!==undefined&&`Subspecies ${this.subspecies}`}. Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+            const kfSent = this.knownFruitable!==undefined?"":(this.knownFruitable?"Known fruitable.":"Nonfruitable")
+            const filterSizeSent = "" // TODO: ????
+            const flushesSent = (this.flushes!==undefined&&this.flushes.length!==0)?`${this.flushes.length} flushes.`:""
+            const contamsSent = (this.contamination!==undefined&&this.contamination.length!==0)?`${this.contamination.length} contam notes.`:"Not noted as contaminated."
+            return `Bag ${this._id}. Species: ${this.species}. ${this.subspecies!==undefined&&`Subspecies: ${this.subspecies}`}. ${kfSent}.${contamsSent}${flushesSent}${filterSizeSent} Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
         }
         if(this.disposed !== undefined){
-            return `Bag ${this._id}. Disposed on ${new Date(this.disposed).toISOString()}`
+            return `Bag ${this._id}. Disposed on ${new Date(this.disposed).toISOString()} after ${this.flushes?this.flushes.length:0} flushes`
         }
         return `Bag ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.`
     }
