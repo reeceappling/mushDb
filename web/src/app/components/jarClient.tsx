@@ -493,7 +493,7 @@ export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"jar"}>
+    return <NewEntryFormWrapper entryType={"jar"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         {grainBatchIn === undefined && <GrainBatchSelectorCloseable doSelect={setGrainBatch} allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel}/>}
         <JarSizeSelector onChange={(unit: string) => {

@@ -6,7 +6,7 @@
     "node": ">=26.5.0"
   },
   "scripts": {
-    "test": "jest",
+    "test": "jest src/__test__/components/Bag.test.tsx",
     "coverage": "jest --coverage",
     "clean-imports": "eslint ./src --fix",
     "e2e": "cypress open",

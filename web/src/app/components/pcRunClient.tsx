@@ -311,7 +311,7 @@ export function NewPcRunForm(
         }
     }
     return (
-        <NewEntryFormWrapper entryType={"pcRun"}>
+        <NewEntryFormWrapper entryType={"pcRun"} isTopLevel={handlers.isTopLevel}>
             <div className={"areaHeader"}>{"Creating a new PC Run"}</div>
             {/* TODO: create as header????*/}
             <ErrorDisplay err={err}/>

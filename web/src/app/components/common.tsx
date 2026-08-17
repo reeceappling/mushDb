@@ -991,10 +991,10 @@ function depthAndEntryClasses(depth: number, entryType?: string) {
     return " depth" + depth + (entryType ? " " + entryType : "")
 }
 
-export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string, className?: string }>) {
+export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string, isTopLevel: boolean, className?: string }>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div
+        <div role={(props.isTopLevel?'main ':'')+"form"}
             className={"subForm newEntryForm" + depthAndEntryClasses(depth, props.entryType) + (props.className ? " " + props.className : "")}>
             {props.children}
         </div>
@@ -1004,7 +1004,7 @@ export function NewEntryFormWrapper(props: React.PropsWithChildren<{ entryType: 
 export function ImportEntryFormWrapper(props: React.PropsWithChildren<{ entryType: string }>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div
+        <div role={'form'}
             className={"subForm importEntryForm" + depthAndEntryClasses(depth, props.entryType)}>
             {props.children}
         </div>
@@ -1014,7 +1014,7 @@ export function ImportEntryFormWrapper(props: React.PropsWithChildren<{ entryTyp
 export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: string, id?: string }>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div id={props.id} className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>
+        <div id={props.id} role='main form' data-testid={"display-"+props.entryType} className={"subForm displayForm" + depthAndEntryClasses(depth, props.entryType)}>
                 {props.children}
         </div>
     </DepthProvider>

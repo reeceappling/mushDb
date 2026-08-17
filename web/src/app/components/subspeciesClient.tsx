@@ -198,7 +198,7 @@ export function NewSubspeciesForm({handlers, species}: {
             })
     }
     return (
-        <NewEntryFormWrapper entryType={"subspecies"}>
+        <NewEntryFormWrapper entryType={"subspecies"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
             {/*{species === undefined && <SpeciesSelectorCloseable doSelect={setSelectedSpecies} allowCreation={false} creatorInPage={false}/>}*/}
             {species === undefined && <ExistingSpeciesSelector initialSpecies={species} doSelect={s => {

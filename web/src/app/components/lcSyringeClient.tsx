@@ -405,7 +405,7 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             })
     }
 
-    return <NewEntryFormWrapper entryType={"lcSyringe"}>
+    return <NewEntryFormWrapper entryType={"lcSyringe"} isTopLevel={false}>
             <div>{txt}</div>
             {createdItemsDiv()}
             <ErrorDisplay err={err}/>

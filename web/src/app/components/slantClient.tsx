@@ -383,7 +383,7 @@ export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<Sl
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"slant"}>
+    return <NewEntryFormWrapper entryType={"slant"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         <SlantStickSelector setStickType={setStickType}/>
         <TestAndValidate todos={["ensure providing agarBatch makes selector disappear"]}>

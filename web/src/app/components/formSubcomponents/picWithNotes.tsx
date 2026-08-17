@@ -53,6 +53,23 @@ export interface PicWithNotesIncoming {
     notes?: Note[]
 }
 
+export const ExamplePicsWithNotes: PicWithNotesIncoming[] = [
+    {
+        time:45678,
+        location:"test.jpg", // TODO: multiple test images?
+        notes:[
+            {time:45679,note:"pic1note1"}
+        ]},
+    {
+        time:56789,
+        location:"test.jpg", // TODO: multiple test images?
+        notes:[
+            {time:56789,note:"pic2note1"},
+            {time:56799,note:"pic2note2"},
+        ]
+    }
+]
+
 export function IsValidPicWithNotesIncoming(input: any): boolean {
     return (
         typeof input === 'object' &&

@@ -271,7 +271,7 @@ export function NewProjectForm(
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"project"}>
+    return <NewEntryFormWrapper entryType={"project"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         <Subform>
             <InputTextInlineTitle label={"Project Name"} readonly={false} value={name || ""} onChange={setName}/>

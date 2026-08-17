@@ -185,7 +185,7 @@ export function NewSaleForm( // TODO: overhaul! Need Id available?
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"sale"}>
+    return <NewEntryFormWrapper entryType={"sale"} isTopLevel={false}>
         <ErrorDisplay err={err}/>
         <NewEntryNotes setNotes={setNotes} />
         <button className={"greenButton"} onClick={createSale}>{"Create Sale"}</button>

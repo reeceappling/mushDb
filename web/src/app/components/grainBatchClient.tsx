@@ -284,7 +284,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"grainBatch"}>
+    return <NewEntryFormWrapper entryType={"grainBatch"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         {recipe === undefined &&
             <JarRecipeSelector doSelect={setJarRecipe} allowCreate={handlers.isTopLevel}

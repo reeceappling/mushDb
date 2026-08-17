@@ -302,7 +302,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
         }
     }
     return (
-        <NewEntryFormWrapper entryType={"lcRecipe"}>
+        <NewEntryFormWrapper entryType={"lcRecipe"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
             {templateRecipeSelector()}
             <Subform>

@@ -444,7 +444,7 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
             })
     }
 
-    return <NewEntryFormWrapper entryType={"lc"}>
+    return <NewEntryFormWrapper entryType={"lc"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         {lcRecipeIn === undefined && <LcRecipeSelectorCloseable doSelect={setLcRecipe}
                                                                 allowCreation={handlers.isTopLevel}

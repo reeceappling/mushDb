@@ -62,7 +62,7 @@ export default function PageWrapper(
 }
 
 export function Footer() {
-    return <footer className={styles.footer}>
+    return <footer className={styles.footer} role={"contentinfo"}>
         <a
             href="https://mush.appli.ng"
             rel="noopener noreferrer"

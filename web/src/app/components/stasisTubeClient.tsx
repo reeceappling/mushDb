@@ -321,7 +321,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"stasisTube"}>
+    return <NewEntryFormWrapper entryType={"stasisTube"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err} />
         {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel} creatorInPage={true}/>}
         <NewEntryNotes setNotes={setNotes}/>

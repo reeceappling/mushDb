@@ -236,7 +236,7 @@ export function NewWaterJarForm(
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"waterJar"}>
+    return <NewEntryFormWrapper entryType={"waterJar"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         <PcRunSelectorCloseable doSelect={setPCRun} allowCreation={true} creatorInPage={true}/>
         {/*</SelectorWrapper>*/}

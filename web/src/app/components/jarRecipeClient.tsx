@@ -365,7 +365,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
             }}>{"Select a template recipe (optional)"}</button>
         }
     }
-    return <NewEntryFormWrapper entryType={"jarRecipe"}>
+    return <NewEntryFormWrapper entryType={"jarRecipe"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         {templateRecipeSelector()}
         <Subform>

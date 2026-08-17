@@ -431,7 +431,7 @@ export function NewFruitingChamberForm({handlers, substrateBatchIn, parent}: {
         return <div>{parentId || "unknown parent"}</div> // TODO: FIX
     }
     return (
-        <NewEntryFormWrapper entryType={"fruitingChamber"}>
+        <NewEntryFormWrapper entryType={"fruitingChamber"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
             {batchArea()}
             {/* TODO: grain volume from parent????*/}

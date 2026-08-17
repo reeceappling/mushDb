@@ -275,7 +275,7 @@ export function NewSpeciesForm(
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"species"}>
+    return <NewEntryFormWrapper entryType={"species"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         <Subform>
         <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"Name :"} setName={setName}/>

@@ -225,7 +225,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
             })
     }
     return (
-        <NewEntryFormWrapper entryType={"substrateBatch"}>
+        <NewEntryFormWrapper entryType={"substrateBatch"} isTopLevel={handlers.isTopLevel}>
             {/* button to open/close the creator*/}
             <ErrorDisplay err={err}/>
             <TestAndValidate todos={["ENSURE WORKS PROPERLY FOR BOTH EXISTING AND PICKING"]}>

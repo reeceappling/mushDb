@@ -627,7 +627,7 @@ export function NewPlateForm(
             })
     }
     const sliderClasses="mt-10 mb-10"//{/* TODO: ensure ok! Change from 10!*/}
-    return <NewEntryFormWrapper entryType={"plate"}>
+    return <NewEntryFormWrapper entryType={"plate"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         {agarBatchIn === undefined && <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true/* TODO: is true ok for both?*/}/>}
         <div className={sliderClasses}>

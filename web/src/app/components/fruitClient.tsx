@@ -456,7 +456,7 @@ export function NewFruitForm(
             })
     }
     return (
-        <NewEntryFormWrapper entryType={"fruit"}>
+        <NewEntryFormWrapper entryType={"fruit"} isTopLevel={false}>
             <ErrorDisplay err={err}/>
             {/* TODO: say harvest date is today?*/}
             <PicsDisplay pix={[]} updateParent={v => {

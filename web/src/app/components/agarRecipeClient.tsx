@@ -364,7 +364,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
         }
     }
     return (
-        <NewEntryFormWrapper entryType={"agarRecipe"}>
+        <NewEntryFormWrapper entryType={"agarRecipe"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
             <div>
                 {templateRecipeSelector()}

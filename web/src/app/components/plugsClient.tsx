@@ -492,7 +492,7 @@ export function NewPlugsForm(
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"plugs"}>
+    return <NewEntryFormWrapper entryType={"plugs"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         <Subform>
             <div className={"text-lg"}>{"Dowels: "}</div>

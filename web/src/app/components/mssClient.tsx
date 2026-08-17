@@ -366,7 +366,7 @@ export function NewMssForm(
             })
     }
 
-    return <NewEntryFormWrapper entryType={"mss"}>
+    return <NewEntryFormWrapper entryType={"mss"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         <TestAndValidate todos={["allow scans for Spore print or water jar selectors!"]}>
             { sporePrintIn === undefined && <div>

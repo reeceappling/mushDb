@@ -310,7 +310,7 @@ export function NewTransferArea({
         </div>
     }
 
-    return <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling? */}
+    return <NewEntryFormWrapper entryType={"transfer"} isTopLevel={false}>{/* TODO: overhaul styling? */}
         {newTransferNotifArea()}
         <ErrorDisplay err={err}/>
         <div className={"newTransferRow3"}>
@@ -425,7 +425,7 @@ export function NewTransferArea({
 //     return <>
 //         {newTransferNotifArea()}
 //         <></>
-//         <NewEntryFormWrapper entryType={"transfer"}>{/* TODO: overhaul styling? */}
+//         <NewEntryFormWrapper entryType={"transfer"} isTopLevel={false}>{/* TODO: overhaul styling? */}
 //             <ErrorDisplay err={err}/>
 //
 //             <div className={"newTransferRow3"}>

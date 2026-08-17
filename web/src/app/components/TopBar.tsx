@@ -52,12 +52,12 @@ export function TopBarCreateMenu() {
         setAnchorEl(null)
     }
     const menuItem = (entryType: string, txt: string): JSX.Element => {
-        return <MenuItem href={"/new/" + entryType} onClick={handleClose} component={"a"}
+        return <MenuItem role={menuItemRole} href={"/new/" + entryType} onClick={handleClose} component={"a"}
                          sx={sublistItemProps}>{txt}</MenuItem>
     }
-    return <div>
+    return <div role={listMenuDivRole}>
         <Button
-            id={"topBarCreateButton"}
+            id={"topBarCreateButton"} role={listMenuButtonRole}
             sx={buttonProps}
             aria-controls={open ? 'topBarCreateMenu' : undefined}
             aria-haspopup={true}
@@ -65,7 +65,7 @@ export function TopBarCreateMenu() {
             onClick={handleClick}>
             {"Create"}
         </Button>
-        <Menu id={"topBarCreateMenu"}
+        <Menu id={"topBarCreateMenu"} role={listMenuMenuRole}
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
@@ -97,7 +97,7 @@ export default function TopBar() {
             console.error(err) // TODO: ok?
         })
     }
-    return <div id={"topBar"}>
+    return <div id={"topBar"} role={"menubar"}>
         <TopBarListMenu/>
         <TopBarViewMenu/>
         <TopBarImportMenu/>
@@ -109,7 +109,7 @@ export default function TopBar() {
 export function RfidTopArea(props:rfidSelectorProps){
     const {state} = useRfidReaderContext()
     const [err, setErr] = React.useState<string | undefined>(undefined);
-    return <div id={"rfidTopArea"}>
+    return <div id={"rfidTopArea"} role={"menuitem"}>
         <LastReadTag/>
         <ReadTagButton/>
         <ReaderWriterSelector onSelect={props.onSelect}/>
@@ -236,9 +236,10 @@ export function TopBarViewMenu() {
         setId(redirectToId)
         handleViewById()
     }
-    return <div>
+    return <div role={listMenuDivRole}>
         <Button
             id={"topBarViewButton"}
+            role={listMenuButtonRole}
             sx={buttonProps}
             aria-controls={open ? 'topBarViewMenu' : undefined}
             aria-haspopup={true}
@@ -246,14 +247,14 @@ export function TopBarViewMenu() {
             onClick={handleClick}>
             {"View"}
         </Button>
-        <Menu id={"topBarViewMenu"}
+        <Menu id={"topBarViewMenu"} role={listMenuMenuRole}
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
               slotProps={{
                   list: {'aria-labelledby': 'topBarViewButton'}
               }}>
-            <MenuItem onClick={(e) => {
+            <MenuItem role={menuItemRole} onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
             }}>
@@ -271,35 +272,35 @@ export function TopBarViewMenu() {
                     }}> {"go to this id"}</button>}
                 </div>
             </MenuItem>
-            <MenuItem href={"/testpage"} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/testpage"} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{"TEST PAGE"}</MenuItem>{/*TODO: DELETE ME*/}
-            <MenuItem href={"/view/agarBatch/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/agarBatch/" + id} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{"Agar Batch"}</MenuItem>
-            <MenuItem href={"/view/agarRecipe/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/agarRecipe/" + id} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Agar Recipe"}</MenuItem>
-            <MenuItem href={"/view/jarRecipe/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/jarRecipe/" + id} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Jar Recipe"}</MenuItem>
-            <MenuItem href={"/view/lcRecipe/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/lcRecipe/" + id} onClick={handleClose}
                       component={"a"}
                       sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Liquid Culture Recipe"}</MenuItem>
-            <MenuItem href={"/view/pcRun/" + id} onClick={handleClose} component={"a"}
+            <MenuItem role={menuItemRole} href={"/view/pcRun/" + id} onClick={handleClose} component={"a"}
                       sx={sublistItemProps}>{"PC Run"}</MenuItem>
-            <MenuItem href={"/view/project/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/project/" + id} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Project"}</MenuItem>
-            <MenuItem href={"/view/sale/" + id} onClick={handleClose} component={"a"}
+            <MenuItem role={menuItemRole} href={"/view/sale/" + id} onClick={handleClose} component={"a"}
                       sx={sublistItemProps}>{"Sale"}</MenuItem>
-            <MenuItem href={"/view/species/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/species/" + id} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Species"}</MenuItem>
-            <MenuItem href={"/view/subspecies/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/subspecies/" + id} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Subspecies"}</MenuItem>
-            <MenuItem href={"/view/substrateBatch/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/substrateBatch/" + id} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{"Substrate Batch"}</MenuItem>
-            <MenuItem href={"/view/substrateRecipe/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/substrateRecipe/" + id} onClick={handleClose}
                       component={"a"}
                       sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Substrate Recipe"}</MenuItem>
-            <MenuItem href={"/view/transfer/" + id} onClick={handleClose}
+            <MenuItem role={menuItemRole} href={"/view/transfer/" + id} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{"Transfer"}</MenuItem>
-            <MenuItem href={"/view/user/" + id} onClick={handleClose} component={"a"}
+            <MenuItem role={menuItemRole} href={"/view/user/" + id} onClick={handleClose} component={"a"}
                       sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"User"}</MenuItem>
         </Menu>
     </div>
@@ -315,11 +316,12 @@ export function TopBarImportMenu() {
         setAnchorEl(null)
     }
     const menuItem = (path: string, txt: string): JSX.Element => {
-        return <MenuItem onClick={handleClose} component={"a"} sx={sublistItemProps} href={path}>{txt}</MenuItem>
+        return <MenuItem role={menuItemRole} onClick={handleClose} component={"a"} sx={sublistItemProps} href={path}>{txt}</MenuItem>
     }
-    return <div>
+    return <div role={listMenuDivRole}>
         <Button
             id={"topBarImportButton"}
+            role={listMenuButtonRole}
             sx={buttonProps}
             aria-controls={open ? 'topBarImportMenu' : undefined}
             aria-haspopup={true}
@@ -328,6 +330,7 @@ export function TopBarImportMenu() {
             {"Import"}
         </Button>
         <Menu id={"topBarImportMenu"}
+              role={listMenuMenuRole}
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
@@ -352,6 +355,11 @@ export function TopBarImportMenu() {
     </div>
 }
 
+const listMenuDivRole = "menu"
+const listMenuButtonRole = "menuItem"
+const listMenuMenuRole = "menu"
+const menuItemRole = "menuitem"
+
 export function TopBarListMenu() {
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl)
@@ -362,12 +370,13 @@ export function TopBarListMenu() {
         setAnchorEl(null)
     }
     const menuItem = (entryType: string, txt: string): JSX.Element => {
-        return <MenuItem href={"/list/" + entryType} onClick={handleClose} component={"a"}
+        return <MenuItem role={menuItemRole} href={"/list/" + entryType} onClick={handleClose} component={"a"}
                          sx={sublistItemProps}>{txt}</MenuItem>
     }
-    return <div>
+    return <div role={listMenuDivRole}>
         <Button
             id={"topBarListButton"}
+            role={listMenuButtonRole}
             sx={buttonProps}
             aria-controls={open ? 'topBarListMenu' : undefined}
             aria-haspopup={true}
@@ -376,6 +385,7 @@ export function TopBarListMenu() {
             {"List"}
         </Button>
         <Menu id={"topBarListMenu"}
+              role={listMenuMenuRole}
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}

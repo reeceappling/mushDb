@@ -229,7 +229,7 @@ export function NewSubstrateRecipeForm({handlers}: { handlers: NewEntryInput<Sub
             })
     }
     return (
-        <NewEntryFormWrapper entryType={"substrateRecipe"}>
+        <NewEntryFormWrapper entryType={"substrateRecipe"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
             <Subform>
                 <NameArea classNames={"inlineChildren"} currentName={name} setName={setName} readonly={false}

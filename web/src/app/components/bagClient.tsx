@@ -319,7 +319,7 @@ export default function BagDisplay(
                 </FlexedSinglesGroup>}
                 <FlexedSinglesGroup>
                     {isInnoculated()&&<GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>}
-                    {initial.wetness ? <WetnessDisplay value={initial.wetness}/> : <SliderOnlyIfUndefinedWithOpenButton text={"Wetness"} defaultValue={5} onChange={setWetness}/>}
+                    {(initial.wetness||readonly) ? <WetnessDisplay data-testid="wetness-display" value={initial.wetness}/> : <SliderOnlyIfUndefinedWithOpenButton data-testid="wetness-display" text={"Wetness"} defaultValue={5} onChange={setWetness}/>}
                 </FlexedSinglesGroup>
                 {isInnoculated()&&<FlexedSinglesGroup>
                     <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
@@ -417,7 +417,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             })
     }
     return (
-        <NewEntryFormWrapper entryType={"bag"}>
+        <NewEntryFormWrapper entryType={"bag"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
             <div>{"Creating Bag: "}</div>
             {substrateBatchIn !== undefined &&

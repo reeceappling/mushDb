@@ -391,7 +391,7 @@ export function NewSporePrintForm(
         }
     }
 
-    return <NewEntryFormWrapper entryType={"sporePrint"}>
+    return <NewEntryFormWrapper entryType={"sporePrint"} isTopLevel={false}>
         <ErrorDisplay err={err}/>
         {parentId === undefined && <FruitSelectorCloseable onSelect={(f) => {
             setParent(f?._id)

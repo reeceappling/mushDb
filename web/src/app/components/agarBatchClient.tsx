@@ -246,7 +246,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"agarBatch"}>
+    return <NewEntryFormWrapper entryType={"agarBatch"} isTopLevel={handlers.isTopLevel}>
         <div data-cy-id="Header">{"Creating a new agar batch"}</div>
         <ErrorDisplay data-cy-id="Error" err={err}/>
         {pcRunInp ? <PcRunArea binaryId={pcRunInp?._id}/> :

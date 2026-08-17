@@ -336,7 +336,7 @@ export function NewSporeSwabForm(
             })
     }
 
-    return <NewEntryFormWrapper entryType={"sporeSwab"}>
+    return <NewEntryFormWrapper entryType={"sporeSwab"} isTopLevel={false}>
         <ErrorDisplay err={err}/>
         {(printIn || fruitIn) && <IdInput/>}
         <NewEntryNotes setNotes={setNotes}/>
