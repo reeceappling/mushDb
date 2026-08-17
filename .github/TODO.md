@@ -886,6 +886,8 @@
 - [x] Creating sporeprints from fruits and providing an image is not putting image on the final spore print
 - [x] Plate display changing wetAtCooledTime from unknown to yes and updating causes error (fixed)
 - [x] A newly imported plate without species is failing to add a new note (fixed)
+- [x] Dockerfile react do not copy testfiles into base image for building
+
 
 # Other
 ## mongo backups
