@@ -352,7 +352,7 @@ export default function BagDisplay(
 }
 
 export function WetnessDisplay({value,text}: { value?: number, text?: string}) {
-    return <div>{(text||"Wetness")+": " + (value ? value + "/10" : "unknown")}</div>
+    return <div data-testid="wetness-display" role={"status"}>{(text||"Wetness")+": " + (value ? value + "/10" : "unknown")}</div>
 }
 
 // const filterSizeSelector = (setFilterSize: (f?: string) => void, filterSize?: string) => {

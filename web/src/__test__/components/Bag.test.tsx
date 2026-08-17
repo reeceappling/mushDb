@@ -2,7 +2,7 @@
 
 import {render, screen, within} from '@testing-library/react';
 import React from 'react';
-import BagDisplay from '../../app/components/bagClient.jsx'
+import BagDisplay from '@/app/components/bagClient'
 import {BagData} from "@/app/components/bagServer";
 import {ExamplePicsWithNotes} from "@/app/components/formSubcomponents/picWithNotes";
 import {
@@ -10,9 +10,9 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 
 describe('View Component', () => {
-    it('', () => { // TODO: name
+    it('aTest', () => { // TODO: name
         // TODO: this!
-        render(<BagDisplay readonly={true} data={new BagData({
+        let bagArea = <BagDisplay readonly={true} data={new BagData({
             _id: "testId",
             recipe: "testRecipe",
             substrateBatch: "batch",
@@ -43,21 +43,23 @@ describe('View Component', () => {
                 projects: (new Map<string, boolean>()).set("testProject", true),
                 blanketPerm: true,
             },
-        })} headerLevel={0} isTopLevel={true} />);
+        })} headerLevel={0} isTopLevel={true} />
+        render(bagArea);
         let mainArea = screen.getByRole("main")
-        expect(mainArea).visible()
+        //expect(mainArea).visible()
         let wetness = within(mainArea).getByTestId("wetness-display")
         expect(wetness.innerText === "Wetness: unknown")
+        expect(wetness).toHaveRole('status')
 
         // TODO: expect(comp).toBeInTheDocument()
         // const heading = screen.getByText(/Hello world! I am using React/i);
         // expect(heading).toBeInTheDocument()
     });
 });
-describe('Create Component', () => {
-
-});
-describe('Import Component', () => {
-
-});
+// describe('Create Component', () => {
+//
+// });
+// describe('Import Component', () => {
+//
+// });
 // TODO: any other components
