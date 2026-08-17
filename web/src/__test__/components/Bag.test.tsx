@@ -1,5 +1,5 @@
 // TODO: THIS!
-
+import '@testing-library/jest-dom/vitest'
 import {render, screen, within} from '@testing-library/react';
 import React from 'react';
 import BagDisplay from '@/app/components/bagClient'
