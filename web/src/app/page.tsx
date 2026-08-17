@@ -6,6 +6,10 @@ import {GetReaderWriterNames} from "@/app/components/serverActions";
 import {cookies} from "next/headers";
 import {BaseExternalUrl} from "@/app/components/Constants";
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+//export const instant = false;
+
 // TODO: use <Link> to link btwn pages
 export default async function Page(){
   //export default async function Home() {

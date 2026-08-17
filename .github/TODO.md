@@ -1,4 +1,7 @@
 # TODOs found while using
+- [ ] Fix conflicting Eslint versions
+- [ ] Dont use inflight in tsx! Look into using Lru-cache instead
+- [ ] //export const instant = false; is in a lot of pages. See which can be uncommented, and which should be false or true
 - [ ] Client tests
   - [ ] Use Mock Service Worker (mswjs.io) to mock network stuff
   - [ ] React Testing Library + Jest?

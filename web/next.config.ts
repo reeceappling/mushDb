@@ -68,7 +68,7 @@ const nextConfig: NextConfig = {
         //browserToTerminal: true, // TODO: Forwards all browser logs to terminal 'warn', 'error', true, false
     },
     //serverExternalPackages: ['@acme/ui'], // TODO: see https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages
-    //cacheComponents: true, // TODO: ???
+    cacheComponents: true, // TODO: ???
     //partialPrefetching: true, // TODO: https://nextjs.org/docs/app/api-reference/config/next-config-js/partialPrefetching
     // pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'], // TODO: https://nextjs.org/docs/app/api-reference/config/next-config-js/pageExtensions
     // outputHashSalt: 'my-deployment-salt', // TODO: see https://nextjs.org/docs/app/api-reference/config/next-config-js/outputHashSalt

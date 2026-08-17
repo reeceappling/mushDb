@@ -11,6 +11,10 @@ import "@/app/ui/listPage.css" // TODO: consider moving
 import "@/app/ui/project.css" // TODO: consider moving
 import { Geist, Geist_Mono } from "next/font/google"; // TODO: FIX
 
+// TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
+// See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
+//export const instant = false;
+
 // TODO: ensure all ok
 
 const geistSans = Geist({
