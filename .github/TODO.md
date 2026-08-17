@@ -1,4 +1,93 @@
 # TODOs found while using
+- [ ] Client tests
+  - [ ] Use Mock Service Worker (mswjs.io) to mock network stuff
+  - [ ] React Testing Library + Jest?
+  - [ ] folders to test
+    - [ ] auth
+    - [ ] components
+      - [ ] form subcomponents
+        - [ ] biometrics?
+        - [ ] cookies context?
+        - [ ] depth context?
+        - [ ] dictation context?
+        - [ ] modal context?
+        - [ ] pageType context?
+        - [ ] readerWriterButtons
+        - [ ] session context?
+        - [ ] utils
+          - [ ] headers
+          - [ ] session
+          - [ ] slider
+          - [ ] volume selector
+        - [ ] additives
+        - [ ] antibiotic
+        - [ ] commonClient1-2
+        - [ ] contams
+        - [ ] date
+        - [ ] entryLink
+        - [ ] generationInput
+        - [ ] grains
+        - [ ] id
+        - [ ] imageSelector
+        - [ ] initialState
+        - [ ] knownFruitableArea
+        - [ ] liquids
+        - [ ] moveOnceUsed
+        - [ ] notes
+        - [ ] numericInput
+        - [ ] nutrients
+        - [ ] ovc
+        - [ ] picWithNotes
+        - [ ] plugs
+        - [ ] server
+        - [ ] shared
+        - [ ] singleTextBoxArea
+        - [ ] sugars
+        - [ ] textbox
+      - [ ] measurements?
+      - [ ] Main components
+        - [ ] AccessControl
+        - [ ] AgarBatch
+        - [ ] AgarRecipe
+        - [ ] Auth
+        - [ ] Bag
+        - [ ] ClientGeneric
+        - [ ] common and constants
+        - [ ] Fruit
+        - [ ] FruitingChamber
+        - [ ] GrainBatch
+        - [ ] Jar
+        - [ ] JarRecipe
+        - [ ] LC
+        - [ ] LcRecipe
+        - [ ] LcSyringe
+        - [ ] MSS
+        - [ ] PcRun
+        - [ ] Perms
+        - [ ] Plate
+        - [ ] Plugs
+        - [ ] Project
+        - [ ] Sale
+        - [ ] Selector
+        - [ ] ServerActions
+        - [ ] Slant
+        - [ ] Species
+        - [ ] SporePrint
+        - [ ] SporeSwab
+        - [ ] StasisTube
+        - [ ] Subspecies
+        - [ ] SubstrateBatch
+        - [ ] SubstrateRecipe
+        - [ ] TopBar
+        - [ ] Transfer
+        - [ ] User
+        - [ ] WaterJar
+    - [ ] error
+    - [ ] import
+    - [ ] list
+    - [ ] login
+    - [ ] new
+    - [ ] view
 - [ ] Add an "needs ID" species, as well as a "pretty sure" species marker, so we can temporarily mark species we are not sure about, and confirm them later.
   - [ ] Confirmation should crawl the dependency chain to ensure all parents get populated as well!
 - [ ] Will require a new table to house the biometric keys (which are related to the users), and also related to specific devices

@@ -14,6 +14,7 @@ const eslintConfig = [
 export default [...nextCoreWebVitals, ...nextTypescript, {
   plugins: {
     "unused-imports": unusedImports,
+    //"react", "jest"
   },
   rules: {
     // Turn off some things

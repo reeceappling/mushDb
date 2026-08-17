@@ -6,12 +6,14 @@
     "node": ">=26.5.0"
   },
   "scripts": {
-    "e2e": "cypress open",
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start -p 3000",
-    "lint": "eslint .",
-    "clean-imports": "eslint ./src --fix"
+    "test": "jest",
+    "coverage": "jest --coverage",
+    "e2e": "cypress open", "note-e2e": "NOT USABLE AT THE MOMENT",
+    "clean-imports": "eslint ./src --fix",
+    "dev": "next dev", "note-dev": "NOT USABLE AT THE MOMENT",
+    "build": "next build", "note-build": "UNSURE IF WORKING",
+    "start": "next start -p 3000", "note-start": "UNSURE IF WORKING",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
@@ -29,13 +31,19 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "cypress": "^14.4.1",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.12",
+    "eslint-plugin-jest": "^29.16.1",
     "eslint-plugin-unused-imports": "^4.4.1",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "postcss": "^8.5.23",
     "tailwindcss": "^4.1.11",
     "typescript": "^5"
