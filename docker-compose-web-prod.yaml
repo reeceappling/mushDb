@@ -1,4 +1,3 @@
-#version: '3.8'#TODO: REMOVE, DEPRECATED
 services:
   web:
     image: mush-web:latest
