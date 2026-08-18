@@ -4,8 +4,7 @@
 
 import {BaseInternalUrl} from "@/app/components/ConstantsServer";
 
-export async function GetTransferReasons():Promise<Map<string,string>>{ // TODO: broken to hell because of some networking stuff...
-    console.log("trying to get transfer reasons..."); // TODO: del
+export async function GetTransferReasons():Promise<Map<string,string>>{
     const resp = await fetch(await BaseInternalUrl() + "/options/transferReasons")
     if (!resp.ok){
         throw new Error("response not ok: "+(await resp.text()))
@@ -15,8 +14,8 @@ export async function GetTransferReasons():Promise<Map<string,string>>{ // TODO:
     })
 }
 
-export async function GetFilterSizes():Promise<Map<string,string>>{ // TODO: validate working
-    const resp = await fetch(await BaseInternalUrl() + "/options/bagFilterSizes") // TODO: validate internal works here. Do we need any headers?
+export async function GetFilterSizes():Promise<Map<string,string>>{
+    const resp = await fetch(await BaseInternalUrl() + "/options/bagFilterSizes")
     if (!resp.ok){
         throw new Error("response not ok: "+(await resp.text()))
     }

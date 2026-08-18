@@ -109,7 +109,7 @@ export function FormListArea<Type>(listGroup: (props: GroupProps<Type>) => JSX.E
 export type OnViewCreatorTriCol = {
     txt: string,
     newCreationArea: OnViewCreatorTriColFunction,
-    needsTesting?: boolean, // TODO: remove later
+    needsTesting?: boolean, // TODO: remove later!
 }
 export type OnViewCreatorTriColFunction = (onCreate: AddCreatedTriColFunction) => JSX.Element
 export type AddCreatedTriColFunction = (newLinks: CreatedLinkTriCol[], closeAfter: boolean) => void
@@ -117,7 +117,7 @@ export type AddCreatedTriColFunction = (newLinks: CreatedLinkTriCol[], closeAfte
 export type OnViewCreatorQuadCol = {
     txt: string,
     newCreationArea: OnViewCreatorQuadColFunction,
-    needsTesting?: boolean, // TODO: remove later
+    needsTesting?: boolean, // TODO: remove later!
 }
 export type OnViewCreatorQuadColFunction = (onCreate: AddCreatedQuadColFunction) => JSX.Element
 export type AddCreatedQuadColFunction = (newLinks: CreatedLinkQuadCol[], closeAfter: boolean) => void
