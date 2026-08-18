@@ -18,60 +18,6 @@ export default function EntryLinkForId(
         {props.displayId || props.linkId/* TODO: wrap in text tag?*/}
     </EntryLinkIdWrapper>
 }
-export function EntryLinkForEntry<T extends Entry>(
-    {
-        props,
-    }: {
-        props: {
-            entry: T;
-            openInNewTab?: boolean;
-        };
-    }) {
-    return <EntryLinkWrapper props={props}>
-        {props.entry.getId()/* TODO: wrap in text tag?*/}
-    </EntryLinkWrapper>
-}
-
-// export function DefaultLink<T extends Entry>(info:{
-//     entry:T,
-//     openInNewTab?: boolean
-// }): JSX.Element { // TODO: consider using???
-//     return <EntryLinkForEntry props={info}/>
-// }
-// export function DefaultIdLink(info:{
-//     entryType: string,
-//     linkId: string,
-//     openInNewTab?: boolean,
-//     displayId?: string
-// }): JSX.Element { // TODO: consider using???
-//     return <EntryLinkForId props={info}/>
-// }
-
-// export function EntryLinkWrapper<T extends Entry | {
-//     linkId: string;
-//     entryType: string;
-// }>(
-//     {props,children}:{
-//         props:{data:T,openInNewTab?:boolean};
-//         children: ReactNode;
-//     }){
-//     if ("linkId" in props.data) {
-//         return <EntryLinkWrapperForId props={{
-//             linkId: props.data.linkId,
-//             entryType: props.data.entryType,
-//             openInNewTab: props.openInNewTab,
-//         }}>
-//             {children}
-//         </EntryLinkWrapperForId>
-//     } else {
-//         return <EntryLinkWrapperForEntry props={{
-//             entry: props.data,
-//             openInNewTab:true,
-//         }}>
-//             {children}
-//         </EntryLinkWrapperForEntry>
-//     }
-// }
 
 export function EntryLinkWrapper<T extends Entry>(
     {

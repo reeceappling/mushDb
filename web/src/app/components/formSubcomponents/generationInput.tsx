@@ -17,11 +17,9 @@ export function GenerationInput({
                 try {
                     const val = Number(v)
                     if (val===0){
-                        console.log("generation set to undefined") // TODO: ok?
-                        updateParent(undefined) // TODO: validate ok
-                        setCurrent(undefined) // TODO: validate ok
+                        updateParent(undefined)
+                        setCurrent(undefined)
                     } else {
-                        console.log("generation set to "+val) // TODO: ok?
                         updateParent(val)
                         setCurrent(val)
                     }

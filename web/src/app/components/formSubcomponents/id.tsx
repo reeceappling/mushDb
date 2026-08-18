@@ -31,12 +31,12 @@ export function IdPageLink({
                                    }: {
                                        id: string;
                                        entryType: string;
-                                       openInNewTab?: boolean // TODO: use this everywhere needed 5/21/26
+                                       openInNewTab?: boolean
                                    }
 ) {
     const url = viewUrlFor(entryType, id)
     const onClickStopPropagation = (e: React.MouseEvent)=>{
-        e.preventDefault(); // TODO: ok?
+        e.preventDefault();
         e.stopPropagation();
     }
     // TODO: validate both work!

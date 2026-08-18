@@ -37,7 +37,7 @@ export function PixRows(
     return <>
         <div className={"picsGroup picsRows"}>
             {current.map((v, i) => {
-                return <PixRowNew key={i} remv={() => { // TODO: ensure key ok
+                return <PixRowNew key={i} remv={() => {
                     const upd = structuredClone(current)
                     upd[i].disabled = true
                     doUpdate(upd)
@@ -108,94 +108,3 @@ export function PixRowNew(
         {rightArea()}
     </div>
 }
-
-// export function VolumetricInput(
-//     {
-//         initialParentVolmL,
-//         initialVolumetricAmount,
-//         initialVolumetricUnits,
-//     }:{
-//         initialParentVolmL?: number,
-//         initialVolumetricAmount?: number
-//         initialVolumetricUnits?: string
-//     }){
-//     const [parentVolmL, setParentVolmL] = useState(initialParentVolmL || 1000.0)
-//     const [volumetricValue, setVolumetricValue] = useState<number>(initialVolumetricAmount||0.0)
-//     const resolveChildVal = (volumetricMmt:number, parentmL?:number)=> {
-//         if (parentmL === undefined){
-//             return volumetricMmt
-//         }
-//         return (parentmL*volumetricMmt)/1000.0
-//     }
-//     const [childAmt, setChildAmt] = useState<number>(resolveChildVal(volumetricValue,parentVolmL))
-//     const [err, setErr] = useState<string | undefined>(undefined)
-//     const getInitialSubUnit = ()=>{
-//         if (!initialVolumetricUnits){
-//             return ""
-//         }
-//         const subUnits = initialVolumetricUnits.split("/")
-//         if (subUnits.length !== 2) {
-//             throw "invalid input units, must be 'x/y' where x and y are units of measure"
-//         } else {
-//             return subUnits[0]
-//         }
-//     }
-//     const getInitialSubUnitStart = ()=>{
-//         try {
-//             return getInitialSubUnit()
-//         } catch {
-//             setErr("invalid input units, must be 'x/y' where x and y are units of measure")
-//             return ""
-//         }
-//     }
-//     const [subUnit, setSubUnit] = useState<string>(getInitialSubUnitStart())
-//     // Handle changes to initial parent volume
-//     useEffect(()=>{
-//         // TODO: set child amount!
-//         if (initialParentVolmL === undefined){
-//             // TODO: what to do if no longer defined? no change?
-//             return
-//         }
-//         setParentVolmL(initialParentVolmL)
-//         setChildAmt(resolveChildVal(volumetricValue, initialParentVolmL))
-//     },[initialParentVolmL])
-//     // Handle changes to initial valumetric amount
-//     useEffect(()=>{
-//         // TODO: set child amount!
-//         if (initialVolumetricAmount===undefined){
-//             // TODO: ??? nothing?
-//             return
-//         }
-//         setVolumetricValue(initialVolumetricAmount)
-//         setChildAmt(resolveChildVal(initialVolumetricAmount, initialParentVolmL))
-//     },[initialVolumetricAmount])
-//     // Handle input units changes
-//     useEffect(()=>{
-//         try {
-//             setSubUnit(getInitialSubUnit())
-//         } catch{
-//             setErr("invalid input units, must be 'x/y' where x and y are units of measure")
-//         }
-//     },[initialVolumetricUnits])
-//     const actualValueInput = <InputDecimal initial={childAmt} min={0} label={"fixme smaller"} updateParent={(n:number)=>{
-//         setChildAmt(n)
-//         setVolumetricValue((n*1000)/parentVolmL)
-//     } }/>
-//     // const mlInput = <InputNumber value={mL.toString()} onChange={s=>{
-//     //     try {
-//     //         s.
-//     //     } catch (e){
-//     //
-//     //     }
-//     // }} updateParent={(n:number)=>{}} min={0} /*onChange={()=>{}}*/ />
-//     const subUnitInput = <InputText readonly={false} value={subUnit} errorMessage={undefined/*TODO: ???*/} onBlur={()=>{/*TODO: ???*/}} placeholder={undefined/*TODO: ???*/}/>
-//     const finalValueInput = <InputDecimal initial={volumetricValue} min={0} label={"fixme final"} updateParent={(n:number)=>{
-//         setVolumetricValue(n)
-//         setChildAmt(resolveChildVal(n, parentVolmL))
-//     } }/>
-//     return <div className={"inlineChildren"}>
-//         <div>{actualValueInput}</div>
-//         <div>{subUnitInput}</div>
-//         <div>{"("}{finalValueInput}{" "+subUnit+")"}</div>
-//     </div>
-// }

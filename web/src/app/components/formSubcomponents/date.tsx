@@ -16,7 +16,7 @@ export default function DateArea(
     {pre, when, readonly, updateParent}: DateProps) {
     const whenDate = new Date(when || Date.now())
     const [day, setDay] = useState<{ n: number, err: string | undefined }>({n: whenDate.getDate(), err: undefined})
-    const [month, setMonth] = useState<{ n: number, err: string | undefined }>({n: whenDate.getMonth(), err: undefined}) // TODO: currently Jan==0?
+    const [month, setMonth] = useState<{ n: number, err: string | undefined }>({n: whenDate.getMonth(), err: undefined})
     const [year, setYear] = useState<{ n: number, err: string | undefined }>({
         n: whenDate.getFullYear(),
         err: undefined
@@ -114,10 +114,10 @@ export default function DateArea(
     return (
         <NoSsr>
             <div className={"dateHolder"}>
-                {(pre !== "" && pre !== undefined) && <div>{pre}</div> /* TODO: P OK? */}
+                {(pre !== "" && pre !== undefined) && <div>{pre}</div> }
                 <div className={'dateEditable'}>
                     <div className={"inlineChildren"}>
-                        <div className={"inlineChildren inputNumbersInline"}>{/*TODO: MAYBE DELETE THIS WRAPPER DIV*/}
+                        <div className={"inlineChildren inputNumbersInline"}>{/*TODO: MAYBE DELETE THIS WRAPPER DIV?*/}
                             <InputNumber2 step={1} min={1} max={12} readonly={false} mode={"integer"}
                                           errorMessage={month.err} value={"" + (month.n + 1)} onChange={(e) => {
                                 updateMonth(e || "")

@@ -34,13 +34,6 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import * as React from "react";
 
-// export function OnClickWrapper(props: React.PropsWithChildren<{ handleClick?: () => void }>) {
-//     return <div className={"hoverClickable"} onClick={(e) => {
-//         e.stopPropagation() // TODO: ok?
-//         e.preventDefault() // TODO: ok?
-//         props.handleClick && props.handleClick()
-//     }}>{props.children}</div>
-// }
 
 export function RemoveToggle({disabled, click, keptClass, removedClass, keptTxt, removedTxt}: {
     disabled: boolean,
@@ -78,7 +71,7 @@ export function LiquidEntryForNew({initial, updateParent}: {
     }, [initial]);
     return <>
         <div className={"text-m"}>{current.name}</div>
-        <InputDecimal label={"Percentage by volume"} initial={initial.pct} updateParent={handleFormChangePct}  min={0.0} max={100}/>{/* TODO: min/max ok?*/}
+        <InputDecimal label={"Percentage by volume"} initial={initial.pct} updateParent={handleFormChangePct}  min={0.0} max={100}/>
     </>
 }
 export function SugarEntryForNew({
@@ -272,7 +265,7 @@ export function ParentDisplay(
     }
     if (parentType === undefined) {
         return <div>
-            {"Parent: "+parent+" (unknown type, should never happen)"/* TODO: THIS!*/}
+            {"Parent: "+parent+" (unknown type, should never happen)"}
         </div>
     }
     const txtFor = (typ: string, id: string) => {
@@ -313,50 +306,6 @@ export function ParentDisplay(
         default:
             return <div>{"Unknown parentType: " + parentType + " with ID " + parent}</div>
     }
-}
-
-// export function ProjectsArea({ // TODO: MOVE????????
-//                                  projects, headerLevel, readonly, setProjects
-//                              }: {
-//                                  projects: string[],
-//                                  setProjects?: (p?: string[]) => void
-//                                  headerLevel?: number,
-//                                  readonly?: boolean,
-//                              }
-// ) {
-//     let ProjectsLabel = <div>{"Projects: "}</div>
-//     // TODO: ADD TO A PROJECT????
-//     // TODO: CREATE A PROJECT????
-//     return <div>
-//         {ProjectsLabel}
-//         {projects.map((proj, i) => {
-//             return <div key={i}>{proj}</div> // TODO: ENSURE OK
-//         })}
-//         {/* TODO: ADD A NEW PROJECT AREA */}
-//         {/* TODO: Create a project link? */}
-//     </div>
-// }
-
-export function GensInlineDisplay(
-    {gensSinceSpore, gensSinceFruitOrSpore, dontDisplayGensFruitOrSpore, headerLevel, offset}: {
-        gensSinceSpore?: number,
-        gensSinceFruitOrSpore?: number,
-        headerLevel?: number,
-        dontDisplayGensFruitOrSpore?: boolean,
-        offset?: number,
-    }
-) {
-    return <div>
-        <div>{"Generations since:"}</div>
-        <div>
-            <div>{"Spore: "}</div>
-            <div>{gensSinceSpore || "unknown"}</div>
-        </div>
-        {(!dontDisplayGensFruitOrSpore) && <div>
-            <div>{"Fruit or Spore: "}</div>
-            <div>{gensSinceFruitOrSpore || "unknown"}</div>
-        </div>}
-    </div>
 }
 
 export function GensFormDisplay(
@@ -540,109 +489,6 @@ export function MostRecentImageDisplay(
         </div>
     </DepthProvider>
 }
-
-// export const SpeciesArea = (
-//     {
-//         readonly, setSpecies, initial, headerLevel
-//     }: {
-//         readonly: boolean,
-//         setSpecies?: (sp: SpeciesData | undefined) => void,
-//         initial?: string,
-//         headerLevel?: number,
-//     }
-// ) => {
-//     let spArea: JSX.Element | null = null
-//     if (readonly) {
-//         spArea = <div>{"unknown"}</div>
-//         if (initial !== undefined) {
-//             spArea = <EntryLinkForId props={{
-//                 linkId: initial.split(" ").join("_"), // TODO: FIX THIS! URLENCODE!
-//                 displayId: initial,
-//                 entryType: "species",
-//                 openInNewTab: false, // TODO: ok?
-//             }}/>
-//         }
-//     } else {
-//         // TODO: CSS
-//         spArea = <ExistingSpeciesSelector doSelect={(s) => {
-//             setSpecies && setSpecies(s)
-//         }}/>
-//     }
-//     return <div className={"areaWrapper"}>
-//         <div className={"areaHeader"}>{"Species:"}</div>
-//         <div>{spArea}</div>
-//     </div>
-// }
-
-// export function SpeciesFormArea({species}:{
-//     species?: string,
-// }){
-//     return <div>
-//         {"Species: "+(species?species:"undefined")}{/* TODO: LINK!?*/}
-//     </div>
-// }
-// export function SpeciesSubspeciesFormArea({species,subspecies}:{
-//     species?: string,
-//     subspecies?: string,
-// }){
-//     return <>
-//         <SpeciesFormArea species={species}/>
-//         {subspecies && <SubspeciesFormArea subspecies={subspecies}/>}
-//     </>
-// }
-
-// export const SubspeciesArea = (
-//     {
-//         readonly, currentSpecies, initialSub, setSubspecies, headerLevel
-//     }: {
-//         readonly: boolean,
-//         setSubspecies?: (sp: SubspeciesData | undefined) => void,
-//         currentSpecies?: string,
-//         initialSub?: string,
-//         headerLevel?: number
-//     }
-// ) => {
-//     if (currentSpecies === undefined) {
-//         return null
-//     }
-//     let spArea: JSX.Element | null = null
-//     if (readonly) {
-//         if (initialSub !== undefined) {
-//             spArea = <EntryLinkForId props={{
-//                 displayId: initialSub,
-//                 linkId: initialSub.split(" ").join("_"), // TODO: FIX! URLENCODE!
-//                 entryType: "subspecies",
-//                 openInNewTab: false, // TODO: ok?
-//             }}/>
-//         }
-//     } else {
-//         spArea = <ExistingSubSpeciesSelector species={currentSpecies} doSelect={(s) => {
-//             setSubspecies && setSubspecies(s)
-//         }}/>
-//     }
-//     return <div className={"areaWrapper"}>
-//         <div className={"areaHeader"}>{"Subspecies: "}</div>
-//         <div>{spArea}</div>
-//     </div>
-// }
-
-// export const SalesArea = ( // TODO: MOVE???? // TODO: onClick??????
-//     readonly: boolean,
-//     initialSales: string[],
-//     newSale?: () => void,
-//     headerLevel?: number,
-// ) => {
-//     return <div>
-//         <div>Sales</div>
-//         {initialSales.map((sale) => {
-//             const b58id = BinaryToBase58(sale)
-//             return <div>
-//                 <div>{"Sales"}</div> {/* TODO: MAKE THIS A LINK!!!!!*/}
-//             </div>
-//         })}
-//         {!readonly && <button onClick={newSale}>{"New Sale"}</button>}
-//     </div>
-// }
 
 export function SporePrintColorArea(
     {readonly, color, setColor}: {
@@ -854,7 +700,6 @@ export function OpenMainPage(
         const url = viewUrlFor(type, linkId)
         if (redirect) {
             window.location.assign(url)
-            // redirect(url) // TODO: del if working
         } else {
             window.open(url, '_blank', 'noopener,noreferrer'); // TODO: ensure ok
         }

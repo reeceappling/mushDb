@@ -12,7 +12,7 @@ export function KnownFruitableArea(
         headerLevel?: number
     }) {
     const KFTxt = "Known Fruitable: "
-    if (readonly) { // TODO: ENSURE OK
+    if (readonly) {
         return <div className={"knownFruitableArea"}>
             {KFTxt + ": " + optionalBoolToString(initial)}
         </div>
