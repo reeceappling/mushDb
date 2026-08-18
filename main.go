@@ -271,7 +271,7 @@ func main() {
 	}
 	passthroughConfig := newPassthroughHandlerConfig().
 		useHttps(false).
-		withHost(webHostName).
+		withHost(webHostName). // TODO: ADD FORWARDED HEADER HERE INSTEAD OF IN webProxyHandler!
 		withCookies(true).
 		withHeaders(true).
 		withPort(webHostPort)
@@ -504,9 +504,14 @@ func internalOnlyMiddlewareCreator(validDomain string, expectedPort int) func(ha
 				}
 			}
 			if reqHost != expDomain {
+				println("BAD DOMAIN ON INTERNAL: " + reqHost + " shoudl have been " + expDomain)
 				http.Error(w, "Internal requests only expected at this endpoint. Invalid host or port", http.StatusForbidden)
 				return
+			} else {
+				println("ACCEPTED INTERNAL DOMAIN: " + reqHost + " shoudl have been " + expDomain)
+
 			}
+			r.Header.Set("x-forwarded-host", "mush.appli.ng") // TODO: ok?
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -1178,6 +1183,7 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 			return
 		}
 		req.Header = r.Header
+		req.Header.Set("x-forwarded-host", "mush.appli.ng") // TODO: MOVE THIS TO ELSEWHERE!
 		//for key, vals := range r.Header {
 		//	req.Header.Set(key, vals[0])
 		//}
@@ -1398,11 +1404,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		uat := user.AccountType // TODO: del
 		if uat.IsAdmin() {      // TODO: del
 			uats = "Admin" // TODO: del
-		} else { // TODO: del
+		} else {                 // TODO: del
 			if uat.IsRegular() { // TODO: del
 				uats = "Regular user" // TODO: del
 			} // TODO: del
-		} // TODO: del
+		}                                                                                       // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		if !user.IsAdmin() && out.Private {
 			if user.AccountType.IsGuest() {
@@ -1732,7 +1738,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	println("trying to read from reader: " + readerName)
 	ctx := r.Context()
 	err := env.IfNotProd(ctx, func() error { // TODO: del later?
-		if readerName == goodTestRfid { // TODO: remove later
+		if readerName == goodTestRfid {      // TODO: remove later
 			// TODO: multiple? not just one id?
 			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 			if err != nil {
@@ -1863,7 +1869,7 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	toWriteBytes := [8]byte{0, 0, 0, 0, 0, 0, 0, 0} // TODO: ok?
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	validResponse := []byte("Cleared")               // TODO: ok?
+	validResponse := []byte("Cleared") // TODO: ok?
 	err := env.IfNotProd(r.Context(), func() error { // TODO: del later?
 		if writerName == goodTestRfid {
 			_, err := w.Write(validResponse)

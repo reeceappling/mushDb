@@ -462,11 +462,21 @@ func loadMriPics(pics *SplitEntries[picWithNotesForm, PicWithNotes], contams *Sp
 	if contams != nil {
 		for _, ex := range contams.Existing {
 			if !ex.Disabled {
-				imagesForUpdateFunc = append(imagesForUpdateFunc, *ex.Data.convert().getPicWithNotes())
+				tempPic := ex.Data.convert().getPicWithNotes()
+				if tempPic != nil {
+					imagesForUpdateFunc = append(imagesForUpdateFunc, *tempPic)
+				} else {
+					println("PICTURE WAS NIL IN loadMriPics 3") // TODO: del?
+				}
 			}
 		}
 		for _, c := range contams.New {
-			imagesForUpdateFunc = append(imagesForUpdateFunc, *c.getPicWithNotes())
+			tempPic := c.getPicWithNotes()
+			if tempPic != nil {
+				imagesForUpdateFunc = append(imagesForUpdateFunc, *tempPic)
+			} else {
+				println("PICTURE WAS NIL IN loadMriPics 2") // TODO: del?
+			}
 		}
 	}
 

@@ -7,7 +7,9 @@ import (
 )
 
 const cacheExpiry time.Duration = 24 * time.Hour // TODO: properly set this!
-const redisClientContextKey = "redisClientContextKey"
+type ctxKey string
+
+const redisClientContextKey ctxKey = "redisClientContextKey"
 
 func getClient(ctx context.Context) *redis.Client {
 	cli, ok := ctx.Value(redisClientContextKey).(*redis.Client)
@@ -107,5 +109,6 @@ func Set(ctx context.Context, key string, val []byte) error {
 
 func Del(ctx context.Context, key string) error {
 	client := getClient(ctx)
+	client.HSet()
 	return client.Del(ctx, key).Err()
 }

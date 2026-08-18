@@ -10,7 +10,6 @@ import DateArea from "@/app/components/formSubcomponents/date";
 import {useContext, useEffect, useState} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
-import TestAndValidate from "@/app/components/testing/untested";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 
 export const ExampleImageLocation: string = "test.jpg"
@@ -116,8 +115,9 @@ export function ContamsDisplay(
     const [created, setCreated] = useState<NewContaminationForm[]>([])
     const initKey = contaminationKey(initial);
     useEffect(() => {
-        setExisting(initFor(structuredClone(initial)));
         setCreated([]);
+        setExisting(initFor(structuredClone(initial)));
+        // TODO: used to be setCreated([]);
     }, [initKey]);
     const update = (ex: Data<ContaminationForm>[], nw: NewContaminationForm[]) => {
         updateParent({
@@ -192,9 +192,12 @@ export function ContamsRows({initial, updateParent, readonly}: {
     }
 
     return <div className={"contamsRows"}>
-        {initial.map((init, i) => {
+        {initial.map((init, i) => { // TODO: used to be initial.map, revert if not works
+            if (current.length <= i) { // TODO: ADD TO ANY OTHER THINGS LIKE THIS!
+                return null
+            }
             const ctm = current[i]
-            const disabledClass = (ctm.disabled ? " disabled" : "")
+            const disabledClass = (ctm.disabled ? " disabled" : "") // TODO: FAILING HERE!!!
             const disableBtn = disableButtonCreator(i)
             return <div key={i} className={"contentsOnly contamRow" + disabledClass}>
                 <div className={"picLeft" + disabledClass}>
@@ -211,24 +214,21 @@ export function ContamsRows({initial, updateParent, readonly}: {
                 <div className={"contamOverviewTable" + disabledClass}>
                     <DateArea when={ctm.data.time} readonly={true}/>
                     {readonly ? <>
-                        <div>{"Confirmed?: "+(ctm.data.confirmed ? "Confirmed" : "Unconfirmed")}</div>
+                        <div>{"Confirmed?: " + (ctm.data.confirmed ? "Confirmed" : "Unconfirmed")}</div>
                         <div>{"Bacteria: " + (ctm.data.bacteria ? "yes" : "no")}</div>
                         <div>{"Mold: " + (ctm.data.mold ? "yes" : "no")}</div>
                     </> : <>
-                        <TestAndValidate todos={["toggle for confirmed and handle on the serverside"]}>
-                            <div>{ctm.data.confirmed ? "Confirmed" : "Unconfirmed"}</div>
-                        </TestAndValidate>
-                        {/*<div>*/}{/* TODO: THIS!*/}
-                        {/*    <div className={"inline"}>{"Confirmed? "}</div>*/}
-                        {/*    <input className={"inline"} type={'checkbox'} disabled={init.confirmed}*/}
-                        {/*           checked={ctm.data.confirmed}*/}
-                        {/*           onChange={e => {*/}
-                        {/*               e.stopPropagation();*/}
-                        {/*               let updated = structuredClone(current)*/}
-                        {/*               updated[i].data.confirmed = !ctm.data.confirmed*/}
-                        {/*               doUpdate(updated)*/}
-                        {/*           }}/>*/}
-                        {/*</div>*/}
+                        <div>
+                            <div className={"inline"}>{"Confirmed? "}</div>
+                            <input className={"inline"} type={'checkbox'} disabled={init.confirmed/* TODO: ok?*/}
+                                   checked={ctm.data.confirmed}
+                                   onChange={e => {
+                                       e.stopPropagation();
+                                       const updated = structuredClone(current)
+                                       updated[i].data.confirmed = !ctm.data.confirmed
+                                       doUpdate(updated)
+                                   }}/>
+                        </div>
                         <div>
                             <div className={"inline"}>{"Bacteria: "}</div>
                             <input className={"inline"} type={'checkbox'} disabled={init.bacteria}
@@ -237,9 +237,8 @@ export function ContamsRows({initial, updateParent, readonly}: {
                                        e.stopPropagation();
                                        const updated = structuredClone(current)
                                        updated[i].data.bacteria = !ctm.data.bacteria
-                                       updated[i].data.confirmed == !ctm.data.bacteria || ctm.data.mold
+                                       //updated[i].data.confirmed == !ctm.data.bacteria || ctm.data.mold
                                        doUpdate(updated)
-                                       console.log("updating bacteria "+i+ "to "+!ctm.data.bacteria )
                                    }}/>
                         </div>
                         <div>
@@ -247,9 +246,10 @@ export function ContamsRows({initial, updateParent, readonly}: {
                             <input className={"inline"} type={'checkbox'} disabled={init.mold}
                                    checked={ctm.data.mold}
                                    onChange={e => {
+                                       e.stopPropagation();
                                        const updated = structuredClone(current)
                                        updated[i].data.mold = !ctm.data.mold
-                                       updated[i].data.confirmed == !ctm.data.mold || ctm.data.bacteria
+                                       //updated[i].data.confirmed == !ctm.data.mold || ctm.data.bacteria
                                        doUpdate(updated)
                                    }}/>
                         </div>
@@ -257,11 +257,11 @@ export function ContamsRows({initial, updateParent, readonly}: {
                 </div>
                 <div className={"inline" + disabledClass}>
                     <NotesFormAreaPics readonly={readonly} initial={init.notes} allowLargeTextBox={false/* TODO: OK?*/}
-                                   updateParent={nts => {
-                        const updated = structuredClone(current)
-                        updated[i].data.notes = nts
-                        doUpdate(updated)
-                    }}/>
+                                       updateParent={nts => {
+                                           const updated = structuredClone(current)
+                                           updated[i].data.notes = nts
+                                           doUpdate(updated)
+                                       }}/>
                 </div>
             </div>
         })}
@@ -316,47 +316,45 @@ export function ContamsNewRows({initial, updateParent, readonly}: {
 
                     <div className={"contamOverviewTable"}>
                         <DateArea when={ctm.data.time} readonly={true}/>
-                        <TestAndValidate todos={["make confirmed changeable"]}>
-                            <div>{ctm.data.confirmed ? "Confirmed" : "Unconfirmed"}</div>
-                        </TestAndValidate>
-                        {readonly ?
-                            <div>{"Bacteria: " + (ctm.data.bacteria ? "yes" : "no")}</div> :
-                            <div>
-                                <div className={"inline"}>{"Bacteria: "}</div>
-                                <input className={"inline"} type={'checkbox'} checked={ctm.data.bacteria}
-                                       onChange={e => {
-                                           const updated = structuredClone(current)
-                                           updated[i].data.bacteria = !ctm.data.bacteria
-                                           // TODO: CHANGE HOW CONFIRMED WORKS!
-                                           updated[i].data.confirmed = ctm.data.bacteria || ctm.data.mold
-                                           update(updated)
-                                       }}/>
-                            </div>
-                        }
-                        {readonly ?
-                            <div>{"Mold: " + (ctm.data.mold ? "yes" : "no")}</div> /*TODO: THE ENTIRE READONLY PART!*/ :
-                            <div>
-                                <div className={"inline"}>{"Mold: "}</div>
-                                <input className={"inline"} type={'checkbox'} checked={ctm.data.mold}
-                                       onChange={e => {
-                                           const updated = structuredClone(current)
-                                           updated[i].data.mold = !ctm.data.mold
-                                           // TODO: CHANGE HOW CONFIRMED WORKS!
-                                           updated[i].data.confirmed = ctm.data.mold || ctm.data.bacteria
-                                           update(updated)
-                                       }}/>
-                            </div>
-                        }
+                        <div>
+                            <div className={"inline"}>{"Confirmed? "}</div>
+                            <input className={"inline"} type={'checkbox'} disabled={false}
+                                   checked={ctm.data.confirmed}
+                                   onChange={e => {
+                                       e.stopPropagation();
+                                       const updated = structuredClone(current)
+                                       updated[i].data.confirmed = !ctm.data.confirmed
+                                       update(updated)
+                                   }}/>
+                        </div>
+                        <div>
+                            <div className={"inline"}>{"Bacteria: "}</div>
+                            <input className={"inline"} type={'checkbox'} checked={ctm.data.bacteria}
+                                   onChange={e => {
+                                       const updated = structuredClone(current)
+                                       updated[i].data.bacteria = !ctm.data.bacteria
+                                       update(updated)
+                                   }}/>
+                        </div>
+                        <div>
+                            <div className={"inline"}>{"Mold: "}</div>
+                            <input className={"inline"} type={'checkbox'} checked={ctm.data.mold}
+                                   onChange={e => {
+                                       const updated = structuredClone(current)
+                                       updated[i].data.mold = !ctm.data.mold
+                                       update(updated)
+                                   }}/>
+                        </div>
                     </div>
                     <div className={"inline"}>
                         <NotesFormAreaPics readonly={false} initial={[]} allowLargeTextBox={false/* TODO: OK?*/}
-                            updateParent={nts => {
-                                const updated = structuredClone(current)
-                                updated[i].data.notes = nts.new.map(n => {
-                                    return n.data
-                                })
-                                update(updated)
-                            }}/>
+                                           updateParent={nts => {
+                                               const updated = structuredClone(current)
+                                               updated[i].data.notes = nts.new.map(n => {
+                                                   return n.data
+                                               })
+                                               update(updated)
+                                           }}/>
                     </div>
                 </div>
             })}

@@ -1,10 +1,11 @@
-"use server";
+'use server';
 
 //import {BaseInternalUrl} from "@/app/components/Constants";
 
 import {BaseInternalUrl} from "@/app/components/ConstantsServer";
 
-export async function GetTransferReasons():Promise<Map<string,string>>{
+export async function GetTransferReasons():Promise<Map<string,string>>{ // TODO: broken to hell because of some networking stuff...
+    console.log("trying to get transfer reasons..."); // TODO: del
     const resp = await fetch(await BaseInternalUrl() + "/options/transferReasons")
     if (!resp.ok){
         throw new Error("response not ok: "+(await resp.text()))
