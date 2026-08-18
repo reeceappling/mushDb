@@ -127,7 +127,7 @@ export const DisplayNumerical: FC<NumericInputProps> = ({
                 htmlFor={id}
                 className={labelClassAbsolute}
             >{label}</label>
-            <input // TODO: USE SOMETHING OTHER THAN INPUT!!!!
+            <input
                 inputMode="decimal"
                 autoComplete="off"
                 pattern={pattern}
@@ -141,7 +141,7 @@ export const DisplayNumerical: FC<NumericInputProps> = ({
             />
             <div
                 className={errClassName}
-                id={`${id}-helper-text`} // TODO: ?????????????
+                id={`${id}-helper-text`}
             >{errorMessage}</div>
         </fieldset>
     );
@@ -187,7 +187,7 @@ export const DisplayNumerical2: FC<NumericInputProps> = ({
                 />
                 <div
                     className={errClassName2}
-                    id={`${id}-helper-text`} // TODO: ?????????????
+                    id={`${id}-helper-text`}
                 >{errorMessage}</div>
             </div>
         </>
@@ -323,7 +323,7 @@ export const InputNumerical2: FC<NumericInputProps> = (
             />
             <div
                 className={errClassName2}
-                id={`${id}-helper-text`} // TODO: ?????????????
+                id={`${id}-helper-text`}
             >{errorMessage}</div>
         </div>
     )
@@ -346,7 +346,7 @@ export function InputDecimal({initial,label,min,max,updateParent}:{initial:numbe
                                                return
                                            }
                                            try {
-                                               const n = Number(val) // TODO: allow only numbers here
+                                               const n = Number(val)
                                                if (!Number.isNaN(n)) {
                                                    val && updateParent(n)
                                                    setErr(undefined)
@@ -382,7 +382,6 @@ export const InputTextWithSmallTitle: FC<TextInputProps> = (
             className={labelClassAbsolute}
         >{label}</label>
         <InputText placeholder={placeholder} value={value} onChange={onChange} readonly={readonly} errorMessage={errorMessage}/>
-        {/* TODO: revert if not working <InputText placeholder={placeholder} value={value} onChange={onChange} readonly={readonly} errorMessage={errorMessage}/>*/}
     </div>
 };
 
@@ -440,11 +439,11 @@ export const InputText: FC<TextInputOnlyProps> = (
                 className={numInputClassName}
                 placeholder={placeholder}
                 aria-describedby={`${id}-helper-text`}
-                onBlur={e=>{onBlur && onBlur()}} // TODO: ensure ok
+                onBlur={e=>{onBlur && onBlur()}}
             />
             <div
                 className={errClassName2}
-                id={`${id}-helper-text`} // TODO: ?????????????
+                id={`${id}-helper-text`}
             >{errorMessage}</div>
     </>
 };
@@ -505,7 +504,7 @@ export const InputNumber: FC<NumericInputOnlyProps> = (
         />
         <div
             className={errClassName2}
-            id={`${id}-helper-text`} // TODO: ?????????????
+            id={`${id}-helper-text`}
         >{errorMessage}</div>
     </>
 };
@@ -566,7 +565,7 @@ export const InputNumber2: FC<NumericInputOnlyProps> = (
         />
         <div
             className={errClassName2}
-            id={`${id}-helper-text`} // TODO: ?????????????
+            id={`${id}-helper-text`}
         >{errorMessage}</div>
     </>
 };
@@ -627,7 +626,7 @@ export const InputNumber4: FC<NumericInputOnlyProps> = (
         />
         <div
             className={errClassName2}
-            id={`${id}-helper-text`} // TODO: ?????????????
+            id={`${id}-helper-text`}
         >{errorMessage}</div>
     </>
 };

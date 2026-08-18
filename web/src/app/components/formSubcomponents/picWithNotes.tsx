@@ -56,13 +56,13 @@ export interface PicWithNotesIncoming {
 export const ExamplePicsWithNotes: PicWithNotesIncoming[] = [
     {
         time:45678,
-        location:"test.jpg", // TODO: multiple test images?
+        location:"test.jpg",
         notes:[
             {time:45679,note:"pic1note1"}
         ]},
     {
         time:56789,
-        location:"test.jpg", // TODO: multiple test images?
+        location:"test.jpg",
         notes:[
             {time:56789,note:"pic2note1"},
             {time:56799,note:"pic2note2"},
