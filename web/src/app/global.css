@@ -3,11 +3,11 @@
 
 div {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 *, *::before, *::after {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 
 .basicButton {
@@ -57,9 +57,8 @@ html, body {
 
 .depth1, .depth2, .depth3, .depth4 {
     padding: 8px;
-    /*margin: 8px; !* TODO: ensure ok*!*/
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
     &.depthContainer {
         border-radius: 1rem;
     }
@@ -211,9 +210,9 @@ html, body {
 
 }
 
-.listPageItem.latestListDisplay { /* List pages! */
-    /* TODO: THIS*/
-}
+/*.listPageItem.latestListDisplay { !* List pages! *!*/
+/*    !* TODO: THIS*!*/
+/*}*/
 
 html, body {
     color: var(--primaryText);
@@ -231,7 +230,7 @@ html, body {
     justify-content: center;
     max-width: fit-content;
     margin-inline: auto; /* TODO: ew */
-    text-align: center; /* TODO: ensure ok */
+    text-align: center;
 }
 
 .centerV {
@@ -357,9 +356,9 @@ a {
     align-items: center;
 }
 
-.flexBoxGroup .areaHeader {
-    /* TODO: STYLE TEXT */
-}
+/*.flexBoxGroup .areaHeader {*/
+/*    !* TODO: STYLE TEXT *!*/
+/*}*/
 
 .fullWidth {
     width: 100%;
@@ -438,10 +437,8 @@ a {
     box-sizing: border-box;
     /* Side-by-side for larger screens */
     display: grid;
-    grid-template-columns: 25% 1fr; /* TODO: 25%? 20em? what to do??? /* Image and notes side-by-side */
+    grid-template-columns: 25% 1fr;
     align-items: start;
-    /*padding: 1rem; !* TODO: get rid of*!*/
-    /*border: 1px solid #ccc; !* TODO: get rid of*!*/
 
     & > div {
         max-width: 100%;
@@ -490,14 +487,9 @@ a {
 
 .picRow {
     width: 100%;
-    /*align-content: center;*/
     margin: var(--smallSpace);
-    /*padding: 10px; !* TODO: ok?*!*/
-    /*display: flex;*/
 
     & > * {
-        /*display: inline-block;*/
-        /*justify-content: center;*/
         vertical-align: top;
     }
 }
@@ -509,7 +501,7 @@ a {
 /*.picRow.disabled {*/
 /*    background-color: var(--clr-danger-2);*/
 /*}*/
-.disabled { /* TODO: which to use?*/
+.disabled { /* TODO: which to use? TODO: ADD OTHER DISABLES AS RED*/
     &.picRow, &.existingNote, &.projectUserRow {
         background-color: var(--clr-danger-2);
     }
@@ -520,7 +512,7 @@ a {
 }
 
 .picRow > .picLeft {
-    margin: 1em; /* TODO: ok?*/
+    margin: 1em;
 }
 
 .contamRow.disabled {
@@ -557,19 +549,19 @@ a {
 }
 
 .gapTop {
-    margin-top: var(--smallSpace); /* TODO: ENSURE OK */
+    margin-top: var(--smallSpace);
 }
 
 .medGapTop {
-    margin-top: var(--medSpace); /* TODO: ENSURE OK */
+    margin-top: var(--medSpace);
 }
 
 .gapBottom {
-    margin-bottom: var(--smallSpace); /* TODO: ENSURE OK */
+    margin-bottom: var(--smallSpace);
 }
 
 .medGapBottom {
-    margin-bottom: var(--medSpace); /* TODO: ENSURE OK */
+    margin-bottom: var(--medSpace);
 }
 
 .inlineChildren {
@@ -631,7 +623,7 @@ a {
 }
 
 .noteValue {
-    margin-top: 1em; /*TODO:ENSURE_OK*/
+    margin-top: 1em;
 }
 .alias {
     display: inline-block;
@@ -643,7 +635,7 @@ a {
 }
 
 .aliasValue {
-    margin-top: 1em; /*TODO:ENSURE_OK*/
+    margin-top: 1em;
 }
 
 .inline {
@@ -655,7 +647,7 @@ a {
 /*}*/
 
 .gensParent > * {
-    margin: var(--smallSpace); /* TODO: ENSURE OK*/
+    margin: var(--smallSpace);
 }
 
 .gridCol {
@@ -780,7 +772,7 @@ a {
     justify-items: center;
     grid-template-columns: 1fr 1fr;
     column-gap: 1em;
-    /* TODO: alignment and justification z*/
+    /* TODO: alignment and justification */
     grid-template-rows: min-content;
 
     & > * {
@@ -858,8 +850,8 @@ a {
     margin-top: var(--smallSpace);
     padding: 1em;
     clear: both; /* TODO: ok?*/
-    position: relative;/* TODO: ok?*/
-    z-index: 10;/* TODO: ok?*/
+    position: relative;
+    z-index: 10;
 }
 
 .padContent {

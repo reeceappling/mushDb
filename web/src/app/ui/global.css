@@ -1,10 +1,10 @@
 div {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 *, *::before, *::after {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 
 .fullPage > .latestListDisplay {
@@ -31,11 +31,11 @@ div {
     /* TODO: widths, margins, paddings, edges/rounding, etc?*/
     &.subForm {
         & > * {
-            margin-bottom: 1em; /* TODO: ensure ok*/
+            margin-bottom: 1em;
         }
     }
     & > .idComponent {
-        text-align: center; /* TODO: ensure ok */
+        text-align: center;
     }
     .depth1 {
         /* TODO: depth1 stuff*/

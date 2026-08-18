@@ -6,7 +6,7 @@
     display: flex;
     flex-wrap: nowrap;
     & * {
-        margin: auto; /* TODO: hacky*/
+        margin: auto;
     }
     & .MuiButton-text {
         /*color: var(--topBarTextColor);*/

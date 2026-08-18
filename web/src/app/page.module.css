@@ -108,11 +108,11 @@ a.secondary {
   gap: 8px;
 }
 
-.footer > div {
-  /*display: flex; TODO: probably not right, but might be a better start*/
-  /*align-items: center;*/
-  /*gap: 8px;*/
-}
+/*.footer > div {*/
+/*  !*display: flex; TODO: probably not right, but might be a better start*!*/
+/*  !*align-items: center;*!*/
+/*  !*gap: 8px;*!*/
+/*}*/
 
 .footer img {
   flex-shrink: 0;

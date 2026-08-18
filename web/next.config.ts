@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
     output: "standalone", // TODO: see https://nextjs.org/docs/app/api-reference/config/next-config-js/output
-    crossOrigin: 'anonymous', // TODO: ok? FIX?
+    crossOrigin: "use-credentials",// TODO: used to be 'anonymous',
     experimental: {
         serverActions: { // TODO; see https://nextjs.org/docs/app/api-reference/config/next-config-js/serverActions
             // TODO: go over these! figure out what is actually needed!
@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
             // bodySizeLimit: '2mb', // TODO: ???
         },
         cssChunking: true, // TODO: ok?
+        // TODO: cssChunking: { type: 'graph', requestCost: 100000, weightDistribution: 0.1},
         //inlineCss: true, // TODO: ????
         //optimizePackageImports: ['package-name'], // TODO: do this!
         // prefetchInlining: false, // TODO: consider via https://nextjs.org/docs/app/api-reference/config/next-config-js/prefetchInlining
@@ -49,7 +50,7 @@ const nextConfig: NextConfig = {
         // useTypeScriptCli: false,
         // webVitalsAttribution: ['CLS', 'LCP'], // TODO: see https://nextjs.org/docs/app/api-reference/config/next-config-js/webVitalsAttribution
     },
-    trailingSlash: false, // Redirect trailing slashes to no trailing slash
+    trailingSlash: false, // TODO: this?// Redirect trailing slashes to no trailing slash
     //typedRoutes: true, // TODO: see https://nextjs.org/docs/app/api-reference/config/next-config-js/typedRoutes
     //transpilePackages: ['package-name', '@scope/pkg'], // TODO: ???
     //reactCompiler: true, // TODO: see https://nextjs.org/docs/app/api-reference/config/next-config-js/reactCompiler
@@ -68,7 +69,7 @@ const nextConfig: NextConfig = {
         //browserToTerminal: true, // TODO: Forwards all browser logs to terminal 'warn', 'error', true, false
     },
     //serverExternalPackages: ['@acme/ui'], // TODO: see https://nextjs.org/docs/app/api-reference/config/next-config-js/serverExternalPackages
-    cacheComponents: true, // TODO: ???
+    cacheComponents: true, // TODO: use this!???
     //partialPrefetching: true, // TODO: https://nextjs.org/docs/app/api-reference/config/next-config-js/partialPrefetching
     // pageExtensions: ['js', 'jsx', 'ts', 'tsx', 'md', 'mdx'], // TODO: https://nextjs.org/docs/app/api-reference/config/next-config-js/pageExtensions
     // outputHashSalt: 'my-deployment-salt', // TODO: see https://nextjs.org/docs/app/api-reference/config/next-config-js/outputHashSalt

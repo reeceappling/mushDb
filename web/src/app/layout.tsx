@@ -7,15 +7,13 @@ import "@/app/ui/subform.css"
 import "@/app/ui/topBar.css"
 import "@/app/ui/onViewCreators.css"
 import "@/app/ui/transferDisplay.css"
-import "@/app/ui/listPage.css" // TODO: consider moving
-import "@/app/ui/project.css" // TODO: consider moving
-import { Geist, Geist_Mono } from "next/font/google"; // TODO: FIX
+import "@/app/ui/listPage.css"
+import "@/app/ui/project.css"
+import { Geist, Geist_Mono } from "next/font/google";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
 //export const instant = false;
-
-// TODO: ensure all ok
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,14 +27,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    template:  '%s | MushDB',// TODO: ok?
-    default: "MushDB",// TODO: ok?
+    template:  '%s | MushDB',
+    default: "MushDB",
   },
-  description: "Fungus Database", // TODO: ok?
-  generator: `Wouldn't you like to know, weather boy`, // TODO: used to be Next.js, but wanted to be funny
-  applicationName: 'MushDb', // TODO: ok?
+  description: "Mycology Database",
+  generator: `Wouldn't you like to know, weather boy`,
+  applicationName: 'MushDb',
   //referrer: 'origin-when-cross-origin', // TODO: ok?
-  keywords: ['MushDb', 'ReeceAppling', 'Reece Appling'], // TODO: ok?
+  keywords: ['MushDb', 'ReeceAppling', 'Reece Appling','Reece','Appling',"mycology","mushrooms","fungi"],
   authors: [{ name: 'Reece Appling', url: 'reece.appli.ng' }], // TODO: ok?
   creator: 'Reece Appling', // TODO: ok?
   publisher: 'Reece Appling', // TODO: ok?

@@ -1,15 +1,15 @@
 div {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 *, *::before, *::after {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 
 #transferDisplay {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
     & .fromToImage {
         box-sizing: border-box;
         display: flex;
@@ -23,7 +23,7 @@ div {
     }
     & .fromToLink {
         & .xferEntryLink:hover {
-            color: var(--clr-success-0); /* TODO: ensure ok */
+            color: var(--clr-success-0);
         }
         box-sizing: border-box;
         font-size: 1.2rem;

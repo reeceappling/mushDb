@@ -5,7 +5,7 @@
         width: 100%;
         &.nonHeaderRow {
             &:hover {
-                background-color: var(--clr-success-1); /* TODO: FIX!*/
+                background-color: var(--clr-success-1);
             }
         }
         /*&.headerRow {*/

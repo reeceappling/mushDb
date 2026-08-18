@@ -10,12 +10,12 @@ import {BaseExternalUrl} from "@/app/components/Constants";
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
 //export const instant = false;
 
-// TODO: use <Link> to link btwn pages
+
 export default async function Page(){
   //export default async function Home() {
   const cookieStore = await cookies()
   const session = cookieStore.get('_gothic_session')
-  const readers = await GetReaderWriterNames() // TODO; ensure works
+  const readers = await GetReaderWriterNames()
   return <PageWrapper props={{pageType: "view", readers: readers}}>
       <div className={styles.page}>
         <main className={styles.main}>
