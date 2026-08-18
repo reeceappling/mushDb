@@ -46,7 +46,7 @@ type Props = {
     }>
 };
 // Next.js runs this first to set the tab title
-export async function generateMetadata({ params }: Props): Promise<Metadata> { // TODO: add generateMetadata on all pages!
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const {itemType, idEncoded} = await params
     const cookieStore = await cookies()
     const session = cookieStore.get('_gothic_session')
@@ -133,7 +133,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> { /
 }
 
 const getData: (a1:string,a2:string,allCookies:string)=>Promise<any> = async (itemTypeA: string, idEnc: string,allCookies:string) => {
-    return new Promise<React.JSX.Element>((accept, reject) => { // TODO: REIMPLEMENT!
+    return new Promise<React.JSX.Element>((accept, reject) => {
         fetch(BaseExternalUrl + "/db/get/" + itemTypeA + "/" + idEnc, {
             method: 'Get',
             credentials: 'include',
@@ -189,7 +189,7 @@ export default async function Page({
     } catch (e) {
         return <PageWrapper props={{pageType: "view", readers: []}}>
                 <div>{"Page not loaded. Nonexistent or unauthorized entry: "}</div> {/* TODO: STYLING*/}
-                <div>{JSON.stringify(e)/* TODO: CHANGE!*/}</div>
+                <div>{JSON.stringify(e)}</div>
         </PageWrapper>
     }
 

@@ -6,7 +6,7 @@ import {Metadata} from "next";
 
 export const metadata: Metadata = {
     title: "Error",
-    description: "An error has occurred" // TODO: make this dynamically using errText?
+    description: "An error has occurred"
 };
 export default async function Page({
                                        params,

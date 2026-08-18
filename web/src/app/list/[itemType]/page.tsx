@@ -17,7 +17,7 @@ type Props = {
 };
 
 // Next.js runs this first to set the tab title
-export async function generateMetadata({params}: Props): Promise<Metadata> { // TODO: add generateMetadata on all pages!
+export async function generateMetadata({params}: Props): Promise<Metadata> {
     const {itemType} = await params
     return {
         title: itemType + ` list`,
@@ -41,7 +41,7 @@ export default async function Page({
                 credentials: 'include',
                 headers: {
                     'Accept': 'application/json',
-                    'Cookie': allCookies, // TODO: FIX THIS! THIS IS CURRENTLY REQUIRED FOR AUTHENTICATION
+                    'Cookie': allCookies, // TODO: necessary?
                 },
             }).then((res) => {
                 if (!res.ok) {

@@ -15,7 +15,7 @@ type Props = {
     params: Promise<{ itemType: string }>
 };
 // Next.js runs this first to set the tab title
-export async function generateMetadata({ params }: Props): Promise<Metadata> { // TODO: add generateMetadata on all pages!
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const {itemType} = await params
     return {
         title: itemType+` import`,
