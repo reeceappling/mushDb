@@ -7,13 +7,6 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {useEffect, useState} from "react";
 
 export type Antibiotic = "Doxycycline" | "Cefazolin" | "Amoxicillin";
-export const AntibioticsList: Antibiotic[] = ["Doxycycline", "Cefazolin", "Amoxicillin"]
-
-export function IsValidAntibiotic(input: any): boolean {
-    return (
-        typeof input === 'string' && AntibioticsList.includes(input as Antibiotic) // TODO: fixme
-    )
-}
 
 export function AntibioticSelector( // TODO: can only disable/enable, delete will happen on update
     {initial, onSelect, blacklist}: {

@@ -11,11 +11,7 @@ import {RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
 import {useEffect, useState} from "react";
 
-export const GrainsList: string[] = ["Oats", "Popcorn", "Wheat", "Rye", "Millett"]
-
-
-
-export function GrainsTypeSelector( // TODO: USE THIS!!!!!
+export function GrainsTypeSelector(
     {initial, onSelect,blacklist}:{
         initial?: string,
         onSelect?: (ab?: string)=>void

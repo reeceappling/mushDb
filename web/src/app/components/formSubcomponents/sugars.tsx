@@ -15,9 +15,6 @@ export interface Sugar {
     unit: string,
 }
 
-export const SugarsList: string[] = ["dextrose", "honey", "other"]
-
-
 export function IsValidSugar(input: any): boolean {
     return (
         typeof input === 'object' &&
@@ -27,12 +24,12 @@ export function IsValidSugar(input: any): boolean {
     )
 }
 
-export function SugarTypeSelectorForNew( // TODO: USE THIS!!!!!
+export function SugarTypeSelectorForNew(
     {current, onSelect, readonly, blacklist}:{
         readonly: boolean,
         current?: string,
         onSelect?: (ab?: string)=>void
-        blacklist?: string[], // TODO: use?
+        blacklist?: string[],
     }){
     if(readonly){
         return <div>{current || "FIXME"}</div>
@@ -55,7 +52,7 @@ export function SugarTypeSelectorForNew( // TODO: USE THIS!!!!!
     } />
 }
 
-export function SugarTypeSelector( // TODO: USE THIS!!!!!
+export function SugarTypeSelector(
     {initial, onSelect, blacklist}: {
         initial?: string,
         onSelect?: (ab?: string) => void,

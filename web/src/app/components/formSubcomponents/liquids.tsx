@@ -44,35 +44,6 @@ export function LiquidsTypeSelectorForNew(
     }/>
 }
 
-// export function LiquidTypeSelector( // TODO: USE THIS!!!!!
-//     {current, onSelect, blacklist, readonly}: {
-//         readonly: boolean,
-//         current?: string,
-//         onSelect?: (ab?: string) => void,
-//         blacklist?: string[],
-//     }) {
-//     if (readonly) {
-//         return current
-//     }
-//     const {isPending, error, data} = useQuery({
-//         queryKey: ['liquidsOptions'],
-//         queryFn: () => getOptionsResponse("liquids")
-//     })
-//     if (isPending || error !== null) {
-//         return <div>{isPending ? "LIQUID SELECTOR LOADING" : "LIQUID SELECTOR ERROR: " + error.message}</div>
-//     }
-//     const filteredOptions = data.filter((val, idx) => {
-//         return !(blacklist && blacklist.includes(val))
-//     })
-//     return <SelectorResetsOnSelectFor options={["", ...filteredOptions]} updateParent={(s) => {
-//         if (s === "") {
-//             onSelect && onSelect()
-//         } else {
-//             onSelect && onSelect(s as string)
-//         }
-//     }}/>
-// }
-
 export function LiquidsAreaReadOnly({values}: {values?:Liquid[]}) {
     if (!values || values.length===0){
         return null

@@ -13,8 +13,6 @@ export interface Additive {
     unit: string
 }
 
-export const AdditivesList: string[] = ["Add1", "Add2", "Add3"] // TODO: swap out with actual additives
-
 export function IsValidAdditive(input: any): boolean {
     return (
         typeof input === 'object' &&

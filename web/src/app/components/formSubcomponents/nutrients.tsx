@@ -11,20 +11,11 @@ import {NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcompone
 import * as React from "react";
 import {useEffect, useState} from "react";
 
-interface NutrientsAreaProps {
-    readonly: boolean,
-    initialValues: NutrientData[],
-    updateParent: (entries: AllNutrients) => void,
-}
-
 export interface Nutrient {
     nutrient: string,
     amount: number,
     unit: string,
 }
-
-export const NutrientsList: string[] = ["PotatoFlakes", "LME", "other"]
-
 
 export function IsValidNutrient(input: any): boolean {
     return (
@@ -139,45 +130,6 @@ export function NutrientsEntriesGroupForNew({
         />
     </div>
 }
-
-
-// export function NutrientsEntriesGroupForNew({initial, updateParent}: {initial: Nutrient[], updateParent: (l: Nutrient[])=>void}){
-//     // TODO: initialModified????
-//     const [current, setCurrent] = useState<Nutrient[]>(initial);
-//     useEffect(()=>{
-//         setCurrent(initial)
-//     },[initial])
-//     const handleSelectNutrient = (v: string) => {
-//         const data = [...(current || []), {nutrient: v, amount: 0, unit: ""}];
-//         setCurrent(data)
-//         // TODO: why no update parent here?
-//     }
-//     const doUpdate = (upd:Nutrient[]) => {
-//         setCurrent(upd)
-//         updateParent(upd)
-//     }
-//     return <div>
-//         {current.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
-//         {current.map((n,i)=>{
-//             return <div key={n.nutrient} className={"contentsOnly"}>
-//                 <NutrientEntryForNew initial={{
-//                     nutrient: n.nutrient,
-//                     amount: initial.length>i?initial[i].amount: 1.0, // TODO: ok?
-//                     unit: initial.length>i?initial[i].unit:"g", // TODO: ok?
-//                 }} updateParent={(updated: Nutrient) => {
-//                     doUpdate([...(current || [])].map((existing) => {
-//                         return existing.nutrient !== n.nutrient ? existing : updated
-//                     }))
-//                 }}/>
-//                 <RemoveButton txt={"Remove"} click={()=>{
-//                     doUpdate([...(current || [])].filter((existing) => existing.nutrient !== n.nutrient))
-//                 }} />
-//             </div>
-//         })}
-//         </div>}
-//         <NutrientTypeSelectorForNew onSelect={(val)=>{val && handleSelectNutrient(val)}} blacklist={current.map((v)=>{return v.nutrient})} readonly={false} />
-//     </div>
-// }
 
 export function NutrientEntriesGroup({initialEntries, preexisting, readonly, updateParent}: GroupProps<Nutrient>){
     const handleFormChangeNutrient = (index: number, val: string) => {
