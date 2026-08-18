@@ -1,4 +1,6 @@
 # TODOs found while using
+- [ ] Adding a contam (mold+bact) to a plate succeeds but does not get handled properly on the client without a reload, fix.
+- [ ] Typescript TransferReasons is broken on the clone from fruit page!
 - [ ] Fix conflicting Eslint versions
 - [ ] Dont use inflight in tsx! Look into using Lru-cache instead
 - [ ] //export const instant = false; is in a lot of pages. See which can be uncommented, and which should be false or true
