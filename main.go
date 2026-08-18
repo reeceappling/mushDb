@@ -271,10 +271,11 @@ func main() {
 	}
 	passthroughConfig := newPassthroughHandlerConfig().
 		useHttps(false).
-		withHost(webHostName). // TODO: ADD FORWARDED HEADER HERE INSTEAD OF IN webProxyHandler!
+		withDestinationHost(webHostName).
 		withCookies(true).
 		withHeaders(true).
-		withPort(webHostPort)
+		withPort(webHostPort).
+		withForwardedHost(extHost)
 
 	// Proxy combo middlewares
 	webAuthAdminMiddleware := rfid.GetAuthService(ctx).AuthAdminOrDenyMiddleware
@@ -1132,6 +1133,7 @@ type passthroughHandlerConfig struct {
 	port              int
 	copyCookies       bool
 	copyHeaders       bool
+	forwardedHost     *string
 }
 
 func newPassthroughHandlerConfig() passthroughHandlerConfig {
@@ -1144,12 +1146,16 @@ func newPassthroughHandlerConfig() passthroughHandlerConfig {
 	}
 }
 
-func (conf passthroughHandlerConfig) withHost(hostName string) passthroughHandlerConfig {
+func (conf passthroughHandlerConfig) withDestinationHost(hostName string) passthroughHandlerConfig {
 	conf.host = hostName
 	return conf
 }
 func (conf passthroughHandlerConfig) withPort(port int) passthroughHandlerConfig {
 	conf.port = port
+	return conf
+}
+func (conf passthroughHandlerConfig) withForwardedHost(hostname string) passthroughHandlerConfig {
+	conf.forwardedHost = &hostname
 	return conf
 }
 func (conf passthroughHandlerConfig) useHttps(useHttps bool) passthroughHandlerConfig {
@@ -1183,7 +1189,9 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 			return
 		}
 		req.Header = r.Header
-		req.Header.Set("x-forwarded-host", "mush.appli.ng") // TODO: MOVE THIS TO ELSEWHERE!
+		if config.forwardedHost != nil {
+			req.Header.Set("x-forwarded-host", *config.forwardedHost)
+		}
 		//for key, vals := range r.Header {
 		//	req.Header.Set(key, vals[0])
 		//}
@@ -1219,7 +1227,7 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 		}
 
 		// RELAY HEADERS AS NEEDED
-		// TODO: REMOVE AUTH PERMS HEADERS
+		// TODO: REMOVE AUTH PERMS HEADERS?
 		for k, v := range resp.Header {
 			w.Header().Set(k, v[0])
 		}
