@@ -4,11 +4,17 @@ Entrypoint for all client requests to the project. Covers the api for interactin
 ## Main area
 ### TODO: THIS!-----------------------------------------------------
 ## Directories
+### cache
+Package for caching data in memory, on disk, and in external services. (NOT UTILIZED YET)
 ### env
-### TODO: THIS!-----------------------------------------------------
+Package for utilizing environment variables and secrets.
 ### goGenerator
-### TODO: THIS!-----------------------------------------------------
+Standalone go template program to generate go code from templates. Used to generate the api and database code for different entry types.
+### gotel
+package for Go Otel
+### mocks
+package for generated mocks
 ### pics
-### TODO: THIS!-----------------------------------------------------
+Package for storing and retrieving pictures from the filesystem utilizing context.
 ### request
-### TODO: THIS!-----------------------------------------------------
+Request IDs, traces, and time storage on the context of each request.
