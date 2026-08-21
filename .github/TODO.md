@@ -96,7 +96,7 @@
     - [ ] login
     - [ ] new
     - [ ] view
-- [ ] Add an "needs ID" species, as well as a "pretty sure" species marker, so we can temporarily mark species we are not sure about, and confirm them later.
+- [ ] Add an "needs ID" species?, as well as a "pretty sure" species marker, so we can temporarily mark species we are not sure about, and confirm them later.
   - [ ] Confirmation should crawl the dependency chain to ensure all parents get populated as well!
 - [ ] Will require a new table to house the biometric keys (which are related to the users), and also related to specific devices
 - [ ] On spore print, when trying to add a new photo, if you try to remove the photo before updating nothing happens
@@ -110,9 +110,9 @@
     - [ ] SporeSwab and WaterJar are the only 2 missing modal dispatches in their import areas
 - [ ] Creating a new project fails to update the user
 - [ ] FOOTER
-- [ ] description() in each server tsx file
+- [x] description() in each server tsx file
   - [x] Do all method declarations for descriptions after grainBatch
-    - [ ] Ensure all these methods work as expected!
+    - [x] Ensure all these methods work as expected!
 - [ ] Do not redirect non-logged-in users for publicly-available entries. We will need this for web scrapers.
 - [ ] Ensure error page is not indexed!
 - [ ] Layout.tsx (all from https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadata-fields)

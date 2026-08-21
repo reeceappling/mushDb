@@ -1139,3 +1139,105 @@ func validateAliasesNameUnused(ctx context.Context, coll *mongo.Collection, newN
 	}
 	return errors.New("at least one entry contained a new alias the user was trying to add")
 }
+
+type UndisposedItems struct {
+	Items      []MainCollectionId
+	EntryTypes []string
+}
+
+func undisposedItemsCutoffs(collectionName string) unix.Time {
+	now := time.Now()
+	yrs, mos, dys := undisposedItemsCutoffDeltas(collectionName)
+	cutoffDate := now.AddDate(yrs, mos, dys)
+	return unix.Time(cutoffDate.UnixMilli())
+}
+func undisposedItemsCutoffDeltas(collectionName string) (years, months, days int) {
+	switch collectionName {
+	case BagsCollectionName:
+		return 0, -6, 0 // 6mo
+	case FruitsCollName:
+		return 0, 0, -14 // 2wks
+	case FruitingChamberCollectionName:
+		return 0, -6, 0 // 6mo
+	case GrainJarCollectionName:
+		return 0, -6, 0 // 6mo
+	case LCCollectionName:
+		return -1, 0, 0 // 1yr
+	case LcSyringeCollectionName:
+		return -1, 0, 0 // 1yr
+	case MssCollectionName:
+		return -1, 0, 0 // 1yr
+	case PlatesCollectionName:
+		return 0, -6, 0 // 6mo
+	case PlugsCollectionName:
+		return -1, 0, 0 // 1yr
+	case SlantsCollectionName:
+		return -1, 0, 0 // 1yr
+	case SporePrintCollectionName:
+		return -2, 0, 0 // 2yr
+	case SporeSwabCollectionName:
+		return -2, 0, 0 // 2yr
+	case StasisTubeCollectionName:
+		return -2, 0, 0 // 2yr
+	case WaterJarsCollectionName:
+		return -1, 0, 0 // 1yr
+	default:
+		panic("invalid item type for cutoff")
+	}
+}
+
+//func getOldUndisposedItems(ctx context.Context, howOldToConsider time.Duration) (items []MainCollectionItem, types []string, startIndex []int, err error){
+//	items = []MainCollectionItem{}
+//	types = []string{}
+//	startIndex = []int{}
+//	ct := 0
+//	for _, baseItem := range []MainCollectionItem{&Bag{},&Fruit{},&FruitingChamber{},&GrainJar{},&LiquidCulture{},&LcSyringe{},&MSS{},&Plate{},&PlugsJar{},&Slant{},&SporeSwab{}, &SporePrint{},&StasisTube{},&WaterJar{}}{
+//		entryType := baseItem.EntryType()
+//		foundSome := false
+//		for item, err := range getOldUndisposedItemsSingleType(ctx, baseItem){
+//			if err == nil {
+//				if !foundSome {
+//					startIndex = append(startIndex, ct)
+//					types = append(types, entryType)
+//				} else {
+//					foundSome = true
+//				}
+//
+//			} else {
+//				return nil, []string{entryType}, nil, err
+//			}
+//			items = append(items, item)
+//		}
+//	}
+//	return items, types, startIndex, nil
+//}
+
+// TODO: consider using
+//func getOldUndisposedItemsSingleType[T MainCollectionItem](ctx context.Context, exampleItem T) iter.Seq2[T, error] {
+//	cutoffTime := undisposedItemsCutoffs(exampleItem.CollectionName())
+//	filter := bson.M{
+//		"disposed":     bson.M{"$exists": false},
+//		"creationDate": bson.M{"$lt": cutoffTime},
+//	} // TODO: validate working!
+//	return func(yield func(item T, err error) bool) {
+//		curs, err := DbFrom(ctx).Collection(exampleItem.CollectionName()).Find(ctx, filter)
+//		if err != nil {
+//			yield(exampleItem, err)
+//			return
+//		}
+//		for curs.Next(ctx) {
+//			var item T
+//			if err = curs.Decode(&item); err != nil {
+//				yield(exampleItem, err)
+//				return
+//			} else {
+//				yield(item, nil)
+//			}
+//		}
+//		if err = curs.Err(); err != nil {
+//			yield(exampleItem, err)
+//			return
+//		}
+//	}
+//	// TODO: go get bags, fruits, fruiting chambers, jars, lcs, lcSyringes, mss, plate, plugs, slant, sporePrint, sporeSwab, stasisTube, waterJar
+//}
