@@ -1212,6 +1212,24 @@ func undisposedItemsCutoffDeltas(collectionName string) (years, months, days int
 //	return items, types, startIndex, nil
 //}
 
+//func mongoAnd(query1, query2, query3 bson.D) bson.D { // TODO: USE THIS!
+//	return bson.D{{Key: "$and", Value: bson.A{
+//		query1, query2, query3,
+//	}}}
+//}
+//func mongoAndB(queries ...bson.E) bson.D { // TODO: USE THIS!
+//	return bson.D(queries)
+//}
+//
+//func mongoOr(query1, query2, query3 bson.D) bson.D { // TODO: USE THIS!
+//	return bson.D{{Key: "$or", Value: bson.A{
+//		query1, query2, query3,
+//	}}}
+//}
+//func mongoOrB(queries ...bson.D) bson.D { // TODO: USE THIS!
+//	return bson.D{{Key: "$or", Value: queries}}
+//}
+
 // TODO: consider using
 //func getOldUndisposedItemsSingleType[T MainCollectionItem](ctx context.Context, exampleItem T) iter.Seq2[T, error] {
 //	cutoffTime := undisposedItemsCutoffs(exampleItem.CollectionName())
