@@ -144,6 +144,15 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up
 ```
 ### Running the native app
+#### On-device for testing
+use Expo Go on phone
+```bash
+(
+  cd native/mushDb
+  npx expo start
+)
+```
+#### Building and deploying standalone app
 TODO: THIS!-----------------------------------------------------
 
 ## Viewing Logs
