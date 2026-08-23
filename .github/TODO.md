@@ -1,4 +1,5 @@
 # TODOs found while using
+- [ ] Upgrade uuid in web
 - [ ] Cloudflare cache only images. https://www.debugbear.com/docs/cloudflare-caching
 - [x] Adding a contam (mold+bact) to a plate succeeds but does not get handled properly on the client without a reload, fix.
 - [x] Contams, change how confirmed works
@@ -182,6 +183,20 @@
 # Random links
 - [ ] https://medium.com/@mfsilv/kubernetes-a-gentle-introduction-9d23de7f00e0
 # Wishlist
+- [ ] React Native app for mobile devices
+  - [ ] use Expo Go to develop on Android 
+  - [ ] custom url protocol to open app on mobile devices? mush://
+  - [ ] app.json
+    - [ ] TODOs
+  - [ ] LICENSE - FIX
+  - [ ] native/mushDb
+    - [ ] assets
+      - [ ] images
+        - [ ] Remove or modify any necessary images in this dir, as well as in the tablcons subdir
+      - [ ] expo.icon dir
+        - [ ] modify icon.json
+        - [ ] Assets dir
+          - [ ] modify expo-symbol 2.svg and grid.png
 - [ ] Link shortener?
 - [ ] traceIDs for all requests going throughout the system, including the go side, ts side, and mongo side. This will allow us to trace requests through the system and see where things are failing.
 - [ ] mongodb mocks using mtest (import "go.mongodb.org/mongo-driver/mongo/integration/mtest")

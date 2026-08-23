@@ -12,6 +12,7 @@ This is a group of containers (a docker-compose project) that I use to keep trac
 [webserver README](../web/README.md)
 
 [api README](../api/README.md)
+[native app README](../native/mushDb/README.md)
 # Running Locally
 ## Requirements
 <details>
@@ -35,7 +36,7 @@ This is a group of containers (a docker-compose project) that I use to keep trac
 </details>
 
 ## How to Run
-### Setup
+### Setup API and webapp
 #### Cloudflare
 ##### Cloudflare Api for DNS
 TODO: how to setup cloudflare api for dns
@@ -86,7 +87,7 @@ openssl rand -base64 741 > etc/mongodb.key
 chmod 666 etc/mongodb.key
 chown mongodb:mongodb etc/mongodb.key
 ```
-### Running the containers
+### Running the api and webapp containers
 **The quick way** (If everything is already set up)
 ```bash
 ./scripts/run_main.sh
@@ -142,6 +143,8 @@ MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps 
 # replace env file with your own
 MY_UID="$(id -u)" MY_GID="$(id -g)" docker compose --env-file env/.env.devhttps up
 ```
+### Running the native app
+TODO: THIS!-----------------------------------------------------
 
 ## Viewing Logs
 For each service, only the last 50 lines
