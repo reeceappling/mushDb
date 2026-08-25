@@ -44,9 +44,9 @@ type StasisTube struct { // TODO: instructions somewhere?
 	AclField                          `bson:"inline"`
 }
 
-func (s StasisTube) Blank() CollectionItem {
-	return &StasisTube{}
-}
+//func (s StasisTube) Blank() CollectionItem {
+//	return &StasisTube{}
+//}
 
 func (s StasisTube) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {

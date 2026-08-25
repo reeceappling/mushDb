@@ -50,7 +50,7 @@ type CollectionItem interface {
 	CollectionName() string
 	Decode(*mongo.SingleResult) (CollectionItem, error)
 	IdValue() any // binary string id? DO NOT USE FOR ACTUALLY QUERYING THE DB DUE TO ANY TYPE
-	Blank() CollectionItem
+	//Blank() CollectionItem
 }
 
 var lastUpdatedIndexModel = mongo.IndexModel{

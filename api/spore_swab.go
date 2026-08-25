@@ -35,9 +35,9 @@ type SporeSwab struct {
 	AclField                          `bson:"inline"`
 }
 
-func (s SporeSwab) Blank() CollectionItem {
-	return &SporeSwab{}
-}
+//func (s SporeSwab) Blank() CollectionItem {
+//	return &SporeSwab{}
+//}
 
 func (sw SporeSwab) Innoculatable() error {
 	return errors.New("sporeSwabs are not innoculatable")

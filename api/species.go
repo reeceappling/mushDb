@@ -28,9 +28,9 @@ type Species struct {
 
 }
 
-func (s Species) Blank() CollectionItem {
-	return &Species{}
-}
+//func (s Species) Blank() CollectionItem {
+//	return &Species{}
+//}
 
 const shiitakeName = "Shiitake"
 const shiitakeSciName = "Lentinula Edodes"

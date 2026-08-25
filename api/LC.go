@@ -44,9 +44,9 @@ type LiquidCulture struct {
 	AclField                          `bson:"inline"`
 }
 
-func (l LiquidCulture) Blank() CollectionItem {
-	return &LiquidCulture{}
-}
+//func (l LiquidCulture) Blank() CollectionItem {
+//	return &LiquidCulture{}
+//}
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
 	canTransferTo := []string{GrainJarSourceType, PlateSourceType, SlantSourceType, StasisTubeSourceType, LcSourceType, BagSourceType}

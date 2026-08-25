@@ -27,9 +27,9 @@ type WaterJar struct {
 	AclField              `bson:"inline"`
 }
 
-func (wj WaterJar) Blank() CollectionItem {
-	return &WaterJar{}
-}
+//func (wj WaterJar) Blank() CollectionItem {
+//	return &WaterJar{}
+//}
 
 func (wj WaterJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{}, errors.New("WaterJar has no genetic info")

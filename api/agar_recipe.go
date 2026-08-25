@@ -29,9 +29,9 @@ type AgarRecipe struct {
 	AclField                   `bson:"inline"`
 }
 
-func (ar AgarRecipe) Blank() CollectionItem {
-	return &AgarRecipe{}
-}
+//func (ar AgarRecipe) Blank() CollectionItem {
+//	return &AgarRecipe{}
+//}
 
 type updateAgarRecipeRequest struct {
 	NameField
@@ -294,10 +294,10 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 // TODO: USE!
 func getCollectionItemByName[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, name string, out T) (err error) {
 	// TODO: SET T SO IT IS NOT NIL
-	temp, ok := out.Blank().(T)
-	if !ok {
-		return errors.New("Blank() issue")
-	}
+	//temp, ok := out.Blank().(T)
+	//if !ok {
+	//	return errors.New("Blank() issue")
+	//}
 	user, err := GetResolvedUserPerms(ctx)
 	if err != nil {
 		return err
@@ -315,11 +315,11 @@ func getCollectionItemByName[T PermissionedAltCollectionItem[AlternateCollection
 	}()
 	for {
 		if curs.TryNext(ctx) {
-			if err = curs.Decode(temp); err != nil {
+			if err = curs.Decode(out); err != nil {
 				return err
 			}
-			if temp.Permissions().HighestPermFor(user).CanRead() {
-				out = temp
+			if out.Permissions().HighestPermFor(user).CanRead() {
+				//out = temp // TODO: dont like that out still returns on err
 				return nil
 			}
 			// TODO: this returns early. Do we want to locate all of the recipes with this name?
@@ -333,11 +333,10 @@ func getCollectionItemByName[T PermissionedAltCollectionItem[AlternateCollection
 		}
 	}
 	//// TODO: or just find the first if names are unique
-	//if err = coll.FindOne(ctx, findFilter).Decode(&temp); err != nil {
+	//if err = coll.FindOne(ctx, findFilter).Decode(&out); err != nil {
 	//	return err
 	//}
-	//if !temp.Permissions().HighestPermFor(user).CanRead() {
-	//  out = temp
+	//if !out.Permissions().HighestPermFor(user).CanRead() {
 	//	return errors.New("user does not have permission")
 	//}
 	//return nil

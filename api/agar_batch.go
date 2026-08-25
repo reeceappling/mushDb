@@ -27,9 +27,9 @@ type AgarBatch struct { // This is >=1 media bottles of the same recipe that wen
 	AclField         `bson:"inline"`
 }
 
-func (ab AgarBatch) Blank() CollectionItem {
-	return &AgarBatch{}
-}
+//func (ab AgarBatch) Blank() CollectionItem {
+//	return &AgarBatch{}
+//}
 
 type AgarBatchField struct {
 	AgarBatch *AlternateCollectionId `bson:"agarBatch,omitempty" json:"agarBatch,omitempty"`

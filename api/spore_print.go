@@ -42,9 +42,9 @@ type SporePrint struct {
 	AclField                          `bson:"inline"`
 }
 
-func (s SporePrint) Blank() CollectionItem {
-	return &SporePrint{}
-}
+//func (s SporePrint) Blank() CollectionItem {
+//	return &SporePrint{}
+//}
 
 type SporePrintColor string
 

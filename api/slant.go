@@ -42,9 +42,9 @@ type Slant struct {
 	AclField                          `bson:"inline"`
 }
 
-func (s Slant) Blank() CollectionItem {
-	return &Slant{}
-}
+//func (s Slant) Blank() CollectionItem {
+//	return &Slant{}
+//}
 
 func (s Slant) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
@@ -89,8 +89,7 @@ func (s Slant) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 	if err != nil {
 		return err
 	}
-	upd, err := xfer.
-		PicsModsForChild(s).
+	upd, err := xfer.PicsModsForChild(s).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).

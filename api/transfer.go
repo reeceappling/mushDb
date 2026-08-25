@@ -80,9 +80,9 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	AclField                   `bson:"inline"`
 }
 
-func (t Transfer) Blank() CollectionItem {
-	return &Transfer{}
-}
+//func (t Transfer) Blank() CollectionItem {
+//	return &Transfer{}
+//}
 
 func (t Transfer) PicsModsForChild(child HasPicsField) *Mods {
 	if t.ToImage == nil {

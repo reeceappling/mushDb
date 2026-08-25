@@ -39,9 +39,9 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	AclField                          `bson:"inline"`
 }
 
-func (f Fruit) Blank() CollectionItem {
-	return &Fruit{}
-}
+//func (f Fruit) Blank() CollectionItem {
+//	return &Fruit{}
+//}
 
 func (f Fruit) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{PlateSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
