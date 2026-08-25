@@ -35,6 +35,10 @@ type Subspecies struct {
 	DefaultAcl       ACL `bson:"defaultAcl" json:"defaultAcl"` // Only used when importing mainCollectionItems
 }
 
+func (s Subspecies) Blank() CollectionItem {
+	return &Subspecies{}
+}
+
 const TestSubspeciesName = "TestSubspecies"
 
 func initializeSubspecies(ctx context.Context) error {

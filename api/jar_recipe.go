@@ -106,6 +106,10 @@ type JarRecipe struct {
 	AclField                   `bson:"inline"`
 }
 
+func (j JarRecipe) Blank() CollectionItem {
+	return &JarRecipe{}
+}
+
 type GrainPercentage struct {
 	Grain      Grain `bson:"grain" json:"grain"`
 	Percentage int   `bson:"percentage" json:"percentage"`

@@ -23,7 +23,7 @@ export default async function Page({
     const {nextUrl} = await params
     return <PageWrapper props={{pageType:"login",readers: []}}>
         <Suspense fallback={<p>{"Loading..."}</p>}>
-            <AuthArea successUrl={nextUrl} loggedIn={false}/>
+            <AuthArea successUrl={nextUrl} loggedIn={false}/>{/* TODO: CHECK LOGGED IN */}
         </Suspense>
     </PageWrapper>
 }

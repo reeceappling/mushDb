@@ -511,6 +511,11 @@ func (serv *AuthService) SigninGoogleAuthedUser(ctx context.Context, oauthUser g
 	return
 }
 
+func (serv *AuthService) SigninPassAuthedUser(ctx context.Context, u User) (sessionId SessionId, err error) {
+	sessionId, _, err = serv.registerSessionAndResolvePerms(ctx, u)
+	return
+}
+
 func (serv *AuthService) SigninGuestUser() (sessionId SessionId, err error) {
 	if serv == nil {
 		return "", errors.New("nil auth service")
@@ -628,7 +633,42 @@ const (
 	AuthPermsContextHeaderKey = "Auth-Info"
 )
 
-func authSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.Handler) http.Handler {
+// TODO: UNUSED RIGHT NOW, USE FOR NATIVE APP?
+func MiddlewareAuthOnContext(next http.Handler, notLoggedInHandler http.Handler, errorHandler func(error) http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		svc := GetAuthService(ctx)
+		var sess genericsessions.Session[ResolvedUserPerms]
+		sessionId, err := SessionIdFromRequest(r)
+		if err != nil {
+			next.ServeHTTP(w, r)
+			return
+		} else {
+			env.LogIfDev(ctx, string("Trying to reauth session ID "+sessionId))
+			sess, err = svc.TryToReAuth(r.Context(), sessionId)
+			if err != nil {
+				env.LogIfDev(ctx, "failed to reAuth: "+err.Error())
+				if errors.Is(err, ErrBlankSessionKey) || errors.Is(err, utils.NotFound) {
+					if notLoggedInHandler != nil {
+						notLoggedInHandler.ServeHTTP(w, r)
+					} else {
+						next.ServeHTTP(w, r)
+					}
+					return
+				}
+
+				errorHandler(err).ServeHTTP(w, r)
+				return
+			}
+		}
+		ctxWithAuthInfo := SetAuthInfo(r.Context(), sess.Data)
+
+		// TODO: ensure session cookies persist!
+		next.ServeHTTP(w, r.WithContext(ctxWithAuthInfo))
+	})
+}
+
+func AuthSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.Handler) http.Handler {
 	return func(onAuthed, handleNoSessionCookie http.Handler, handleAuthErr func(error) http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -759,13 +799,13 @@ func (serv *AuthService) AuthOrRedirectMiddleware(redirectUrl string) func(http.
 		http.Redirect(w, r, redirectUrl+"?"+finalQuery.Encode(), http.StatusTemporaryRedirect)
 	})
 	return func(nextHandler http.Handler) http.Handler {
-		return serv.necessaryFirstMiddleware(authSplitterMiddleware()(nextHandler, redirectHandler, customDenyHandler))
+		return serv.necessaryFirstMiddleware(AuthSplitterMiddleware()(nextHandler, redirectHandler, customDenyHandler))
 	}
 }
 
 func (serv *AuthService) BasicSplitterMiddleware() func(http.Handler, http.Handler) http.Handler {
 	return func(authSuccess, authFailure http.Handler) http.Handler {
-		return serv.necessaryFirstMiddleware(authSplitterMiddleware()(authSuccess, authFailure, func(error) http.Handler {
+		return serv.necessaryFirstMiddleware(AuthSplitterMiddleware()(authSuccess, authFailure, func(error) http.Handler {
 			return authFailure
 		}))
 	}
@@ -781,7 +821,7 @@ func customDenyHandler(err error) http.Handler {
 }
 
 func (serv *AuthService) AuthOrDenyMiddleware(nextHandler http.Handler) http.Handler {
-	return serv.necessaryFirstMiddleware(authSplitterMiddleware()(nextHandler, denyHandler, func(error) http.Handler { return denyHandler }))
+	return serv.necessaryFirstMiddleware(AuthSplitterMiddleware()(nextHandler, denyHandler, func(error) http.Handler { return denyHandler }))
 }
 func (serv *AuthService) AuthAdminOrDenyMiddleware(nextHandler http.Handler) http.Handler {
 	return serv.necessaryFirstMiddleware(authAdminSplitterMiddleware()(nextHandler, denyHandler, func(error) http.Handler { return denyHandler }))
@@ -793,10 +833,12 @@ func (serv *AuthService) OnContext(ctx context.Context) context.Context {
 
 const SessionIdKey = "SessionId"
 
+var ErrNoValidSessionOnRequest = errors.New("no valid session on request")
+
 func SessionIdFromRequest(r *http.Request) (SessionId, error) {
 	sessId, err := gothic.GetFromSession(SessionIdKey, r)
 	if err != nil {
-		return "", err
+		return "", errors.Join(ErrNoValidSessionOnRequest, err)
 	}
 	return SessionId(sessId), nil
 }

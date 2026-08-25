@@ -32,6 +32,10 @@ type Project struct {
 	Perms ProjectPerms `bson:"perms" json:"perms"` // Map of email of user to permission on project
 }
 
+func (p Project) Blank() CollectionItem {
+	return &Project{}
+}
+
 func (p Project) DbId() string {
 	return string(p.Name)
 }

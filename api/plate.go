@@ -108,6 +108,10 @@ type Plate struct {
 	AclField                            `bson:"inline"`
 }
 
+func (p Plate) Blank() CollectionItem {
+	return &Plate{}
+}
+
 func (p Plate) IdValue() any {
 	return p.Id.dbIdStr() // TODO: ensure ok
 }

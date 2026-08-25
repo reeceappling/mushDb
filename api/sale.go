@@ -220,6 +220,10 @@ type Sale struct { // TODO: THIS IS A LINE ITEM! SHOULD ONLY CONTAIN ONE ITEM! O
 	AclField          `bson:"inline"`
 }
 
+func (s Sale) Blank() CollectionItem {
+	return &Sale{}
+}
+
 //type Sale struct {
 //	AlternateCollectionIdField `bson:"inline"`
 //	CreationDateField          `bson:"inline"` // This is sale date

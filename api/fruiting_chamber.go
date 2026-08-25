@@ -46,6 +46,10 @@ type FruitingChamber struct { // TODO: SHOEBOX vs monotub!
 	AclField                          `bson:"inline"`
 }
 
+func (f FruitingChamber) Blank() CollectionItem {
+	return &FruitingChamber{}
+}
+
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{PlateSourceType, SlantSourceType, BagSourceType, FruitingChamberSourceType /*BagSourceType, GrainJarSourceType*/}, dst.SourceType()) {
 		return errors.New("Fruiting chamber cannot transfer to " + dst.SourceType())

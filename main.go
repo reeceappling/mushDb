@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -287,6 +288,7 @@ func main() {
 
 	println("Defining webserver passthrough endpoints (external)")
 	OptionsGetPost := OptionsMiddleware(http.MethodGet, http.MethodPost)
+	//OptionsGetPostDelete := OptionsMiddleware(http.MethodGet, http.MethodPost, http.MethodDelete)
 	OptionsGetOnly := OptionsMiddleware(http.MethodGet)
 	OptionsPostOnly := OptionsMiddleware(http.MethodPost)
 
@@ -297,9 +299,11 @@ func main() {
 	}
 	corsAuthRateLimit := Middlewares(CorsAuthMiddleware, rateLimitCtxMiddleware)
 	// TODO: none of these log requests/responses. Consider adding wrapWriter middleware.
+	// loginPath GET=login page, POST=login, DELETE=logout
 	http.Handle(loginPath /* /login */, Middlewares(tracerMiddleware(loginPath), OptionsGetPost, corsAuthRateLimit, handleLoginMiddleware)(webProxyHandler))
-	http.Handle("/logout", Middlewares(tracerMiddleware("/logout"), OptionsGetOnly, corsAuthRateLimit)(handleLogout)) // TODO: make logout button in ts!
+	http.Handle("/logout", Middlewares(tracerMiddleware("/logout"), OptionsGetOnly, corsAuthRateLimit)(handleLogout)) // TODO: make logout button in ts! POST?
 	http.Handle("/guestLogin", Middlewares(tracerMiddleware("/guestLogin"), OptionsPostOnly, rateLimitCtxMiddleware)(handleGuestLogin))
+	http.Handle("/isLoggedIn", Middlewares(tracerMiddleware("/isLoggedIn"), OptionsGetOnly, rateLimitCtxMiddleware)(handleIsLoggedIn))
 	// TODO: reenable for testing only! http.Handle("/testLogin/{emailEncoded}", rateLimitCtxMiddleware(OptionsPostOnly(handleTestLogin))) // TODO: remove later
 	http.Handle("/auth/{provider}", Middlewares(tracerMiddleware("/auth/{provider}"), OptionsGetOnly, corsAuthRateLimit)(authProviderHandler))   // TODO: getOnly ok?
 	http.Handle("/auth/{provider}/callback", Middlewares(tracerMiddleware("/auth/{provider}/callback"), corsAuthRateLimit)(authCallbackHandler)) // TODO: GET or POST?
@@ -709,6 +713,59 @@ func envVarOrDefault(varName, defaultResult string) string {
 	return result
 }
 
+var handleUserPassLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	bs, err := io.ReadAll(r.Body)
+	err = errors.Join(err, r.Body.Close())
+	if err != nil {
+		http.Error(w, "failed to read userPass body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	req := userPassLoginRequest{}
+	if err = json.Unmarshal(bs, &req); err != nil {
+		http.Error(w, "failed to unmarshal request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// TODO: brought over from userPassLoginHandler
+	var usr rfid.User                 // TODO: LOAD!
+	salt, expectedFinalHash := "", "" // TODO: GET SALT AND EXPECTED FINAL HASH BASED ON USER
+	combinedWithSalt := []byte(req.HashedPass + salt)
+	h := sha256.New()
+	if _, err = h.Write(combinedWithSalt); err != nil {
+		http.Error(w, "failed to compute hash: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if expectedFinalHash != string(h.Sum(nil)) {
+		http.Error(w, "invalid login credentials", http.StatusUnauthorized)
+		return
+	}
+	sessId, err := rfid.GetAuthService(ctx).SigninPassAuthedUser(ctx, usr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	println("created new session id for guest: " + sessId)
+	session, err := gothic.Store.New(r, string(sessId))
+	if err != nil {
+		// TODO: delete session?
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
+	if err != nil {
+		// TODO: delete session? If not already saved, then no?
+		//session.Options.MaxAge = -1 // delete session
+		err = errors.Join(errors.New("sessId storage fail"), err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err = gothic.Store.Save(r, w, session); err != nil {
+		http.Error(w, "failed so save session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	redirectToBasePage(r, w)
+}
+
 var handleGuestLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	println("signing in as guest user...") // TODO: del!
@@ -718,13 +775,12 @@ var handleGuestLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	println("created new session id for guest: " + sessId)
-	session, err := gothic.Store.New(r, string(sessId))
+	session, err := gothic.Store.New(r, string(sessId)) // TODO: split all below this into newGothSession(r, sessId)? and use in handleUserPassLogin as well
 	if err != nil {
 		// TODO: delete guest session?
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	println("adding session id to session") // TODO: del
 	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
 	if err != nil {
 		// TODO: delete guest session? If not already saved, then no?
@@ -739,40 +795,78 @@ var handleGuestLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Requ
 	}
 	redirectToBasePage(r, w)
 }
-var handleTestLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	email, err := rfid.UrlDecodeString(r.PathValue("emailEncoded"))
-	if err != nil {
-		http.Error(w, "failed to decode email from request path: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
-	sessId, err := rfid.GetAuthService(ctx).SigninTestUser(email)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	println("created new session id (" + string(sessId) + ") for test user: " + email)
-	session, err := gothic.Store.New(r, string(sessId))
-	if err != nil {
-		// TODO: delete test session?
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
-	if err != nil {
-		// TODO: delete test session? If not already saved, then no?
-		//session.Options.MaxAge = -1 // delete session
-		err = errors.Join(errors.New("sessId storage fail"), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err = gothic.Store.Save(r, w, session); err != nil {
-		http.Error(w, "failed so save session: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	redirectToBasePage(r, w)
+type isLoggedInResponse struct {
+	UserType string  `json:"userType"`
+	UserId   *string `json:"userId,omitempty"`
 }
+
+var isLoggedInInternalHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // TODO: validate works correctly
+	auth, err := rfid.GetAuthInfo(r.Context())
+	if err != nil { // TODO: may not need error handler?
+		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	acctType := auth.AccountType
+
+	resp := isLoggedInResponse{
+		UserType: acctType.String(),
+	}
+	if !acctType.IsGuest() {
+		resp.UserId = &auth.Email
+	}
+	bsOut, err := json.Marshal(resp)
+	if err != nil {
+		http.Error(w, "failed to marshal result bytes: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
+	rfid.HandleHttpWriteError(err)
+})
+
+func isLoggedInErrorHandler(e error) http.Handler { // TODO: validate works the way we want
+	return http.HandlerFunc(func(w2 http.ResponseWriter, r *http.Request) {
+		http.Error(w2, "Error checking logged-in status: "+e.Error(), http.StatusInternalServerError)
+		return
+	})
+}
+
+var isLoggedInNotLoggedInHandler http.Handler = nil                                                                                  // TODO: ensure ok
+var handleIsLoggedIn = rfid.MiddlewareAuthOnContext(isLoggedInInternalHandler, isLoggedInNotLoggedInHandler, isLoggedInErrorHandler) // TODO: validate works correctly!
+//func handleTestLogin(w http.ResponseWriter, r *http.Request) {
+//	ctx := r.Context()
+//	email, err := rfid.UrlDecodeString(r.PathValue("emailEncoded"))
+//	if err != nil {
+//		http.Error(w, "failed to decode email from request path: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//
+//	sessId, err := rfid.GetAuthService(ctx).SigninTestUser(email)
+//	if err != nil {
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	println("created new session id (" + string(sessId) + ") for test user: " + email)
+//	session, err := gothic.Store.New(r, string(sessId))
+//	if err != nil {
+//		// TODO: delete test session?
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
+//	if err != nil {
+//		// TODO: delete test session? If not already saved, then no?
+//		//session.Options.MaxAge = -1 // delete session
+//		err = errors.Join(errors.New("sessId storage fail"), err)
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	if err = gothic.Store.Save(r, w, session); err != nil {
+//		http.Error(w, "failed so save session: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	redirectToBasePage(r, w)
+//}
 
 func handleLoginMiddleware(viewHandler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -782,11 +876,42 @@ func handleLoginMiddleware(viewHandler http.Handler) http.Handler {
 		case http.MethodPost:
 			time.Sleep(1500 * time.Millisecond) // Make user wait for login, lower likelihood of attack
 			println("SHOULD NEVER BE HIT")      // TODO: THIS IS GETTING HIT!
+			// TODO: handleUserPassLogin(w, r)
+		//case http.MethodDelete:
+		//	handleLogout.ServeHTTP(w, r) // TODO: ensure ok
 		default:
 			http.Error(w, "Unsupported http request method: "+http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
 		}
-
 	})
+}
+
+type userPassLoginRequest struct {
+	Username   string `json:"username"`
+	HashedPass string `json:"hashedPass"`
+}
+
+func userPassLoginHandler(w http.ResponseWriter, r *http.Request) {
+
+	// TODO: LOGIN WITH HASHED PASS
+
+	//ctx := r.Context()
+	//var usr rfid.User
+	//// TODO: get user via database from username (or email?)
+	//// TODO: ENSURE USER DOES NOT ALREADY HAVE A SESSION?
+	//sessId, email, err := rfid.GetAuthService(ctx).SigninPassAuthedUser(ctx, usr)
+	//if err != nil {
+	//	http.Error(w, "failed to sign in with password", http.StatusInternalServerError)
+	//	return
+	//}
+	//err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
+	//if err != nil {
+	//	http.Error(w, "sessId storage fail:"+err.Error() , http.StatusInternalServerError)
+	//	return
+	//}
+	//return nil
+	//// TODO: CREATE NEW SESSION FOR USER, AND RETURN SESSION
+	http.Error(w, "userpass login not implemented yet!", http.StatusNotImplemented)
+	return
 }
 
 func handleUserAuthedViaGoth(ctx context.Context, user goth.User, w http.ResponseWriter, r *http.Request) error {
@@ -800,13 +925,13 @@ func handleUserAuthedViaGoth(ctx context.Context, user goth.User, w http.Respons
 		if err != nil {
 			return errors.Join(errors.New("authSvc google signin fail"), err)
 		}
+		// TODO: USERPASS LOGIN?????
 	default:
 		sessId, err = authSvc.SigninGuestUser() // TODO: ???
 		if err != nil {
 			return errors.Join(errors.New("authSvc guest signin fail"), err)
 		}
 	}
-	// TODO: WHAT ABOUT GUESTS?
 
 	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
 	if err != nil {
@@ -1110,13 +1235,13 @@ var handleLogout = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "failed to get session id from request: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err = gothic.Logout(w, r); err != nil {
-		http.Error(w, "logout goth fail: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = rfid.GetAuthService(r.Context()).LogoutSession(sessId) // TODO: should this go before the goth stuff?
+	// TODO: ENSURE USERPASS LOGIN uses the custom session store?
+	err = errors.Join(
+		rfid.GetAuthService(r.Context()).LogoutSession(sessId),
+		gothic.Logout(w, r),
+	)
 	if err != nil {
-		http.Error(w, "failed to log out of rfid session: "+err.Error(), http.StatusInternalServerError)
+		http.Error(w, "logout failure: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Location", loginPath) // TODO: set to login!
@@ -1408,11 +1533,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		uat := user.AccountType // TODO: del
 		if uat.IsAdmin() {      // TODO: del
 			uats = "Admin" // TODO: del
-		} else {                 // TODO: del
+		} else { // TODO: del
 			if uat.IsRegular() { // TODO: del
 				uats = "Regular user" // TODO: del
 			} // TODO: del
-		}                                                                                       // TODO: del
+		} // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		if !user.IsAdmin() && out.Private {
 			if user.AccountType.IsGuest() {
@@ -1742,7 +1867,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	println("trying to read from reader: " + readerName)
 	ctx := r.Context()
 	err := env.IfNotProd(ctx, func() error { // TODO: del later?
-		if readerName == goodTestRfid {      // TODO: remove later
+		if readerName == goodTestRfid { // TODO: remove later
 			// TODO: multiple? not just one id?
 			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 			if err != nil {
@@ -1873,7 +1998,7 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	toWriteBytes := [8]byte{0, 0, 0, 0, 0, 0, 0, 0} // TODO: ok?
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	validResponse := []byte("Cleared") // TODO: ok?
+	validResponse := []byte("Cleared")               // TODO: ok?
 	err := env.IfNotProd(r.Context(), func() error { // TODO: del later?
 		if writerName == goodTestRfid {
 			_, err := w.Write(validResponse)

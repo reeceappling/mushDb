@@ -19,6 +19,10 @@ type User struct {
 	// All can view?
 }
 
+func (u User) Blank() CollectionItem {
+	return &User{}
+}
+
 func (u User) DbId() string {
 	return u.Email
 }

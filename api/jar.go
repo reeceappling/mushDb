@@ -53,6 +53,10 @@ type BurstGrainsField struct { // 0 is none, 10 is most or all
 	BurstGrains *int `bson:"burstGrains,omitempty" json:"burstGrains,omitempty"`
 }
 
+func (j GrainJar) Blank() CollectionItem {
+	return &GrainJar{}
+}
+
 func (j GrainJar) CanTransferTo(dst geneticSource) error {
 	if slices2.Contains([]string{FruitingChamberSourceType, FruitSourceType, LcSyringeSourceType, MssSourceType, SporePrintSourceType, SporeSwabSourceType, WaterJarsSourceType}, dst.SourceType()) {
 		return errors.New("jar cannot transfer to " + dst.SourceType())

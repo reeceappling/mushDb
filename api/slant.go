@@ -42,6 +42,10 @@ type Slant struct {
 	AclField                          `bson:"inline"`
 }
 
+func (s Slant) Blank() CollectionItem {
+	return &Slant{}
+}
+
 func (s Slant) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("plates cannot transfer to " + dst.SourceType())

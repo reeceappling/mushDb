@@ -4,6 +4,7 @@ import React, {useEffect, useState} from "react";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {CredentialResponse, GoogleLogin} from "@react-oauth/google";
 import {ReadonlyURLSearchParams, useSearchParams} from "next/navigation";
+import TestAndValidate from "@/app/components/testing/untested";
 
 // TODO: ADD LOGOUT BUTTON SOMEWHERE!
 export interface AuthAreaProps {
@@ -17,9 +18,9 @@ export default function AuthArea( // TODO: any depth?????
         loggedIn
     }: AuthAreaProps) {
     // const [cookies, setCookie, removeCookie] = useCookies(['SessionId']); // TODO: may be needed
-    const [user, setUser] = useState<string>("")
-    const [pass, setPass] = useState<string>("")
-    const [remember, setRemember] = useState<boolean>(false)
+    // const [user, setUser] = useState<string>("")
+    // const [pass, setPass] = useState<string>("")
+    // const [remember, setRemember] = useState<boolean>(false)
     const [err, setErr] = useState<string | undefined>()
     useEffect(() => {
         if (loggedIn) {
@@ -33,7 +34,7 @@ export default function AuthArea( // TODO: any depth?????
         location.assign(successUrl) // see redirectToBasePage
     }
     const handleGoogleLoginSuccess = (sessId: string) => {
-        console.log("response creds:",sessId) // TODO: FIX
+        //console.log("response creds:", sessId) // TODO: FIX
         // TODO: https://developers.google.com/identity/protocols/oauth2/javascript-implicit-flow
         // TODO: redirectUri
         // TODO: make sure has scopes https://www.googleapis.com/auth/userinfo.email and https://www.googleapis.com/auth/userinfo.profile
@@ -42,7 +43,7 @@ export default function AuthArea( // TODO: any depth?????
         // TODO: CREATE SESSION
         // TODO: REDIRECT
     }
-    const handleLoginSuccess = (sessId: string)=>{
+    const handleLoginSuccess = (sessId: string) => {
         // setCookie('SessionId', sessId, { // TODO: may be needed
         //     path: '/', // Makes the cookie available throughout the entire site
         //     maxAge: 3600, // Cookie expires in 1 hour (in seconds)
@@ -51,7 +52,7 @@ export default function AuthArea( // TODO: any depth?????
         // TODO: redirect to correct area // see redirectToBasePage
     }
     return (<>
-        {/*// <div className={"fullPage"}>*/}
+            {/*// <div className={"fullPage"}>*/}
             {/* TODO: ERROR FOR FAILED LOGIN */}
             <div className={"fixCenterScreen"}></div>
             <div className={"centerH"}>
@@ -64,7 +65,7 @@ export default function AuthArea( // TODO: any depth?????
             {/*<div className="loginRow">*/}
             {/*    <a href={"/guestLogin"}>{"Continue as guest"}</a>*/}
             {/*</div>*/}
-        {/*// </div>*/}
+            {/*// </div>*/}
         </>
     )
 }
@@ -270,28 +271,33 @@ export default function AuthArea( // TODO: any depth?????
 //         </div>
 //     );
 // }
+//
+// function loginDestination(basePath: string, searchParams: ReadonlyURLSearchParams): string {
+//     const dst = searchParams.get('destination')
+//     if (dst !== null) {
+//         return basePath + '?destination=' + encodeURIComponent(dst)
+//     }
+//     return basePath
+// }
 
-function loginDestination(basePath: string, searchParams: ReadonlyURLSearchParams): string {
-    const dst = searchParams.get('destination')
-    if (dst !== null) {
-        return basePath +'?destination=' + encodeURIComponent(dst)
-    }
-    return basePath
-}
-
-function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
+function SignInArea({onLogin}: { onLogin: (sessId: string) => void }) {
     const searchParams = useSearchParams();
     const [testEmail, setTestEmail] = useState<string>("")
+    const [username, setUsername] = useState<string>("") // TODO: make username field
+    const [password, setPassword] = useState<string>("") // TODO: make password field
     const dstParam = searchParams.get('destination')
-    const loginParams = (dstParam !== null && dstParam !== "" ? '?destination=' + encodeURIComponent(dstParam):"")
+    const loginParams = (dstParam !== null && dstParam !== "" ? '?destination=' + encodeURIComponent(dstParam) : "")
     // This function will be called upon a successful login
-    const handleSuccess = (credentialResponse: CredentialResponse) => {
+    const handleGoogleSuccess = (credentialResponse: CredentialResponse) => {
         // // If you are using the authorization code flow, you will receive a code to be exchanged for an access token
         // const authorizationCode = credentialResponse.credential; // TODO: ????
-        location.assign('/auth/google'+loginParams)
+        location.assign('/auth/google' + loginParams)
     };
-    const guestSignIn = ()=>{
-        fetch('/guestLogin'+loginParams, { // TODO: fetch('/guestLogin', {
+    const handleUserPassSuccess = (sessId: string) => {
+        // TODO: DO THIS!
+    }
+    const guestSignIn = () => {
+        fetch('/guestLogin' + loginParams, { // TODO: fetch('/guestLogin', {
             method: 'POST',
             headers: { // TODO: no auth headers?
                 'Content-Type': 'application/json',
@@ -309,18 +315,50 @@ function SignInArea({onLogin}:{onLogin:(sessId:string)=>void}) {
                 console.error('Error signing in as guest:', error);
             });
     }
-const testSignIn = ()=>{
-        if (testEmail ===""){
+    const userPassSignin = () => { // TODO: VALIDATE WORKS!
+        if(password.length < 10){ // TODO: ensure password valid
+            console.error("PASSWORD NOT STRONG ENOUGH")
+            return
+        }
+        hashPasswordBrowser(password).then(hashedPass=>{
+            fetch('/login' + loginParams, { // TODO: fetch('/guestLogin', {
+                method: 'POST',
+                headers: { // TODO: no auth headers?
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    hashedPass: hashedPass,
+                })
+            }).then(response => {
+                if (response.redirected) {
+                    // response.url contains the final destination URL
+                    window.location.href = response.url;
+                    return;
+                }
+                // TODO: what if response not ok?
+            })
+                .catch(error => {
+                    // Handle errors in communicating with your backend server
+                    console.error('Error signing in:', error);
+                });
+        }).catch(err=>{
+            console.error("passhash failure: "+JSON.stringify(err))
+        })
+
+    }
+    const testSignIn = () => {
+        if (testEmail === "") {
             console.error("no test email provided!")
             return
         }
-        fetch('/testLogin/'+encodeURI(testEmail)+loginParams, {
+        fetch('/testLogin/' + encodeURI(testEmail) + loginParams, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
         })
-            .then(response =>{
+            .then(response => {
                 if (response.redirected) {
                     // response.url contains the final destination URL
                     window.location.href = response.url;
@@ -340,11 +378,12 @@ const testSignIn = ()=>{
     return (
         <div>
             <GoogleLogin
-                // allowed_parent_origin={["mush.appli.ng","localhost"]}
-                onSuccess={handleSuccess}
+                allowed_parent_origin={"mush.appli.ng"} // TODO: make a var, but also remove if not working
+                onSuccess={handleGoogleSuccess}
                 onError={handleError}
                 useOneTap
             />
+            <UserPassLogin onSuccess={handleUserPassSuccess} onError={handleError} />
             <button className={"basicButtonSmall"} onClick={guestSignIn}>{"Continue as guest"}</button>
             {/*<div> TODO: reenable for testing only!*/}
             {/*    <div>{"Test user signin area"}</div>*/}
@@ -373,26 +412,46 @@ const testSignIn = ()=>{
         </div>
     );
 }
+function UserPassLogin({onSuccess, onError}: {onSuccess: (sessId: string) => void, onError: (error: string) => void}) {
+    return <TestAndValidate todos={["NOT IMPLEMENTED"]}>
+        {"USER PASS LOGIN NOT IMPLEMENTED YET!"}
+    </TestAndValidate>
+}
+async function hashPasswordBrowser(password: string): Promise<string> {
+    // Encode the password string into a Uint8Array
+    const msgBuffer = new TextEncoder().encode(password);
 
+    // Hash the buffer using SHA-256
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
 
+    // Convert the ArrayBuffer back into a hexadecimal string
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-interface TextInputProps {
-    name: string,
-    wrapperName: string,
-    labelText: string,
-    labelClass: string,
-    inputType: string,
-    placeholderText: string,
-    inputClass: string,
-    value: string,
-    updateTextHandler: (s: string) => void,
+    return hashHex;
 }
 
-function TextInput(props: TextInputProps) { // TODO: delete if unused
-    return (
-        <div className={props.wrapperName}>
-            <label htmlFor={props.name} className={props.labelClass}><b>{props.labelText}</b></label>
-            <input type={props.inputType} placeholder={props.placeholderText} name={props.name} className={props.inputClass} value={props.value} onChange={(e) => {props.updateTextHandler(e.currentTarget.value)}} required/>
-        </div>
-    )
-}
+
+// interface TextInputProps {
+//     name: string,
+//     wrapperName: string,
+//     labelText: string,
+//     labelClass: string,
+//     inputType: string,
+//     placeholderText: string,
+//     inputClass: string,
+//     value: string,
+//     updateTextHandler: (s: string) => void,
+// }
+
+// function TextInput(props: TextInputProps) { // TODO: delete if unused
+//     return (
+//         <div className={props.wrapperName}>
+//             <label htmlFor={props.name} className={props.labelClass}><b>{props.labelText}</b></label>
+//             <input type={props.inputType} placeholder={props.placeholderText} name={props.name}
+//                    className={props.inputClass} value={props.value} onChange={(e) => {
+//                 props.updateTextHandler(e.currentTarget.value)
+//             }} required/>
+//         </div>
+//     )
+// }

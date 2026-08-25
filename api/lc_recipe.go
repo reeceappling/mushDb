@@ -27,6 +27,10 @@ type LcRecipe struct {
 	AclField                   `bson:"inline"`
 }
 
+func (l LcRecipe) Blank() CollectionItem {
+	return &LcRecipe{}
+}
+
 type LcRecipeField struct {
 	Recipe AlternateCollectionId `bson:"recipe" json:"recipe"`
 }

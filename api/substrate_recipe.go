@@ -37,6 +37,10 @@ type SubstrateRecipe struct {
 	AclField                   `bson:"inline"`
 }
 
+func (s SubstrateRecipe) Blank() CollectionItem {
+	return &SubstrateRecipe{}
+}
+
 func initializeSubstrates(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(SubstrateRecipesCollectionName)

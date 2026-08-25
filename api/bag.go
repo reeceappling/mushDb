@@ -49,6 +49,10 @@ type Bag struct {
 	AclField         `bson:"inline"`
 }
 
+func (b Bag) Blank() CollectionItem {
+	return &Bag{}
+}
+
 func (b Bag) Innoculatable() error {
 	return errors.Join(
 		b.RequireNoSpecies(),

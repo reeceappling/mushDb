@@ -31,6 +31,10 @@ type PCRun struct {
 	AclField                   `bson:"inline"`
 }
 
+func (p PCRun) Blank() CollectionItem {
+	return &PCRun{}
+}
+
 var impPcRun = exAltId
 
 func initializePCRuns(ctx context.Context) error {

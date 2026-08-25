@@ -183,6 +183,7 @@
 # Random links
 - [ ] https://medium.com/@mfsilv/kubernetes-a-gentle-introduction-9d23de7f00e0
 # Wishlist
+- [ ] User/Pass login with goth sessions. Already started putting this together.
 - [ ] React Native app for mobile devices
   - [ ] use Expo Go to develop on Android 
   - [ ] custom url protocol to open app on mobile devices? mush://

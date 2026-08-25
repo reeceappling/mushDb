@@ -24,6 +24,10 @@ type SubstrateBatch struct {
 	AclField             `bson:"inline"`
 }
 
+func (s SubstrateBatch) Blank() CollectionItem {
+	return &SubstrateBatch{}
+}
+
 func initializeSubstrateBatches(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(SubstrateBatchCollectionName)

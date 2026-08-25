@@ -440,6 +440,15 @@ func (ad *AccountType) IsGuest() bool {
 func (ad *AccountType) IsRegular() bool {
 	return ad != nil && !ad.IsAdmin()
 }
+func (ad *AccountType) String() string {
+	if ad.IsGuest() {
+		return "Guest" // TODO: USE
+	}
+	if ad.IsAdmin() {
+		return "Admin" // TODO: USE
+	}
+	return "User" // TODO: USE
+}
 func AcctTypeAdmin() *AccountType {
 	accType := AccountType(true)
 	return &accType

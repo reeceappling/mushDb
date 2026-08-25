@@ -42,6 +42,10 @@ type LcSyringe struct {
 	AclField                          `bson:"inline"`
 }
 
+func (lcs LcSyringe) Blank() CollectionItem {
+	return &LcSyringe{}
+}
+
 func (lcs LcSyringe) Innoculatable() error {
 	return errors.New("lcSyringes never innoculatable")
 }

@@ -30,6 +30,10 @@ type GrainBatch struct {
 	AclField               `bson:"inline"`
 }
 
+func (g *GrainBatch) Blank() CollectionItem {
+	return &GrainBatch{}
+}
+
 type GrainBatchField struct {
 	GrainBatch AlternateCollectionId `bson:"grainBatch" json:"grainBatch"`
 }

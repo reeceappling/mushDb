@@ -3,9 +3,9 @@
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import React, {JSX, useContext, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
-import {PcRunData} from "@/app/components/pcRunServer";
+import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     dataFor,

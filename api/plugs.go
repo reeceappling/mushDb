@@ -42,6 +42,10 @@ type PlugsJar struct {
 	AclField                          `bson:"inline"`
 }
 
+func (pl PlugsJar) Blank() CollectionItem {
+	return &PlugsJar{}
+}
+
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("plugs cannot transfer to " + dst.SourceType())

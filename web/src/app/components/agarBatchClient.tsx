@@ -183,7 +183,7 @@ export default function AgarBatchDisplay(
                 <DateArea data-cy-id={"LastUpdated"} pre={"Last Updated: "} when={initial.lastUpdated}
                           readonly={true}/>
                 <div data-cy-id={"Color"}>{"Color: " + data.color}</div>
-                <PcRunArea data-cy-id={"Run"} binaryId={initial.pcRun}/>
+                <PcRunArea data-cy-id={"Run"} binaryId={data.pcRun}/>
                 <AgarRecipeArea data-cy-id={"Recipe"} agarRecipeBinId={initial.agarRecipe}/>
             </FlexedArea>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>

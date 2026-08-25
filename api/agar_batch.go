@@ -27,6 +27,10 @@ type AgarBatch struct { // This is >=1 media bottles of the same recipe that wen
 	AclField         `bson:"inline"`
 }
 
+func (ab AgarBatch) Blank() CollectionItem {
+	return &AgarBatch{}
+}
+
 type AgarBatchField struct {
 	AgarBatch *AlternateCollectionId `bson:"agarBatch,omitempty" json:"agarBatch,omitempty"`
 }
@@ -48,8 +52,6 @@ type updateAgarBatchRequest struct {
 
 func (req updateAgarBatchRequest) modsFor(existing *AgarBatch, acl AclField) (bson.D, error) {
 	return NewMods().
-		// TODO: can PC run be added late?
-		// TODO: can color be added late?
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(acl.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
