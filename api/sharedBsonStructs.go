@@ -354,9 +354,12 @@ func newSugarMeasurement(add Sugar, amount float64, unit string) SugarMeasuremen
 
 // TODO: add all of these to autogenned
 var (
-	Dextrose   Sugar = "dextrose" // This is corn syrup
+	Dextrose   Sugar = "dextrose" // This is corn syrup (Karo), or pure dextrose
 	Honey      Sugar = "honey"
 	MapleSyrup Sugar = "maple syrup"
+	// TODO: sucrose?  (table sugar)
+	// TODO: fructose?
+	// TODO: Molasses? // Provides trace minerals and micronutrients, though darker variants should be used sparingly because it can darken agar.
 )
 
 type Grain string
