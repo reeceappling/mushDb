@@ -263,32 +263,12 @@ func importLiquidCultureHandler(w http.ResponseWriter, r *http.Request) {
 	data := importLiquidCultureRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do the multipart reader differently. Check importPlugsHandler
+	reader, err := multipartReaderInitialize(r.Context(), w, r, &data)
 	defer r.Body.Close()
-	reader, err := r.MultipartReader()
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
+		return // Already wrote
 	}
-	p1, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer p1.Close()
-	// Process text (or object)
-	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
-		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+
 	//authinfo, err := GetAuthInfo(r.Context())
 	//if err != nil {
 	//	http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)

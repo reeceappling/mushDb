@@ -293,7 +293,11 @@ export default function SlantDisplay(
     }
     const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
         const disp = initial.disposed !== undefined
+        const innoculated = initial.species !== undefined
         return !disp ? [
+        ...(innoculated ? [
+            /* TODO: FRUIT CREATION?*/
+        ]:[]),
             WriteRfidOvcArea(initial._id),
             // TODO: any others?
         ]:[]

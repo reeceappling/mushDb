@@ -26,9 +26,9 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	SpeciesField            `bson:"inline"`
 	SubspeciesOptionalField `bson:"inline"`
 	GenSporeField           `bson:"inline"`
-	TransfersOutField       `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	TransfersOutField       `bson:"inline"` // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
 	Prints                  []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
-	ParentTypeField         `bson:"inline"`    // EntryType, store, online, or outside
+	ParentTypeField         `bson:"inline"` // EntryType, store, online, or outside
 	// parent can be "store, outside, or a mainCollectionId (box/bag)"
 	MainCollectionOptionalParentField `bson:"inline"` // NONEXISTENT MEANS FROM STORE or outside
 	PicsField                         `bson:"inline"`
@@ -413,12 +413,12 @@ func updateFruitHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type importFruitRequest struct {
-	ParentType string // "online", "store", or "outside" // TODO: ? FIX? I don't think online is an option in tsx currently
+	ParentType string // "online", "store", or "outside"
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
 	// image as "img"
-	WriteTagToField // TODO: add to typescript or remove!
+	WriteTagToField
 }
 
 func importFruitHandler(w http.ResponseWriter, r *http.Request) {
@@ -491,6 +491,10 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			dataProcessed = true
+			if !slices.Contains([]string{"online", "outside", "store"}, data.ParentType) { // TODO: ensure ok
+				http.Error(w, "invalid parent type: "+data.ParentType, http.StatusBadRequest)
+				return
+			}
 		}
 
 		// Go to next part or break
@@ -525,7 +529,7 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 		SpeciesField:            data.SpeciesField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		GenSporeField:           GenSporeField{gen},
-		ParentTypeField:         ParentTypeField{&data.ParentType}, // TODO: is this ok? REQUIRED?
+		ParentTypeField:         ParentTypeField{&data.ParentType},
 		PicsField:               PicsField{pix},
 		MostRecentImageField:    MostRecentImageField{importedPic},
 		NotesField:              NotesField{data.Notes},

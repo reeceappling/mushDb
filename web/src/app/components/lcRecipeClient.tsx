@@ -288,7 +288,7 @@ export function NewLcRecipeForm({handlers}: { handlers: NewEntryInput<LcRecipeDa
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {
-            return <LcRecipeSelector doSelect={(rec) => { // TODO: endpoint for getStandard
+            return <LcRecipeSelector doSelect={(rec) => {
                 if (rec === undefined) {
                     return
                 }

@@ -638,7 +638,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
 	println("multipart reader if necessary")
-	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
 		println("failed in multipart reader area") // TODO: del
 		// Already written

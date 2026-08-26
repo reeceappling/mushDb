@@ -216,7 +216,7 @@ export function LcImportDisplay({headerLevel}: ImportDisplayInput) {
     return <ImportEntryFormWrapper entryType={"lc"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <LcRecipeSelectorCloseable doSelect={setRecipe} txt={"Recipe"} creatorInPage={false/* TODO: ok?*/}
+        <LcRecipeSelectorCloseable doSelect={setRecipe} txt={"Recipe"} creatorInPage={false}
                                    allowCreation={true}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}

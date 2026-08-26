@@ -133,7 +133,7 @@ export default function PcRunDisplay(
     }
     const createdLinkFor = (linkText: string, linkId: string, typ: string) => {
         return <EntryLinkForId
-            props={{openInNewTab: false/* TODO: ok?*/, displayId: linkText, linkId: linkId, entryType: typ}}/>
+            props={{openInNewTab: false, displayId: linkText, linkId: linkId, entryType: typ}}/>
     }
     const onViewCreators: OnViewCreatorTriCol[] = [
         {

@@ -322,7 +322,7 @@ export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems
             {v.aliases && v.aliases.map((a, i) => {
                 return <div key={a + i}>{a}</div>
             })}
-        </div>, true), // TODO: ok?
+        </div>, true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }), // TODO: fit?

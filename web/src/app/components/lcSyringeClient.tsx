@@ -190,19 +190,6 @@ export function LcSyringeImportDisplay() {
             }
         }
         DoMultipartImportRequest(formData, "lcSyringe", AssertLcSyringe, setErr, allCookies(cookies), dispatchUpdate)
-
-        // fetch(importApiUrlFor("lcSyringe"), {
-        //     method: 'Post',
-        //     body: JSON.stringify(dataObj),
-        //     headers: clientPostRequestHeaders,
-        // })
-        //     .then(HandleJsonResponse)
-        //     .then((newItem) => {
-        //         AssertLcSyringe(newItem)
-        //         window.location.assign(viewUrlFor("lcSyringe", newItem._id))
-        //         // redirect(viewUrlFor("lcSyringe", newItem._id)) // TODO: del if working
-        //     })
-        //     .catch(ErrHandler(setErr));
     }
     return <ImportEntryFormWrapper entryType={"lcSyringe"}>
         {err != undefined && <div>{"Error: " + err}</div>}
@@ -367,9 +354,9 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
             <div>
                 <div>{"Lc syringes Created:"}</div>
             </div>
-            {itemsCreated.map((createdLc) => {
-                const b58id = createdLc
-                return <EntryLinkForId key={createdLc/* TODO: ensure ok*/} props={{displayId: b58id, linkId: b58id, entryType: "lcSyringe", openInNewTab: false /* TODO: ok?*/}}/>
+            {itemsCreated.map((item) => {
+                const b58id = item
+                return <EntryLinkForId key={item} props={{displayId: b58id, linkId: b58id, entryType: "lcSyringe", openInNewTab: false /* TODO: ok?*/}}/>
             })}
         </div>
     }

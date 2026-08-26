@@ -233,7 +233,7 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
                     <SubstrateRecipeArea txt={"Substrate Recipe: "} readonly={true} id={selectedRecipe?._id}/> :
                     <SubstrateRecipeSelectorCloseable doSelect={setSelectedRecipe}
                                                       allowCreation={handlers.isTopLevel}
-                                                      creatorInPage={false/* TODO: false ok?*/}/>}
+                                                      creatorInPage={false}/>}
             </TestAndValidate>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
@@ -255,7 +255,7 @@ export const SubstrateBatchArea = ({id, txt}: {
             <div>{txt ? txt : "Substrate Batch: "}</div>
             {id ? <div>
                 <EntryLinkForId
-                    props={{displayId: id, linkId: id, entryType: "substrateBatch", openInNewTab: false/* TODO: ok?*/}}/>
+                    props={{displayId: id, linkId: id, entryType: "substrateBatch", openInNewTab: false}}/>
             </div> :
                 <div>{"unknown"}</div>}
         </div>

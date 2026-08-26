@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -291,96 +290,96 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
-// TODO: USE!
-func getCollectionItemByName[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, name string, out T) (err error) {
-	// TODO: SET T SO IT IS NOT NIL
-	//temp, ok := out.Blank().(T)
-	//if !ok {
-	//	return errors.New("Blank() issue")
-	//}
-	user, err := GetResolvedUserPerms(ctx)
-	if err != nil {
-		return err
-	}
-	findFilter := bson.M{"name": name}
-	coll := DbFrom(ctx).Collection(out.CollectionName())
-	curs, err := coll.Find(ctx, findFilter)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if curs.ID() != 0 {
-			err = errors.Join(err, curs.Close(ctx))
-		}
-	}()
-	for {
-		if curs.TryNext(ctx) {
-			if err = curs.Decode(out); err != nil {
-				return err
-			}
-			if out.Permissions().HighestPermFor(user).CanRead() {
-				//out = temp // TODO: dont like that out still returns on err
-				return nil
-			}
-			// TODO: this returns early. Do we want to locate all of the recipes with this name?
-		}
-		cursorClosed := curs.ID() == 0
-		if cursorClosed {
-			return mongo.ErrNoDocuments
-		}
-		if err = curs.Err(); err != nil {
-			return err
-		}
-	}
-	//// TODO: or just find the first if names are unique
-	//if err = coll.FindOne(ctx, findFilter).Decode(&out); err != nil {
-	//	return err
-	//}
-	//if !out.Permissions().HighestPermFor(user).CanRead() {
-	//	return errors.New("user does not have permission")
-	//}
-	//return nil
-}
-func getAgarRecipeByName(ctx context.Context, name string) (*AgarRecipe, error) {
-	out := &AgarRecipe{}
-	user, err := GetResolvedUserPerms(ctx)
-	if err != nil {
-		return nil, err
-	}
-	coll := DbFrom(ctx).Collection(AgarRecipesCollectionName)
-	findFilter := bson.M{"name": name}
-	curs, err := coll.Find(ctx, findFilter)
-	if err != nil {
-		return out, err
-	}
-	defer curs.Close(ctx)
-	for {
-		if curs.TryNext(ctx) {
-			if err = curs.Decode(out); err != nil {
-				return out, err
-			}
-			if out.ACL.HighestPermFor(user).CanRead() {
-				return out, nil
-			}
-			// TODO: this returns early. Do we want to locate all of the recipes with this name?
-		}
-		cursorClosed := curs.ID() == 0
-		if cursorClosed {
-			return nil, mongo.ErrNoDocuments
-		}
-		if err = curs.Err(); err != nil {
-			return nil, err
-		}
-	}
-	//// TODO: or just find the first if names are unique
-	//if err = coll.FindOne(ctx, findFilter).Decode(&out); err != nil {
-	//	return nil, err
-	//}
-	//if !out.ACL.HighestPermFor(user).CanRead() {
-	//	return nil, errors.New("user does not have permission")
-	//}
-	//return out, nil
-}
+//// TODO: USE! ALSO ONE FOR ALIAS????
+//func getCollectionItemByName[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, name string, out T) (err error) {
+//	// TODO: SET T SO IT IS NOT NIL
+//	//temp, ok := out.Blank().(T)
+//	//if !ok {
+//	//	return errors.New("Blank() issue")
+//	//}
+//	user, err := GetResolvedUserPerms(ctx)
+//	if err != nil {
+//		return err
+//	}
+//	findFilter := bson.M{"name": name}
+//	coll := DbFrom(ctx).Collection(out.CollectionName())
+//	curs, err := coll.Find(ctx, findFilter)
+//	if err != nil {
+//		return err
+//	}
+//	defer func() {
+//		if curs.ID() != 0 {
+//			err = errors.Join(err, curs.Close(ctx))
+//		}
+//	}()
+//	for {
+//		if curs.TryNext(ctx) {
+//			if err = curs.Decode(out); err != nil {
+//				return err
+//			}
+//			if out.Permissions().HighestPermFor(user).CanRead() {
+//				//out = temp // TODO: dont like that out still returns on err
+//				return nil
+//			}
+//			// TODO: this returns early. Do we want to locate all of the recipes with this name?
+//		}
+//		cursorClosed := curs.ID() == 0
+//		if cursorClosed {
+//			return mongo.ErrNoDocuments
+//		}
+//		if err = curs.Err(); err != nil {
+//			return err
+//		}
+//	}
+//	//// TODO: or just find the first if names are unique
+//	//if err = coll.FindOne(ctx, findFilter).Decode(&out); err != nil {
+//	//	return err
+//	//}
+//	//if !out.Permissions().HighestPermFor(user).CanRead() {
+//	//	return errors.New("user does not have permission")
+//	//}
+//	//return nil
+//}
+//func getAgarRecipeByName(ctx context.Context, name string) (*AgarRecipe, error) {
+//	out := &AgarRecipe{}
+//	user, err := GetResolvedUserPerms(ctx)
+//	if err != nil {
+//		return nil, err
+//	}
+//	coll := DbFrom(ctx).Collection(AgarRecipesCollectionName)
+//	findFilter := bson.M{"name": name}
+//	curs, err := coll.Find(ctx, findFilter)
+//	if err != nil {
+//		return out, err
+//	}
+//	defer curs.Close(ctx)
+//	for {
+//		if curs.TryNext(ctx) {
+//			if err = curs.Decode(out); err != nil {
+//				return out, err
+//			}
+//			if out.ACL.HighestPermFor(user).CanRead() {
+//				return out, nil
+//			}
+//			// TODO: this returns early. Do we want to locate all of the recipes with this name?
+//		}
+//		cursorClosed := curs.ID() == 0
+//		if cursorClosed {
+//			return nil, mongo.ErrNoDocuments
+//		}
+//		if err = curs.Err(); err != nil {
+//			return nil, err
+//		}
+//	}
+//	//// TODO: or just find the first if names are unique
+//	//if err = coll.FindOne(ctx, findFilter).Decode(&out); err != nil {
+//	//	return nil, err
+//	//}
+//	//if !out.ACL.HighestPermFor(user).CanRead() {
+//	//	return nil, errors.New("user does not have permission")
+//	//}
+//	//return out, nil
+//}
 
 type AgarRecipeField struct {
 	AgarRecipe AlternateCollectionId `bson:"agarRecipe" json:"agarRecipe"`

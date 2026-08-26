@@ -214,10 +214,7 @@ export default function ProjectDisplay(
             </FlexedArea>
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TestAndValidate
-                todos={["setting a user to view only and updating will remove the user from the project :("]}>{/* TODO: THIS*/}
-                {/*<ProjectPermsArea perms={initial}*/}
-                {/*                  setPerms={setPerms} */}
-                {/*                  readonly={readonly}/>*/}
+                todos={["setting a user to view only and updating will remove the user from the project :("]}>
                 <ProjectPermsAreaNew initial={initial.perms}
                                      setPerms={setPerms}
                                      readonly={readonly}/>
@@ -327,85 +324,6 @@ export function ReadWriteSelector({readonly, onUpdate, value}: {
                         }} disabled={false}/>
 }
 
-// export function ProjectPermsArea({perms, setPerms, readonly}: {
-//     perms?: Map<string, string>,
-//     setPerms?: (pp: Map<string, string>) => void,
-//     readonly: boolean,
-// }) {
-//     const [current, setCurrent] = useState(perms ? new Map<string, string>(perms) : new Map<string, string>())
-//     useEffect(() => {
-//         const temp = perms ? new Map<string, string>(perms) : new Map<string, string>()
-//         setCurrent(temp)
-//     }, [perms]);
-//     const depth = useContext(DepthContext)
-//     if (readonly && !current) {
-//         return null
-//     }
-//     // const updatePerms = (upd: Map<string,Data<string>>)=>{
-//     //     const toUpdateWith: Map<string, string> = new Map(
-//     //         [...upd.entries()]
-//     //             .filter(([k, v]) => !v.disabled)
-//     //             .map(([k, v]) => [k, v.data])
-//     //     );
-//     //     setPerms && setPerms(toUpdateWith)
-//     // }
-//     const existingUsersArea = () => {
-//         if (current === undefined || current.size === 0) {
-//             if (current === undefined) {
-//                 console.log("perms was undefined") // TODO: del
-//             } else {
-//                 console.log("perms size was 0") // TODO: del
-//             }
-//             return null
-//         }
-//         return <>{/* TODO: make this into a grid or table?*/}
-//             {[...current.entries()].map(p => {
-//                 return <>
-//                     <div key={p[0] + "name"}>{p[0]}</div>
-//                     <ReadWriteAdminSelector key={p[0] + "sel"} readonly={readonly} value={p[1]}
-//                                             onUpdate={(b) => {
-//                                                 const updated = new Map<string, string>(current)
-//                                                 setPerms && setPerms(updated.set(p[0], b))
-//                                             }}/>
-//                     <RemoveButton key={p[0] + "remv"} click={() => {
-//                         const updated = new Map<string, string>(current)
-//                         updated.delete(p[0])
-//                         setPerms && setPerms(updated)
-//                         // let updated = new Map<string, string>(perms)
-//                         // perms.entries().forEach(v => {
-//                         //     if (v[0] !== p[0]) {
-//                         //         updated.set(v[0], v[1])
-//                         //     }
-//                         // })
-//                         // setPerms && setPerms(updated)
-//                     }} txt={"Remove"}/>
-//                 </>
-//             })}
-//         </>
-//
-//     }
-//     return <DepthProvider>
-//         <div className={"subForm depth" + depth}>
-//             <div className={"centerH text-lg mb-1"}>{"Permissions"}</div>
-//             <div className={"projectPermsUsers"}>
-//                 {existingUsersArea()}
-//             </div>
-//
-//             {/* AREA TO ADD USER */}
-//             <div className={"inlineChildren"}>
-//                 <div>{"Add user: "}</div>
-//                 <UserSelector onSelect={(u) => {
-//                     const out = new Map<string, string>(current)
-//                     out.set(u._id, "read")
-//                     setPerms && setPerms(out)
-//                 }} blacklist={(current !== undefined && current.size > 0) ? [...current.entries()].map(u => {
-//                     return u[0]
-//                 }) : []}/>
-//             </div>
-//         </div>
-//     </DepthProvider>
-// }
-
 export function ProjectPermsAreaNew({initial, setPerms, readonly}: {
     initial?: Map<string, string>,
     setPerms?: (pp: Map<string, string>) => void,
@@ -478,11 +396,11 @@ export function ProjectPermsAreaNew({initial, setPerms, readonly}: {
 
     const existingUsersArea = () => {
         if (!existing || existing.size === 0) {
-            if (!existing) {
-                console.log("perms was undefined") // TODO: del
-            } else {
-                console.log("perms size was 0") // TODO: del
-            }
+            // if (!existing) {
+            //     console.log("perms was undefined") // TODO: del
+            // } else {
+            //     console.log("perms size was 0") // TODO: del
+            // }
             return null
         }
         return <>{/* TODO: make this into a grid or table?*/}

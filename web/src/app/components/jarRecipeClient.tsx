@@ -354,7 +354,7 @@ export function NewJarRecipeForm({handlers}: { handlers: NewEntryInput<JarRecipe
     }
     const templateRecipeSelector = () => {
         if (templateSelectorOpen) {
-            return <JarRecipeSelector doSelect={(rec) => { // TODO: endpoint for getStandard?
+            return <JarRecipeSelector doSelect={(rec) => {
                 if (rec) {
                     loadTemplate(rec)
                 }

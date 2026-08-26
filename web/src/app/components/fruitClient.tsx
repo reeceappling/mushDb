@@ -528,7 +528,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         {/* Required Fields */}
         <div className={"inlineChildren"}>
             <div>{"Source: "}</div>
-            <SelectorFor options={["", "store", "outside"]} initial={""} updateParent={setParentType} disabled={false}/>
+            <SelectorFor options={["", "store", "outside", "online"]} initial={""} updateParent={setParentType} disabled={false}/>
         </div>
         {/* TODO: ParentType: FOR "store" OR "outside" ONLY!!!!! */}{/* TODO: THIS!*/}
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>

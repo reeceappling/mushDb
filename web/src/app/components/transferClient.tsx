@@ -669,21 +669,3 @@ export function TransferSelectorTable({data, onClick, withLink}: ListPageItems<T
     ]
     return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new TransferData(v)}}/>
 }
-
-// // TODO: likely will not be used. Consider delete
-// export function TransferSelector(
-//     {
-//         doSelect,
-//         allowCreate
-//     }: {
-//         doSelect: (val: TransferData | undefined) => void,
-//         allowCreate?: boolean
-//     }) {
-//     const table = (items: TransferData[]):JSX.Element=>{
-//         return <TransferSelectorTable data={items} onClick={doSelect}/>
-//     }
-//
-//     return <ExistingRecentSelector entryType={"transfer"} entryTypes={"transfers"} doSelect={doSelect} asserter={AssertTransfer}
-//                                    table={table}>
-//     </ExistingRecentSelector>
-// }

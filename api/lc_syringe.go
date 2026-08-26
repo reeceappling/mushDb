@@ -293,7 +293,7 @@ func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
 	log := logging.GetSugaredLogger(ctx)
 	data, id := importLcSyringeRequest{}, NextMainCollectionId()
 	b58id := id.AsBase58()
-	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
 		env.LogIfDev(ctx, "failed in multipart reader area: "+err.Error())
 		// Already written

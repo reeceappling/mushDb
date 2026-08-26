@@ -248,7 +248,7 @@ func GetSubspeciesByNameInTxn(ctx context.Context, name string) (out Subspecies,
 }
 
 func multipartReaderForRequest[T any](r *http.Request, w http.ResponseWriter, result *T) (reader *multipart.Reader, err error) {
-	//r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
+	//r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize) // TODO: do we need this?
 	reader, err = r.MultipartReader()
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
@@ -363,14 +363,14 @@ func getMultipartImages(ctx context.Context, prefixPath string, w http.ResponseW
 }
 
 func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, data *T, b58id Base58Str) (newPics, newContams, newFlushes map[int]string, err error) {
-	defer r.Body.Close()
+	defer r.Body.Close() // TODO: this ok here?
 	prefixPath := r.PathValue("variant")
 	if prefixPath == "" {
 		println("variant missing from path")
 		http.Error(w, "variant missing from path", http.StatusBadRequest)
 		return nil, nil, nil, errors.New("no prefix path 'variant' provided")
 	}
-	reader, err := multipartReaderForRequest(r, w, data)
+	reader, err := multipartReaderForRequest(r, w, data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
 		return nil, nil, nil, err // Already wrote
 	}

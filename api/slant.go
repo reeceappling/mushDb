@@ -273,7 +273,7 @@ func updateSlantHandler(w http.ResponseWriter, r *http.Request) {
 	id := *mainCollId
 	b58Id := mainCollId.AsBase58()
 	ctx, db := Db(r)
-	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: overhaul and use normal reader multipart strat?
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
 		// Already written
 		return
@@ -331,31 +331,10 @@ func importSlantHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSlantRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
+	reader, err := multipartReaderInitialize(r.Context(), w, r, &data)
 	defer r.Body.Close()
-	reader, err := r.MultipartReader() // TODO: do streamlined
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	p1, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer p1.Close()
-	// Process text (or object)
-	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
-		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
-		return
+		return // Already wrote
 	}
 	// Try to get pic if exists
 	picsSaved := []string{}

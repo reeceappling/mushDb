@@ -172,7 +172,7 @@ export default function SpeciesDisplay(
                     onCreate: (v: SubspeciesData) => {
                         setSubspecies([...(subspecies || []), v._id])
                         const toAdd: CreatedLinkTriCol[] = []
-                        // const toAdd = [{ // TODO: ???
+                        // const toAdd = [{ // TODO: FIX?
                         //     typeText: "Subspecies",
                         //     node: <CreatedLinkFor
                         //         linkText={v._id}
@@ -422,7 +422,7 @@ export function SpeciesListPageTable({data, onClick, withLink}: ListPageItems<Sp
             {v.aliases && v.aliases.map((a, i) => {
                 return <div key={a + i}>{a}</div>
             })}
-        </div>, true), // TODO: ok?
+        </div>, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }), // TODO: fit?

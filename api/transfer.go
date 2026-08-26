@@ -88,7 +88,9 @@ func (t Transfer) PicsModsForChild(child HasPicsField) *Mods {
 	if t.ToImage == nil {
 		return NewMods()
 	}
-	pic := newPicWithNotes(t.CreationDate, []Note{}, *t.ToImage) // TODO: note?
+	pic := newPicWithNotes(t.CreationDate, []Note{
+		// TODO: note?
+	}, *t.ToImage)
 	return NewMods().
 		withMostRecentImage(&pic).
 		withPics(child.currentPics().addPic(pic).Pics) // TODO: ensure works as expected
@@ -97,7 +99,9 @@ func (t Transfer) PicsModsForParent(parent HasPicsField) *Mods {
 	if t.FromImage == nil {
 		return NewMods()
 	}
-	pic := newPicWithNotes(t.CreationDate, []Note{}, *t.FromImage) // TODO: note?
+	pic := newPicWithNotes(t.CreationDate, []Note{
+		// TODO: note?
+	}, *t.FromImage)
 	return NewMods().
 		withMostRecentImage(&pic).
 		withPics(parent.currentPics().addPic(pic).Pics) // TODO: ensure works as expected
@@ -190,38 +194,47 @@ func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error
 	}, txnOptions)
 }
 
-func createTransferHandler(w http.ResponseWriter, r *http.Request) {
-	data := createTransferRequest{}
-	id := newAlternateCollectionId()
-	ctx, now := request.UnixTime(r.Context())
-	b58id := id.AsBase58()
+func multipartReaderInitialize[T any](ctx context.Context, w http.ResponseWriter, r *http.Request, data *T) (*multipart.Reader, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
-	defer r.Body.Close()
 	reader, err := r.MultipartReader()
 	if err != nil {
 		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
+		return nil, err
 	}
 	p1, err := reader.NextPart()
 	if err != nil {
 		println("failed to go to next part: " + err.Error()) // TODO: ok?
 		http.Error(w, "failed to go to next part: "+err.Error(), http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 	defer p1.Close()
 	// Process text (or object)
 	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
+	err = errors.Join(errr, p1.Close())
+	if err != nil {
 		println("failed to read Data from form: " + err.Error()) // TODO: ok?
 		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
-		return
+		return nil, err
 	}
 
 	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
+	err = json.Unmarshal(bs, data)
 	if err != nil {
 		dbErrCtx(ctx, w, errors.Join(errors.New("failed to unmarshal Data from form"), err), http.StatusBadRequest)
+		return nil, err
+	}
+	return reader, nil
+}
+
+func createTransferHandler(w http.ResponseWriter, r *http.Request) {
+	data := createTransferRequest{}
+	id := newAlternateCollectionId()
+	ctx, now := request.UnixTime(r.Context())
+	b58id := id.AsBase58()
+	reader, err := multipartReaderInitialize(ctx, w, r, &data)
+	defer r.Body.Close()
+	if err != nil {
+		// Already wrote
 		return
 	}
 	// Get any images

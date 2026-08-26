@@ -143,7 +143,7 @@ export function AssertMss(input: any): asserts input is MssData {
     return
 }
 
-export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR PURCHASED OR PRE-EXISTING MSS
+export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // Use only for purchased or preexisting mss
     const {dispatch} = useModalContext();
     const [createdDate, setCreatedDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>()
@@ -151,7 +151,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
     const [subspecies, setSubspecies] = useState<string | undefined>()
     const [notes, setNotes] = useState<Note[]>([])
 
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>() // TODO: do we want this?
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [entriesCreated, setEntriesCreated] = useState<string[]>([])
     const [err, setErr] = useState<string | undefined>()
     const entriesCreatedDiv = ()=>{
@@ -160,9 +160,8 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         }
         return <div>
             <div><div>{"Multispore syringes Created:"}</div></div>
-            {entriesCreated.map((created,i)=>{
-                const b58id = created
-                return <EntryLinkForId key={i/* TODO: ensure ok*/} props={{displayId:b58id, linkId: b58id, entryType:"mss", openInNewTab: false}}/>// TODO: OPENINNEWTAB false ok?
+            {entriesCreated.map((created)=>{
+                return <EntryLinkForId key={created} props={{displayId:created, linkId: created, entryType:"mss", openInNewTab: false}}/>// TODO: OPENINNEWTAB false ok?
             })}
         </div>
     }
@@ -189,7 +188,6 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
             .then(v => {
                 AssertMss(v)
                 window.location.assign(viewUrlFor("mss", v._id))
-                // redirect(viewUrlFor("mss", newItem._id)) // TODO: del if working
             })
             .catch(ErrHandler(setErr)); // TODO: dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
 //         header: "Create Failure",
@@ -202,8 +200,6 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: U
         {entriesCreatedDiv()}
         <DateArea readonly={false} pre={"Created: "} when={Date.now()} updateParent={setCreatedDate}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<SpeciesArea initial={species?._id} readonly={false} setSpecies={setSpecies}/>*/}
-        {/*<SubspeciesArea initialSub={subspecies?._id} currentSpecies={species?._id} readonly={false} setSubspecies={setSubspecies}/>*/}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={tryImport}>{"Submit"}</button>

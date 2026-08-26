@@ -26,7 +26,7 @@ import {
     resolveContamsFormData,
     resolvePicsFormData,
     SelectorWrapper,
-    setFormFull,
+    setFormFull, CreatedLinkFor,
 } from "@/app/components/common";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import React, {JSX, useContext, useState} from "react";
@@ -63,6 +63,7 @@ import {
 } from "@/app/components/formSubcomponents/contaminations";
 import {SaleArea} from "@/app/components/saleClient";
 import {
+    AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
     SplitAllEntries
@@ -91,6 +92,14 @@ import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/coo
 import {WetnessDisplay} from "@/app/components/bagClient";
 import {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {NewFruitingChamberForm} from "@/app/components/fruitingChamberClient";
+import {NewLcSyringeForm} from "@/app/components/lcSyringeClient";
+import {LcSyringeData} from "@/app/components/lcSyringeServer";
+import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
+import {NewSporePrintForm} from "@/app/components/sporePrintClient";
+import {SporePrintData} from "@/app/components/sporePrintServer";
+import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
 
 export function AssertJar(input: any): asserts input is JarData {
     if (typeof input !== 'object') {
@@ -373,17 +382,51 @@ export default function JarDisplay(
                 {"Size: " + sizeFromNum(data.sizeCups)}
             </div>
         }
-    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
-        const disp = initial.disposed !== undefined
-        return !disp ? [
-            WriteRfidOvcArea(initial._id),
-            // TODO: create spore print (if innoculated)
-            // TODO: creat spore swab (if innoculated)
-        ] : []
-    }
     const isInnoculated = ()=>{
         return initial.species !== undefined
     }
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            ...(isInnoculated() ? [/*{
+                txt: "New Fruiting Chamber", // TODO: FULLY TEST! New on 8/26/26 // TODO: needs to also propagate species information
+                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                    return <NewFruitingChamberForm handlers={{isTopLevel: false,onCreate:(fc: FruitingChamberData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                            onCreate([{
+                                typeText: "Fruiting Chamber",
+                                node: <CreatedLinkFor linkId={fc._id} typ={"fruitingChamber"}/>,
+                            }], false)
+                        }}} parent={initial._id} substrateBatchIn={undefined}/>
+                },
+            },*/{
+                txt: "New Spore Print", // TODO: FULLY TEST! New on 8/26/26
+                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                    return <NewSporePrintForm parentId={initial._id} onCreate={(sp: SporePrintData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                        onCreate([{
+                            typeText: "Spore Print",
+                            node: <CreatedLinkFor linkId={sp._id} typ={"sporePrint"}/>,
+                        }], false)
+                }}/>
+                },
+            },{
+                txt: "New Spore Swab", // TODO: FULLY TEST! New on 8/26/26
+                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                    return <NewSporeSwabForm otherParentIn={initial._id} onCreate={(sp: SporeSwabData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                        onCreate([{
+                            typeText: "Spore Swab",
+                            node: <CreatedLinkFor linkId={sp._id} typ={"sporeSwab"}/>,
+                        }], false)
+                    }}/>
+                },
+            },/*{
+                // TODO: new fruit?????
+            }*/] : []),
+            WriteRfidOvcArea(initial._id),
+
+            // TODO: creat spore swab (if innoculated)
+        ] : []
+    }
+
         return <DisplayFormWrapper entryType={"jar"}>
             <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Grain Jar", entryType:"jar"}}/>
@@ -457,7 +500,7 @@ export function NewJarForm({handlers, pcRunIn, grainBatchIn}: {
     const cookies = useContext(CookiesContext)
     const createJar = (e: React.MouseEvent) => {
         e.preventDefault()
-        if (!grainBatch) { // TODO: if recipe exists but batch does not, then create batch AND jar
+        if (!grainBatch) { // TODO: if recipe exists but batch does not, then create batch AND jar?
             setErr("batch must exist!")
             return
         }

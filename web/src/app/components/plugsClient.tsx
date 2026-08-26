@@ -3,6 +3,7 @@
 import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
+    CreatedLinkFor,
     DisplayFormWrapper,
     DisplayInput,
     DoCreateRequest, DoMultipartImportRequest, DoUpdateMultipartRequest,
@@ -30,7 +31,13 @@ import {DowelType, PlugsData} from "@/app/components/plugsServer";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {KnownFruitableArea} from "./formSubcomponents/knownFruitableArea";
 import ReaderWriterSelector, {WriteRfidOvcArea} from "./formSubcomponents/readerWriterButtons/readerSelector";
-import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "./formSubcomponents/shared";
+import {
+    AddCreatedQuadColFunction,
+    AddCreatedTriColFunction,
+    AllEntries,
+    OnViewCreatorQuadCol,
+    SplitAllEntries
+} from "./formSubcomponents/shared";
 import {ACL} from "./accessControlServer";
 import {
     ErrorDisplay,
@@ -66,6 +73,10 @@ import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import TestAndValidate from "@/app/components/testing/untested";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 import {JarRecipeData} from "@/app/components/jarRecipeServer";
+import {NewSporePrintForm} from "@/app/components/sporePrintClient";
+import {SporePrintData} from "@/app/components/sporePrintServer";
+import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
 
 export function AssertPlugs(input: any): asserts input is PlugsData {
     if (typeof input !== 'object') {
@@ -271,7 +282,31 @@ export default function PlugsDisplay(
     }
     const ovcs: () => OnViewCreatorQuadCol[] = () => {
         const disp = initial.disposed !== undefined
+        const innoculated = initial.species !== undefined
         return !disp ? [
+            ...(innoculated ? [
+                /*{TODO: new fruit?????},*/
+                {
+                    txt: "New Spore Print", // TODO: FULLY TEST! New on 8/26/26
+                    newCreationArea: (onCreate: AddCreatedQuadColFunction) => { // TODO: for print and swab OVCs, make a convenience function....
+                        return <NewSporePrintForm parentId={initial._id} onCreate={(sp: SporePrintData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                            onCreate([{
+                                typeText: "Spore Print",
+                                node: <CreatedLinkFor linkId={sp._id} typ={"sporePrint"}/>,
+                            }], false)
+                        }}/>
+                    },
+                },{
+                    txt: "New Spore Swab", // TODO: FULLY TEST! New on 8/26/26
+                    newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                        return <NewSporeSwabForm otherParentIn={initial._id} onCreate={(sp: SporeSwabData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                            onCreate([{
+                                typeText: "Spore Swab",
+                                node: <CreatedLinkFor linkId={sp._id} typ={"sporeSwab"}/>,
+                            }], false)
+                        }}/>
+                    },
+                }]:[]),
             WriteRfidOvcArea(initial._id),
             // TODO: area to create fruit if innoculated
             // ...[initial.species ? [{

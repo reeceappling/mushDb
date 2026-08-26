@@ -428,6 +428,7 @@ func importBagHandler(w http.ResponseWriter, r *http.Request) {
 	filesProcessed := 0
 	ctx, now := request.UnixTime(r.Context())
 	for { // TODO: FIX THIS MULTIPART READER? Unconfirmed that this even needs fixing as of 6/5/26
+		// TODO: see if we can switch this to the way all the others are...
 		fileName := p.FileName()
 		defer p.Close()
 		if isFile := fileName != ""; isFile {

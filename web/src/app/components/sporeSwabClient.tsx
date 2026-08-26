@@ -286,7 +286,7 @@ export default function SporeSwabDisplay(
 
 // Should only be accessible from a fruit's page
 export function NewSporeSwabForm(
-    // TODO: can also be made from bag, box
+    // can also be made from bag, box, etc.
     {printIn, fruitIn, otherParentIn, offset, onCreate}: {
         printIn?: SporePrintData
         fruitIn?: FruitData
@@ -401,7 +401,7 @@ export function ChildSwabArea({parent}:{parent?:string}){
         })
     }
     const redirectToSwab = (swab:SporeSwabData) => {
-        window.location.assign(viewUrlFor("sporeSwab", swab._id)) // TODO: ENSURE OK!
+        window.location.assign(viewUrlFor("sporeSwab", swab._id))
     }
     const toggleCollapsed = (e: React.MouseEvent<HTMLButtonElement,MouseEvent>) => {
         e.preventDefault()

@@ -289,7 +289,7 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 	data := importPlugsRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
 		// Already written
 		return

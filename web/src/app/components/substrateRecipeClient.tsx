@@ -264,7 +264,7 @@ export function SubstrateRecipeArea({id, txt, readonly, onSelect}: { // TODO: OV
     const [open, setOpen] = React.useState(false)
     let linkArea: JSX.Element | null = <div>{"unknown"}</div>
     if (open) {
-        <SubstrateRecipeSelector doSelect={r => {
+        return <SubstrateRecipeSelector doSelect={r => {
             if (r !== undefined) {
                 onSelect && onSelect(r)
                 setRecipeName(r._id)
