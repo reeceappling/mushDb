@@ -450,13 +450,24 @@ type Antibiotic string
 var (
 	HydrogenPeroxide Antibiotic = "HydrogenPeroxide"
 	Doxycycline      Antibiotic = "Doxycycline"
-	Cefazolin        Antibiotic = "Cefazolin" // RX only, not available normally
+	Cefazolin        Antibiotic = "Cefazolin"       // RX only, not available normally
+	Chloramphenicol  Antibiotic = "Chloramphenicol" // Minimal if any degradation under sterilization conditions // TODO: unknown how to get
+	Ciprofloxacin    Antibiotic = "Ciprofloxacin"   // TODO: unknown how to get
+	Gentamicin       Antibiotic = "Gentamicin"      // TODO: unknown how to get
+	Penicillin       Antibiotic = "Penicillin"      // Frequently combined with Streptomycin (Pen-Strep) to target gram-positive bacteria // TODO: unknown how to get
+	Streptomycin     Antibiotic = "Streptomycin"    // Frequently used in environmental or agricultural fungal isolation to suppress general bacterial flora // TODO: unknown how to get
+
 )
 
 var antibioticsWithDosages = []Tuple[Antibiotic, string]{
 	newTuple(HydrogenPeroxide, "unknown as of right now"), // TODO: figure out measurements
 	newTuple(Doxycycline, "unknown as of right now"),      // TODO: figure out measurements
 	newTuple(Cefazolin, "unknown as of right now"),        // TODO: figure out measurements
+	newTuple(Chloramphenicol, "unknown as of right now"),  // TODO: figure out measurements
+	newTuple(Ciprofloxacin, "unknown as of right now"),    // TODO: figure out measurements
+	newTuple(Gentamicin, "unknown as of right now"),       // TODO: figure out measurements
+	newTuple(Penicillin, "unknown as of right now"),       // TODO: figure out measurements
+	newTuple(Streptomycin, "unknown as of right now"),     // TODO: figure out measurements
 }
 var antibiotics = sliceutils.Map(antibioticsWithDosages, func(awd Tuple[Antibiotic, string]) Antibiotic {
 	return awd.a
