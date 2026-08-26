@@ -247,13 +247,17 @@ func (l Liquid) withPct(pct float64) Liquid {
 
 type Fluid string
 
+var fluids = []Fluid{ // TODO: remove once autogen has been run again
+	Water,
+	DistilledWater,
+	GrainWater,
+}
 var (
 	Water          = Fluid("water")
 	DistilledWater = Fluid("distilledWater")
 	GrainWater     = Fluid("grain water")
+	// TODO: any more?
 )
-var fluids = []Fluid{Water, DistilledWater, GrainWater} // TODO: remove once autogen has been run again
-// TODO: remove once autogen has been run again
 
 func (f Fluid) AsLiquid(pct ...float64) Liquid {
 	val := 100.0
@@ -324,14 +328,19 @@ type NutrientMeasurement struct {
 
 type Nutrient string
 
+var nutrients = []Nutrient{
+	LME,
+	Potato,
+	BRF,
+}
+
+// TODO: add all of these to autogenned
 var (
 	LME    Nutrient = "LME"
 	Potato Nutrient = "potato flakes"
 	BRF    Nutrient = "Brown rice flour"
+	// TODO: any more?
 )
-
-// TODO: add all of these to autogenned
-var nutrients = []Nutrient{LME, Potato, BRF}
 
 // TODO: add all of these to autogenned
 type SugarMeasurement struct {
@@ -342,8 +351,6 @@ type SugarMeasurement struct {
 
 type Sugar string
 
-var sugars = []Sugar{Dextrose, Honey, MapleSyrup}
-
 func newSugarMeasurement(add Sugar, amount float64, unit string) SugarMeasurement {
 	return SugarMeasurement{
 		Type:   add,
@@ -352,12 +359,19 @@ func newSugarMeasurement(add Sugar, amount float64, unit string) SugarMeasuremen
 	}
 }
 
+var sugars = []Sugar{
+	Dextrose,
+	Honey,
+	MapleSyrup,
+	//Sucrose,
+}
+
 // TODO: add all of these to autogenned
 var (
 	Dextrose   Sugar = "dextrose" // This is corn syrup (Karo), or pure dextrose
 	Honey      Sugar = "honey"
 	MapleSyrup Sugar = "maple syrup"
-	// TODO: sucrose?  (table sugar)
+	//Sucrose Sugar = "sucrose (table sugar)" // TODO: enable? // Not commonly used (does mycelium not process it well?)
 	// TODO: fructose?
 	// TODO: Molasses? // Provides trace minerals and micronutrients, though darker variants should be used sparingly because it can darken agar
 )
@@ -381,6 +395,7 @@ var (
 	Oats     Grain = "oats"
 	Popcorn  Grain = "popcorn"
 	BirdSeed Grain = "birdseed"
+	// TODO: any more?
 )
 
 func writeAsJson(w http.ResponseWriter, obj any) {
@@ -423,6 +438,7 @@ var (
 	purple     Colorant = "Purple"
 )
 
+// TODO: reference this?
 var colors = sliceutils.MapToMap(colorants, func(inp Colorant) (string, Colorant) {
 	return string(inp), inp
 })
@@ -434,7 +450,8 @@ func ValidColor(c Colorant) bool {
 	// return ok
 }
 
-type Additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
+type Additive string
+
 var additives = []Additive{Vermiculite, Perlite, Gypsum, YeastNutrient, CoffeeGrounds, Mica}
 
 // TODO: add all of these to autogenned
@@ -444,7 +461,7 @@ var (
 	Gypsum        Additive = "gypsum"
 	YeastNutrient Additive = "yeast nutrient"
 	CoffeeGrounds Additive = "Coffee Grounds"
-	Mica          Additive = "Mica"
+	Mica          Additive = "Mica" // TODO: different colors?
 )
 
 type Antibiotic string
@@ -452,22 +469,21 @@ type Antibiotic string
 // TODO: add all of these to autogenned
 var (
 	HydrogenPeroxide Antibiotic = "HydrogenPeroxide"
-	Doxycycline      Antibiotic = "Doxycycline"
 	Cefazolin        Antibiotic = "Cefazolin"       // RX only, not available normally
 	Chloramphenicol  Antibiotic = "Chloramphenicol" // Minimal if any degradation under sterilization conditions // TODO: unknown how to get
 	Ciprofloxacin    Antibiotic = "Ciprofloxacin"   // TODO: unknown how to get
-	Gentamicin       Antibiotic = "Gentamicin"      // TODO: unknown how to get
-	Penicillin       Antibiotic = "Penicillin"      // Frequently combined with Streptomycin (Pen-Strep) to target gram-positive bacteria // TODO: unknown how to get
-	Streptomycin     Antibiotic = "Streptomycin"    // Frequently used in environmental or agricultural fungal isolation to suppress general bacterial flora // TODO: unknown how to get
-
+	Doxycycline      Antibiotic = "Doxycycline"
+	Gentamicin       Antibiotic = "Gentamicin"   // TODO: unknown how to get
+	Penicillin       Antibiotic = "Penicillin"   // Frequently combined with Streptomycin (Pen-Strep) to target gram-positive bacteria // TODO: unknown how to get
+	Streptomycin     Antibiotic = "Streptomycin" // Frequently used in environmental or agricultural fungal isolation to suppress general bacterial flora // TODO: unknown how to get
 )
 
 var antibioticsWithDosages = []Tuple[Antibiotic, string]{
 	newTuple(HydrogenPeroxide, "unknown as of right now"), // TODO: figure out measurements
-	newTuple(Doxycycline, "unknown as of right now"),      // TODO: figure out measurements
 	newTuple(Cefazolin, "unknown as of right now"),        // TODO: figure out measurements
 	newTuple(Chloramphenicol, "unknown as of right now"),  // TODO: figure out measurements
 	newTuple(Ciprofloxacin, "unknown as of right now"),    // TODO: figure out measurements
+	newTuple(Doxycycline, "unknown as of right now"),      // TODO: figure out measurements
 	newTuple(Gentamicin, "unknown as of right now"),       // TODO: figure out measurements
 	newTuple(Penicillin, "unknown as of right now"),       // TODO: figure out measurements
 	newTuple(Streptomycin, "unknown as of right now"),     // TODO: figure out measurements
