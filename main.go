@@ -133,7 +133,11 @@ func main() {
 	// Get non-db env vars
 	rfidRegistrySecret, googId, googSecret, webHostName, apiPort := resolveOtherSecrets(ctx)
 
-	// TODO: api is hosted internally on 8080, but the actual site on cloudflare uses 443! Web is on 3000
+	/*
+		api is hosted internally on 8080
+		actual site on cloudflare uses 443
+		Web is on 3000
+	*/
 	//tempPortStr := ""
 	//if (extProto == "https" && apiPort != 443) || (extProto == "http" && (apiPort != 80 && apiPort != defaultHttpPort)) { // TODO: 80 AND 8080 ok here?
 	//	tempPortStr = fmt.Sprintf(`:%d`, apiPort)
