@@ -339,7 +339,7 @@ func (acl ACL) HighestPermFor(userPerms ResolvedUserPerms) *ReadWritePerm {
 	}
 	if userPerms.Projects != nil {
 		for proj, projCanWriteOnEntry := range acl.Projects {
-			if projPerm, exists := userPerms.Projects[proj]; exists { // TODO: account for project edit!?
+			if projPerm, exists := userPerms.Projects[proj]; exists {
 				userCanWriteOnProj := projPerm != nil
 				userCanWriteOnProjAndProjCanWriteOnEntry := userCanWriteOnProj && projCanWriteOnEntry
 				if userCanWriteOnProjAndProjCanWriteOnEntry {
@@ -465,7 +465,6 @@ type ResolvedUserPerms struct {
 	Email       string                           `bson:"email" json:"email"`
 	AccountType *AccountType                     `bson:"accountType,omitempty" json:"accountType,omitempty"` // nil is guest (never write), false is normal email, true is admin
 	Projects    map[projectName]*UserProjectPerm `bson:"projects,omitempty" json:"projects,omitempty"`       // nil is readonly, false is canWrite, true is admin of project
-	//CanEditProjects map[projectName]struct{}// TODO: for project editors, maybe have a separate map? I dont really like this...
 }
 
 func (perms ResolvedUserPerms) GetUser(ctx context.Context) (*User, error) {
@@ -551,9 +550,6 @@ type ProjectPerm string // "read", "write", or "admin". Used as a pointer, where
 var (
 	// ProjectAdmin defines a ProjectPerm for a user that can write on entries for the specified project (if the project can write to the entry), as well as modify the project itself
 	ProjectAdmin ProjectPerm = "admin"
-	// TODO: next line
-	//// ProjectModify defines a ProjectPerm for a user that can write and read on entries for the specified project, as well as modify everything on the project except permissions
-	// TODO: this! ProjectModify ProjectPerm = "modify"
 	// ProjectWrite defines a ProjectPerm for a user that can write (and read) on entries for the specified project (if the project can write to the entry)
 	ProjectWrite ProjectPerm = "write"
 	// ProjectRead defines a ProjectPerm for a user that can read entries for the specified project
@@ -569,8 +565,6 @@ func (pp ProjectPerm) UserProjectPerm() *UserProjectPerm {
 		return UserProjectWrite()
 	case ProjectRead:
 		return UserProjectRead()
-	//case ProjectModify:
-	//	return UserProjectModify() // TODO: FIX! May be physically impossible without changing structs given UserProjectX is a *bool
 	default:
 		panic("invalid user project perm string: " + string(pp))
 	}
@@ -590,17 +584,11 @@ func (pp *ProjectPerm) CanWrite() bool {
 	return pp != nil && *pp != ProjectRead
 }
 
-//func (pp *ProjectPerm) CanModifyProject() bool { // TODO: this!
-//	return pp != nil && *pp == ProjectModify
-//}
-
 func (projPerm *ProjectPerm) UnmarshalJSON(bs []byte) (err error) {
 	s := strings.Trim(string(bs), `"`)
 	switch s {
 	case "admin":
 		*projPerm = ProjectAdmin
-	//case "modify":
-	//	*projPerm = ProjectModify // TODO: reenable once ready!
 	case "write":
 		*projPerm = ProjectWrite
 	case "read":

@@ -194,6 +194,7 @@ type createFruitingChamberRequest struct {
 	// removed: Recipe // substrate recipe (pull from batch)
 	SubstrateBatchField
 	// TODO: do FCs only ever take jars? can any other parent types exist?
+	// TODO: can we make FCs either way? Either without jar but with substrateBatch, or with batch and jar?
 	ParentJar          MainCollectionId `json:"parentJar"` // TODO: do we want this? // TODO: ALLOW USER TO INPUT PARENT AND CHAIN A TRANSFER CREATION AS WELL?
 	GrainCups          float64
 	MixedSubstrateCups float64

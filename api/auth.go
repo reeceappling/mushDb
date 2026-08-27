@@ -2,8 +2,6 @@ package api
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -34,24 +32,24 @@ import (
 //	}
 //}
 
-var sessionAesCipher cipher.AEAD // 32 bytes for AES-256
-
-func init() {
-	// Generate AES key for this run
-	key := make([]byte, 32) // 32 bytes for AES-256
-	_, err := rand.Read(key)
-	if err != nil {
-		panic("failed to generate random session encryption key")
-	}
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		panic("failed to generate random session encryption key")
-	}
-	sessionAesCipher, err = cipher.NewGCM(block)
-	if err != nil {
-		panic("failed to generate random session encryption key")
-	}
-}
+//var sessionAesCipher cipher.AEAD // 32 bytes for AES-256
+//
+//func init() {
+//	// Generate AES key for this run
+//	key := make([]byte, 32) // 32 bytes for AES-256
+//	_, err := rand.Read(key)
+//	if err != nil {
+//		panic("failed to generate random session encryption key")
+//	}
+//	block, err := aes.NewCipher(key)
+//	if err != nil {
+//		panic("failed to generate random session encryption key")
+//	}
+//	sessionAesCipher, err = cipher.NewGCM(block)
+//	if err != nil {
+//		panic("failed to generate random session encryption key")
+//	}
+//}
 
 const authServiceContextKey = "authenticationService"
 
@@ -269,7 +267,7 @@ func (srv *AuthService) newSessionIdForUserWithoutLock(email string) (SessionId,
 		return "", errors.Join(err, errors.New("failed to check session with email"))
 	}
 
-	for i := 0; i < maxSessionIdGenerationTries; i++ { // TODO: num ok?
+	for i := 0; i < maxSessionIdGenerationTries; i++ {
 		var temp SessionId
 		temp, err = generateSessionId()
 		if err != nil {
@@ -663,7 +661,7 @@ func MiddlewareAuthOnContext(next http.Handler, notLoggedInHandler http.Handler,
 		}
 		ctxWithAuthInfo := SetAuthInfo(r.Context(), sess.Data)
 
-		// TODO: ensure session cookies persist!
+		// TODO: ensure session cookies persist?!
 		next.ServeHTTP(w, r.WithContext(ctxWithAuthInfo))
 	})
 }
@@ -725,7 +723,7 @@ func AuthSplitterMiddleware() func(http.Handler, http.Handler, func(error) http.
 			}
 			ctxWithAuthInfo := SetAuthInfo(r.Context(), sess.Data)
 
-			// TODO: ensure session cookies persist!
+			// TODO: ensure session cookies persist?!
 			onAuthed.ServeHTTP(w, r.WithContext(ctxWithAuthInfo))
 		})
 	}
@@ -753,7 +751,7 @@ func authAdminSplitterMiddleware() func(http.Handler, http.Handler, func(error) 
 				http.Error(w, "Access Denied. Admin area", http.StatusForbidden)
 				return
 			}
-			// TODO: ensure session cookies persist!
+			// TODO: ensure session cookies persist?!
 			onAuthed.ServeHTTP(w, r.WithContext(SetAuthInfo(r.Context(), sess.Data)))
 		})
 	}
