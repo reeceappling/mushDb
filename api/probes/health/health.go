@@ -35,7 +35,8 @@ func exampleDoNotUse() {
 
 	// Application endpoints
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Application is running"))
+		_, err := w.Write([]byte("Application is running"))
+		rfid.HandleHttpWriteError(err)
 	})
 
 	server := &http.Server{
@@ -195,7 +196,7 @@ func (h *Handler) SetLivenessCheck(check func() bool) {
 // Returns 200 if the application is alive, 503 otherwise
 func (h *Handler) LivenessHandler(w http.ResponseWriter, r *http.Request) {
 	var statusCode int = http.StatusOK
-	w.Header().Set("Content-Type", "application/json") // TODO: ok?
+	w.Header().Set("Content-Type", "application/json")
 	out := map[string]interface{}{
 		"status": checkers.LivenessAlive,
 	}
@@ -206,9 +207,8 @@ func (h *Handler) LivenessHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(out); err != nil {
-		rfid.HandleHttpWriteError(err)
-	}
+	err := json.NewEncoder(w).Encode(out)
+	rfid.HandleHttpWriteError(err)
 	return
 }
 
@@ -231,11 +231,11 @@ func (h *Handler) ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 		if response.Status != checkers.StatusHealthy {
 			statusCode = http.StatusServiceUnavailable
 		}
+		out = response
 	}
 	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(out); err != nil {
-		rfid.HandleHttpWriteError(err)
-	}
+	err := json.NewEncoder(w).Encode(out)
+	rfid.HandleHttpWriteError(err)
 }
 
 // StartupHandler handles startup probe requests
@@ -253,7 +253,6 @@ func (h *Handler) StartupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(out); err != nil {
-		rfid.HandleHttpWriteError(err)
-	}
+	err := json.NewEncoder(w).Encode(out)
+	rfid.HandleHttpWriteError(err)
 }

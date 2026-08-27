@@ -418,7 +418,7 @@ func resolveOtherSecrets(ctx context.Context) (rfidRegistrySecret, googId, googS
 		panic("failed to resolve secret GOOGLE_CLIENT_SECRET: " + err.Error())
 	}
 	webHostName = envVarOrDefault("WEB_HOST_INTERNAL", "web") // Can have port if not hosting on 80
-	apiPort, err = strconv.Atoi(os.Getenv("API_PORT"))        // TODO: ok?
+	apiPort, err = strconv.Atoi(os.Getenv("API_PORT"))
 	if err != nil {
 		logging.GetLogger(ctx).Warn(fmt.Sprintf(`No api port configured, defaulting to port %d`, defaultHttpPort))
 		apiPort = defaultHttpPort
@@ -963,10 +963,6 @@ func handleUserAuthedViaGoth(ctx context.Context, user goth.User, w http.Respons
 //
 //	return string(s), nil
 //}
-//
-//func adminLogin(w http.ResponseWriter, r *http.Request) {
-//	// TODO: implement!
-//}
 
 func getDestinationFromAuthRequest(r *http.Request) string {
 	if dst := r.URL.Query().Get("destination"); dst != "" {
@@ -977,19 +973,11 @@ func getDestinationFromAuthRequest(r *http.Request) string {
 
 var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	providerName := r.PathValue("provider")
-	println("RECEIVED REQUEST at " + r.URL.String()) // TODO: del?
 	if providerName == "guest" {
 		handleGuestLogin(w, r)
 		return
 	}
 
-	//bs, err := io.ReadAll(r.Body)
-	//if err != nil {
-	//	println("failed to read body", err.Error())
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//println(string(bs)) // TODO: del?
 	q := r.URL.Query()
 	q.Add("provider", "google")
 	customParamsFromMap := func(m map[string]string) string {
@@ -1019,18 +1007,19 @@ var authProviderHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 			http.Error(w, "failed to handle user auth: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Write([]byte("OK!"))
+		_, err = w.Write([]byte("OK!"))
+		rfid.HandleHttpWriteError(err)
 		return
 		// t, _ := template.New("foo").Parse(userTemplate)
 		//t.Execute(w, gothUser)
 	}
-	println("not authed, beginning authentication by redirecting") // TODO: del?
 
-	//gothic.BeginAuthHandler(w, r)
+	//gothic.BeginAuthHandler(w, r) // TODO: ???
 	url, err := gothic.GetAuthURL(w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintln(w, "error in gothic.GetAuthURL: ", err) // TODO: handle err?
+		_, err = fmt.Fprintln(w, "error in gothic.GetAuthURL: ", err) // TODO: handle err?
+		rfid.HandleHttpWriteError(err)
 		return
 	}
 
@@ -1148,7 +1137,7 @@ func getStateMapAndUpdateRequest(r *http.Request) error {
 }
 
 func removeCookie(c *http.Cookie, w http.ResponseWriter) {
-	c.MaxAge = -1 // TODO: is this ok?
+	c.MaxAge = -1 // Set maxAge negative to remove cookie
 	http.SetCookie(w, c)
 }
 
@@ -1229,6 +1218,8 @@ func redirectToBasePage(r *http.Request, w http.ResponseWriter) {
 	if dst == "" {
 		env.LogIfDev(ctx, "dst not on query")
 		dst = baseApiUrl
+	} else {
+		// TODO: urlDecode? Probably dont need
 	}
 	env.LogIfDev(ctx, "redirecting to: "+dst)
 	http.Redirect(w, r, dst, http.StatusTemporaryRedirect) // TODO: REDIRECT!
@@ -1249,7 +1240,7 @@ var handleLogout = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "logout failure: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Location", loginPath) // TODO: set to login!
+	w.Header().Set("Location", loginPath) // TODO: set to login! (with correct return url?)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 })
 
@@ -1383,27 +1374,13 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 	}
 }
 
-//func placeholderMiddleware(next http.Handler) http.Handler { // TODO: DELETEME!!!!!!!
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		next.ServeHTTP(w, r)
-//		// TODO: reenable
-//		//next.ServeHTTP(w, r.WithContext(rfid.SetAuthInfo(r.Context(), rfid.AuthInfo{
-//		//	Email: rfid.AlternateCollectionId(primitive.ObjectID{}),
-//		//	Opts: &rfid.UserPermsResolved{
-//		//		Admin:    utils.Pointer(true),
-//		//		Projects: nil,
-//		//	},
-//		//})))
-//	})
+//func setupFilePathMiddleware(filePath string) func(next http.Handler) http.Handler {
+//	return func(next http.Handler) http.Handler {
+//		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//			next.ServeHTTP(w, r.WithContext(pics.SetFilePath(r.Context(), filePath)))
+//		})
+//	}
 //}
-
-func setupFilePathMiddleware(filePath string) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r.WithContext(pics.SetFilePath(r.Context(), filePath)))
-		})
-	}
-}
 
 const imagesEndpoint = "/db/images/" // MUST match PicsEndpoint in PicWithNotes.tsx // TODO: use?
 var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
@@ -1414,7 +1391,6 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "image name must not be blank", http.StatusBadRequest)
 		return
 	}
-	//println("trying to read picture file: " + filepath.Join(pics.GetFilePath(ctx), imgSubPath)) // TODO: DEL
 	bytes, err := os.ReadFile(filepath.Join(pics.GetFilePath(ctx), imgSubPath))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -1527,7 +1503,6 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to get project: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// TODO: PERMS!
 		user, err := rfid.GetAuthInfo(ctx)
 		if err != nil {
 			env.LogIfDev(ctx, "Failed to get authinfo: "+err.Error())
@@ -1538,11 +1513,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		uat := user.AccountType // TODO: del
 		if uat.IsAdmin() {      // TODO: del
 			uats = "Admin" // TODO: del
-		} else { // TODO: del
+		} else {                 // TODO: del
 			if uat.IsRegular() { // TODO: del
 				uats = "Regular user" // TODO: del
 			} // TODO: del
-		} // TODO: del
+		}                                                                                       // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		if !user.IsAdmin() && out.Private {
 			if user.AccountType.IsGuest() {
@@ -1556,19 +1531,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 				return
 			}
 		}
-
 		bytes, err = json.Marshal(out)
 		if err != nil {
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
-		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
-		//if err != nil {
-		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
-		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
-		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "species", "subspecies": // Items with possible spaces in names but which have normal perms
 		// TODO: handle alternate names? Return a link to the proper page?
 		var blankItem rfid.PermissionedAltCollectionItem[string]
@@ -1591,7 +1558,6 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// PERMS!
 		user, err := rfid.GetAuthInfo(ctx)
 		if err != nil {
 			http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
@@ -1601,21 +1567,13 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "permission denied for sp/subsp", http.StatusForbidden)
 			return
 		}
-
 		bytes, err = json.Marshal(out)
 		if err != nil {
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
-		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
-		//if err != nil {
-		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
-		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
-		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	case "user": // User (can have @)
-		// TODO: ensure admin?????
+		// Get the requested user
 		decodedId, err := rfid.UrlDecodeString(id)
 		if err != nil {
 			http.Error(w, "failed to decode user email: "+err.Error(), http.StatusInternalServerError)
@@ -1626,19 +1584,23 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 			http.Error(w, "failed to get alt collection itemType: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		// TODO: any permissions? validate user is admin?
+		// Validate user is either admin or the user they want to view
+		user, err := rfid.GetAuthInfo(ctx)
+		if err != nil {
+			http.Error(w, "Failed to get authinfo: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if !user.IsAdmin() {
+			if user.Email != out.Email {
+				http.Error(w, "non-admins cannot view users", http.StatusForbidden)
+				return
+			}
+		}
 		bytes, err = json.Marshal(out)
 		if err != nil {
 			http.Error(w, "failed to marshal itemType", http.StatusInternalServerError)
 			return
 		}
-		//tempBs, err := json.MarshalIndent(out, "", "  ") // TODO: del
-		//if err != nil {
-		//	env.LogIfDev(ctx, "failed to marshal itemType: "+err.Error())
-		//	http.Error(w, "failed to marshal itemType: "+err.Error(), http.StatusInternalServerError)
-		//	return
-		//}
-		//env.LogIfDev(ctx, "returning item: "+string(tempBs))
 	// Cases which are alt colls with base58->binary ids
 	case "agarBatch", "agarRecipe", "jarRecipe", "grainBatch", "lcRecipe", "pcRun", "sale", "substrateRecipe", "substrateBatch", "transfer":
 		var possibleName = id
@@ -1651,7 +1613,7 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 				return
 			}
 		}
-		tryGetItem := func(inputItem rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]) (rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId], error) {
+		tryGetRecipe := func(inputItem rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]) (rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId], error) {
 			if !failedToGetAltId {
 				if altId != nil {
 					outTemp, errTemp := rfid.GetAltCollectionItem(ctx, *altId, inputItem)
@@ -1660,59 +1622,52 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 					}
 				} else {
 					if !isRecipe {
-						return nil, errors.New("should never happen in tryGetItem")
+						return nil, errors.New("should never happen in tryGetRecipe")
 					}
 				}
-
 			}
 			tempOut, tempErr := rfid.GetRecipeWithName(ctx, possibleName, inputItem) // TODO: ensure name-overlap does not cause problems here!
 			if tempErr == nil {
-				// TODO: SET RESPONSE HEADERS SO THE USER CAN BE REDIRECTED?????
+				// TODO: REDIRECT TO THE CORRECT URL? OR JUST SWAP THE URL IN THE BROWSER?
 			}
 			return tempOut, tempErr
 		}
 		var out rfid.PermissionedAltCollectionItem[rfid.AlternateCollectionId]
 		switch entryType {
 		case "agarBatch":
-			temp, errr := tryGetItem(&rfid.AgarBatch{})
-			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarBatch{})
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarBatch{})
 			out, err = temp, errr
 		case "agarRecipe":
-			temp, errr := tryGetItem(&rfid.AgarRecipe{})
+			temp, errr := tryGetRecipe(&rfid.AgarRecipe{})
 			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.AgarRecipe{}) // TODO: handle recipe name?
 			out, err = temp, errr
 		case "grainBatch":
-			temp, errr := tryGetItem(&rfid.GrainBatch{})
-			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.GrainBatch{})
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.GrainBatch{})
 			out, err = temp, errr
 			//out = temp
 		case "jarRecipe":
-			temp, errr := tryGetItem(&rfid.JarRecipe{})
+			temp, errr := tryGetRecipe(&rfid.JarRecipe{})
 			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.JarRecipe{}) // TODO: handle recipe name?
 			out, err = temp, errr
 		case "lcRecipe":
-			temp, errr := tryGetItem(&rfid.LcRecipe{})
+			temp, errr := tryGetRecipe(&rfid.LcRecipe{})
 			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.LcRecipe{}) // TODO: handle recipe name?
 			out, err = temp, errr
 		case "pcRun":
-			temp, errr := tryGetItem(&rfid.PCRun{})
-			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.PCRun{})
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.PCRun{})
 			out, err = temp, errr
 		case "sale":
-			temp, errr := tryGetItem(&rfid.Sale{})
-			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Sale{})
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Sale{})
 			out, err = temp, errr
 		case "substrateBatch":
-			temp, errr := tryGetItem(&rfid.SubstrateBatch{})
-			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateBatch{})
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateBatch{})
 			out, err = temp, errr
 		case "substrateRecipe":
-			temp, errr := tryGetItem(&rfid.SubstrateRecipe{})
+			temp, errr := tryGetRecipe(&rfid.SubstrateRecipe{})
 			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.SubstrateRecipe{}) // TODO: handle recipe name?
 			out, err = temp, errr
 		case "transfer":
-			temp, errr := tryGetItem(&rfid.Transfer{})
-			//temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Transfer{})
+			temp, errr := rfid.GetAltCollectionItem(ctx, *altId, &rfid.Transfer{})
 			out, err = temp, errr
 		default:
 			env.LogIfDev(ctx, "invalid entry type in getAnyCollHandler: "+entryType)
@@ -1872,7 +1827,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	println("trying to read from reader: " + readerName)
 	ctx := r.Context()
 	err := env.IfNotProd(ctx, func() error { // TODO: del later?
-		if readerName == goodTestRfid { // TODO: remove later
+		if readerName == goodTestRfid {      // TODO: remove later
 			// TODO: multiple? not just one id?
 			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 			if err != nil {
@@ -2003,7 +1958,7 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	toWriteBytes := [8]byte{0, 0, 0, 0, 0, 0, 0, 0} // TODO: ok?
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	validResponse := []byte("Cleared")               // TODO: ok?
+	validResponse := []byte("Cleared") // TODO: ok?
 	err := env.IfNotProd(r.Context(), func() error { // TODO: del later?
 		if writerName == goodTestRfid {
 			_, err := w.Write(validResponse)

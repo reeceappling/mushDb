@@ -18,7 +18,7 @@ type HealthCheckResult struct {
 	Status    Status
 	Message   string
 	Duration  time.Duration `json:"duration_ns"`
-	Timestamp time.Time     `json:"duration_ns"`
+	Timestamp time.Time     `json:"timestamp"`
 }
 
 type HealthResponse struct {

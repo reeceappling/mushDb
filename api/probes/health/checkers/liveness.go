@@ -6,17 +6,42 @@ import (
 	"net/http"
 )
 
-type Liveness string
+type LivenessStatus string
 
 const (
-	LivenessAlive     = "alive"
-	LivenessUnhealthy = "unhealthy"
+	LivenessAlive     LivenessStatus = "alive"
+	LivenessUnhealthy LivenessStatus = "unhealthy"
 )
 
 var LivenessHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // TODO: use or no?
 	w.WriteHeader(http.StatusOK)
-	err := json.NewEncoder(w).Encode(map[string]string{"status": "alive"})
-	if err != nil {
-		rfid.HandleHttpWriteError(err)
-	}
+	out := map[string]string{"status": string(LivenessAlive)}
+	err := json.NewEncoder(w).Encode(out)
+	rfid.HandleHttpWriteError(err)
 })
+
+//type Liveness struct {}
+//// NewLiveness creates a new Liveness checker
+//func NewLiveness() *Liveness {
+//	return &Liveness{}
+//}
+//
+//func (h *Liveness) Name() string {
+//	return "liveness"
+//}
+//
+//// Check performs the HTTP health check
+//func (h *Liveness) Check(ctx context.Context) HealthCheckResult {
+//	start := time.Now()
+//	out := HealthCheckResult{
+//		Name:      h.Name(),
+//		Status: Status(LivenessAlive),
+//		Message:   "", // TODO: ????
+//		Duration:  start.Sub(start),
+//		Timestamp: time.Now(), // TODO: ????
+//	}
+//	now := time.Now()
+//	out.Timestamp = now
+//	out.Duration = now.Sub(start)
+//	return out
+//}
