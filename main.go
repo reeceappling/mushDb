@@ -105,6 +105,7 @@ const loginPath = "/login"
 
 func main() {
 	ctx := context.Background()
+	// TODO: SETUP Health check service (also for telemetry, db, webserver, caches?, mainServer, rfidStuff). See /api/probes/health
 	// Set up OpenTelemetry.// TODO: DISABLE FOR NOW
 	//otelShutdown, err := gotel.SetupSDK(ctx)
 	//if err != nil {
@@ -292,8 +293,13 @@ func main() {
 	OptionsGetOnly := OptionsMiddleware(http.MethodGet)
 	OptionsPostOnly := OptionsMiddleware(http.MethodPost)
 
-	// handle login
+	// Generic Endpoints
+	// K8s container check endpoints // TODO: utilize /api/probes. See exampleDoNotUse()
+	//http.Handle("/health", healthHandler)
+	//http.Handle("/ready", healthHandler)
+	//http.Handle("/startup", healthHandler)
 
+	// handle login
 	rateLimitCtxMiddleware := func(next http.Handler) http.Handler {
 		return rateLimiter(ctxMiddleware(next))
 	}
@@ -1533,11 +1539,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		uat := user.AccountType // TODO: del
 		if uat.IsAdmin() {      // TODO: del
 			uats = "Admin" // TODO: del
-		} else { // TODO: del
+		} else {                 // TODO: del
 			if uat.IsRegular() { // TODO: del
 				uats = "Regular user" // TODO: del
 			} // TODO: del
-		} // TODO: del
+		}                                                                                       // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		if !user.IsAdmin() && out.Private {
 			if user.AccountType.IsGuest() {
@@ -1867,7 +1873,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	println("trying to read from reader: " + readerName)
 	ctx := r.Context()
 	err := env.IfNotProd(ctx, func() error { // TODO: del later?
-		if readerName == goodTestRfid { // TODO: remove later
+		if readerName == goodTestRfid {      // TODO: remove later
 			// TODO: multiple? not just one id?
 			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 			if err != nil {
@@ -1998,7 +2004,7 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	toWriteBytes := [8]byte{0, 0, 0, 0, 0, 0, 0, 0} // TODO: ok?
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	validResponse := []byte("Cleared")               // TODO: ok?
+	validResponse := []byte("Cleared") // TODO: ok?
 	err := env.IfNotProd(r.Context(), func() error { // TODO: del later?
 		if writerName == goodTestRfid {
 			_, err := w.Write(validResponse)
