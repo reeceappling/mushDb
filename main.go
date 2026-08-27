@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 	google2 "github.com/markbates/goth/providers/google"
@@ -18,7 +16,6 @@ import (
 	rfid "github.com/reeceappling/mushDb/api"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
-	"github.com/reeceappling/mushDb/api/request"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/shared"
 	"github.com/ulule/limiter/v3"
@@ -94,6 +91,7 @@ func setupDb(ctxIn context.Context) (ctx context.Context, client *mongo.Client, 
 	if err != nil {
 		return ctx, nil, errors.Join(errors.New("failed to create MongoDB application client"), err)
 	}
+	// TODO: set db initialization health to ok?
 	println("DB setup and connection complete!")
 	return ctx, rfid.GetMongoClient(ctx), nil
 }
@@ -177,9 +175,11 @@ func main() {
 		case v == syscall.SIGINT:
 			println("Server received SIGINT Signal")
 		default:
+
 			println("Server Received Signal", "signal", v)
 		}
 		println("Shutting Down Server")
+		// TODO: set server health to bad? maybe need to do this after the server has been shutdown
 
 		srvCtx, cancel := context.WithTimeout(ctx, 30*time.Second) // default ecs shutdown is 30 seconds
 		defer cancel()
@@ -194,8 +194,8 @@ func main() {
 		}
 		os.Exit(42) // weird code so we can tell at a glance that we shut it down
 	}()
-	googleAuthProvider := google2.New(googId, googSecret, authCallbackUrlFor("google"), "email", "profile", "openid") // TODO: ensure callback is ok
-	guestCallbackUrl := authCallbackUrlFor("guest")                                                                   // TODO: set this up!
+	googleAuthProvider := google2.New(googId, googSecret, authCallbackUrlFor("google"), "email", "profile", "openid")
+	guestCallbackUrl := authCallbackUrlFor("guest")
 	guestAuthProvider := NewGuestProvider(guestCallbackUrl, "guest")
 	goth.UseProviders(googleAuthProvider, guestAuthProvider)
 	//gothic.Store = customSessionStore{} // TODO: REENABLE????
@@ -376,11 +376,10 @@ func main() {
 	// Next endpt needs no authorization, but does have a rate limiter?? // TODO: rl?
 	http.Handle("/options/{optionsType}", Middlewares(tracerMiddleware("/options"), rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything... // TODO: options middleware?
 
+	// TODO: after ListenAndServe is called, also set api server health to ok?
 	if err = srv.ListenAndServe(); err != nil {
+		// TODO: set server health to bad?
 		panic("failed to listen and serve for http: " + err.Error())
-	}
-	if err != nil {
-		panic("ERROR CLOSING SERVER " + err.Error())
 	}
 }
 func setupEnvironment(ctxIn context.Context) context.Context {
@@ -476,31 +475,31 @@ func OptionsMiddleware(acceptableMethods ...string) SingleMiddleware {
 	}
 }
 
-type customSessionStore struct { // TODO: use or delete
-	svc *rfid.AuthService
-}
+//type customSessionStore struct { // TODO: use or delete
+//	svc *rfid.AuthService
+//}
 
-func (c customSessionStore) Get(r *http.Request, name string) (*sessions.Session, error) {
-	for _, cookie := range r.Cookies() {
-		println(cookie.Name)
-		if cookie.Name == name {
-			// TODO: FIX THIS IF NEEDED
-		}
-	}
-	return nil, errors.New("implement me") // TODO: fix?
-}
-
-func (c customSessionStore) New(r *http.Request, name string) (*sessions.Session, error) {
-	//TODO implement me
-	panic("implement me")
-	return nil, errors.New("implement me") // TODO: fix?
-}
-
-func (c customSessionStore) Save(r *http.Request, w http.ResponseWriter, s *sessions.Session) error {
-	//TODO implement me
-	panic("implement me") // TODO: fix?
-	return errors.New("implement me")
-}
+//func (c customSessionStore) Get(r *http.Request, name string) (*sessions.Session, error) {
+//	for _, cookie := range r.Cookies() {
+//		println(cookie.Name)
+//		if cookie.Name == name {
+//			// TODO: FIX THIS IF NEEDED
+//		}
+//	}
+//	return nil, errors.New("implement me") // TODO: fix?
+//}
+//
+//func (c customSessionStore) New(r *http.Request, name string) (*sessions.Session, error) {
+//	//TODO implement me
+//	panic("implement me")
+//	return nil, errors.New("implement me") // TODO: fix?
+//}
+//
+//func (c customSessionStore) Save(r *http.Request, w http.ResponseWriter, s *sessions.Session) error {
+//	//TODO implement me
+//	panic("implement me") // TODO: fix?
+//	return errors.New("implement me")
+//}
 
 func internalOnlyMiddlewareCreator(validDomain string, expectedPort int) func(handler http.Handler) http.Handler {
 	expDomain := fmt.Sprintf("%s:%d", validDomain, expectedPort)
@@ -524,46 +523,46 @@ func internalOnlyMiddlewareCreator(validDomain string, expectedPort int) func(ha
 	}
 }
 
-func ReqTrackingMiddleWare(handler http.Handler) http.Handler { // TODO: USE OR DELETE
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		// TODO: setup logger
-		//consoleLoggerCore := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentConfig().EncoderConfig), zapcore.AddSync(os.Stdout), zapcore.DebugLevel)
-		//otelLoggerCore := otelzap.NewCore("mush-api-go", otelzap.WithLoggerProvider(global.GetLoggerProvider()))
-		//core := zapcore.NewTee(
-		//	otelLoggerCore,
-		//	consoleLoggerCore,
-		//)
-		//sugar := zap.New(core).Sugar()
-		log := logging.GetLogger(ctx)
-
-		requestPath := r.URL.Path
-		var requestId string
-		// Set request path on request
-		log = log.WithStringKVP(request.Path, requestPath)
-		// Set request and trace ids (trace only if span exists)
-		log, requestId = log.Fork(request.Id)
-		ctx = request.SetPath(ctx, requestPath)
-		ctx = request.WithId(ctx, &requestId)
-		//if span, ok := tracer.SpanFromContext(ctx); ok {
-		//	span.SetTag(request.Id, requestId)
-		//	span.SetBaggageItem(request.Id, requestId)
-		//	traceId := span.Context().TraceID() // TODO: get traceId from elsewhere?
-		//	log = log.WithTraceId(ctx, strconv.Itoa(int(traceId)))
-		//}
-
-		defer log.Sync() //nolint:errcheck
-
-		handler.ServeHTTP(w, r.WithContext(logging.SetLogger(ctx, log)))
-
-		//now := time.Now()
-		//// TODO: ensure works properly
-		//wrappedWriter := NewResponseWriterWrapper(w, func() {
-		//	w.Header().Set("reqTimeMs", strconv.Itoa(int(time.Since(now).Milliseconds())))
-		//}) // reqTimeMs header will exist on responses
-		//handler.ServeHTTP(wrappedWriter, r.WithContext(logging.SetLogger(ctx, log)))
-	})
-}
+//func ReqTrackingMiddleWare(handler http.Handler) http.Handler { // TODO: USE OR DELETE
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		ctx := r.Context()
+//		// TODO: setup logger
+//		//consoleLoggerCore := zapcore.NewCore(zapcore.NewConsoleEncoder(zap.NewDevelopmentConfig().EncoderConfig), zapcore.AddSync(os.Stdout), zapcore.DebugLevel)
+//		//otelLoggerCore := otelzap.NewCore("mush-api-go", otelzap.WithLoggerProvider(global.GetLoggerProvider()))
+//		//core := zapcore.NewTee(
+//		//	otelLoggerCore,
+//		//	consoleLoggerCore,
+//		//)
+//		//sugar := zap.New(core).Sugar()
+//		log := logging.GetLogger(ctx)
+//
+//		requestPath := r.URL.Path
+//		var requestId string
+//		// Set request path on request
+//		log = log.WithStringKVP(request.Path, requestPath)
+//		// Set request and trace ids (trace only if span exists)
+//		log, requestId = log.Fork(request.Id)
+//		ctx = request.SetPath(ctx, requestPath)
+//		ctx = request.WithId(ctx, &requestId)
+//		//if span, ok := tracer.SpanFromContext(ctx); ok {
+//		//	span.SetTag(request.Id, requestId)
+//		//	span.SetBaggageItem(request.Id, requestId)
+//		//	traceId := span.Context().TraceID() // TODO: get traceId from elsewhere?
+//		//	log = log.WithTraceId(ctx, strconv.Itoa(int(traceId)))
+//		//}
+//
+//		defer log.Sync() //nolint:errcheck
+//
+//		handler.ServeHTTP(w, r.WithContext(logging.SetLogger(ctx, log)))
+//
+//		//now := time.Now()
+//		//// TODO: ensure works properly
+//		//wrappedWriter := NewResponseWriterWrapper(w, func() {
+//		//	w.Header().Set("reqTimeMs", strconv.Itoa(int(time.Since(now).Milliseconds())))
+//		//}) // reqTimeMs header will exist on responses
+//		//handler.ServeHTTP(wrappedWriter, r.WithContext(logging.SetLogger(ctx, log)))
+//	})
+//}
 
 //
 //func NewResponseWriterWrapper(w http.ResponseWriter, onRespond func()) WrappedResponseWriter {
@@ -574,10 +573,10 @@ func ReqTrackingMiddleWare(handler http.Handler) http.Handler { // TODO: USE OR 
 //	}
 //}
 
-type ProviderIndex struct {
-	Providers    []string
-	ProvidersMap map[string]string
-}
+//type ProviderIndex struct {
+//	Providers    []string
+//	ProvidersMap map[string]string
+//}
 
 //type WrappedResponseWriter struct {
 //	TwoHundredOrAboveHeaderWritten bool
@@ -719,58 +718,58 @@ func envVarOrDefault(varName, defaultResult string) string {
 	return result
 }
 
-var handleUserPassLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	bs, err := io.ReadAll(r.Body)
-	err = errors.Join(err, r.Body.Close())
-	if err != nil {
-		http.Error(w, "failed to read userPass body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	req := userPassLoginRequest{}
-	if err = json.Unmarshal(bs, &req); err != nil {
-		http.Error(w, "failed to unmarshal request: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// TODO: brought over from userPassLoginHandler
-	var usr rfid.User                 // TODO: LOAD!
-	salt, expectedFinalHash := "", "" // TODO: GET SALT AND EXPECTED FINAL HASH BASED ON USER
-	combinedWithSalt := []byte(req.HashedPass + salt)
-	h := sha256.New()
-	if _, err = h.Write(combinedWithSalt); err != nil {
-		http.Error(w, "failed to compute hash: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if expectedFinalHash != string(h.Sum(nil)) {
-		http.Error(w, "invalid login credentials", http.StatusUnauthorized)
-		return
-	}
-	sessId, err := rfid.GetAuthService(ctx).SigninPassAuthedUser(ctx, usr)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	println("created new session id for guest: " + sessId)
-	session, err := gothic.Store.New(r, string(sessId))
-	if err != nil {
-		// TODO: delete session?
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
-	if err != nil {
-		// TODO: delete session? If not already saved, then no?
-		//session.Options.MaxAge = -1 // delete session
-		err = errors.Join(errors.New("sessId storage fail"), err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if err = gothic.Store.Save(r, w, session); err != nil {
-		http.Error(w, "failed so save session: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	redirectToBasePage(r, w)
-}
+//var handleUserPassLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+//	ctx := r.Context()
+//	bs, err := io.ReadAll(r.Body)
+//	err = errors.Join(err, r.Body.Close())
+//	if err != nil {
+//		http.Error(w, "failed to read userPass body: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	req := userPassLoginRequest{}
+//	if err = json.Unmarshal(bs, &req); err != nil {
+//		http.Error(w, "failed to unmarshal request: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// TODO: brought over from userPassLoginHandler
+//	var usr rfid.User                 // TODO: LOAD!
+//	salt, expectedFinalHash := "", "" // TODO: GET SALT AND EXPECTED FINAL HASH BASED ON USER
+//	combinedWithSalt := []byte(req.HashedPass + salt)
+//	h := sha256.New()
+//	if _, err = h.Write(combinedWithSalt); err != nil {
+//		http.Error(w, "failed to compute hash: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	if expectedFinalHash != string(h.Sum(nil)) {
+//		http.Error(w, "invalid login credentials", http.StatusUnauthorized)
+//		return
+//	}
+//	sessId, err := rfid.GetAuthService(ctx).SigninPassAuthedUser(ctx, usr)
+//	if err != nil {
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	println("created new session id for guest: " + sessId)
+//	session, err := gothic.Store.New(r, string(sessId))
+//	if err != nil {
+//		// TODO: delete session?
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
+//	if err != nil {
+//		// TODO: delete session? If not already saved, then no?
+//		//session.Options.MaxAge = -1 // delete session
+//		err = errors.Join(errors.New("sessId storage fail"), err)
+//		http.Error(w, err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	if err = gothic.Store.Save(r, w, session); err != nil {
+//		http.Error(w, "failed so save session: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	redirectToBasePage(r, w)
+//}
 
 var handleGuestLogin http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -891,34 +890,34 @@ func handleLoginMiddleware(viewHandler http.Handler) http.Handler {
 	})
 }
 
-type userPassLoginRequest struct {
-	Username   string `json:"username"`
-	HashedPass string `json:"hashedPass"`
-}
-
-func userPassLoginHandler(w http.ResponseWriter, r *http.Request) {
-
-	// TODO: LOGIN WITH HASHED PASS
-
-	//ctx := r.Context()
-	//var usr rfid.User
-	//// TODO: get user via database from username (or email?)
-	//// TODO: ENSURE USER DOES NOT ALREADY HAVE A SESSION?
-	//sessId, email, err := rfid.GetAuthService(ctx).SigninPassAuthedUser(ctx, usr)
-	//if err != nil {
-	//	http.Error(w, "failed to sign in with password", http.StatusInternalServerError)
-	//	return
-	//}
-	//err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
-	//if err != nil {
-	//	http.Error(w, "sessId storage fail:"+err.Error() , http.StatusInternalServerError)
-	//	return
-	//}
-	//return nil
-	//// TODO: CREATE NEW SESSION FOR USER, AND RETURN SESSION
-	http.Error(w, "userpass login not implemented yet!", http.StatusNotImplemented)
-	return
-}
+//type userPassLoginRequest struct {
+//	Username   string `json:"username"`
+//	HashedPass string `json:"hashedPass"`
+//}
+//
+//func userPassLoginHandler(w http.ResponseWriter, r *http.Request) {
+//
+//	// TODO: LOGIN WITH HASHED PASS
+//
+//	//ctx := r.Context()
+//	//var usr rfid.User
+//	//// TODO: get user via database from username (or email?)
+//	//// TODO: ENSURE USER DOES NOT ALREADY HAVE A SESSION?
+//	//sessId, email, err := rfid.GetAuthService(ctx).SigninPassAuthedUser(ctx, usr)
+//	//if err != nil {
+//	//	http.Error(w, "failed to sign in with password", http.StatusInternalServerError)
+//	//	return
+//	//}
+//	//err = gothic.StoreInSession(rfid.SessionIdKey, string(sessId), r, w)
+//	//if err != nil {
+//	//	http.Error(w, "sessId storage fail:"+err.Error() , http.StatusInternalServerError)
+//	//	return
+//	//}
+//	//return nil
+//	//// TODO: CREATE NEW SESSION FOR USER, AND RETURN SESSION
+//	http.Error(w, "userpass login not implemented yet!", http.StatusNotImplemented)
+//	return
+//}
 
 func handleUserAuthedViaGoth(ctx context.Context, user goth.User, w http.ResponseWriter, r *http.Request) error {
 	authSvc := rfid.GetAuthService(ctx)
@@ -1539,11 +1538,11 @@ var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *ht
 		uat := user.AccountType // TODO: del
 		if uat.IsAdmin() {      // TODO: del
 			uats = "Admin" // TODO: del
-		} else {                 // TODO: del
+		} else { // TODO: del
 			if uat.IsRegular() { // TODO: del
 				uats = "Regular user" // TODO: del
 			} // TODO: del
-		}                                                                                       // TODO: del
+		} // TODO: del
 		env.LogIfDev(ctx, fmt.Sprintf(`Getting page for user %s, who is %s`, user.Email, uats)) // TODO: del
 		if !user.IsAdmin() && out.Private {
 			if user.AccountType.IsGuest() {
@@ -1873,7 +1872,7 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	println("trying to read from reader: " + readerName)
 	ctx := r.Context()
 	err := env.IfNotProd(ctx, func() error { // TODO: del later?
-		if readerName == goodTestRfid {      // TODO: remove later
+		if readerName == goodTestRfid { // TODO: remove later
 			// TODO: multiple? not just one id?
 			_, err := w.Write([]byte(rfid.EmptyTestPlateBinaryId().AsBase58()))
 			if err != nil {
@@ -2004,7 +2003,7 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 	ctx := r.Context()
 	toWriteBytes := [8]byte{0, 0, 0, 0, 0, 0, 0, 0} // TODO: ok?
 	writerName := shared.RfidReaderName(r.PathValue("writerName"))
-	validResponse := []byte("Cleared") // TODO: ok?
+	validResponse := []byte("Cleared")               // TODO: ok?
 	err := env.IfNotProd(r.Context(), func() error { // TODO: del later?
 		if writerName == goodTestRfid {
 			_, err := w.Write(validResponse)

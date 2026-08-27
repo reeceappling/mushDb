@@ -1,4 +1,4 @@
-package probes
+package checkers
 
 import (
 	"encoding/json"

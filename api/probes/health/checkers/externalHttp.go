@@ -1,4 +1,4 @@
-package probes
+package checkers
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 )
 
 // HTTPChecker verifies external HTTP service availability
-type HTTPChecker struct {
+type HTTP struct {
 	name    string
 	url     string
 	client  *http.Client
@@ -17,32 +17,32 @@ type HTTPChecker struct {
 }
 
 // HTTPCheckerOption configures the HTTP checker
-type HTTPCheckerOption func(*HTTPChecker)
+type HTTPCheckerOption func(*HTTP)
 
 // WithMethod sets the HTTP method for the health check request
-func WithMethod(method string) HTTPCheckerOption {
-	return func(h *HTTPChecker) {
+func WithHttpCheckerMethod(method string) HTTPCheckerOption {
+	return func(h *HTTP) {
 		h.method = method
 	}
 }
 
 // WithHeaders sets custom headers for the health check request
-func WithHeaders(headers map[string]string) HTTPCheckerOption {
-	return func(h *HTTPChecker) {
+func WithHttpCheckerHeaders(headers map[string]string) HTTPCheckerOption {
+	return func(h *HTTP) {
 		h.headers = headers
 	}
 }
 
 // WithHttpCheckerTimeout sets a custom timeout for the HTTP client
 func WithHttpCheckerTimeout(timeout time.Duration) HTTPCheckerOption {
-	return func(h *HTTPChecker) {
+	return func(h *HTTP) {
 		h.client.Timeout = timeout
 	}
 }
 
-// NewHTTPChecker creates a new HTTP health checker
-func NewHTTPChecker(name, url string, opts ...HTTPCheckerOption) *HTTPChecker {
-	checker := &HTTPChecker{
+// NewHTTP creates a new HTTP health checker
+func NewHTTP(name, url string, opts ...HTTPCheckerOption) *HTTP {
+	checker := &HTTP{
 		name:   name,
 		url:    url,
 		method: "GET",
@@ -56,12 +56,12 @@ func NewHTTPChecker(name, url string, opts ...HTTPCheckerOption) *HTTPChecker {
 	return checker
 }
 
-func (h *HTTPChecker) Name() string {
+func (h *HTTP) Name() string {
 	return h.name
 }
 
 // Check performs the HTTP health check
-func (h *HTTPChecker) Check(ctx context.Context) HealthCheckResult {
+func (h *HTTP) Check(ctx context.Context) HealthCheckResult {
 	start := time.Now()
 	result := HealthCheckResult{
 		Name:      h.name,

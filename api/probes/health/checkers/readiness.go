@@ -1,4 +1,4 @@
-package probes
+package checkers
 
 import (
 	"encoding/json"
@@ -6,6 +6,24 @@ import (
 	"net/http"
 	"sync/atomic"
 )
+
+func NewReadinessSensor() *ReadinessSensor {
+	return &ReadinessSensor{ready: atomic.Bool{}}
+}
+
+type ReadinessSensor struct {
+	ready atomic.Bool
+}
+
+func (rs *ReadinessSensor) Ready() bool {
+	return rs.ready.Load()
+}
+func (rs *ReadinessSensor) SetReady() {
+	rs.ready.Store(true)
+}
+func (rs *ReadinessSensor) SetUnready() {
+	rs.ready.Store(false)
+}
 
 type Readiness string
 

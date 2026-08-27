@@ -1,15 +1,15 @@
-package probes
+package health
 
 import (
 	"context"
 	"encoding/json"
 	rfid "github.com/reeceappling/mushDb/api"
+	"github.com/reeceappling/mushDb/api/probes/health/checkers"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -20,10 +20,10 @@ func exampleDoNotUse() {
 	healthHandler := NewHandler(healthService)
 
 	// Register external API health check
-	healthService.Register(NewHTTPChecker(
+	healthService.Register(checkers.NewHTTP(
 		"payment-api",
 		os.Getenv("PAYMENT_API_URL")+"/health",
-		WithHttpCheckerTimeout(3*time.Second),
+		checkers.WithHttpCheckerTimeout(3*time.Second),
 	))
 	// Create HTTP server
 	mux := http.NewServeMux()
@@ -91,64 +91,37 @@ func exampleDoNotUse() {
 	}()
 }
 
-type Status string
-
-const (
-	StatusHealthy   Status = "healthy"
-	StatusUnhealthy Status = "unhealthy"
-	StatusDegraded  Status = "degraded"
-)
-
-type HealthCheckResult struct {
-	Name      string
-	Status    Status
-	Message   string
-	Duration  time.Duration `json:"duration_ns"`
-	Timestamp time.Time     `json:"duration_ns"`
-}
-
-type HealthResponse struct {
-	Status    Status
-	Timestamp time.Time
-	Checks    map[string]HealthCheckResult `json:"checks,omitempty"`
-}
-
-type Checker interface {
-	Name() string
-	Check(context.Context) HealthCheckResult
-}
-
 type HealthService struct {
 	mu       sync.RWMutex
-	checkers []Checker
+	checkers []checkers.Checker
 	timeout  time.Duration
 }
 
 func NewHealthService(timeout time.Duration) *HealthService {
 	return &HealthService{
-		checkers: make([]Checker, 0),
+		checkers: make([]checkers.Checker, 0),
 		timeout:  timeout,
 	}
 }
-func (h *HealthService) Register(checker Checker) {
+func (h *HealthService) Register(checker checkers.Checker) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.checkers = append(h.checkers, checker)
 }
-func (h *HealthService) CheckAll(ctx context.Context) HealthResponse {
+func (h *HealthService) CheckAll(ctx context.Context) checkers.HealthResponse {
 	h.mu.RLock()
-	checkers := make([]Checker, len(h.checkers))
-	copy(checkers, h.checkers)
+	chkrs := make([]checkers.Checker, len(h.checkers))
+	copy(chkrs, h.checkers)
 	h.mu.RUnlock()
 
 	ctx, cancel := context.WithTimeout(ctx, h.timeout)
 	defer cancel()
 
-	results := make(chan HealthCheckResult, len(checkers))
+	results := make(chan checkers.HealthCheckResult, len(chkrs))
 	var wg sync.WaitGroup
-	for _, checker := range checkers {
+	for _, checker := range chkrs {
 		wg.Add(1)
-		go func(c Checker) {
+		go func(c checkers.Checker) {
 			defer wg.Done()
 			results <- checker.Check(ctx)
 		}(checker)
@@ -160,17 +133,17 @@ func (h *HealthService) CheckAll(ctx context.Context) HealthResponse {
 	}()
 
 	// Collect results
-	response := HealthResponse{
-		Status:    StatusHealthy,
+	response := checkers.HealthResponse{
+		Status:    checkers.StatusHealthy,
 		Timestamp: time.Now(),
-		Checks:    make(map[string]HealthCheckResult),
+		Checks:    make(map[string]checkers.HealthCheckResult),
 	}
 	for result := range results {
 		response.Checks[result.Name] = result
-		if result.Status == StatusUnhealthy {
-			response.Status = StatusUnhealthy
-		} else if result.Status == StatusDegraded && response.Status != StatusUnhealthy {
-			response.Status = StatusDegraded
+		if result.Status == checkers.StatusUnhealthy {
+			response.Status = checkers.StatusUnhealthy
+		} else if result.Status == checkers.StatusDegraded && response.Status != checkers.StatusUnhealthy {
+			response.Status = checkers.StatusDegraded
 		}
 	}
 	return response
@@ -179,19 +152,24 @@ func (h *HealthService) CheckAll(ctx context.Context) HealthResponse {
 // Handler provides HTTP handlers for health endpoints
 type Handler struct {
 	service       *HealthService
-	ready         *atomic.Bool
-	startupDone   *atomic.Bool
+	ready         *checkers.ReadinessSensor
+	startupDone   *checkers.ReadinessSensor
 	livenessCheck func() bool
+}
+
+func (h *Handler) Ready() bool {
+	return h.ready.Ready()
+}
+func (h *Handler) StartedUp() bool {
+	return h.startupDone.Ready()
 }
 
 // NewHandler creates a new health handler
 func NewHandler(service *HealthService) *Handler {
-	ready := &atomic.Bool{}
-	startupDone := &atomic.Bool{}
 	return &Handler{
 		service:     service,
-		ready:       ready,
-		startupDone: startupDone,
+		ready:       checkers.NewReadinessSensor(),
+		startupDone: checkers.NewReadinessSensor(),
 		livenessCheck: func() bool {
 			return true // Default: always alive
 		},
@@ -200,12 +178,12 @@ func NewHandler(service *HealthService) *Handler {
 
 // SetReady marks the application as ready to receive traffic
 func (h *Handler) SetReady(isReady bool) {
-	h.ready.Store(isReady)
+	h.ready.SetReady()
 }
 
 // SetStartupComplete marks startup as complete
 func (h *Handler) SetStartupComplete() {
-	h.startupDone.Store(true)
+	h.startupDone.SetReady()
 }
 
 // SetLivenessCheck sets a custom liveness check function
@@ -219,11 +197,11 @@ func (h *Handler) LivenessHandler(w http.ResponseWriter, r *http.Request) {
 	var statusCode int = http.StatusOK
 	w.Header().Set("Content-Type", "application/json") // TODO: ok?
 	out := map[string]interface{}{
-		"status": LivenessAlive,
+		"status": checkers.LivenessAlive,
 	}
 	if !h.livenessCheck() {
 		statusCode = http.StatusServiceUnavailable
-		out["status"] = LivenessUnhealthy
+		out["status"] = checkers.LivenessUnhealthy
 		out["message"] = "liveness check failed"
 		return
 	}
@@ -241,16 +219,16 @@ func (h *Handler) ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 	var statusCode = http.StatusOK
 	w.Header().Set("Content-Type", "application/json")
 	// Check if marked as not ready
-	if !Ready() {
+	if !h.Ready() {
 		statusCode = http.StatusServiceUnavailable
 		out = map[string]interface{}{
-			"status":  ReadinessNotReady,
+			"status":  checkers.ReadinessNotReady,
 			"message": "application not ready",
 		}
 	} else {
 		// Run all service dependency checks
 		response := h.service.CheckAll(r.Context())
-		if response.Status != StatusHealthy {
+		if response.Status != checkers.StatusHealthy {
 			statusCode = http.StatusServiceUnavailable
 		}
 	}
@@ -262,19 +240,20 @@ func (h *Handler) ReadinessHandler(w http.ResponseWriter, r *http.Request) {
 
 // StartupHandler handles startup probe requests
 func (h *Handler) StartupHandler(w http.ResponseWriter, r *http.Request) {
+	var statusCode = http.StatusOK
+	out := map[string]interface{}{
+		"status": checkers.StartupStatusStarted,
+	}
 	w.Header().Set("Content-Type", "application/json")
 
-	if !h.startupDone.Load() {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  "starting",
-			"message": "application still initializing",
-		})
-		return
+	if !h.StartedUp() {
+		statusCode = http.StatusServiceUnavailable
+		out["status"] = checkers.StartupStatusStarting
+		out["message"] = "application still initializing"
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "started",
-	})
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(out); err != nil {
+		rfid.HandleHttpWriteError(err)
+	}
 }
