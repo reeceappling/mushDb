@@ -188,7 +188,7 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 type updateSyringeRequest struct {
 	DisposedField
 	ConfirmedCleanField
-	KnownFruitableField // TODO: handle in react
+	KnownFruitableField
 	ImagesUpdateField
 	NotesUpdateField
 	PermsOnRequest `json:"acl"`

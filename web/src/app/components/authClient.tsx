@@ -378,12 +378,12 @@ function SignInArea({onLogin}: { onLogin: (sessId: string) => void }) {
     return (
         <div>
             <GoogleLogin
-                allowed_parent_origin={"mush.appli.ng"} // TODO: make a var, but also remove if not working
+                // allowed_parent_origin={"mush.appli.ng"} // TODO: make a var, but also remove if not working
                 onSuccess={handleGoogleSuccess}
                 onError={handleError}
                 useOneTap
             />
-            <UserPassLogin onSuccess={handleUserPassSuccess} onError={handleError} />
+            {/*<UserPassLogin onSuccess={handleUserPassSuccess} onError={handleError} />*/}
             <button className={"basicButtonSmall"} onClick={guestSignIn}>{"Continue as guest"}</button>
             {/*<div> TODO: reenable for testing only!*/}
             {/*    <div>{"Test user signin area"}</div>*/}

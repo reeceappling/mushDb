@@ -33,8 +33,8 @@ type MSS struct {
 	TransfersOutField                 `bson:"inline"`
 	SaleField                         `bson:"inline"`
 	DisposedField                     `bson:"inline"`
-	MostRecentImageField              `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
-	PicsField                         `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
+	MostRecentImageField              `bson:"inline"`
+	PicsField                         `bson:"inline"`
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"`
@@ -141,6 +141,9 @@ func createMssHandler(w http.ResponseWriter, r *http.Request) { // Only called f
 		dbErr(w, "failed to find sporePrint: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	if data.WaterSource != nil {
+		// TODO: VALIDATE WATER JAR IF EXISTS
+	}
 	ctx, now := request.UnixTime(r.Context())
 	toInsert := &MSS{
 		MainCollectionIdField:             MainCollectionIdField{id},
@@ -235,7 +238,7 @@ func (req resolvedUpdateMssRequest) modsFor(existing *MSS, aclField AclField) (b
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updatePicsIfNeeded(req.Images, existing.Pics).                                               // TODO: validate working!
+		updatePicsIfNeeded(req.Images, existing.Pics). // TODO: validate working!
 		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, nil, nil)). // TODO: validate working!
 		updateLastUpdatedIfNeeded().
 		Finalized()

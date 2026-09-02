@@ -214,7 +214,6 @@ export default function MssDisplay(
     const [initial, setInitial] = useState(data)
 
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
-
         const [sale, setSale] = useState(data.sale)
         const [disposed, setDisposed] = useState(data.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
@@ -338,7 +337,7 @@ export function NewMssForm(
         }
         const body: any = {
             sporePrintId: sporePrint._id,
-            waterJar: waterJar._id, // TODO: DO THIS ON THE GO SIDE!
+            waterJar: waterJar._id,
             notes: notes,
             writeTagTo: writeTagTo,
         }

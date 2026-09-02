@@ -194,6 +194,7 @@ export function JarImportDisplay({}: ImportDisplayInput) {
     const [wetness, setWetness] = useState<number | undefined>()
     const [burstGrains, setBurstGrains] = useState<number | undefined>()
     const [imageFile, setImageFile] = useState<File | undefined>()
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const cookies = useContext(CookiesContext)
@@ -210,6 +211,7 @@ export function JarImportDisplay({}: ImportDisplayInput) {
             generation: generation,
             wetness: wetness,
             burstGrains: burstGrains,
+            notes: notes,
             writeTagTo: writeTagTo,
         }
         formData.set("data", JSON.stringify(dataObj))
@@ -261,6 +263,7 @@ export function JarImportDisplay({}: ImportDisplayInput) {
         <SliderOnlyIfUndefinedWithOpenButton text={"(Optional) Burst Grains"} defaultValue={0} onChange={setBurstGrains}/>
 
         <ImageSelector updateParent={setImageFile}/>
+        <NewEntryNotes setNotes={setNotes}/>{/* TODO: add this to every other import that may need it*/}
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={importEntry}>{"Import"}</button>
     </ImportEntryFormWrapper>
@@ -302,7 +305,7 @@ export default function JarDisplay(
         const [initial, setInitial] = useState(data)
 
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
-        const [sale, setSale] = useState(initial.sale)
+        //const [sale, setSale] = useState(initial.sale)
         const [disposed, setDisposed] = useState(initial.disposed)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
@@ -317,7 +320,7 @@ export default function JarDisplay(
         const updateInitial = (updated: JarData) => {
             setInitial(updated)
             setKnownFruitable(updated.knownFruitable)
-            setSale(updated.sale)
+            //setSale(updated.sale)
             setDisposed(updated.disposed)
             setNotes(InitialNotesState(updated.notes))
             setPics(InitialPicsEntries(updated.pics))
@@ -334,7 +337,7 @@ export default function JarDisplay(
             const dataObj: any = {
                 knownFruitable: knownFruitable,
                 disposed: disposed,
-                sale: sale, // TODO: remove
+                //sale: sale, // TODO: remove
                 wetness: wetness,
                 burstGrains: burstGrains,
                 acl: MarshalAcl(acl),
@@ -422,8 +425,6 @@ export default function JarDisplay(
                 // TODO: new fruit?????
             }*/] : []),
             WriteRfidOvcArea(initial._id),
-
-            // TODO: creat spore swab (if innoculated)
         ] : []
     }
 
@@ -450,7 +451,7 @@ export default function JarDisplay(
                     <InnocDisplay innoc={initial.innoc}/>
                     <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}
                                         headerLevel={headerLevel}/>
-                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
+                    {/*TODO:???<SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>*/}
                 </FlexedSinglesGroup>}
                 {isInnoculated()&&<FlexedSinglesGroup>
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>

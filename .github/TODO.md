@@ -183,6 +183,8 @@
 # Random links
 - [ ] https://medium.com/@mfsilv/kubernetes-a-gentle-introduction-9d23de7f00e0
 # Wishlist
+- [ ] LRU Cache for images! See /api/cache/lru.go for what I have started on
+- [ ] Try to switch all Node things to Bun. In theory could go 20x faster than Node, but may require some extra work to get it working properly. May only want to use bun for dev?
 - [ ] User/Pass login with goth sessions. Already started putting this together.
 - [ ] React Native app for mobile devices
   - [ ] use Expo Go to develop on Android 

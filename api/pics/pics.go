@@ -5,11 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/reeceappling/goUtils/v2/errorreference"
+	"github.com/reeceappling/mushDb/api/cache"
 	"os"
 	"path/filepath"
 )
 
+var lruCache *cache.LRU
+
+func init() {
+	lruCache = cache.NewLRU(maxImagesInCache)
+}
+
+const maxImagesInCache = 10 // TODO: 10 ok?
 const filePathCtxKey = "dbImageFilePath"
 
 func SetFilePath(ctx context.Context, filePath string) context.Context {
@@ -43,12 +50,11 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 		}
 		if _, err = os.Stat(whereToWrite); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				//println("filePath" + filePath)             // TODO: del
-				//println("writing file to " + whereToWrite) // TODO: del
 				err = os.WriteFile(whereToWrite, bs, 777) // TODO: 666 instead of 777?
 				if err != nil {
 					println("failed to write file", err.Error())
 				}
+				lruCache.Add(whereToWrite, bs) // TODO: ensure this is ok for the LRU cache!
 				return fileNameWithPrefixPath, err
 			}
 			println("file exists already!", err.Error())
@@ -62,37 +68,47 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 }
 
 func GetFile(ctx context.Context, imgSubPath string) (bytes []byte, err error) {
-	picsDir := GetFilePath(ctx)
-	bytes, err = os.ReadFile(filepath.Join(picsDir, imgSubPath))
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			err = errorreference.ErrorNotFound
-			//// TODO: READ FROM s3 if needed?
-			//bytes, err = s3.NewFileReader().Read(ctx, imgSubPath) // TODO: ensure ok
-			//if err != nil {
-			//	if errors.Is(err, errorreference.ErrorNotFound) {
-			//		println("file does not exist locally or in s3!") // TODO: fix
-			//		return nil, ErrNotFound
-			//
-			//	}
-			//	return nil, err
-			//}
-		}
+	path := filepath.Join(GetFilePath(ctx), imgSubPath)
+	// Try to get from LRU cache first
+	if bs, found := lruCache.Get(path); found {
+		return bs, nil
 	}
-	return bytes, err
+	// Cache miss
+	return os.ReadFile(path)
+
+	//picsDir := GetFilePath(ctx)
+	//bytes, err = os.ReadFile(filepath.Join(picsDir, imgSubPath))
+	//if err != nil {
+	//	if errors.Is(err, os.ErrNotExist) {
+	//		err = errorreference.ErrorNotFound
+	//		//// TODO: READ FROM s3 if needed?
+	//		//bytes, err = s3.NewFileReader().Read(ctx, imgSubPath) // TODO: ensure ok
+	//		//if err != nil {
+	//		//	if errors.Is(err, errorreference.ErrorNotFound) {
+	//		//		println("file does not exist locally or in s3!") // TODO: fix
+	//		//		return nil, ErrNotFound
+	//		//
+	//		//	}
+	//		//	return nil, err
+	//		//}
+	//	}
+	//}
+	//return bytes, err
 }
 
 func DeleteFiles(ctx context.Context, filenamesWithPrefixPaths ...string) error {
 	var errOut error = nil
 	homeDir := GetFilePath(ctx)
 	for _, filenameWithPrefixPath := range filenamesWithPrefixPaths {
-		err := os.Remove(homeDir + filenameWithPrefixPath)
+		path := homeDir + filenameWithPrefixPath
+		err := os.Remove(path)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				continue
 			}
 			errOut = errors.Join(errOut, err)
 		}
+		_ = lruCache.Evict(path) // TODO: ok? do we even need this?
 	}
 	return errOut
 }
