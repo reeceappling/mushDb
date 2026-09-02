@@ -6,14 +6,17 @@ import (
 	mqtt "github.com/mochi-mqtt/server/v2"
 	"github.com/mochi-mqtt/server/v2/hooks/auth"
 	"github.com/mochi-mqtt/server/v2/listeners"
+	"github.com/mochi-mqtt/server/v2/packets"
 	"github.com/segmentio/kafka-go"
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 )
 
-func NewBroker() error { // TODO: likely use a docker image with a config instead! see https://github.com/mochi-mqtt/server
+func NewBroker(ctx context.Context) error { // TODO: likely use a docker image with a config instead! see https://github.com/mochi-mqtt/server
 	// 1. Create a new MQTT Server instance
 	server := mqtt.New(&mqtt.Options{
 		Capabilities: &mqtt.Capabilities{
@@ -28,6 +31,63 @@ func NewBroker() error { // TODO: likely use a docker image with a config instea
 		SysTopicResendInterval:   10,    // TODO: fix
 		InlineClient:             false, // TODO: fix
 	})
+	handleIncomingMqttItem := func(cl *mqtt.Client, sub packets.Subscription, pk packets.Packet) {
+		topicNameParts := strings.Split(pk.TopicName, "/")
+		switch topicNameParts[0] {
+		case "sensors":
+			// sensors/location/groupID/type
+			//location, groupId, typ := topicNameParts[1], topicNameParts[2], topicNameParts[3]
+			msgs := []kafka.Message{{
+				Topic: pk.TopicName,
+				//Key:        nil, // TODO: time?
+				Value: pk.Payload,
+				//Time:       time.Time{}, // TODO: fix?
+			}, {
+				Topic: "sensors",            // TODO: send to topic with only the latest sensors info
+				Key:   []byte(pk.TopicName), // TODO: time?
+				Value: pk.Payload,
+				//Time:       time.Time{}, // TODO: fix?
+			}}
+			err := writeToKafka(ctx, msgs...)
+			if err != nil {
+				panic("failed to write")
+			}
+		case "controllers": // TODO: ????
+			// controllers/location/groupID/type
+			//location, groupId, typ := topicNameParts[1], topicNameParts[2], topicNameParts[3]
+			msgs := []kafka.Message{{
+				Topic: pk.TopicName,
+				//Key:        nil, // TODO: time?
+				Value: pk.Payload,
+				//Time:       time.Time{}, // TODO: fix?
+			}, {
+				Topic: "controllers",        // TODO: send to topic with only the latest sensors info
+				Key:   []byte(pk.TopicName), // TODO: time?
+				Value: pk.Payload,
+				//Time:       time.Time{}, // TODO: fix?
+			}}
+			err := writeToKafka(ctx, msgs...)
+			if err != nil {
+				panic("failed to write")
+			}
+		default:
+			panic("unknown topic!")
+		}
+
+		//server.Log.Info("inline client received message from subscription", "client", cl.ID, "subscriptionId", sub.Identifier, "topic", pk.TopicName, "payload", string(pk.Payload))
+	}
+	err := server.Subscribe("sensors/#", 1, handleIncomingMqttItem)
+	if err != nil {
+		panic(err)
+	}
+	err = server.Subscribe("controllers/#", 1, handleIncomingMqttItem)
+	if err != nil {
+		panic(err)
+	}
+	/*
+		Single-level Wildcard (+): Replaces a single sub-topic level (e.g., subscribing to home/+/temperature matches home/livingroom/temperature and home/kitchen/temperature).
+		Multi-level Wildcard (#): Matches any number of deeper sub-topic levels at the tail end of a string (e.g., subscribing to home/# matches all sub-topics under home).
+	*/
 
 	// 2. Allow all connections (For production, use secure authentication hooks!) // TODO: this!
 	_ = server.AddHook(new(auth.AllowHook), nil)
