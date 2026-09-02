@@ -13,14 +13,14 @@ type LRU struct { // TODO: EXPAND USAGE OF LRU CACHE TO OTHER THINGS, OR CONSIDE
 	mu             sync.Mutex
 	ct             int
 	maxSize        int
-	m              *sync.Map
+	m              sync.Map
 	newest, oldest *cacheNode
 }
 
 func NewLRU(maxSize int) *LRU {
 	return &LRU{
 		maxSize: maxSize,
-		m:       &sync.Map{},
+		m:       sync.Map{},
 	}
 }
 
