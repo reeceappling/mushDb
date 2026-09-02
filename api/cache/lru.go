@@ -45,7 +45,6 @@ func (c *LRU) moveExistingToFront(node *cacheNode) {
 }
 func (c *LRU) Add(key string, value []byte) (overwritten bool) {
 	val, exists := c.m.Load(key)
-	//existingNode, exists := c.m[key]
 	if exists {
 		existingNode := val.(*cacheNode)
 		existingNode.value = value
@@ -67,9 +66,8 @@ func (c *LRU) Evict(key string) (evicted bool) {
 	evicted = false
 	val, exists := c.m.Load(key)
 	if exists {
-		existingNode := val.(*cacheNode)
 		c.mu.Lock()
-		evicted = c.removeNodeFromLL(existingNode)
+		evicted = c.removeNodeFromLL(val.(*cacheNode))
 		c.mu.Unlock()
 	}
 	c.m.Delete(key)
