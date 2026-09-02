@@ -80,7 +80,7 @@ func (f FruitingChamber) generation() (sinceSpore *Generation, sinceSporeOrClone
 	return f.GenSinceSpore, f.GenSinceFruitOrSpore
 }
 
-// TODO: create box via jar instead? Probably want to do it that way...
+// TODO: create box via jar instead? Probably want to do it that way... Maybe not? DECIDE
 func (f FruitingChamber) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
@@ -275,7 +275,7 @@ func createFruitingChamberHandler(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			return nil, e
 		}
-		// TODO: if jar, use all of jar? Call it disposed?
+		// TODO: if jar, use all of jar? Call it disposed? PROBABLY NOT
 		// TODO: handle disposal on transfer!?
 		return nil, e
 	})

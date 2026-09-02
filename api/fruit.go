@@ -26,9 +26,9 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	SpeciesField            `bson:"inline"`
 	SubspeciesOptionalField `bson:"inline"`
 	GenSporeField           `bson:"inline"`
-	TransfersOutField       `bson:"inline"` // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
+	TransfersOutField       `bson:"inline"`    // handled by new Transfer. Can only be clone to plate (sporeprint handled another way)
 	Prints                  []MainCollectionId `bson:"prints,omitempty" json:"prints,omitempty"`
-	ParentTypeField         `bson:"inline"` // EntryType, store, online, or outside
+	ParentTypeField         `bson:"inline"`    // EntryType, store, online, or outside
 	// parent can be "store, outside, or a mainCollectionId (box/bag)"
 	MainCollectionOptionalParentField `bson:"inline"` // NONEXISTENT MEANS FROM STORE or outside
 	PicsField                         `bson:"inline"`
@@ -235,7 +235,7 @@ func initializeFruits(ctx context.Context) error {
 type createFruitRequest struct {
 	ParentId   MainCollectionId `json:"parentId"`
 	ParentType string           `json:"parentType"`
-	// TODO: harvestDate? or just always make it today
+	// Harvest date will always be today
 	NotesField
 	Pics           []PicWithNotesLessLocation `json:"pics,omitempty"` // newPic-1
 	PermsOnRequest `json:"acl"`
@@ -289,7 +289,7 @@ func createFruitHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// TODO: NEXT LINE IS FAILING BECAUSE IT CANNOT UNMARSHAL A MAIN COLLECTION ITEM! UNSURE IF STILL FAILING!
+	// TODO: NEXT LINE IS FAILING BECAUSE IT CANNOT UNMARSHAL A MAIN COLLECTION ITEM! UNSURE IF STILL FAILING! Pretty sure working but make sure
 	// parent is not a pointer because the interface's underlying types are each pointers
 	err = db.Collection(parent.CollectionName()).FindOne(ctx, BsonFindFilter(IDfld, data.ParentId)).Decode(parent)
 	if err != nil {
@@ -491,7 +491,7 @@ func importFruitHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			dataProcessed = true
-			if !slices.Contains([]string{"online", "outside", "store"}, data.ParentType) { // TODO: ensure ok
+			if !slices.Contains([]string{"online", "outside", "store"}, data.ParentType) {
 				http.Error(w, "invalid parent type: "+data.ParentType, http.StatusBadRequest)
 				return
 			}
@@ -580,7 +580,7 @@ func FruitFromSourceInTxn(ctx mongo.SessionContext, parent geneticSource) (*Frui
 		return nil, err
 	}
 	xferId := newAlternateCollectionId()
-	xfer := Transfer{ // TODO: ptr?
+	xfer := Transfer{
 		AlternateCollectionIdField: AlternateCollectionIdField{xferId},
 		From:                       parentId,
 		To:                         id,

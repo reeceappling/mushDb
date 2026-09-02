@@ -672,96 +672,9 @@ func BsonPredicateFilter(predicate string, value any) bson.M { // TODO: use and 
 //	}
 //	return out
 //}
-//
-//func WithImageChanges(currentMods bson.D, fieldName string, outImages SplitEntries[picWithNotesForm, PicWithNotes], currentPics []PicWithNotes) (bson.D, error) {
-//	mods, err := WithExistingEntriesChange(currentMods, fieldName, outImages.Existing, currentPics, compareImageUpdate)
-//	if err != nil {
-//		return bson.D{}, err
-//	}
-//	mods = append(mods, pushToArray(fieldName, outImages.New...)...)
-//	return mods, nil
-//}
-//
-//func WithContamChanges(currentMods bson.D, fieldName string, outContams SplitEntries[contamForm, Contamination], currentContams []Contamination) (bson.D, error) {
-//	mods, err := WithExistingEntriesChange(currentMods, fieldName, outContams.Existing, currentContams, compareContamUpdate)
-//	if err != nil {
-//		return bson.D{}, err
-//	}
-//	mods = append(mods, pushToArrayInline(fieldName, outContams.New...)...)
-//	return mods, nil
-//}
-
-//// WithEntriesChanges Is to be used with notes, and things formatted like them (no image-holders)
-//func WithEntriesChanges[T any](currentMods bson.D, id string, updatedEntries AllEntries[T], existing []T, areEqual func(a, b T) bool) (mods bson.D, err error) {
-//	mods, err = WithExistingEntriesChange(currentMods, id, updatedEntries.Existing, existing, areEqual)
-//	if err != nil {
-//		return nil, err
-//	}
-//	// add new items
-//	mods = append(mods, pushToArrayInline("notes", updatedEntries.New...)...)
-//	return mods, nil
-//}
-
-//// WithExistingEntriesChange is to be used with Images, Contams, etc
-//func WithExistingEntriesChangeNew[T, U any](upd *Mods, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) *Mods {
-//	if upd.err != nil {
-//		return upd
-//	}
-//	// INCOMING SIZE MUST BE THE SAME!
-//	if len(existing) != len(updatedExisting) {
-//		upd.err = errors.New("incorrect amount of incoming existing " + id + "s")
-//		return upd
-//	}
-//	// Do changes/removals
-//	for i, newExisting := range updatedExisting {
-//		indexKey := fmt.Sprintf(`%s.%d`, id, i)
-//		if newExisting.Disabled {
-//			upd.Unset(indexKey) // TODO: value of 1 was here?
-//			//removals = append(removals, bson.E{currentKey, 1}) // TODO: make sure ok
-//			continue
-//		}
-//		if !areEqual(newExisting.Data, existing[i]) {
-//			upd.Set(indexKey, newExisting.Data)
-//		}
-//	}
-//	// TODO: Changes (sets) first if exist (not sure if possible the way we do it)
-//	// TODO: Removals second if exist
-//	return upd
-//}
-
-//// WithExistingEntriesChange is to be used with Images, Contams, etc
-//func WithExistingEntriesChange[T, U any](currentMods bson.D, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) (mods bson.D, err error) {
-//	mods = currentMods
-//	// INCOMING SIZE MUST BE THE SAME!
-//	if len(existing) != len(updatedExisting) {
-//		err = errors.New("incorrect amount of incoming existing " + id + "s")
-//	}
-//	// Do changes
-//	removals := []bson.E{}
-//	chgs := []bson.E{}
-//	for i, newExisting := range updatedExisting {
-//		if newExisting.Disabled {
-//			removals = append(removals, bson.E{fmt.Sprintf(`%s.%d`, id, i), 1})
-//			continue
-//		}
-//		if !areEqual(newExisting.Data, existing[i]) {
-//			chgs = append(chgs, bson.E{fmt.Sprintf(`%s.%d`, id, i), newExisting.Data})
-//		}
-//	}
-//	// Changes first if exist
-//	if len(chgs) > 0 {
-//		mods = append(mods, bson.E{"$set", chgs})
-//	}
-//	// Removals second if exist
-//	if len(removals) > 0 {
-//		mods = append(mods, bson.E{"$unset", removals})
-//	}
-//	return mods, nil
-//}
 
 func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, error) {
 	// Get field bytes as an image
-	println("decoding jpg")
 	img, _, err := imageorient.Decode(p)
 	// If using mac screenshots (cmd+shift+5), you'll need to do this:
 	// defaults write com.apple.screencapture type jpg; killall SystemUIServer
@@ -780,7 +693,7 @@ func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, er
 	//}
 	buf := new(bytes.Buffer)
 	println("re-encoding as jpg")
-	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG??????
+	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG?????? maybe webp?????
 	if err != nil {
 		http.Error(w, "failed to encode image to save! "+err.Error(), http.StatusInternalServerError)
 		return nil, err
@@ -906,10 +819,6 @@ func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {
 	return
 }
 
-//func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection {
-//	return db.Collection(item.CollectionName())
-//}
-
 func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
 	coll := DbFrom(ctx).Collection(existing.CollectionName())
 	user, err := GetAuthInfo(ctx)
@@ -936,6 +845,7 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 	return
 }
 
+// TODO: use or delete?
 func finishMainCollItemUpdateInTxn[T MainCollectionItem](ctx mongo.SessionContext, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) (T, error) {
 	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
 	coll := db.Collection(existing.CollectionName())
@@ -1069,17 +979,6 @@ func ImportFinalPerms(ctx context.Context, spec string, subspec *string) (ACL, e
 	return finalPerms, nil
 }
 
-//func TimeFromId(id AlternateCollectionId) time.Time { // TODO: USE AND MOVE
-//	return primitive.ObjectID(id).Timestamp()
-//}
-//
-//func Ternary[T any](val bool, ifTrue, ifFalse T) T {
-//	if val {
-//		return ifTrue
-//	}
-//	return ifFalse
-//}
-
 func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
 	if val == nil {
 		return ifNil
@@ -1146,6 +1045,7 @@ type UndisposedItems struct {
 	EntryTypes []string
 }
 
+// TODO: use or del?
 func undisposedItemsCutoffs(collectionName string) unix.Time {
 	now := time.Now()
 	yrs, mos, dys := undisposedItemsCutoffDeltas(collectionName)

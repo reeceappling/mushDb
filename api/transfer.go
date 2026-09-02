@@ -42,9 +42,9 @@ var transferReasons = map[transferReason]string{ // TODO: move these to autogenn
 	"contaminated":      "parent was contaminated",
 	"sectoring":         "transferring a specific sector",
 	"age":               "sample is very old",
-	xferReasonColonized: "fully colonized",
-	xferReasonReady:     "ready",   // TODO: ?????
-	xferReasonHarvest:   "harvest", // TODO: ONLY FOR HARVESTING!!!! NOT FOR NORMAL TRANSFERS!
+	xferReasonColonized: "fully colonized", // TODO: how does this differ from outgrew?
+	xferReasonReady:     "ready",           // TODO: ?????
+	xferReasonHarvest:   "harvest",         // TODO: ONLY FOR HARVESTING!!!! NOT FOR NORMAL TRANSFERS!
 }
 
 var sporePrintColors = []SporePrintColor{ // TODO: move these to autogenned?

@@ -376,3 +376,59 @@ func fullMultipartWithNoBreaks[T any](w http.ResponseWriter, r *http.Request, da
 	}
 	return getMultipartImages(r.Context(), prefixPath, w, reader, b58id)
 }
+
+//// TODO: move
+//func checkIdTypeWithRaw[T bson.M | bson.D](ctx context.Context, collection *mongo.Collection, filter T) {
+//	var rawDoc bson.Raw
+//	err := collection.FindOne(ctx, filter).Decode(&rawDoc)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	// Lookup looks up an element in the raw document by key
+//	idElement, err := rawDoc.LookupErr(IDfld)
+//	if err != nil {
+//		fmt.Println("_id field does not exist in this document")
+//		return
+//	}
+//
+//	// idElement.Type returns a bsontype.Type (e.g., bsontype.ObjectID, bsontype.String)
+//	fmt.Printf("Exact BSON Type: %s (Hex byte value: %x)\n", idElement.Type, idElement.Type)
+//}
+//
+//// TODO: move
+//func checkIdTypeWithRawOnCursor(cursor *mongo.Cursor) error {
+//	var rawDoc bson.Raw
+//	err := cursor.Decode(&rawDoc)
+//	if err != nil {
+//		println("failed to decode document from cursor: " + err.Error())
+//		return errors.Join(err, errors.New("failed to decode document from cursor"))
+//	}
+//
+//	// Lookup looks up an element in the raw document by key
+//	idElement, err := rawDoc.LookupErr(IDfld)
+//	if err != nil {
+//		println("_id field does not exist in this document: " + err.Error())
+//		return errors.Join(err, errors.New("_id field does not exist in this document"))
+//	}
+//
+//	// idElement.Type returns a bsontype.Type (e.g., bsontype.ObjectID, bsontype.String)
+//
+//	println("item: ", rawDoc.String())
+//	println("id", idElement.String(), "value", string(idElement.Value))
+//	//idElType := idElement.Type
+//	//println(fmt.Sprintf("Exact BSON Type: %s (Hex byte value: %x)\n", idElType, idElType))
+//	//println(fmt.Sprintf("As string: %s. Value: %s\n", idElement.String(), string(idElement.Value)))
+//	return nil
+//}
+
+//func TimeFromId(id AlternateCollectionId) time.Time { // TODO: USE AND MOVE
+//	return primitive.ObjectID(id).Timestamp()
+//}
+//
+//func Ternary[T any](val bool, ifTrue, ifFalse T) T {
+//	if val {
+//		return ifTrue
+//	}
+//	return ifFalse
+//}

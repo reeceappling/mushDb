@@ -40,51 +40,6 @@ func (field JarRecipeField) asRequiredField() (out JarRecipeRequiredField, err e
 	return JarRecipeRequiredField{*field.Recipe}, nil
 }
 
-//// TODO: move
-//func checkIdTypeWithRaw[T bson.M | bson.D](ctx context.Context, collection *mongo.Collection, filter T) {
-//	var rawDoc bson.Raw
-//	err := collection.FindOne(ctx, filter).Decode(&rawDoc)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	// Lookup looks up an element in the raw document by key
-//	idElement, err := rawDoc.LookupErr(IDfld)
-//	if err != nil {
-//		fmt.Println("_id field does not exist in this document")
-//		return
-//	}
-//
-//	// idElement.Type returns a bsontype.Type (e.g., bsontype.ObjectID, bsontype.String)
-//	fmt.Printf("Exact BSON Type: %s (Hex byte value: %x)\n", idElement.Type, idElement.Type)
-//}
-//
-//// TODO: move
-//func checkIdTypeWithRawOnCursor(cursor *mongo.Cursor) error {
-//	var rawDoc bson.Raw
-//	err := cursor.Decode(&rawDoc)
-//	if err != nil {
-//		println("failed to decode document from cursor: " + err.Error())
-//		return errors.Join(err, errors.New("failed to decode document from cursor"))
-//	}
-//
-//	// Lookup looks up an element in the raw document by key
-//	idElement, err := rawDoc.LookupErr(IDfld)
-//	if err != nil {
-//		println("_id field does not exist in this document: " + err.Error())
-//		return errors.Join(err, errors.New("_id field does not exist in this document"))
-//	}
-//
-//	// idElement.Type returns a bsontype.Type (e.g., bsontype.ObjectID, bsontype.String)
-//
-//	println("item: ", rawDoc.String())
-//	println("id", idElement.String(), "value", string(idElement.Value))
-//	//idElType := idElement.Type
-//	//println(fmt.Sprintf("Exact BSON Type: %s (Hex byte value: %x)\n", idElType, idElType))
-//	//println(fmt.Sprintf("As string: %s. Value: %s\n", idElement.String(), string(idElement.Value)))
-//	return nil
-//}
-
 func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) {
 	f, err := field.asRequiredField()
 	if err != nil {
@@ -258,7 +213,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = errors.Join( // TODO: do this on all other recipes and stuff
+	if err = errors.Join(
 		req.ValidateGrains(),
 		req.NutrientsField.Validate(),
 		req.SugarsField.Validate(),

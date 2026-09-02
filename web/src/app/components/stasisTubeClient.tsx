@@ -163,7 +163,7 @@ export default function StasisTubeDisplay(
         const initNotes: Data<Note>[] = existingNotes.map((n) => {
             return {data: n, disabled: false}
         })
-
+        // TODO: ADD WATER JAR AREA?
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
@@ -285,6 +285,7 @@ export default function StasisTubeDisplay(
 
 export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<StasisTubeData>, pcRunIn?: PcRunData}){
     const {dispatch} = useModalContext();
+    // TODO: ADD WATER JAR???
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
@@ -333,6 +334,7 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
 export function StasisTubeImportDisplay() {
     const {dispatch} = useModalContext();
     const [created, setCreated] = useState<number>(Date.now())
+    // TODO: ADD WATER JAR???
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)

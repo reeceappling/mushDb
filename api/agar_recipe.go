@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -272,6 +273,18 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := newAlternateCollectionId()
 	ctx, now := request.UnixTime(r.Context())
+
+	if err = errors.Join(
+		req.LiquidsField.Validate(),
+		// TODO: validate agar?
+		req.NutrientsField.Validate(),
+		req.SugarsField.Validate(),
+		req.AdditivesField.Validate(),
+		req.AntibioticsField.Validate(),
+	); err != nil {
+		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	toInsert := AgarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},

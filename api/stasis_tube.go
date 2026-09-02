@@ -44,10 +44,6 @@ type StasisTube struct { // TODO: instructions somewhere?
 	AclField                          `bson:"inline"`
 }
 
-//func (s StasisTube) Blank() CollectionItem {
-//	return &StasisTube{}
-//}
-
 func (s StasisTube) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("stasis tubes cannot transfer to " + dst.SourceType())
@@ -84,7 +80,7 @@ func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 		return err
 	}
 	upd, err := xfer.
-		PicsModsForChild(s). // TODO: ensure this exists everywhere that might have it
+		PicsModsForChild(s).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).
@@ -103,7 +99,7 @@ func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("parent not found for transfer update. Should never happen") // TODO: MAKE VAR
+		return errors.New("parent not found for transfer update. Should never happen")
 	}
 	return nil
 }
@@ -377,12 +373,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Validation
-	//if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-	//	if err = db.Collection(SalesCollectionName).FindOne(ctx, BsonFindFilter(IDfld, out.Sale)).Err(); err != nil {
-	//		dbErr(w, "failed to find new sale entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed? or get rid of the sale...
-	//		return
-	//	}
-	//}
+	// TODO: any validation?
 	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.PermsOnRequest)
 }
 
