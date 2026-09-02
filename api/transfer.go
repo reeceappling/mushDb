@@ -307,7 +307,7 @@ func createTransferHandler(w http.ResponseWriter, r *http.Request) {
 		fromType = *data.FromType
 	} else {
 		//if fromType is nil, then we must go find the fromType
-		fromType, err = getEntryTypeForId(ctx, parentId)
+		fromType, err = GetEntryTypeForId(ctx, parentId)
 	}
 	// Get parent and child items
 	err = DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{IDfld: childId}).Decode(&childMapEntry)

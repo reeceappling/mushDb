@@ -13,7 +13,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 )
 
 func NewBroker(ctx context.Context) error { // TODO: likely use a docker image with a config instead! see https://github.com/mochi-mqtt/server
@@ -90,7 +89,7 @@ func NewBroker(ctx context.Context) error { // TODO: likely use a docker image w
 	*/
 
 	// 2. Allow all connections (For production, use secure authentication hooks!) // TODO: this!
-	_ = server.AddHook(new(auth.AllowHook), nil)
+	_ = server.AddHook(new(auth.AllowHook), nil) // TODO: change AllowHook!
 
 	// 3. Create a TCP listener on the standard MQTT port (1883)
 	tcpListener := listeners.NewTCP(listeners.Config{
@@ -98,7 +97,7 @@ func NewBroker(ctx context.Context) error { // TODO: likely use a docker image w
 		Address: ":1883", // TODO: this!
 	})
 
-	err := server.AddListener(tcpListener)
+	err = server.AddListener(tcpListener)
 	if err != nil {
 		return errors.Join(errors.New("failed to add listener"), err)
 	}

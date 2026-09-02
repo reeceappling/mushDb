@@ -359,13 +359,10 @@ func main() {
 	// Resolving Types
 	http.Handle("/db/pathFor/{id}", Middlewares(tracerMiddleware("/db/pathFor"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.GetPageForIdHandler)) // TODO: DenyGuestMiddleware? // TODO: options middleware?
 	// Get handlers
-	// TODO: ??? http.Handle("/db/get/rfid/{id}", Middlewares(rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(getRfidHandler()) // TODO: DenyGuestMiddleware?             // TODO: GET RID OF???             // TODO: ensure this works for base58s
-	// TODO: ??? http.Handle("/db/get/rfid/{id}", rateLimitedWithCtxAndInternalAuth(getRfidHandler()) // TODO: DenyGuestMiddleware?             // TODO: GET RID OF???             // TODO: ensure this works for base58s
 	http.Handle("/db/get/{variant}/{id}", Middlewares(tracerMiddleware("/db/get"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(getAnyCollectionHandler)) // TODO: options middleware?
-	http.Handle("/db/images/{imageSubPath...}", Middlewares(tracerMiddleware("/db/images"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getImageHandler))            // TODO: rate limiter ok here? // TODO: options middleware?
+	http.Handle(imagesEndpoint+"{imageSubPath...}", Middlewares(tracerMiddleware("/db/images"), rateLimiter, ctxMiddleware, authOrDenyMiddleware)(getImageHandler))        // TODO: rate limiter ok here? // TODO: options middleware?
 	// Creation handlers
 	http.Handle("/db/create/{variant}", Middlewares(tracerMiddleware("/db/create/{variant}"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfidMiddleware, rfid.DenyGuestMiddleware)(rfid.CreateHandler)) // TODO: options middleware?
-	// TODO: chain spore print handler?
 	// update handlers
 	http.Handle("/db/update/{variant}/{id}", Middlewares(tracerMiddleware("/db/update"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.UpdateHandler)) // TODO: no rfid? // TODO: options middleware?
 	// import handlers
@@ -377,6 +374,8 @@ func main() {
 	http.Handle("/db/list/{variant}", Middlewares(tracerMiddleware("/db/list"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.ListEntriesHandler))                                                 // TODO: options middleware?
 	http.Handle("/db/subspeciesFor/{variant}", Middlewares(tracerMiddleware("/db/subspeciesFor"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware)(rfid.ListSubspeciesHandler))                            // TODO: options middleware?
 	http.Handle("/sessionUserProjects", Middlewares(tracerMiddleware("/sessionUserProjects"), rateLimiter, ctxMiddleware, wrapWriter, authOrDenyMiddleware, rfid.DenyGuestMiddleware)(rfid.SessionUserProjectsHandler)) // TODO: DenyGuestMiddleware? Will guests only have public projects??? // TODO: options middleware?
+	// RedirectHandlers
+	http.Handle("/db/get/rfid/{id}", Middlewares(rateLimiter, ctxMiddleware)(getRfidHandler)) // TODO: require auth? this will let someone know if an id exists....
 	// Next endpt needs no authorization, but does have a rate limiter?? // TODO: rl?
 	http.Handle("/options/{optionsType}", Middlewares(tracerMiddleware("/options"), rateLimiter, internalOnlyMiddleware)(rfid.GetOptionsHandler)) // TODO: DenyGuestMiddleware? Guests should not be changing anything... // TODO: options middleware?
 
@@ -1418,75 +1417,96 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 //	}
 //})
 
-//// TODO: use this somewhere!
-//// getItemTypeForId request body is just a base58 string of the mainCollectionId
-//func getItemTypeForId() http.Handler {
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		defer r.Body.Close()
-//		bs, err := io.ReadAll(r.Body)
-//		if err != nil {
-//			http.Error(w, "Error reading body: "+err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//		req := rfid.MainCollectionId{}
-//		if err = json.Unmarshal(bs, &req); err != nil {
-//			http.Error(w, "Error parsing body: "+err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//		itemType, err := rfid.FindItemTypeForId(r.Context(), req)
-//		if err != nil {
-//			http.Error(w, "Error finding item type: "+err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//		_, err = w.Write([]byte(itemType.EntryType()))
-//		if err != nil {
-//			rfid.HandleHttpWriteError(err)
-//		}
+// // TODO: use this somewhere!
+// // getItemTypeForId request body is just a base58 string of the mainCollectionId
 //
-//	})
-//}
-//
-//func getRfidHandler() http.Handler {
-//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//		ctx := r.Context()
-//		id := r.PathValue("id")
-//		idBytes := []byte(id)
-//		if len(idBytes) != rfid.RfidByteSize {
-//			http.Error(w, "invalid id format. Must be 8 bytes", http.StatusBadRequest)
-//			return
-//		}
-//		item, err := rfid.GetMainCollectionItemWithId(ctx, [rfid.RfidByteSize]byte(idBytes))
-//		if err != nil {
-//			if errors.Is(err, mongo.ErrNoDocuments) {
-//				http.Error(w, "not found: "+err.Error(), http.StatusNotFound)
+//	func getItemTypeForId() http.Handler {
+//		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//			defer r.Body.Close()
+//			bs, err := io.ReadAll(r.Body)
+//			if err != nil {
+//				http.Error(w, "Error reading body: "+err.Error(), http.StatusInternalServerError)
 //				return
 //			}
-//			http.Error(w, "failed to retrieve item: "+err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//		user, err := rfid.GetAuthInfo(ctx)
-//		if err != nil {
-//			http.Error(w, "failed to retrieve user: "+err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//		// Validate user can read this entry
-//		if item.Permissions().HighestPermFor(user) == nil {
-//			http.Error(w, "permission denied", http.StatusForbidden)
-//			return
-//		}
-//		out, err := json.Marshal(item)
-//		if err != nil {
-//			http.Error(w, "failed to marshal item", http.StatusInternalServerError)
-//			return
-//		}
+//			req := rfid.MainCollectionId{}
+//			if err = json.Unmarshal(bs, &req); err != nil {
+//				http.Error(w, "Error parsing body: "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//			itemType, err := rfid.FindItemTypeForId(r.Context(), req)
+//			if err != nil {
+//				http.Error(w, "Error finding item type: "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//			_, err = w.Write([]byte(itemType.EntryType()))
+//			if err != nil {
+//				rfid.HandleHttpWriteError(err)
+//			}
 //
-//		_, err = w.Write(out)
-//		if err != nil {
-//			rfid.HandleHttpWriteError(err)
-//		}
-//	})
-//}
-
+//		})
+//	}
+//
+//	func getRfidHandler() http.Handler {
+//		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//			ctx := r.Context()
+//			id := r.PathValue("id")
+//			idBytes := []byte(id)
+//			if len(idBytes) != rfid.RfidByteSize {
+//				http.Error(w, "invalid id format. Must be 8 bytes", http.StatusBadRequest)
+//				return
+//			}
+//			item, err := rfid.GetMainCollectionItemWithId(ctx, [rfid.RfidByteSize]byte(idBytes))
+//			if err != nil {
+//				if errors.Is(err, mongo.ErrNoDocuments) {
+//					http.Error(w, "not found: "+err.Error(), http.StatusNotFound)
+//					return
+//				}
+//				http.Error(w, "failed to retrieve item: "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//			user, err := rfid.GetAuthInfo(ctx)
+//			if err != nil {
+//				http.Error(w, "failed to retrieve user: "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//			// Validate user can read this entry
+//			if item.Permissions().HighestPermFor(user) == nil {
+//				http.Error(w, "permission denied", http.StatusForbidden)
+//				return
+//			}
+//			out, err := json.Marshal(item)
+//			if err != nil {
+//				http.Error(w, "failed to marshal item", http.StatusInternalServerError)
+//				return
+//			}
+//
+//			_, err = w.Write(out)
+//			if err != nil {
+//				rfid.HandleHttpWriteError(err)
+//			}
+//		})
+//	}
+var getRfidHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) { // TODO: validate works properly!
+	ctx := r.Context()
+	id, err := rfid.UrlDecodeString(r.PathValue("id"))
+	if err != nil {
+		env.LogIfDev(ctx, "failed to url decode string")
+		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	mainCollId, err := rfid.StandardizeMainCollectionId(id)
+	if err != nil {
+		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	typ, err := rfid.GetEntryTypeForId(ctx, *mainCollId)
+	if err != nil {
+		http.Error(w, "failed to get entry type for id: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	newUrl := fmt.Sprintf(`%s/view/%s/%s`, baseApiUrl, typ, id) // TODO: dynamic domain!
+	http.Redirect(w, r, newUrl, http.StatusFound)
+}
 var getAnyCollectionHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	id, err := rfid.UrlDecodeString(r.PathValue("id"))
