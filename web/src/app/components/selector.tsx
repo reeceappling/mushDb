@@ -12,7 +12,6 @@ export interface SelectorProps<T> {
     hideDisposed?: boolean
 }
 
-// TODO: MAKE SURE SELECTOR DISPLAY VALUES PROPERLY DISPLAYS BASE58S WHEN NEEDED
 export function SelectorFor(
     inputs: {
         options: string[],
@@ -33,7 +32,6 @@ export function SelectorFor(
     </select>
 }
 
-// TODO: MAKE SURE SELECTOR DISPLAY VALUES PROPERLY DISPLAYS BASE58S WHEN NEEDED
 export function SelectorResetsOnSelectFor(
     inputs: {
         options: string[],
@@ -90,7 +88,7 @@ export function SelectorResetsOnSelectForCustom<T>(
     </select>
 }
 
-export default function CloseableSelector<T extends Entry>({props}: { // TODO: FIX FOR PERMISSIONED ONES?
+export default function CloseableSelector<T extends Entry>({props}: {
     props: {
         createSelector: (selectHandler:(onSelect: T)=>void)=>JSX.Element,
         createCreator?: (selectHandler:(onSelect: T)=>void)=>JSX.Element,

@@ -172,7 +172,7 @@ export function PermissionSelector({dontShowBelow,canWrite,onChange}:permSelecto
     return (
         <select className={"tailwindSelector"} value={valueFor(canWrite)} onChange={(e)=>onSelect(e.currentTarget.value)}>
             {optionsFor(dontShowBelow).map((str: string)=>{
-                return <option key={str/* TODO: ensure ok*/} value={str}>{str}</option>
+                return <option key={str} value={str}>{str}</option>
             })}
         </select>
     )
