@@ -12,15 +12,11 @@ export interface AuthAreaProps {
     loggedIn: boolean
 }
 
-export default function AuthArea( // TODO: any depth?????
+export default function AuthArea(
     {
         successUrl,
         loggedIn
     }: AuthAreaProps) {
-    // const [cookies, setCookie, removeCookie] = useCookies(['SessionId']); // TODO: may be needed
-    // const [user, setUser] = useState<string>("")
-    // const [pass, setPass] = useState<string>("")
-    // const [remember, setRemember] = useState<boolean>(false)
     const [err, setErr] = useState<string | undefined>()
     useEffect(() => {
         if (loggedIn) {
@@ -56,7 +52,7 @@ export default function AuthArea( // TODO: any depth?????
             {/* TODO: ERROR FOR FAILED LOGIN */}
             <div className={"fixCenterScreen"}></div>
             <div className={"centerH"}>
-                <ErrorDisplay err={err}/>{/* TODO: headerLevel ok? */}
+                <ErrorDisplay err={err}/>
             </div>
             <div className="centerH">
                 {/* GOOGLE SIGN IN/UP*/}
@@ -430,28 +426,3 @@ async function hashPasswordBrowser(password: string): Promise<string> {
 
     return hashHex;
 }
-
-
-// interface TextInputProps {
-//     name: string,
-//     wrapperName: string,
-//     labelText: string,
-//     labelClass: string,
-//     inputType: string,
-//     placeholderText: string,
-//     inputClass: string,
-//     value: string,
-//     updateTextHandler: (s: string) => void,
-// }
-
-// function TextInput(props: TextInputProps) { // TODO: delete if unused
-//     return (
-//         <div className={props.wrapperName}>
-//             <label htmlFor={props.name} className={props.labelClass}><b>{props.labelText}</b></label>
-//             <input type={props.inputType} placeholder={props.placeholderText} name={props.name}
-//                    className={props.inputClass} value={props.value} onChange={(e) => {
-//                 props.updateTextHandler(e.currentTarget.value)
-//             }} required/>
-//         </div>
-//     )
-// }

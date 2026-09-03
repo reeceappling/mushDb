@@ -62,6 +62,7 @@ export default function PageWrapper(
 }
 
 export function Footer() {
+    const yr=new Date().getFullYear()
     return <footer className={styles.footer} role={"contentinfo"}>
         <a
             href="https://mush.appli.ng"
@@ -112,7 +113,7 @@ export function Footer() {
         {/*    Go to nextjs.org →*/}
         {/*</a>*/}
         <div>
-            <div>{"© 2024-2026 "/* TODO: dynamic final year*/}<a href={"https://reece.appli.ng"}>{"Reece Appling."}</a>
+            <div>{`© 2024-${yr} `/* TODO: dynamic final year*/}<a href={"https://reece.appli.ng"}>{"Reece Appling."}</a>
             </div>
             <div style={{float: 'right'}}>{" All Rights Reserved"}</div>
         </div>
