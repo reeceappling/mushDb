@@ -1,11 +1,9 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {
-    ExamplePicWithNotesIncoming,
     PicWithNotesIncoming
 } from "@/app/components/formSubcomponents/picWithNotes";
 import CloseableSelector from "@/app/components/selector";
-import {ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/contaminations";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 import {FruitSelector} from "@/app/components/fruitClient";
 
 // export function TestFruitOK(){

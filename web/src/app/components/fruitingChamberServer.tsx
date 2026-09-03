@@ -5,12 +5,8 @@ import {
 } from "@/app/components/formSubcomponents/picWithNotes";
 import {
     Contamination,
-    ExampleContaminations,
-    ExamplePicsWithNotesIncoming
 } from "@/app/components/formSubcomponents/contaminations";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
+import {ACL} from "@/app/components/accessControlServer";
 
 // export function TestFruitingChamberOk(){
 //     return new FruitingChamberData({

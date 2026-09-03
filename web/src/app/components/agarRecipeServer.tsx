@@ -4,27 +4,27 @@ import {Nutrient} from "@/app/components/formSubcomponents/nutrients";
 import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Antibiotic} from "@/app/components/formSubcomponents/antibiotic";
 import {Additive} from "@/app/components/formSubcomponents/additives";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {AgarRecipeSelector, NewAgarRecipeForm} from "@/app/components/agarRecipeClient";
 import {CapitalizeFirstLetter} from "@/app/components/commonServer";
 
-export function TestAgarRecipeOk(){
-    return new AgarRecipeData({
-        _id: "(AGAR RECIPE ID HERE)",
-        name: "(AGAR RECIPE NAME HERE)",
-        liquids: [{name:"Water",pct:100}],
-        agar: 20, // g/L
-        standard: true,
-        nutrients: [{nutrient:"Oats",amount:17.2,unit:"handfuls"}],
-        sugars: [{type:"Glucose",amount:100,unit:"tons"}],
-        additives: [],// TODO: this
-        antibiotics: [], // TODO: this
-        notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        acl: TestAcl(),
-    })
-}
+// export function TestAgarRecipeOk(){
+//     return new AgarRecipeData({
+//         _id: "(AGAR RECIPE ID HERE)",
+//         name: "(AGAR RECIPE NAME HERE)",
+//         liquids: [{name:"Water",pct:100}],
+//         agar: 20, // g/L
+//         standard: true,
+//         nutrients: [{nutrient:"Oats",amount:17.2,unit:"handfuls"}],
+//         sugars: [{type:"Glucose",amount:100,unit:"tons"}],
+//         additives: [],// TODO: this
+//         antibiotics: [], // TODO: this
+//         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface AgarRecipeData {
     _id: string
