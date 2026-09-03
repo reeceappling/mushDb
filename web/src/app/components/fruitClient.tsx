@@ -167,10 +167,9 @@ export default function FruitDisplay(
     const [sporePrints, setSporePrints] = useState(data.prints) // TODO: use?
     const [err, setErr] = useState<string | undefined>()
     const [acl, setAcl] = useState<ACL>(initial.acl)
-    //const [popupInfo, setPopupInfo] = useState<PopupInfo>(DefaultPopupInfo)
-    useEffect(() => {
-        console.log("ACL set to: "+JSON.stringify(MarshalAcl(acl))) // TODO: del!
-    }, [acl])
+    // useEffect(() => {
+    //     console.log("ACL set to: "+JSON.stringify(MarshalAcl(acl))) // TODO: del!
+    // }, [acl])
     const updateInitial = (updated: FruitData) => {
         setInitial(updated)
         setPics(InitialPicsEntries(updated.pics))
@@ -355,7 +354,7 @@ export default function FruitDisplay(
                 </FlexedSinglesGroup>
             </FlexedArea>
             <TransfersOutDisplay thisId={initial._id} thisEntryType={"fruit"} transfersOut={transfersOut}
-                                 allowNewTransferCreation={false}/>{/* TODO: validTypesTo*/}
+                                 allowNewTransferCreation={false}/>
             <FruitPrintsDisplay prints={sporePrints}/>
             <ChildSwabArea parent={initial._id}/>{/* TODO: SWABS DISPLAY?*/}
             <PicsDisplay pix={initial.pics || []} updateParent={setPics} readonly={readonly}/>{/* Pics */}
@@ -474,7 +473,7 @@ export function NewFruitForm(
 
 export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE ONLY FOR FRUITS PURCHASED OR FOUND
     const {dispatch} = useModalContext();
-    const [parentType, setParentType] = useState<string | undefined>(undefined) // TODO: ensure this is everywhere in ts and go. Also set parent type where needed
+    const [parentType, setParentType] = useState<string | undefined>(undefined)
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
@@ -530,12 +529,7 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
             <div>{"Source: "}</div>
             <SelectorFor options={["", "store", "outside", "online"]} initial={""} updateParent={setParentType} disabled={false}/>
         </div>
-        {/* TODO: ParentType: FOR "store" OR "outside" ONLY!!!!! */}{/* TODO: THIS!*/}
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
-        {/*/!* Optional fields*!/*/}
-        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}*/}
-        {/*                            headerLevel={headerLevel}/>*/}
         <ImageSelector updateParent={setImageFile}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>

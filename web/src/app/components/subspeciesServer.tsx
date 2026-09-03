@@ -1,18 +1,17 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {TestNotes} from "@/app/components/formSubcomponents/contaminations";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 
-export function TestSubspeciesOk(){
-    return new SubspeciesData({
-        _id: "(SUBSPECIES NAME HERE)",
-        species: "(SPECIES NAME HERE)",
-        aliases: ["(Alias 1)","(Alias 2)"],
-        notes: TestNotes,
-        lastUpdated: 789,
-        acl: TestAcl(),
-        defaultAcl: TestAcl(),
-    })
-}
+// export function TestSubspeciesOk(){
+//     return new SubspeciesData({
+//         _id: "(SUBSPECIES NAME HERE)",
+//         species: "(SPECIES NAME HERE)",
+//         aliases: ["(Alias 1)","(Alias 2)"],
+//         notes: TestNotes,
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//         defaultAcl: TestAcl(),
+//     })
+// }
 
 export interface SubspeciesData {
     _id: string

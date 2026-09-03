@@ -1,25 +1,25 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {MssSelector, NewMssForm} from "@/app/components/mssClient";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 
 
-export function TestMssOk(){
-    return new MssData({
-        _id: "(MSS ID HERE)",
-        creationDate: Date.now()-2000,
-        species: "(SPECIES NAME)",
-        subspecies: "(SUBSPECIES NAME)",
-        parent: "(PARENT ID)",
-        transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
-        sale: "(SALE ID)",
-        disposed: Date.now()+40000,
-        notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        acl: TestAcl(),
-    })
-}
+// export function TestMssOk(){
+//     return new MssData({
+//         _id: "(MSS ID HERE)",
+//         creationDate: Date.now()-2000,
+//         species: "(SPECIES NAME)",
+//         subspecies: "(SUBSPECIES NAME)",
+//         parent: "(PARENT ID)",
+//         transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
+//         sale: "(SALE ID)",
+//         disposed: Date.now()+40000,
+//         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 export interface MssData {
     _id: string
     creationDate: number
@@ -49,7 +49,7 @@ export class MssData {
         return "mss"
     }
     public description(): string {
-        return `Multispore syringe ${this._id}. Species ${this.species}.${this.subspecies!==undefined&&` Subspecies ${this.subspecies}.`} Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}` // TODO: KF
+        return `Multispore syringe ${this._id}. Species ${this.species}.${this.subspecies!==undefined&&` Subspecies ${this.subspecies}.`} Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed!==undefined&&` Disposed on ${new Date(this.disposed).toISOString()}`}`
     }
 }
 

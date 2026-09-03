@@ -8,25 +8,25 @@ import {ExamplePicsWithNotesIncoming} from "@/app/components/formSubcomponents/c
 import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import {FruitSelector} from "@/app/components/fruitClient";
 
-export function TestFruitOK(){
-    return new FruitData({
-        _id: "(FRUIT ID HERE)",
-        creationDate: 1,
-        species: "(SPECIES)",
-        subspecies: "(SUBSPECIES)",
-        genSpore: 7,
-        transfersOut: ["(TRANSFER OUT 1)","(TRANSFER OUT 2)"],
-        prints: ["(PRINT1)","(PRINT2)"],
-        parentType: "bag",
-        parent: "(PARENT ID)",
-        pics: ExamplePicsWithNotesIncoming,
-        disposed: Date.now()+5000,
-        mostRecentImage: ExamplePicWithNotesIncoming,
-        notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        acl: TestAcl(),
-    })
-}
+// export function TestFruitOK(){
+//     return new FruitData({
+//         _id: "(FRUIT ID HERE)",
+//         creationDate: 1,
+//         species: "(SPECIES)",
+//         subspecies: "(SUBSPECIES)",
+//         genSpore: 7,
+//         transfersOut: ["(TRANSFER OUT 1)","(TRANSFER OUT 2)"],
+//         prints: ["(PRINT1)","(PRINT2)"],
+//         parentType: "bag",
+//         parent: "(PARENT ID)",
+//         pics: ExamplePicsWithNotesIncoming,
+//         disposed: Date.now()+5000,
+//         mostRecentImage: ExamplePicWithNotesIncoming,
+//         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface FruitData {
     _id: string

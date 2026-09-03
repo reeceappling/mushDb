@@ -448,9 +448,9 @@ export function NewLcForm({handlers, lcRecipeIn, pcRunIn}: {
         <ErrorDisplay err={err}/>
         {lcRecipeIn === undefined && <LcRecipeSelectorCloseable doSelect={setLcRecipe}
                                                                 allowCreation={handlers.isTopLevel}
-                                                                creatorInPage={handlers.isTopLevel}/>} {/* TODO: isTopLevel? disallow ok? */}{/* TODO: closeable or no? */}
+                                                                creatorInPage={handlers.isTopLevel}/>}
         {pcRunIn === undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel}
-                                                          creatorInPage={true}/>} {/* TODO: isTopLevel? disallow ok? */}
+                                                          creatorInPage={true}/>}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
@@ -468,7 +468,7 @@ export function LcListPageTable({data, onClick, withLink}: ListPageItems<LcData>
         NewColumn("Clean", v => v.confirmedClean ? (v.confirmedClean ? "clean" : "dirty") : "?", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcData) => {

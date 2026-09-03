@@ -1,28 +1,27 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
 import {NewPcRunForm, PcRunSelector} from "@/app/components/pcRunClient";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 
-export function TestPcRunOk(){
-    return new PcRunData({
-        _id: "(ID_HERE)",
-        creationDate: Date.now()-2000,
-        runtimeMinutes: 120,
-        notes: [{
-            time: 123,
-            note: "(NOTE 1)"
-        },{
-            time: 456,
-            note: "(NOTE 2)"
-        }],
-        lastUpdated: Date.now(),
-        acl: TestAcl(), // TODO: do we want?
-    })
-}
+// export function TestPcRunOk(){
+//     return new PcRunData({
+//         _id: "(ID_HERE)",
+//         creationDate: Date.now()-2000,
+//         runtimeMinutes: 120,
+//         notes: [{
+//             time: 123,
+//             note: "(NOTE 1)"
+//         },{
+//             time: 456,
+//             note: "(NOTE 2)"
+//         }],
+//         lastUpdated: Date.now(),
+//         acl: TestAcl(), // TODO: do we want?
+//     })
+// }
 
 export interface PcRunData {
     _id: string
-    // TODO: LOCATION? Cooker?
     creationDate: number
     runtimeMinutes: number
     notes?: Note[]

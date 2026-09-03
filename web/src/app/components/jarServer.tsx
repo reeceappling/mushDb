@@ -8,39 +8,37 @@ import {
     ExampleContaminations,
     ExamplePicsWithNotesIncoming
 } from "@/app/components/formSubcomponents/contaminations";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
-import {JarSelector} from "@/app/components/jarClient";
+import {ACL} from "@/app/components/accessControlServer";
 
-export function TestJarOK(){
-    return new JarData({
-        _id: "(JAR ID HERE)",
-        sizeCups: 4,
-        recipe: "(JAR RECIPE ID)",
-        // grainBatch: "(GRAIN_BATCH_ID)",
-        wetness: 5,
-        burstGrains: 1,
-        pcRun: "(PC RUN ID)",
-        creationDate: Date.now()-2000,
-        species: "(SPECIES NAME)",
-        subspecies: "(SUBSPECIES NAME)",
-        innoc: "(Innoc transfer id!)",
-        genSpore: 7,
-        genFruitOrSpore: 3,
-        transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
-        parentType: "plate",
-        parent: "(PARENT ID)",
-        pics: ExamplePicsWithNotesIncoming,
-        contamination: ExampleContaminations,
-        knownFruitable: true,
-        sale: "SALE_ID_HERE",
-        disposed: Date.now()+40000,
-        mostRecentImage: ExamplePicWithNotesIncoming,
-        notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        acl: TestAcl(),
-    })
-}
+// export function TestJarOK(){
+//     return new JarData({
+//         _id: "(JAR ID HERE)",
+//         sizeCups: 4,
+//         recipe: "(JAR RECIPE ID)",
+//         // grainBatch: "(GRAIN_BATCH_ID)",
+//         wetness: 5,
+//         burstGrains: 1,
+//         pcRun: "(PC RUN ID)",
+//         creationDate: Date.now()-2000,
+//         species: "(SPECIES NAME)",
+//         subspecies: "(SUBSPECIES NAME)",
+//         innoc: "(Innoc transfer id!)",
+//         genSpore: 7,
+//         genFruitOrSpore: 3,
+//         transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
+//         parentType: "plate",
+//         parent: "(PARENT ID)",
+//         pics: ExamplePicsWithNotesIncoming,
+//         contamination: ExampleContaminations,
+//         knownFruitable: true,
+//         sale: "SALE_ID_HERE",
+//         disposed: Date.now()+40000,
+//         mostRecentImage: ExamplePicWithNotesIncoming,
+//         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface JarData {
     _id: string
@@ -93,30 +91,3 @@ export class JarData {
         return `Jar ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.`
      }
 }
-
-// export function JarSelectorCloseable(sp: SelectorProps<JarData>) { // TODO: use
-//     const doSel = (val?: JarData):void=>{
-//         if (!val){
-//             return
-//         }
-//         sp.doSelect(val)
-//     }
-//     return <CloseableSelector<JarData> props={{
-//         allowCreation: sp.allowCreation,
-//         doSelect: doSel, // For selecting normally
-//         closeTxt: "Close Jar List",
-//         //createTxt: "Create Bag",// TODO: ???
-//         lowercase: "jar",
-//         //creatorInPage: sp.creatorInPage,// TODO: ???
-//         //createEndpt: "bag",// TODO: ???
-//         createSelector:(selHdl: (onSelect: JarData) => void)=>{
-//             return <JarSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
-//                 v && selHdl(v)
-//             }}/>
-//         },
-//         // TODO: ok?
-//         // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-//         //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-//         // },
-//     }}/>
-// }

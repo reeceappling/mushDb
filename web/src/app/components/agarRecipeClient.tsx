@@ -203,7 +203,7 @@ export default function AgarRecipeDisplay(
                         return onCreate([{
                             typeText: "Agar Batch",
                             node: <CreatedLinkFor linkId={newItem._id} typ={"agarBatch"}/>
-                        }], false) // TODO: true instead?
+                        }], false)
                     },
                     isTopLevel: false,
                 }}/>
@@ -255,7 +255,7 @@ export default function AgarRecipeDisplay(
             <AdditivesAreaReadOnly values={initial.additives}/>
             <AntibioticsDisplay antibiotics={initial.antibiotics}/>
             <NotesFormArea readonly={readonly} initial={initial.notes}
-                           updateParent={setNotes}/>{/* TODO: this is erroring when updating after creating a note, then erroring again when trying to click update with no changes because it says existing notes length is not the same!*/}
+                           updateParent={setNotes}/>{/* TODO: this is erroring when updating after creating a note, then erroring again when trying to click update with no changes because it says existing notes length is not the same! Validate that this is fixed or still a problem*/}
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={initial.acl} readonly={readonly}
                             updateParent={setAcl}/>{/*TODO: agarRecipe 1 is not properly loading the initial acl!*/}
@@ -396,6 +396,7 @@ export function NewAgarRecipeForm({handlers}: { handlers: NewEntryInput<AgarReci
             </div>
             </Subform>
             {/* TODO: liquids and below as flexbox?*/}
+            {/* TODO: per N mL for nutes, sugars, additives?*/}
             <Subform>
                 <div>{"Liquids: "}</div>
                 <LiquidEntriesGroupForNew initial={defaultLiquids} updateParent={setLiquids}/>
@@ -442,7 +443,7 @@ export const AgarRecipeArea = ({agarRecipeBinId,agarRecipe}: { agarRecipeBinId?:
         if (agarRecipeBinId) {
             return <div>
                 <EntryLinkForId props={{
-                    displayId: recipe ? recipe.name : agarRecipeBinId, // TODO: add id?
+                    displayId: recipe ? recipe.name : agarRecipeBinId,
                     linkId: agarRecipeBinId,
                     entryType: "agarRecipe"
                 }}/>
@@ -522,10 +523,10 @@ export function AgarRecipeListPageTable({data, onClick, withLink}: ListPageItems
                     return <div key={i}>{v}</div>
                 })}
             </div>
-        }), // TODO: fit?
+        }),
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }) // TODO: fit on last?
+        })
 
     ]
     if (withLink) {

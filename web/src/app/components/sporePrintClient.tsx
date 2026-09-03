@@ -339,7 +339,6 @@ export function NewSporePrintForm(
         const doReq = () => {
             const formData = new FormData()
             const dataObj: any = {
-                // parentType: parentType, // TODO: may be deletable!
                 parent: parent,
                 notes: notes,
                 // optional pics also here
@@ -459,7 +458,7 @@ export function SporePrintImportDisplay({headerLevel}: ImportDisplayInput) { // 
     return <ImportEntryFormWrapper entryType={"sporePrint"}>
         <ErrorDisplay err={err}/>
         <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
-        {/* TODO: parent! store or online?*/}
+        {/* TODO: parent! store, outside, or online?*/}
         <SporePrintColorArea readonly={false} setColor={setColor}/>
         <SporePrintDensityArea readonly={false} setDensity={setDensity}/>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
@@ -480,7 +479,7 @@ export function SporePrintListPageTable({data, onClick, withLink}: ListPageItems
         NewColumn("Subspec", v => v.subspecies || "", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SporePrintData) => {

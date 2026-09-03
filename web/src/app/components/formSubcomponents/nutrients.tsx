@@ -84,11 +84,14 @@ export function NutrientsAreaReadOnly({values}: {values?:Nutrient[]}) {
 export function NutrientsEntriesGroupForNew({
                                                 initial,
                                                 updateParent,
+                                                // TODO: this! scaleFactor,
                                             }: {
     initial: Nutrient[],
-    updateParent: (l: Nutrient[]) => void
+    updateParent: (l: Nutrient[]) => void,
+    // TODO: this! scaleFactor?: number,
 }) {
     const [current, setCurrent] = useState<Nutrient[]>(initial)
+    // TODO: this! const [factor, setFactor] = useState(scaleFactor||1.0)
 
     useEffect(() => {
         setCurrent(initial)

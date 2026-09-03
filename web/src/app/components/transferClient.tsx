@@ -630,7 +630,7 @@ export function TransferListPageTable({data, onClick, withLink}: ListPageItems<T
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }, true),
-        NewColumn("Reason", v=>v.reason), // TODO: fit? probably not
+        NewColumn("Reason", v=>v.reason),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: TransferData)=>{

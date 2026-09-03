@@ -638,10 +638,10 @@ export function NewPlateForm(
         }
         const body: any = {
             agarBatch: agarBatch._id,
-            condensationCoverageAtPourTime: condensationCoverageAtPourTime, // TODO: ensure ok on go side
-            pourCoverage: pourCoverage, // TODO: ensure ok on go side
-            wetAtCooledTime: wetAtCooledTime, // TODO: ensure ok on go side
-            agarOnOutsideAtPourTime: agarOnOutsideAtPourTime, // TODO: ensure ok on go side
+            condensationCoverageAtPourTime: condensationCoverageAtPourTime,
+            pourCoverage: pourCoverage,
+            wetAtCooledTime: wetAtCooledTime,
+            agarOnOutsideAtPourTime: agarOnOutsideAtPourTime,
             notes: notes,
             writeTagTo: writeTagTo,
         }
@@ -671,7 +671,7 @@ export function NewPlateForm(
     return <NewEntryFormWrapper entryType={"plate"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         {agarBatchIn === undefined && <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true}
-                                                                  creatorInPage={true/* TODO: is true ok for both?*/}/>}
+                                                                  creatorInPage={true}/>}
         <div className={sliderClasses}>
             <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
         </div>
@@ -699,7 +699,7 @@ export function PlateListPageTable({data, onClick, withLink}: ListPageItems<Plat
         NewColumn("Subspec", v => v.subspecies || "", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PlateData) => {

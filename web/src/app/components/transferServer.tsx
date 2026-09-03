@@ -1,24 +1,23 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {TestNotes, ExampleImageLocation} from "@/app/components/formSubcomponents/contaminations";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 
 
-export function TestTransferOk(){
-    return new TransferData({
-        _id: "(TRANSFER ID HERE)",
-        from: "(FROM 1)",
-        to: "(TO)",
-        fromType: "plate",
-        toType: "plate",
-        creationDate: Date.now()-10000,
-        reason: "mold",
-        fromImage: ExampleImageLocation,
-        toImage: ExampleImageLocation,
-        notes: TestNotes,
-        lastUpdated: 789,
-        acl: TestAcl(),
-    })
-}
+// export function TestTransferOk(){
+//     return new TransferData({
+//         _id: "(TRANSFER ID HERE)",
+//         from: "(FROM 1)",
+//         to: "(TO)",
+//         fromType: "plate",
+//         toType: "plate",
+//         creationDate: Date.now()-10000,
+//         reason: "mold",
+//         fromImage: ExampleImageLocation,
+//         toImage: ExampleImageLocation,
+//         notes: TestNotes,
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface TransferData {
     _id: string

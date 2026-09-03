@@ -1,29 +1,28 @@
-import {ExamplePicWithNotesIncoming, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
+import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {ExamplePicsWithNotesIncoming, TestNotes} from "@/app/components/formSubcomponents/contaminations";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector from "@/app/components/selector";
 import {SporePrintSelector} from "@/app/components/sporePrintClient";
 
 
-export function TestSporePrintOk(){
-    return new SporePrintData({
-        _id: "(SUBSTR ID HERE)",
-        parent: "(PARENT ID)",
-        creationDate: Date.now()-2000,
-        species: "(SPECIES NAME)",
-        subspecies: "(SUBSPECIES NAME)",
-        color: "Black",
-        density: "Average",
-        pics: ExamplePicsWithNotesIncoming,
-        sale: "SALE ID",
-        disposed: Date.now(),
-        mostRecentImage: ExamplePicWithNotesIncoming,
-        notes: TestNotes,
-        lastUpdated: 789,
-        acl: TestAcl(),
-    })
-}
+// export function TestSporePrintOk(){
+//     return new SporePrintData({
+//         _id: "(SUBSTR ID HERE)",
+//         parent: "(PARENT ID)",
+//         creationDate: Date.now()-2000,
+//         species: "(SPECIES NAME)",
+//         subspecies: "(SUBSPECIES NAME)",
+//         color: "Black",
+//         density: "Average",
+//         pics: ExamplePicsWithNotesIncoming,
+//         sale: "SALE ID",
+//         disposed: Date.now(),
+//         mostRecentImage: ExamplePicWithNotesIncoming,
+//         notes: TestNotes,
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface SporePrintData {
     _id: string
@@ -67,21 +66,14 @@ export function SporePrintSelectorCloseable({onSelect,hideDisposed}:{onSelect: (
         onSelect(val)
     }
     return <CloseableSelector<SporePrintData> props={{
-        allowCreation: false, // TODO: ok?
+        allowCreation: false,
         doSelect: doSel, // For selecting normally
         closeTxt: "Close Spore Print List",
-        //createTxt: "Create Fruit", // TODO: ok?
         lowercase: "sporePrint",
-        //creatorInPage: sp.creatorInPage, // TODO: ok?
-        //createEndpt: "fruit", // TODO: ok?
         createSelector:(selHdl: (onSelect: SporePrintData) => void)=>{
             return <SporePrintSelector hideDisposed={hideDisposed} doSelect={(v)=>{
                 v && selHdl(v)
             }}/>
         },
-        // TODO: do we want a creator anywhere for this?
-        // createCreator:(selHdl: (onSelect: FruitData) => void)=>{
-        //     return <FruitSelector handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
     }}/>
 }

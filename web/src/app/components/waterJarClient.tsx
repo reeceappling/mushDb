@@ -284,7 +284,7 @@ export function WaterJarListPageTable({data, onClick, withLink}: ListPageItems<W
         }, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: WaterJarData) => {

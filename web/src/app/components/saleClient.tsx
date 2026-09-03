@@ -278,7 +278,7 @@ export function SaleListPageTable({data, onClick, withLink}: ListPageItems<SaleD
         }, true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SaleData)=>{

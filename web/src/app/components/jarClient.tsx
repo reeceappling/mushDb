@@ -263,7 +263,7 @@ export function JarImportDisplay({}: ImportDisplayInput) {
         <SliderOnlyIfUndefinedWithOpenButton text={"(Optional) Burst Grains"} defaultValue={0} onChange={setBurstGrains}/>
 
         <ImageSelector updateParent={setImageFile}/>
-        <NewEntryNotes setNotes={setNotes}/>{/* TODO: add this to every other import that may need it*/}
+        <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={importEntry}>{"Import"}</button>
     </ImportEntryFormWrapper>
@@ -337,7 +337,6 @@ export default function JarDisplay(
             const dataObj: any = {
                 knownFruitable: knownFruitable,
                 disposed: disposed,
-                //sale: sale, // TODO: remove
                 wetness: wetness,
                 burstGrains: burstGrains,
                 acl: MarshalAcl(acl),

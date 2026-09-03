@@ -399,7 +399,7 @@ export function LcRecipeListPageTable({data, onClick, withLink}: ListPageItems<L
         }, true),
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }) // TODO: fit?
+        })
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcRecipeData) => {

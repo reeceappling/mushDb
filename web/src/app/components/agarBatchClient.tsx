@@ -257,7 +257,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
         }
         {agarRecipeIn ? <AgarRecipeArea agarRecipe={agarRecipeIn}/> :
             <Subform>
-                <AgarRecipeSelectorCloseable /* TODO: consider using subform on other closeables?*/
+                <AgarRecipeSelectorCloseable
                     doSelect={setRecipe}
                     txt={"Agar Recipe: "}
                     allowCreation={true}
@@ -278,7 +278,7 @@ export function AgarBatchListPageTable({data, onClick, withLink}: ListPageItems<
         NewColumn("Agar Recipe", (v) => v.agarRecipe, true),
         NewColumn("Last Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit on last?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: AgarBatchData) => {

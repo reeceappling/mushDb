@@ -400,7 +400,7 @@ export function StasisTubeListPageTable({data, onClick, withLink}: ListPageItems
         NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: StasisTubeData)=>{

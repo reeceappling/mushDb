@@ -200,10 +200,7 @@ export function NewSubspeciesForm({handlers, species}: {
     return (
         <NewEntryFormWrapper entryType={"subspecies"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
-            {/*{species === undefined && <SpeciesSelectorCloseable doSelect={setSelectedSpecies} allowCreation={false} creatorInPage={false}/>}*/}
-            {species === undefined && <ExistingSpeciesSelector initialSpecies={species} doSelect={s => {
-                setSelectedSpecies(s)
-            }} />}
+            {species === undefined && <ExistingSpeciesSelector initialSpecies={species} doSelect={setSelectedSpecies} />}
             <Subform>
             {/* NAME (ID) */}
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"New Subspecies Name: "} setName={setName} readonly={false}/>
@@ -325,7 +322,7 @@ export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems
         </div>, true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubspeciesData)=>{

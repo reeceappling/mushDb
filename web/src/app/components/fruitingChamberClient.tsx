@@ -505,12 +505,12 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             knownFruitable: knownFruitable,
             writeTagTo: writeTagTo
         }
-        setDebug("creating form data");
+        setDebug("creating form data"); // TODO: del
         const formData = new FormData()
         formData.set("data", JSON.stringify(dataObj)) // Must always be called before setting the images
-        setDebug("set form data");
+        setDebug("set form data"); // TODO: del
         // TODO: does images need to be set on the data obj?
-        imageFile && formData.set("img", imageFile, "img") // TODO: for some reason images are not working!
+        imageFile && formData.set("img", imageFile, "img") // TODO: for some reason images are not working! should be working now, validate.
         // setDebug("set image file");
         //
         //
@@ -599,7 +599,7 @@ export function FruitingChamberImportDisplay({headerLevel}: ImportDisplayInput) 
             }
         }}/>
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
-        <div className={"centerH"/* TODO: if this works put it on all import pages*/}
+        <div className={"centerH"}
              onPointerDown={() => setDebug("image area pointerdown")}
              onClick={() => setDebug("image area click")}>
             <ImageSelector updateParent={setImageFile}/>

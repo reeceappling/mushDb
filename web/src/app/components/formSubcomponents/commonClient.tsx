@@ -122,12 +122,18 @@ export function SugarEntryForNew({
 export function NutrientEntryForNew({
                                         initial,
                                         updateParent,
+                                        // TODO: this! scaleFactor,
                                     }: {
     initial: Nutrient,
-    updateParent: (l: Nutrient) => void
+    updateParent: (l: Nutrient) => void,
+    // TODO: this! scaleFactor?: number,
 }) {
     const [errTxt, setErrTxt] = useState<string | undefined>()
+    // TODO: this! const factor = scaleFactor || 1.0
 
+    // const scaledNumber = (n:number)=>{
+    //     return n*factor;
+    // }
     const handleFormChangeAmt = (val: number) => {
         updateParent({ ...initial, amount: val })
     }

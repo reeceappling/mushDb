@@ -5,23 +5,23 @@ import {Sugar} from "@/app/components/formSubcomponents/sugars";
 import {Additive} from "@/app/components/formSubcomponents/additives";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {LcRecipeSelector, NewLcRecipeForm} from "@/app/components/lcRecipeClient";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 import {CapitalizeFirstLetter} from "@/app/components/commonServer";
 
-export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
-    return new LcRecipeData({
-        _id: "(LC RECIPE ID HERE)",
-        name: "(LC RECIPE NAME HERE)",
-        liquids: [], //TODO: fixMe!
-        nutrients: [],  //TODO: fixMe!
-        standard: true,
-        sugars: [],  //TODO: fixMe!
-        additives: [], //TODO: fixMe!
-        notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        acl: TestAcl(), // TODO: do we want?
-    })
-}
+// export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
+//     return new LcRecipeData({
+//         _id: "(LC RECIPE ID HERE)",
+//         name: "(LC RECIPE NAME HERE)",
+//         liquids: [], //TODO: fixMe!
+//         nutrients: [],  //TODO: fixMe!
+//         standard: true,
+//         sugars: [],  //TODO: fixMe!
+//         additives: [], //TODO: fixMe!
+//         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(), // TODO: do we want?
+//     })
+// }
 
 export interface LcRecipeData {
     _id: string
@@ -63,7 +63,7 @@ export class LcRecipeData {
     }
 }
 
-export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) { // TODO: use
+export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) {
     const doSel = (val?: LcRecipeData):void=>{
         if (!val){
             return

@@ -92,9 +92,7 @@ export function AssertProject(input: any): asserts input is ProjectData {
         }
     }
     // Complex optional keys (perms)
-    //console.log("inp perms: "+JSON.stringify(Object.entries(input.perms))) // TODO: del
     input.perms = UnmarshalProjectPermsField(input)
-    //console.log("out perms: "+JSON.stringify(Object.entries(input.perms))) // TODO: del
     return
 }
 

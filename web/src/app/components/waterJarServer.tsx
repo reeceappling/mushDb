@@ -1,6 +1,4 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-
-
 import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {NewWaterJarForm, WaterJarSelector} from "@/app/components/waterJarClient";

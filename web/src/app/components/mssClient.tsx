@@ -144,7 +144,7 @@ export function AssertMss(input: any): asserts input is MssData {
 }
 
 export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // Use only for purchased or preexisting mss
-    const {dispatch} = useModalContext();
+    const {dispatch} = useModalContext(); // TODO: use?
     const [createdDate, setCreatedDate] = useState(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>()
     // Non-required
@@ -161,7 +161,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // Use onl
         return <div>
             <div><div>{"Multispore syringes Created:"}</div></div>
             {entriesCreated.map((created)=>{
-                return <EntryLinkForId key={created} props={{displayId:created, linkId: created, entryType:"mss", openInNewTab: false}}/>// TODO: OPENINNEWTAB false ok?
+                return <EntryLinkForId key={created} props={{displayId:created, linkId: created, entryType:"mss", openInNewTab: false}}/>
             })}
         </div>
     }
@@ -173,7 +173,7 @@ export function MssImportDisplay({headerLevel}: ImportDisplayInput) { // Use onl
         }
         const body: any = {
             creationDate: createdDate,
-            species: species._id, // TODO: validate on insert
+            species: species._id,
             // optional
             subspecies: subspecies,
             notes: notes,
@@ -421,7 +421,7 @@ export function ChildMssArea({parent}:{parent?:string}){
         })
     }
     const redirectToMss = (mss:MssData) => {
-        window.location.assign(viewUrlFor("mss", mss._id)) // TODO: ENSURE OK!
+        window.location.assign(viewUrlFor("mss", mss._id))
     }
     const toggleCollapsed = (e: React.MouseEvent<HTMLButtonElement,MouseEvent>) => {
         e.preventDefault()
@@ -467,7 +467,7 @@ export function MssListPageTable({data, onClick, withLink}: ListPageItems<MssDat
         NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: MssData)=>{

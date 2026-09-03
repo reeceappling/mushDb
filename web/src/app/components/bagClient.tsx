@@ -76,7 +76,7 @@ import {
     SpeciesSubspeciesArea
 } from "@/app/components/speciesClient";
 import {SubstrateBatchArea} from "@/app/components/substrateBatchClient";
-import {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
+import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
 import {SubstrateBatchData, SubstrateBatchSelectorCloseable} from "@/app/components/substrateBatchServer";
 import TestAndValidate from "@/app/components/testing/untested";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
@@ -184,7 +184,7 @@ export default function BagDisplay(
     const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
     const [disposed, setDisposed] = useState(initial.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-    const [wetness, setWetness] = useState(initial.wetness) // TODO: new! handle on go side!
+    const [wetness, setWetness] = useState(initial.wetness)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     // ItemsWithPics
     const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
@@ -192,7 +192,6 @@ export default function BagDisplay(
     const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
     const [err, setErr] = useState<string | undefined>()
     const [acl, setAcl] = useState<ACL>(initial.acl)
-    //const [newFruits, setNewFruits] = useState<FruitData[]>([]) // TODO: get rid of???
     const filterSizeArea = (filterSize: string, headerLevel?: number) => {
         return <div>
             <div>{"Filter Size: " + filterSize}</div>
@@ -216,9 +215,8 @@ export default function BagDisplay(
     const bagSubmit = () => {
         const formData = new FormData()
         const dataObj: any = {
-            wetness: wetness, // TODO: ok?
+            wetness: wetness,
             knownFruitable: knownFruitable,
-            sale: sale, // TODO: how/when should sales be made?
             disposed: disposed,
             notes: notes,
             writeTagTo: writeTagTo,
@@ -269,7 +267,7 @@ export default function BagDisplay(
         const disp = initial.disposed !== undefined
         return (!disp)?[
             ...((innoculated)?[OvcForNewFruit(initial._id, "bag", allCookies(cookies))]:[]),
-            WriteRfidOvcArea(initial._id), // TODO: TEST!
+            WriteRfidOvcArea(initial._id),
             ...((innoculated)?[
                 {
                     txt: "Create Spore Print (+fruit)",
@@ -300,7 +298,7 @@ export default function BagDisplay(
             <MostRecentImageDisplay data={initial.mostRecentImage}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
-                    <PcRunArea binaryId={initial.pcRun}/>{/* TODO: ENSURE OK!*/}
+                    <PcRunArea binaryId={initial.pcRun}/>
                     <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Substrate recipe: "}/>{/* TODO: hover styling?*/}
                     <SubstrateBatchArea id={data.substrateBatch} txt={"Substrate batch: "}/>{/* TODO: hover styling?*/}
                     {filterSizeArea(initial.filterSize)}
@@ -372,7 +370,7 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [filterSize, setFilterSize] = useState<string | undefined>()
     // Optional
-    const [wetness, setWetness] = useState<number | undefined>(undefined) // TODO: allow to be undefined on go side
+    const [wetness, setWetness] = useState<number | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
@@ -424,9 +422,6 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
                 <SubstrateBatchSelectorCloseable txt={"Substrate Batch"} doSelect={setSubstrateBatch}
                                                  allowCreation={handlers.isTopLevel} creatorInPage={false}/>}
             <SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/>
-            {/*<WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {*/}
-            {/*    setWetness(value)*/}
-            {/*}}/>*/}
             {pcRunIn === undefined && // TODO: Show pc run if already exists?
                 <PcRunSelectorCloseable doSelect={setPcRun} creatorInPage={true} allowCreation={true}/>}
             <div className={"centerH medGapTop"}>
@@ -448,15 +443,17 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
 export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
     const {dispatch} = useModalContext();
     // Required
-    const [sealDate, setSealDate] = useState<number>(0) // TODO: used to be useState(Date.now()), but something did not like that...
+    const [sealDate, setSealDate] = useState<number>(0)
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [recipe, setRecipe] = useState<SubstrateRecipeData | undefined>(undefined)
     const [filterSize, setFilterSize] = useState<string | undefined>(undefined)
     // Optional
     const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
+    const [wetness, setWetness] = useState<number | undefined>(undefined)
     const [generation, setGeneration] = useState<number | undefined>(1)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
     const cookies = useContext(CookiesContext)
@@ -485,6 +482,8 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
             subspecies: subspecies,
             generation: generation,
             knownFruitable: knownFruitable,
+            wetness: wetness,
+            notes: notes,
             writeTagTo: writeTagTo,
         }
         formData.set("data", JSON.stringify(dataObj))
@@ -505,8 +504,6 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
             }
         }
         DoMultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies), dispatchUpdate)
-        // TODO: redirect not working.
-
     }
     return <ImportEntryFormWrapper entryType={"bag"}>
         {/* Required Fields */}
@@ -519,14 +516,10 @@ export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
             {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize}
                                                  current={filterSize}/>{/* TODO: ensure working!*/}
         </div>
-        {/* TODO: WETNESS*/}
-        {/* TODO: NOTES*/}
+        <SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/>
+        <NewEntryNotes setNotes={setNotes}/>
         {/* Species required, subspecies optional*/}
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
-        {/*<ExistingSpeciesSelector doSelect={setSpecies}/>*/}
-        {/*<TestAndValidate todos={["what to do when a species has no subspecies?"]}>*/}
-        {/*    <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
-        {/*</TestAndValidate>*/}
         {/* Other Optional fields*/}
         {species && <><GenerationInput updateParent={setGeneration}/>
             <TestAndValidate todos={["default to unknown?"]}>
@@ -549,7 +542,7 @@ export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagDat
             return NumberToDateStr(v.lastUpdated)
         }, true),
         NewColumn("Species", (v) => v.species || "", true),
-        NewColumn("Subspec.", (v) => v.subspecies || ""), // TODO: fit?
+        NewColumn("Subspec.", (v) => v.subspecies || ""),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: BagData) => {

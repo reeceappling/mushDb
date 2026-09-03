@@ -180,7 +180,8 @@ export default function GrainBatchDisplay(
         }
         const ovcs: OnViewCreatorQuadCol[] = [
             {
-                txt: "Create Jars From Batch", // TODO: creates either PC-d or un-pc'd jars!
+                txt: "Create Jars From Batch",
+                // TODO: creates either PC-d or un-pc'd jars!
                 // TODO: does this creation need a pcRun??? Can we do it before the run?
                 // TODO: can items be added when creating a PC run?
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {

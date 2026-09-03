@@ -271,7 +271,7 @@ export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageI
         NewColumn("Recipe", (v) => v.recipe, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubstrateBatchData) => {

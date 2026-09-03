@@ -144,7 +144,7 @@ export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
     return
 }
 
-export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
+export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) {
     const {dispatch} = useModalContext();
     const [swabDate, setSwabDate] = useState<number>(Date.now())
     const [notes, setNotes] = useState<Note[]>([])
@@ -250,7 +250,6 @@ export default function SporeSwabDisplay(
             WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
-            {/* TODO: AREA TO CREATE TRANSFER! */}
             <ErrorDisplay err={err}/>
             <ID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
             <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
@@ -355,7 +354,7 @@ export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<
         NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SporeSwabData)=>{

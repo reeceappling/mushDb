@@ -12,35 +12,35 @@ import {ACL, TestAcl} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
 
-export function TestFruitingChamberOk(){
-    return new FruitingChamberData({
-        _id: "(FC ID HERE)",
-        recipe: "(SUB RECIPE)",
-        substrateBatch: "(SUB BATCH)",
-        cupsGrain: 4,
-        mixedSubstratePerGrain: 1,
-        casingPerGrain: 0.5,
-        creationDate: Date.now()-2000,
-        species: "(SPECIES)",
-        subspecies: "(SUBSPECIES)",
-        innoc: "(INNOC ID)",
-        genSpore: 7,
-        genFruitOrSpore:2,
-        transfersOut: ["(TRANSFER OUT 1)","(TRANSFER OUT 2)"],
-        parentType: "plate",
-        parent: "(PARENT ID)",
-        pics: ExamplePicsWithNotesIncoming,
-        contamination: ExampleContaminations,
-        flushes: ExamplePicsWithNotesIncoming,
-        knownFruitable: true,
-        mostRecentImage: ExamplePicWithNotesIncoming,
-        sale: "(SALE_ID)",
-        disposed: Date.now()+5000,
-        notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        acl: TestAcl(),
-    })
-}
+// export function TestFruitingChamberOk(){
+//     return new FruitingChamberData({
+//         _id: "(FC ID HERE)",
+//         recipe: "(SUB RECIPE)",
+//         substrateBatch: "(SUB BATCH)",
+//         cupsGrain: 4,
+//         mixedSubstratePerGrain: 1,
+//         casingPerGrain: 0.5,
+//         creationDate: Date.now()-2000,
+//         species: "(SPECIES)",
+//         subspecies: "(SUBSPECIES)",
+//         innoc: "(INNOC ID)",
+//         genSpore: 7,
+//         genFruitOrSpore:2,
+//         transfersOut: ["(TRANSFER OUT 1)","(TRANSFER OUT 2)"],
+//         parentType: "plate",
+//         parent: "(PARENT ID)",
+//         pics: ExamplePicsWithNotesIncoming,
+//         contamination: ExampleContaminations,
+//         flushes: ExamplePicsWithNotesIncoming,
+//         knownFruitable: true,
+//         mostRecentImage: ExamplePicWithNotesIncoming,
+//         sale: "(SALE_ID)",
+//         disposed: Date.now()+5000,
+//         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface FruitingChamberData {
     _id: string

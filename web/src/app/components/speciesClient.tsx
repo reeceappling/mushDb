@@ -187,7 +187,6 @@ export default function SpeciesDisplay(
         },
     ]
     const updateAliases = (as: string[])=>{
-        console.log(JSON.stringify(as)) // TODO: del
         setAliases(as)
     }
     return (
@@ -417,7 +416,7 @@ export function ExistingSpeciesSelector(
 export function SpeciesListPageTable({data, onClick, withLink}: ListPageItems<SpeciesData>) {
     let cols: ListTableColumn<SpeciesData>[] = [
         NewColumn("Name", (v) => v._id, true),
-        NewColumn("Scientific", (v) => v.scientificName, true), // TODO: wrap?
+        NewColumn("Scientific", (v) => v.scientificName, true),
         NewColumn("Aliases", (v) => <div>
             {v.aliases && v.aliases.map((a, i) => {
                 return <div key={a + i}>{a}</div>
@@ -425,7 +424,7 @@ export function SpeciesListPageTable({data, onClick, withLink}: ListPageItems<Sp
         </div>, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SpeciesData) => {
@@ -476,7 +475,7 @@ export function SubspeciesForSpeciesArea(
                     entryType: "subspecies",
                     linkId: encodeURI(subsp),
                     displayId: subsp,
-                    openInNewTab: false, // TODO: ok?
+                    openInNewTab: false,
                 }}/>
             </div>
         })}

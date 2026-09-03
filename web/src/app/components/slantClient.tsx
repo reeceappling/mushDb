@@ -420,7 +420,7 @@ export function SlantListPageTable({data, onClick, withLink}: ListPageItems<Slan
         NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SlantData)=>{

@@ -67,7 +67,7 @@ export class SlantData {
     }
     public description(): string {
         const firstSent = `Slant ${this._id}`
-        // TODO: plugs types?
+        // TODO: plugs/splant types?
         const secondSent = this.species !== undefined?`Species ${this.species}${this.subspecies!==undefined&&`. Subspecies ${this.subspecies}`}`:` Not innoculated`
         const lastSent = `Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed !== undefined && ` Disposed on ${new Date(this.disposed).toISOString()}`}`
         return `${firstSent}. ${secondSent}. ${lastSent}`

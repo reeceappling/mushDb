@@ -244,7 +244,7 @@ export default function LcSyringeDisplay(
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             disposed: disposed,
-            sale: initial.sale, // TODO: this!?
+            //sale: initial.sale, // TODO: this!?
             notes: notes,
             acl: MarshalAcl(acl),
         }
@@ -342,7 +342,7 @@ export function NewLcSyringeForm({parentLc, onCreate, txt}: {
     const {dispatch} = useModalContext();
     const cookies = useContext(CookiesContext)
     const [itemsCreated, setItemsCreated] = useState<string[]>([])
-    const [parent, setParent] = useState<LcData | undefined>(parentLc) // TODO: this ok to not call set??
+    const [parent, setParent] = useState<LcData | undefined>(parentLc)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
@@ -419,7 +419,7 @@ export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<
         NewColumn("Clean",v=>v.confirmedClean?(v.confirmedClean?"clean":"dirty"):"?", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO: fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: LcSyringeData)=>{

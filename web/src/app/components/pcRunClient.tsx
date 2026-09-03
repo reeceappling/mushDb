@@ -272,7 +272,7 @@ export default function PcRunDisplay(
 export function NewPcRunForm(
     {handlers}: { handlers: NewEntryInput<PcRunData> }) {
     const {dispatch} = useModalContext();
-    const [runTime, setRunTime] = useState("60") // TODO: ok?
+    const [runTime, setRunTime] = useState("60")
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
 
@@ -313,7 +313,6 @@ export function NewPcRunForm(
     return (
         <NewEntryFormWrapper entryType={"pcRun"} isTopLevel={handlers.isTopLevel}>
             <div className={"areaHeader"}>{"Creating a new PC Run"}</div>
-            {/* TODO: create as header????*/}
             <ErrorDisplay err={err}/>
             {/* RunTime TODO: RETHINK THIS??? do we want to put options for typical runtimes?*/}
 
@@ -355,7 +354,7 @@ export function PcRunListPageTable({data, onClick, withLink}: ListPageItems<PcRu
         NewColumn("Runtime Mins", (v) => v.runtimeMinutes, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }), // TODO; fit?
+        }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PcRunData) => {

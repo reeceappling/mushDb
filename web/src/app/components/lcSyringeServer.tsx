@@ -1,27 +1,27 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {LcSyringeSelector} from "@/app/components/lcSyringeClient";
 import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
 
-export function TestLcSyringeOk(){
-    return new LcSyringeData({
-        _id: "(LC ID HERE)",
-        creationDate: Date.now()-2000,
-        species: "(SPECIES NAME)",
-        subspecies: "(SUBSPECIES NAME)",
-        confirmedClean: undefined,
-        knownFruitable: true,
-        genSpore: 7,
-        genFruitOrSpore: 3,
-        transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
-        parent: "(PARENT ID)",
-        disposed: Date.now()+40000,
-        notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        acl: TestAcl(),
-    })
-}
+// export function TestLcSyringeOk(){
+//     return new LcSyringeData({
+//         _id: "(LC ID HERE)",
+//         creationDate: Date.now()-2000,
+//         species: "(SPECIES NAME)",
+//         subspecies: "(SUBSPECIES NAME)",
+//         confirmedClean: undefined,
+//         knownFruitable: true,
+//         genSpore: 7,
+//         genFruitOrSpore: 3,
+//         transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
+//         parent: "(PARENT ID)",
+//         disposed: Date.now()+40000,
+//         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 export interface LcSyringeData {
     _id: string
     parent?: string

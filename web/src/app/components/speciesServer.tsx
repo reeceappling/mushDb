@@ -1,27 +1,27 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {SpeciesSelector} from "@/app/components/speciesClient";
 
-export function TestSpeciesOk() {
-    return new SpeciesData({
-        _id: "(ID_HERE)",
-        scientificName: "(SCI_NAME_HERE)",
-        aliases: ["(Alias 1)", "(Alias 2)"],
-        standardSubstrate: "(SUBSTRATE ID)",
-        subspecies: ["Brown Beech", "White Beech"],
-        notes: [{
-            time: 123,
-            note: "(NOTE 1)"
-        }, {
-            time: 456,
-            note: "(NOTE 2)"
-        }],
-        lastUpdated: 789,
-        acl: TestAcl(),
-        defaultAcl: TestAcl(),
-    })
-}
+// export function TestSpeciesOk() {
+//     return new SpeciesData({
+//         _id: "(ID_HERE)",
+//         scientificName: "(SCI_NAME_HERE)",
+//         aliases: ["(Alias 1)", "(Alias 2)"],
+//         standardSubstrate: "(SUBSTRATE ID)",
+//         subspecies: ["Brown Beech", "White Beech"],
+//         notes: [{
+//             time: 123,
+//             note: "(NOTE 1)"
+//         }, {
+//             time: 456,
+//             note: "(NOTE 2)"
+//         }],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//         defaultAcl: TestAcl(),
+//     })
+// }
 
 export interface SpeciesData {
     _id: string

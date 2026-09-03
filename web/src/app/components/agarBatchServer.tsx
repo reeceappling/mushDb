@@ -4,19 +4,19 @@ import {
     NewAgarBatchForm
 } from "@/app/components/agarBatchClient";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {ACL, TestAcl} from "@/app/components/accessControlServer";
+import {ACL} from "@/app/components/accessControlServer";
 
-export function TestAgarBatchOk() {
-    return new AgarBatchData({
-        _id: "(Batch ID HERE)",
-        color: "Clear",
-        pcRun: "(Run ID HERE)",
-        agarRecipe: "(Recipe ID HERE)",
-        notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        acl: TestAcl(),
-    });
-}
+// export function TestAgarBatchOk() {
+//     return new AgarBatchData({
+//         _id: "(Batch ID HERE)",
+//         color: "Clear",
+//         pcRun: "(Run ID HERE)",
+//         agarRecipe: "(Recipe ID HERE)",
+//         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     });
+// }
 
 export interface AgarBatchData {
     _id: string
@@ -71,4 +71,4 @@ export function AgarBatchSelectorCloseable(sp: SelectorProps<AgarBatchData>) {
     }}/>
 }
 
-export const ChannelTextNewAgarBatch = "newAgarBatch"
+// export const ChannelTextNewAgarBatch = "newAgarBatch"
