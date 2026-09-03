@@ -102,7 +102,7 @@ export function ProjectsDisplay({readonly, initial, onClick, updateParent, allow
             })
         }</>
     }
-    const [current, setCurrent] = useState<Map<string, boolean>>(initial); // TODO: ensure new Map() not needed
+    const [current, setCurrent] = useState<Map<string, boolean>>(initial);
     useEffect(()=>{
         setCurrent(initial) // TODO: ensure new Map() not needed! TODO: can we remove useEffect here?
     },[initial])
@@ -156,7 +156,7 @@ export function ProjectsDisplay({readonly, initial, onClick, updateParent, allow
 export function AclProjectsDisplay({readonly, initial, onUsernClick, updateParent}: {
     readonly: boolean,
     initial: Map<string,boolean>,
-    onUsernClick?: (proj: string) => void // TODO: do we need both onClick and updateParent?
+    onUsernClick?: (proj: string) => void
     updateParent?: (newProjects: Map<string,boolean>) => void
 }) {
     return <ProjectsDisplay readonly={readonly}
@@ -307,15 +307,6 @@ export function TogglableAreaWithDepth(props: React.PropsWithChildren<{
     </DepthProvider>
 }
 
-// export function CloneAcl(acl: ACL): ACL { // TODO: use?
-//     return {
-//         blanketPerm: acl.blanketPerm,
-//         users: (acl.users !== undefined && acl.users.size !== 0) ? new Map<string, boolean>(acl.users) : new Map<string, boolean>(),
-//         projects: (acl.projects !== undefined && acl.projects.size !== 0) ? new Map<string, boolean>(acl.projects) : new Map<string, boolean>(),
-//     }
-// }
-
-
 export function AclDefaultAclDisplay(inp: {
     readonly: boolean,
     ACL: ACL,
@@ -393,9 +384,9 @@ export function AclDisplay(inp: {
         setCurrent(updated)
     }
     const updateProjects = (updated: Map<string,boolean>)=>{
-        const newProjects = {...cloneCurrent(), projects: updated}
-        console.log("new projects: ") // TODO: del
-        console.table(Array.from(newProjects.projects.entries()), ["name", "canWrite"]); // TODO: del
+        //const newProjects = {...cloneCurrent(), projects: updated}
+        // console.log("new projects: ") // TODO: del
+        // console.table(Array.from(newProjects.projects.entries()), ["name", "canWrite"]); // TODO: del
         update({...cloneCurrent(), projects: updated})
     }
     const updateUsers = (updated: Map<string,boolean>)=>{
