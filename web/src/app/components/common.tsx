@@ -47,9 +47,6 @@ import {AssertWaterJar} from "@/app/components/waterJarClient";
 import {AssertTransfer} from "@/app/components/transferClient";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {DepthContext, DepthProvider} from "@/app/components/formSubcomponents/depthContext/depth";
-import {FruitData} from "@/app/components/fruitServer";
-import {Actions, ActionTypes} from "@/app/components/formSubcomponents/modalContext/modal";
-import {allCookies} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 
 export const clientPostRequestHeaders = {
     credentials: 'include',
@@ -80,9 +77,6 @@ export function SendMultipartRequest(url: string, formData: FormData, cookies: s
     })
 }
 
-
-
-// TODO: USE THIS!
 export function MainCollectionInputOrRead({label, placeholder, onIdSelected, copyText}: {
     label?: string,
     placeholder?: string,
@@ -323,9 +317,9 @@ export function IsBool(item: any): boolean {
     return typeof item === 'boolean'
 }
 
-export function HeaderLevel(lvl?: number) {
-    return lvl || defaultHeaderLevel
-}
+// export function HeaderLevel(lvl?: number) {
+//     return lvl || defaultHeaderLevel
+// }
 
 export interface ListPageItems<T> {
     data: T[],
@@ -333,73 +327,73 @@ export interface ListPageItems<T> {
     withLink?: boolean,
 }
 
-export interface InlineProps<T> {
-    data: T,
-    expandByDefault?: boolean,
-    onClick?: (v?: T) => void
-    headerLevel?: number
-    idIsLink?: boolean
-    showMainPageButton?: boolean
-}
+// export interface InlineProps<T> {
+//     data: T,
+//     expandByDefault?: boolean,
+//     onClick?: (v?: T) => void
+//     headerLevel?: number
+//     idIsLink?: boolean
+//     showMainPageButton?: boolean
+// }
+//
+// export interface SingleListProps<T> {
+//     data: T[],
+//     onClick: (v: T) => void
+// }
+//
+// export interface TwoListProps<T> {
+//     recent: T[],
+//     standard: T[],
+//     onClick: (v: T) => void
+// }
 
-export interface SingleListProps<T> {
-    data: T[],
-    onClick: (v: T) => void
-}
+// export function InlineSubArea(
+//     {
+//         props, children
+//     }: {
+//         props: {
+//             className?: string
+//         },
+//         children: ReactNode,
+//     }) {
+//     return <div data-cy-id="InlineSubAreaWrapper" className={props.className}>
+//         <div data-cy-id="InlineSubArea" className={"inlineSubArea"}>
+//             {children}
+//         </div>
+//     </div>
+// }
 
-export interface TwoListProps<T> {
-    recent: T[],
-    standard: T[],
-    onClick: (v: T) => void
-}
+// export function InlineExpansionArea(
+//     {
+//         props, children
+//     }: {
+//         props: {
+//             expanded?: boolean
+//         },
+//         children: ReactNode,
+//     }) {
+//     if (!props.expanded) {
+//         return null
+//     }
+//     return <InlineSubArea data-cy-id="InlineExpansionArea" props={{}}>
+//         {children}
+//     </InlineSubArea>
+// }
 
-export function InlineSubArea(
-    {
-        props, children
-    }: {
-        props: {
-            className?: string
-        },
-        children: ReactNode,
-    }) {
-    return <div data-cy-id="InlineSubAreaWrapper" className={props.className}>
-        <div data-cy-id="InlineSubArea" className={"inlineSubArea"}>
-            {children}
-        </div>
-    </div>
-}
-
-export function InlineExpansionArea(
-    {
-        props, children
-    }: {
-        props: {
-            expanded?: boolean
-        },
-        children: ReactNode,
-    }) {
-    if (!props.expanded) {
-        return null
-    }
-    return <InlineSubArea data-cy-id="InlineExpansionArea" props={{}}>
-        {children}
-    </InlineSubArea>
-}
-
-export function InlineExpansionButton(
-    {
-        setExpanded, expanded
-    }: {
-        setExpanded: (value: SetStateAction<boolean | undefined>) => void
-        expanded?: boolean
-    }) {
-    return <div data-cy-id="InlineExpansionButtonWrapper">
-        <button className={"basicButton"} data-cy-id="InlineExpansionButton" onClick={(e) => {
-            e.stopPropagation();
-            setExpanded(!expanded)
-        }}>{expanded ? "See less" : "See more"}</button>
-    </div>
-}
+// export function InlineExpansionButton(
+//     {
+//         setExpanded, expanded
+//     }: {
+//         setExpanded: (value: SetStateAction<boolean | undefined>) => void
+//         expanded?: boolean
+//     }) {
+//     return <div data-cy-id="InlineExpansionButtonWrapper">
+//         <button className={"basicButton"} data-cy-id="InlineExpansionButton" onClick={(e) => {
+//             e.stopPropagation();
+//             setExpanded(!expanded)
+//         }}>{expanded ? "See less" : "See more"}</button>
+//     </div>
+// }
 
 export function TwoValuePlusUnknownSelector({pre, updateParent, initial, trueStr, falseStr, className}: {
     pre: string,
@@ -489,21 +483,6 @@ export interface NewEntryInput<T> {
     isTopLevel: boolean
     onCreate?: (newItem: T) => void
 }
-
-// // TODO: MOVE THIS
-// export async function getTypeFor(id: string) { // TODO: ensure this works????
-//     // TODO: USE EXAMPLE ITEMS FOR DEV ENVIRONMENT!
-//     return await fetch(BaseExternalUrl + "/typeOf/" + id, {
-//         method: "GET",
-//         headers: clientPostRequestHeaders,
-//     }).then(HandleTxtResponse)
-//         .then((entryType) => {
-//             return entryType
-//         })
-//         .catch((error) => {
-//             throw error
-//         });
-// }
 
 export async function getPathFor(id: string) { // TODO: ensure this works????
     const resp = await fetch(BaseExternalUrl + "/db/pathFor/" + id, {
@@ -891,63 +870,11 @@ export function SelectorTableWithHeader<T>({header, data,table,onSelect}:{
     </>
 }
 
-// // TODO: may disappear
-// export function InlineEntry(props: React.PropsWithChildren<{ onClick?: () => void }>) { // TODO: ADD THIS TO ALL INLINES!!!!!
-//     return <div className={"inlineEntry"} onClick={(e) => {
-//         e.stopPropagation()
-//         props.onClick && props.onClick()
-//     }}>
-//         {props.children}
-//     </div>
-// }
-//
 export function dataFor<Type>(vals?: Type[]): Data<Type>[] {
     return (vals || []).map((l) => {
         return {data: l, disabled: false}
     })
 }
-
-//InputDecimal
-// export function FloatInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
-//     const [val, setVal] = useState<number>(initial || 0)
-//     const updateNumber = (s: string) => {
-//         try {
-//             const n = Number(s)
-//             setVal(n)
-//             onChange(n)
-//         } catch (e) {
-//             console.error("failed to set float input for "+s+" "+JSON.stringify(e))
-//         }
-//     }
-//     return <div>
-//         <TestAndValidate todos={["validate working properly"]}>
-//             <InputNumber min={0} max={10000} onChange={s => {
-//                 s && updateNumber(s)
-//             }} step={1} mode={Modes.floating} value={val.toString()} readonly={false}/>
-//         </TestAndValidate>
-//     </div>
-// }
-
-//InputDecimal
-// export function DecimalInput({initial, onChange}: { initial?: number, onChange: (value: number) => void }) {
-//     const [val, setVal] = useState<number>(initial || 0)
-//     const updateNumber = (s: string) => {
-//         try {
-//             const n = Number(s)
-//             setVal(n)
-//             onChange(n)
-//         } catch (e) {
-//             console.error("failed to set float input for "+s+" "+JSON.stringify(e))
-//         }
-//     }
-//     return <div>
-//         <TestAndValidate todos={["validate working properly"]}>
-//             <InputNumber min={0} max={10000} onChange={s => {
-//                 s && updateNumber(s)
-//             }} step={1} mode={"floating"} value={val.toString()} readonly={false}/>
-//         </TestAndValidate>
-//     </div>
-// }
 
 export function SelectorWrapper<T>(props: React.PropsWithChildren<{
     title: string,
@@ -1023,14 +950,14 @@ export function DisplayFormWrapper(props: React.PropsWithChildren<{ entryType: s
 export function Subform(props: React.PropsWithChildren<{}>) {
     const depth = useContext(DepthContext)
     return <DepthProvider>
-        <div className={"subForm depth" + depth}>{/* TODO: likely not working as expected. +1?*/}
+        <div className={"subForm depth" + depth}>
             {props.children}
         </div>
     </DepthProvider>
 }
 
 export function CreatedLinkFor({linkId, typ, linkText}: { linkId: string, typ: string, linkText?: string }) {
-    return <EntryLinkForId props={{displayId: linkText || linkId, linkId: linkId, entryType: typ, openInNewTab: false/* TODO: ok?*/}}/>
+    return <EntryLinkForId props={{displayId: linkText || linkId, linkId: linkId, entryType: typ, openInNewTab: false}}/>
 }
 
 export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) => void): asserts input is ListResult<T> {
@@ -1052,10 +979,6 @@ export function AssertDualListResult<T>(input: any, validateEntry: (inp: any) =>
     }
     return
 }
-
-// export function AssertSubRecipeListResult(input: any): asserts input is ListResult<SubstrateRecipeData> {
-//     AssertDualListResult<SubstrateRecipeData>(input, AssertSubstrateRecipe)
-// }
 
 export function validatorForAssertion(asserter: ((input: any) => void)) {
     return (inp: any) => {
@@ -1109,6 +1032,47 @@ export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, fo
             asserter(entry)
             return entry
         })
+}
+
+export interface PopupInfo {
+    header: string
+    text?: string
+    isErr: boolean // TODO: use this!
+}
+
+export function PopupApp({info}: { info:PopupInfo }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [doneWithFirstLoad, setDoneWithFirstLoad] = useState<boolean>(false);
+    const [data, setData] = useState<PopupInfo>(info);
+    useEffect(() => {
+        if(doneWithFirstLoad){
+            setData(info)
+            setIsOpen(true)
+        }else{
+            setDoneWithFirstLoad(true);
+        }
+    }, [info]);
+    const close = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>)=>{
+        e.stopPropagation()
+        e.preventDefault()
+        setIsOpen(false)
+    }
+    if (isOpen) {
+        return <div className={"popupModal"}>
+            <div className={"popupModalContent"}>
+                <h3>{data.header}</h3>
+                <p className={data.isErr?"error":""}>{data.text || "no text set, you should never see this message"}</p>
+                <button className={"basicButton buttonFullWidth"} onClick={close}>{"Close"}</button>
+            </div>
+        </div>
+    }
+    return null
+}
+
+export const DefaultPopupInfo: PopupInfo = {
+    header: "initial header",
+    text: "you should never see this text",
+    isErr: false,
 }
 
 // TODO: DICTAPHONES SHOULD BE USED IN:
@@ -1506,43 +1470,3 @@ export function DoUpdateMultipartRequest<T>(entryType: string, urlId: string, fo
 //         throw "client speech synthesis not currently available"
 //     }
 // }
-export interface PopupInfo {
-    header: string
-    text?: string
-    isErr: boolean // TODO: use this!
-}
-
-export function PopupApp({info}: { info:PopupInfo }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [doneWithFirstLoad, setDoneWithFirstLoad] = useState<boolean>(false);
-    const [data, setData] = useState<PopupInfo>(info);
-    useEffect(() => {
-        if(doneWithFirstLoad){
-            setData(info)
-            setIsOpen(true)
-        }else{
-            setDoneWithFirstLoad(true);
-        }
-    }, [info]);
-    const close = (e:React.MouseEvent<HTMLButtonElement, MouseEvent>)=>{
-        e.stopPropagation()
-        e.preventDefault()
-        setIsOpen(false)
-    }
-    if (isOpen) {
-        return <div className={"popupModal"}>
-            <div className={"popupModalContent"}>
-                <h3>{data.header}</h3>
-                <p className={data.isErr?"error":""}>{data.text || "no text set, you should never see this message"}</p>
-                <button className={"basicButton buttonFullWidth"} onClick={close}>{"Close"}</button>
-            </div>
-        </div>
-    }
-    return null
-}
-
-export const DefaultPopupInfo: PopupInfo = {
-    header: "initial header",
-    text: "you should never see this text",
-    isErr: false,
-}

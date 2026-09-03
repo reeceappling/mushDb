@@ -39,7 +39,7 @@ export function AssertUser(input: any): asserts input is UserData {
     //     }
     // }
     // complex optional keys
-    const complexOptionalKeys = new Map<string, (v: any) => boolean>([ // TODO: validate!
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['perms', IsValidUserPerms]
     ])
     for (const [key, validator] of complexOptionalKeys) {

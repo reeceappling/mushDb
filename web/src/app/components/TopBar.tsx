@@ -77,7 +77,7 @@ export function TopBarCreateMenu() {
             {menuItem("lcRecipe", "LC Recipe")}
             {menuItem("pcRun", "PC Run")}
             {menuItem("plugs", "Plugs")}
-            {menuItem("project", "Project")}{/* TODO: maybe just create this in each form? */}
+            {menuItem("project", "Project")}
             {menuItem("species", "Species")}
             {menuItem("subspecies", "Subspecies")}
             {menuItem("substrateRecipe", "Substrate Recipe")}
@@ -153,18 +153,6 @@ function LastReadTag() {
         {"No tag value read yet"}
     </div>
 }
-
-// export function Makeid(length: number) { // TODO: DELETEME
-//     let result = '';
-//     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-//     const charactersLength = characters.length;
-//     let counter = 0;
-//     while (counter < length) {
-//         result += characters.charAt(Math.floor(Math.random() * charactersLength));
-//         counter += 1;
-//     }
-//     return result;
-// }
 
 export function UseLatestReadTagButton({onClick}: { onClick: (id?: string) => void }) {
     const {state} = useRfidReaderContext()
