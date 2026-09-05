@@ -15,17 +15,29 @@ type LRU struct { // TODO: EXPAND USAGE OF LRU CACHE TO OTHER THINGS, OR CONSIDE
 	maxSize        int
 	m              sync.Map
 	newest, oldest *cacheNode
-	moveToFront    chan *cacheNode
+	moveToFront    chan<- *cacheNode
+	addNode        chan<- *cacheNode
+	// TODO: channel for adding?
 }
 
 func NewLRU(maxSize int) *LRU {
 	frontChan := make(chan *cacheNode, maxSize) // TODO: chan size ok?
+	addChan := make(chan *cacheNode, maxSize)   // TODO: chan size ok?
 	c := &LRU{
 		maxSize:     maxSize,
 		m:           sync.Map{},
-		moveToFront: frontChan,
-		// TODO: ENSURE CHANNEL GETS CLOSED WHEN WE WANT IT TO BE
+		moveToFront: frontChan, // TODO: ENSURE CHANNEL GETS CLOSED WHEN WE WANT IT TO BE
+		addNode:     addChan,   // TODO: ENSURE CHANNEL GETS CLOSED WHEN WE WANT IT TO BE
 	}
+	go func() {
+		for item := range addChan {
+			c.mu.Lock() // TODO: should this go before store?
+			// TODO: can we make it so that it only needs one channel?
+			c.addToFront(item) // TODO: should store be done after addToFront so that there is no race condition?
+			c.m.Store(item.key, item)
+			c.mu.Unlock()
+		}
+	}()
 	go func() {
 		for item := range frontChan {
 			c.moveExistingToFront(item)
@@ -66,10 +78,7 @@ func (c *LRU) Add(key string, value []byte) (overwritten bool) {
 		value: value,
 	}
 
-	c.m.Store(key, node)
-	c.mu.Lock() // TODO: should this go before store?
-	defer c.mu.Unlock()
-	c.addToFront(node)
+	c.addNode <- node
 	return false
 }
 func (c *LRU) Evict(key string) (evicted bool) {
