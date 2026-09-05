@@ -1,11 +1,11 @@
-FROM --platform=linux/arm64 golang:latest AS builder
-
-# TODO: THIS IS UNUSED IN THIS PROJECT!!!!
-WORKDIR /app
-COPY rfidServer server
-
-FROM --platform=linux/arm64 alpine:latest
-WORKDIR /root/s
-COPY --from=builder /app/server .
-RUN chmod 777 server
-CMD ["./server"]
+#FROM --platform=linux/arm64 golang:latest AS builder
+#
+## TODO: THIS IS UNUSED IN THIS PROJECT!!!! PROBABLY REMOVE!
+#WORKDIR /app
+#COPY rfidServer server
+#
+#FROM --platform=linux/arm64 alpine:latest
+#WORKDIR /root/s
+#COPY --from=builder /app/server .
+#RUN chmod 777 server
+#CMD ["./server"]

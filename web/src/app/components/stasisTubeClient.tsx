@@ -1,7 +1,12 @@
 'use client'
 
-import React, {JSX, useState} from "react";
-import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
+import React, {JSX, useContext, useState} from "react";
+import {
+    IsValidNote,
+    NewEntryNotes,
+    Note,
+    NotesFormArea
+} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
     Data,
@@ -21,22 +26,30 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType, OptionalKey,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    DoMultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
+    OptionalArrayOfType,
+    OptionalKey,
     OptionalSimpleKey,
+    RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData, SendMultipartRequest, setFormData,
-    setFormImages,
+    resolvePicsFormData,
+    setFormFull,
 } from "@/app/components/common";
-import ReaderWriterSelector, {
-    WriteRfidOvcArea
-} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
+import ReaderWriterSelector, {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
     ErrorDisplay,
     GensFormDisplay, MostRecentImageDisplay,
@@ -44,41 +57,44 @@ import {
     PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
-    ContaminationForm, ContamsDisplay, InitialContamState, InitialNotesState, IsValidContamination,
+    ContaminationForm, ContamsDisplay, InitialContamState, IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {StasisTubeData} from "@/app/components/stasisTubeServer";
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {AclDisplay, IsValidAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertStasisTube(input: any): asserts input is StasisTubeData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('StasisTube assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['pcRun', 'string'],
         ['waterSource', 'string'],
         ['species', 'string'],
@@ -92,23 +108,31 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
         ['sale', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('StasisTube assertion failure: optional key ' + key + ' was not valid');
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        ['mostRecentImage', IsValidPicWithNotesIncoming],
-       ['acl', IsValidAcl]
+    // complex required keys
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        //['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Stasis Tube assertion failure: required key ' + key + ' was not valid');
+        }
+    }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('StasisTube assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -116,75 +140,30 @@ export function AssertStasisTube(input: any): asserts input is StasisTubeData {
         ['contamination', IsValidContamination],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('StasisTube assertion failure: optional array key ' + key + ' was not valid');
         }
     }
-    return
-}
-
-export function StasisTubeImportDisplay({headerLevel,cookies}:ImportDisplayInput) { // TODO: use headerLevel
-    const [created, setCreated] = useState<number>(Date.now())
-    const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
-    const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
-    const [imageFile, setImageFile] = useState<File | undefined>(undefined)
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
-    const [err, setErr] = useState<string | undefined>(undefined)
-    const importEntry = () => {
-        let formData = new FormData()
-        let dataObj: any = {
-            created:created,
-        }
-        if(species===undefined){
-            setErr("Species must be set!")
-            return
-        }
-        dataObj.species = species._id
-        subspecies && (dataObj.subspecies = subspecies._id)
-        knownFruitable && (dataObj.knownFruitable = knownFruitable)
-        generation && (dataObj.generation = generation)
-        if(imageFile!==undefined){
-            formData.set("image", imageFile, "imgFile")
-        }
-        writeTagTo && (dataObj.writeTagTo=writeTagTo)
-
-        SendMultipartRequest(BaseExternalUrl+"/db/import/stasisTube", cookies, formData)
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then((newId) => {
-                redirect(BaseExternalUrl+"/view/stasisTube/"+newId)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
     }
-    return <ImportEntryFormWrapper entryType={"stasisTube"}>
-        {err!=undefined && <div>{"Error: "+err}</div>}
-        <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies/*cookies={cookies}*/}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
-        <KnownFruitableArea doSelect={setKnownFruitable}/>
-        <GenerationInput updateParent={setGeneration}/>
-        <ImageSelector updateParent={setImageFile}/>
-        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />
-        <button className={"greenButton"} onClick={importEntry}>{"Import Stasis Tube"}</button>
-    </ImportEntryFormWrapper>
+    input.acl = UnmarshalAcl(input.acl)
+    return
 }
 
 export default function StasisTubeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
-    }: DisplayInput) {
-    try {
-        AssertStasisTube(data)
-        const [initial, setInitial] = useState(data)
+        readonly, data, headerLevel, isTopLevel
+    }: DisplayInput<StasisTubeData>) {
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
         const existingNotes: Note[] = initial.notes || []
         const initNotes: Data<Note>[] = existingNotes.map((n) => {
             return {data: n, disabled: false}
         })
-
+        // TODO: ADD WATER JAR AREA?
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
@@ -194,7 +173,7 @@ export default function StasisTubeDisplay(
         // State helpers
         const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: StasisTubeData)=>{
             setInitial(updated)
             setImages(InitialPicsEntries(updated.pics))
@@ -206,78 +185,95 @@ export default function StasisTubeDisplay(
             // Helper states
             setTransfersOut(updated.transfersOut || [])
             setAcl(updated.acl)
+            setErr(undefined)
         }
+        const cookies = useContext(CookiesContext)
         const stasisTubeSubmit = () => {
-            let body = new FormData()
-            let dataObj:any={
+            const formData = new FormData()
+            const dataObj:any={
                 knownFruitable: knownFruitable,
                 sale: sale,
                 disposed: disposed,
                 notes: notes,
-                acl: acl,
+                acl: MarshalAcl(acl),
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(images)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(images)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
+                const contamsInfo = resolveContamsFormData(contams)
+                const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
+                setFormFull(formData, dataObj, newImages, newContams, undefined)
+                // formData.set("data", JSON.stringify(dataObj))
+                // setFormImages("newPic", formData, newImages)
+                // setFormImages("newContam", formData, newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
 
-            SendMultipartRequest(BaseExternalUrl+"/db/update/stasisTube/"+initial._id, cookies, body)
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertStasisTube(entry)
-                    updateInitial(entry)
+            DoUpdateRequest("stasisTube",data._id, formData, AssertStasisTube, allCookies(cookies))
+                .then(v=>{
+                    updateInitial(new StasisTubeData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(e=>{
+                    setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
+                })
         }
-        const ovcs: OnViewCreatorQuadCol[] = [
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
             WriteRfidOvcArea(initial._id),
-        ]
+        ]:[]
+    }
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
         return (
             <DisplayFormWrapper entryType={"stasisTube"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"Stasis Tube"} entryType={"stasisTube"}/>
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
-                <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} />
+                <ErrorDisplay err={err}/>
+                <ID props={{id:data._id, txt:"Stasis Tube", entryType:"stasisTube"}}/>
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
+                <MostRecentImageDisplay data={initial.mostRecentImage}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
-                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
+                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} initialDisposed={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
-                        <PcRunArea binaryId={initial.pcRun} headerLevel={headerLevel}/>
-                        <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly} headerLevel={headerLevel}/>
-                        <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel} canCreateSale={true}/>
+                        <PcRunArea binaryId={initial.pcRun}/>
+                        {isInnoculated()&&<KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly} headerLevel={headerLevel}/>}
+                        {isInnoculated()&&<SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>}
                     </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore} headerLevel={headerLevel} />
-
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    {isInnoculated()&&<FlexedSinglesGroup>
+                        <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
+                    </FlexedSinglesGroup>}
+                    {isInnoculated()&&<FlexedSinglesGroup>
+                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>{/* TODO: allow changing subspecies for mainCollectionItems at some point???*/}
                         <InnocDisplay innoc={initial.innoc} openInNewTab={false}/>
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
-                    </FlexedSinglesGroup>
+                        <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
+                    </FlexedSinglesGroup>}
                 </FlexedArea>
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut} validTypesTo={["plate","stasisTube","jar"/* TODO: ANYMORE????*/]} cookies={cookies} headerTxt={"Transfers"}/>
+                {isInnoculated()&&<TransfersOutDisplay thisId={initial._id} thisEntryType={"stasisTube"} allowNewTransferCreation={!readonly} transfersOut={transfersOut}
+                                     disposeAfter={true} headerTxt={"Transfers"}/>}
                 <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel} />{/* Pics */}
                 <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
@@ -285,46 +281,48 @@ export default function StasisTubeDisplay(
                 }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: StasisTube data format incorrect: " + err}</div>
-    }
 }
 
 export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<StasisTubeData>, pcRunIn?: PcRunData}){
+    const {dispatch} = useModalContext();
+    // TODO: ADD WATER JAR???
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+
+    const cookies = useContext(CookiesContext)
     const createStasisTube = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(pcRun===undefined){
             setErr("pc run must be defined")
             return
         }
-        let body:any={
+        const body:any={
+            // TODO; consider adding optional water jar field
             pcRun: pcRun._id,
             notes: notes,
             writeTagTo:writeTagTo,
         }
-
-        fetch(BaseExternalUrl+"/db/create/stasisTube", {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify(body),
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertStasisTube(entry)
-                handlers.onCreate && handlers.onCreate(entry)
+        DoCreateRequest("stasisTube", body, AssertStasisTube, allCookies(cookies))
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(new StasisTubeData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
     }
-    return <NewEntryFormWrapper entryType={"stasisTube"}>
+    return <NewEntryFormWrapper entryType={"stasisTube"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err} />
         {pcRunIn !== undefined && <PcRunSelectorCloseable doSelect={setPcRun} allowCreation={handlers.isTopLevel} creatorInPage={true}/>}
         <NewEntryNotes setNotes={setNotes}/>
@@ -333,44 +331,105 @@ export function NewStasisTubeForm({handlers, pcRunIn}: {handlers: NewEntryInput<
     </NewEntryFormWrapper>
 }
 
+export function StasisTubeImportDisplay() {
+    const {dispatch} = useModalContext();
+    const [created, setCreated] = useState<number>(Date.now())
+    // TODO: ADD WATER JAR???
+    const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
+    const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
+    const [imageFile, setImageFile] = useState<File | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
+    const importEntry = () => {
+        const formData = new FormData() // TODO: const ok?
+        const dataObj: any = {
+            creationDate:created,
+            // optional
+            species: species?._id,
+            subspecies: subspecies,
+            knownFruitable: knownFruitable,
+            generation: generation,
+            notes: notes,
+            writeTagTo: writeTagTo,
+        }
+        formData.set("data", JSON.stringify(dataObj))
+        if(imageFile!==undefined){
+            formData.set("image", imageFile, "img")
+        }
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "stasisTube", AssertStasisTube, setErr, allCookies(cookies), dispatchUpdate)
+    }
+    return <ImportEntryFormWrapper entryType={"stasisTube"}>
+        {err!=undefined && <div>{"Error: "+err}</div>}
+        <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        <KnownFruitableArea doSelect={setKnownFruitable}/>
+        <GenerationInput updateParent={setGeneration}/>
+        <ImageSelector updateParent={setImageFile}/>
+        <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} />
+        <button className={"greenButton"} onClick={importEntry}>{"Import Stasis Tube"}</button>
+    </ImportEntryFormWrapper>
+}
+
 export function StasisTubeListPageTable({data, onClick, withLink}: ListPageItems<StasisTubeData>) {
     let cols: ListTableColumn<StasisTubeData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
+        }, true),
+        NewColumn("Spec", (v)=>v.species||"", true),
+        NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: StasisTubeData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"stasisTube",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new StasisTubeData(v)}}/>
 }
 export function StasisTubeSelectorTable({data, onClick}: ListPageItems<StasisTubeData>) {
     return <StasisTubeListPageTable data={data} onClick={onClick} withLink={true} />
 }
-export function StasisTubeSelector(
-    {
-        doSelect,
-        allowCreate
-    }: {
-        doSelect: (val: StasisTubeData | undefined) => void,
-        allowCreate?: boolean
-    }) {
-    const table = (items: StasisTubeData[]):JSX.Element=>{
-        return <StasisTubeSelectorTable data={items} onClick={doSelect}/>
-    }
-
-    return <ExistingRecentSelector entryType={"stasisTube"} entryTypes={"stasisTubes"} doSelect={doSelect} asserter={AssertStasisTube}
-                                   table={table}>
-        {allowCreate && <NewStasisTubeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
-    </ExistingRecentSelector>
-}
+// export function StasisTubeSelector(
+//     {
+//         doSelect,
+//         allowCreate,
+//         hideDisposed
+//     }: {
+//         doSelect: (val: StasisTubeData | undefined) => void,
+//         allowCreate?: boolean,
+//         hideDisposed?:boolean
+//     }) {
+//     const table = (items: StasisTubeData[]):JSX.Element=>{
+//         return <StasisTubeSelectorTable data={items} onClick={doSelect}/>
+//     }
+//
+//     return <ExistingRecentSelector entryType={"stasisTube"} entryTypes={"stasisTubes"} doSelect={doSelect} asserter={AssertStasisTube}
+//                                    table={table} hideDisposed={hideDisposed}>
+//         {allowCreate && <NewStasisTubeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
+//     </ExistingRecentSelector>
+// }

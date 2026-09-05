@@ -9,6 +9,7 @@ import (
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/goUtils/v2/utils/channels"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/env"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -25,6 +26,11 @@ const (
 	mongoClientContextKey = "mongoClient"
 )
 
+// TODO: allow admins to do this!
+func changeItemSpeciesSubspecies[T MainCollectionItem](ctx context.Context, item T, newSpecies string, newSubspecies *string) {
+	// TODO: THIS! ONLY ALLOW ADMINS TO DO THIS?
+}
+
 var (
 	ErrInvalidByteLength = errors.New("invalid id bytes length")
 )
@@ -37,6 +43,10 @@ func (b58str Base58Str) ToBinaryCollectionId() (BinaryCollectionId, error) {
 		return "", err
 	}
 	return BinaryCollectionId(bs), nil
+}
+
+func (b58str Base58Str) Bytes() []byte {
+	return []byte(b58str)
 }
 
 // ConvertBase10StringToLittleEndianBytes converts a base-10 string to little-endian bytes.
@@ -80,14 +90,14 @@ func (b58str Base58Str) Base2Bytes() ([]byte, error) {
 //	}
 //}
 
-func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
+func (b58str Base58Str) ToMainCollectionId() (MainCollectionId, error) {
 	intVal, err := strconv.Atoi(string(b58str))
 	if err == nil && intVal < 128 && intVal > 0 { // TODO: fix for zero???
 		return [8]byte{0, 0, 0, 0, 0, 0, 0, uint8(intVal - 1)}, nil // TODO: validate works ok!
 	}
 	//if string(b58str) == "1" {
 	//	return [8]byte{0, 0, 0, 0, 0, 0, 0, 0}, nil
-	//} // TODO: fix this for
+	//} // TODO: fix this for alts?
 	out := [RfidByteSize]byte{}
 	bs, err := b58str.Base2Bytes()
 	if err != nil {
@@ -109,14 +119,16 @@ func (b58str Base58Str) toMainCollectionId() (MainCollectionId, error) {
 }
 
 func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
-	println("converting base58 string", b58str)
+
 	out := [12]byte{}
 	bs, err := b58str.Base2Bytes()
 	if err != nil {
 		return out, err
 	}
 	if len(bs) == 12 {
-		return AlternateCollectionId(bs), nil
+		id := AlternateCollectionId(bs)
+		println("converting base58 string", b58str, "result", string(bs))
+		return id, nil
 	}
 	if len(bs) < 12 {
 		// TODO: ensure padding ok
@@ -124,10 +136,10 @@ func (b58str Base58Str) toAltCollectionId() (AlternateCollectionId, error) {
 		for i, b := range bs {
 			result[12-len(bs)+i] = b // TODO: validate ok
 		}
+		println("converting base58 string", b58str, "result", string(result[:]))
 		return result, nil
 	}
-	// TODO: what about too long?
-	panic("longer alts not handled yet")
+	panic("longer alts not handled yet") // TODO: what about too long?
 	return AlternateCollectionId(bs), nil
 }
 
@@ -138,7 +150,7 @@ func Base2BytesToBase58(littleEndianBytes []byte) (Base58Str, error) {
 	}
 	baseTenStr := []byte(new(big.Int).SetBytes(sliceutils.ReverseOf(littleEndianBytes)).Text(10))
 	encoded, err := base58.BitcoinEncoding.Encode(baseTenStr)
-	println(string(baseTenStr), string(encoded)) // TODO; DEL
+	//println(string(baseTenStr), string(encoded), "a thing") // TODO; DEL
 	if err != nil {
 		return "", errors.Join(errors.New("base58 encoding fault"), err)
 	}
@@ -198,10 +210,6 @@ func (id *BinaryCollectionId) UnmarshalJSON(bs []byte) (err error) {
 
 const RfidByteSize = 8
 
-//var _ bson.ValueMarshaler = MainCollectionId{}
-//var _ bson.ValueUnmarshaler = &MainCollectionId{}
-
-// type MainCollectionId string // TODO: WILL ALWAYS BE THE BINARY ID!!!!
 type MainCollectionId [RfidByteSize]byte
 
 type mcidNode struct {
@@ -213,7 +221,7 @@ type mcidNode struct {
 // newMcids is an internal channel holding new mainCollectionIds that have been pre-verified to not already exist
 var newMcids chan MainCollectionId
 
-// TODO: ctx should be cancellable here
+// ctx should be cancellable here
 // TODO: need to THOROUGHLY test this, ensure that it is generating properly, and that there are no duplicates across batches, and that it is properly cancelled when context is done, and that the channel is properly closed and drained when context is done
 func StartGeneratingMCIDs(ctx context.Context, batchSize int) {
 	if newMcids != nil {
@@ -253,10 +261,10 @@ func StartGeneratingMCIDs(ctx context.Context, batchSize int) {
 	return
 }
 
-func NextMainCollectionId() MainCollectionId { // TODO: use
+func NextMainCollectionId() MainCollectionId {
 	return <-newMcids
 }
-func NextMainCollectionIds(num int) []MainCollectionId { // TODO: use
+func NextMainCollectionIds(num int) []MainCollectionId {
 	out := make([]MainCollectionId, num)
 	for i := 0; i < num; i++ {
 		out[i] = <-newMcids
@@ -296,22 +304,15 @@ func (id MainCollectionId) ToBinaryCollectionId() BinaryCollectionId {
 }
 
 func (id MainCollectionId) MarshalJSON() ([]byte, error) {
-	//marshalling := [RfidByteSize]byte(id)
-	//println("Marshalling " + string(marshalling[0:]))
-	bs58 := id.AsBase58()
-	//println(bs58) // TODO: CLEANUP
-	out := []byte(`"` + string(bs58) + `"`)
-	//println("Marshalled: " + string(out))
-	return out, nil
+	return []byte(`"` + string(id.AsBase58()) + `"`), nil
 }
 
 func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
 	var b58Str Base58Str
-	// TODO: works with var b58Str string
 	if err := json.Unmarshal(bs, &b58Str); err != nil {
 		return err
 	}
-	val, err := b58Str.toMainCollectionId()
+	val, err := b58Str.ToMainCollectionId()
 	if err != nil {
 		return err
 	}
@@ -322,8 +323,8 @@ func (id *MainCollectionId) UnmarshalJSON(bs []byte) error {
 func (id MainCollectionId) dbIdStr() string { // Returns Most efficient string
 	return string(id[:])
 }
-func (id MainCollectionId) AsBase58() Base58Str { // TODO: make sure that everywhere this is used, it is being used properly, and doesnt need to be in binary format
-	return id.ToBinaryCollectionId().AsBase58() // TODO: make sure ok
+func (id MainCollectionId) AsBase58() Base58Str {
+	return id.ToBinaryCollectionId().AsBase58()
 }
 func (id MainCollectionId) IdField() MainCollectionIdField { // Returns Most efficient string
 	return MainCollectionIdField{id}
@@ -406,12 +407,6 @@ monoculture
 source (cutting, MSS, Transfer, LC, Grain, TODO:etc)
 */
 
-/*
-use DATABASE_NAME
-db.createCollection(name, options)
-autoIndexId	Boolean	(Optional) If true, automatically create index on _id field.s Default value is false.
-*/
-
 // TODO: auth mechanisms https://www.mongodb.com/docs/drivers/go/current/fundamentals/auth/
 func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPort int) (context.Context, *mongo.Client, error) {
 	hostAndPort := dbHostName
@@ -419,14 +414,8 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		hostAndPort = fmt.Sprintf("%s:%d", dbHostName, dbPort)
 	}
 
-	//uri := fmt.Sprintf("mongodb://%s", hostAndPort)
-	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB
 	hostPortAndParams := fmt.Sprintf("%s/?authSource=admin&replicaSet=rs0", hostAndPort)
 	uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostPortAndParams)
-	//uri := fmt.Sprintf("mongodb://%s:%s@%s", usern, pass, hostAndPort) // TODO: NAME OF DB 	// TODO: deleteMe
-
-	// TODO: SET UP INITIAL USER IF USER DOES NOT EXIST!
-	// TODO: THIS SHOULD BE DONE VIA: https://stackoverflow.com/questions/42912755/how-to-create-a-db-for-mongodb-container-on-start-up
 
 	println("trying to connect to database", usern, pass)
 	opts := options.Client().
@@ -436,8 +425,7 @@ func NewMongoDbClient(ctx context.Context, usern, pass, dbHostName string, dbPor
 		//SetHosts([]string{hostAndPort}).
 		SetServerSelectionTimeout(time.Second * 20).
 		//SetAuth(options.Credential{Username: usern, Password: pass}). // TODO: get rid of?
-		//SetAuth(options.Credential{Username: usern, Password: pass}).
-		//SetAppName("mainApi").
+		//SetAppName("mainApi"). // TODO: ???
 		//SetServerAPIOptions(options.ServerAPI(options.ServerAPIVersion1)).
 		SetConnectTimeout(10 * time.Second). // TODO: no?
 		SetTimeout(15 * time.Second)         // TODO: no?
@@ -486,6 +474,11 @@ func mongoClientForURI(ctx context.Context, uri string) (context.Context, error)
 }
 
 func GetMongoClient(ctx context.Context) *mongo.Client {
+	if sessCtx := mongo.SessionFromContext(ctx); sessCtx != nil {
+		if cli := sessCtx.Client(); cli != nil {
+			return cli
+		}
+	}
 	val, exists := ctx.Value(mongoClientContextKey).(*mongo.Client)
 	if !exists {
 		panic("no mongo client found on context")
@@ -493,21 +486,25 @@ func GetMongoClient(ctx context.Context) *mongo.Client {
 	return val
 }
 
-func chanWithPostSendHook[T any](out chan<- T, afterFinalSend func(T)) (inpC chan<- T) {
-	inp, out := make(chan T), make(chan T)
-	go func() {
-		defer close(out)
-		for val := range inp {
-			out <- val
-			// Once validated sent, do the onSend handler
-			afterFinalSend(val)
-		}
-	}()
-	return inp
+func DbFrom(ctx context.Context) *mongo.Database {
+	return GetMongoClient(ctx).Database(dbName)
 }
 
+//func chanWithPostSendHook[T any](out chan<- T, afterFinalSend func(T)) (inpC chan<- T) {
+//	inp, out := make(chan T), make(chan T)
+//	go func() {
+//		defer close(out)
+//		for val := range inp {
+//			out <- val
+//			// Once validated sent, do the onSend handler
+//			afterFinalSend(val)
+//		}
+//	}()
+//	return inp
+//}
+
 func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[string]) ([]MainCollectionId, utils.Set[string], error) {
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
+	client := GetMongoClient(ctx)
 	out := make([]MainCollectionId, 0, n)
 	found := utils.Set[string]{}
 	for ctFound := 0; ctFound < n; {
@@ -523,8 +520,8 @@ func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[str
 			}
 
 			// get these ids from the map collection???
-			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", newId)).Err()
-			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, bsonFindFilter("_id", newId)).Err()
+			err := client.Database(dbName).Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter(IDfld, newId)).Err()
+			//err := client.Database(dbName).Collection(collectionName).FindOne(ctx, BsonFindFilter(IDfld, newId)).Err()
 			if err != nil {
 				if errors.Is(err, mongo.ErrNoDocuments) {
 					found.Add(string(newId[:]))
@@ -540,18 +537,13 @@ func generateMainCollectionIds(ctx context.Context, n int, lastSet utils.Set[str
 	return out, found, nil
 }
 
-//func getLastNEntriesForType[T]() { // TODO: do this
-//
-//}
-
 func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
 	findBson := bson.D{{}}
 	sortField := "$natural"
 	// TODO: pagination?
 	opts := options.Find().
-		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
+		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural and that natural works with non-default ID types
+	cursor, err := DbFrom(ctx).
 		Collection(temp.CollectionName()).
 		Find(ctx, findBson, opts)
 	if err != nil {
@@ -560,33 +552,57 @@ func getAllEntries[T CollectionItem](ctx context.Context, temp T) ([]T, error) {
 	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
 }
 
-func getLastNEntries[T CollectionItem](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T) ([]T, error) {
-	findBson := bson.D{{}}
-	if filterOutStandard {
-		findBson = bsonFindFilter("standard", false)
-	}
+func getLastNEntries[T CollectionItem, U any](ctx context.Context, updated bool, nresults int, filterOutStandard bool, temp T, disposed *bool, startAfterId *U) ([]T, error) {
 	sortField := "$natural"
 	if updated {
 		sortField = "lastUpdated"
 	}
+	sortBson := bson.D{{Key: sortField, Value: -1}}
+	// disposed: true means show only the disposed, false meens only show the undisposed, nil means do not filter based on disposed!
+	findBson := bson.D{}
+	// Create search filter
+	if filterOutStandard {
+		findBson = BsonFindFilter("standard", false)
+	}
+	if startAfterId != nil {
+		// TODO: bson.D vs bson.M?
+		valueGreaterThan := bson.E{"$gt", *startAfterId}
+		idGreaterThan := bson.E{"_id", bson.D{valueGreaterThan}} // TODO: validate works
+		//valueGreaterThan := bson.M{"$gt": *startAfterId}
+		//idGreaterThan := bson.E{Key: "_id", Value: valueGreaterThan}
+		findBson = append(findBson, idGreaterThan)
+	}
+	if disposed != nil {
+		// Using bson.D (Ordered document - Recommended for performance and readability)
+		existenceFilter := bson.E{"disposed", bson.D{{"$exists", *disposed}}} // TODO: validate works!
+		//// Using bson.M (shorter syntax
+		//valueExists := bson.M{"$exists": *disposed}
+		//existenceFilter := bson.E{Key: "disposed", Value: valueExists} // TODO: validate works!
+		findBson = append(findBson, existenceFilter)
+	}
+	if len(findBson) == 0 {
+		findBson = bson.D{{}} // TODO: necessary? probably not
+	}
+
 	// TODO: pagination?
 	opts := options.Find().
-		//SetLimit(int64(nresults)). // TODO: no limit because user can be unable to view some items
-		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
+		//SetLimit(int64(nresults)). // no limit because user can be unable to view some items
+		SetSort(sortBson) // Descending (latest first) // TODO: ensure -1 works with natural and that natural works with non-default IDs
 	//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
-		Collection(temp.CollectionName()).
-		Find(ctx, findBson, opts)
+	cursor, err := DbFrom(ctx).Collection(temp.CollectionName()).Find(ctx, findBson, opts)
 	if err != nil {
 		return nil, err
 	}
-	return getCollectionItemsFromCursor[T](ctx, cursor, &nresults)
+	var finalNumResults *int = nil
+	if nresults > 0 {
+		finalNumResults = &nresults
+	}
+	return getCollectionItemsFromCursor[T](ctx, cursor, finalNumResults)
 }
 
 func FindItemTypeForId(ctx context.Context, id MainCollectionId) (MainCollectionItem, error) {
 	mapEntry := &idMapEntry{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bson.M{"_id": id}).Decode(mapEntry)
+	err := DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, bson.M{IDfld: id}).Decode(mapEntry)
 	if err != nil {
 		return nil, err
 	}
@@ -605,216 +621,292 @@ type InMemoryCacheItem[T any] struct {
 // TODO: CHANGESTREAMS to track most recently used/updated items in each collection!
 // TODO: also want to track recipe ids and names in a cache, and invalidate the cache when additions happen
 
-//type idNamePairCache struct {
-//	*sync.RWMutex
-//	timeout time.Time
-//	IdNamePairArray
-//}
-//type IdNamePairArray struct {
-//	names []string
-//	ids   []string
-//}
-//func (arr IdNamePairArray) asMap() map[string]string{
-//	out := map[string]string{}
-//	for i, id := range arr.ids {
-//		out[id] = arr.names[i]
-//	}
-//	return out
-//}
-//
-//type RecipeCache struct {
-//	Agar      *idNamePairCache
-//	Jar       *idNamePairCache ``
-//	LC        *idNamePairCache ``
-//	Substrate *idNamePairCache ``
-//}
-//
-//func (cache RecipeCache) GetAgarRecipes(ctx context.Context) map[string]string {
-//	now := time.Now()
-//	subcache := cache.Agar
-//	if cache.Agar.timeout.Before(now) {
-//		// TODO: go get them from the db
-//		// TODO: update the cache
-//	} else {
-//		subcache.RLock()
-//		defer subcache.RUnlock()
-//		return cache.Agar.IdNamePairArray.asMap()
-//	}
-//}
+var GetPageForIdHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "no id provided", http.StatusBadRequest)
+		return
+	}
+	out := &idMapEntry{}
+	err := DbFrom(ctx).
+		Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(out)
+	if err != nil {
+		http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write([]byte(fmt.Sprintf(`%s/%s`, out.EntryType, out.Id.AsBase58())))
+	handleWriteErr(err, w)
+}
 
-func GetPageForIdHandler() http.Handler {
+var CreateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	endpt := r.PathValue("variant")
+	var handler http.HandlerFunc
+	switch endpt {
+	case "agarBatch":
+		handler = createAgarBatchHandler
+	case "agarRecipe":
+		handler = createAgarRecipeHandler
+	case "bag":
+		handler = createBagHandler
+	case "lc":
+		handler = createLiquidCultureHandler
+	case "lcSyringe":
+		handler = createSyringeHandler
+	case "lcRecipe":
+		handler = createLcRecipeHandler
+	case "fruit":
+		handler = createFruitHandler
+	case "fruitingChamber":
+		handler = createFruitingChamberHandler
+	case "grainBatch":
+		handler = createGrainBatchHandler
+	case "jar":
+		handler = createJarHandler
+	case "jarRecipe":
+		handler = createJarRecipeHandler
+	case "mss":
+		handler = createMssHandler
+	case "pcRun":
+		handler = createPcRunHandler
+	case "plate":
+		handler = createPlateHandler
+	case "plugs":
+		handler = createPlugsHandler
+	case "project":
+		handler = createProjectHandler
+	case "sale":
+		handler = createSaleHandler
+	case "slant":
+		handler = createSlantHandler
+	case "species":
+		handler = createSpeciesHandler
+	case "sporePrint":
+		handler = createSporePrintHandler
+	case "sporeSwab":
+		handler = createSporeSwabHandler
+	case "stasisTube":
+		handler = createStasisTubeHandler
+	case "subspecies":
+		handler = createSubspeciesHandler
+	case "substrateRecipe":
+		handler = createSubstrateRecipeHandler
+	case "substrateBatch":
+		handler = createSubstrateBatchHandler
+	case "transfer":
+		handler = createTransferHandler
+	//case "user": handler = createUserHandler // TODO: probably don't need
+	case "waterJar":
+		handler = createWaterJarHandler
+	default:
+		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
+		return
+	}
+	handler(w, r)
+}
+
+func DenyGuestMiddleware(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		id := r.PathValue("id")
-		if id == "" {
-			http.Error(w, "no id provided", http.StatusBadRequest)
-			return
-		}
-		out := &idMapEntry{}
-		err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-			Database(dbName).
-			Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(out)
+		resolvedPerms, err := GetAuthInfo(r.Context())
 		if err != nil {
-			http.Error(w, "failed to get item by id: "+err.Error(), http.StatusInternalServerError)
+			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
 			return
 		}
-		_, err = w.Write([]byte(fmt.Sprintf(`%s/%s`, out.EntryType, out.Id.AsBase58())))
-		handleWriteErr(err, w)
+		if resolvedPerms.isGuest() {
+			http.Error(w, "guest users cannot utilize this endpoint", http.StatusUnauthorized)
+			return
+		}
+		handler.ServeHTTP(w, r)
 	})
+
 }
 
-func HandleCreate() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		resolvedPerms, err := GetResolvedUserPerms(r.Context())
-		if err != nil {
-			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
-			return
-		}
-		if resolvedPerms.isGuest() {
-			http.Error(w, "guest users cannot create entries", http.StatusForbidden)
-			return
-		}
-		endpt := r.PathValue("variant")
-		//switch endpt {
-		//case "agarBatch": createAgarBatchHandler(w,r)
-		//case "agarRecipe": createAgarRecipeHandler(w,r)
-		//case "bag": createBagHandler(w,r)
-		//}
-		handle, exists := map[string]http.HandlerFunc{
-			"agarBatch":  createAgarBatchHandler,
-			"agarRecipe": createAgarRecipeHandler,
-			"bag":        createBagHandler,
-			"lc":         createLiquidCultureHandler,
-			"lcSyringe":  createSyringeHandler,
-			//"plugs": createPlugsHandler, // TODO: FIX!
-			"lcRecipe":        createLcRecipeHandler,
-			"fruit":           createFruitHandler,
-			"fruitingChamber": createFruitingChamberHandler,
-			"jar":             createJarHandler,
-			"jarRecipe":       createJarRecipeHandler,
-			"mss":             createMssHandler,
-			"pcRun":           createPcRunHandler,
-			"plate":           createPlateHandler,
-			"plugs":           createPlugsHandler,
-			"project":         createProjectHandler,
-			"sale":            createSaleHandler,
-			"slant":           createSlantHandler,
-			"species":         createSpeciesHandler,
-			"sporePrint":      createSporePrintHandler,
-			"sporeSwab":       createSporeSwabHandler,
-			"stasisTube":      createStasisTubeHandler,
-			"subspecies":      createSubspeciesHandler,
-			"substrateRecipe": createSubstrateRecipeHandler,
-			"substrateBatch":  createSubstrateBatchHandler,
-			"transfer":        createTransferHandler,
-			//"user":"", // TODO: probably don't need
-			"waterJar": createWaterJarHandler,
-		}[endpt]
-		if !exists {
-			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
-			return
-		}
-		handle(w, r)
-		//GetPermsMiddleware(handler).ServeHTTP(w, r)
+//func AdminOnlyMiddleware(handler http.Handler) http.Handler {
+//	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		resolvedPerms, err := GetAuthInfo(r.Context()) // TODO: is err still needed here?
+//		if err != nil {
+//			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
+//			return
+//		}
+//		if !resolvedPerms.IsAdmin() {
+//			http.Error(w, "non-admin users cannot delete entries", http.StatusUnauthorized)
+//			return
+//		}
+//		handler.ServeHTTP(w, r)
+//	})
+//
+//}
+
+var ImportHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	endpt := r.PathValue("variant")
+	var handler http.HandlerFunc
+	switch endpt {
+	case "bag":
+		handler = importBagHandler
+	case "lc":
+		handler = importLiquidCultureHandler
+	case "lcSyringe":
+		handler = importLcSyringeHandler
+	case "plugs":
+		handler = importPlugsHandler
+	case "fruit":
+		handler = importFruitHandler
+	case "fruitingChamber":
+		handler = importFruitingChamberHandler
+	case "jar":
+		handler = importJarHandler
+	case "mss":
+		handler = importMssHandler
+	case "plate":
+		handler = importPlateHandler
+	case "slant":
+		handler = importSlantHandler
+	case "sporePrint":
+		handler = importSporePrintHandler
+	case "sporeSwab":
+		handler = importSporeSwabHandler
+	case "stasisTube":
+		handler = importStasisTubeHandler
+	case "waterJar":
+		handler = importWaterJarHandler
+	default:
+		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
+		return
 	}
+	handler.ServeHTTP(w, r)
 }
 
-func GetPermsMiddleware(handler http.HandlerFunc) http.Handler {
-	return handler // TODO: replace with old GetPermsMiddleware once perms are reenabled
-}
-func ImportHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		resolvedPerms, err := GetResolvedUserPerms(r.Context())
-		if err != nil {
-			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
-			return
-		}
-		if resolvedPerms.isGuest() {
-			http.Error(w, "guest users cannot import entries", http.StatusForbidden)
-			return
-		}
-		endpt := r.PathValue("endpt")
-		handler, exists := map[string]http.HandlerFunc{
-			"bag":             importBagHandler,
-			"lc":              importLiquidCultureHandler,
-			"lcSyringe":       importLcSyringeHandler,
-			"plugs":           importPlugsHandler,
-			"fruit":           importFruitHandler,
-			"fruitingChamber": importFruitingChamberHandler,
-			"jar":             importJarHandler,
-			"mss":             importMssHandler,
-			"plate":           importPlateHandler,
-			"slant":           importSlantHandler,
-			"sporePrint":      importSporePrintHandler,
-			"sporeSwab":       importSporeSwabHandler,
-			"stasisTube":      importStasisTubeHandler,
-			//"waterJar":      importWaterJarHandler, // TODO: import water jar handler?
-
-		}[endpt]
-		if !exists {
-			http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
-		}
-		GetPermsMiddleware(handler).ServeHTTP(w, r)
+var UpdateHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	println("hit updateById handler")
+	resolvedPerms, err := GetResolvedUserPerms(r.Context())
+	if err != nil {
+		println("failed to load permissions")
+		http.Error(w, "failed to load permissions", http.StatusInternalServerError)
+		return
 	}
+	if resolvedPerms.isGuest() {
+		println("guest tried to edit")
+		http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
+		return
+	}
+	endpt := r.PathValue("variant")
+	var handler http.HandlerFunc
+	switch endpt {
+	case "agarBatch":
+		handler = updateAgarBatchHandler
+	case "agarRecipe":
+		handler = updateAgarRecipeHandler
+	case "bag":
+		handler = updateBagHandler
+	case "grainBatch":
+		handler = updateGrainBatchHandler
+	case "lc":
+		handler = updateLiquidCultureHandler
+	case "lcRecipe":
+		handler = updateLcRecipeHandler
+	case "lcSyringe":
+		handler = updateSyringeHandler
+	case "plugs":
+		handler = updatePlugsHandler
+	case "fruit":
+		handler = updateFruitHandler
+	case "fruitingChamber":
+		handler = updateFruitingChamberHandler
+	case "jar":
+		handler = updateJarHandler
+	case "jarRecipe":
+		handler = updateJarRecipeHandler
+	case "mss":
+		handler = updateMssHandler
+	case "pcRun":
+		handler = updatePcRunHandler
+	case "plate":
+		handler = updatePlateHandler
+	case "plug":
+		handler = updatePlugsHandler
+	case "project":
+		handler = updateProjectHandler
+	case "sale":
+		handler = updateSaleHandler
+	case "slant":
+		handler = updateSlantHandler
+	case "species":
+		handler = updateSpeciesHandler
+	case "sporePrint":
+		handler = updateSporePrintHandler
+	case "sporeSwab":
+		handler = updateSporeSwabHandler
+	case "stasisTube":
+		handler = updateStasisTubeHandler
+	case "subspecies":
+		handler = updateSubspeciesHandler
+	case "substrateRecipe":
+		handler = updateSubstrateRecipeHandler
+	case "substrateBatch":
+		handler = updateSubstrateBatchHandler
+	case "transfer":
+		handler = updateTransferHandler
+	//case "user":             handler = updateUserHandler
+	case "waterJar":
+		handler = updateWaterJarHandler
+	default:
+		println("no handler for endpoint: " + endpt) // TODO: del
+		http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
+		return
+	}
+	handler.ServeHTTP(w, r)
 }
 
-func UpdateById() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		println("hit updateById handler")
-		resolvedPerms, err := GetResolvedUserPerms(r.Context())
-		if err != nil {
-			println("failed to load permissions")
-			http.Error(w, "failed to load permissions", http.StatusInternalServerError)
-			return
-		}
-		//bs, _ := json.Marshal(resolvedPerms)  // TODO; del
-		//println("resolved perms", string(bs)) // TODO: del
-		if resolvedPerms.isGuest() { // TODO: reenable
-			println("guest tried to edit")
-			http.Error(w, "guest users cannot edit entries", http.StatusForbidden)
-			return
-		}
-		endpt := r.PathValue("endpt")
-		handler, exists := map[string]http.HandlerFunc{
-			"agarBatch":       updateAgarBatchHandler,
-			"agarRecipe":      updateAgarRecipeHandler,
-			"bag":             updateBagHandler,
-			"grainBatch":      updateGrainBatchHandler,
-			"lc":              updateLiquidCultureHandler,
-			"lcRecipe":        updateLcRecipeHandler,
-			"lcSyringe":       updateSyringeHandler,
-			"plugs":           updatePlugsHandler,
-			"fruit":           updateFruitHandler,
-			"fruitingChamber": updateFruitingChamberHandler,
-			"jar":             updateJarHandler,
-			"jarRecipe":       updateJarRecipeHandler,
-			"mss":             updateMssHandler,
-			"pcRun":           updatePcRunHandler,
-			"plate":           updatePlateHandler,
-			"plug":            updatePlugsHandler,
-			"project":         updateProjectHandler,
-			"sale":            updateSaleHandler,
-			"slant":           updateSlantHandler,
-			"species":         updateSpeciesHandler,
-			"sporePrint":      updateSporePrintHandler,
-			"sporeSwab":       updateSporeSwabHandler,
-			"stasisTube":      updateStasisTubeHandler,
-			"subspecies":      updateSubspeciesHandler,
-			"substrateRecipe": updateSubstrateRecipeHandler,
-			"substrateBatch":  updateSubstrateBatchHandler,
-			"transfer":        updateTransferHandler,
-			//"user":             updateUserHandler,
-			"waterJar": updateWaterJarHandler,
-		}[endpt]
-		if !exists {
-			http.Error(w, "no handler for endpoint: "+endpt, http.StatusBadRequest)
-		}
-		GetPermsMiddleware(handler).ServeHTTP(w, r)
-	}
-}
+//var DeleteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+//	endpt := r.PathValue("variant")
+//	if r.Method != http.MethodDelete {
+//		http.Error(w, "invalid method for endpoint", http.StatusMethodNotAllowed)
+//		return
+//	}
+//
+//	handler, exists := map[string]http.HandlerFunc{
+//		"agarBatch":       deleteAgarBatchHandler,
+//		"agarRecipe":      deleteAgarRecipeHandler,
+//		"bag":             deleteBagHandler,
+//		"fruit":           deleteFruitHandler,
+//		"fruitingChamber": deleteFruitingChamberHandler,
+//		"grainBatch":      deleteGrainBatchHandler,
+//		"jar":             deleteJarHandler,
+//		"jarRecipe":       deleteJarRecipeHandler,
+//		"lc":              deleteLcHandler,
+//		"lcRecipe":        deleteLcRecipeHandler,
+//		"lcSyringe":       deleteLcSyringeHandler,
+//		"mss":             deleteMssHandler,
+//		"pcRun":           deletePcRunHandler,
+//		"plate":           deletePlateHandler,
+//		"plugs":           deletePlugsHandler,
+//		"project":         deleteProjectHandler,
+//		"sale":            deleteSaleHandler,
+//		"slant":           deleteSlantHandler,
+//		"species":         deleteSpeciesHandler,
+//		"sporePrint":      deleteSporePrintHandler,
+//		"sporeSwab":       deleteSporeSwabHandler,
+//		"stasisTube":      deleteStasisTubeHandler,
+//		"subspecies":      deleteSubspeciesHandler,
+//		"substrateBatch":  deleteSubstrateBatchHandler,
+//		"substrateRecipe": deleteSubstrateRecipeHandler,
+//		"transfer":        deleteTransferHandler,
+//		"waterJar":        deleteWaterJarHandler,
+//	}[endpt]
+//	if !exists {
+//		http.Error(w, "no import handler for endpoint: "+endpt, http.StatusBadRequest)
+//		return
+//	}
+//	handler.ServeHTTP(w, r)
+//}
 
 func dbErr(w http.ResponseWriter, txt string, status int) {
 	println("txnErr " + txt)
 	http.Error(w, txt, status)
+	return
+}
+func dbErrCtx(ctx context.Context, w http.ResponseWriter, err error, status int) {
+	env.LogIfDev(ctx, err.Error())
+	http.Error(w, err.Error(), status)
 	return
 }

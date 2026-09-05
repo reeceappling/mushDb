@@ -5,30 +5,33 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/disintegration/imageorient"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/exp/maps"
 	"image/jpeg"
-	"image/png"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"reflect"
 	"time"
 )
 
-const GoodTestRfidTag = "goodTestRdfidItem"
+const maxMultipartRequestSize = 32<<25 + 1024 //32<<20 + 1024 // TODO: is this max size ok?
+
+//const GoodTestRfidTag = "goodTestRdfidItem"
 
 var ErrNoParentModifiedForTransfer = errors.New("parent not found for transfer update. Shouldnt occur")
 var ErrMissingOptionalField = errors.New("missing optional field")
 var ErrFailedToFinalizeMods = errors.New("failed to finalize mods")
 
-// TODO: ALL CREATION ENDPOINTS
 // TODO: USE!
 func UrlEncodeString(toEncode string) string {
 	return url.QueryEscape(toEncode)
@@ -43,21 +46,12 @@ var (
 	_ CollectionItem = &Sale{}
 )
 
-type CollectionItem interface { // TODO: ADD USER TO THIS?
+type CollectionItem interface {
 	CollectionName() string
 	Decode(*mongo.SingleResult) (CollectionItem, error)
-	IdValue() any // binary string id?
+	IdValue() any // binary string id? DO NOT USE FOR ACTUALLY QUERYING THE DB DUE TO ANY TYPE
+	//Blank() CollectionItem
 }
-
-//var (
-//	_ fruiter = FruitingChamber{}
-//	_ fruiter = Bag{}
-//)
-//
-//type fruiter interface {
-//	basicFruit() Fruit
-//	Permissioned
-//}
 
 var lastUpdatedIndexModel = mongo.IndexModel{
 	Keys:    bson.D{{Key: "lastUpdated", Value: -1}},
@@ -65,159 +59,170 @@ var lastUpdatedIndexModel = mongo.IndexModel{
 }
 var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
 var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, false, false) // TODO: ensure actually indexes the correct thing! // TODO: this is a wildcard index!!!!
-var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false)
+// var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false) // TODO: del?
 var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false) // TODO: do we even need to use this?
-var creationDateIndexModel = newSimpleIndex("creationDate", "createDate", true, false, false)
-var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false)
+var creationDateIndexModel = newSimpleIndex("creationDate", "creationDate", true, false, false)
 
-var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false)
+// var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false) // TODO: USE?
 
-// TODO: USE!
-func SetEnv(ctx context.Context, isProd bool) context.Context {
-	return context.WithValue(ctx, "isProd", isProd)
-}
-func GetEnv(ctx context.Context) bool {
-	isProd, ok := ctx.Value("isProd").(bool)
-	if !ok {
-		panic("Env not found")
-	}
-	return isProd
-}
+var aliasesIndexModel = newSimpleIndex("aliases", "aliases", false, true, false) // THIS DOES NOT ENFORCE UNIQUENESS!!!!!
 
-//// TODO: searching in a specific index
-//func latestNUpdatedB(ctx context.Context) error { // TODO: fixMe
-//	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
-//	//indx := // TODO: use correct index
-//	opts := options.Find().SetHint(
-//		mongo.IndexModel{Keys: bson.D{{"transfersOut", 1}}}, // TODO: ????????????
-//		)
-//	coll := db.Collection(FruitsCollName)
-//	_, err := coll.Find(ctx, bson.D{}, opts)
-//	return err
-//	//coll.UpdateByID(ctx, bson.D{bson.E{Key: "_id": "someId"}}, ) // TODO: use this
+//func updateTogether() bson.D {
+//	return []primitive.E{withUpdateNow()}
 //}
 
-func withUpdateNow() primitive.E {
-	return primitive.E{
-		Key:   "lastUpdated",
-		Value: unixTimeForNow(),
+type Tuple[A any, B any] struct {
+	a A
+	b B
+}
+
+func newTuple[A any, B any](a A, b B) Tuple[A, B] {
+	return Tuple[A, B]{
+		a: a,
+		b: b,
 	}
 }
-
-func updateTogether() bson.D {
-	return []primitive.E{withUpdateNow()}
+func (t Tuple[A, B]) values() (A, B) {
+	return t.a, t.b
 }
 
-// TODO: HOW TO SORT AND STUFF IS ABOVE
+type initializer Tuple[string, func(context.Context) error]
+
+func (item initializer) Name() string {
+	return item.a
+}
+func (item initializer) initialize(ctx context.Context) error {
+	return item.b(ctx)
+}
+func newInitializer(name string, f func(context.Context) error) initializer {
+	return initializer(Tuple[string, func(context.Context) error]{a: name, b: f})
+}
 
 func Initialize(ctx context.Context) error {
-	for i, initializer := range map[string]func(context.Context) error{
-		"db": initializeDb,
+	for _, item := range [30]initializer{
+		newInitializer("itemMapCollection", initializeItemMapCollection),
+		newInitializer("db", initializeDb),
 		// Initialize main collections
-		"bags":             initializeBags,
-		"fruiting chamber": initializeFruitingChamber,
-		"jars":             initializeJars,
-		"LCs":              initializeLCs,
-		"LcSyringes":       initializeSyringes,
-		"mss":              initializeMSS,
-		"plate":            initializePlates,
-		"slant":            initializeSlants,
-		"stasis tube":      initializeStasisTubes,
-		"spore swabs":      initializeSporeSwabs,
-		// Initialize new main collections
-		"fruit":       initializeFruits,
-		"spore print": initializeSporePrints,
-		"plugs":       initializePlugs,
-		"waterJar":    initializeWaterJars,
-		//Initialize Collections with predefined items
-		"agar Recipe":      initializeAgarRecipes,
-		"jar Recipe":       initializeJarRecipes,
-		"lc Recipe":        initializeLcRecipes,
-		"substrate Recipe": initializeSubstrates,
-		"species":          initializeSpecies,
-		"subspecies":       initializeSubspecies,
+		newInitializer("bags", initializeBags),
+		newInitializer("fruiting chambers", initializeFruitingChamber),
+		newInitializer("jars", initializeJars),
+		newInitializer("LCs", initializeLCs),
+		newInitializer("lcSyringes", initializeSyringes),
+		newInitializer("mss", initializeMSS),
+		newInitializer("plates", initializePlates),
+		newInitializer("slants", initializeSlants),
+		newInitializer("stasis tubes", initializeStasisTubes),
+		newInitializer("spore swabs", initializeSporeSwabs),
+		newInitializer("fruits", initializeFruits),
+		newInitializer("spore prints", initializeSporePrints),
+		newInitializer("plugs", initializePlugs),
+		newInitializer("waterJars", initializeWaterJars),
+		//Initialize Alt Collections with predefined items
+		newInitializer("agar Recipes", initializeAgarRecipes),
+		newInitializer("jar Recipes", initializeJarRecipes),
+		newInitializer("lc Recipes", initializeLcRecipes),
+		newInitializer("substrate Recipes", initializeSubstrates),
+		newInitializer("species", initializeSpecies),
+		newInitializer("subspecies", initializeSubspecies),
 		// Initialize other alt collections
-		"agar batch":        initializeAgarBatches,
-		"grain batch":       initializeGrainBatches,
-		"pc run":            initializePCRun,
-		"sales":             initializeSales,
-		"transfer":          initializeTransfers,
-		"projects":          initializeProjects,
-		"substrate batches": initializeSubstrateBatches,
+		newInitializer("agar batches", initializeAgarBatches),
+		newInitializer("grain batches", initializeGrainBatches),
+		newInitializer("pc runs", initializePCRuns),
+		newInitializer("sales", initializeSales),
+		newInitializer("transfer", initializeTransfers),
+		newInitializer("projects", initializeProjects),
+		newInitializer("substrate batches", initializeSubstrateBatches),
 		// initialize users
-		"users": initializeUsers,
+		newInitializer("users", initializeUsers),
 	} {
-		println("trying", i, "initializer")
-		if err := initializer(ctx); err != nil {
-			return errors.Join(fmt.Errorf(`%s initializer failed`, i), err)
+		if err := item.initialize(ctx); err != nil {
+			return errors.Join(fmt.Errorf(`%s initializer failed`, item.Name()), err)
 		}
-		println("completed initializing", i)
 	}
-	for name, b58IdStr := range map[string]string{
+	// TODO: REENABLE!
+	//if err := initializeAliasesCollection(ctx); err != nil { // TODO: when spec/subspec/subRec are created/modified/deleted, also update the aliases collection!
+	//	println("aliases collection failed to initialize", err.Error())
+	//	return errors.Join(errors.New("aliases initializer failed"), err)
+	//}
+	// List instead of map to ensure order...
+	for _, item := range []Tuple[string, string]{
 		// Mains IDs
-		"plate":           string(exPlate.AsBase58()),
-		"bag":             string(exBag.AsBase58()),
-		"fruitingChamber": string(exFC.AsBase58()),
-		"jar":             string(exJar.AsBase58()),
-		"mss":             string(exMSS.AsBase58()),
-		"slant":           string(exSlant.AsBase58()),
-		"stasisTube":      string(exStasis.AsBase58()),
-		"fruit":           string(exFruitId.AsBase58()),
-		"sporePrint":      string(exSporePrint.AsBase58()),
-		"waterJar":        string(exWaterId.AsBase58()),
+		newTuple("plate", string(exPlate.AsBase58())),
+		newTuple("bag", string(exBag.AsBase58())),
+		newTuple("fruitingChamber", string(exFC.AsBase58())),
+		newTuple("jar", string(exJar.AsBase58())),
+		newTuple("mss", string(exMSS.AsBase58())),
+		newTuple("slant", string(exSlant.AsBase58())),
+		newTuple("stasisTube", string(exStasis.AsBase58())),
+		newTuple("fruit", string(exFruitId.AsBase58())),
+		newTuple("sporePrint", string(exSporePrint.AsBase58())),
+		newTuple("waterJar", string(exWaterId.AsBase58())),
 		// Standard Alt IDs
-		"agarBatch":       string(exAltId.AsBase58()),
-		"agarRecipe":      string(exAltId.AsBase58()),
-		"jarRecipe":       string(exAltId.AsBase58()),
-		"lcRecipe":        string(exAltId.AsBase58()),
-		"sale":            string(exAltId.AsBase58()),
-		"substrateRecipe": string(exAltId.AsBase58()),
-		"transfer":        string(exAltId.AsBase58()),
+		newTuple("agarBatch", string(exAltId.AsBase58())),
+		newTuple("agarRecipe", string(exAltId.AsBase58())),
+		newTuple("jarRecipe", string(exAltId.AsBase58())),
+		newTuple("lcRecipe", string(exAltId.AsBase58())),
+		newTuple("sale", string(exAltId.AsBase58())),
+		newTuple("substrateRecipe", string(exAltId.AsBase58())),
+		newTuple("transfer", string(exAltId.AsBase58())),
 		// String Alt IDs
-		"project":    testEntryStringId,
-		"species":    testEntryStringId,
-		"subspecies": testEntryStringId,
+		newTuple("project", testEntryStringId),
+		newTuple("species", testEntryStringId),
+		newTuple("subspecies", testEntryStringId),
 	} {
+		name, b58IdStr := item.values()
 		println(fmt.Sprintf(`test %s can be found at /view/%s/%s`, name, name, b58IdStr))
 	}
+	// TODO: validateDbEntries(ctx) like ensuring pc runs exist on all appropriate things?
 
 	return nil
 }
 
-func simplifyUpdates(elementsGroup ...bson.E) bson.D { // TODO: USE THIS
-	return elementsGroup
-}
+//func validateDbEntries(ctx context.Context) {
+//	for _, _ = range map[string]
+//}
 
-func simpleUpdate(key string, value interface{}) bson.E {
-	return bson.E{Key: key, Value: value}
-}
+//func simplifyUpdates(elementsGroup ...bson.E) bson.D { // TODO: USE THIS
+//	return elementsGroup
+//}
+//
+//func simpleUpdate(key string, value interface{}) bson.E { // TODO: use or delete
+//	return bson.E{Key: key, Value: value}
+//}
+//
+//func simplePointerUpdate[T any](mods []bson.E, key string, ptr *T) []bson.E { // TODO: use or delete
+//	if ptr == nil {
+//		return mods
+//	}
+//	out := append(mods, simpleUpdate(key, ptr))
+//	return out
+//}
 
-func simplePointerUpdate[T any](mods []bson.E, key string, ptr *T) []bson.E {
-	if ptr == nil {
-		return mods
-	}
-	out := append(mods, simpleUpdate(key, ptr))
-	return out
-}
-
-func getItemLatestImage(item CollectionItem) (*ImageLocation, UnixTime) { // TODO: consider using?
-	var loc *ImageLocation = nil
-	var latest UnixTime = 0
-	if itemWithPicsField, ok := item.(interface{ getLatestPicFromPicsField() *PicWithNotes }); ok {
-		if pwn := itemWithPicsField.getLatestPicFromPicsField(); pwn != nil {
-			loc = &pwn.Location
-			latest = pwn.Time
-		}
-	}
-	if contamItem, ok := item.(interface{ getContamsLatestImage() *Contamination }); ok {
-		if contam := contamItem.getContamsLatestImage(); contam != nil {
-			if contam.Location != nil && contam.Time > latest {
-				return contam.Location, contam.Time
-			}
-		}
-	}
-	return loc, latest
-}
+//func getItemLatestImage(item CollectionItem) (*ImageLocation, unix.Time) { // TODO: consider using?
+//	var loc *ImageLocation = nil
+//	var latest unix.Time = 0
+//	if itemWithPicsField, ok := item.(interface{ getLatestPicFromPicsField() *PicWithNotes }); ok {
+//		if pwn := itemWithPicsField.getLatestPicFromPicsField(); pwn != nil {
+//			loc = &pwn.Location
+//			latest = pwn.Time
+//		}
+//	}
+//	if contamItem, ok := item.(interface{ getContamsLatestImage() *Contamination }); ok {
+//		if contam := contamItem.getContamsLatestImage(); contam != nil {
+//			if contam.Location != nil && contam.Time > latest {
+//				return contam.Location, contam.Time
+//			}
+//		}
+//	}
+//	// TODO: add getLatestFlush to Bags, FCs, etc...
+//	if itemWithFlushesField, ok := item.(interface{ getLatestFlush() *PicWithNotes }); ok {
+//		if pwn := itemWithFlushesField.getLatestFlush(); pwn != nil {
+//			loc = &pwn.Location
+//			latest = pwn.Time
+//		}
+//	}
+//	return loc, latest
+//}
 
 // TODO: USE THIS IN UPDATES!
 //func latestPicUpdate(latestPicPtrsForEachGroup []*PicWithNotes) []bson.E {
@@ -255,31 +260,31 @@ func getItemLatestImage(item CollectionItem) (*ImageLocation, UnixTime) { // TOD
 //	}
 //}
 
-func pushToArrayInline[T any](fieldName string, vals ...T) bson.D {
-	switch len(vals) {
-	case 1:
-		return bson.D{{
-			Key: "$push",
-			Value: bson.D{{
-				Key:   fieldName,
-				Value: vals[0],
-			}},
-		}}
-	case 0:
-		return bson.D{}
-	default:
-		return bson.D{{
-			Key: "$push",
-			Value: bson.D{{
-				Key: fieldName,
-				Value: bson.D{{
-					Key:   "$each",
-					Value: vals,
-				}},
-			}},
-		}} // TODO: ensure this works
-	}
-}
+//func pushToArrayInline[T any](fieldName string, vals ...T) bson.D {
+//	switch len(vals) {
+//	case 1:
+//		return bson.D{{
+//			Key: "$push",
+//			Value: bson.D{{
+//				Key:   fieldName,
+//				Value: vals[0],
+//			}},
+//		}}
+//	case 0:
+//		return bson.D{}
+//	default:
+//		return bson.D{{
+//			Key: "$push",
+//			Value: bson.D{{
+//				Key: fieldName,
+//				Value: bson.D{{
+//					Key:   "$each",
+//					Value: vals,
+//				}},
+//			}},
+//		}} // TODO: ensure this works
+//	}
+//}
 
 //func pushToArrayNew[T any](fieldName string, vals ...T) bson.D { // TODO: rename
 //	switch len(vals) {
@@ -353,110 +358,110 @@ func newSimpleIndex(indexName, key string, descending, sparse, unique bool) mong
 	}
 }
 
-func indicesSame(a, b mongo.IndexModel) bool { // TODO: use?
-	return (a.Keys.(bson.D)[0].Key == b.Keys.(bson.D)[0].Key) && reflect.DeepEqual(a.Options, b.Options)
-}
+//func indicesSame(a, b mongo.IndexModel) bool { // TODO: use?
+//	return (a.Keys.(bson.D)[0].Key == b.Keys.(bson.D)[0].Key) && reflect.DeepEqual(a.Options, b.Options)
+//}
 
 var ErrInvalidEntryType = errors.New("invalid entry type")
 
-//func entryTypeFor(inp string) (CollectionItem, error) { // TODO: does not work for Projects?
-//	switch strings.ToLower(inp) {
-//	case "agarbatch", "agar batch",
-//		"agarbatches", "agar batches":
-//		return &AgarBatch{}, nil
-//	case "agarrecipe", "agar recipe",
-//		"agarrecipes", "agar recipes":
-//		return &AgarRecipe{}, nil
-//	case "bag",
-//		"bags":
-//		return &Bag{}, nil
-//	case "fruit",
-//		"fruits":
-//		return &Fruit{}, nil
-//	case "fruitingchamber", "box", "chamber", "fruiting chamber",
-//		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
-//		return &FruitingChamber{}, nil
-//	case "jar", "grainjar", "grain jar",
-//		"jars", "grainjars", "grain jars":
-//		return &GrainJar{}, nil
-//	case "jarrecipe", "jar recipe",
-//		"jarrecipes", "jar recipes":
-//		return &JarRecipe{}, nil
-//	case "lc", "liquidculture", "liquid culture",
-//		"lcs", "liquidcultures", "liquid cultures":
-//		return &LiquidCulture{}, nil
-//	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
-//		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
-//		return &LcRecipe{}, nil
-//	case "lcSyringe", "lcSyringes":
-//		return &LcSyringe{}, nil
-//	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
-//		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
-//		return &MSS{}, nil
-//	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
-//		"pcruns", "pc runs", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
-//		return &PCRun{}, nil
-//	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
-//		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
-//		return &Plate{}, nil
-//	case "plugs", "plug", "peg", "pegs":
-//		return &PlugsJar{}, nil
-//	case "project", "Projects":
-//		return &Project{}, nil
-//	case "sale", "sales":
-//		return &Sale{}, nil
-//	case "slant", "slants":
-//		return &Slant{}, nil
-//	case "species":
-//		return &Species{}, nil
-//	case "sporeprint", "spore print", "print",
-//		"sporeprints", "spore prints", "prints":
-//		return &SporePrint{}, nil
-//	case "stasistube", "stasis tube", "stasis", "tube",
-//		"stasistubes", "stasis tubes", "tubes":
-//		return &StasisTube{}, nil
-//	case "subspecies":
-//		return &Subspecies{}, nil
-//	case "substrate", "substraterecipe", "substrate recipe",
-//		"substrates", "substraterecipes", "substrate recipes":
-//		return &SubstrateRecipe{}, nil
-//	case "transfer", "xfer",
-//		"transfers", "xfers":
-//		return &Transfer{}, nil
-//	case "user", "users":
-//		return &User{}, nil
-//	case "waterJar", "waterJars":
-//		return &WaterJar{}, nil
-//	default:
-//		return nil, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name"))
-//	}
-//}
-
 func getStandardEntries[T CollectionItem](ctx context.Context, temp T) (out []T, err error) {
-	cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
+	cursor, err := GetMongoClient(ctx).
 		Database(dbName).
 		Collection(temp.CollectionName()).
-		Find(ctx, bsonFindFilter("standard", true)) // TODO: NOT WORKING PROPERLY?!!!!! (check again)
+		Find(ctx, BsonFindFilter("standard", true)) // TODO: NOT WORKING PROPERLY?!!!!! (check again)
 	if err != nil {
 		return nil, err
 	}
 	return getCollectionItemsFromCursor[T](ctx, cursor, nil)
 }
 
+//func cursorIterator[T CollectionItem](ctx context.Context, cursor *mongo.Cursor) iter.Seq2[T, error] { // TODO: consider using!
+//	return func(yield func(T, error) bool) {
+//		defer cursor.Close(ctx) // TODO; ensure ok
+//		yieldCount := 0
+//		var tempResult T
+//		user, err := GetAuthInfo(ctx)
+//		if err != nil {
+//			if !yield(tempResult, err) {
+//				return
+//			}
+//			return
+//		}
+//		for {
+//			var result T
+//			if cursor.TryNext(ctx) {
+//				if err = cursor.Decode(&result); err != nil {
+//					if !yield(result, err) {
+//						return
+//					}
+//					return
+//				}
+//				//bs, err := json.Marshal(result)
+//				//if err == nil {
+//				//	println("CHECKING AN ITEM: " + string(bs)) // TODO: del
+//				//}
+//				// If item is permissioned, ensure the user can read it
+//				permedItem, ok := interface{}(result).(Permissioned)
+//				if ok {
+//					acl := permedItem.Permissions()
+//					// If user cannot read or write, do not add
+//					if acl.HighestPermFor(user) == nil {
+//						println("skipping entry, user does not have permission!") // TODO: del
+//						// Skip this entry
+//						continue
+//					}
+//				}
+//				//if !allowDisposed { // TODO: reenable if disposed isnt filtered out in query
+//				//	disposableItem, ok := interface{}(result).(Disposable)
+//				//	if ok && disposableItem.DisposalInfo() != nil {
+//				//		// Skip this entry
+//				//		continue
+//				//	}
+//				//}
+//				if !yield(result, nil) {
+//					return
+//				}
+//				yieldCount++
+//			}
+//
+//			cursorClosed := cursor.ID() == 0
+//			if cursorClosed && yieldCount == 0 {
+//				yield(result, mongo.ErrNoDocuments)
+//				return
+//			}
+//			if err = cursor.Err(); err != nil {
+//				yield(result, err)
+//				return
+//			}
+//			if cursorClosed {
+//				return
+//			}
+//		}
+//	}
+//}
+
 func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]T, error) {
+	defer cursor.Close(ctx)
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
 	results := []T{}
-	if numItems != nil {
+	if numItems != nil && *numItems > 0 {
 		results = make([]T, 0, *numItems)
 	} else {
-		if user.isAdmin() {
-			err = cursor.All(ctx, &results)
+		if user.IsAdmin() {
+			err = cursor.All(ctx, &results) // TODO: only results size???
 			return results, err
 		}
 	}
+	//for result, err := range cursorIterator[T](ctx, cursor) { // TODO: consider using
+	//	if err != nil {
+	//		return nil, err // TODO: ok?
+	//	} else {
+	//		results = append(results, result)
+	//	}
+	//}
 
 	for numItems == nil || len(results) < *numItems {
 		if cursor.TryNext(ctx) {
@@ -464,22 +469,80 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 			if err = cursor.Decode(&result); err != nil {
 				return nil, err
 			}
+			//bs, err := json.Marshal(result)
+			//if err == nil {
+			//	println("CHECKING AN ITEM: " + string(bs)) // TODO: del
+			//}
 			// If item is permissioned, ensure the user can read it
 			permedItem, ok := interface{}(result).(Permissioned)
 			if ok {
+				acl := permedItem.Permissions()
 				// If user cannot read or write, do not add
-				if permedItem.Permissions().HighestPermFor(user) == nil {
+				if acl.HighestPermFor(user) == nil {
+					// TODO: println("skipping entry, user does not have permission!") // TODO: del
 					// Skip this entry
 					continue
 				}
 			}
+			//if !allowDisposed { // TODO: reenable if disposed isnt filtered out in query
+			//	disposableItem, ok := interface{}(result).(Disposable)
+			//	if ok && disposableItem.DisposalInfo() != nil {
+			//		// Skip this entry
+			//		continue
+			//	}
+			//}
 
 			results = append(results, result)
 			continue
 		}
 		cursorClosed := cursor.ID() == 0
-		if cursorClosed && len(results) == 0 {
-			return results, mongo.ErrNoDocuments
+		if cursorClosed {
+			if len(results) == 0 {
+				return results, mongo.ErrNoDocuments
+			}
+		}
+		if err = cursor.Err(); err != nil {
+			return nil, err
+		}
+		if cursorClosed {
+			break
+		}
+	}
+	return results, nil
+}
+func getUserProjectsFromCursor(ctx context.Context, cursor *mongo.Cursor, numItems *int) ([]*Project, error) {
+	defer cursor.Close(ctx)
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	results := []*Project{}
+	if numItems != nil {
+		results = make([]*Project, 0, *numItems)
+	} else {
+		if user.IsAdmin() {
+			err = cursor.All(ctx, &results) // TODO: only results size???
+			return results, err
+		}
+	}
+
+	for numItems == nil || len(results) < *numItems {
+		if cursor.TryNext(ctx) {
+			var result *Project
+			if err = cursor.Decode(&result); err != nil {
+				return nil, err
+			}
+			if result.Private && !result.Perms.ForUser(user.Email).CanRead() {
+				continue
+			}
+			results = append(results, result)
+			continue
+		}
+		cursorClosed := cursor.ID() == 0
+		if cursorClosed {
+			if len(results) == 0 {
+				return results, mongo.ErrNoDocuments
+			}
 		}
 		if err = cursor.Err(); err != nil {
 			return nil, err
@@ -492,8 +555,8 @@ func getCollectionItemsFromCursor[T CollectionItem](ctx context.Context, cursor 
 }
 
 type picWithNotesForm struct {
-	Time UnixTime `json:"time"`
-	Img  string   `json:"img"`
+	Time unix.Time `json:"time"`
+	Img  string    `json:"img"` // Same as Location on PicWithNotes
 	NotesUpdateField
 }
 
@@ -505,10 +568,10 @@ func (pwn picWithNotesForm) convert() PicWithNotes {
 }
 
 type contamForm struct {
-	Time      UnixTime `json:"time"`
-	Confirmed bool     `json:"confirmed"`
-	Bacteria  bool     `json:"bacteria"`
-	Mold      bool     `json:"mold"`
+	Time      unix.Time `json:"time"`
+	Confirmed bool      `json:"confirmed"`
+	Bacteria  bool      `json:"bacteria"`
+	Mold      bool      `json:"mold"`
 	NotesUpdateField
 	Location *string `json:"location,omitempty"` // MAY OR MAY NOT EXIST ON RESPONSE
 }
@@ -557,6 +620,46 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 	return notesWereModified(existing.Notes, updated.Notes)
 }
 
+const IDfld = "_id"
+
+func BsonFindFilter(key string, value any) bson.D {
+	return bson.D{bson.E{Key: key, Value: value}}
+}
+func BsonFindByIdFilterOrdered[T CollectionId](id T) bson.D { // TODO: ensure ok
+	return bson.D{bson.E{Key: IDfld, Value: id}}
+}
+
+func BsonFindByIdFilterUnordered[T CollectionId](id T) bson.M { // TODO: ensure ok
+	return bson.M{IDfld: id}
+}
+
+func BsonItemsAfterFilter(key string, prevValue any) bson.M { // TODO: use and validate ok
+	return bson.M{key: bson.M{"$gt": prevValue}}
+}
+func BsonItemsStartingWithFilter(key string, prevValue any) bson.M { // TODO: use and validate ok
+	return bson.M{key: bson.M{"$gte": prevValue}}
+}
+func BsonItemsUntilIncludingFilter(key string, prevValue any) bson.M { // TODO: use and validate ok
+	return bson.M{key: bson.M{"$lte": prevValue}}
+}
+func BsonItemsUntilExcludingFilter(key string, prevValue any) bson.M { // TODO: use and validate ok
+	return bson.M{key: bson.M{"$lt": prevValue}}
+}
+func BsonPredicateFilter(predicate string, value any) bson.M { // TODO: use and validate ok
+	/* Predicate options:
+	https://www.mongodb.com/docs/manual/reference/mql/query-predicates/
+	"$X" where X in one of the following arrays.
+		comparison: [eq, ne, gt,gte,lt,lte, in, nin]
+		logical: [and, nor, not, or]
+		array queries: [all, elemMatch, size]
+		bitwise: [bitsAllClear,bitsAllSet,bitsAnyClear,bitsAnySet]
+		data types:  [exists, type]
+		misc: [expr, jsonSchema, mod, regex, where]
+		geo: [geoIntersects, geoWithin, near, nearSphere]
+	*/
+	return bson.M{predicate: value}
+}
+
 //func setUnsetUnequalPointers[T comparable](key string, update *T, current *T, modsIn bson.D) bson.D {
 //	if (update == nil && current == nil) || ((update != nil && current != nil) && (*(update)) == (*(current))) {
 //		return modsIn
@@ -569,108 +672,28 @@ func compareImageUpdate(updated picWithNotesForm, existing PicWithNotes) (equal 
 //	}
 //	return out
 //}
-//
-//func WithImageChanges(currentMods bson.D, fieldName string, outImages SplitEntries[picWithNotesForm, PicWithNotes], currentPics []PicWithNotes) (bson.D, error) {
-//	mods, err := WithExistingEntriesChange(currentMods, fieldName, outImages.Existing, currentPics, compareImageUpdate)
-//	if err != nil {
-//		return bson.D{}, err
-//	}
-//	mods = append(mods, pushToArray(fieldName, outImages.New...)...)
-//	return mods, nil
-//}
-//
-//func WithContamChanges(currentMods bson.D, fieldName string, outContams SplitEntries[contamForm, Contamination], currentContams []Contamination) (bson.D, error) {
-//	mods, err := WithExistingEntriesChange(currentMods, fieldName, outContams.Existing, currentContams, compareContamUpdate)
-//	if err != nil {
-//		return bson.D{}, err
-//	}
-//	mods = append(mods, pushToArrayInline(fieldName, outContams.New...)...)
-//	return mods, nil
-//}
-
-//// WithEntriesChanges Is to be used with notes, and things formatted like them (no image-holders)
-//func WithEntriesChanges[T any](currentMods bson.D, id string, updatedEntries AllEntries[T], existing []T, areEqual func(a, b T) bool) (mods bson.D, err error) {
-//	mods, err = WithExistingEntriesChange(currentMods, id, updatedEntries.Existing, existing, areEqual)
-//	if err != nil {
-//		return nil, err
-//	}
-//	// add new items
-//	mods = append(mods, pushToArrayInline("notes", updatedEntries.New...)...)
-//	return mods, nil
-//}
-
-//// WithExistingEntriesChange is to be used with Images, Contams, etc
-//func WithExistingEntriesChangeNew[T, U any](upd *Mods, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) *Mods {
-//	if upd.err != nil {
-//		return upd
-//	}
-//	// INCOMING SIZE MUST BE THE SAME!
-//	if len(existing) != len(updatedExisting) {
-//		upd.err = errors.New("incorrect amount of incoming existing " + id + "s")
-//		return upd
-//	}
-//	// Do changes/removals
-//	for i, newExisting := range updatedExisting {
-//		indexKey := fmt.Sprintf(`%s.%d`, id, i)
-//		if newExisting.Disabled {
-//			upd.Unset(indexKey) // TODO: value of 1 was here?
-//			//removals = append(removals, bson.E{currentKey, 1}) // TODO: make sure ok
-//			continue
-//		}
-//		if !areEqual(newExisting.Data, existing[i]) {
-//			upd.Set(indexKey, newExisting.Data)
-//		}
-//	}
-//	// TODO: Changes (sets) first if exist (not sure if possible the way we do it)
-//	// TODO: Removals second if exist
-//	return upd
-//}
-
-//// WithExistingEntriesChange is to be used with Images, Contams, etc
-//func WithExistingEntriesChange[T, U any](currentMods bson.D, id string, updatedExisting []Data[T], existing []U, areEqual func(a T, b U) bool) (mods bson.D, err error) {
-//	mods = currentMods
-//	// INCOMING SIZE MUST BE THE SAME!
-//	if len(existing) != len(updatedExisting) {
-//		err = errors.New("incorrect amount of incoming existing " + id + "s")
-//	}
-//	// Do changes
-//	removals := []bson.E{}
-//	chgs := []bson.E{}
-//	for i, newExisting := range updatedExisting {
-//		if newExisting.Disabled {
-//			removals = append(removals, bson.E{fmt.Sprintf(`%s.%d`, id, i), 1})
-//			continue
-//		}
-//		if !areEqual(newExisting.Data, existing[i]) {
-//			chgs = append(chgs, bson.E{fmt.Sprintf(`%s.%d`, id, i), newExisting.Data})
-//		}
-//	}
-//	// Changes first if exist
-//	if len(chgs) > 0 {
-//		mods = append(mods, bson.E{"$set", chgs})
-//	}
-//	// Removals second if exist
-//	if len(removals) > 0 {
-//		mods = append(mods, bson.E{"$unset", removals})
-//	}
-//	return mods, nil
-//}
 
 func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, error) {
 	// Get field bytes as an image
-	println("decoding jpg")
-	img, err := jpeg.Decode(p)
+	img, _, err := imageorient.Decode(p)
+	// If using mac screenshots (cmd+shift+5), you'll need to do this:
+	// defaults write com.apple.screencapture type jpg; killall SystemUIServer
 	if err != nil {
-		println("decoding png")
-		img, err = png.Decode(p)
-		if err != nil {
-			http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
-			return nil, err
-		}
+		http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
+		return nil, err
 	}
+	//img, err := jpeg.Decode(p)
+	//if err != nil {
+	//	println("decoding png")
+	//	img, err = png.Decode(p)
+	//	if err != nil {
+	//		http.Error(w, "failed to read image as either jpeg as png! "+err.Error(), http.StatusBadRequest)
+	//		return nil, err
+	//	}
+	//}
 	buf := new(bytes.Buffer)
 	println("re-encoding as jpg")
-	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG??????
+	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG?????? maybe webp?????
 	if err != nil {
 		http.Error(w, "failed to encode image to save! "+err.Error(), http.StatusInternalServerError)
 		return nil, err
@@ -680,19 +703,19 @@ func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, er
 
 func handleWriteErr(err error, w http.ResponseWriter) {
 	if err != nil {
-		println("failed to write! " + err.Error()) // TODO: SOMETHING HERE!
+		env.LogAlways("failed to write! " + err.Error())
 	}
 }
 
 func handleFileDeleteErr(err error) {
-	println("failed to delete file! " + err.Error()) // TODO: SOMETHING HERE!
+	env.LogAlways("failed to delete file! " + err.Error())
 }
 
 var (
 	testEntryStringId    = "TestEntry"
 	exAltId              = altCollIdForint(0)
 	exFruitId            = mainCollIdForint(idTestFruit)
-	exampleTime          = unixTimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
+	exampleTime          = unix.TimeFor(time.Date(2024, 12, 29, 0, 0, 0, 0, time.UTC))
 	exReqTimeField       = RequiredTimeField{exampleTime}
 	exampleSpecies       = "Beech"
 	exampleSubspecies    = utils.Pointer("Brown Beech")
@@ -737,22 +760,25 @@ var (
 			exProjRead:  false,
 			exProjWrite: true,
 		},
-		BlanketPerm: false,
+		BlanketPerm: RWPermWrite(),
 	}
 	testAcl = ACL{
-		// TODO: ensure ok
 		Users: map[string]bool{
-			exUserNoProjectRead:  false,
-			exUserNoProjectWrite: true,
+			//testUserEmailGoogleNormal:     false, // TODO: fix for correct user! may be 2409?
+			//testUserEmailSelf: true,
+			testUserEmailPAA: true,
+			testUserEmailPWA: true,
+			testUserEmailPRA: false,
+			// testUserEmailPNA: nil,
 		},
 		Projects: map[projectName]bool{
 			exProjRead:  false,
 			exProjWrite: true,
 		},
-		BlanketPerm: false,
+		BlanketPerm: RWPermRead(),
 	}
 	exBool                     = utils.Pointer(true)
-	exPicLoc                   = "test.jpg" // TODO: make sure this exists
+	exPicLoc                   = "test.jpg" // Uses a picture from another site...
 	exPicWithNotesLessLocation = PicWithNotesLessLocation{
 		RequiredTimeField: exReqTimeField,
 		NotesField:        NotesField{exampleNotes()},
@@ -793,25 +819,20 @@ func decodeItem[T any](item *T, encoded *mongo.SingleResult) (err error) {
 	return
 }
 
-func CollectionFor(item CollectionItem, db *mongo.Database) *mongo.Collection {
-	return db.Collection(item.CollectionName())
-}
-func Refresh[T CollectionItem](ctx context.Context, db *mongo.Database, item *T) error {
-	return CollectionFor(*item, db).FindOne(ctx, bson.D{{Key: "_id", Value: (*item).IdValue( /* TODO: PROBABLY WONT WORK*/ )}}).Decode(item)
-}
-
-func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
+func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
+	coll := DbFrom(ctx).Collection(existing.CollectionName())
 	user, err := GetAuthInfo(ctx)
 	if err != nil {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if user.isGuest() {
-		dbErr(w, "guests cannot edit", http.StatusForbidden)
-		return
-	}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
+	// dont allow user to remove their own perms!
+	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
+		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return
 	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
@@ -820,8 +841,44 @@ func finishMainCollItemUpdate[T MainCollectionItem](ctx context.Context, w http.
 		return
 	}
 	upd, err := modsFor(existing, aclField)
-	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err) // TODO: switch to inTxn?
 	return
+}
+
+// TODO: use or delete?
+func finishMainCollItemUpdateInTxn[T MainCollectionItem](ctx mongo.SessionContext, w http.ResponseWriter, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) (T, error) {
+	db := mongo.SessionFromContext(ctx).Client().Database(dbName)
+	coll := db.Collection(existing.CollectionName())
+	user, err := GetAuthInfo(ctx)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return existing, err
+	}
+	if !user.HasPermissionToEdit(existing) {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return existing, err
+	}
+	// dont allow user to remove their own perms!
+	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
+		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
+		return existing, err
+	}
+	aclField, err := reqPerms.AclForUser(ctx, user)
+	if err != nil {
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return existing, err
+	}
+	upd, err := modsFor(existing, aclField)
+	if err != nil {
+		dbErr(w, "err in modsFor: "+err.Error(), http.StatusInternalServerError)
+		return existing, err
+	}
+	err = handleUpdateModsInTxn(ctx, coll, existing, existing.DbId(), upd, err)
+	if err != nil {
+		dbErr(w, "failed to update: "+err.Error(), http.StatusInternalServerError)
+		return existing, err
+	}
+	return existing, err
 }
 
 func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, modsFor func(T, AclField) (bson.D, error), existing T, reqPerms PermsOnRequest) {
@@ -830,12 +887,12 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if user.isGuest() {
-		dbErr(w, "guests cannot edit", http.StatusForbidden)
+	if !user.HasPermissionToEdit(existing) {
+		dbErr(w, "user not authorized to edit this entry", http.StatusUnauthorized)
 		return
 	}
-	if !user.HasPermissionToEdit(existing) {
-		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
+		http.Error(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return
 	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
@@ -844,7 +901,7 @@ func finishAltCollItemUpdate[T PermissionedAltCollectionItem[AlternateCollection
 		return
 	}
 	upd, err := modsFor(existing, aclField)
-	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err) // TODO: switch to inTxn?
 	return
 }
 
@@ -854,12 +911,13 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if user.isGuest() {
-		dbErr(w, "guests cannot edit", http.StatusForbidden)
-		return
-	}
 	if !user.HasPermissionToEdit(existing) {
 		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
+	// dont allow user to remove their own perms!
+	if !reqPerms.AsACL().HighestPermFor(user).CanWrite() {
+		dbErr(w, "user cannot remove their own ability to write", http.StatusBadRequest)
 		return
 	}
 	aclField, err := reqPerms.AclForUser(ctx, user)
@@ -868,6 +926,237 @@ func finishStringIdAltCollItemUpdate[T PermissionedAltCollectionItem[string]](ct
 		return
 	}
 	upd, err := modsFor(existing, aclField)
-	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err) // TODO: switch to inTxn?
 	return
 }
+
+func ReadSimpleStructuredBody[T any](r *http.Request, w http.ResponseWriter, req *T) error {
+	defer r.Body.Close()
+	bs, err := io.ReadAll(r.Body)
+	if err != nil {
+		println("failed to read body: " + err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	if err = json.Unmarshal(bs, &req); err != nil {
+		println("bad body format: " + string(bs))
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	return nil
+}
+
+func MarshalAndReturn(ctx context.Context, w http.ResponseWriter, toReturn any) {
+	bs, err := json.Marshal(toReturn)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	env.LogIfDev(ctx, "sending response item: "+string(bs))
+	_, err = w.Write(bs)
+	if err != nil {
+		handleWriteErr(err, w)
+	}
+}
+
+func ImportFinalPerms(ctx context.Context, spec string, subspec *string) (ACL, error) {
+	var finalPerms ACL
+	sp, subsp, err := getSpeciesAndSubspecies(ctx, spec, subspec)
+	if err != nil {
+		return ACL{}, errors.New("failed to get species or subspecies: " + err.Error())
+	}
+	if subsp != nil {
+		finalPerms = subsp.DefaultAcl.Clone()
+	} else {
+		finalPerms = sp.DefaultAcl.Clone()
+	}
+	userEmail := GetUserEmail(ctx)
+	if finalPerms.Users == nil {
+		finalPerms.Users = map[string]bool{}
+	}
+	finalPerms.Users[userEmail] = true
+
+	return finalPerms, nil
+}
+
+func TernaryPtr[T any](val *bool, ifTrue, ifFalse, ifNil T) T {
+	if val == nil {
+		return ifNil
+	}
+	if *val {
+		return ifTrue
+	}
+	return ifFalse
+}
+
+func aliasesFilter(brandNewAliases []string) bson.M {
+	return bson.M{ // TODO: probably super inefficient, so use sparingly in spec, subspec, and subRec
+		"$or": bson.A{
+			bson.M{"_id": bson.M{"$in": brandNewAliases}},     // Matches if _id is in the list
+			bson.M{"aliases": bson.M{"$in": brandNewAliases}}, // Matches if any array item is in the list // TODO: ensure ok
+		},
+	}
+}
+
+// TODO: validate working
+func validateAliasesUnused(ctx context.Context, coll *mongo.Collection, existingName string, existingAliases, updatedAliases []string) error {
+	newAliases := utils.SetFrom(updatedAliases...)
+	for _, al := range existingAliases {
+		newAliases.Remove(al)
+	}
+	if newAliases.Contains(existingName) {
+		return errors.New("aliases cannot match name")
+	}
+	if len(newAliases) == 0 {
+		return nil // No alias changes, return early successfully
+	}
+	brandNewAliases := newAliases.ToSlice()
+	if err := coll.FindOne(ctx, aliasesFilter(brandNewAliases)).Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			// Not found, success! all unused aliases
+			return nil
+		}
+		return err
+	}
+	return errors.New("at least one entry contained a new alias the user was trying to add")
+}
+
+// TODO: validate working
+func validateAliasesNameUnused(ctx context.Context, coll *mongo.Collection, newName string, aliases []string) error {
+	newAliases := utils.SetFrom(aliases...)
+	newAliases.Add(newName)
+	if len(newAliases) == 0 {
+		return nil // No alias changes, return early successfully
+	}
+	brandNewAliases := newAliases.ToSlice()
+
+	if err := coll.FindOne(ctx, aliasesFilter(brandNewAliases)).Err(); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			// Not found, success! all unused aliases
+			return nil
+		}
+		return err
+	}
+	return errors.New("at least one entry contained a new alias the user was trying to add")
+}
+
+type UndisposedItems struct {
+	Items      []MainCollectionId
+	EntryTypes []string
+}
+
+// TODO: use or del?
+func undisposedItemsCutoffs(collectionName string) unix.Time {
+	now := time.Now()
+	yrs, mos, dys := undisposedItemsCutoffDeltas(collectionName)
+	cutoffDate := now.AddDate(yrs, mos, dys)
+	return unix.Time(cutoffDate.UnixMilli())
+}
+func undisposedItemsCutoffDeltas(collectionName string) (years, months, days int) {
+	switch collectionName {
+	case BagsCollectionName:
+		return 0, -6, 0 // 6mo
+	case FruitsCollName:
+		return 0, 0, -14 // 2wks
+	case FruitingChamberCollectionName:
+		return 0, -6, 0 // 6mo
+	case GrainJarCollectionName:
+		return 0, -6, 0 // 6mo
+	case LCCollectionName:
+		return -1, 0, 0 // 1yr
+	case LcSyringeCollectionName:
+		return -1, 0, 0 // 1yr
+	case MssCollectionName:
+		return -1, 0, 0 // 1yr
+	case PlatesCollectionName:
+		return 0, -6, 0 // 6mo
+	case PlugsCollectionName:
+		return -1, 0, 0 // 1yr
+	case SlantsCollectionName:
+		return -1, 0, 0 // 1yr
+	case SporePrintCollectionName:
+		return -2, 0, 0 // 2yr
+	case SporeSwabCollectionName:
+		return -2, 0, 0 // 2yr
+	case StasisTubeCollectionName:
+		return -2, 0, 0 // 2yr
+	case WaterJarsCollectionName:
+		return -1, 0, 0 // 1yr
+	default:
+		panic("invalid item type for cutoff")
+	}
+}
+
+//func getOldUndisposedItems(ctx context.Context, howOldToConsider time.Duration) (items []MainCollectionItem, types []string, startIndex []int, err error){
+//	items = []MainCollectionItem{}
+//	types = []string{}
+//	startIndex = []int{}
+//	ct := 0
+//	for _, baseItem := range []MainCollectionItem{&Bag{},&Fruit{},&FruitingChamber{},&GrainJar{},&LiquidCulture{},&LcSyringe{},&MSS{},&Plate{},&PlugsJar{},&Slant{},&SporeSwab{}, &SporePrint{},&StasisTube{},&WaterJar{}}{
+//		entryType := baseItem.EntryType()
+//		foundSome := false
+//		for item, err := range getOldUndisposedItemsSingleType(ctx, baseItem){
+//			if err == nil {
+//				if !foundSome {
+//					startIndex = append(startIndex, ct)
+//					types = append(types, entryType)
+//				} else {
+//					foundSome = true
+//				}
+//
+//			} else {
+//				return nil, []string{entryType}, nil, err
+//			}
+//			items = append(items, item)
+//		}
+//	}
+//	return items, types, startIndex, nil
+//}
+
+//func mongoAnd(query1, query2, query3 bson.D) bson.D { // TODO: USE THIS!
+//	return bson.D{{Key: "$and", Value: bson.A{
+//		query1, query2, query3,
+//	}}}
+//}
+//func mongoAndB(queries ...bson.E) bson.D { // TODO: USE THIS!
+//	return bson.D(queries)
+//}
+//
+//func mongoOr(query1, query2, query3 bson.D) bson.D { // TODO: USE THIS!
+//	return bson.D{{Key: "$or", Value: bson.A{
+//		query1, query2, query3,
+//	}}}
+//}
+//func mongoOrB(queries ...bson.D) bson.D { // TODO: USE THIS!
+//	return bson.D{{Key: "$or", Value: queries}}
+//}
+
+// TODO: consider using
+//func getOldUndisposedItemsSingleType[T MainCollectionItem](ctx context.Context, exampleItem T) iter.Seq2[T, error] {
+//	cutoffTime := undisposedItemsCutoffs(exampleItem.CollectionName())
+//	filter := bson.M{
+//		"disposed":     bson.M{"$exists": false},
+//		"creationDate": bson.M{"$lt": cutoffTime},
+//	} // TODO: validate working!
+//	return func(yield func(item T, err error) bool) {
+//		curs, err := DbFrom(ctx).Collection(exampleItem.CollectionName()).Find(ctx, filter)
+//		if err != nil {
+//			yield(exampleItem, err)
+//			return
+//		}
+//		for curs.Next(ctx) {
+//			var item T
+//			if err = curs.Decode(&item); err != nil {
+//				yield(exampleItem, err)
+//				return
+//			} else {
+//				yield(item, nil)
+//			}
+//		}
+//		if err = curs.Err(); err != nil {
+//			yield(exampleItem, err)
+//			return
+//		}
+//	}
+//	// TODO: go get bags, fruits, fruiting chambers, jars, lcs, lcSyringes, mss, plate, plugs, slant, sporePrint, sporeSwab, stasisTube, waterJar
+//}

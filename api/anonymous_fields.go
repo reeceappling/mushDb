@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"math"
 	"slices"
 	"time"
@@ -47,6 +48,7 @@ type AlternateCollectionOptionalParentField struct {
 	Parent *AlternateCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
 }
 
+// WetnessField contains an int 0-10. 5 is perfect, 0 is dry, 10 is soaked.
 type WetnessField struct {
 	Wetness *int `bson:"wetness,omitempty" json:"wetness,omitempty"` // nil==unknown, 0== very dry, 10==veryWet, 5==perfect fieldCapacity, normal range 4-6
 }
@@ -152,19 +154,26 @@ type ParentTypeField struct {
 }
 
 type CreationDateField struct {
-	CreationDate UnixTime `bson:"creationDate" json:"creationDate"`
+	CreationDate unix.Time `bson:"creationDate" json:"creationDate"`
 }
 
 type DisposedField struct {
-	Disposed *UnixTime `bson:"disposed,omitempty" json:"disposed,omitempty"`
+	Disposed *unix.Time `bson:"disposed,omitempty" json:"disposed,omitempty"`
 }
 
-func (df DisposedField) DisposalInfo() *UnixTime {
+func (s DisposedField) RequireNotDisposed() error {
+	if s.Disposed != nil {
+		return errors.New("cannot be disposed")
+	}
+	return nil
+}
+
+func (df DisposedField) DisposalInfo() *unix.Time {
 	return df.Disposed
 }
 
 type Disposable interface {
-	DisposalInfo() *UnixTime
+	DisposalInfo() *unix.Time
 }
 
 type GenerationsFields struct {
@@ -184,16 +193,25 @@ type GenSporeField struct { // only used on fruit and embedded in GenerationsFie
 }
 
 type LastUpdatedField struct {
-	LastUpdated UnixTime `bson:"lastUpdated" json:"lastUpdated"`
-}
-
-func LastUpdatedFieldForNow() LastUpdatedField {
-	return LastUpdatedField{unixTimeForNow()}
+	LastUpdated unix.Time `bson:"lastUpdated" json:"lastUpdated"`
 }
 
 type NotesField struct {
 	Notes []Note `bson:"notes,omitempty" json:"notes,omitempty"`
 }
+
+func (field NotesField) EqualTo(other NotesField) bool {
+	if len(field.Notes) != len(other.Notes) {
+		return false
+	}
+	for i, _ := range field.Notes {
+		if !field.Notes[i].EqualTo(other.Notes[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 type HasNotesField interface {
 	GetNotes() []Note
 }
@@ -205,7 +223,7 @@ func (field NotesField) GetNotes() []Note {
 func (field NotesField) withAllTimesSetTo(t time.Time) NotesField {
 	return NotesField{sliceutils.Map(field.Notes, func(n Note) Note {
 		return Note{
-			RequiredTimeField: newRequiredTimeField(unixTimeFor(t)),
+			RequiredTimeField: newRequiredTimeField(unix.TimeFor(t)),
 			Note:              n.Note,
 		}
 	})}
@@ -221,6 +239,13 @@ type PressureCookedTouchingWaterOptionalField struct {
 
 type KnownFruitableField struct {
 	KnownFruitable *bool `bson:"knownFruitable,omitempty" json:"knownFruitable,omitempty"` // set on transfer in, or once fruited
+}
+
+func (f KnownFruitableField) RequireUnknownFruitable() error {
+	if f.KnownFruitable != nil {
+		return errors.New("knownFruitable must be unpopulated")
+	}
+	return nil
 }
 
 func (kff KnownFruitableField) knownToBeFruitable() *bool {

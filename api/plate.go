@@ -1,5 +1,7 @@
 package api
 
+//go:generate goGenerator/buildAndGenerate.sh
+
 // TODO: newFromAgarBatch (post-PC) typical
 
 import (
@@ -8,7 +10,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -16,11 +21,11 @@ import (
 	"slices"
 )
 
-// TODO: sometimes needed for transfers
-// TODO: needed for clones
+// sometimes needed for transfers
+// needed for clones
 
 type CondensationCoverageAtSealTimeField struct {
-	CondensationCoverageAtSealTime *int `bson:"condensationCoverageAtSealTime,omitempty" json:"condensationCoverageAtSealTime,omitempty"` // TODO: (0-100), HANDLE EVERYWHERE, NEW!
+	CondensationCoverageAtSealTime *int `bson:"condensationCoverageAtSealTime,omitempty" json:"condensationCoverageAtSealTime,omitempty"` // (0-100)
 }
 
 func (cc CondensationCoverageAtSealTimeField) condensationCoverage() *int {
@@ -29,6 +34,17 @@ func (cc CondensationCoverageAtSealTimeField) condensationCoverage() *int {
 
 type hasCondensCov interface {
 	condensationCoverage() *int
+}
+type CondensationCoverageAtPourTimeField struct {
+	CondensationCoverageAtPourTime *int `bson:"condensationCoverageAtPourTime,omitempty" json:"condensationCoverageAtPourTime,omitempty"` // 0-100 where 100 is ideal and default
+}
+
+func (cc CondensationCoverageAtPourTimeField) condensationCoveragePourTime() *int {
+	return cc.CondensationCoverageAtPourTime
+}
+
+type hasCondensCovPourTime interface {
+	condensationCoveragePourTime() *int
 }
 type PourCoverageField struct {
 	PourCoverage *int `bson:"pourCoverage,omitempty" json:"pourCoverage,omitempty"` // PourCoverage (0-100) (or nil for imports)
@@ -42,7 +58,7 @@ type hasPourCoverage interface {
 	pourCoverage() *int
 }
 type WetAtCooledTimeField struct {
-	WetAtCooledTime *bool `bson:"wetAtCooledTime,omitempty" json:"wetAtCooledTime,omitempty"` // WetAtCooledTime TODO: (nil==unknown or imported, false==known and not wet, true=known and wet), HANDLE EVERYWHERE, NEW!
+	WetAtCooledTime *bool `bson:"wetAtCooledTime,omitempty" json:"wetAtCooledTime,omitempty"` // WetAtCooledTime (nil==unknown or imported, false==known and not wet, true=known and wet)
 }
 
 func (f WetAtCooledTimeField) wetAtCool() *bool {
@@ -53,7 +69,7 @@ type hasWact interface {
 	wetAtCool() *bool
 }
 type AgarOnOutsideAtPourTimeField struct {
-	AgarOnOutsideAtPourTime *bool `bson:"agarOnOutsideAtPourTime,omitempty" json:"agarOnOutsideAtPourTime,omitempty"` // Only when mispours happen with plates above this one // TODO: HANDLE EVERYWHERE, NEW!
+	AgarOnOutsideAtPourTime *bool `bson:"agarOnOutsideAtPourTime,omitempty" json:"agarOnOutsideAtPourTime,omitempty"` // Only when mispours happen with plates above this one
 }
 
 func (f AgarOnOutsideAtPourTimeField) agarOutside() *bool {
@@ -67,8 +83,9 @@ type hasAgarOutside interface {
 type Plate struct {
 	MainCollectionIdField `bson:"inline"`
 	AgarBatchField        `bson:"inline"` // will be empty for preexisting
-	// TODO: do we want PC run on here too? and on others like it?
+	// TODO: do we want PC run on here too? and on others like it? (probably not due to data bloat?). we can use the agar batch to get the pc run or vise versa.
 	CreationDateField                   `bson:"inline"`
+	CondensationCoverageAtPourTimeField `bson:"inline"` // Percentage of condensation surface area coverage at pour time
 	CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
 	PourCoverageField                   `bson:"inline"` // Percentage of bottom surface area agar coverage
 	WetAtCooledTimeField                `bson:"inline"` // Wet when initially cooled? True, false, or unknown
@@ -78,18 +95,22 @@ type Plate struct {
 	InnocField                          `bson:"inline"`
 	GenerationsFields                   `bson:"inline"`
 	TransfersOutField                   `bson:"inline"`
-	ParentTypeField                     `bson:"inline"` // nil == mainCollectionType, can also be MSS or clone! // TODO: INDEX????
+	ParentTypeField                     `bson:"inline"` // nil == imported, otherwise entryType, what happens with clones?!
 	MainCollectionOptionalParentField   `bson:"inline"`
 	PicsField                           `bson:"inline"`
 	ContaminationsField                 `bson:"inline"`
 	KnownFruitableField                 `bson:"inline"`
-	SaleField                           `bson:"inline"`
+	SaleField                           `bson:"inline"` // TODO: how to set not sellable? not ready for sale? ready for sale? returned? sold? resold?
 	DisposedField                       `bson:"inline"`
 	MostRecentImageField                `bson:"inline"`
 	NotesField                          `bson:"inline"`
 	LastUpdatedField                    `bson:"inline"`
 	AclField                            `bson:"inline"`
 }
+
+//func (p Plate) Blank() CollectionItem {
+//	return &Plate{}
+//}
 
 func (p Plate) IdValue() any {
 	return p.Id.dbIdStr() // TODO: ensure ok
@@ -115,26 +136,35 @@ func (p Plate) generation() (sinceSpore *Generation, sinceSporeOrClone *Generati
 	return p.GenSinceSpore, p.GenSinceFruitOrSpore
 }
 
+func (p Plate) Innoculatable() error {
+	return errors.Join(
+		p.RequireNoSpecies(),
+		p.RequireNoSubspecies(),
+		p.RequireNotDisposed(),
+		p.RequireUnsold(),
+		p.RequireUnknownFruitable(),
+		p.RequireNoInnoculation())
+}
+
 func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
 	if err != nil {
 		return err
 	}
-	// TODO: if xfer has a pic on it for the to, can we add it to the child?
 	upd, err := xfer.
-		PicsModsForChild().
+		PicsModsForChild(p).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(PlatesCollectionName).UpdateByID(ctx, p.Id, upd)
 	if err != nil {
@@ -147,10 +177,10 @@ func (p Plate) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from ge
 }
 
 func initializePlates(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(PlatesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("agarBatch", "agarBatch", false, true, false),
+		newSimpleIndex("agarBatch", "agarBatch", false, true, false), // Required index for batch deletes
 		creationDateIndexModel,
 		//newSimpleIndex("condensationCoverageAtSealTime", "condensationCoverageAtSealTime", true, true, false),
 		//newSimpleIndex("pourCoverage", "pourCoverage", false, true, false),
@@ -165,8 +195,8 @@ func initializePlates(ctx context.Context) error {
 		//newSimpleIndex("parent", "parent", false, true, false),
 		//newSimpleIndex("parentType", "parentType", false, true, false),
 		//
-		////Pics (no index)
-		//// TODO: Contams
+		// Pics (no index)
+		// Contams?
 		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		//saleIndexModel,
 		//disposedIndexModel,
@@ -175,53 +205,57 @@ func initializePlates(ctx context.Context) error {
 		lastUpdatedIndexModel,
 		projectsIndexModel,
 	})
-	if err != nil {
-		return err
-	}
-	testPlateIds := []int{idTestPlateBlanketRead, idTestPlateUserWrite,
-		idTestPlateUserRead,
-		idTestPlateProjectWrite,
-		idTestPlateProjectRead,
-		idTestPlateUserWriteProjRead,
-		idTestPlateUserOutsideProject,
-	}
-	platesMade := map[Base58Str]string{}
-	testPlates := []*Plate{}
-	// If test plate does not exist, then create it
-	firstPlate := basicTestPlate()
-	testId := firstPlate.Id
-	platesMade[testId.AsBase58()] = "test plate with id 1"
-	testPlates = append(testPlates, &firstPlate)
-	emptyPlate := emptyTestPlate()
-	emptyTestId := emptyPlate.Id
-	platesMade[emptyTestId.AsBase58()] = "test empty plate"
-
-	testPlates = append(testPlates, &emptyPlate)
-	for i, permInt := range testPlateIds {
-		id := mainCollIdForint(permInt)
-		platesMade[id.AsBase58()] = testAclStrings[i]
-		var tempCoverage = &i
-		var tempBool = utils.Pointer(false)
-		switch i {
-		case 1:
-			tempCoverage = nil
-			tempBool = nil
-		case 2:
-			tempBool = utils.Pointer(true)
-		default:
-			// Do nothing different
+	return env.IfNotProd(ctx, func() error {
+		if err != nil {
+			return err
 		}
-		newTestPlate := testPlateFor(id, &exAltId, exampleTime, tempCoverage, tempCoverage, tempBool, tempBool,
-			&testEntryStringId, &testEntryStringId, &exAltId, &exGenSinceSpore, &exGenSinceFruitSpore, exAlts,
-			&exParentType, &testId, exPics, exContams, exBool, &exAltId, &exampleTime, &exPics[0], exampleNotes(),
-			exampleTime, testAcls[i])
-		testPlates = append(testPlates, &newTestPlate)
-	}
-	println("Built-in plates entries:")
-	for tempId, name := range platesMade {
-		println(tempId, name)
-	}
-	return addTestMainEntries(ctx, testPlates...)
+		testPlateIds := [6]int{
+			idTestPlateBlanketWrite,
+			idTestPlateBlanketRead,
+			idTestPlateAdminOnly,
+			idTestPlateProjectWrite,
+			idTestPlateProjectRead,
+			idTestPlateUserOutsideProject,
+		}
+		platesMade := map[Base58Str]string{}
+		testPlates := []*Plate{}
+		// If test plate does not exist, then create it
+		firstPlate := basicTestPlate()
+		testId := firstPlate.Id
+		platesMade[testId.AsBase58()] = "test plate with id 1"
+		testPlates = append(testPlates, &firstPlate)
+		emptyPlate := emptyTestPlate()
+		emptyTestId := emptyPlate.Id
+		platesMade[emptyTestId.AsBase58()] = "test empty plate"
+
+		testPlates = append(testPlates, &emptyPlate)
+		for i, permInt := range testPlateIds {
+			id := mainCollIdForint(permInt)
+			platesMade[id.AsBase58()] = testAclStrings[i]
+			var tempCoverage = &i
+			var tempBool = utils.Pointer(false)
+			switch i {
+			case 1:
+				tempCoverage = nil
+				tempBool = nil
+			case 2:
+				tempBool = utils.Pointer(true)
+			default:
+				// Do nothing different
+			}
+			// Project-user + Project-entry permissions test plates
+			newTestPlate := testPlateFor(id, &exAltId, exampleTime, tempCoverage, tempCoverage, tempBool, tempBool,
+				&testEntryStringId, &testEntryStringId, &exAltId, &exGenSinceSpore, &exGenSinceFruitSpore, exAlts,
+				&exParentType, &testId, exPics, exContams, exBool, &exAltId, &exampleTime, &exPics[0], exampleNotes(),
+				exampleTime, testAcls[i])
+			testPlates = append(testPlates, &newTestPlate)
+		}
+		println("Built-in plates entries:")
+		for tempId, name := range platesMade {
+			println(tempId, name)
+		}
+		return addTestMainEntries(ctx, testPlates...)
+	})
 }
 
 func basicTestPlate() Plate {
@@ -239,7 +273,7 @@ func basicTestPlate() Plate {
 		},
 		TransfersOutField:                 TransfersOutField{exAlts},
 		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&testId}, // TODO: ok? // TODO: multiple?
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&testId},
 		PicsField:                         PicsField{exPics},
 		ContaminationsField:               ContaminationsField{exContams},
 		KnownFruitableField:               KnownFruitableField{exBool},
@@ -248,6 +282,7 @@ func basicTestPlate() Plate {
 		MostRecentImageField:              MostRecentImageField{&exPics[0]},
 		NotesField:                        NotesField{exampleNotes()},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		AclField:                          allCanWriteAcl(),
 	}
 }
 func emptyTestPlate() Plate {
@@ -273,12 +308,13 @@ func emptyTestPlate() Plate {
 		MostRecentImageField:              MostRecentImageField{},
 		NotesField:                        NotesField{},
 		LastUpdatedField:                  LastUpdatedField{exampleTime},
+		AclField:                          allCanWriteAcl(),
 	}
 }
 func testPlateFor(
 	id MainCollectionId,
 	agarBatchId *AlternateCollectionId,
-	creationDate UnixTime,
+	creationDate unix.Time,
 	condensationCoverageAtSealTime,
 	pourCoverage *int,
 	wetAtCooledTime,
@@ -293,11 +329,11 @@ func testPlateFor(
 	contams []Contamination,
 	knownFruitable *bool,
 	sale *AlternateCollectionId,
-	disposed *UnixTime,
+	disposed *unix.Time,
 	mostRecentImage *PicWithNotes,
 	notes []Note,
-	lastUpdated UnixTime,
-	acl *ACL,
+	lastUpdated unix.Time,
+	acl ACL,
 ) Plate {
 	return Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
@@ -316,7 +352,7 @@ func testPlateFor(
 		},
 		TransfersOutField:                 TransfersOutField{xfersOut},
 		ParentTypeField:                   ParentTypeField{parentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{parent}, // TODO: ok? // TODO: multiple?
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{parent},
 		PicsField:                         PicsField{picsForItem},
 		ContaminationsField:               ContaminationsField{contams},
 		KnownFruitableField:               KnownFruitableField{knownFruitable},
@@ -335,7 +371,7 @@ func EmptyTestPlateBinaryId() MainCollectionId {
 
 type createPlateRequest struct {
 	AgarBatch AlternateCollectionId `json:"agarBatch"`
-	CondensationCoverageAtSealTimeField
+	CondensationCoverageAtPourTimeField
 	PourCoverageField
 	WetAtCooledTimeField
 	AgarOnOutsideAtPourTimeField
@@ -357,14 +393,8 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
-	now := unixTimeForNow()
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	agarBatchField := AgarBatchField{AgarBatch: &data.AgarBatch}
 	_, err = agarBatchField.Get(ctx)
 	if err != nil && !errors.Is(err, ErrMissingOptionalField) {
@@ -375,7 +405,8 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		MainCollectionIdField:               MainCollectionIdField{id},
 		AgarBatchField:                      agarBatchField,
 		CreationDateField:                   CreationDateField{now},
-		CondensationCoverageAtSealTimeField: data.CondensationCoverageAtSealTimeField,
+		CondensationCoverageAtPourTimeField: data.CondensationCoverageAtPourTimeField,
+		CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{nil},
 		PourCoverageField:                   data.PourCoverageField,
 		WetAtCooledTimeField:                data.WetAtCooledTimeField,
 		AgarOnOutsideAtPourTimeField:        data.AgarOnOutsideAtPourTimeField,
@@ -383,6 +414,11 @@ func createPlateHandler(w http.ResponseWriter, r *http.Request) {
 		LastUpdatedField:                    LastUpdatedField{now},
 		// No Perms here for basic plates
 		AclField: allCanWriteAcl(),
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
@@ -393,13 +429,12 @@ type updatePlateRequest struct {
 	WetAtCooledTimeField
 	AgarOnOutsideAtPourTimeField
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	ImagesUpdateField
 	ContamsUpdateField
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
@@ -409,14 +444,55 @@ func (upr updatePlateRequest) reform() resolvedUpdatePlateRequest {
 		WetAtCooledTimeField:                upr.WetAtCooledTimeField,
 		AgarOnOutsideAtPourTimeField:        upr.AgarOnOutsideAtPourTimeField,
 		KnownFruitableField:                 upr.KnownFruitableField,
-		SaleField:                           upr.SaleField,
-		DisposedField:                       upr.DisposedField,
-		NotesUpdateField:                    upr.NotesUpdateField,
-		Images:                              imageUpdates(upr.Images),
-		Contams:                             contamUpdates(upr.Contams),
-		WriteTagToField:                     upr.WriteTagToField,
-		PermsOnRequest:                      upr.PermsOnRequest,
+		//SaleField:                           upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		Contams:          contamUpdates(upr.Contams),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
+}
+
+func loadMriPics(pics *SplitEntries[picWithNotesForm, PicWithNotes], contams *SplitEntries[contamForm, Contamination], flushes *SplitEntries[picWithNotesForm, PicWithNotes]) []PicWithNotes {
+	imagesForUpdateFunc := []PicWithNotes{}
+	if pics != nil {
+		for _, ex := range pics.Existing {
+			if !ex.Disabled {
+				imagesForUpdateFunc = append(imagesForUpdateFunc, ex.Data.convert())
+			}
+		}
+		imagesForUpdateFunc = append(imagesForUpdateFunc, pics.New...)
+	}
+	if contams != nil {
+		for _, ex := range contams.Existing {
+			if !ex.Disabled {
+				tempPic := ex.Data.convert().getPicWithNotes()
+				if tempPic != nil {
+					imagesForUpdateFunc = append(imagesForUpdateFunc, *tempPic)
+				} else {
+					println("PICTURE WAS NIL IN loadMriPics 3") // TODO: del?
+				}
+			}
+		}
+		for _, c := range contams.New {
+			tempPic := c.getPicWithNotes()
+			if tempPic != nil {
+				imagesForUpdateFunc = append(imagesForUpdateFunc, *tempPic)
+			} else {
+				println("PICTURE WAS NIL IN loadMriPics 2") // TODO: del?
+			}
+		}
+	}
+
+	if flushes != nil {
+		for _, f := range flushes.Existing {
+			if !f.Disabled {
+				imagesForUpdateFunc = append(imagesForUpdateFunc, f.Data.convert())
+			}
+		}
+		imagesForUpdateFunc = append(imagesForUpdateFunc, flushes.New...)
+	}
+	return imagesForUpdateFunc
 }
 
 func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField) (bson.D, error) {
@@ -426,10 +502,11 @@ func (req resolvedUpdatePlateRequest) modsFor(existing *Plate, aclField AclField
 		updateWetAtCooledTimeIfNeeded(req, existing).
 		updateAgarOnOutsideAtPourTimeIfNeeded(req, existing).
 		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
 		updateContamsIfNeeded(req.Contams, existing.Contaminations).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
@@ -442,43 +519,24 @@ type resolvedUpdatePlateRequest struct {
 	WetAtCooledTimeField
 	AgarOnOutsideAtPourTimeField
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
-	Images  SplitEntries[picWithNotesForm, PicWithNotes]
-	Contams SplitEntries[contamForm, Contamination]
-	WriteTagToField
-	PermsOnRequest
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams        SplitEntries[contamForm, Contamination]
+	PermsOnRequest `json:"acl"`
 }
 
 func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 	data := &updatePlateRequest{}
-	idStr, err := UrlDecodeString(r.PathValue("id"))
+	b58Id, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
-		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	mainCollId, err := StandardizeMainCollectionId(idStr)
+
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
-		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id := *mainCollId
-	b58Id := mainCollId.AsBase58()
-	reqBs, err := json.MarshalIndent(data, "", " ")
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	println(string(reqBs)) // TODO: del
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, "plate", &data, b58Id)
-	if err != nil {
-		// Already wrotw
+		// Already wrote
 		return
 	}
 
@@ -505,17 +563,16 @@ func updatePlateHandler(w http.ResponseWriter, r *http.Request) {
 			println("no contam location for", i)
 		}
 	}
+
 	ctx := r.Context()
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-	coll := client.Database(dbName).Collection(PlatesCollectionName)
+	coll := GetMongoClient(ctx).Database(dbName).Collection(PlatesCollectionName)
 	existing := &Plate{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
-	if err != nil {
+	if err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing); err != nil {
 		// TODO: an issue here?
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, out.PermsOnRequest)
 }
 
 func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string](ctx context.Context, w http.ResponseWriter, coll *mongo.Collection, existing T, id U, upd bson.D, err error) {
@@ -529,14 +586,12 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		return
 	}
 	// write updates to db
-	bsonId := bsonFindFilter("_id", id)
-	err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
-	if err != nil {
+	bsonId := BsonFindFilter(IDfld, id)
+	if err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err(); err != nil {
 		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = coll.FindOne(ctx, bsonId).Decode(&existing)
-	if err != nil {
+	if err = coll.FindOne(ctx, bsonId).Decode(&existing); err != nil {
 		dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -545,58 +600,55 @@ func handleUpdateMods[T any, U MainCollectionId | AlternateCollectionId | string
 		dbErr(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	bsOut2, err2 := json.MarshalIndent(existing, "", " ") // TODO: delete later
-	if err2 != nil {
-		dbErr(w, err2.Error(), http.StatusInternalServerError)
-		return
-	}
-	println("Writing update:", string(bsOut2))
 	_, err = w.Write(bsOut)
 	handleWriteErr(err, w)
 }
 
+func handleUpdateModsInTxn[T any, U MainCollectionId | AlternateCollectionId | string](ctx context.Context, coll *mongo.Collection, existing T, id U, upd bson.D, err error) error {
+	if err != nil {
+		return err
+	}
+	if len(upd) == 0 {
+		return errors.New("no changes made")
+	}
+	// write updates to db
+	bsonId := BsonFindFilter(IDfld, id)
+	if err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err(); err != nil {
+		return err
+	}
+	return coll.FindOne(ctx, bsonId).Decode(&existing)
+}
+
 type importPlateRequest struct {
 	CreationDateField
-	SpeciesField
+	SpeciesOptionalField
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *int `json:"generation,omitempty"`
+	Generation *Generation `json:"generation,omitempty"` // required when innoculated!
 	PourCoverageField
+	CondensationCoverageAtPourTimeField
 	// pic as "img"
 	WriteTagToField
-	PermsOnRequest
 }
 
 func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	ctx, now := request.UnixTime(r.Context())
 	data := importPlateRequest{}
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
 	println("multipart reader if necessary")
-	reader, err := multipartReaderForRequest(r, w, &data)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
+		println("failed in multipart reader area") // TODO: del
 		// Already written
 		return
 	}
-	// TODO: CONVERT TO newPics, newContams, newFlushes, err := fullMultipartWithNoBreaks(w, r, "bag", &data, b58Id)
-	//	if err != nil {
-	//		// Already wrotw
-	//		return
-	//	}
-	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "email cannot write perms: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 	// Try to get pic if exists
-	picsSaved := []string{} // TODO: do this streamlined with the multipart function
+	picsSaved := []string{}
 	defer func() {
 		if err != nil {
-			err = pics.DeleteFiles(r.Context(), picsSaved...)
+			err = pics.DeleteFiles(ctx, picsSaved...)
 			if err != nil {
 				handleFileDeleteErr(err)
 			}
@@ -607,6 +659,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 	p, err := reader.NextPart()
 	if err != nil {
 		if err != io.EOF {
+			println("failed in nextPart") // TODO: del
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -614,6 +667,7 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		fileName := p.FileName()
 		defer p.Close()
 		if fileName != "img" {
+			println("invalid image name") // TODO: del
 			http.Error(w, "invalid image name", http.StatusBadRequest)
 			return
 		}
@@ -621,65 +675,114 @@ func importPlateHandler(w http.ResponseWriter, r *http.Request) {
 		fieldBytes, err := multipartToImageBytes(p, w)
 		if err != nil {
 			// Already wrote
+			println("failed in multipartToImageBytes") // TODO: del
 			return
 		}
-		newFileNameWithPrefixPath, errr := pics.SaveFile(r.Context(), fieldBytes, "plate", string(b58id), "img")
+		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "plate", string(b58id), "img")
 		if errr != nil {
 			err = errr
+			println("failed to save file: " + err.Error()) // TODO: del
 			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTimeForNow()
-		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
+		importedPicNotes := []Note{} // TODO: ok?
+		importedPic = utils.Pointer(newPicWithNotes(now, importedPicNotes, ImageLocation(newFileNameWithPrefixPath)))
 	}
+	var condensCovSealed *int = nil
 	var gen *Generation = nil
-	if data.Generation != nil {
-		gen = (*Generation)(data.Generation)
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation", http.StatusBadRequest)
+			return
+		}
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
+			return
+		}
+		gen = data.Generation
+		// If innoculated, ensure seal and pour condensation coverage are the same
+		condensCovSealed = data.CondensationCoverageAtPourTime
+	} else {
+		data.KnownFruitable = nil
+		data.Subspecies = nil
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
-	println("getting auth info")
-	user, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	println("getting speciest and subspecies")
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms *ACL = nil
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
-	ctx, db := Db(r)
-	coll := db.Collection(PlatesCollectionName)
+	var finalPerms ACL
+	if data.Species == nil { // Not innoculated
+		finalPerms = allCanWriteAcl().ACL
+		data.PourCoverage = nil
+	} else {
+		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
+		if err != nil {
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 
 	toInsert := Plate{
 		MainCollectionIdField:               MainCollectionIdField{id},
 		CreationDateField:                   data.CreationDateField,
-		CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{nil},
+		CondensationCoverageAtPourTimeField: data.CondensationCoverageAtPourTimeField,
+		CondensationCoverageAtSealTimeField: CondensationCoverageAtSealTimeField{condensCovSealed},
 		PourCoverageField:                   data.PourCoverageField,
 		WetAtCooledTimeField:                WetAtCooledTimeField{nil},
 		AgarOnOutsideAtPourTimeField:        AgarOnOutsideAtPourTimeField{nil},
-		SpeciesOptionalField:                data.SpeciesField.AsOptional(),
+		SpeciesOptionalField:                data.SpeciesOptionalField,
 		SubspeciesOptionalField:             data.SubspeciesOptionalField,
 		GenerationsFields:                   GenerationsFieldFor(gen),
 		PicsField:                           PicsField{pix},
 		KnownFruitableField:                 data.KnownFruitableField,
 		MostRecentImageField:                MostRecentImageField{importedPic},
-		LastUpdatedField:                    LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:                    LastUpdatedField{now},
 		AclField:                            AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	println("trying to import the plate...")
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
+
+//func deletePlateHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).ToMainCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	// ensure item does not have any transfers in or out
+//	item, err := GetMainCollectionItemSpecific[*Plate](ctx, id, &Plate{})
+//	if err != nil {
+//		if errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+//		} else {
+//			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//	if item.Parent != nil {
+//		// TODO: what if we want to remove it from the parent as well?
+//		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+//		return
+//	}
+//	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+//		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+//}

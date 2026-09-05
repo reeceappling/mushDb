@@ -6,6 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -16,9 +19,10 @@ import (
 // sometimes needed for transfers
 
 type PlugsJar struct {
+	// TODO: DO DOWELS NEED TO BE SOAKED? Nutrients?
 	MainCollectionIdField             `bson:"inline"`
 	ParentTypeField                   `bson:"inline"` // empty==bought
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: empty=bought. From plugs, jar, LC, plate/slant
+	MainCollectionOptionalParentField `bson:"inline"` // empty=bought. From plugs, jar, LC, plate/slant
 	CreationDateField                 `bson:"inline"`
 	DowelTypes                        []Dowel `bson:"dowelTypes" json:"dowelTypes"`
 	GenerationsFields                 `bson:"inline"`
@@ -26,16 +30,21 @@ type PlugsJar struct {
 	TransfersOutField                 `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
 	InnocField                        `bson:"inline"`
-	//PicsField                           `bson:"inline"` // TODO: pics?
-	//ContaminationsField                 `bson:"inline"` // TODO: contams?
-	KnownFruitableField `bson:"inline"`
-	PcRunOptionalField  `bson:"inline"` // TODO: used to be required, but not found for imports! created before innoculation
-	SalesField          `bson:"inline"` // TODO: MULTIPLE!
-	DisposedField       `bson:"inline"` // Also changed once all pegs are sold/used?
-	NotesField          `bson:"inline"`
-	LastUpdatedField    `bson:"inline"`
-	AclField            `bson:"inline"`
+	PicsField                         `bson:"inline"` // TODO: ADDED 7/6/26
+	ContaminationsField               `bson:"inline"` // TODO: ADDED 7/6/26
+	MostRecentImageField              `bson:"inline"`
+	KnownFruitableField               `bson:"inline"`
+	PcRunOptionalField                `bson:"inline"` // defaults on import, but can be created without a run!
+	SalesField                        `bson:"inline"` // TODO: MULTIPLE!
+	DisposedField                     `bson:"inline"` // Also changed once all pegs are sold/used?
+	NotesField                        `bson:"inline"`
+	LastUpdatedField                  `bson:"inline"`
+	AclField                          `bson:"inline"`
 }
+
+//func (pl PlugsJar) Blank() CollectionItem {
+//	return &PlugsJar{}
+//}
 
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {
@@ -58,18 +67,18 @@ func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fro
 	if err != nil {
 		return err
 	}
-	upd, err := xfer.PicsModsForChild().
+	upd, err := xfer.PicsModsForChild(pl).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(PlugsCollectionName).UpdateByID(ctx, pl.Id, upd)
 	if err != nil {
@@ -83,6 +92,21 @@ func (pl PlugsJar) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fro
 
 func (pl PlugsJar) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return pl.GenSinceSpore, pl.GenSinceFruitOrSpore
+}
+
+func (pl PlugsJar) Innoculatable() error {
+	var soldErr error = nil
+	if pl.Sales != nil || len(pl.Sales) != 0 {
+		soldErr = errors.New("cannot innoculate sold plugs")
+	}
+	return errors.Join(
+		pl.RequireNoSpecies(),
+		pl.RequireNoSubspecies(),
+		pl.RequireNotDisposed(),
+		soldErr,
+		pl.RequireUnknownFruitable(),
+		pl.RequireNoInnoculation(),
+		pl.HasPcRun())
 }
 
 type Dowel struct {
@@ -120,8 +144,9 @@ const (
 
 type LengthUnit string
 
-var filterSizeUnits = []LengthUnit{um}          // TODO: use? can be 0.2 micron (not pc-able), 0.5 micron (pc-able), or 5 micron (pc-able)
-var dowelRadiusUnits = []LengthUnit{mm, cm, in} // TODO: use?
+var filterSizeUnits = []LengthUnit{um} // TODO: use? can be 0.2 micron (not pc-able), 0.5 micron (pc-able), or 5 micron (pc-able)
+var dowelRadiusUnits = []LengthUnit{mm, cm, in}
+
 // var dowelLengthUnits = []LengthUnit{mm, cm, in, ft} // TODO: use?
 // TODO: use?
 var lengthUnits = []LengthUnit{um, mm, cm, in, ft, meter} // TODO: use?
@@ -134,30 +159,13 @@ const (
 	meter = "m"
 )
 
-//func (pl PlugsJar) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	// TODO: can this even occur?
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(pl.CollectionName())
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, pl.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
-
 func initializePlugs(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PlugsCollectionName)
+	coll := DbFrom(ctx).Collection(PlugsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		creationDateIndexModel,
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
-		creationDateIndexModel,
 		// TODO: combo dowel types index?
 		//newSimpleIndex("dowelTypes", "dowelTypes.wood", false, false, false),
 		//newSimpleIndex("dowelSizes", "dowelTypes.radius", false, false, false),
@@ -176,43 +184,45 @@ func initializePlugs(ctx context.Context) error {
 		return err
 	}
 	// Create test plugs
-	testItem := &PlugsJar{
-		MainCollectionIdField: MainCollectionIdField{exPlugId},
-		ParentTypeField: ParentTypeField{
-			utils.Pointer("plate"),
-		},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
-		CreationDateField:                 exampleTime.asCreationDate(),
-		DowelTypes: []Dowel{
-			{
-				Radius: Radius{
-					Size:  2,
-					Units: "cm",
-				},
-				Wood: "oak",
+	return env.IfNotProd(ctx, func() error {
+		testItem := &PlugsJar{
+			MainCollectionIdField: MainCollectionIdField{exPlugId},
+			ParentTypeField: ParentTypeField{
+				utils.Pointer("plate"),
 			},
-		},
-		SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
-		SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
-		InnocField:              InnocField{&exAltId},
-		PcRunOptionalField:      PcRunOptionalField{&exAltId},
-		SalesField:              SalesField{[]AlternateCollectionId{exAltId}},
-		DisposedField:           DisposedField{&exampleTime},
-		NotesField:              NotesField{exampleNotes()},
-		LastUpdatedField:        LastUpdatedField{exampleTime},
-		AclField:                allCanReadAcl(),
-	}
-	return addTestMainEntries(ctx, testItem)
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+			CreationDateField:                 CreationDateField{exampleTime},
+			DowelTypes: []Dowel{
+				{
+					Radius: Radius{
+						Size:  2,
+						Units: "cm",
+					},
+					Wood: "oak",
+				},
+			},
+			SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
+			SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
+			InnocField:              InnocField{&exAltId},
+			PcRunOptionalField:      PcRunOptionalField{&exAltId},
+			SalesField:              SalesField{[]AlternateCollectionId{exAltId}},
+			DisposedField:           DisposedField{&exampleTime},
+			NotesField:              NotesField{exampleNotes()},
+			LastUpdatedField:        LastUpdatedField{exampleTime},
+			AclField:                allCanReadAcl(nil),
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createPlugsRequest struct {
-	DowelTypes         []Dowel `bson:"dowelTypes" json:"dowelTypes"`
-	PcRunOptionalField         // OPTIONAL!
+	DowelTypes         []Dowel `json:"dowelTypes"`
+	PcRunOptionalField         // OPTIONAL! // TODO: Can be created before pc!
 	NotesField
 	WriteTagToField
 }
 
-func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully test!
+func createPlugsHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	data := createPlugsRequest{}
 	id := NextMainCollectionId()
@@ -227,6 +237,7 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// validate dowels
 	for i, d := range data.DowelTypes {
 		if err = d.validate(); err != nil {
 			errTxt := fmt.Sprintf("failed to validate dowel type for entry #%d", i)
@@ -240,14 +251,8 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 			return
 		}
 	}
-	// TODO: validate dowels
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
 
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := PlugsJar{
 		MainCollectionIdField: MainCollectionIdField{id},
 		CreationDateField:     CreationDateField{now},
@@ -259,59 +264,83 @@ func createPlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: fully
 		AclField: allCanWriteAcl(),
 	}
 
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
-// TODO: import plugs request!
-type importPlugsRequest struct { // TODO: USE THIS!
-	DowelTypes              []Dowel         `bson:"dowelTypes" json:"dowelTypes"` // TODO: ok?
-	Generation              *Generation     `json:"generation"`                   // Nil so we can // TODO; ensure ok
-	SpeciesOptionalField    `bson:"inline"` // TODO: ok?
-	SubspeciesOptionalField `bson:"inline"` // TODO: ok?
-	KnownFruitableField     `bson:"inline"` // TODO: ok?
-	NotesField              `bson:"inline"` // TODO: ok?
-	WriteTagToField         `bson:"inline"`
+type importPlugsRequest struct {
+	DowelTypes []Dowel     `json:"dowelTypes"`
+	Generation *Generation `json:"generation,omitempty"` // required when innoculated
+	SpeciesOptionalField
+	SubspeciesOptionalField
+	KnownFruitableField
+	NotesField
+	WriteTagToField
 }
 
 func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+	defer r.Body.Close()
+	ctx, now := request.UnixTime(r.Context())
 	data := importPlugsRequest{}
 	id := NextMainCollectionId()
-	defer r.Body.Close()
-	bs, err := io.ReadAll(r.Body)
+	b58id := id.AsBase58()
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
-		http.Error(w, "failed to read request body: "+err.Error(), http.StatusBadRequest)
+		// Already written
 		return
 	}
-	err = json.Unmarshal(bs, &data)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
-		http.Error(w, "failed to unmarshal request body: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	now := unixTimeForNow()
-	toInsert := PlugsJar{
-		MainCollectionIdField: MainCollectionIdField{id},
-		//ParentTypeField:                   ParentTypeField{},
-		//MainCollectionOptionalParentField: MainCollectionOptionalParentField{},
-		CreationDateField: CreationDateField{now},
-		DowelTypes:        data.DowelTypes,
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{data.Generation},
-			GenSinceFruitOrSpore: data.Generation,
-		},
-		SpeciesOptionalField: SpeciesOptionalField{data.Species},
-		//TransfersOutField:       TransfersOutField{},
-		SubspeciesOptionalField: SubspeciesOptionalField{data.SubSpecies},
-		//InnocField:              InnocField{},
-		KnownFruitableField: data.KnownFruitableField,
-		//PcRunOptionalField:      PcRunOptionalField{nil},
-		//SalesField:              SalesField{},
-		//DisposedField:           DisposedField{},
-		NotesField:       NotesField{data.Notes},
-		LastUpdatedField: LastUpdatedField{now},
-		// No Perms here for basic plugs
-		AclField: allCanWriteAcl(),
+	// Try to get pic if exists
+	picsSaved := []string{}
+	defer func() {
+		if err != nil {
+			err = pics.DeleteFiles(ctx, picsSaved...)
+			if err != nil {
+				handleFileDeleteErr(err)
+			}
+		}
+	}()
+	// Go to next part, if exists to get image
+	var importedPic *PicWithNotes = nil
+	p, errr := reader.NextPart()
+	if errr != nil {
+		err = errr
+		if err != io.EOF {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		fileName := p.FileName()
+		defer p.Close()
+		if fileName != "img" {
+			http.Error(w, "invalid image name", http.StatusBadRequest)
+			return
+		}
+		// Process file
+		fieldBytes, err := multipartToImageBytes(p, w)
+		if err != nil {
+			// Already wrote
+			return
+		}
+		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "plugs", string(b58id), "img")
+		if errr != nil {
+			err = errr
+			http.Error(w, "failed to save file: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
+	// Validation
 	for i, d := range data.DowelTypes {
 		if err = d.validate(); err != nil {
 			errTxt := fmt.Sprintf("failed to validate dowel type for entry #%d", i)
@@ -319,68 +348,113 @@ func importPlugsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	// validate sub/species
-	if data.Species == nil {
-		if data.SubSpecies != nil {
-			http.Error(w, "species must exist if subspecies does", http.StatusBadRequest)
+	var gen *Generation = nil
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
 			return
 		}
-		if data.KnownFruitable != nil {
-			http.Error(w, "knownFruitable must be nil for non-innoculated imports", http.StatusBadRequest)
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
 			return
 		}
-		if data.Generation != nil {
-			http.Error(w, "generation must be nil for non-innoculated imports", http.StatusBadRequest)
-			return
-		}
+		gen = data.Generation
 	} else {
-		sp, subsp, err := getSpeciesAndSubspecies(r.Context(), *data.Species, data.SubSpecies)
-		if err != nil {
-			http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if subsp != nil {
-			toInsert.ACL = subsp.DefaultAcl.Clone()
-		} else {
-			toInsert.ACL = sp.DefaultAcl.Clone()
-		}
+		data.KnownFruitable = nil
+		data.Subspecies = nil
 	}
-	if err = data.Generation.validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	pix := []PicWithNotes{}
+	if importedPic != nil {
+		pix = []PicWithNotes{*importedPic}
 	}
 
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	var finalPerms ACL
+	if data.Species == nil { // Not innoculated
+		finalPerms = allCanWriteAcl().ACL
+	} else {
+		finalPerms, err = ImportFinalPerms(ctx, *data.Species, data.Subspecies)
+		if err != nil {
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	toInsert := PlugsJar{
+		MainCollectionIdField: MainCollectionIdField{id},
+		PcRunOptionalField:    PcRunOptionalField{&impPcRun}, // default for imports
+		CreationDateField:     CreationDateField{now},
+		DowelTypes:            data.DowelTypes,
+		GenerationsFields: GenerationsFields{
+			GenSporeField:        GenSporeField{gen},
+			GenSinceFruitOrSpore: gen,
+		},
+		SpeciesOptionalField:    SpeciesOptionalField{data.Species},
+		SubspeciesOptionalField: SubspeciesOptionalField{data.Subspecies},
+		KnownFruitableField:     data.KnownFruitableField,
+		PicsField:               PicsField{pix},
+		ContaminationsField:     ContaminationsField{Contaminations: []Contamination{}},
+		NotesField:              NotesField{data.Notes},
+		LastUpdatedField:        LastUpdatedField{now},
+		// No Perms here for basic plugs
+		AclField: finalPerms.AsField(),
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	finishCreateMainCollectionEntry(ctx, &toInsert, w)
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
-// TODO: new sale?
+// TODO: new sale? (plugs can have multiple)
 
 type updatePlugsRequest struct {
 	PcRunOptionalField // Can only be set once!
+	KnownFruitableField
 	NotesUpdateField
-	PermsOnRequest
-	WriteTagToField
+	ImagesUpdateField
+	ContamsUpdateField
 	DisposedField
+	PermsOnRequest `json:"acl"`
 }
 
-func (req updatePlugsRequest) modsFor(existing *PlugsJar, acl AclField) (bson.D, error) {
+func (upr updatePlugsRequest) reform() resolvedUpdatePlugsRequest {
+	return resolvedUpdatePlugsRequest{
+		PcRunOptionalField:  upr.PcRunOptionalField,
+		KnownFruitableField: upr.KnownFruitableField,
+		DisposedField:       upr.DisposedField,
+		NotesUpdateField:    upr.NotesUpdateField,
+		Images:              imageUpdates(upr.Images),
+		Contams:             contamUpdates(upr.Contams),
+		PermsOnRequest:      upr.PermsOnRequest,
+	}
+}
+
+type resolvedUpdatePlugsRequest struct {
+	PcRunOptionalField // Can only be set once!
+	KnownFruitableField
+	NotesUpdateField
+	Images  SplitEntries[picWithNotesForm, PicWithNotes]
+	Contams SplitEntries[contamForm, Contamination]
+	DisposedField
+	PermsOnRequest `json:"acl"`
+}
+
+func (req resolvedUpdatePlugsRequest) modsFor(existing *PlugsJar, acl AclField) (bson.D, error) {
 	mods := NewMods()
 	return mods.
 		updatePcRunIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updateDisposedIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
 
-func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
-	req := &updatePlugsRequest{}
+func updatePlugsHandler(w http.ResponseWriter, r *http.Request) { // TODO: overhauled for images and contams! thoroughly test!
+	data := &updatePlugsRequest{}
 	idStr, err := UrlDecodeString(r.PathValue("id"))
 	if err != nil {
 		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
@@ -391,27 +465,88 @@ func updatePlugsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id := *mainCollId
-	err = writeRfidTagIfNecessary(r.Context(), req.WriteTagTo, id)
+	ctx := r.Context()
+	newPics, newContams, _, err := fullMultipartWithNoBreaks(w, r, &data, Base58Str(idStr))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		// Already wrote
 		return
 	}
-	ctx := r.Context()
+
+	// CHECK THAT ALL NEW PICS EXIST
+	// PROCESS ALL NEW PICS AND CONTAMS
+	//// TODO: PANICKING WHEN SENDING EMPTY THINGS!!!!
+	//for i, picNote := range data.Images.Existing[0].Data.Notes.asEntries() {
+	//	println("note", i, picNote.Note)
+	//}
+	out := data.reform()
+	for i, _ := range data.Images.New {
+		loc, exists := newPics[i]
+		if !exists {
+			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
+			return
+		}
+		out.Images.New[i].Location = ImageLocation(loc)
+	}
+	for i, _ := range data.Contams.New {
+		if loc, exists := newContams[i]; exists {
+			finalLoc := ImageLocation(loc)
+			out.Contams.New[i].Location = &finalLoc
+		} else {
+			println("no contam location for", i)
+		}
+	}
+
 	existing := &PlugsJar{}
-	client := ctx.Value(mongoClientContextKey).(*mongo.Client)
-	coll := client.Database(dbName).Collection(PlugsCollectionName)
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	db := DbFrom(ctx)
+	err = db.Collection(PlugsCollectionName).FindOne(ctx, BsonFindFilter(IDfld, *mainCollId)).Decode(existing)
 	if err != nil {
 		http.Error(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if req.PcRun != nil {
-		_, err = req.PcRunOptionalField.Get(ctx)
+	if existing.PcRun == nil && data.PcRun != nil { // only check this if the run changed
+		_, err = data.PcRunOptionalField.Get(ctx)
 		if err != nil {
 			http.Error(w, "invalid pc run: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
-	finishMainCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, out.PermsOnRequest)
+
 }
+
+//func deletePlugsHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).ToMainCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	// ensure item does not have any transfers in or out
+//	item, err := GetMainCollectionItemSpecific[*PlugsJar](ctx, id, &PlugsJar{})
+//	if err != nil {
+//		if errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+//		} else {
+//			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//	if item.Parent != nil {
+//		// TODO: what if we want to remove it from the parent as well?
+//		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+//		return
+//	}
+//	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+//		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+//}

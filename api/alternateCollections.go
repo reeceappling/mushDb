@@ -34,27 +34,25 @@ type ListResponse[T any] struct {
 	Standard []T `json:"standard,omitempty"`
 }
 
-func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated bool, maxResults int, doStandardToo bool, temp T) (bs []byte, err error) {
-	latestEntries, err := getLastNEntries(ctx, true, maxResults, doStandardToo, temp)
+func listEntriesHandlerInternal[T CollectionItem, U any](ctx context.Context, updated bool, maxResults int, doStandardToo bool, temp T, disposed *bool, startAfterId *U) (bs []byte, err error) {
+	latestEntries, err := getLastNEntries(ctx, updated, maxResults, doStandardToo, temp, disposed, startAfterId)
 	if err != nil {
 		if !errors.Is(err, mongo.ErrNoDocuments) {
-			println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
+			//println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
 			return nil, err
 		}
+		println("error getting entries: " + err.Error())
 		latestEntries, err = []T{}, nil
 	}
 	if !doStandardToo {
 		bs, err = json.Marshal(latestEntries)
-		if err != nil {
-			return nil, err
-		}
 	} else {
 		outObj := map[string][]T{"recent": latestEntries}
-		// TODO: do we want to also display repeats on standard entries?
+		// TODO: do we want to also display repeats on standard entries? NO?
 		outObj["standard"], err = getStandardEntries(ctx, temp)
 		if err != nil {
 			if !errors.Is(err, mongo.ErrNoDocuments) {
-				println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
+				//println("ERROR: listEntriesHandlerInternal found a non-ErrNoDocs", err) // TODO: this
 				return nil, err
 			}
 			outObj["standard"], err = []T{}, nil
@@ -62,262 +60,376 @@ func listEntriesHandlerInternal[T CollectionItem](ctx context.Context, updated b
 		// Standard is filtered out from latest already
 
 		bs, err = json.Marshal(outObj)
-		if err != nil {
-			return nil, err
-		}
-		tempBs, err := json.MarshalIndent(outObj, "", " ")
-		if err != nil {
-			return nil, err
-		}
-		println("list being returned: " + string(tempBs)) // TODO: del!
 	}
 	if err != nil {
 		return nil, err
 	}
 	return bs, nil
 }
-func ListUsernamesHandler(ctx context.Context) ([]byte, error) {
-	latestEntries, err := getAllEntries(ctx, &User{})
+func listProjectsHandlerInternal(ctx context.Context, updated bool) (bs []byte, err error) {
+	sortField := "$natural"
+	if updated {
+		sortField = "lastUpdated"
+	}
+	// TODO: pagination?
+	opts := options.Find().
+		//SetLimit(int64(nresults)). // no limit because user can be unable to view some items
+		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural and that natural works with non-default IDs
+	//opts.SetHint() // Give an index name if needed // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
+	cursor, err := DbFrom(ctx).
+		Collection(ProjectsCollectionName).
+		Find(ctx, bson.D{{}}, opts)
 	if err != nil {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			errTxt := "ERROR: listEntriesHandlerInternal found a non-ErrNoDocs: " + err.Error()
-			println(errTxt) // TODO: this
-			return nil, errors.New(errTxt)
-		}
-		latestEntries, err = []*User{}, nil
+		return nil, err
 	}
-	out := make([]string, len(latestEntries))
-	for i, entry := range latestEntries {
-		out[i] = entry.Email
+	projects, err := getUserProjectsFromCursor(ctx, cursor, nil)
+	if err != nil {
+		return nil, err
 	}
-	return json.Marshal(out)
+	return json.Marshal(projects)
+}
+func ListUsersHandler(ctx context.Context, removeGuests bool) ([]byte, error) {
+	findBson := bson.D{{}}
+	// TODO: will this rule out admins? if removeGuests { // TODO: REMOVE ALL GUESTS FROM THE LIST
+	//	findBson = bson.D{{"perms", bson.M{"$ne": nil}}} // TODO; ensure works!
+	//}
+	// TODO: pagination?
+	opts := options.Find().
+		//SetLimit(int64(nresults)). // no limit because user can be unable to view some items
+		SetSort(bson.D{{IDfld, 1}}) // 1 = Ascending, -1 = Descending
+	//opts.SetHint() // Give an index name if needed // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
+	cursor, err := DbFrom(ctx).
+		Collection(UserCollName).
+		Find(ctx, findBson, opts)
+	if err != nil {
+		return nil, err
+	}
+	results := []*User{}
+	err = cursor.All(ctx, &results)
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(results)
 }
 
-func ListEntriesHandler() http.Handler {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		// TODO: DEPENDING ON VARIANT, EITHER DO LATEST OR LATEST AND STANDARD!!!!!
-
-		var maxResults int = 10 // TODO: extend where needed?
-		requested := r.PathValue("variant")
-		doStandardToo := strings.Contains(requested, "Recipe") // "agarRecipe", "jarRecipe", "lcRecipe", "substrateRecipe"
-
-		if maxNum := r.URL.Query().Get("n"); maxNum != "" {
-			n, err := strconv.Atoi(maxNum)
-			if err != nil {
-				http.Error(w, fmt.Sprintf(`param n must be a number, or nonexistent (defaults to %d)`, maxResults), http.StatusBadRequest)
-				return
-			}
-			maxResults = n
-		}
-
-		// TODO: parallelize?
-		var bs []byte
-		var err error
-		switch strings.ToLower(requested) {
-		case "agarbatch", "agar batch",
-			"agarbatches", "agar batches":
-			bs, err = listEntriesHandlerInternal[*AgarBatch](r.Context(), true, maxResults, doStandardToo, &AgarBatch{})
-		case "agarrecipe", "agar recipe",
-			"agarrecipes", "agar recipes":
-			bs, err = listEntriesHandlerInternal[*AgarRecipe](r.Context(), true, maxResults, doStandardToo, &AgarRecipe{})
-		case "bag",
-			"bags":
-			bs, err = listEntriesHandlerInternal[*Bag](r.Context(), true, maxResults, doStandardToo, &Bag{})
-		case "fruit",
-			"fruits":
-			bs, err = listEntriesHandlerInternal[*Fruit](r.Context(), true, maxResults, doStandardToo, &Fruit{})
-		case "fruitingchamber", "box", "chamber", "fruiting chamber",
-			"boxes", "fruitingchambers", "chambers", "fruiting chambers":
-			bs, err = listEntriesHandlerInternal[*FruitingChamber](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{})
-		case "grainbatch", "grainbatches":
-			bs, err = listEntriesHandlerInternal[*GrainBatch](r.Context(), true, maxResults, doStandardToo, &GrainBatch{})
-		case "jar", "grainjar", "grain jar",
-			"jars", "grainjars", "grain jars":
-			bs, err = listEntriesHandlerInternal[*GrainJar](r.Context(), true, maxResults, doStandardToo, &GrainJar{})
-		case "jarrecipe", "jar recipe",
-			"jarrecipes", "jar recipes":
-			bs, err = listEntriesHandlerInternal[*JarRecipe](r.Context(), true, maxResults, doStandardToo, &JarRecipe{})
-		case "lc", "liquidculture", "liquid culture",
-			"lcs", "liquidcultures", "liquid cultures":
-			bs, err = listEntriesHandlerInternal[*LiquidCulture](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{})
-		case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
-			"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
-			bs, err = listEntriesHandlerInternal[*LcRecipe](r.Context(), true, maxResults, doStandardToo, &LcRecipe{})
-		case "lcsyringe", "lcsyringes":
-			bs, err = listEntriesHandlerInternal[*LcSyringe](r.Context(), true, maxResults, doStandardToo, &LcSyringe{})
-		case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
-			"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
-			bs, err = listEntriesHandlerInternal[*MSS](r.Context(), true, maxResults, doStandardToo, &MSS{})
-		case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
-			"pcruns", "pc runs", "pcRuns", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
-			bs, err = listEntriesHandlerInternal[*PCRun](r.Context(), true, maxResults, doStandardToo, &PCRun{})
-		case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
-			"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
-			bs, err = listEntriesHandlerInternal[*Plate](r.Context(), true, maxResults, doStandardToo, &Plate{})
-		case "plugs", "plug", "peg", "pegs":
-			bs, err = listEntriesHandlerInternal[*PlugsJar](r.Context(), true, maxResults, doStandardToo, &PlugsJar{})
-		case "project", "projects":
-			bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{})
-		case "sale", "sales":
-			bs, err = listEntriesHandlerInternal[*Sale](r.Context(), true, maxResults, doStandardToo, &Sale{})
-		case "slant", "slants":
-			bs, err = listEntriesHandlerInternal[*Slant](r.Context(), true, maxResults, doStandardToo, &Slant{})
-		case "species":
-			bs, err = listEntriesHandlerInternal[*Species](r.Context(), true, maxResults, doStandardToo, &Species{})
-		case "sporeprint", "spore print", "print",
-			"sporeprints", "spore prints", "prints":
-			bs, err = listEntriesHandlerInternal[*SporePrint](r.Context(), true, maxResults, doStandardToo, &SporePrint{})
-		case "sporeswab", "sporeswabs", "swab", "swabs":
-			bs, err = listEntriesHandlerInternal[*SporeSwab](r.Context(), true, maxResults, doStandardToo, &SporeSwab{})
-		case "stasistube", "stasis tube", "stasis", "tube",
-			"stasistubes", "stasis tubes", "tubes":
-			bs, err = listEntriesHandlerInternal[*StasisTube](r.Context(), true, maxResults, doStandardToo, &StasisTube{})
-		case "subspecies":
-			bs, err = listEntriesHandlerInternal[*Subspecies](r.Context(), true, maxResults, doStandardToo, &Subspecies{})
-		case "substrate", "substraterecipe", "substrate recipe",
-			"substrates", "substraterecipes", "substrate recipes":
-			bs, err = listEntriesHandlerInternal[*SubstrateRecipe](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{})
-		case "substratebatch", "substratebatches":
-			bs, err = listEntriesHandlerInternal[*SubstrateBatch](r.Context(), true, maxResults, doStandardToo, &SubstrateBatch{})
-		case "transfer", "xfer",
-			"transfers", "xfers":
-			bs, err = listEntriesHandlerInternal[*Transfer](r.Context(), true, maxResults, doStandardToo, &Transfer{})
-		case "user", "users":
-			//bs, err = ListUsernamesHandler(r.Context()) // TODO: list usernames handler soemwhere else?
-			bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
-		case "waterjar", "waterjars", "water jar", "water jars", "sterilizedwater", "sterilizedwaterjar", "sterilewater", "sterilewaterjar":
-			bs, err = listEntriesHandlerInternal[*WaterJar](r.Context(), true, maxResults, doStandardToo, &WaterJar{})
-		default:
-			http.Error(w, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name")).Error(), http.StatusBadRequest)
-		}
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		_, err = w.Write(bs)
-		handleWriteErr(err, w)
+var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	// TODO: handle disposedFilter on the client side
+	var disposedFilter *bool = nil
+	disposedParam := r.URL.Query().Get("disposed")
+	var tempDisposed = false
+	switch disposedParam {
+	case "only": // TODO: USE THIS!
+		tempDisposed = true
+		disposedFilter = &tempDisposed
+	case "hide": // TODO: USE THIS!
+		disposedFilter = &tempDisposed
+	default:
+		disposedFilter = nil
 	}
-	return http.HandlerFunc(handler)
-}
-func ListSubspeciesHandler() http.Handler {
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		spec, err := UrlDecodeString(r.PathValue("variant"))
-		if err != nil {
-			http.Error(w, "got bad species name. "+err.Error(), http.StatusBadRequest)
-			return
-		}
-		findBson := bsonFindFilter("species", spec)
-		sortField := "$natural" // TODO: FIX to sort for name!
-		// TODO: pagination?
-		opts := options.Find().
-			SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
-		//opts.SetHint() // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
-		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-			Database(dbName).
-			Collection(SubspeciesCollectionName).
-			Find(ctx, findBson, opts)
-		if err != nil {
-			if errors.Is(err, mongo.ErrNoDocuments) { // TODO: NOT WORKING PROPERLY FOR BEECH!
-				_, err = w.Write([]byte("[]"))
-				handleWriteErr(err, w)
-				return
-			}
-			http.Error(w, "failed to list subspecies. "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		subspecs, err := getCollectionItemsFromCursor[Subspecies](ctx, cursor, nil)
-		if err != nil {
-			if errors.Is(err, mongo.ErrNoDocuments) {
-				_, err = w.Write([]byte("[]"))
-				handleWriteErr(err, w)
-				return
-			}
-			http.Error(w, "failed to list subspecies after getting. "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		bs, err := json.Marshal(subspecs)
-		if err != nil {
-			http.Error(w, "failed to marshal subspecies after getting. "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		_, err = w.Write(bs)
-		handleWriteErr(err, w)
+	startAfterParam := r.URL.Query().Get("startAfter")
+	if startAfterParam != "" {
+		// TODO: THIS!
 	}
-	return http.HandlerFunc(handler)
+	//allowDisposed = r.URL.Query().Get("hideDisposed") != "true" // TODO: REMOVE IF USED
+	var maxResults = 30 // TODO: extend where needed?
+	requested := r.PathValue("variant")
+	doStandardToo := strings.Contains(requested, "Recipe") // "agarRecipe", "jarRecipe", "lcRecipe", "substrateRecipe"
+
+	if maxNum := r.URL.Query().Get("n"); maxNum != "" {
+		n, err := strconv.Atoi(maxNum)
+		if err != nil {
+			http.Error(w, fmt.Sprintf(`param n must be a number, or nonexistent (defaults to %d)`, maxResults), http.StatusBadRequest)
+			return
+		}
+		maxResults = n
+	}
+
+	// TODO: parallelize?
+	var bs []byte
+	var err error
+	getAltCollId := func(sap string, w http.ResponseWriter) (*AlternateCollectionId, error) {
+		if startAfterParam == "" {
+			return nil, nil
+		}
+		acid, err := Base58Str(startAfterParam).toAltCollectionId()
+		if err != nil {
+			http.Error(w, "failed to convert base58 to altCollId: "+err.Error(), http.StatusBadRequest)
+			return nil, err
+		}
+		return &acid, nil
+	}
+	getMainCollId := func(sap string, w http.ResponseWriter) (*MainCollectionId, error) {
+		if startAfterParam == "" {
+			return nil, nil
+		}
+		mcid, err := Base58Str(startAfterParam).ToMainCollectionId()
+		if err != nil {
+			http.Error(w, "invalid mainCollectionId: "+err.Error(), http.StatusBadRequest)
+			return nil, err
+		}
+		return &mcid, nil
+	}
+	getParamStringDecoded := func(sap string, w http.ResponseWriter) (*string, error) {
+		if startAfterParam == "" {
+			return nil, nil
+		}
+		decoded, err := UrlDecodeString(startAfterParam)
+		if err != nil {
+			http.Error(w, "invalid altCollectionId: "+err.Error(), http.StatusBadRequest)
+			return nil, err
+		}
+		return &decoded, nil
+
+	}
+	switch strings.ToLower(requested) {
+	case "agarbatch", "agar batch",
+		"agarbatches", "agar batches":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*AgarBatch, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &AgarBatch{}, disposedFilter, acid)
+	case "agarrecipe", "agar recipe",
+		"agarrecipes", "agar recipes":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*AgarRecipe, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &AgarRecipe{}, disposedFilter, acid)
+	case "bag",
+		"bags":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Bag, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Bag{}, disposedFilter, mcid)
+	case "fruit",
+		"fruits":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Fruit, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Fruit{}, disposedFilter, mcid)
+	case "fruitingchamber", "box", "chamber", "fruiting chamber",
+		"boxes", "fruitingchambers", "chambers", "fruiting chambers":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*FruitingChamber, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &FruitingChamber{}, disposedFilter, mcid)
+	case "grainbatch", "grainbatches":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*GrainBatch, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &GrainBatch{}, disposedFilter, acid)
+	case "jar", "grainjar", "grain jar",
+		"jars", "grainjars", "grain jars":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*GrainJar, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &GrainJar{}, disposedFilter, mcid)
+	case "jarrecipe", "jar recipe",
+		"jarrecipes", "jar recipes":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*JarRecipe, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &JarRecipe{}, disposedFilter, acid)
+	case "lc", "liquidculture", "liquid culture",
+		"lcs", "liquidcultures", "liquid cultures":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*LiquidCulture, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &LiquidCulture{}, disposedFilter, mcid)
+	case "lcrecipe", "lc recipe", "liquidculturerecipe", "liquid culture recipe",
+		"lcrecipes", "lc recipes", "liquidculturerecipes", "liquid culture recipes":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*LcRecipe, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &LcRecipe{}, disposedFilter, acid)
+	case "lcsyringe", "lcsyringes":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*LcSyringe, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &LcSyringe{}, disposedFilter, mcid)
+	case "mss", "sporesyringe", "spore syringe", "multisporesyringe", "multi spore syringe",
+		"msss", "sporesyringes", "spore syringes", "multisporesyringes", "multi spore syringes":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*MSS, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &MSS{}, disposedFilter, mcid)
+	case "pcrun", "pc run", "pressure cooker run", "pressure cooker", "pc", "pressurecooker", "run",
+		"pcruns", "pc runs", "pcRuns", "pressure cooker runs", "pressure cookers", "pcs", "pressurecookers", "runs":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*PCRun, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &PCRun{}, disposedFilter, acid)
+	case "plate", "dish", "agarplate", "agar plate", "agardish", "agar dish", "petri", "petridish", "petri dish",
+		"plates", "dishes", "agarplates", "agar plates", "agardishes", "agar dishes", "petris", "petridishes", "petri dishes":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Plate, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Plate{}, disposedFilter, mcid)
+	case "plugs", "plug", "peg", "pegs":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*PlugsJar, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &PlugsJar{}, disposedFilter, mcid)
+	case "project", "projects":
+		// TODO: projects list after!
+		bs, err = listProjectsHandlerInternal(r.Context(), true) // TODO: true ok here? TEST HEAVILY!
+		//bs, err = listEntriesHandlerInternal[*Project](r.Context(), true, maxResults, doStandardToo, &Project{}, disposedFilter)
+	case "sale", "sales":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Sale, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &Sale{}, disposedFilter, acid)
+	case "slant", "slants":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Slant, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &Slant{}, disposedFilter, mcid)
+	case "species":
+		// Species are not paginated, we always return ALL OF THEM
+		startAfterName, err := getParamStringDecoded(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Species, string](r.Context(), true, -1, doStandardToo, &Species{}, disposedFilter, startAfterName)
+	case "sporeprint", "spore print", "print",
+		"sporeprints", "spore prints", "prints":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*SporePrint, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &SporePrint{}, disposedFilter, mcid)
+	case "sporeswab", "sporeswabs", "swab", "swabs":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*SporeSwab, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &SporeSwab{}, disposedFilter, mcid)
+	case "stasistube", "stasis tube", "stasis", "tube",
+		"stasistubes", "stasis tubes", "tubes":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*StasisTube, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &StasisTube{}, disposedFilter, mcid)
+	case "subspecies":
+		// TODO: string ok?
+		startAfterName, err := getParamStringDecoded(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Subspecies, string](r.Context(), true, -1, doStandardToo, &Subspecies{}, disposedFilter, startAfterName)
+	case "substrate", "substraterecipe", "substrate recipe",
+		"substrates", "substraterecipes", "substrate recipes":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*SubstrateRecipe, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &SubstrateRecipe{}, disposedFilter, acid)
+	case "substratebatch", "substratebatches":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*SubstrateBatch, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &SubstrateBatch{}, disposedFilter, acid)
+	case "transfer", "xfer",
+		"transfers", "xfers":
+		acid, err := getAltCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*Transfer, AlternateCollectionId](r.Context(), true, maxResults, doStandardToo, &Transfer{}, disposedFilter, acid)
+	case "user", "users":
+		// TODO: string ok?
+		startAfterEmail, err := getParamStringDecoded(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*User, string](r.Context(), true, maxResults, doStandardToo, &User{}, disposedFilter, startAfterEmail)
+	case "nonguest", "nonguests": // TODO: do we even want this?
+		// TODO: start after handler?
+		bs, err = ListUsersHandler(r.Context(), true) // TODO: validate working!
+		//bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
+	case "waterjar", "waterjars", "water jar", "water jars", "sterilizedwater", "sterilizedwaterjar", "sterilewater", "sterilewaterjar":
+		mcid, err := getMainCollId(startAfterParam, w)
+		if err != nil {
+			return // already wrote
+		}
+		bs, err = listEntriesHandlerInternal[*WaterJar, MainCollectionId](r.Context(), true, maxResults, doStandardToo, &WaterJar{}, disposedFilter, mcid)
+	default:
+		http.Error(w, errors.Join(ErrInvalidEntryType, errors.New("invalid collection input. Does not map to a collection name")).Error(), http.StatusBadRequest)
+	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bs)
+	handleWriteErr(err, w)
+}
+var ListSubspeciesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	spec, err := UrlDecodeString(r.PathValue("variant"))
+	if err != nil {
+		http.Error(w, "got bad species name. "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	findBson := BsonFindFilter("species", spec)
+	sortField := "$natural" // TODO: FIX to sort for name!
+	// TODO: pagination?
+	opts := options.Find().
+		SetSort(bson.D{{Key: sortField, Value: -1}}) // Descending (latest first) // TODO: ensure -1 works with natural
+	//opts.SetHint() // Takes an index if searching will be easier that way // TODO: figure out if we need this (https://www.mongodb.com/docs/manual/reference/method/cursor.hint/#mongodb-method-cursor.hint)
+	cursor, err := DbFrom(ctx).
+		Collection(SubspeciesCollectionName).
+		Find(ctx, findBson, opts)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			_, err = w.Write([]byte("[]"))
+			handleWriteErr(err, w)
+			return
+		}
+		http.Error(w, "failed to list subspecies. "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	subspecs, err := getCollectionItemsFromCursor[Subspecies](ctx, cursor, nil)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			_, err = w.Write([]byte("[]"))
+			handleWriteErr(err, w)
+			return
+		}
+		http.Error(w, "failed to list subspecies after getting. "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bs, err := json.Marshal(subspecs)
+	if err != nil {
+		http.Error(w, "failed to marshal subspecies after getting. "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bs)
+	handleWriteErr(err, w)
 }
 
-//	func ListNewestEntriesHandler() http.Handler {
-//		handler := func(w http.ResponseWriter, r *http.Request) {
-//			var maxResults int = 10
-//			requested := r.PathValue("variant")
-//
-//			createdOrUpdated, ok := map[string]string{
-//				"":        "updated",
-//				"updated": "updated",
-//				"created": "created",
-//			}[r.URL.Query().Get("createdOrUpdated")]
-//			if !ok {
-//				http.Error(w, "param createdOrUpdated must be created, updated, or nonexistent", http.StatusBadRequest)
-//				return
-//			}
-//			if maxNum := r.URL.Query().Get("n"); maxNum != "" {
-//				n, err := strconv.Atoi(maxNum)
-//				if err != nil {
-//					http.Error(w, fmt.Sprintf(`param n must be a number, or nonexistent (defaults to %d)`, maxResults), http.StatusBadRequest)
-//					return
-//				}
-//				maxResults = n
-//			}
-//
-//			entries, err := getLastNEntries(r.Context(), requested, createdOrUpdated == "updated", maxResults)
-//			if err != nil {
-//				code := http.StatusInternalServerError
-//				if errors.Is(err, mongo.ErrNoDocuments) {
-//					code = http.StatusNotFound
-//				}
-//				http.Error(w, err.Error(), code)
-//				return
-//			}
-//			bs, err := json.Marshal(entries)
-//			if err != nil {
-//				http.Error(w, "Unexpected latest marshalling error: "+err.Error(), http.StatusInternalServerError)
-//				return
-//			}
-//			if _, err = w.Write(bs); err != nil {
-//				HandleHttpWriteError(err)
-//			}
-//		}
-//		return http.HandlerFunc(handler)
-//		//return GetPermsMiddleware(handler)
-//	}
 func HandleHttpWriteError(err error) {
-	println("http write errors are currently unhandled! Err: " + err.Error())
+	if err != nil {
+		println("http write errors are currently unhandled! Err: " + err.Error())
+	}
 }
-
-//
-//func ListStandardEntriesHandler() http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		requested := r.PathValue("variant")
-//		entries, err := getStandardEntries(r.Context(), requested)
-//		if err != nil {
-//			code := http.StatusInternalServerError
-//			if errors.Is(err, mongo.ErrNoDocuments) {
-//				code = http.StatusNotFound
-//			}
-//			http.Error(w, err.Error(), code)
-//			return
-//		}
-//		bs, err := json.Marshal(entries)
-//		if err != nil {
-//			http.Error(w, "Unexpected latest marshalling error: "+err.Error(), http.StatusInternalServerError)
-//			return
-//		}
-//		if _, err = w.Write(bs); err != nil {
-//			HandleHttpWriteError(err)
-//		}
-//	}
-//}
 
 func PrintAltCollectionItemIds[T AltCollectionItem[U], U AltCollectionIdType](Prefix string, testItems []T) error {
 	if len(testItems) == 0 {
@@ -357,9 +469,8 @@ func addTestAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx contex
 		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(testItems[0].CollectionName())
 		return coll.BulkWrite(ctx, sliceutils.Map(testItems, func(item T) mongo.WriteModel {
 			// TODO: bson.M vs bson.D?
-			return mongo.NewReplaceOneModel().SetReplacement(item).SetFilter(bson.M{"_id": item.DbId()}).SetUpsert(true)
+			return mongo.NewReplaceOneModel().SetReplacement(item).SetFilter(bson.M{IDfld: item.DbId()}).SetUpsert(true)
 		}))
-		// TODO: do something with the result?
 	})
 	wg.Wait()
 	if err := PrintAltCollectionItemIds("Test", testItems); err != nil {
@@ -372,27 +483,55 @@ func addBasicAltEntries[T AltCollectionItem[U], U AltCollectionIdType](ctx conte
 	if err := PrintAltCollectionItemIds("Builtin", testItems); err != nil {
 		return err
 	}
-	// TODO: txn or no?
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(testItems[0].CollectionName())
+	coll := DbFrom(ctx).Collection(testItems[0].CollectionName())
 	for _, item := range testItems {
-		switch id := item.IdValue().(type) {
-		case AlternateCollectionId:
-			println(id.AsBase58())
-		case string:
-			println(id)
-		default:
-			return errors.New("invalid basic alt entry id, must be string or Alt Id")
-		}
 		_, err := coll.InsertOne(ctx, item, options.InsertOne())
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
 				continue
 			}
-			// TODO: update existing if needed?
 			println("error adding basic alt entries: " + err.Error())
 			return err
 		}
+
 	}
 
 	return nil
+}
+
+func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id AlternateCollectionId, err error) {
+	var idStr string
+	idStr, err = UrlDecodeString(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "failed to url decode altCollId string: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	altCollId, err := StandardizeAltCollectionId(idStr)
+	if err != nil {
+		http.Error(w, "failed to standardize alt collection id: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	b58id, id = altCollId.AsBase58(), *altCollId
+	return
+}
+
+func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) {
+	coll := DbFrom(ctx).Collection(toInsert.CollectionName())
+	_, err := coll.InsertOne(ctx, toInsert)
+	if err != nil {
+		http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		return
+	}
+	_, err = w.Write(bsOut)
+	if err != nil {
+		handleWriteErr(err, w)
+	}
+}
+
+func finishImportMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
+	finishCreateMainCollectionEntry(ctx, toInsert, w)
 }

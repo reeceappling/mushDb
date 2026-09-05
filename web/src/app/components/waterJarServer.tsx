@@ -1,13 +1,6 @@
 import {Note} from "@/app/components/formSubcomponents/notes";
-import {
-    Contamination,
-} from "@/app/components/formSubcomponents/contaminations";
-import {PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {AgarBatchSelector, NewAgarBatchForm} from "@/app/components/agarBatchClient";
-import {AgarBatchData, ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
 import {NewWaterJarForm, WaterJarSelector} from "@/app/components/waterJarClient";
 
 // export function TestWaterOk(){
@@ -22,6 +15,7 @@ import {NewWaterJarForm, WaterJarSelector} from "@/app/components/waterJarClient
 //         pcRun: "(PC RUN ID HERE)",
 //         notes: [...testNotes],
 //         lastUpdated: 789,
+//         acl: TestAcl(), // TODO: do we want this?
 //     }
 //     return a
 // }
@@ -32,6 +26,26 @@ export interface WaterJarData {
     notes?: Note[]
     disposed?: number
     lastUpdated: number
+    acl: ACL
+}
+export class WaterJarData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<WaterJarData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "waterJar"
+    }
+    public description(): string {
+        const firstSent = `Water jar ${this._id}`
+        const lastSent = `Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}.${this.disposed !== undefined && ` Disposed on ${new Date(this.disposed).toISOString()}`}`
+        return `${firstSent}. ${lastSent}`
+    }
 }
 
 export function WaterJarSelectorCloseable(sp: SelectorProps<WaterJarData>) {
@@ -44,13 +58,11 @@ export function WaterJarSelectorCloseable(sp: SelectorProps<WaterJarData>) {
     return <CloseableSelector<WaterJarData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: "",
         closeTxt: "Close Water Jar List",
         createTxt: "Create Water Jar",
         lowercase: "water jar",
         creatorInPage: sp.creatorInPage,
         createEndpt: "waterJar",
-        getId: (v: WaterJarData) => v._id,
         createSelector:(selHdl: (onSelect: WaterJarData) => void)=>{
             return <WaterJarSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

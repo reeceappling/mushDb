@@ -1,9 +1,9 @@
 'use client'
 
-import React, {Dispatch, SetStateAction, useEffect, useState} from "react";
+import React, {Dispatch, SetStateAction, useContext, useEffect, useState} from "react";
 import ID from "@/app/components/formSubcomponents/id";
 import {
-    CheckArrayType,
+    CheckArrayType, clientPostRequestHeaders,
     DisplayFormWrapper,
     DisplayInput, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
@@ -13,16 +13,18 @@ import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
 import {IsValidUserPerms, UserData, UserPerms} from "@/app/components/userServer";
 import {SelectorResetsOnSelectForCustom} from "@/app/components/selector";
+import { CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertUser(input: any): asserts input is UserData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Transfer assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
@@ -37,10 +39,10 @@ export function AssertUser(input: any): asserts input is UserData {
     //     }
     // }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['perms', IsValidUserPerms]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
@@ -61,43 +63,36 @@ export function AssertUser(input: any): asserts input is UserData {
 
 export default function UserDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel
-    }: DisplayInput) {
-    try {
-
-        AssertUser(data)
-        const [initial, setInitial] = useState(data)
+        readonly, data, headerLevel, isTopLevel
+    }: DisplayInput<UserData>) {
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
         const [err, setErr] = useState<string | undefined>()
         const [perms, setPerms] = useState<UserPerms>(initial.perms || {admin: true, projects: []}) // TODO: SETPERMS
         const updateInitial = (updated: UserData) => {
             setInitial(updated)
             setPerms(updated.perms || {admin: true, projects: []})
+            setErr(undefined)
         }
+        const cookies = useContext(CookiesContext)
         const userSubmit = () => {
-            if ((!perms.admin && (initial.perms === undefined || initial.perms.admin)) || (perms.admin && (initial.perms && initial.perms.admin === false))) { // TODO: ensure ok
-                fetch(BaseExternalUrl + "/db/update/user", { // TODO: MAKE SURE TO ONLY REMOVE ADMIN OR MAKE IT TRUE, DONT REMOVE ADMIN FROM SELF-USER
-                    method: 'Post',
-                    body: JSON.stringify(perms),
-                    headers: {
-                        credentials: 'include',
-                        'Content-type': "application/json"
-                    },
-                })
-                    .then(HandleJsonResponse)
-                    .then((entry) => {
-                        AssertUser(entry)
-                        updateInitial(entry)
-                    })
-                    .catch((er) => {
-                        setErr(JSON.stringify(er))
-                    });
-            }
+            console.error("user updating not currently implemented!") // TODO: fix!
+            // if ((!perms.admin && (initial.perms === undefined || initial.perms.admin)) || (perms.admin && (initial.perms && initial.perms.admin === false))) { // TODO: ensure ok
+            //     const body: any = perms
+            //     DoUpdateRequest("user",initial._id, body, AssertUser, allCookies(cookies))
+            //         .then(v=>{
+            //             updateInitial(new UserData(v))
+            //         })
+            //         .catch(e=>{
+            //             setErr(JSON.stringify(e))
+            //         })
+            // }
         }
         return (
 
             <DisplayFormWrapper entryType={"user"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"User"} entryType={"user"}/>
+                <ErrorDisplay err={err}/>
+                <ID props={{id:data._id, txt:"User", entryType:"user"}}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>{/*TODO: ALL THESE GROUPS!*/}
                     </FlexedSinglesGroup>
@@ -116,9 +111,6 @@ export default function UserDisplay(
                 {/* TODO: unlikely to need: <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/> TODO: where to put?*/}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Transfer data format incorrect: " + err}</div>
-    }
 }
 
 // TODO: MOVE!
@@ -132,14 +124,11 @@ export function HandleErr(error: any, setErr: Dispatch<SetStateAction<string | u
     }
 }
 
-// TODO: move?
+// TODO: move? keep on client because user can have different accesses
 function getAllOptions<T>(itemType: string, assertEntry: (input: any) => void) {
     return fetch(BaseExternalUrl + "/db/list/" + itemType, {
         method: "GET",
-        headers: {
-            credentials: 'include',
-            'Content-type': 'application/json',
-        },
+        headers: clientPostRequestHeaders,
     }).then(HandleJsonResponse)
         .then((data) => {
             console.log("handling user selector response") // TODO: del

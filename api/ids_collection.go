@@ -13,19 +13,18 @@ type idMapEntry struct {
 	EntryType string           `bson:"entryType" json:"entryType"`
 }
 
-func initializeItemMapCollection(ctx context.Context) error { // TODO: USE!
+func initializeItemMapCollection(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName)
+	coll := DbFrom(ctx).Collection(idMapCollectionName)
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		newSimpleIndex("entryType", "entryType", false, false, false),
 	})
 	return err
 }
 
-// TODO: USE
-func getEntryTypeForId(ctx context.Context, id MainCollectionId) (string, error) {
+func GetEntryTypeForId(ctx context.Context, id MainCollectionId) (string, error) {
 	result := idMapEntry{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(idMapCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(&result)
+	err := DbFrom(ctx).Collection(idMapCollectionName).FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&result)
 	return result.EntryType, err
 }
 

@@ -4,38 +4,49 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/writeconcern"
+	"golang.org/x/exp/maps"
 	"io"
 	"net/http"
 )
-
-// TODO: needed for: ???????????????
 
 type projectName string
 
 type Project struct {
 	Name              projectName `bson:"_id" json:"_id"`
 	CreationDateField `bson:"inline"`
-	Completed         *UnixTime `bson:"completed,omitempty" json:"completed,omitempty"` // TODO: index?
+	Private           bool       `bson:"private" json:"private"`
+	Completed         *unix.Time `bson:"completed,omitempty" json:"completed,omitempty"`
 	NotesField        `bson:"inline"`
 	LastUpdatedField  `bson:"inline"`
-	Perms             ProjectPerms `bson:"perms" json:"perms"`
-	// TODO: make it so we can add/remove users from Projects
+	// TODO: add user Project perm that allows modifying all except permissions?
+	Perms ProjectPerms `bson:"perms" json:"perms"` // Map of email of user to permission on project
 }
+
+//func (p Project) Blank() CollectionItem {
+//	return &Project{}
+//}
 
 func (p Project) DbId() string {
 	return string(p.Name)
 }
 
+// TODO: use?
 func (p Project) AddUser(u User, perm *ReadWritePerm) string {
 	// TODO: this!!!!
 	// TODO: update email entry
 	// TODO: update email session?
 	panic("implement me")
-}
+} // TODO: impl!?
 
 func (p Project) IdValue() any {
 	return string(p.Name)
@@ -43,7 +54,7 @@ func (p Project) IdValue() any {
 
 func initializeProjects(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName)
+	coll := DbFrom(ctx).Collection(ProjectsCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		//newSimpleIndex("completed", "creationDate", true, true, false),
@@ -52,14 +63,16 @@ func initializeProjects(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, testItem := range testProjects {
-		// If test item does not exist or does not match, then create/update it
-		_, errRep := coll.ReplaceOne(ctx, bsonFindFilter("_id", testItem.Name), testItem, options.Replace().SetUpsert(true))
-		err = errors.Join(errRep, err)
-		if err != nil {
+	return env.IfNotProd(ctx, func() error {
+		for _, testItem := range testProjects {
+			// If test item does not exist or does not match, then create/update it
+			_, errRep := coll.ReplaceOne(ctx, BsonFindFilter(IDfld, testItem.Name), testItem, options.Replace().SetUpsert(true))
+			err = errors.Join(errRep, err)
+			if err != nil {
+			}
 		}
-	}
-	return err
+		return err
+	})
 }
 
 func GetAllProjects(ctx context.Context, complete *bool) ([]Project, error) {
@@ -68,15 +81,17 @@ func GetAllProjects(ctx context.Context, complete *bool) ([]Project, error) {
 		return nil, err
 	}
 	if complete != nil {
+		var keepFilter func(*Project) bool
 		if *complete {
-			projs = sliceutils.FilterInPlace(projs, func(pr *Project) bool {
+			keepFilter = func(pr *Project) bool {
 				return pr.Completed != nil
-			})
+			}
 		} else {
-			projs = sliceutils.FilterInPlace(projs, func(pr *Project) bool {
+			keepFilter = func(pr *Project) bool {
 				return pr.Completed == nil
-			})
+			}
 		}
+		projs = sliceutils.FilterInPlace(projs, keepFilter)
 	}
 
 	return sliceutils.Map(projs, func(pr *Project) Project {
@@ -84,59 +99,140 @@ func GetAllProjects(ctx context.Context, complete *bool) ([]Project, error) {
 	}), nil
 }
 
-var testProjects = []Project{
-	{
-		Name:              "testProjectAdmin",
+const (
+	TestProjectNamePublic  = "testProjectPublic"
+	TestProjectNamePrivate = "testProjectPrivate"
+)
+
+var testProjectsMap = map[projectName]Project{
+	TestProjectNamePublic: {
+		Name:              TestProjectNamePublic,
+		Private:           false,
 		CreationDateField: CreationDateField{exampleTime},
 		Completed:         nil,
 		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be admin"),
+			newNote(exampleTime, "Admin user is admin"),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] are admin`, testUserEmailPAA, testUserEmailPAB, testUserEmailPAC)),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] can write`, testUserEmailPWA, testUserEmailPWB, testUserEmailPWC)),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] can read`, testUserEmailPRA, testUserEmailPRB, testUserEmailPRC)),
+			newNote(exampleTime, fmt.Sprintf(`test users [%s, %s, %s] excluded`, testUserEmailPNA, testUserEmailPNB, testUserEmailPNC)),
 		}},
 		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]string{
-			testUserEmail: "admin",
-		},
-	}, {
-		Name:              "testProjectWrite",
-		CreationDateField: CreationDateField{exampleTime},
-		Completed:         &exampleTime,
-		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be able to write but not admin"),
-		}},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]string{
-			testUserEmail: "write",
-		},
-	}, {
-		Name:              "testProjectRead",
-		CreationDateField: CreationDateField{exampleTime},
-		Completed:         nil,
-		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should be able to read"),
-		}},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms: map[string]string{
-			testUserEmail: "read",
-		},
-	}, {
-		Name:              "testProjectNone",
-		CreationDateField: CreationDateField{exampleTime},
-		Completed:         nil,
-		NotesField: NotesField{Notes: []Note{
-			newNote(exampleTime, "test user should not be able to do anything"),
-		}},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		Perms:            nil,
+		Perms:            createTestProjectPerms(),
 	},
+	TestProjectNamePrivate: {
+		Name:              TestProjectNamePrivate,
+		Private:           true,
+		CreationDateField: CreationDateField{exampleTime},
+		Completed:         nil,
+		NotesField: NotesField{Notes: []Note{
+			newNote(exampleTime, "Admin users should be the only one that can read this project"),
+		}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		Perms:            map[string]ProjectPerm{},
+	},
+}
+
+func createTestProjectPerms() ProjectPerms {
+	out := ProjectPerms{}
+	admins := []string{
+		//testUserEmailGoogleNormal, testUserEmailSelf, // TODO: del?
+		testUserEmailPAA, testUserEmailPAB, testUserEmailPAC,
+	}
+	writers := []string{
+		testUserEmailPWA, testUserEmailPWB, testUserEmailPWC,
+	}
+	readers := []string{
+		testUserEmailPRA, testUserEmailPRB, testUserEmailPRC,
+	}
+	nones := []string{
+		testUserEmailPNA, testUserEmailPNB, testUserEmailPNC,
+	}
+	adminPerm, writePerm, readPerm := &ProjectAdmin, &ProjectWrite, &ProjectRead
+	for perm, emails := range map[*ProjectPerm][]string{
+		adminPerm: admins,
+		writePerm: writers,
+		readPerm:  readers,
+		nil:       nones,
+	} {
+		if perm == nil {
+			continue
+		}
+		for _, email := range emails {
+			out[email] = *perm
+		}
+	}
+	return out
+}
+
+var testProjects = []Project{
+	//{
+	//	Name:              "testProjectAdmin",
+	//	CreationDateField: CreationDateField{exampleTime},
+	//	Completed:         nil,
+	//	NotesField: NotesField{Notes: []Note{
+	//		newNote(exampleTime, "test user should be admin. Admin user is admin"),
+	//	}},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	Perms: map[string]ProjectPerm{
+	//		testUserEmailGoogleNormal:     ProjectAdmin,
+	//		testUserEmailSelf: ProjectAdmin,
+	//		//testUserEmailPAA:  ProjectWrite,
+	//		//testUserEmailPAB:  ProjectWrite,
+	//		//testUserEmailPAC:  ProjectWrite,
+	//		//testUserEmailPWA:  ProjectRead,
+	//		//testUserEmailPWB:  ProjectRead,
+	//		//testUserEmailPWC:  ProjectRead,
+	//		////testUserEmailPNA:  ProjectNone,
+	//		////testUserEmailPNB:  ProjectNone,
+	//	},
+	//}, {
+	//	Name:              "testProjectWrite",
+	//	CreationDateField: CreationDateField{exampleTime},
+	//	Completed:         &exampleTime,
+	//	NotesField: NotesField{Notes: []Note{
+	//		newNote(exampleTime, "test user should be able to write but not admin. Admin user is admin"),
+	//	}},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	Perms: map[string]ProjectPerm{
+	//		testUserEmailGoogleNormal:     ProjectWrite,
+	//		testUserEmailSelf: ProjectAdmin,
+	//	},
+	//}, {
+	//	Name:              "testProjectRead",
+	//	CreationDateField: CreationDateField{exampleTime},
+	//	Completed:         nil,
+	//	NotesField: NotesField{Notes: []Note{
+	//		newNote(exampleTime, "test user should be able to read. Admin user is admin"),
+	//	}},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	Perms: map[string]ProjectPerm{
+	//		testUserEmailGoogleNormal:     ProjectRead, // TODO: ensure to remove dots and plusses from (pre-@) emails? Maybe keep them because that's nicer as a service provider :)
+	//		testUserEmailSelf: ProjectAdmin,
+	//	},
+	//}, {
+	//	Name:              "testProjectNone",
+	//	CreationDateField: CreationDateField{exampleTime},
+	//	Completed:         nil,
+	//	NotesField: NotesField{Notes: []Note{
+	//		newNote(exampleTime, "test user should not be able to do anything. Admin user is admin"),
+	//	}},
+	//	LastUpdatedField: LastUpdatedField{exampleTime},
+	//	Perms: map[string]ProjectPerm{
+	//		testUserEmailSelf: ProjectAdmin, // This is self and not test user because I want only my main email to be admin
+	//	},
+	//},
+	testProjectsMap[TestProjectNamePublic],
+	testProjectsMap[TestProjectNamePrivate],
 }
 
 type createProjectRequest struct {
 	NameField
+	Private bool `json:"private"`
 	NotesField
 }
 
 func createProjectHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: ADD CREATING USER TO THE PROJECT AS THE INITIAL USER. HANDLE ALL PERMS
 	// TODO: update sessions with perm updates?
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
@@ -150,43 +246,42 @@ func createProjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(ProjectsCollectionName)
-	user, err := GetAuthInfo(ctx)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	// dont allow guests to create projects
-	if user.isGuest() {
-		http.Error(w, "guests cannot create new projects", http.StatusForbidden)
-		return
-	}
 
-	now := unixTimeForNow()
+	ctx, now := request.UnixTime(r.Context())
+	userEmail, projName := GetUserEmail(ctx), projectName(req.Name)
 	toInsert := Project{
-		Name:              projectName(req.Name),
+		Name:              projName,
 		CreationDateField: CreationDateField{now},
+		Private:           req.Private,
 		NotesField:        req.NotesField,
 		LastUpdatedField:  LastUpdatedField{now},
-		Perms: ProjectPerms(map[string]string{
-			user.Email: "admin",
+		Perms: ProjectPerms(map[string]ProjectPerm{
+			userEmail: ProjectAdmin,
 		}),
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
-	// TODO: add this project to the user session
+	// TODO: try to add project to user!
+
+	updateUser := func() error {
+		// add project to the user session in mem
+		authSvc := GetAuthService(ctx)
+		authSvc.Lock()
+		defer authSvc.Unlock()
+		return authSvc.store.AddProjectToUserSession(userEmail, projName, ProjectAdmin)
+	}
+	finishCreateProject(ctx, toInsert, w, updateUser)
 }
 
 type updateProjectRequest struct {
-	Completed *UnixTime `json:"completed,omitempty"`
+	Completed *unix.Time `json:"completed,omitempty"`
+	Private   bool       `json:"private"`
 	NotesUpdateField
 	Perms ProjectPerms `json:"perms"`
-	// TODO: update perms should update users too!
 }
 
 func (req updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
 	return NewMods().
 		updateProjectCompletedIfNeeded(req.Completed, existing.Completed).
+		updateProjectPrivateIfNeeded(req.Private, existing.Private).
 		updateNotesIfNeeded(req, existing).
 		updateProjectPermsIfNeeded(req.Perms, existing.Perms).
 		updateLastUpdatedIfNeeded().
@@ -194,7 +289,7 @@ func (req updateProjectRequest) modsFor(existing *Project) (bson.D, error) {
 }
 
 func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
-	urlEncodedProjectName := r.PathValue("id") // TODO: NOT FINDING PROJECT!
+	urlEncodedProjectName := r.PathValue("id") // TODO: NOT FINDING PROJECT! VALIDATE PROPERLY FINDING!
 	println("project update url used: " + r.URL.String())
 	projNameStr, err := UrlDecodeString(urlEncodedProjectName)
 	if err != nil {
@@ -210,13 +305,12 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Validate user perms for this project
-	// TODO: validate current user can edit
+
+	// validate current user can edit (is admin of service or admin on project)
 	if projUserPerm := user.PermsForProject(projName); projUserPerm == nil || bool(*projUserPerm) != true {
 		http.Error(w, "user is not project admin", http.StatusForbidden)
 		return
 	}
-	// TODO: HANDLE CHANGES TO PERMS
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -230,16 +324,10 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	bs, err = json.MarshalIndent(req, "", "\t")
-	println("RECEIVED: ", string(bs)) // TODO: del
-	if err != nil {                   // TODO: del
-		http.Error(w, "failed to marshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	} // TODO: del
 	ctx, db := Db(r)
 	coll := db.Collection(ProjectsCollectionName)
 	existing := Project{}
-	err = coll.FindOne(ctx, bson.M{"_id": projName}).Decode(&existing)
+	err = coll.FindOne(ctx, bson.M{IDfld: projName}).Decode(&existing)
 	if err != nil {
 		stat := http.StatusInternalServerError
 		if err == mongo.ErrNoDocuments {
@@ -248,26 +336,74 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, err.Error(), stat)
 		return
 	}
-	for u, _ := range req.Perms {
-		if _, exists := existing.Perms[u]; !exists {
+	// Validate user perms for this project
+	// Validate user is admin of project
+	existingUserPerm := existing.Perms[user.Email]
+	if !user.IsAdmin() && (existingUserPerm != "admin") {
+		dbErr(w, "unauthorized to edit", http.StatusForbidden)
+		return
+	}
+	// Validate any changes, ensure new users exist, and sort perms changes into groups
+	usersWithProjectRemoved := utils.SetOf(maps.Keys(existing.Perms))
+	usersWithProjectChanged := map[string]ProjectPerm{}
+	usersWithProjectAdded := map[string]ProjectPerm{}
+	for u, futurePerm := range req.Perms {
+		usersWithProjectRemoved.Remove(u)
+		existingPerm, exists := existing.Perms[u]
+		if !exists {
+			usersWithProjectAdded[u] = futurePerm
 			// validate new user exists
-			result := db.Collection(UserCollName).FindOne(ctx, bsonFindFilter("_id", u))
+			result := db.Collection(UserCollName).FindOne(ctx, BsonFindFilter(IDfld, u))
 			if err = result.Err(); err != nil {
 				dbErr(w, "user "+u+" does not exist. Invalid request", http.StatusBadRequest)
 				return
 			}
+		} else {
+			if futurePerm != existingPerm {
+				usersWithProjectChanged[u] = futurePerm
+			}
 		}
 	}
-	// Validate user is admin of project
-	existingUserPerm := existing.Perms[user.Email]
-	if !user.isAdmin() && (existingUserPerm != "admin") {
-		dbErr(w, "unauthorized to edit", http.StatusForbidden)
-		return
+
+	updateUsers := func(sessCtx mongo.SessionContext) (any, error) {
+		permKey := "perms." + string(projName)
+		txColl := mongo.SessionFromContext(sessCtx).
+			Client().Database(dbName).
+			Collection(UserCollName)
+		authSvc := GetAuthService(sessCtx)
+		authSvc.Lock()
+		defer authSvc.Unlock()
+		for u, _ := range usersWithProjectRemoved {
+			// remove project from each user that no longer has the project // TODO: VALIDATE WORKING PROPERLY
+			_, e := txColl.UpdateByID(sessCtx, u, bson.D{{"$unset", bson.D{{permKey, ""}}}}) // TODO: ensure ok
+			if e != nil {
+				return nil, e
+			}
+			// remove the project from the user in the session stuff!
+			if err = authSvc.store.RemoveProjectFromUserSession(u, projName); err != nil {
+				return nil, err
+			}
+
+		}
+		// Add project with perm to user, or change the project perm  // TODO: VALIDATE WORKING PROPERLY
+		for _, subset := range []map[string]ProjectPerm{usersWithProjectChanged, usersWithProjectAdded} {
+			for u, userPerm := range subset {
+				_, e := txColl.UpdateByID(sessCtx, u, bson.D{{"$set", bson.D{{permKey, userPerm}}}}) // TODO: ensure ok
+				if e != nil {
+					return nil, e
+				}
+				// add the project to the user in the session stuff!
+				if err = authSvc.store.AddProjectToUserSession(u, projName, userPerm); err != nil {
+					return nil, err
+				}
+			}
+		}
+		return nil, nil
 	}
 
 	// Create and write modifications
 	upd, err := req.modsFor(&existing)
-	handleUpdateMods(ctx, w, coll, existing, existing.DbId(), upd, err)
+	handleUpdateProject(ctx, w, existing, upd, err, updateUsers)
 }
 
 //func allUnfinishedProjectsForUser(ctx context.Context, auth AuthInfo) ([]ProjectWithPerm, error) {
@@ -275,9 +411,9 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //	if auth.Opts != nil {
 //		filter := bson.M{} // TODO: make sure this works
 //		if !auth.isAdmin() {
-//			filter = bson.M{"_id": bson.M{"$in": maps.Keys(auth.Opts.Projects)}}
+//			filter = bson.M{IDfld: bson.M{"$in": maps.Keys(auth.Opts.Projects)}}
 //		}
-//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
+//		cursor, err := DbFrom(ctx).Collection(ProjectsCollectionName).
 //			Find(ctx, filter) // TODO: ok?
 //		if err != nil {
 //			return nil, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
@@ -319,7 +455,7 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //		if unfinishedOnly {
 //			filter["completed"] = bson.M{"$exists": false}
 //		}
-//		cursor, err := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(ProjectsCollectionName).
+//		cursor, err := DbFrom(ctx).Collection(ProjectsCollectionName).
 //			Find(ctx, filter) // TODO: ok?
 //		if err != nil {
 //			return nil, errors.Join(errors.New("failed to get cursor for UserPerms Projects"), err)
@@ -365,4 +501,158 @@ func updateProjectHandler(w http.ResponseWriter, r *http.Request) {
 //		}
 //	}
 //	return out, nil
+//}
+
+func sessOpts() *options.SessionOptions {
+	return options.Session() // TODO: change?
+}
+func writeConc() *writeconcern.WriteConcern {
+	return writeconcern.Majority() // TODO: ok?
+}
+
+func handleUpdateProject(ctx context.Context, w http.ResponseWriter, existing Project, upd bson.D, err error, updateUsers func(mongo.SessionContext) (any, error)) {
+	if err != nil {
+		println("mod creation failure: " + err.Error())
+		dbErr(w, "error creating txn:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(upd) == 0 {
+		dbErr(w, "no changes made", http.StatusBadRequest)
+		return
+	}
+
+	sessionOptions := sessOpts()
+	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
+	if err != nil {
+		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	wc := writeConc()
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+	// Defers ending the session after the transaction is committed or ended
+	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		defer sess.EndSession(ctx)
+		// update the users (if needed)
+		if _, e := updateUsers(sessCtx); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to update users: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		// Update the project
+		coll := mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(ProjectsCollectionName)
+		bsonId := BsonFindFilter(IDfld, existing.DbId())
+		err = coll.FindOneAndUpdate(ctx, bsonId, upd).Err()
+		if err != nil {
+			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		var updated Project
+		err = coll.FindOne(ctx, bsonId).Decode(&updated)
+		if err != nil {
+			dbErr(w, "failed to write update to db: "+err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+		bsOut, err := json.Marshal(updated)
+		if err != nil {
+			dbErr(w, err.Error(), http.StatusInternalServerError)
+			return nil, err
+		}
+
+		// Try to commit the txn
+		if e := sess.CommitTransaction(ctx); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		_, err = w.Write(bsOut)
+		handleWriteErr(err, w)
+
+		return nil, nil
+	}, txnOptions)
+	return
+}
+
+func finishCreateProject(ctx context.Context, toInsert Project, w http.ResponseWriter, inTxn func() error) {
+	sessionOptions := sessOpts()
+	sess, err := GetMongoClient(ctx).StartSession(sessionOptions)
+	if err != nil {
+		http.Error(w, "failed to start mongo session: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	wc := writeConc()
+	txnOptions := options.Transaction().SetWriteConcern(wc)
+	// Defers ending the session after the transaction is committed or ended
+	_, err = sess.WithTransaction(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		defer sess.EndSession(ctx)
+		sessDb := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
+		// TODO:
+		// TODO: add project to user in db?
+		// do the inserts
+		_, err := sessDb.Collection(toInsert.CollectionName()).InsertOne(ctx, toInsert)
+		if err != nil {
+			http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
+			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
+		}
+		// Get current user and update
+		// get user currently in db
+		user := User{}
+		err = sessDb.Collection(UserCollName).FindOne(sessCtx, BsonFindFilter(IDfld, GetUserEmail(ctx))).Decode(&user)
+		if err != nil {
+			http.Error(w, "failed to get user in db: "+err.Error(), http.StatusInternalServerError)
+			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
+		}
+		// add project to the user's perms, re-save
+		user.Perms.Projects = append(user.Perms.Projects, toInsert.Name)
+		if !isUniqueSlice(user.Perms.Projects...) {
+			http.Error(w, "final user projects contained duplicates", http.StatusInternalServerError)
+			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
+		}
+		update := bson.M{
+			"$push": bson.M{
+				"perms.projects": toInsert.Name,
+			},
+		}
+		// TODO: I created some projects earlier that failed to update the user, make sure all projects are on all users that should have them...
+		_, err = sessDb.Collection(UserCollName).UpdateByID(ctx, user.Email, update) // TODO: ENSURE WORKING!
+		if err != nil {
+			http.Error(w, "failed to update user: "+err.Error(), http.StatusInternalServerError)
+			return nil, errors.Join(err, ErrTxnWriteFail, sess.AbortTransaction(ctx))
+		}
+		// do the thing needed to be successful
+		if e := inTxn(); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to do post-insert call: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		if e := sess.CommitTransaction(ctx); e != nil {
+			errTxn := errors.Join(e, sess.AbortTransaction(ctx))
+			http.Error(w, "failed to commit: "+errTxn.Error(), http.StatusInternalServerError)
+			return nil, errTxn
+		}
+		return nil, nil
+	}, txnOptions)
+	if err != nil {
+		return
+	}
+	bsOut, err := json.Marshal(toInsert)
+	if err != nil {
+		http.Error(w, "failed to marshal: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	_, err = w.Write(bsOut)
+	if err != nil {
+		handleWriteErr(err, w)
+		return
+	}
+}
+
+func isUniqueSlice[T comparable](items ...T) bool {
+	return len(utils.SetOf(items)) == len(items)
+}
+
+//func deleteProjectHandler(w http.ResponseWriter, r *http.Request) {
+//	// TODO: ensure no items have this project on it!
+//	// TODO: search agarBatch, agarRecipe, bag, fruit, fc, grainBatch, jar, jarRecipe, lc, lcRecipe, lcSyringe, mss, pcRun, plate, plugs, sale, slant, species, sporePrint, sporeSwab, stasisTube, subspecies, substrateBatch, substrateRecipe, transfer, user(?), waterJar
+//	http.Error(w, "delete project not implemented yet...", http.StatusNotImplemented)
+//	return
 //}

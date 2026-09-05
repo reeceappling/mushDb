@@ -1,14 +1,21 @@
 # syntax=docker.io/docker/dockerfile:1
-FROM node:18-alpine AS base
+FROM node:26.5-alpine AS base
+
+WORKDIR /app
+
+# Private Base API URL should use http and not https. Internal services in the cluster typically communicate over http, and the api service will handle TLS termination if needed. If we set this to https, the Next.js server will try to connect to the api service using https, which will fail since the api service is not configured for https.
+# Must be available at runtime, which is why it is built into all images during this build process.
+# TODO: consider moving to only the last one...
+ENV NEXT_PRIVATE_BASE_API_URL="http://api:8080"
 
 # Rebuild the source code only when needed
 FROM base AS builder
 
-WORKDIR /app
+# in base: WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* .npmrc* ./
-# Omit --production flag for TypeScript devDependencies # TODO: ?????????
+# Omit --production flag for TypeScript devDependencies # TODO: try out npm ci --omit=dev
 RUN \
   if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f package-lock.json ]; then npm ci; \
@@ -17,7 +24,7 @@ RUN \
   else echo "Warning: Lockfile not found. It is recommended to commit lockfiles to version control." && yarn install; \
   fi
 
-COPY src ./src
+COPY src/app ./src/app
 COPY public ./public
 COPY next.config.ts .
 COPY postcss.config.mjs .
@@ -30,10 +37,7 @@ ARG MAIN_API_EXTERNAL_HOST=mush.appli.ng
 ARG MAIN_API_EXTERNAL_PROTOCOL=https
 ARG MAIN_API_EXTERNAL_PORT=443
 ARG GOOGLE_CLIENT_ID=badIdInDockerfile
-# TODO: api.namespace.svc.cluster.local TODO: FIX
 ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
-# Private Base API URL should use http and not https. Internal services in the cluster typically communicate over http, and the api service will handle TLS termination if needed. If we set this to https, the Next.js server will try to connect to the api service using https, which will fail since the api service is not configured for https.
-ENV NEXT_PRIVATE_BASE_API_URL=http://api:8080
 ENV NEXT_PUBLIC_DOMAIN: ${MAIN_API_EXTERNAL_HOST}
 ENV NEXT_PUBLIC_PORT: ${MAIN_API_EXTERNAL_PORT}
 ENV NEXT_PUBLIC_BASE_API_URL=${MAIN_API_EXTERNAL_PROTOCOL}://${MAIN_API_EXTERNAL_HOST}
@@ -55,9 +59,9 @@ RUN \
 # Note: It is not necessary to add an intermediate step that does a full copy of `node_modules` here
 
 # Create Production image, copy all the files, and run next
+# Start with the base image which contains all private env vars and the base workdir
 FROM base AS runner
 
-WORKDIR /app
 RUN apk --no-cache add curl lsof
 
 # Don't run production as root
@@ -67,26 +71,14 @@ USER nextjs
 
 COPY --from=builder /app/public ./public
 
-# Automatically leverage output traces to reduce image size
+# Automatically leverage output traces to reduce image size # TODO: this!
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Environment variables must be redefined at run time
-ARG MAIN_API_EXTERNAL_HOST=mush.appli.ng
-ARG MAIN_API_EXTERNAL_PROTOCOL=https
-ARG MAIN_API_EXTERNAL_PORT=443
-# Private Base API URL should use http and not https. Internal services in the cluster typically communicate over http, and the api service will handle TLS termination if needed. If we set this to https, the Next.js server will try to connect to the api service using https, which will fail since the api service is not configured for https.
-ENV NEXT_PRIVATE_BASE_API_URL=http://api:8080
-ENV NEXT_PUBLIC_DOMAIN: ${MAIN_API_EXTERNAL_HOST}
-ENV NEXT_PUBLIC_PORT: ${MAIN_API_EXTERNAL_PORT}
-ENV NEXT_PUBLIC_BASE_API_URL=${MAIN_API_EXTERNAL_PROTOCOL}://${MAIN_API_EXTERNAL_HOST}
-
-# Uncomment the following line to disable telemetry at run time
+# Uncomment the following line to disable telemetry at run time # TODO: this?
 # ENV NEXT_TELEMETRY_DISABLED 1
 
-# Note: Don't expose ports here, Compose will handle that for us # TODO: SEE IF THIS WORKS WITHOUT EXPOSURE
-EXPOSE 3000
-
-# TODO: ENSURE WEB NOT WEIRD
+# TODO: where does server.js come from? can we rename it?
+# TODO: port dynamic? -H=web dynamic?
 CMD ["node", "server.js", "-p", "3000", "-H", "web"]

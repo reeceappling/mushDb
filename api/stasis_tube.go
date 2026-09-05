@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -21,7 +23,7 @@ import (
 
 type StasisTube struct { // TODO: instructions somewhere?
 	MainCollectionIdField             `bson:"inline"`
-	PcRunOptionalField                `bson:"inline"` // All tubes must go through the PC. probably won't exist for pre-existing tubes (imports=="unknown") // TODO: new, also used to not be optional
+	PcRunField                        `bson:"inline"` // All tubes must go through the PC. Created with PC. (imports==default)
 	WaterJarOptionalField             `bson:"inline"` // Only populated if the tubes are not PC'd with water inside // TODO: HANDLE THIS EVERYWHERE! NOT YET DONE IN TS
 	CreationDateField                 `bson:"inline"`
 	SpeciesOptionalField              `bson:"inline"`
@@ -50,28 +52,27 @@ func (s StasisTube) CanTransferTo(dst geneticSource) error {
 }
 
 func (s StasisTube) GeneticInfoAsParent() (GeneticParentInfo, error) {
-	return GeneticParentInfo{}, nil
+	return GeneticParentInfo{
+		SpeciesOptionalField:    s.SpeciesOptionalField,
+		SubspeciesOptionalField: s.SubspeciesOptionalField,
+		KnownFruitableField:     s.KnownFruitableField,
+		GenerationsFields:       s.GenerationsFields,
+	}, nil
 }
 
 func (s StasisTube) generation() (sinceSpore *Generation, sinceSporeOrClone *Generation) {
 	return s.GenSinceSpore, s.GenSinceFruitOrSpore
 }
 
-//func (s StasisTube) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(s.CollectionName())
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, s.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
+func (s StasisTube) Innoculatable() error {
+	return errors.Join(
+		s.RequireNoSpecies(),
+		s.RequireNoSubspecies(),
+		s.RequireNotDisposed(),
+		s.RequireUnsold(),
+		s.RequireUnknownFruitable(),
+		s.RequireNoInnoculation())
+}
 
 func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
 	parentInfo, genSpore, genFruitSpore, err := childGensForParent(from)
@@ -79,26 +80,26 @@ func (s StasisTube) setTransferChild(ctx mongo.SessionContext, xfer Transfer, fr
 		return err
 	}
 	upd, err := xfer.
-		PicsModsForChild().
+		PicsModsForChild(s).
 		withInnoc(xfer).
 		withParentType(&xfer.FromType).
 		withParent(utils.Pointer(from.DbId())).
 		withGens(genSpore, genFruitSpore).
 		withSpecies(parentInfo.Species).
-		withSubspecies(parentInfo.SubSpecies).
+		withSubspecies(parentInfo.Subspecies).
 		withKnownFruitable(parentInfo.KnownFruitable).
 		withPerms(from.Permissions()).
 		withLastUpdated(xfer.LastUpdated).
 		Finalized()
 	if err != nil {
-		return ErrFailedToFinalizeMods
+		return errors.Join(err, ErrFailedToFinalizeMods)
 	}
 	res, err := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(StasisTubeCollectionName).UpdateByID(ctx, s.Id, upd)
 	if err != nil {
 		return err
 	}
 	if res.ModifiedCount == 0 {
-		return errors.New("parent not found for transfer update. Should never happen") // TODO: MAKE VAR
+		return errors.New("parent not found for transfer update. Should never happen")
 	}
 	return nil
 }
@@ -108,11 +109,11 @@ func (s StasisTube) id() []byte {
 }
 
 func initializeStasisTubes(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(StasisTubeCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		creationDateIndexModel,
+		newSimpleIndex("pcRun", "pcRun", false, true, false),
 		newSimpleIndex("species", "species", false, true, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//newSimpleIndex("innoc", "innoc", false, true, false),
@@ -122,44 +123,48 @@ func initializeStasisTubes(ctx context.Context) error {
 		//newSimpleIndex("parent", "parent", false, true, false),         // TODO: nil is store or outside?
 		//newSimpleIndex("parentType", "parentType", false, true, false), // TODO: nil is store or outside?
 		//Pics (no index)
-		// TODO: Contams
+		// Contams
 		//newSimpleIndex("knownFruitable", "knownFruitable", false, true, false),
 		//saleIndexModel,
 		//disposedIndexModel,
 		// MostRecentImage
 		//Notes (no index) (maybe later with tags?)
+		// waterJar?
 		projectsIndexModel,
 		lastUpdatedIndexModel,
-		// TODO: projectsIndexModel,
 	})
 	if err != nil {
 		return err
 	}
 	// If test agar batch does not exist, then create it
-	testId := mainCollIdForint(idTestStasis)
-	testItem := &StasisTube{
-		MainCollectionIdField:   MainCollectionIdField{testId},
-		CreationDateField:       CreationDateField{exampleTime},
-		SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
-		SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
-		InnocField:              InnocField{&exAltId},
-		GenerationsFields: GenerationsFields{
-			GenSporeField:        GenSporeField{&exGenSinceSpore},
-			GenSinceFruitOrSpore: &exGenSinceFruitSpore,
-		},
-		TransfersOutField:                 TransfersOutField{exAlts},
-		ParentTypeField:                   ParentTypeField{&exParentType},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
-		PicsField:                         PicsField{exPics},
-		ContaminationsField:               ContaminationsField{exContams},
-		KnownFruitableField:               KnownFruitableField{exBool},
-		SaleField:                         SaleField{&exAltId},
-		DisposedField:                     DisposedField{&exampleTime},
-		MostRecentImageField:              MostRecentImageField{&exPics[0]},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	}
-	return addTestMainEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error {
+		testId := mainCollIdForint(idTestStasis)
+		testItem := &StasisTube{
+			MainCollectionIdField:   MainCollectionIdField{testId},
+			WaterJarOptionalField:   WaterJarOptionalField{nil},
+			CreationDateField:       CreationDateField{exampleTime},
+			SpeciesOptionalField:    SpeciesOptionalField{&testEntryStringId},
+			SubspeciesOptionalField: SubspeciesOptionalField{&testEntryStringId},
+			InnocField:              InnocField{&exAltId},
+			GenerationsFields: GenerationsFields{
+				GenSporeField:        GenSporeField{&exGenSinceSpore},
+				GenSinceFruitOrSpore: &exGenSinceFruitSpore,
+			},
+			TransfersOutField:                 TransfersOutField{exAlts},
+			ParentTypeField:                   ParentTypeField{&exParentType},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exPlate},
+			PicsField:                         PicsField{exPics},
+			ContaminationsField:               ContaminationsField{exContams},
+			KnownFruitableField:               KnownFruitableField{exBool},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+			MostRecentImageField:              MostRecentImageField{&exPics[0]},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+			AclField:                          allCanWriteAcl(),
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createStasisTubeRequest struct {
@@ -188,19 +193,23 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	now := unixTimeForNow()
-	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := StasisTube{
 		MainCollectionIdField: MainCollectionIdField{id},
-		PcRunOptionalField:    PcRunOptionalField{&data.PcRun},
+		PcRunField:            PcRunField{data.PcRun},
 		CreationDateField:     CreationDateField{now},
 		NotesField:            data.NotesField,
 		LastUpdatedField:      LastUpdatedField{now},
-		AclField:              allCanWriteAcl(),
+		AclField:              allCanWriteAcl(), // Because initial stasis tubes are empty
 	}
 	// Validate
-	if _, err := toInsert.PcRunOptionalField.Get(ctx); err != nil && !errors.Is(err, ErrMissingOptionalField) {
+	if _, err := toInsert.PcRunField.Get(ctx); err != nil && !errors.Is(err, ErrMissingOptionalField) {
 		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
@@ -208,47 +217,43 @@ func createStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 
 type updateStasisTubeRequest struct {
 	KnownFruitableField
-	SaleField
+	//SaleField
 	DisposedField
 	NotesUpdateField
 	ImagesUpdateField
 	ContamsUpdateField
-	WriteTagToField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updateStasisTubeRequest) reform() resolvedUpdateStasisTubeRequest {
 	return resolvedUpdateStasisTubeRequest{
 		KnownFruitableField: upr.KnownFruitableField,
-		SaleField:           upr.SaleField,
-		DisposedField:       upr.DisposedField,
-		NotesUpdateField:    upr.NotesUpdateField,
-		Images:              imageUpdates(upr.Images),
-		Contams:             contamUpdates(upr.Contams),
-		WriteTagToField:     upr.WriteTagToField,
-		PermsOnRequest:      upr.PermsOnRequest,
+		//SaleField:           upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		Contams:          contamUpdates(upr.Contams),
+		PermsOnRequest:   upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateStasisTubeRequest struct {
 	KnownFruitableField
-	SaleField // TODO: validate exists
 	DisposedField
 	NotesUpdateField
 	Images  SplitEntries[picWithNotesForm, PicWithNotes]
 	Contams SplitEntries[contamForm, Contamination]
-	WriteTagToField
 	PermsOnRequest
 }
 
 func (req resolvedUpdateStasisTubeRequest) modsFor(existing *StasisTube, aclField AclField) (bson.D, error) {
 	return NewMods().
 		updateKnownFruitableIfNeeded(req, existing).
-		updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePicsIfNeeded(req.Images, existing.Pics).
 		updateContamsIfNeeded(req.Contams, existing.Contaminations).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, &req.Contams, nil)).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
@@ -263,42 +268,15 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	mainCollId, err := StandardizeMainCollectionId(idStr)
 	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
 		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	id := *mainCollId
 	b58Id := mainCollId.AsBase58()
-	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)
+	reader, err := multipartReaderInitialize(r.Context(), w, r, &data)
 	defer r.Body.Close()
-	reader, err := r.MultipartReader() // TODO: do streamlined
 	if err != nil {
-		http.Error(w, "unable to open multipart reader: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	p1, err := reader.NextPart()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer p1.Close()
-	// Process text (or object)
-	bs, errr := io.ReadAll(p1)
-	if errr != nil {
-		err = errr
-		http.Error(w, "failed to read Data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return // Already wrote
 	}
 	// Get any images
 	newPics := map[int]string{}
@@ -355,7 +333,7 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			picsSaved = append(picsSaved, newFileNameWithPrefixPath)
 			newPics[num] = newFileNameWithPrefixPath
 		case "newContam":
-			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "stasisTube", string(b58Id), "contam")
+			newFileNameWithPrefixPath, err := pics.SaveFile(r.Context(), fieldBytes, "stasisTube", string(b58Id), "contam") // TODO: contam even needed here???
 			if err != nil {
 				http.Error(w, "failed to save new contamination: "+err.Error(), http.StatusBadRequest)
 				return
@@ -389,43 +367,40 @@ func updateStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	coll := db.Collection(StasisTubeCollectionName)
 	// go get current stasisTube
 	existing := StasisTube{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	// Validation
-	if out.Sale != nil && (existing.Sale == nil || *existing.Sale != *out.Sale) {
-		if err = db.Collection(SalesCollectionName).FindOne(ctx, bsonFindFilter("_id", out.Sale)).Err(); err != nil {
-			dbErr(w, "failed to find new sale entry: "+err.Error(), http.StatusBadRequest) // TODO: do this everywhere needed
-			return
-		}
-	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
+	// TODO: any validation?
+	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, out.PermsOnRequest)
 }
 
 type importStasisTubeRequest struct {
 	CreationDateField
-	SpeciesField
+	SpeciesOptionalField
+	// Optional
 	SubspeciesOptionalField
 	KnownFruitableField
-	Generation *int
+	Generation *Generation // required for when innoculated!
 	// pic as "img"
+	NotesField
 	WriteTagToField
-	PermsOnRequest
 }
 
 func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	data := importStasisTubeRequest{}
+	ctx, now := request.UnixTime(r.Context())
 	id := NextMainCollectionId()
 	b58id := id.AsBase58()
-	reader, err := multipartReaderForRequest(r, w, &data)
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
 		// Already written
 		return
 	}
 	defer r.Body.Close()
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
 	if err != nil {
 		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -434,7 +409,7 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 	picsSaved := []string{} // TODO: do streamlined
 	defer func() {
 		if err != nil {
-			err = pics.DeleteFiles(r.Context(), picsSaved...)
+			err = pics.DeleteFiles(ctx, picsSaved...)
 			if err != nil {
 				handleFileDeleteErr(err)
 			}
@@ -452,6 +427,8 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 		fileName := p.FileName()
 		defer p.Close()
 		if fileName != "img" {
+			http.Error(w, "invalid image name", http.StatusBadRequest)
+			return
 		}
 		// Process file
 		fieldBytes, err := multipartToImageBytes(p, w)
@@ -466,50 +443,105 @@ func importStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
-		now := unixTimeForNow()
 		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
 	var gen *Generation = nil
-	if data.Generation != nil {
-		gen = (*Generation)(data.Generation)
+	if data.Species != nil {
+		if data.Generation == nil {
+			http.Error(w, "innoculated must have generation: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if *data.Generation < 1 {
+			http.Error(w, "gen must be positive", http.StatusBadRequest)
+			return
+		}
+		gen = data.Generation
+	} else {
+		data.KnownFruitable = nil
+		data.Subspecies = nil
 	}
 	pix := []PicWithNotes{}
 	if importedPic != nil {
 		pix = []PicWithNotes{*importedPic}
 	}
 
-	user, err := GetAuthInfo(r.Context()) // TODO: THIS until finalPerms.Users[user.Email] = true is used in many places. Make it its own func
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms *ACL = nil
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
+	var finalPerms ACL
+	innoculated := data.Species != nil
+	if !innoculated {
+		finalPerms = allCanWriteAcl().ACL
 	} else {
-		finalPerms = sp.DefaultAcl.Clone()
+		finalPerms, err = ImportFinalPerms(r.Context(), *data.Species, data.Subspecies)
+		if err != nil {
+			http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
-	ctx, db := Db(r)
-	coll := db.Collection(StasisTubeCollectionName)
 	toInsert := StasisTube{
 		MainCollectionIdField:   MainCollectionIdField{id},
 		CreationDateField:       data.CreationDateField,
-		SpeciesOptionalField:    data.SpeciesField.AsOptional(),
+		SpeciesOptionalField:    data.SpeciesOptionalField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
+		PcRunField:              PcRunField{impPcRun}, // import pc run!
 		GenerationsFields:       GenerationsFieldFor(gen),
 		PicsField:               PicsField{pix},
 		KnownFruitableField:     data.KnownFruitableField,
 		MostRecentImageField:    MostRecentImageField{importedPic},
-		LastUpdatedField:        LastUpdatedField{unixTimeForNow()},
+		NotesField:              data.NotesField,
+		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
+}
+
+func deleteStasisTubeHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+		return
+	}
+	id, err := Base58Str(idStr).ToMainCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate not used in other places...
+	ctx := r.Context()
+	db := DbFrom(ctx)
+	// ensure item does not have any transfers in or out
+	item, err := GetMainCollectionItemSpecific[*StasisTube](ctx, id, &StasisTube{})
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	if item.Innoc != nil {
+		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+		return
+	}
+	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+		return
+	}
+
+	// Delete if not found elsewhere!
+	deleteResult, err := db.Collection(StasisTubeCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
+	if err != nil {
+		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if deleteResult.DeletedCount == 0 {
+		http.Error(w, "failed to delete id "+idStr+" from stasis tubes. Id not found", http.StatusNotFound)
+		return
+	}
+	_, err = w.Write([]byte(idStr))
+	handleWriteErr(err, w)
 }

@@ -93,7 +93,7 @@ func mainCollMap(name string) (item MainCollectionItem, exists bool) {
 }
 func initializeDb(ctx context.Context) error {
 	// Db will auto-create if it does not exist
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	collNames, err := db.ListCollectionNames(ctx, bson.D{})
 	if err != nil {
 		return err
@@ -140,31 +140,7 @@ func initializeDb(ctx context.Context) error {
 	}
 	return nil
 }
-
-// TODO: get rid of one of the following two?
 func typeForEntryType(src string) (MainCollectionItem, error) {
-	out, exists := map[string]MainCollectionItem{
-		BagSourceType:             &Bag{},
-		FruitSourceType:           &Fruit{},
-		FruitingChamberSourceType: &FruitingChamber{},
-		GrainJarSourceType:        &GrainJar{},
-		LcSyringeSourceType:       &LcSyringe{},
-		LcSourceType:              &LiquidCulture{},
-		MssSourceType:             &MSS{},
-		PlateSourceType:           &Plate{},
-		PlugSourceType:            &PlugsJar{},
-		SlantSourceType:           &Slant{},
-		SporePrintSourceType:      &SporePrint{},
-		SporeSwabSourceType:       &SporeSwab{},
-		StasisTubeSourceType:      &StasisTube{},
-		WaterJarsSourceType:       &WaterJar{},
-	}[src]
-	if !exists {
-		return nil, errors.New(src + " is not a valid entry type")
-	}
-	return out, nil
-}
-func typeForSource(src string) (MainCollectionItem, error) {
 	out, exists := map[string]MainCollectionItem{
 		BagSourceType:             &Bag{},
 		FruitSourceType:           &Fruit{},

@@ -1,17 +1,16 @@
 div {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 *, *::before, *::after {
     box-sizing: border-box;
-    max-width: 100%; /* TODO: ensure ok*/
+    max-width: 100%;
 }
 
 .subForm {
     /*display: block;*/
     box-sizing: border-box;
     max-width: 100%;
-    /* TODO: ALL INTERNALS HERE! */
     &.displayForm {
         &.depth0 {
             box-sizing: border-box;
@@ -41,15 +40,14 @@ div {
             }
 
         }
-        /* TODO: ALL INTERNALS HERE! */
     }
-    &.newEntryForm {
-        /* TODO: ALL INTERNALS HERE! */
-    }
-    &.importEntryForm {
-        /* TODO: ALL INTERNALS HERE! */
-    }
-    & > div { /* direct children of a subform (ex: MostRecentImage, ACL, grouped fields */
+    /*&.newEntryForm {*/
+    /*    !* TODO: ALL INTERNALS HERE! *!*/
+    /*}*/
+    /*&.importEntryForm {*/
+    /*    !* TODO: ALL INTERNALS HERE! *!*/
+    /*}*/
+    /*& > div { !* direct children of a subform (ex: MostRecentImage, ACL, grouped fields *!*/
 
-    }
+    /*}*/
 }

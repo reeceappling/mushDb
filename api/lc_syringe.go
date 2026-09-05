@@ -4,7 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/pics"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -12,20 +17,16 @@ import (
 	"slices"
 )
 
-// TODO: needed for xfers
+// needed for
+// xfers
 
 // TODO: newFromLC
-
-// TODO: new are this, sporeSwab, plugs
-
-// Naming convention "{ParentLCID}-#" // TODO: ?????
-
-//func parseName() // TODO: ???
 
 type LcSyringe struct {
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either purchased (nil), LC, or LcSyringe
-	MainCollectionOptionalParentField `bson:"inline"` // TODO: likely won't exist for pre-existing
+	MainCollectionOptionalParentField `bson:"inline"` // won't exist for imported
+	MostRecentImageField              `bson:"inline"`
 	CreationDateField                 `bson:"inline"` // create or receive date
 	SpeciesField                      `bson:"inline"`
 	SubspeciesOptionalField           `bson:"inline"`
@@ -33,6 +34,7 @@ type LcSyringe struct {
 	GenerationsFields                 `bson:"inline"`
 	KnownFruitableField               `bson:"inline"`
 	ConfirmedCleanField               `bson:"inline"`
+	PicsField                         `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
 	DisposedField                     `bson:"inline"`
 	NotesField                        `bson:"inline"`
@@ -40,36 +42,22 @@ type LcSyringe struct {
 	AclField                          `bson:"inline"`
 }
 
-func (lcs LcSyringe) Innoculatable() bool {
-	return false
+//func (lcs LcSyringe) Blank() CollectionItem {
+//	return &LcSyringe{}
+//}
+
+func (lcs LcSyringe) Innoculatable() error {
+	return errors.New("lcSyringes never innoculatable")
 }
 
 func (lcs LcSyringe) CanTransferTo(dst geneticSource) error {
-	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType}, dst.SourceType()) {
+	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, FruitingChamberSourceType}, dst.SourceType()) {
 		return errors.New("lc syringe cannot transfer to " + dst.SourceType())
 	}
 	return nil
 }
 
-//func (sw LcSyringe) setTransferParent(ctx context.Context, xfer Transfer) error {
-//	// TODO: can this even happen?
-//	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(sw.CollectionName())
-//	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-//	if err != nil {
-//		return err
-//	}
-//	res, err := coll.UpdateByID(ctx, sw.Id, upd)
-//	if err != nil {
-//		return err
-//	}
-//	if res.ModifiedCount == 0 {
-//		return ErrNoParentModifiedForTransfer
-//	}
-//	return nil
-//}
-
 func (sw LcSyringe) setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error {
-	// TODO: cannot happen
 	panic("does not happen")
 }
 
@@ -77,6 +65,7 @@ func (sw LcSyringe) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{
 		SpeciesOptionalField:    sw.SpeciesField.AsOptional(),
 		SubspeciesOptionalField: sw.SubspeciesOptionalField,
+		KnownFruitableField:     sw.KnownFruitableField,
 		GenerationsFields:       GenerationsFieldFor(utils.Pointer(Generation(0))),
 	}, nil
 }
@@ -99,10 +88,10 @@ func (sw LcSyringe) id() []byte {
 
 func initializeSyringes(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcSyringeCollectionName)
+	coll := DbFrom(ctx).Collection(LcSyringeCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
+		creationDateIndexModel,
 		//newSimpleIndex("parent", "parent", false, true, false),
-		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//saleIndexModel,
@@ -112,31 +101,36 @@ func initializeSyringes(ctx context.Context) error {
 		//newSimpleIndex("confirmedClean", "confirmedClean", false, true, false),
 		//transfersOutIndexModel,
 		//newSimpleIndex("disposed", "disposed", false, true, false),
-		//// TODO: Projects?
+		projectsIndexModel,
 		//Notes (no index unless tags)
 		lastUpdatedIndexModel,
 	})
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	testItem := &LcSyringe{
-		MainCollectionIdField:             MainCollectionIdField{Id: exLCS},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exLC},
-		CreationDateField:                 exampleTime.asCreationDate(),
-		SpeciesField:                      SpeciesField{testEntryStringId},
-		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
-		SaleField:                         SaleField{&exAltId},
-		DisposedField:                     DisposedField{&exampleTime},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-		AclField:                          allCanWriteAcl(),
-	}
-	return addTestMainEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error {
+		// If test agar batch does not exist, then create it
+		testItem := &LcSyringe{
+			MainCollectionIdField:             MainCollectionIdField{Id: exLCS},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exLC},
+			MostRecentImageField:              MostRecentImageField{MostRecentImage: &exPics[0]},
+			PicsField:                         PicsField{exPics},
+			CreationDateField:                 CreationDateField{exampleTime},
+			SpeciesField:                      SpeciesField{testEntryStringId},
+			SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+
+			NotesField:       NotesField{exampleNotes()},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         allCanWriteAcl(),
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
 type createLCSyringeRequest struct {
-	LC MainCollectionId `json:"lc"`
+	LC MainCollectionId `json:"parent"`
 	NotesField
 	WriteTagToField
 }
@@ -155,30 +149,26 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = writeRfidTagIfNecessary(r.Context(), data.WriteTagTo, id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	ctx, db := Db(r)
 	// Validate inputs and grab parent
 	parent := &LiquidCulture{}
-	err = db.Collection(LCCollectionName).FindOne(ctx, bsonFindFilter("_id", id)).Decode(&parent)
+	err = db.Collection(LCCollectionName).FindOne(ctx, BsonFindFilter(IDfld, data.LC)).Decode(parent)
 	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
+		dbErr(w, "failed to get parent LC: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if parent.Species == nil {
 		dbErr(w, "Parent LC must be innoculated", http.StatusInternalServerError)
 		return
 	}
-	now := unixTimeForNow()
+	// TODO: CREATE PARENT TRANSFER? YES BUT LcSyringe should not have an innoc field... ENSURE THIS IS WHAT I WANT...
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := LcSyringe{
 		MainCollectionIdField:             MainCollectionIdField{Id: id},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&parent.Id},
-		ConfirmedCleanField:               parent.ConfirmedCleanField, // TODO: is this ok?
+		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.LC},
+		ConfirmedCleanField:               parent.ConfirmedCleanField,
 		KnownFruitableField:               parent.KnownFruitableField,
-		CreationDateField:                 now.asCreationDate(),
+		CreationDateField:                 CreationDateField{now},
 		SpeciesField:                      SpeciesField{Species: *parent.Species},
 		SubspeciesOptionalField:           parent.SubspeciesOptionalField,
 		GenerationsFields:                 parent.GenerationsFields,
@@ -187,148 +177,102 @@ func createSyringeHandler(w http.ResponseWriter, r *http.Request) {
 		// Do not check permissions, just pass parent perms to child
 		AclField: parent.AclField,
 	}
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	finishCreateMainCollectionEntry(ctx, &toInsert, w)
 }
 
 type updateSyringeRequest struct {
-	SaleField // TODO: validate?
 	DisposedField
-	ConfirmedClean      *bool `json:"confirmedClean,omitempty"` // TODO: handle in react
-	KnownFruitableField       // TODO: handle in react
+	ConfirmedCleanField
+	KnownFruitableField
+	ImagesUpdateField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (upr updateSyringeRequest) baseItem() *LcSyringe {
 	return &LcSyringe{}
 }
 
-func (upr updateSyringeRequest) reform() reformedRequest[*LcSyringe] {
+func (upr updateSyringeRequest) reform() resolvedUpdateSyringeRequest {
 	return resolvedUpdateSyringeRequest{
-		SaleField:           upr.SaleField,
+		//SaleField:           upr.SaleField,
 		DisposedField:       upr.DisposedField,
-		ConfirmedClean:      upr.ConfirmedClean,
+		ConfirmedCleanField: upr.ConfirmedCleanField,
 		KnownFruitableField: upr.KnownFruitableField,
 		NotesUpdateField:    upr.NotesUpdateField,
+		Images:              imageUpdates(upr.Images),
 		PermsOnRequest:      upr.PermsOnRequest,
 	}
 }
 
 type resolvedUpdateSyringeRequest struct {
-	SaleField
+	//SaleField
 	DisposedField
-	ConfirmedClean *bool `json:"confirmedClean,omitempty"`
+	ConfirmedCleanField
 	KnownFruitableField
+	Images SplitEntries[picWithNotesForm, PicWithNotes]
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req resolvedUpdateSyringeRequest) modsFor(existing *LcSyringe, aclField AclField) (bson.D, error) {
-	mds := NewMods()
-	updatePointerIfNeeded(mds, "confirmedClean", req.ConfirmedClean, existing.ConfirmedClean)
-	return mds.updateSaleIfNeeded(req.Sale, existing.Sale).
+	imagesForUpdateFunc := []PicWithNotes{}
+	for _, ex := range req.Images.Existing {
+		if !ex.Disabled {
+			imagesForUpdateFunc = append(imagesForUpdateFunc, ex.Data.convert())
+		}
+	}
+	imagesForUpdateFunc = append(imagesForUpdateFunc, req.Images.New...)
+	return NewMods().
+		updateConfirmedCleanIfNeeded(req.ConfirmedClean, existing.ConfirmedClean).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateKnownFruitableIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, imagesForUpdateFunc).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
 
-// TODO: MOVE
-func mainCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id MainCollectionId, err error) {
-	var idStr string
-	idStr, err = UrlDecodeString(r.PathValue("id"))
-	if err != nil {
-		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	mainCollId, err := StandardizeMainCollectionId(idStr)
-	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
-		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	b58id, id = mainCollId.AsBase58(), *mainCollId
-	return
-}
-func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58Str, id AlternateCollectionId, err error) {
-	var idStr string
-	idStr, err = UrlDecodeString(r.PathValue("id"))
-	if err != nil {
-		http.Error(w, "failed to url decode altCollId string: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	altCollId, err := StandardizeAltCollectionId(idStr)
-	if err != nil {
-		http.Error(w, "failed to standardize alt collection id: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	b58id, id = altCollId.AsBase58(), *altCollId
-	return
-}
-
 func updateSyringeHandler(w http.ResponseWriter, r *http.Request) {
-	//mainUpdateHandler[*LcSyringe](w, r, updateSyringeRequest{})
-	req := updateSyringeRequest{}
-	_, id, err := mainCollIdFromRequest(r, w) // TODO: use this everywhere
+	data := updateSyringeRequest{}
+	b58Id, id, err := mainCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}
-	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
-		return // Writes already if err
-	}
-
-	// CHECK THAT ALL NEW PICS EXIST
-	// PROCESS ALL NEW PICS AND CONTAMS
-	out := req.reform()
-	ctx, db := Db(r)
-	coll := db.Collection(LcSyringeCollectionName)
-	// go get current LcSyringe
-	existing := LcSyringe{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
 	if err != nil {
-		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		// Already wrote
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.GetPermsOnRequest())
-}
-
-// TODO: use and move!
-func mainUpdateHandler[T MainCollectionItem](w http.ResponseWriter, r *http.Request, req simpleUpdateHandler[T]) {
-	_, id, err := mainCollIdFromRequest(r, w) // TODO: use this everywhere
-	if err != nil {
-		return // Writes already if err
+	out := data.reform()
+	for i, _ := range data.Images.New {
+		loc, exists := newPics[i]
+		if !exists {
+			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
+			return
+		}
+		out.Images.New[i].Location = ImageLocation(loc)
 	}
-	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
-		return // Writes already if err
-	}
-	// CHECK THAT ALL NEW PICS EXIST
-	// PROCESS ALL NEW PICS AND CONTAMS
-	out := req.reform()
-	existing := req.baseItem()
-	ctx, db := Db(r)
-	coll := db.Collection(existing.CollectionName())
-	// go get current LcSyringe
-
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(existing)
+	ctx := r.Context()
+	client := GetMongoClient(ctx)
+	coll := client.Database(dbName).Collection(LcSyringeCollectionName)
+	existing := &LcSyringe{}
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(existing)
 	if err != nil {
-		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
+		// TODO: an issue here? UNSURE AS OF 8/2/26
+		dbErrCtx(ctx, w, errors.Join(errors.New("failed to find current entry"), err), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, existing, out.GetPermsOnRequest())
-}
+	finishMainCollItemUpdate(ctx, w, out.modsFor, existing, out.PermsOnRequest)
 
-// TODO: MOVE
-type simpleUpdateHandler[T CollectionItem] interface {
-	baseItem() T
-	reform() reformedRequest[T]
-}
-
-// TODO: MOVE
-type reformedRequest[T CollectionItem] interface {
-	modsFor(existing T, aclField AclField) (bson.D, error)
-	GetPermsOnRequest() PermsOnRequest
 }
 
 type importLcSyringeRequest struct {
@@ -336,59 +280,140 @@ type importLcSyringeRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	KnownFruitableField
+	ConfirmedCleanField
+	Generation Generation
 	NotesField
 	// pic as "img"
-	PermsOnRequest
+	WriteTagToField
 }
 
-// TODO: USE!!!
 func importLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
-	data := importLcSyringeRequest{}
-	id := NextMainCollectionId()
 	defer r.Body.Close()
-	// Process text (or object)
-	bs, err := io.ReadAll(r.Body)
+	ctx, now := request.UnixTime(r.Context())
+	log := logging.GetSugaredLogger(ctx)
+	data, id := importLcSyringeRequest{}, NextMainCollectionId()
+	b58id := id.AsBase58()
+	reader, err := multipartReaderForRequest(r.WithContext(ctx), w, &data) // TODO: consider swapping for multipartReaderInitialize
 	if err != nil {
-		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
+		env.LogIfDev(ctx, "failed in multipart reader area: "+err.Error())
+		// Already written
 		return
 	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
+	// Try to get pic if exists
+	picsSaved := []string{}
+	defer func() {
+		if err != nil {
+			err = pics.DeleteFiles(ctx, picsSaved...)
+			if err != nil {
+				handleFileDeleteErr(err)
+			}
+		}
+	}()
+	// Go to next part, if exists to get image
+	var importedPic *PicWithNotes = nil
+	p, err := reader.NextPart()
 	if err != nil {
-		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	user, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
-		return
-	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms *ACL = nil
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
+		if err != io.EOF {
+			dbErrCtx(ctx, w, errors.Join(errors.New("failed in nextPart"), err), http.StatusInternalServerError)
+			return
+		}
 	} else {
-		finalPerms = sp.DefaultAcl.Clone()
+		fileName := p.FileName()
+		defer p.Close()
+		if fileName != "img" {
+			dbErrCtx(ctx, w, errors.Join(errors.New("invalid image name"), err), http.StatusBadRequest)
+			return
+		}
+		// Process file
+		fieldBytes, err := multipartToImageBytes(p, w)
+		if err != nil {
+			// Already wrote
+			log.Error("failed in multipartToImageBytes")
+			return
+		}
+		newFileNameWithPrefixPath, errr := pics.SaveFile(ctx, fieldBytes, "lcSyringe", string(b58id), "img")
+		if errr != nil {
+			err = errr
+			dbErrCtx(ctx, w, errors.Join(errors.New("failed to save file"), err), http.StatusBadRequest)
+			return
+		}
+		picsSaved = append(picsSaved, newFileNameWithPrefixPath)
+		importedPic = utils.Pointer(newPicWithNotes(now, []Note{}, ImageLocation(newFileNameWithPrefixPath)))
 	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
+	if data.Generation < 1 {
+		dbErrCtx(ctx, w, errors.New("generation cannot be <=0 for a non-spore import"), http.StatusBadRequest)
+		return
+	}
 
-	ctx, db := Db(r)
-	coll := db.Collection(LcSyringeCollectionName)
+	finalPerms, err := ImportFinalPerms(ctx, data.Species, data.Subspecies)
+	if err != nil {
+		dbErrCtx(ctx, w, errors.Join(errors.New("failed to get species and/or subspecies"), err), http.StatusInternalServerError)
+		return
+	}
+	pix := []PicWithNotes{}
+	if importedPic != nil {
+		pix = []PicWithNotes{*importedPic}
+	}
 	toInsert := LcSyringe{
-		MainCollectionIdField:   MainCollectionIdField{Id: id},
-		CreationDateField:       data.CreationDateField,
+		MainCollectionIdField: MainCollectionIdField{Id: id},
+		MostRecentImageField:  MostRecentImageField{importedPic},
+		PicsField:             PicsField{pix},
+		CreationDateField:     data.CreationDateField,
+		GenerationsFields: GenerationsFields{
+			GenSporeField: GenSporeField{
+				GenSinceSpore: &data.Generation,
+			},
+			GenSinceFruitOrSpore: &data.Generation,
+		},
 		SpeciesField:            data.SpeciesField,
+		ConfirmedCleanField:     data.ConfirmedCleanField,
 		KnownFruitableField:     data.KnownFruitableField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,
-		LastUpdatedField:        LastUpdatedFieldForNow(),
+		LastUpdatedField:        LastUpdatedField{now},
 		AclField:                AclField{finalPerms},
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		dbErrCtx(ctx, w, errors.Join(errors.New("failed to write tag"), err), http.StatusInternalServerError)
+		return
+	}
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
+
+//func deleteLcSyringeHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).ToMainCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	// ensure item does not have any transfers in or out
+//	item, err := GetMainCollectionItemSpecific[*LcSyringe](ctx, id, &LcSyringe{})
+//	if err != nil {
+//		if errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+//		} else {
+//			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//	if item.Parent != nil {
+//		// TODO: what if we want to remove it from the parent as well?
+//		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+//		return
+//	}
+//	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+//		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+//}

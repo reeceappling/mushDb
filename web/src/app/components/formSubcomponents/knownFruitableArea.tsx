@@ -12,15 +12,15 @@ export function KnownFruitableArea(
         headerLevel?: number
     }) {
     const KFTxt = "Known Fruitable: "
-    if (readonly) { // TODO: ENSURE OK
+    if (readonly) {
         return <div className={"knownFruitableArea"}>
             {KFTxt + ": " + optionalBoolToString(initial)}
         </div>
     }
     const [knownFruitable, setKnownFruitable] = useState<string | undefined>(optionalBoolToOptionalString(initial))
     const onSelect = (e: SyntheticEvent<HTMLSelectElement, Event>) => {
-        let val = e.currentTarget.value
-        let selectFunc = (doSelect === undefined) ? () => {
+        const val = e.currentTarget.value
+        const selectFunc = (doSelect === undefined) ? () => {
         } : doSelect
         selectFunc((val === "" || val === "unknown") ? undefined : val === "true")
         setKnownFruitable(val)
@@ -28,7 +28,7 @@ export function KnownFruitableArea(
     return <div className={"knownFruitableArea"}>
         <div>{KFTxt}</div>
         <div>
-            <select className={"tailwindSelector ml-1"} value={knownFruitable || ""} onChange={onSelect}>
+            <select className={"tailwindSelector ml-1"} value={knownFruitable || ""} onChange={onSelect}>{/* TODO: default to unknown?*/}
                 {["", "true", "false", "unknown"].map((val, i) => {
                     return <option value={val} key={i}>{val}</option>
                 })}

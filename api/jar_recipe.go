@@ -1,18 +1,18 @@
 package api
 
-// TODO: JAR RECIPE BATCH (soaked? simmered/time?)
-
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
 )
 
-// TODO: needed for grainJars
+// needed for grainJars
 
 const JarRecipesCollectionName = "jarRecipes"
 
@@ -25,18 +25,27 @@ type JarRecipeRequiredField struct {
 }
 
 func (field JarRecipeRequiredField) Get(ctx context.Context) (out JarRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName).
-		FindOne(ctx, bson.M{"_id": field.Recipe}).Decode(&out)
-	return
+	println("searching for recipe: ", field.Recipe.AsBase58(), string(field.Recipe[:]))
+	out = JarRecipe{}
+	coll := DbFrom(ctx).Collection(JarRecipesCollectionName)
+	findFilter := BsonFindByIdFilterUnordered(field.Recipe) // TODO: BsonFindByIdFilterOrdered(field.Recipe) /* TODO: ??? bson.M{IDfld: field.Recipe}*/
+	err = coll.FindOne(ctx, findFilter).Decode(&out)
+	return out, err
 }
 
-func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) {
+func (field JarRecipeField) asRequiredField() (out JarRecipeRequiredField, err error) {
 	if field.Recipe == nil {
 		return out, ErrMissingOptionalField
 	}
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName).
-		FindOne(ctx, bson.M{"_id": *field.Recipe}).Decode(&out)
-	return
+	return JarRecipeRequiredField{*field.Recipe}, nil
+}
+
+func (field JarRecipeField) Get(ctx context.Context) (out JarRecipe, err error) {
+	f, err := field.asRequiredField()
+	if err != nil {
+		return out, err
+	}
+	return f.Get(ctx)
 }
 
 type JarRecipe struct {
@@ -51,6 +60,10 @@ type JarRecipe struct {
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
 }
+
+//func (j JarRecipe) Blank() CollectionItem {
+//	return &JarRecipe{}
+//}
 
 type GrainPercentage struct {
 	Grain      Grain `bson:"grain" json:"grain"`
@@ -69,7 +82,7 @@ func (recipe JarRecipe) CollectionName() string {
 
 func initializeJarRecipes(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(JarRecipesCollectionName)
+	coll := DbFrom(ctx).Collection(JarRecipesCollectionName)
 	err := createIndexes(ctx, coll,
 		[]mongo.IndexModel{
 			newSimpleIndex("name", "name", false, false, false),
@@ -86,10 +99,10 @@ func initializeJarRecipes(ctx context.Context) error {
 		return err
 	}
 
-	// Built-ins
+	// Built-ins - Will only create the first time, and subsequent runs will not add any changed data in the interim
 	basicEntries := []*JarRecipe{
 		{
-			NameField:                  NameField{"Popcorn"},
+			NameField:                  NameField{"Popcorn Built-in"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarPop)},
 			Grains:                     []GrainPercentage{{Grain: Popcorn, Percentage: 100}},
 			StandardField:              StandardField{true},
@@ -98,14 +111,14 @@ func initializeJarRecipes(ctx context.Context) error {
 			}},
 		},
 		{
-			NameField:                  NameField{"Oats"},
+			NameField:                  NameField{"Oats Built-in"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOat)},
 			Grains:                     []GrainPercentage{{Grain: Oats, Percentage: 100}},
 			StandardField:              StandardField{true},
 			NotesField:                 NotesField{},
 		},
 		{
-			NameField:                  NameField{"Oats with standard additives"},
+			NameField:                  NameField{"Oats with standard additives Built-in"},
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idJarOatWithVermGypsum)},
 			Grains:                     []GrainPercentage{{Grain: Oats, Percentage: 100}},
 			StandardField:              StandardField{true},
@@ -127,35 +140,37 @@ func initializeJarRecipes(ctx context.Context) error {
 		return err
 	}
 	// Add test entries
-	// If test jar recipe does not exist, then create it
-	testItem := &JarRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		NameField:                  NameField{"testJarRecipeName"},
-		Grains:                     []GrainPercentage{{Grain: BirdSeed, Percentage: 100}},
-		StandardField:              StandardField{false},
-		NutrientsField: NutrientsField{[]NutrientMeasurement{
-			{
-				Nutrient: LME,
-				Amount:   1,
-				Unit:     "kg",
-			},
-			{
-				Nutrient: Potato,
-				Amount:   8,
-				Unit:     "ug",
-			},
-		}},
-		SugarsField: SugarsField{[]SugarMeasurement{
-			newSugarMeasurement(Honey, 1, "large drop per quart jar"),
-		}},
-		AdditivesField: AdditivesField{[]AdditiveMeasurement{
-			newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
-			newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
-		}},
-		NotesField:       NotesField{exampleNotes()},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error {
+		// If test jar recipe does not exist, then create it
+		testItem := &JarRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			NameField:                  NameField{"testJarRecipeName"},
+			Grains:                     []GrainPercentage{{Grain: BirdSeed, Percentage: 100}},
+			StandardField:              StandardField{false},
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
+				{
+					Nutrient: LME,
+					Amount:   1,
+					Unit:     "kg",
+				},
+				{
+					Nutrient: Potato,
+					Amount:   8,
+					Unit:     "ug",
+				},
+			}},
+			SugarsField: SugarsField{[]SugarMeasurement{
+				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
+			}},
+			AdditivesField: AdditivesField{[]AdditiveMeasurement{
+				newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
+				newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
+			}},
+			NotesField:       NotesField{exampleNotes()},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createJarRecipeRequest struct {
@@ -186,6 +201,7 @@ func (req createJarRecipeRequest) ValidateGrains() error {
 }
 
 func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
+	ctx, now := request.UnixTime(r.Context())
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -197,7 +213,7 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err = errors.Join( // TODO: do this on all other recipes and stuff
+	if err = errors.Join(
 		req.ValidateGrains(),
 		req.NutrientsField.Validate(),
 		req.SugarsField.Validate(),
@@ -206,8 +222,6 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(JarRecipesCollectionName)
 	toInsert := JarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{newAlternateCollectionId()},
 		NameField:                  NameField{req.Name},
@@ -217,17 +231,17 @@ func createJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		SugarsField:                SugarsField{req.Sugars},
 		AdditivesField:             AdditivesField{req.Additives},
 		NotesField:                 NotesField{req.Notes},
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
+		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanWriteAcl(),
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateJarRecipeRequest struct {
 	NameField
 	StandardField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateJarRecipeRequest) modsFor(existing *JarRecipe, aclField AclField) (bson.D, error) {
@@ -235,14 +249,16 @@ func (req updateJarRecipeRequest) modsFor(existing *JarRecipe, aclField AclField
 		updateNameIfNeeded(req.Name, existing.Name).
 		updateStandardIfNeeded(req.Standard, existing.Standard).
 		updateNotesIfNeeded(req, existing).
-		// TODO: for perms updates, disallow removing self???
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
 
 func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -255,18 +271,45 @@ func updateJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
-		return
-	}
 	ctx, db := Db(r)
 	coll := db.Collection(JarRecipesCollectionName)
 	existing := JarRecipe{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
+}
+
+func deleteJarRecipeHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id") // recipe by name?
+	if idStr == "" {
+		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+		return
+	}
+	id, err := Base58Str(idStr).toAltCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate not used in other places...
+	ctx := r.Context()
+	db := DbFrom(ctx)
+	// ensure batch not used by any jars first
+	for _, collName := range []string{GrainBatchCollectionName, GrainJarCollectionName} {
+		err = db.Collection(collName).FindOne(ctx, bson.M{"recipe": id}).Err()
+		if err != nil {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				http.Error(w, "failed to check for jar recipe usage in "+collName+" collection. "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// At least one item exists, fail
+			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+			return
+		}
+	}
+
+	DeleteCollectionItem(ctx, JarRecipesCollectionName, id, w)
 }

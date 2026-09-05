@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -25,13 +28,19 @@ type SporeSwab struct {
 	SaleField                         `bson:"inline"` // TODO: was sales! singular now
 	DisposedField                     `bson:"inline"`
 	TransfersOutField                 `bson:"inline"`
+	PicsField                         `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
+	MostRecentImageField              `bson:"inline"` // TODO: NEW! HANDLE EVERYWHERE!
 	NotesField                        `bson:"inline"`
 	LastUpdatedField                  `bson:"inline"`
 	AclField                          `bson:"inline"`
 }
 
-func (sw SporeSwab) Innoculatable() bool {
-	return false
+//func (s SporeSwab) Blank() CollectionItem {
+//	return &SporeSwab{}
+//}
+
+func (sw SporeSwab) Innoculatable() error {
+	return errors.New("sporeSwabs are not innoculatable")
 }
 
 func (sw SporeSwab) CanTransferTo(dst geneticSource) error {
@@ -64,11 +73,11 @@ func (sw SporeSwab) id() []byte {
 
 func initializeSporeSwabs(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SporeSwabCollectionName)
+	coll := DbFrom(ctx).Collection(SporeSwabCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		//newSimpleIndex("parent", "parent", false, false, false),
-		// TODO: parentType?
-		newSimpleIndex("creationDate", "creationDate", true, false, false), // TODO: INDEX CREATION DATES EVERYWHERE!
+		newSimpleIndex("parent", "parent", false, true, false),
+		// parentType?
+		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		newSimpleIndex("species", "species", false, false, false),
 		newSimpleIndex("subspecies", "subspecies", false, true, false),
 		//saleIndexModel,
@@ -81,32 +90,39 @@ func initializeSporeSwabs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// If test agar batch does not exist, then create it
-	testItem := &SporeSwab{
-		MainCollectionIdField:             MainCollectionIdField{exSwabId},
-		MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
-		CreationDateField:                 exampleTime.asCreationDate(),
-		SpeciesField:                      SpeciesField{testEntryStringId},
-		SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
-		SaleField:                         SaleField{&exAltId},
-		DisposedField:                     DisposedField{&exampleTime},
-		NotesField:                        NotesField{exampleNotes()},
-		LastUpdatedField:                  LastUpdatedField{exampleTime},
-	}
-	return addTestMainEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error {
+		// If test agar batch does not exist, then create it
+		testItem := &SporeSwab{
+			MainCollectionIdField:             MainCollectionIdField{exSwabId},
+			MainCollectionOptionalParentField: MainCollectionOptionalParentField{&exSporePrint},
+			CreationDateField:                 CreationDateField{exampleTime},
+			SpeciesField:                      SpeciesField{testEntryStringId},
+			SubspeciesOptionalField:           SubspeciesOptionalField{&testEntryStringId},
+			SaleField:                         SaleField{&exAltId},
+			DisposedField:                     DisposedField{&exampleTime},
+			PicsField:                         PicsField{Pics: nil},
+			NotesField:                        NotesField{exampleNotes()},
+			LastUpdatedField:                  LastUpdatedField{exampleTime},
+			AclField:                          allCanWriteAcl(),
+		}
+		return addTestMainEntries(ctx, testItem)
+	})
 }
 
-type createSporeSwabsRequest struct {
-	num int
-	MainCollectionParentField
-	// SporePrintId MainCollectionId // TODO: make this just parentId, used to be SporePrintId. Ensure handled on ts side
+type createSporeSwabRequest struct {
+	MainCollectionParentField // required
+	// Parent type is retrieved
+	// TODO: HANDLE PICS, were pics added in ts?
 	NotesField
+	WriteTagToField
 }
 
-// TODO: REALLY FLESH THIS OUT
-func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
-	data := createSporeSwabsRequest{}
+// TODO: multi-swab creation request?
+
+func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: TEST ALL BRANCHES!
+	data := createSporeSwabRequest{}
 	defer r.Body.Close()
+	id := NextMainCollectionId()
 	// Process text (or object)
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -119,7 +135,6 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal Data from form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ids := NextMainCollectionIds(data.num)
 	ctx := r.Context()
 	parentItem, err := GetMainCollectionItemWithId(ctx, data.Parent)
 	if err != nil {
@@ -140,91 +155,157 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := unixTimeForNow()
-	out := make([]interface{}, data.num)
-	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		for i, _ := range out {
-			temp := SporeSwab{
-				MainCollectionIdField:             MainCollectionIdField{ids[i]},
-				MainCollectionOptionalParentField: MainCollectionOptionalParentField{&data.Parent},
-				ParentTypeField:                   ParentTypeField{utils.Pointer(parentItem.SourceType())}, // TODO: ensure ok
-				CreationDateField:                 now.asCreationDate(),
-				SpeciesField:                      SpeciesField{*parent.Species},
-				SubspeciesOptionalField:           parent.SubspeciesOptionalField,
-				NotesField:                        NotesField{data.Notes},
-				LastUpdatedField:                  LastUpdatedField{now},
-				// Do not check permissions, just pass parent perms to child
-				AclField: AclField{parentItem.Permissions()},
+	ctx, _ = request.UnixTime(ctx)
+	var fr *Fruit
+	var swabOut *SporeSwab
+	_, er := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+		var e error = nil
+		switch parentItem.SourceType() {
+		case FruitingChamberSourceType, BagSourceType, PlateSourceType, SlantSourceType, PlugSourceType, GrainJarSourceType:
+			fr, e = FruitFromSourceInTxn(sessCtx, parentItem)
+			if e != nil {
+				return nil, e
 			}
-			out[i] = temp
-			if errr := addToIdMapCollection(sessCtx, &temp); errr != nil {
-				return nil, errr
+			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField, id)
+			if e != nil {
+				return nil, e
 			}
+		case FruitSourceType:
+			var ok bool
+			fr, ok = parentItem.(*Fruit)
+			if !ok {
+				return nil, errors.New("fruit is not a Fruit?")
+			}
+			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField, id)
+			if e != nil {
+				return nil, e
+			}
+		case SporePrintSourceType: // Goes directly to swab
+			parentPrint, ok := parentItem.(*SporePrint)
+			if !ok {
+				return nil, errors.New("print is not a print?")
+			}
+			swabOut, e = parentPrint.createSporeSwabInTxn(sessCtx, data.NotesField, NotesField{}, id) // TODO: xferNotes
+			if e != nil {
+				return nil, e
+			}
+		default:
+			e := errors.New("invalid source type: " + parentItem.SourceType())
+			http.Error(w, e.Error(), http.StatusBadRequest)
+			return nil, e
 		}
-		// Actually add the swabs to their collection
-		return mongo.SessionFromContext(sessCtx).Client().Database(dbName).Collection(SporeSwabCollectionName).
-			InsertMany(ctx, out)
+		e = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+		if e != nil {
+			return nil, errors.Join(e, errors.New("failed to write tag"))
+		}
+		return nil, e
 	})
-	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
+	if er != nil {
+		http.Error(w, er.Error(), http.StatusInternalServerError) // TODO: will fail on invalid source type
 		return
 	}
-
-	bsOut, err := json.Marshal(out)
+	bsOut, err := json.Marshal(swabOut)
 	if err != nil {
-		dbErr(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "failed to marshal result: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = w.Write(bsOut)
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	handleWriteErr(err, w)
 }
 
 type updateSporeSwabRequest struct {
-	SaleField
-	DisposedField
-	NotesUpdateField
-	PermsOnRequest
+	//SaleField         `json:"saleField"`
+	DisposedField     `json:"disposedField"`
+	NotesUpdateField  `json:"notesUpdateField"`
+	ImagesUpdateField `json:"imagesUpdateField"`
+	PermsOnRequest    `json:"acl" json:"permsOnRequest"`
 }
 
-func (req updateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
+func (upr updateSporeSwabRequest) reform() resolvedUpdateSporeSwabRequest {
+	return resolvedUpdateSporeSwabRequest{
+		//SaleField:        upr.SaleField,
+		DisposedField:    upr.DisposedField,
+		NotesUpdateField: upr.NotesUpdateField,
+		Images:           imageUpdates(upr.Images),
+		PermsOnRequest:   upr.PermsOnRequest,
+	}
+}
+
+type resolvedUpdateSporeSwabRequest struct {
+	//SaleField
+	DisposedField
+	NotesUpdateField
+	Images         SplitEntries[picWithNotesForm, PicWithNotes]
+	PermsOnRequest `json:"acl"`
+}
+
+func (req resolvedUpdateSporeSwabRequest) modsFor(existing *SporeSwab, aclField AclField) (bson.D, error) {
 	return NewMods().
-		updateSaleIfNeeded(req.Sale, existing.Sale).
+		//updateSaleIfNeeded(req.Sale, existing.Sale).
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
+		updatePicsIfNeeded(req.Images, existing.Pics).
+		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, nil, nil)).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }
 
 func updateSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	data := updateSporeSwabRequest{}
-	idStr, err := UrlDecodeString(r.PathValue("id"))
-	if err != nil {
-		http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	mainCollId, err := StandardizeMainCollectionId(idStr)
-	if err != nil {
-		println("failed to standardize main collection id: " + err.Error()) // TODO: del
-		http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id := *mainCollId
 
-	out := data
+	b58Id, id, err := mainCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
+	newPics, _, _, err := fullMultipartWithNoBreaks(w, r, &data, b58Id)
+	if err != nil {
+		// Already wrote
+		return
+	}
+	out := data.reform()
+	for i, _ := range data.Images.New {
+		loc, exists := newPics[i]
+		if !exists {
+			http.Error(w, fmt.Sprintf("error, location for new picture index %d not found (should never happen)", i), http.StatusInternalServerError)
+			return
+		}
+		out.Images.New[i].Location = ImageLocation(loc)
+	}
+	//bs, err := io.ReadAll(r.Body)
+	//if err != nil {
+	//	http.Error(w, "failed to read body: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//err = json.Unmarshal(bs, &data)
+	//if err != nil {
+	//	http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//idStr, err := UrlDecodeString(r.PathValue("id"))
+	//if err != nil {
+	//	http.Error(w, "failed to url decode string: "+err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
+	//mainCollId, err := StandardizeMainCollectionId(idStr)
+	//if err != nil {
+	//	http.Error(w, "failed to standardize main collection id: "+err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//id := *mainCollId
+
 	ctx, db := Db(r)
 	coll := db.Collection(SporeSwabCollectionName)
 
 	// go get current sporeSwab
 	existing := SporeSwab{}
-	err = coll.FindOne(ctx, bsonFindFilter("_id", id)).Decode(&existing)
+	err = coll.FindOne(ctx, BsonFindFilter(IDfld, id)).Decode(&existing)
 	if err != nil {
 		dbErr(w, "failed to find current entry: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	finishMainCollItemUpdate(ctx, w, coll, out.modsFor, &existing, out.PermsOnRequest)
+	finishMainCollItemUpdate(ctx, w, out.modsFor, &existing, data.PermsOnRequest)
 }
 
 type importSporeSwabRequest struct {
@@ -232,60 +313,96 @@ type importSporeSwabRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
-	PermsOnRequest
+	WriteTagToField
 }
 
+// TODO: consider adding pics to these imports!
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporeSwabRequest{}
 	id := NextMainCollectionId()
-	defer r.Body.Close()
+	if err := ReadSimpleStructuredBody(r, w, &data); err != nil {
+		return
+	}
 
-	// Process text (or object)
-	bs, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "unable to read Data from form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// PARSE INTO CORRECT DATA FORMAT
-	err = json.Unmarshal(bs, &data)
-	if err != nil {
-		http.Error(w, "unable to unmarshal json form Data: "+err.Error(), http.StatusBadRequest)
-		return
-	}
+	// DECIDE: can anyone who is not a guest import? Guests are already denied
 	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
 	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
 	//	return
 	//}
 
-	user, err := GetAuthInfo(r.Context())
+	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
 	if err != nil {
-		http.Error(w, "failed to get auth info: "+err.Error(), http.StatusUnauthorized)
+		http.Error(w, "failed to get species and/or subspecies: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	sp, subsp, err := getSpeciesAndSubspecies(r.Context(), data.Species, data.SubSpecies)
-	if err != nil {
-		http.Error(w, "failed to get species or subspecies: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var finalPerms *ACL = nil
-	if subsp != nil {
-		finalPerms = subsp.DefaultAcl.Clone()
-	} else {
-		finalPerms = sp.DefaultAcl.Clone()
-	}
-	// Add user to the acl as a writer
-	finalPerms.Users[user.Email] = true
 
-	ctx, db := Db(r)
-	coll := db.Collection(SporeSwabCollectionName)
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := SporeSwab{
-		MainCollectionIdField:   MainCollectionIdField{id},
+		MainCollectionIdField:   id.IdField(),
 		CreationDateField:       data.CreationDateField,
 		SpeciesField:            data.SpeciesField,
 		SubspeciesOptionalField: data.SubspeciesOptionalField,
 		NotesField:              data.NotesField,
-		LastUpdatedField:        LastUpdatedFieldForNow(),
-		AclField:                AclField{finalPerms},
+		LastUpdatedField:        LastUpdatedField{now},
+		AclField:                finalPerms.AsField(),
 	}
-	finishImportMainCollectionEntry(ctx, coll, &toInsert, data.PermsOnRequest, w)
+	err = writeRfidTagIfNecessary(ctx, data.WriteTagTo, id)
+	if err != nil {
+		http.Error(w, "failed to write tag: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	finishImportMainCollectionEntry(ctx, &toInsert, w)
+}
+
+func deleteSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+		return
+	}
+	id, err := Base58Str(idStr).ToMainCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate not used in other places...
+	ctx := r.Context()
+	// ensure item does not have any transfers in or out
+	item, err := GetMainCollectionItemSpecific[*SporeSwab](ctx, id, &SporeSwab{})
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+	if item.Parent != nil {
+		// TODO: what if we want to remove it from the parent as well?
+		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+		return
+	}
+	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+		return
+	}
+
+	// Delete if not found elsewhere!
+	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+}
+
+func DeleteCollectionItem[U CollectionId](ctx context.Context, collName string, id U, w http.ResponseWriter) {
+	idStr := string(id.AsBase58())
+	deleteResult, err := DbFrom(ctx).Collection(collName).DeleteOne(ctx, BsonFindFilter(IDfld, id))
+	if err != nil {
+		http.Error(w, "failed to delete item "+idStr+" from "+collName+": "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if deleteResult.DeletedCount == 0 {
+		http.Error(w, "failed to delete item "+idStr+" from "+collName+". Id not found", http.StatusNotFound)
+		return
+	}
+	_, err = w.Write([]byte(idStr))
+	handleWriteErr(err, w)
 }

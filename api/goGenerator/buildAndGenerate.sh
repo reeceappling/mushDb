@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# Run from
 set -e
 echo "building generator"
 go build -o generateCode $(git rev-parse --show-toplevel)/api/goGenerator

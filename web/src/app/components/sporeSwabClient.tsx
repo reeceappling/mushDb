@@ -1,153 +1,183 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup, HandleJsonResponse, HandleTxtResponse,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
+    DisplayInput,
+    DoCreateRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    IsString,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NumberToDateStr,
     OptionalArrayOfType,
-    OptionalKey,
     OptionalSimpleKey,
-    SendMultipartRequest, setFormData
+    RequiredKey,
+    DoImportRequest,
+    resolvePicsFormData,
+    setFormFull,
+    OptionalKey,
+    DoUpdateMultipartRequest, viewUrlFor, Subform
 } from "@/app/components/common";
 import {
     DisposedDisplay,
-    ErrorDisplay,
-    ParentDisplay,
+    ErrorDisplay, MostRecentImageDisplay,
+    ParentDisplay, PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
 import {
     IsValidNote,
     NewEntryNotes,
     Note,
-    NoteEntriesGroup, NotesFormArea,
+    NotesFormArea,
 } from "@/app/components/formSubcomponents/notes";
 import {SporePrintData} from "@/app/components/sporePrintServer";
-import TestAndValidate from "@/app/components/testing/untested";
 import {FruitData} from "@/app/components/fruitServer";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
-import {SporeSwab} from "@/app/components/sporeSwabServer";
+import {
+    AclDisplay,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import ID from "@/app/components/formSubcomponents/id";
 import {ACL} from "@/app/components/accessControlServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
-import {redirect} from "next/navigation";
-import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
+import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
+import {
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {SaleArea} from "@/app/components/saleClient";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {OnViewCreatorsTriColArea, OvcForXfers} from "@/app/components/formSubcomponents/ovc";
+import ReaderWriterSelector, {
+    IdInput,
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {TransfersOutDisplay} from "@/app/components/transferClient";
+import {
+    InitialPicsEntries, IsValidPicWithNotesIncoming,
+    NewPicWithNotesForm,
+    PicWithNotesForm
+} from "@/app/components/formSubcomponents/picWithNotes";
+import {MssData} from "@/app/components/mssServer";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 // TODO: list page not working
 // TODO: ensure display page doing what we want
 
-export function AssertSporeSwab(input: any): asserts input is SporeSwab {
+export function AssertSporeSwab(input: any): asserts input is SporeSwabData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
-    // TODO: THIS!
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['parent', 'string'],
         ['parentType', 'string'],
         ['subspecies', 'string'],
         ['sale', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Swab assertion failure: optional key ' + key + ' was not valid');
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+    // complex required keys
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        //['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Spore Swab assertion failure: required key ' + key + ' was not valid');
+        }
+    }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
-            throw new Error('Swab assertion failure: optional key ' + key + ' was not valid');
+            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+        ['pics', IsValidPicWithNotesIncoming],
         ['transfersOut', IsString],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Swab assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
-export function SporeSwabImportDisplay({headerLevel, cookies}: ImportDisplayInput) { // TODO: USE ONLY FOR EXISTING SPORE PRINTS!
-    const [printDate, setPrintDate] = useState<number>(Date.now())
+export function SporeSwabImportDisplay({headerLevel}: ImportDisplayInput) {
+    const {dispatch} = useModalContext();
+    const [swabDate, setSwabDate] = useState<number>(Date.now())
     const [notes, setNotes] = useState<Note[]>([])
     const [species, setSpecies] = useState<SpeciesData | undefined>()
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>()
     const [image, setImage] = useState<File | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
     const importEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!species) {
             setErr("A species must be selected")
             return
         }
-        let body = new FormData()
-        let dataObj: any = {
-            printDate: printDate,
+        const dataObj: any = {
+            creationDate: swabDate,
             species: species._id,
-            subspecies: subspecies?._id, // TODO: validate on insert
+            // optional
+            subspecies: subspecies,
             notes: notes,
         }
-        setFormData(body, dataObj)
-        body.set("data", JSON.stringify(dataObj))
-        // Img
-        if (image) {
-            body.set("img", image, "img")
-        }
-
-        SendMultipartRequest(BaseExternalUrl + "/db/import/sporePrint", cookies, body)
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then(id => {
-                redirect(BaseExternalUrl + "/view/sporePrint/" + id)
-            })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+        DoImportRequest(dataObj, "sporeSwab", AssertSporeSwab, setErr, allCookies(cookies))
+        // TODO: on error dispatch the modal stuff!
     }
     //no parent because we couldn't possibly know it
     return <ImportEntryFormWrapper entryType={"sporeSwab"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
-        <DateArea pre={"Print Date: "} readonly={false} when={Date.now()} updateParent={setPrintDate}/>
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err}/>
+        <DateArea pre={"Swab Date: "} readonly={false} when={Date.now()} updateParent={setSwabDate}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel}/>*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel}/>*/}
         <ImageSelector updateParent={setImage}/>
-        <NoteEntriesGroup preexisting={false} readonly={false} updateParent={ns => {
-            setNotes(ns.map(n => {
-                return n.data
-            }))
-        }} headerLevel={headerLevel}/>
+        <NewEntryNotes setNotes={setNotes}/>
         <button className={"greenButton"} onClick={importEntry}>{"Create"}</button>
     </ImportEntryFormWrapper>
 
@@ -155,179 +185,276 @@ export function SporeSwabImportDisplay({headerLevel, cookies}: ImportDisplayInpu
 
 export default function SporeSwabDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies,
-    }: DisplayInput) {
-    try {
-        AssertSporeSwab(data)
-        const [initial, setInitial] = useState(data)
+        readonly, data, headerLevel, isTopLevel
+    }: DisplayInput<SporeSwabData>) {
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
+
+        const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
 
         const [sale, setSale] = useState(initial.sale)
-        const [disposed, setDisposed] = useState(initial.disposed)
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [disposed, setDisposed] = useState(data.disposed)
+        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
-        const updateInitial = (updated: SporeSwab) => {
+        const [transfersOut, setTransfersOut] = useState(initial.transfersOut)
+        const updateInitial = (updated: SporeSwabData) => {
             setInitial(updated)
             setSale(updated.sale)
             setDisposed(updated.disposed)
             setNotes(InitialNotesState(updated.notes))
+            setImages(InitialPicsEntries(updated.pics))
             setAcl(updated.acl)
+            setErr(undefined)
+            setTransfersOut(updated.transfersOut)
         }
+        const cookies = useContext(CookiesContext)
         const submit = () => {
-            let dataObj: any = {
+            const formData = new FormData()
+            const dataObj: any = {
                 sale: sale,
                 disposed: disposed,
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-
-            fetch(BaseExternalUrl + "/db/update/sporeSwab/" + data._id, {
-                method: 'Post',
-                body: JSON.stringify(dataObj),
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSporeSwab(entry)
-                    updateInitial(entry)
+            try {
+                // Pics
+                const picsInfo = resolvePicsFormData(images)
+                const newImages = picsInfo.images
+                dataObj.images = picsInfo.obj
+                // Set data on form
+                setFormFull(formData, dataObj, newImages, undefined, undefined)
+            } catch (caught: any) {
+                setErr(JSON.stringify(caught))
+                return
+            }
+            DoUpdateMultipartRequest("sporeSwab",initial._id, formData, AssertSporeSwab, allCookies(cookies))
+                .then(v=>{
+                    updateInitial(new SporeSwabData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(e=>{
+                    setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
+                })
         }
         const ovcs: OnViewCreatorQuadCol[] = [
-            // TODO: use the next one in other places...
-            OvcForXfers(data._id, "sporeSwab", ["plate", "slant", "stasisTube", "jar", "bag", "fruitingChamber"], cookies),
             WriteRfidOvcArea(initial._id),
         ]
         return <DisplayFormWrapper entryType={"sporeSwab"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID id={id} entryType={"sporeSwab"} txt={"Spore Swab"}/>
+            <ErrorDisplay err={err}/>
+            <ID props={{id:data._id, txt:"Spore Swab", entryType:"sporeSwab", linkPage:false, allowOpenMainPage:false}}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
+            <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/> {/*swab to agar and that's about it */}
             <FlexedArea>
                 <FlexedSinglesGroup>
-                    <TestAndValidate todos={["reformat these into groups"]}>
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType} />
-                        <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}
-                                  headerLevel={headerLevel}/>
-                        <DateArea pre={"Print Date: "} readonly={true} when={initial.creationDate}/>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                        <DisposedDisplay readonly={false} disposed={disposed} setDisposedOnParent={setDisposed}/>
-                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                       </TestAndValidate>
+                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType} />
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <DateArea pre={"Print Date: "} readonly={true} when={initial.creationDate}/>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                    <DisposedDisplay readonly={false} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
+                    <SaleArea readonly={false} canCreateSale={true} sale={sale} setSale={setSale}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
-
+            <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"sporeSwab"}
+                                 transfersOut={transfersOut}
+                                 allowNewTransferCreation={!readonly}
+                /*validTypesTo={["plate", "slant"TODO: any others?]} TODO: on go side*//>
+            <PicsDisplay pix={initial.pics} readonly={readonly}
+                         headerLevel={headerLevel} updateParent={setImages}/>
             <NotesFormArea initial={initial.notes} readonly={readonly} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl} />
             </TogglableAreaWithDepth>
             {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                 e.stopPropagation();
                 submit()
             }}>{"Update"}</button>}
-            <OnViewCreatorsTriColArea OnViewCreators={ovcs}
-                                      readonly={readonly}/> {/*swab to agar and that's about it */}
         </DisplayFormWrapper>
-    } catch (err) {
-        return <div>{"ERROR: Spore swab data format incorrect: " + err}</div>
-    }
 }
 
 // Should only be accessible from a fruit's page
 export function NewSporeSwabForm(
-    {printIn, fruitIn, headerLevel, offset, onCreate}: {
+    // can also be made from bag, box, etc.
+    {printIn, fruitIn, otherParentIn, offset, onCreate}: {
         printIn?: SporePrintData
         fruitIn?: FruitData
-        headerLevel?: number
+        otherParentIn?: string
         offset?: number
-        onCreate: (sp: SporeSwab) => void
+        onCreate: (sp: SporeSwabData) => void
     }) {
+    const {dispatch} = useModalContext();
     // TODO: EITHER PRINT OR FRUIT!!!!!
 
     // TODO: THIS!
-    const [parent, setParent] = useState<string | undefined>()
+    const [parent, setParent] = useState<string | undefined>(printIn?._id || fruitIn?._id || otherParentIn || undefined)
     const [notes, setNotes] = useState<Note[]>([])
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
 
     const [err, setErr] = useState<string | undefined>(undefined)
+
+    const cookies = useContext(CookiesContext)
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!parent || parent === "") {
             setErr("Parent must be selected")
             return
         }
-        let dataObj: any = {
+        const body: any = {
             parent: parent,
             notes: notes,
+            writeTagTo: writeTagTo,
         }
+        DoCreateRequest("sporeSwab", body, AssertSporeSwab, allCookies(cookies))
+            .then(v=>{
+                onCreate ? onCreate(v) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
 
-        fetch(BaseExternalUrl + "/db/create/sporeSwab", {
-            method: 'Post',
-            body: JSON.stringify(dataObj),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((resJson) => {
-                AssertSporeSwab(resJson)
-                onCreate(resJson)
             })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
     }
 
-    return <NewEntryFormWrapper entryType={"sporeSwab"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel} offset={offset}/>
-        {/* TODO: PARENT SELECTOR */}
+    return <NewEntryFormWrapper entryType={"sporeSwab"} isTopLevel={false}>
+        <ErrorDisplay err={err}/>
+        {(printIn || fruitIn) && <IdInput/>}
         <NewEntryNotes setNotes={setNotes}/>
+        <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
 
-export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<SporeSwab>) {
-    let cols: ListTableColumn<SporeSwab>[] = [
-        NewColumn("ID", (v)=>v._id),
+export function SporeSwabListPageTable({data, onClick, withLink}: ListPageItems<SporeSwabData>) {
+    let cols: ListTableColumn<SporeSwabData>[] = [
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
+        }, true),
+        NewColumn("Spec", (v)=>v.species||"", true),
+        NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: SporeSwab)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"sporeSwab",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: SporeSwabData)=>{
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SporeSwabData(v)}}/>
 }
-export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwab>) {
+export function SporeSwabSelectorTable({data, onClick}: ListPageItems<SporeSwabData>) {
     return <SporeSwabListPageTable data={data} onClick={onClick} withLink={true} />
 }
 
-export function SporeSwabSelector(
-    {
-        doSelect,
-        allowCreate // TODO: del?
-    }: {
-        doSelect: (val: SporeSwab | undefined) => void,
-        allowCreate?: boolean
-    }) {
-    const table = (items: SporeSwab[]):JSX.Element=>{
-        return <SporeSwabSelectorTable data={items} onClick={doSelect}/>
+// export function SporeSwabSelector(
+//     {
+//         doSelect,
+//         hideDisposed = false
+//     }: {
+//         doSelect: (val: SporeSwabData | undefined) => void,
+//         hideDisposed?: boolean
+//     }) {
+//     const table = (items: SporeSwabData[]):JSX.Element=>{
+//         return <SporeSwabSelectorTable data={items} onClick={doSelect}/>
+//     }
+//
+//     return <ExistingRecentSelector entryType={"sporeSwab"} entryTypes={"sporeSwabs"} doSelect={doSelect} asserter={AssertSporeSwab}
+//                                    table={table} hideDisposed={hideDisposed}>
+//     </ExistingRecentSelector>
+// }
+export function ChildSwabArea({parent}:{parent?:string}){
+    const [values, setValues] = useState<SporeSwabData[] | undefined>(undefined)
+    const [err, setErr] = useState<string | undefined>(undefined)
+    const [collapsed, setCollapsed] = useState(false)
+    const loadValues = (e: React.MouseEvent<HTMLButtonElement,MouseEvent>)=>{
+        e.preventDefault()
+        e.stopPropagation()
+        getChildSwabsOf(parent).then((swabs:SporeSwabData[])=>{
+            setValues(swabs)
+            setErr(undefined)
+        }).catch(e=>{
+            setErr(JSON.stringify(e))
+        })
+    }
+    const redirectToSwab = (swab:SporeSwabData) => {
+        window.location.assign(viewUrlFor("sporeSwab", swab._id))
+    }
+    const toggleCollapsed = (e: React.MouseEvent<HTMLButtonElement,MouseEvent>) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setCollapsed(!collapsed)
+    }
+    if(!parent){
+        return null
+    }
+    if(values===undefined){
+        return <Subform>
+            <ErrorDisplay err={err}/>
+            <button className={"basicButtonSmall"} onClick={loadValues}>{"Load child Spore Swabs"}</button>{/* TODO: ensure classes ok*/}
+        </Subform>
+    }
+    if(values.length===0){
+        // TODO: ensure if a swab is added and this is active it updates!
+        return <Subform>{"No child swabs in database"}</Subform>
+    }
+    const toggleCollapsedButton = ()=>{
+        return <button className={"basicButtonSmall"} onClick={toggleCollapsed}>{(collapsed?"Show":"Hide")+" spore swabs"}</button>
+    }
+    const toggleButton = toggleCollapsedButton() // TODO: ensure ok and updates text when hiding/showing
+    if(collapsed){
+        return <Subform>
+            {toggleButton}
+        </Subform>
     }
 
-    return <ExistingRecentSelector entryType={"sporeSwab"} entryTypes={"sporeSwabs"} doSelect={doSelect} asserter={AssertSporeSwab}
-                                   table={table}>
-        {/* TODO: ok?allowCreate && <NewSporeSwabForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
-    </ExistingRecentSelector>
+    return <Subform>
+        {toggleButton}
+        <SporeSwabSelectorTable data={values} onClick={redirectToSwab}/>
+        {toggleButton}
+    </Subform>
+}
+function getChildSwabsOf(parent?:string):Promise<SporeSwabData[]>{
+    return new Promise((resolve,reject) => {
+        reject("getChildSwabsOf not implemented yet!")
+    })
+    // TODO: FIX THIS WHOLE THING!
+    // return fetch(BaseExternalUrl+'/db/listChildSwab/'+parent, { // TODO: add endpoint!
+    //     method: 'Get',
+    //     credentials: 'include',
+    //     headers: clientGetRequestHeaders,
+    // }).then(res=> {
+    //     return res.json()
+    // }).then(json=>{
+    //     try {
+    //         return json as SporeSwabData[]
+    //     } catch (e) {
+    //         console.error(e)
+    //         throw e
+    //     }
+    // }).catch(err=>{
+    //     throw(err)
+    // })
 }

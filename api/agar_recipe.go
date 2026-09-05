@@ -3,6 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -12,7 +15,7 @@ import (
 // required for: agarBatch
 
 type AgarRecipe struct {
-	AlternateCollectionIdField `bson:"inline"`
+	AlternateCollectionIdField `bson:"inline"` // CreationDate is embedded?
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
 	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
@@ -26,11 +29,15 @@ type AgarRecipe struct {
 	AclField                   `bson:"inline"`
 }
 
+//func (ar AgarRecipe) Blank() CollectionItem {
+//	return &AgarRecipe{}
+//}
+
 type updateAgarRecipeRequest struct {
 	NameField
 	StandardField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateAgarRecipeRequest) modsFor(existing *AgarRecipe, aclField AclField) (bson.D, error) {
@@ -44,7 +51,10 @@ func (req updateAgarRecipeRequest) modsFor(existing *AgarRecipe, aclField AclFie
 }
 
 func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -55,11 +65,6 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)
@@ -77,17 +82,11 @@ func updateAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
 
-const LmeaName = "LMEA"
-const PdaName = "PDA"
-const WaterAgarName = "Water Agar"
-const GrainWaterAgarName = "Grainwater Agar"
-const AntibioticAgarName = "Antibiotic Agar"
-
 func initializeAgarRecipes(ctx context.Context) error {
-	db := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName)
+	db := DbFrom(ctx)
 	coll := db.Collection(AgarRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false), // TODO: unique (last) may need to be true
+		newSimpleIndex("name", "name", false, false, true), // TODO: probably false for last one? Different people could have different recipes with the same name... // TODO: unique (last) may need to be true (do we want names to be unique or not?)
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("agar", "agar", true, false, false),
 		standardIndexModel,
@@ -95,7 +94,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 		//newSimpleIndex("sugars", "sugars.type", false, false, false),
 		//newSimpleIndex("additives", "additives.additive", false, false, false),
 		//newSimpleIndex("antibiotics", "antibiotics", false, false, false),
-		//Notes (not indexed, unless tags)
+		//Notes (not indexed)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
 	})
@@ -104,10 +103,11 @@ func initializeAgarRecipes(ctx context.Context) error {
 	}
 	// Add built-in entries
 	builtinTime := RequiredTimeField{Time: ogTime}
+	basicEntryAcl := allCanReadAcl(nil)
 	basicEntries := []*AgarRecipe{
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idLmea)},
-			NameField:                  NameField{LmeaName},
+			NameField:                  NameField{"LMEA"},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
@@ -118,11 +118,11 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{Notes: []Note{
 				{Note: "Light Malt Extract Agar", RequiredTimeField: builtinTime},
 			}},
-			AclField: allCanReadAcl(),
+			AclField: basicEntryAcl,
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idPda)},
-			NameField:                  NameField{PdaName},
+			NameField:                  NameField{"PDA"},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
@@ -135,22 +135,22 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{Notes: []Note{
 				{Note: "Potato Dextrose Agar", RequiredTimeField: builtinTime},
 			}},
-			AclField: allCanReadAcl(),
+			AclField: basicEntryAcl,
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idWaterAgar)},
-			NameField:                  NameField{WaterAgarName},
+			NameField:                  NameField{"Water Agar"},
 			LiquidsField:               LiquidsField{[]Liquid{Water.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField:             NutrientsField{},
 			SugarsField:                SugarsField{},
 			StandardField:              StandardField{true},
 			NotesField:                 NotesField{},
-			AclField:                   allCanReadAcl(),
+			AclField:                   basicEntryAcl,
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idGrainWaterAgar)},
-			NameField:                  NameField{GrainWaterAgarName},
+			NameField:                  NameField{"Grainwater Agar"},
 			LiquidsField: LiquidsField{[]Liquid{
 				GrainWater.AsLiquid().withPct(50.0),
 				DistilledWater.AsLiquid().withPct(50.0),
@@ -162,11 +162,11 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("Grain water also acts as a nutrient source"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: basicEntryAcl,
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idAntibioticAgar)},
-			NameField:                  NameField{AntibioticAgarName},
+			NameField:                  NameField{"Antibiotic Built-In"},
 			LiquidsField:               LiquidsField{[]Liquid{DistilledWater.AsLiquid()}},
 			Agar:                       20,
 			NutrientsField: NutrientsField{[]NutrientMeasurement{
@@ -178,7 +178,7 @@ func initializeAgarRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("50mg doxycycline per ?????"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: basicEntryAcl,
 		},
 	}
 
@@ -186,50 +186,51 @@ func initializeAgarRecipes(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	//// Add test entries
-	//testItem := &AgarRecipe{
-	//	AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-	//	NameField:                  NameField{testEntryStringId},
-	//	LiquidsField: LiquidsField{[]Liquid{
-	//		Water.AsLiquid().withPct(40.0),
-	//		DistilledWater.AsLiquid().withPct(60.0),
-	//	}},
-	//	Agar:          20,
-	//	StandardField: StandardField{false},
-	//	NutrientsField: NutrientsField{[]NutrientMeasurement{
-	//		nutMmt(LME, 19, "g"),
-	//		nutMmt(Potato, 2, "g"),
-	//	}},
-	//	SugarsField: SugarsField{[]SugarMeasurement{
-	//		sugMmt(Dextrose, 1, "g"),
-	//		sugMmt(Honey, 2, "g"),
-	//	}},
-	//	AdditivesField: AdditivesField{[]AdditiveMeasurement{
-	//		{
-	//			Additive: Vermiculite,
-	//			Amount:   0.2,
-	//			Unit:     "lb",
-	//		},
-	//		{
-	//			Additive: Perlite,
-	//			Amount:   0.7,
-	//			Unit:     "tons",
-	//		},
-	//		{
-	//			Additive: Gypsum,
-	//			Amount:   1,
-	//			Unit:     "pinch",
-	//		},
-	//	}},
-	//	AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
-	//	NotesField:       NotesField{exampleNotes()},
-	//	LastUpdatedField: LastUpdatedField{exampleTime},
-	//	AclField:         AclField{&testAcl},
-	//}
-	//
-	//// Add test entries
-	//return addTestAltEntries(ctx, testItem)
-	return nil
+	// Add test entries if dev
+	return env.IfNotProd(ctx, func() error {
+		testItem := &AgarRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			NameField:                  NameField{testEntryStringId},
+			LiquidsField: LiquidsField{[]Liquid{
+				Water.AsLiquid().withPct(40.0),
+				DistilledWater.AsLiquid().withPct(60.0),
+			}},
+			Agar:          20,
+			StandardField: StandardField{false},
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
+				nutMmt(LME, 19, "g"),
+				nutMmt(Potato, 2, "g"),
+			}},
+			SugarsField: SugarsField{[]SugarMeasurement{
+				sugMmt(Dextrose, 1, "g"),
+				sugMmt(Honey, 2, "g"),
+			}},
+			AdditivesField: AdditivesField{[]AdditiveMeasurement{
+				{
+					Additive: Vermiculite,
+					Amount:   0.2,
+					Unit:     "lb",
+				},
+				{
+					Additive: Perlite,
+					Amount:   0.7,
+					Unit:     "tons",
+				},
+				{
+					Additive: Gypsum,
+					Amount:   1,
+					Unit:     "pinch",
+				},
+			}},
+			AntibioticsField: AntibioticsField{[]Antibiotic{Doxycycline, HydrogenPeroxide}},
+			NotesField:       NotesField{exampleNotes()},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         AclField{testAcl},
+		}
+
+		// Add test entries
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 func sugMmt(t Sugar, amt float64, unit string) SugarMeasurement {
@@ -271,8 +272,19 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	ctx, db := Db(r)
-	coll := db.Collection(AgarRecipesCollectionName)
+	ctx, now := request.UnixTime(r.Context())
+
+	if err = errors.Join(
+		req.LiquidsField.Validate(),
+		// TODO: validate agar?
+		req.NutrientsField.Validate(),
+		req.SugarsField.Validate(),
+		req.AdditivesField.Validate(),
+		req.AntibioticsField.Validate(),
+	); err != nil {
+		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	toInsert := AgarRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
@@ -285,30 +297,151 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AdditivesField:             req.AdditivesField,
 		AntibioticsField:           req.AntibioticsField,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanWriteAcl(),
+		LastUpdatedField:           LastUpdatedField{now},
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
-// TODO: USE!
-func getAgarRecipeByName(ctx context.Context, name string) (AgarRecipe, error) { // TODO: USE ME
-	out := AgarRecipe{}
-	err := ctx.Value(mongoClientContextKey).(*mongo.Client).
-		Database(dbName).
-		Collection(AgarRecipesCollectionName).
-		FindOne(ctx, bson.M{"name": name}).
-		Decode(&out)
-	return out, err
-}
+//// TODO: USE! ALSO ONE FOR ALIAS????
+//func getCollectionItemByName[T PermissionedAltCollectionItem[AlternateCollectionId]](ctx context.Context, name string, out T) (err error) {
+//	// TODO: SET T SO IT IS NOT NIL
+//	//temp, ok := out.Blank().(T)
+//	//if !ok {
+//	//	return errors.New("Blank() issue")
+//	//}
+//	user, err := GetResolvedUserPerms(ctx)
+//	if err != nil {
+//		return err
+//	}
+//	findFilter := bson.M{"name": name}
+//	coll := DbFrom(ctx).Collection(out.CollectionName())
+//	curs, err := coll.Find(ctx, findFilter)
+//	if err != nil {
+//		return err
+//	}
+//	defer func() {
+//		if curs.ID() != 0 {
+//			err = errors.Join(err, curs.Close(ctx))
+//		}
+//	}()
+//	for {
+//		if curs.TryNext(ctx) {
+//			if err = curs.Decode(out); err != nil {
+//				return err
+//			}
+//			if out.Permissions().HighestPermFor(user).CanRead() {
+//				//out = temp // TODO: dont like that out still returns on err
+//				return nil
+//			}
+//			// TODO: this returns early. Do we want to locate all of the recipes with this name?
+//		}
+//		cursorClosed := curs.ID() == 0
+//		if cursorClosed {
+//			return mongo.ErrNoDocuments
+//		}
+//		if err = curs.Err(); err != nil {
+//			return err
+//		}
+//	}
+//	//// TODO: or just find the first if names are unique
+//	//if err = coll.FindOne(ctx, findFilter).Decode(&out); err != nil {
+//	//	return err
+//	//}
+//	//if !out.Permissions().HighestPermFor(user).CanRead() {
+//	//	return errors.New("user does not have permission")
+//	//}
+//	//return nil
+//}
+//func getAgarRecipeByName(ctx context.Context, name string) (*AgarRecipe, error) {
+//	out := &AgarRecipe{}
+//	user, err := GetResolvedUserPerms(ctx)
+//	if err != nil {
+//		return nil, err
+//	}
+//	coll := DbFrom(ctx).Collection(AgarRecipesCollectionName)
+//	findFilter := bson.M{"name": name}
+//	curs, err := coll.Find(ctx, findFilter)
+//	if err != nil {
+//		return out, err
+//	}
+//	defer curs.Close(ctx)
+//	for {
+//		if curs.TryNext(ctx) {
+//			if err = curs.Decode(out); err != nil {
+//				return out, err
+//			}
+//			if out.ACL.HighestPermFor(user).CanRead() {
+//				return out, nil
+//			}
+//			// TODO: this returns early. Do we want to locate all of the recipes with this name?
+//		}
+//		cursorClosed := curs.ID() == 0
+//		if cursorClosed {
+//			return nil, mongo.ErrNoDocuments
+//		}
+//		if err = curs.Err(); err != nil {
+//			return nil, err
+//		}
+//	}
+//	//// TODO: or just find the first if names are unique
+//	//if err = coll.FindOne(ctx, findFilter).Decode(&out); err != nil {
+//	//	return nil, err
+//	//}
+//	//if !out.ACL.HighestPermFor(user).CanRead() {
+//	//	return nil, errors.New("user does not have permission")
+//	//}
+//	//return out, nil
+//}
 
 type AgarRecipeField struct {
 	AgarRecipe AlternateCollectionId `bson:"agarRecipe" json:"agarRecipe"`
 }
 
 func (field AgarRecipeField) Get(ctx context.Context) (out AgarRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(AgarRecipesCollectionName).FindOne(ctx, bson.M{
-		"_id": field.AgarRecipe,
+	err = DbFrom(ctx).Collection(AgarRecipesCollectionName).FindOne(ctx, bson.M{
+		IDfld: field.AgarRecipe,
 	}).Decode(&out)
 	return out, err
 }
+
+//func deleteAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id") // recipe by name?
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	// ensure recipe not used by any batches first
+//	err = db.Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{"agarRecipe": id}).Err()
+//	if err != nil {
+//		if !errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "failed to check for agarRecipe usage in agarBatch collection. "+err.Error(), http.StatusInternalServerError)
+//			return
+//		}
+//	} else {
+//		// At least one item exists, fail
+//		http.Error(w, "at least one agarBatch utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
+//	if err != nil {
+//		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+//		return
+//	}
+//	if deleteResult.DeletedCount == 0 {
+//		http.Error(w, "failed to delete id "+idStr+" from agar recipes. Id not found", http.StatusNotFound)
+//		return
+//	}
+//	_, err = w.Write([]byte(idStr))
+//	handleWriteErr(err, w)
+//}

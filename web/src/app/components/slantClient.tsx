@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AllEntries,
@@ -23,21 +23,29 @@ import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruita
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    ImportDisplayInput, ImportEntryFormWrapper, importUrlFor,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType, OptionalKey,
-    OptionalSimpleKey,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateMultipartRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup, ImportDisplayInput, ImportEntryFormWrapper, ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    DoMultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
+    OptionalArrayOfType,
+    OptionalKey,
+    OptionalSimpleKey, RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData, SendMultipartRequest, setFormData,
-    setFormImages, viewUrlFor,
+    resolvePicsFormData,
+    setFormFull,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
     GensFormDisplay, MostRecentImageDisplay,
@@ -48,39 +56,48 @@ import {
     AgarBatchArea,
 } from "@/app/components/agarBatchClient";
 import {
-    ContaminationForm, ContamsDisplay, InitialContamState, InitialNotesState, IsValidContamination,
+    ContaminationForm, ContamsDisplay, InitialContamState, IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
-import {SaleArea} from "@/app/components/saleClient";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import { SaleArea} from "@/app/components/saleClient";
+import {
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
+import {
+    AclDisplay,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import TestAndValidate from "@/app/components/testing/untested";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertSlant(input: any): asserts input is SlantData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Slant assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['agarBatch', 'string'],
         ['stickType','string'],
         ['species', 'string'],
@@ -94,23 +111,31 @@ export function AssertSlant(input: any): asserts input is SlantData {
         ['sale', 'string'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Slant assertion failure: optional key ' + key + ' was not valid');
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        ['mostRecentImage', IsValidPicWithNotesIncoming],
-       ['acl', IsValidAcl]
+    // complex required keys
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        //['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Slant assertion failure: required key ' + key + ' was not valid');
+        }
+    }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Slant assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -118,75 +143,82 @@ export function AssertSlant(input: any): asserts input is SlantData {
         ['contamination', IsValidContamination],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Slant assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
-export function SlantImportDisplay({headerLevel, cookies}:ImportDisplayInput) {
+export function SlantImportDisplay({headerLevel}:ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     const [created, setCreated] = useState<number>(Date.now())
     const [stickType, setStickType] = useState<string | undefined>(undefined)
     const [species, setSpecies] = useState<SpeciesData | undefined>()
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>()
+    const [subspecies, setSubspecies] = useState<string | undefined>()
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>()
-    const [generation, setGeneration] = useState<number | undefined>()
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [imageFile, setImageFile] = useState<File | undefined>()
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
     const ImportSlant = () => {
-        let formData = new FormData()
-        if(species===undefined){
-            setErr("Species must be set!")
-            return
-        }
+        const formData = new FormData()
         formData.set('data', JSON.stringify({
-            created:created,
+            creationDate:created, // TODO: validate not in future or too far in the past (do on all imports)
             stickType: stickType,
-            species: species._id,
-            subspecies: subspecies?._id,
+            // Optional
+            species: species?._id,
+            subspecies: subspecies,
             knownFruitable: knownFruitable,
             generation: generation,
             writeTagTo: writeTagTo,
         }))
         if(imageFile!==undefined){
-            formData.set("image", imageFile, "imgFile")
+            formData.set("image", imageFile, "img")
         }
-
-
-        SendMultipartRequest(importUrlFor("slant"), cookies, formData)
-            .then(HandleJsonResponse) // TODO: all of these for imports should be HandleJsonResponse, NOT HandleTxtResponse
-            .then((newItem) => {
-                AssertSlant(newItem)
-                redirect(viewUrlFor("slant",newItem._id))
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "slant", AssertSlant, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"slant"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
+        <ErrorDisplay err={err}/>
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies} headerLevel={headerLevel/*cookies={cookies}*/}/>
-        {species?<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies} headerLevel={headerLevel/*cookies={cookies}*/}/>:null}
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         <KnownFruitableArea doSelect={setKnownFruitable} headerLevel={headerLevel}/>
         <GenerationInput updateParent={setGeneration}/>
         <ImageSelector updateParent={setImageFile}/>
         <SlantStickSelector setStickType={setStickType}/>
-        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo} headerLevel={headerLevel}/>
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={ImportSlant}>{"Import Slant"}</button>
     </ImportEntryFormWrapper>
 }
 
 export default function SlantDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
-    }: DisplayInput) {
-    try {
-        AssertSlant(data)
-        const [initial, setInitial] = useState(data)
+        readonly, data, headerLevel
+    }: DisplayInput<SlantData>) {
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
         const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
         const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
         const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
@@ -196,7 +228,7 @@ export default function SlantDisplay(
         // Helper states
         const [transfersOut, setTransfersOut] = useState<string[]>(initial.transfersOut || [])
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const updateInitial = (updated: SlantData)=>{
             setInitial(updated)
             setImages(InitialPicsEntries(updated.pics))
@@ -208,10 +240,12 @@ export default function SlantDisplay(
             // Helper states
             setTransfersOut(updated.transfersOut || [])
             setAcl(updated.acl)
+            setErr(undefined)
         }
+        const cookies = useContext(CookiesContext)
         const slantSubmit = ()=>{
-            let body = new FormData()
-            let dataObj:any={
+            const formData = new FormData()
+            const dataObj:any={
                 knownFruitable:knownFruitable,
                 sale: sale,
                 disposed:disposed,
@@ -220,127 +254,145 @@ export default function SlantDisplay(
             }
             try {
                 // Pics
-                let picsInfo = resolvePicsFormData(images)
-                let newImages = picsInfo.images
+                const picsInfo = resolvePicsFormData(images)
+                const newImages = picsInfo.images
                 dataObj.images = picsInfo.obj
                 // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
+                const contamsInfo = resolveContamsFormData(contams)
+                const newContams = contamsInfo.images
                 dataObj.contams = contamsInfo.obj
                 // Set data on form
-                setFormData(body, dataObj)
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
+                setFormFull(formData, dataObj, newImages, newContams, undefined)
+                // formData.set("data", JSON.stringify(dataObj))
+                // setFormImages("newPic", formData, newImages)
+                // setFormImages("newContam", formData, newContams)
             } catch (caught: any) {
                 setErr(JSON.stringify(caught))
                 return
             }
-
-            SendMultipartRequest(BaseExternalUrl+"/db/update/slant/"+initial._id, cookies, body)
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSlant(entry)
-                    updateInitial(entry)
-                    //window.location.reload()
+            DoUpdateMultipartRequest("slant",initial._id, formData, AssertSlant, allCookies(cookies))
+                .then(v=>{
+                    updateInitial(new SlantData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
+                .catch(e=>{
+                    setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
+                })
         }
-        const ovcs: OnViewCreatorQuadCol[] = [
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        const innoculated = initial.species !== undefined
+        return !disp ? [
+        ...(innoculated ? [
+            /* TODO: FRUIT CREATION?*/
+        ]:[]),
             WriteRfidOvcArea(initial._id),
-        ]
-        return (
+            // TODO: any others?
+        ]:[]
+    }
+
+    return (
             <DisplayFormWrapper entryType={"slant"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"Slant"} entryType={"slant"} />
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
-                <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
+                <ErrorDisplay err={err}/>
+                <ID props={{id:data._id, txt:"Slant", entryType:"slant"}}/>
+                <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
+                <MostRecentImageDisplay data={initial.mostRecentImage}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
-                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} disposed={disposed}
+                        <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated} initialDisposed={initial.disposed}
                                                     readonly={readonly} setDisposedOnParent={setDisposed}/>
                     </FlexedSinglesGroup>
                     <FlexedSinglesGroup>
-                        <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
+                        {isInnoculated()&&<SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>}
                         <AgarBatchArea agarBatchId={initial.agarBatch} headerLevel={headerLevel}/>
                         <div>
                             {"Stick type:"+(initial.stickType || "none")}
                         </div>
                     </FlexedSinglesGroup>
-                    {/* TODO: CondensationCoverageAtSealTimeField `bson:"inline"` // Percentage of condensation surface area coverage at seal time
-                PourCoverageField                   `bson:"inline"` // Percentage of bottom surface area agar coverage
-                WetAtCooledTimeField                `bson:"inline"` // Wet when initially cooled? True, false, or unknown
-                AgarOnOutsideAtPourTimeFiel*/}
-                    <FlexedSinglesGroup>
+                    {isInnoculated()&&<FlexedSinglesGroup>
                         <InnocDisplay innoc={initial.innoc}/>
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
+                        <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
-                        <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
-                                  canCreateSale={true}/>
-                    </FlexedSinglesGroup>
-                    <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
+                        <SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
+                    </FlexedSinglesGroup>}
+                    {isInnoculated()&&<FlexedSinglesGroup>
+                        <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
+                    </FlexedSinglesGroup>}
                 </FlexedArea>
 
-                <TransfersOutDisplay thisId={initial._id} thisEntryType={"slant"} transfersOut={transfersOut} allowNewTransferCreation={!readonly} cookies={cookies}/>
+                {isInnoculated()&&<TransfersOutDisplay thisId={initial._id} thisEntryType={"slant"} transfersOut={transfersOut} allowNewTransferCreation={!readonly}/>}
                 <PicsDisplay pix={initial.pics || []} updateParent={setImages} readonly={readonly} headerLevel={headerLevel}/>{/* Pics */}
                 <ContamsDisplay initial={initial.contamination || []} updateParent={setContams} readonly={readonly} headerLevel={headerLevel}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+                    <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl} />
                 </TogglableAreaWithDepth>
-                <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
                     slantSubmit()
                 }}>{"Update"}</button>}
-
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Slant data format incorrect: " + err}</div>
-    }
 }
 
 export function NewSlantForm({handlers,agarBatchIn}: {handlers: NewEntryInput<SlantData>, agarBatchIn?:AgarBatchData}){
+    const {dispatch} = useModalContext();
     const [agarBatch, setAgarBatch] = useState(agarBatchIn)
     const [stickType, setStickType] = useState<string | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+
+    const cookies = useContext(CookiesContext)
     const createSlant = (e: React.MouseEvent)=>{
         e.preventDefault()
         if(agarBatch===undefined){
             setErr("An agar batch must be selected")
             return
         }
-        let body: any = {
-            agarBatch: agarBatch,
+        // agarBatches always are created with pcRuns, so there is no need to ensure the batch has a run beforehand...
+        const body: any = {
+            agarBatch: agarBatch._id,
             stickType: stickType,
             notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl+"/db/create/slant", {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertSlant(entry)
-                handlers.onCreate && handlers.onCreate(entry)
+        DoCreateRequest("slant", body, AssertSlant, allCookies(cookies))
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(new SlantData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
     }
-    return <NewEntryFormWrapper entryType={"slant"}>
+    return <NewEntryFormWrapper entryType={"slant"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         <SlantStickSelector setStickType={setStickType}/>
-        <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/> {/* TODO: use new one instead?*/}
+        <TestAndValidate todos={["ensure providing agarBatch makes selector disappear"]}>
+        {agarBatchIn===undefined && <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={handlers.isTopLevel} creatorInPage={handlers.isTopLevel/* TODO: ok?*/}/>}
+        </TestAndValidate>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createSlant} onSubmit={(e)=>{e.preventDefault();}}>{"Create"}</button>
@@ -360,24 +412,24 @@ export function SlantStickSelector(x: { setStickType: (s?: string) => void }){
 
 export function SlantListPageTable({data, onClick, withLink}: ListPageItems<SlantData>) {
     let cols: ListTableColumn<SlantData>[] = [
-        NewColumn("ID", (v)=>v._id),
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
+        }, true),
+        NewColumn("Spec", (v)=>v.species||"", true),
+        NewColumn("Subspec", v=>v.subspecies||"", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SlantData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"slant",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SlantData(v)}}/>
 }
 export function SlantSelectorTable({data, onClick}: ListPageItems<SlantData>) {
     return <SlantListPageTable data={data} onClick={onClick} withLink={true} />
@@ -385,17 +437,19 @@ export function SlantSelectorTable({data, onClick}: ListPageItems<SlantData>) {
 export function SlantSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: SlantData | undefined) => void,
-        allowCreate?: boolean
+        allowCreate?: boolean,
+        hideDisposed?:boolean
     }) {
     const table = (items: SlantData[]):JSX.Element=>{
         return <SlantSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"slant"} entryTypes={"slants"} doSelect={doSelect} asserter={AssertSlant}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewSlantForm handlers={{onCreate: doSelect,isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

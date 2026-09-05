@@ -1,4 +1,851 @@
+# TODOs found while using
+- [x] Lazy load display images
+  - [ ] ImageZoomer on normal images area, contams, and flushes
+  - [ ] Add a "loading" spinner for images that are loading
+  - [x] Normal images area (also flushes area)
+  - [x] Contams area
+  - [ ] MostRecentImage
+    - [x] Set to lazy loaded initially
+    - [ ] (decide whether or not we want lazy or eager, lazy for now)
+- [ ] Upgrade uuid in web
+- [ ] Cloudflare cache only images. https://www.debugbear.com/docs/cloudflare-caching
+- [x] Adding a contam (mold+bact) to a plate succeeds but does not get handled properly on the client without a reload, fix.
+- [x] Contams, change how confirmed works
+- [x] Typescript TransferReasons is broken on the clone from fruit page!
+  - [x] EVERYTHING IN server.tsx is not working!
+- [ ] Fix conflicting Eslint versions
+- [ ] Dont use inflight in tsx! Look into using Lru-cache instead
+- [ ] //export const instant = false; is in a lot of pages. See which can be uncommented, and which should be false or true
+- [ ] Client tests
+  - [ ] Use Mock Service Worker (mswjs.io) to mock network stuff
+  - [ ] React Testing Library + Jest?
+  - [ ] folders to test
+    - [ ] auth
+    - [ ] components
+      - [ ] form subcomponents
+        - [ ] biometrics?
+        - [ ] cookies context?
+        - [ ] depth context?
+        - [ ] dictation context?
+        - [ ] modal context?
+        - [ ] pageType context?
+        - [ ] readerWriterButtons
+        - [ ] session context?
+        - [ ] utils
+          - [ ] headers
+          - [ ] session
+          - [ ] slider
+          - [ ] volume selector
+        - [ ] additives
+        - [ ] antibiotic
+        - [ ] commonClient1-2
+        - [ ] contams
+        - [ ] date
+        - [ ] entryLink
+        - [ ] generationInput
+        - [ ] grains
+        - [ ] id
+        - [ ] imageSelector
+        - [ ] initialState
+        - [ ] knownFruitableArea
+        - [ ] liquids
+        - [ ] moveOnceUsed
+        - [ ] notes
+        - [ ] numericInput
+        - [ ] nutrients
+        - [ ] ovc
+        - [ ] picWithNotes
+        - [ ] plugs
+        - [ ] server
+        - [ ] shared
+        - [ ] singleTextBoxArea
+        - [ ] sugars
+        - [ ] textbox
+      - [ ] measurements?
+      - [ ] Main components
+        - [ ] AccessControl
+        - [ ] AgarBatch
+        - [ ] AgarRecipe
+        - [ ] Auth
+        - [ ] Bag
+        - [ ] ClientGeneric
+        - [ ] common and constants
+        - [ ] Fruit
+        - [ ] FruitingChamber
+        - [ ] GrainBatch
+        - [ ] Jar
+        - [ ] JarRecipe
+        - [ ] LC
+        - [ ] LcRecipe
+        - [ ] LcSyringe
+        - [ ] MSS
+        - [ ] PcRun
+        - [ ] Perms
+        - [ ] Plate
+        - [ ] Plugs
+        - [ ] Project
+        - [ ] Sale
+        - [ ] Selector
+        - [ ] ServerActions
+        - [ ] Slant
+        - [ ] Species
+        - [ ] SporePrint
+        - [ ] SporeSwab
+        - [ ] StasisTube
+        - [ ] Subspecies
+        - [ ] SubstrateBatch
+        - [ ] SubstrateRecipe
+        - [ ] TopBar
+        - [ ] Transfer
+        - [ ] User
+        - [ ] WaterJar
+    - [ ] error
+    - [ ] import
+    - [ ] list
+    - [ ] login
+    - [ ] new
+    - [ ] view
+- [ ] Add an "needs ID" species?, as well as a "pretty sure" species marker, so we can temporarily mark species we are not sure about, and confirm them later.
+  - [ ] Confirmation should crawl the dependency chain to ensure all parents get populated as well!
+- [ ] Will require a new table to house the biometric keys (which are related to the users), and also related to specific devices
+- [ ] On spore print, when trying to add a new photo, if you try to remove the photo before updating nothing happens
+- [ ] Chaining spore prints is failing!
+  - [ ] First attempt to fix is done, validate that it works now
+- [ ] lightbox for all pictures
+- [ ] Switch all images to use React's Image tag rather than <img...>
+- [x] On update, make a popup to say completed successfully, or failed with error message
+  - [x] Add the popup to the full page component, and have it in a global context that the update functions can call to set the information...
+  - [x] Handle const {dispatch} = useModalContext(); in all areas like Fruit Display. All should be done except non-multipart imports and creates
+    - [ ] SporeSwab and WaterJar are the only 2 missing modal dispatches in their import areas
+- [ ] Creating a new project fails to update the user
+- [ ] FOOTER
+- [x] description() in each server tsx file
+  - [x] Do all method declarations for descriptions after grainBatch
+    - [x] Ensure all these methods work as expected!
+- [ ] Do not redirect non-logged-in users for publicly-available entries. We will need this for web scrapers.
+- [ ] Ensure error page is not indexed!
+- [ ] Layout.tsx (all from https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadata-fields)
+  - [ ] Opengraph in metadata?
+  - [ ] robots in metadata?
+  - [ ] icons in metadata?
+  - [ ] metadata alternates?
+  - [ ] fix metadata category! https://nextjs.org/docs/app/api-reference/functions/generate-metadata#category
+  - [ ] viewportconfiguration in metadata? https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+  - [ ] manifest in metadata? https://developer.mozilla.org/docs/Web/Manifest
+  - [ ] twitter cards in metadata?
+  - [ ] verification in metadata? 
+  - [ ] metadata appleWebApp and itunes?
+  - [ ] applinks https://nextjs.org/docs/app/api-reference/functions/generate-metadata#applinks
+  - [ ] archives? https://nextjs.org/docs/app/api-reference/functions/generate-metadata#archives
+  - [ ] assets? https://nextjs.org/docs/app/api-reference/functions/generate-metadata#assets
+  - [ ] bookmarks? https://nextjs.org/docs/app/api-reference/functions/generate-metadata#bookmarks
+  - [ ] pinterest rich pin?
+  - [ ] other (custom) metadata fields at bottom.
+- [ ] generateSitemaps? in sitemap.ts (MOVE THIS TO WHEREVER IT NEEDS TO BE!) https://nextjs.org/docs/app/api-reference/functions/generate-sitemaps#example
+- [x] List jars page is not working!!!!!! says that recipe was undefined!
+  - [ ] Fix jars with undefined recipes with a migration
+- [ ] swap out web/public/next.svg and web/public/next-dark.svg with something more appropriate for the homepage
+  - [ ] Style the homepage to be more visually appealing
+- [ ] Add generateMetadata for titles on all pages
+  - [ ] Validate list, new, import, view, error, etc all have good titles
+  - [ ] Other metadata
+- [ ] Change icon
+- [ ] Update homepage
+- [ ] Jar import is not working properly (maybe only on mobile?), giving 500s when submitting 10/27/25 quart using Rye. Wav, unknown KF, gen 4 undefined undefined with pic, no writeTo
+  - [ ] I believe this is fixed!  
+- [ ] Species selector is not showing all species in plugs import...
+  - [ ] Should be fixed. Ensure spec and subspec lists are showing all (which can be viewed by the user)
+- [ ] Adding pictures on mobile on jar view page is not adding new pictures if they have no notes....
+- [ ] Adding pictures on jar view page is truncating notes added and edited on photos ("new pic" ends up as "new pi")
+- [ ] Creating spore print with a picture from a fruit's page is not propagating the picture to the spore print's page
+- [ ] Make websocket connections more stable. Currently has random closures.
+- [ ] I don't think the websocket manager is handling renews well, if at all...
+- [ ] Disallow guests from even trying to modify things!
+- [ ] Allow not-logged-in users to view public entries without redirecting to the login page...
+- [ ] When a reference is used, the referenced item should also update its updated time? Idk, feels weird...
+- [ ] SPECIES LIST NOT WORKING FOR GUESTS! (NOT SHOWING ANYTHING!)
+- [ ] When trying to edit a large note that already exists, clicking the edit button causes the textArea to be very large comparably to its contents!
+- [ ] Pagination on list pages. Use query params (or path) to determine which item to use bson.M{"_id":bson.M{"$gt": lastId}}
+- [ ] mush.appli.ng should redirect to /login if not logged in?
+- [ ] Update MostRecentImage everywhere, just like in LcSyringe!
+  - [ ] Test all places that use updateMostRecentImageIfNeeded
+- [ ] Add pics to MSS
+  - [ ] Go side
+  - [ ] TS side
+- [ ] Add pics to spore swabs
+  - [ ] Go side
+  - [ ] TS side
+ 
+# In Progress
+## Actively Working On
+- [x] Spore print and below Go TODOs
+  - [ ] User, project, and sale Go TODOs
+- [ ] Project, sale, user tsx TODOs
+- [x] MSS and below, ensure api structs match up
+## Passively Working On
+- [ ] README
+## Waiting on something else
+
+# Changes made that need to be tested
+
+# Random links
+- [ ] https://medium.com/@mfsilv/kubernetes-a-gentle-introduction-9d23de7f00e0
+# Wishlist
+- [ ] LRU Cache for images! See /api/cache/lru.go for what I have started on
+- [ ] Try to switch all Node things to Bun. In theory could go 20x faster than Node, but may require some extra work to get it working properly. May only want to use bun for dev?
+- [ ] User/Pass login with goth sessions. Already started putting this together.
+- [ ] React Native app for mobile devices
+  - [ ] use Expo Go to develop on Android 
+  - [ ] custom url protocol to open app on mobile devices? mush://
+  - [ ] app.json
+    - [ ] TODOs
+  - [ ] LICENSE - FIX
+  - [ ] native/mushDb
+    - [ ] assets
+      - [ ] images
+        - [ ] Remove or modify any necessary images in this dir, as well as in the tablcons subdir
+      - [ ] expo.icon dir
+        - [ ] modify icon.json
+        - [ ] Assets dir
+          - [ ] modify expo-symbol 2.svg and grid.png
+- [ ] Link shortener?
+- [ ] traceIDs for all requests going throughout the system, including the go side, ts side, and mongo side. This will allow us to trace requests through the system and see where things are failing.
+- [ ] mongodb mocks using mtest (import "go.mongodb.org/mongo-driver/mongo/integration/mtest")
+- [ ] Use an external kanidm server for auth and user management.
+- [ ] Use external openBao server for secrets management.
+- [ ] Switch policy management to Open Policy Agent? (Probably not because this would be a very heavy lift)
+- [ ] TODO: Add env secrets to repo via ansible vault? Add mongo key to repo via ansible vault? I'd rather not lose those...
+  - [ ] Add sops key? add my private key? public key?
+- [ ] PROTECT THE REPO! No outside collaborators except me for now. Must fork to edit for now. Any secrets in the actions must be put in a specific env.
+- [ ] Secrets manager? OpenBao? https://openbao.org/docs/platform/k8s/helm/run/
+- [ ] OTel for logs, tracing, and metrics, storing those could be prometheus (look at options other than prometheus...) SigNoz?
+  - [ ] FluentBit telemetry forwarding agent (sidecar)? (Another option is otel-collector, but fluentBit appears to be more performant...)
+  - [ ] OpenObserve for traces/metrics/logs?
+  - [ ] Grafana for dashboards? Grafana: Requires a multi-component ecosystem (the LGTM stack: Loki for logs, Mimir for metrics, Tempo for traces) which adds maintenance overhead.
+  - [ ] Prometheus for metrics storage?
+- [x] Switch from Webpack to Turbopack to speed up builds
+- [ ] Biometric authentication
+  - https://freedium-mirror.cfd/https://towardsdev.com/building-a-react-app-with-biometric-authentication-cc69d210a416
+- [ ] Backups of both DB and pictures!
+  - [ ] https://www.google.com/search?client=safari&rls=en&q=docker+compose+mounted+volume%2C+backup+on+cronjob&ie=UTF-8&oe=UTF-8
+  - [ ] Actually implement something that covers these backups
+  - [ ] Validate that we can restore from a backup
 # TODO
+- [ ] Show contams in mostRecentImages area on display pages
+  - [ ] see https://mush.appli.ng/view/plate/jWhiSvRFkgH for example where it does not occur
+- [x] Ensure selectors allow filtering out disposed items (Confirmed working via NewMssForm)
+- [ ] ListPages ensure disposed items are properly marked?
+- [ ] /db/list/nonguests
+  - [ ] Make many typscript things request only nonguests
+- [ ] TS /whitelistUser
+  - [ ] Allow admin to add users to the account creation whitelist...
+  - [ ] persist the whitelist?
+- [ ] ListPageTables allow hiding columns!
+- [ ] Transfer creation, validTypesTo on the go side!
+- [ ] ListPageTable entries should actually be links!
+
+- [x] Ensure files persist through shutdown on disk in specific directories
+  - [x] DB files
+  - [x] Images
+- [ ] PERMISSIONS
+  - [x] Entries 
+    - [x] All TODOs found when searching for "var testAcls = []ACL"
+      - [x] Create a way to login to the test accounts found when searching for "testUserEmailP^*" where ^=[W,R,N] and *=[A,B,C]
+    - [x] Validate guests cannot see anything that is marked as private
+    - [x] Validate guests cannot write anything
+    - [x] Validate non-guest users cannot write anything that they have no permissions for
+  - [x] Project
+    - [x] HANDLE NEW PRIVATE FIELD ON PROJECTS EVERYWHERE!
+      - [x] Guest user can
+        - [x] View the project page if it is publicly readable
+        - [x] Not view the project page if it is not publicly readable TODO: FIX!
+        - [x] Not change the project
+    - [ ] Add "Modify" permission to projects, which allows a user to modify the project but not add/remove users or change their permissions
+      - [ ] Will require an overhaul of the project perms fields and how they are stored in the database, as well as how they are checked on the frontend and backend
+      - [ ] Will require overhauling *UserProjectPerm from *bool to either *string or string
+    - [x] User that is admin (true) on project can
+      - [x] View the project page
+      - [x] Change the project, including adding/removing users and changing their permissions
+        - [x] Edit the project outside of perms
+        - [x] Edit the project perms
+    - [x] User that has write (false) on a project can
+      - [x] View the project page
+      - [x] Not change the project
+    - [x] User that has read (nil) on a project can
+      - [x] View the project page
+      - [x] Not change the project
+- [ ] Entries
+  - [x] Agar Batch
+    - [x] Display page
+      - [x] Create Plates
+      - [x] Create Slant poured pre-PC run
+    - [x] List Page
+  - [x] Agar Recipe
+    - [x] Display page
+    - [x] Create page
+      - [x] Validate all working properly
+      - [x] Nutrients/etc working properly
+    - [x] List Page
+      - [x] Clicks work
+      - [x] Ensure text doesnt step all over each other on slim screens
+  - [x] Bag
+    - [x] Display page
+      - [x] Fix wetness area
+      - [x] Ensure seal date added on transfer
+      - [x] Preexisting users and projects which are not valid cause problems on update
+      - [x] New fruit area
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [x] Allow xfers on go side (to plates only for now)
+        - [x] 4XX should show error in error area, not just console
+    - [x] Create page
+    - [x] Import page
+      - [x] Redirect not working
+      - [x] not finding the substrate recipe for standard recipes
+      - [x] Remove portions when species is not selected
+    - [x] List Page
+  - [x] Fruit
+    - [x] Display page
+      - [x] Create SporePrint
+      - [x] Create SporeSwab
+      - [x] Cloning area?
+        - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Create page (NONE!)
+    - [x] Import page
+    - [x] List Page
+  - [x] Fruiting Chamber
+    - [x] Display page
+      - [x] Dispose button
+      - [x] New fruit area
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [x] Ensure user confirms before this happens
+        - [x] Allow xfers on go side (to plates only for now)
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
+    - [x] Import page (WE ONLY WANT TO IMPORT ALREADY-INNOCULATED)
+      - [x] Casing ratio is not allowing decimals easily...
+      - [x] Default generation is not properly being tracked as 1
+      - [x] Generation 0 is not working properly, failing on post (0-gen should not exist?)
+    - [x] List Page
+  - [x] Grain Batch
+    - [x] Display page
+    - [x] Create page
+      - [x] Create Jar // Create
+        - [x] Add wetness
+        - [x] Add burst grains
+        - [x] Allow PC to be optional
+    - [x] List Page
+  - [x] Jar
+    - [x] Display page
+      - [x] fix wetness and burst grains areas
+        - [x] Validate typescript working
+        - [x] Add both to the go side and confirm working
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Import page
+      - [x] If no species, do not show many other fields!
+      - [x] Add wetness
+      - [x] Add burst grains
+    - [x] List Page
+  - [x] Jar Recipe
+    - [x] Display page
+    - [x] Create page
+      - [x] Subforms?
+      - [x] Template not working!
+    - [x] List Page
+      - [x] Standard
+      - [x] Recent
+  - [x] LC
+    - [x] Display page
+      - [x] test creating LC syringe, LC selector and reading rfid tag
+        - [x] LC selector and reading rfid tag
+      - [x] Create transfer?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [x] NOT WORKING WHEN TRANSFERRING TO GRAIN JAR!
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
+    - [x] Import page
+    - [x] List Page
+  - [x] LC Recipe
+    - [x] Display page
+      - [x] Move name to top as well
+      - [x] create LC
+        - [x] fix pc run selector not showing up
+        - [x] default recipe to current
+        - [x] fully test creating an LC from this page
+    - [x] Create page
+    - [x] List Page
+  - [x] LC Syringe
+    - [x] Display page
+      - [x] ConfirmedClean validate working properly
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Import page
+      - [x] Confirmed clean is not propagating properly, always showing up as unknown...
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
+    - [x] List Page
+    - [x] Display page
+      - [x] KF validate working properly
+        - [ ] KF cannot be changed once set to true? ----------- Allow changing for now!
+        - [ ] ConfirmedClean can be unset? --------- Allow changing for now! We may not want to allow this later!
+      - [ ] Set parent LC to clean from here once LcSyringe confirms it? ------------------------------------------- TODO: THIS IF WE CONFIRM THIS IS WHAT IS PREFERRED!
+  - [x] MSS
+    - [x] Display page
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
+    - [x] Import page
+    - [x] List Page
+  - [ ] PC Run
+    - [x] Create page
+      - [x] Runtime not styled correctly
+    - [x] List Page
+    - [x] Display page
+      - [x] Create LC is not inheriting PCRun and is not showing other selector
+      - [ ] Create GrainJar is not inheriting PCRun and is not showing other selector
+      - [ ] Create Bag wetness, filterSize, and selectors
+      - [ ] Create Batch ensure working as needed
+      - [ ] Create Plate // TODO: intermediate batch // TODO: create?
+      - [ ] Create Plugs // TODO: create?
+      - [ ] Create Slant // TODO: intermediate batch if does not already have a batch // TODO: create?
+      - [ ] Create Stasis Tube // TODO: CREATE
+  - [x] Plate
+    - [x] Display page
+      - [x] pour and condens cov
+        - [x] Validate condens coverage (when unset, allow setting)
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+      - [x] Agar on outside at pour time
+        - [x] If not set, allow setting ONCE
+        - [x] If set, do not allow change!
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
+    - [x] List Page
+    - [x] Import page
+      - [x] Add Coverage sliders
+        - [x] Ensure properly styled
+      - [ ] Pour coverage positioning
+  - [x] Plugs
+    - [x] Display page
+      - [x] Dowel types should be a table??? Maybe a grid?
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Create page
+      - [x] Create PC run from within creator
+        - [x] Get rid of one of the entry boxes for runtime
+      - [x] Validate all areas working properly
+    - [x] Import page
+      - [x] Dowels say amount where it should be radius
+      - [x] For no species, remove gen, KF
+      - [x] NOT WORKING WHEN SUBMITTING!
+    - [x] List Page
+  - [x] Project
+    - [x] Display page
+      - [x] Not properly showing initial user permissions
+      - [x] Perms are not updating visually when users are added or removed!
+    - [x] Create page
+    - [x] Display page
+      - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)
+      - [x] Removing yourself as admin causes reloading the page to fail!
+        - [ ] Re-adding self as admin causes a go-side crash --------------------- (should be fixed, test!)
+    - [x] List Page
+      - [x] Shows all projects a user should be able to see, including public projects
+      - [x] Does not show projects that the user is not privy to
+      - [ ] Be able to filter projects by completeness
+  - [ ] Sale
+    - [x] Display page
+    - [x] List Page
+    - [ ] Create page // TODO: UNSURE WHERE DONE FROM
+  - [x] Slant
+    - [x] Display page
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)// TODO: self page? probably not... Create from AgarBatch (maybe PCRun?)
+    - [x] Import page
+    - [x] List Page
+  - [x] Species
+    - [x] Display page
+      - [x] Aliases
+      - [x] Substrate
+        - [x] Make this changeable
+        - [ ] Lion's mane is failing to change aliases properly, not sure why... Make first letters capitalized
+          - [ ] Creating a new alias instead of editing works fine... 
+      - [x] ACLs
+      - [x] Subspecies viewer
+      - [x] Subspecies creator
+        - [x] Subspecies creator leave out the TriColTable?
+    - [x] Create page
+      - [x] Aliases not working
+      - [ ] Setting to private is not working!
+        - [ ] Add PC, Wood-lovers
+      - [ ] Add Indigo Milk cap
+    - [x] List Page
+      - [ ] Default list to sorted by Name
+  - [x] Spore Print
+    - [x] Display page
+      - [x] Create MSS not working, failing to find current print (fixed)
+    - [x] Import page
+      - [x] Spore print colors and densities selectors not working!
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) only done from fruit, bag, box, plate?
+    - [x] List Page
+    - [ ] Display page
+      - [ ] Chaining spore prints (probably just click the parent and then click to make another print...)-------------------------------------------------------------
+  - [x] Spore Swab
+    - [x] Display page
+      - [x] Parent area
+      - [x] Disposal area
+      - [x] UPDATING NOTES NOT WORKING!
+      - [x] Reformat groups
+      - [x] Move write tag to top
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+    - [x] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY)
+    - [x] Import page
+      - [x] Spore print colors and densities selectors not working!
+    - [x] List Page
+  - [x] Stasis Tube
+    - [x] Display page
+      - [x] Create transfer, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+        - [x] ensure transfer from stasis tube properly disposes
+    - [x] Import page
+    - [x] List Page
+  - [x] Subspecies
+    - [x] Create page
+    - [x] List Page
+      - [x] Clicks work
+      - [x] Display species name then subspecies name!
+    - [x] Display page
+      - [x] Species at top
+      - [x] Aliases
+        - [x] Creating and deleting one at the same time is not working
+        - [x] NOT WORKING TO ADD ALIASES!!!!
+        - [x] DO NOT USE TextBoxArea in AliasesArea!
+        - [x] Deleting is not updating the view on response!
+      - [x] ACLs
+        - [x] Validate both updating properly
+        - [x] When setting to "Publicly Editable", ensure the extra self-user is not added...
+      - [x] Aliases
+        - [ ] Cannot add aliases that already exist elsewhere?--------------------------------------------------------------------------------------------------------------------------
+          - [ ] Must create separate species, subspecies, subRec aliases collections to ensure this works properly :(
+  - [x] Substrate Batch
+    - [x] Display page
+      - [x] Create bag validate
+      - [x] Create FC validate
+        - [x] NOT PROPERLY RETURNING ONCE CREATED!
+    - [x] List Page
+  - [x] Substrate Recipe
+    - [x] Display page
+      - [x] Name at top (copy other recipe view pages)
+      - [x] Create Substrate Batch and validate
+      - [x] Aliases
+        - [x] Not moving new to existing once update response is received
+    - [x] Create page
+    - [x] List Page
+  - [x] Transfer
+    - [x] Display page
+      - [x] Fix "No toImage present" and "No fromImage present"
+    - [x] Create page - No transfer creation page, transfers should only be created from display pages
+    - [x] List Page
+      - [x] Clickable
+      - [x] Ensure things are not stepping all over each other!
+  - [ ] User
+    - [ ] Display page
+    - [ ] Create page // TODO: figure this out
+    - [ ] List Page?
+  - [x] Water Jar
+    - [x] Display page
+      - [x] Disposal area
+      - [x] Create MSS // TODO: CREATE
+    - [x] Create page // TODO: self page?
+      - [x] PC run selector is double-nested...
+    - [x] Import page
+    - [x] List Page
+
+
+
+- [ ] Unit Tests
+  - [ ] Client-side
+    - [ ] Everything in here
+  - [ ] Server-side
+    - [ ] Everything in here
+- [ ] Integration testing
+  - [ ] Everything in here
+- [ ] TODO Later (some create intermediates)
+  - [ ] ADD DISPOSED TO ALL LISTPAGETABLES THAT COULD POSSIBLY WANT IT!
+  - [ ] AgarBatch 
+    - [ ] ListPageTable
+      - [ ] sort by Created, Last Updated
+    - [ ] Display Page
+      - [ ] Create Slant poured post-PC run? (PROBABLY NOT)
+        - [ ] Create Agar batch without PC Run
+        - [ ] Agar batch without PC Run  does not properly populate PC Run on Slant
+  - [ ] AgarRecipe
+    - [ ] List Page
+      - [ ] Reformat on slim screens?
+    - [ ] ListPageTable
+      - [ ] sort by Created, Name, Last Updated
+      - [ ] add creation date?
+    - [ ] Display page
+      - [ ] Create Plate (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
+        - [ ] OVC
+        - [ ] Go side
+      - [ ] Create Slant (Also creates agarBatch) // TODO: unsure if we want because the intermediate batch may want to be used in other things
+        - [ ] OVC
+        - [ ] Go side
+      - [ ] liquids and below as flexbox?
+    - [ ] Create page
+      - [ ] nutes/sugar/etc consider doing x/Liter? (should maybe put a x/L calculator?)
+  - [ ] Bag
+    - [ ] ListPageTable
+      - [ ] sort by Created, Last Updated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Import page
+      - [ ] Add wetness to import page? MAYBE LATER
+      - [ ] Add Notes to import page? MAYBE LATER
+    - [ ] Display page
+      - [ ] Create SporePrint (Creates fruit too) // TODO: this should only be used for 1-offs because it creates a new fruit every time!
+        - [ ] OVC
+        - [ ] Go side
+      - [ ] Create SporeSwab (Creates fruit too) // TODO: this should only be used for 1-offs because it creates a new fruit every time!
+        - [ ] OVC
+        - [ ] Go side
+  - [ ] Fruit
+    - [ ] ListPageTable
+      - [ ] sort by Harvest Date, Last Updated
+      - [ ] filter by species, subspecies, externally sourced, disposed(availability)?
+  - [ ] FruitingChamber
+    - [ ] ListPageTable
+      - [ ] sort by Creation Date, Last Updated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] Create SporePrint (Creates intermediate fruit)
+      - [ ] Create SporeSwab (Creates intermediate fruit)
+      - [ ] Handle sale
+        - [ ] Make sales also trigger disposal? (Do this on many entry types?)
+    - [ ] Import page
+      - [ ] Ensure ratios are how we want to do this... PRETTY SURE THIS IS FINE FOR NOW!
+      - [ ] Casing ratio is not allowing decimals easily...
+      - [ ] Substrate and casing is miscalculating!!!!
+  - [ ] GrainBatch
+    - [ ] ListPageTable
+      - [ ] sort by Creation Date, Last Updated
+  - [ ] Jar
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Create page (NOT DONE DONT WANT TO DO SELF PAGE FOR THIS PROBABLY) (MAYBE DO THIS LATER?)
+    - [ ] Display page
+      - [ ] New fruit area
+    - [ ] Import page
+      - [ ] Add wetness?
+      - [ ] Add burst grains?
+      - [ ] Add notes? maybe just allow on update?
+  - [ ] JarRecipe
+    - [ ] ListPageTable
+      - [ ] sort by Name, Last Updated
+      - [ ] add creation date?
+    - [ ] Create page
+      - [ ] Create Jar (Creates grain batch too, unsure if we want this because the batch will need to be useable for other jars)
+  - [ ] LC
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by clean, species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] LCRecipe
+    - [ ] ListPageTable
+      - [ ] sort by Name, Last Updated
+      - [ ] add creation date?
+  - [ ] LcSyringe
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by clean, species, subspecies, innoculated, disposed(availability)?
+  - [ ] MSS
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by clean, species, subspecies, disposed(availability)?
+    - [ ] Display page
+      - [ ] Sell area, ensure working as we want, and that selling marks as disposed
+  - [ ] PCRun
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by runtime?
+    - [ ] Create page
+      - [ ] Allow items to be added when creating a pc run???
+  - [ ] Plate
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Plugs
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] woods area displaying weird on slim screens!
+      - [ ] New fruit area
+      - [ ] sales area
+  - [ ] Project
+    - [ ] ListPageTable
+      - [ ] sort by Created, Name, LastUpdated
+      - [ ] filter by completed?
+    - [x] Display page
+      - [x] Outline users to be removed in red until they are actually removed! (so we know what updates will be happening)
+        - [ ] Switch to table (already mostly done)
+  - [ ] Sale
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+  - [ ] Slant
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Display page
+      - [ ] New fruit area
+  - [ ] Species
+    - [ ] ListPageTable
+      - [ ] sort by Name, Scientific Name
+      - [ ] sort by Created, LastUpdated
+        - [ ] Add creation date?
+  - [ ] SporePrint
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, disposed(availability)?
+    - [ ] Display page
+      - [ ] Create transfer? PROBABLY NOT, ONLY MSS?, ensure pre-innoculated items do not accept transfers, ensure perms change as needed
+  - [ ] SporeSwab
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, disposed(availability)?
+    - [ ] Display page
+      - [ ] Sales, do sale, mark as disposed when sold
+      - [ ] Parent area
+        - [ ] Link for when parentType is undefined but parentId is defined (put a bandaid on it for now)
+  - [ ] StasisTube
+    - [ ] ListPageTable
+      - [ ] sort by Created, LastUpdated
+      - [ ] filter by species, subspecies, innoculated, disposed(availability)?
+    - [ ] Create page // TODO: self page! ONLY DO THIS IF WE WANT TO CREATE THE TUBES BEFORE PCing! (Probably not until later?)
+  - [ ] Species
+    - [ ] ListPageTable
+      - [ ] sort by Created, Name, LastUpdated?
+        - [ ] Add creation date?
+      - [ ] filter by species?
+  - [ ] SubstrateBatch
+    - [ ] ListPageTable
+      - [ ] sort by Created, Recipe, Last Updated
+      - [ ] filter by Recipe?
+    - [ ] Create page (DO MUCH LATER! SHOULD CREATE RECIPE AS WELL!)
+  - [ ] SubstrateRecipe
+    - [ ] ListPageTable
+      - [ ] sort by Created, Name, Last Updated
+        - [ ] add creation date?
+    - [ ] Display page
+      - [ ] Bag creation area (creates batch as well)
+      - [ ] FruitingChamber (FC/Box) creation area (creates batch as well)
+  - [ ] Transfer
+    - [ ] ListPageTable
+      - [ ] sort by Created, Last Updated
+      - [ ] filter by Source, Reason?
+    - [ ] List Page
+      - [ ] make text smaller for smaller screens?
+  - [ ] WaterJar
+    - [ ] ListPageTable
+      - [ ] sort by Created, Last Updated
+      - [ ] filter by Disposed?
+    - [ ] Display page
+      - [ ] Create Stasis Tube // TODO: CREATE? Should be PC-d with water in tubes????? PROBABLY DONT ALLOW THIS FROM HERE ---------
+
+- [ ] Redirect to login page if not logged in!?
+- [ ] WriteMany for RFID?! Allow subsequent writings... This may be complicated, so do it later...
+- [ ] React Subcomponents
+  - [x] Notes
+    - [x] New Notes area
+    - [x] Existing/Update notes area
+  - [x] ACL (updates and displays)
+  - [ ] more! pull from TODOs in code....
+- [ ] Delete handlers
+  - [ ] AgarBatch
+    - [x] Code
+    - [ ] Test
+  - [ ] AgarRecipe
+    - [x] Code
+    - [ ] Test
+  - [ ] Bag
+    - [x] Code
+    - [ ] Test
+  - [ ] Fruit
+    - [x] Code
+    - [ ] Test
+  - [ ] FruitingChamber
+    - [x] Code
+    - [ ] Test
+  - [ ] GrainBatch
+    - [x] Code
+    - [ ] Test
+  - [ ] Jar
+    - [x] Code
+    - [ ] Test
+  - [ ] JarRecipe
+    - [x] Code
+    - [ ] Test
+  - [ ] LC
+    - [x] Code
+    - [ ] Test
+  - [ ] LcRecipe
+    - [x] Code
+    - [ ] Test
+  - [ ] LcSyringe
+    - [x] Code
+    - [ ] Test
+  - [ ] MSS
+    - [x] Code
+    - [ ] Test
+  - [ ] PcRun
+    - [x] Code
+    - [ ] Test
+  - [ ] Plate
+    - [x] Code
+    - [ ] Test
+  - [ ] Plugs
+    - [x] Code
+    - [ ] Test
+  - [x] Project ------?
+    - [x] Code
+    - [x] Test
+  - [x] Sale
+    - [x] Code
+    - [x] Test
+  - [ ] Slant
+    - [x] Code
+    - [ ] Test
+  - [ ] Species
+    - [x] Code
+      - [ ] Also delete subspecies?
+    - [ ] Test
+  - [ ] SporePrint
+    - [x] Code
+    - [ ] Test
+  - [ ] SporeSwab
+    - [x] Code
+    - [ ] Test
+  - [ ] StasisTube
+    - [x] Code
+    - [ ] Test
+  - [ ] Subspecies
+    - [ ] Code
+      - [ ] Also remove from species?
+    - [ ] Test
+  - [ ] SubstrateBatch
+    - [x] Code
+    - [ ] Test
+  - [ ] SubstrateRecipe
+    - [x] Code
+    - [ ] Test
+  - [x] Transfer
+    - [x] Code
+    - [x] Test
+  - [ ] User
+    - [ ] Code
+    - [ ] Test
+  - [ ] WaterJar
+    - [x] Code
+    - [ ] Test
+
+
+
+- [x] Reenable full authentication flow then test!
+  - [ ] Ensure signup flow is working properly!
+    - [ ] Page to add user to whitelist?
+    - [ ] Page for user to sign up via the whitelist?
 - [ ] Backend Testing
   - [ ] ADD MORE SUB-ITEMS HERE
 - [ ] Frontend Testing (Cypress?)
@@ -25,12 +872,81 @@
     - [ ] SECURITY
     - [ ] SUPPORT
     - [ ] .github/workflows
-
-# In Progress
-## Actively Working On
-## Passively Working On
-- [ ] README
-## Waiting on something else
+- [ ] CORS
+  - [ ] In go, fix and utilize enableCors function
+  - [ ] https://blog.logrocket.com/using-cors-next-js-handle-cross-origin-requests/
+- [ ] Figure out creating sales!
+- [ ] Heavily test createSporeSwab
+- [ ] Heavily test createSporePrint
+- [ ] Test creating transfers out
+  - [ ] StasisTubes should always become disposed when transferred out
+  - [ ] Already-disposed items should not allow transfers
+  - [ ] Creating boxes should render the jar disposed
 
 # Complete
 - [x] Create TODO.md
+- [x] Add Subspecies to species (+tested)
+  - [x] Add subspecies on species on server side
+  - [x] Add subspecies on species on client side
+  - [x] Add subspecies to species when subspecies is created
+  - [x] Add subspecies to species in default items
+- [x] Overhauled EntriesGroupsForNew, validate working
+  - [x] Grains
+  - [x] Nutrients
+  - [x] Sugars
+  - [x] Additives
+  - [x] Antibiotics
+  - [x] Woods
+  - [x] Liquids
+- [x] AgarRecipeArea now has ability to load recipe name if only given id
+- [x] RFID SIGNUP IS WORKING! ENSURE READING AND WRITING WORKS!!!!
+  - [x] Reading
+  - [x] Writing
+  - [x] LISTING
+- [x] Upgrade Next.js to >16
+- [x] Upgrade Node to >26.5
+- [x] Start using turbopack instead of webpack to speed up builds
+- [x] Adding pics/flushes/contams images is not working when trying to view them after update
+  - [x] Switch from <Image> back to <img>
+- [x] LcSyringes ADD PHOTOS
+- [x] Dates on import pages are not allowing January!
+- - [x] SingleNoteV2 NEEDS SIZING CHANGES DURING EDITING FOR NORMAL NOTES AS WELL AS PICTURE AND CONTAM NOTES!
+- [x] Notes styling!
+  - [x] Pictures and Contams should be vertical?
+  - [x] All others should be horizontal?
+- [x] Creating sporeprints from fruits and providing an image is not putting image on the final spore print
+- [x] Plate display changing wetAtCooledTime from unknown to yes and updating causes error (fixed)
+- [x] A newly imported plate without species is failing to add a new note (fixed)
+- [x] Dockerfile react do not copy testfiles into base image for building
+
+
+# Other
+## mongo backups
+### Option 1?
+https://www.google.com/search?client=safari&rls=en&q=mongodb+create+point-in-time+backup+on+a+single-node+instance+while+the+server+is+live&ie=UTF-8&oe=UTF-8
+### Option 2?
+#### Note: this is meant for replica sets, zipping and storing the current file may be easier?
+#!/bin/bash
+MONGO_URI="mongodb://username:password@localhost:27017/?replicaSet=rs0&readPreference=secondary"
+BACKUP_DIR="/var/backups/mongodb"
+DATE=$(date +%Y-%m-%d_%H%M%S)
+TARGET_ZIP="${BACKUP_DIR}/mongo_snap_${DATE}.tar.gz"
+
+mkdir -p "$BACKUP_DIR"
+
+#### Execute consistent full backup including current oplog
+mongodump --uri="$MONGO_URI" --oplog --archive="$TARGET_ZIP" --gzip
+
+#### Check success status
+if [ $? -eq 0 ]; then
+echo "Backup successfully captured at $DATE"
+else
+echo "Backup failed!" >&2
+exit 1
+fi
+#### Enforce a 7-day retention policy by removing old backups
+find /var/backups/mongodb/* -mtime +7 -exec rm -rf {} \;
+To schedule this script to execute nightly at midnight, add this entry via crontab -e:cron0 0 * * * /bin/bash /opt/mongo-backup.sh
+
+1hr vs 30 mins cutoff?
+not after 11:15pm?

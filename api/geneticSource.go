@@ -1,9 +1,9 @@
 package api
 
 import (
-	"context"
 	"errors"
 	"github.com/reeceappling/goUtils/v2/utils"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -14,18 +14,18 @@ type GeneticParentInfo struct {
 	GenerationsFields
 }
 
-func (genetics GeneticParentInfo) GetSpeciesSubspecies(ctx context.Context) (*Species, *Subspecies, error) {
-	if genetics.Species != nil {
-		return nil, nil, errors.New("no species present on entry")
-	}
-	sp, subsp, err := getSpeciesAndSubspecies(ctx, *genetics.Species, genetics.SubSpecies)
-	if err != nil {
-		return nil, nil, err
-	}
-	return &sp, subsp, err
-}
+//func (genetics GeneticParentInfo) GetSpeciesSubspecies(ctx context.Context) (*Species, *Subspecies, error) {
+//	if genetics.Species != nil {
+//		return nil, nil, errors.New("no species present on entry")
+//	}
+//	sp, subsp, err := getSpeciesAndSubspecies(ctx, *genetics.Species, genetics.Subspecies)
+//	if err != nil {
+//		return nil, nil, err
+//	}
+//	return &sp, subsp, err
+//}
 
-var ( // TODO: all used to be non-pointer. Ensure they all still work
+var (
 	_ geneticSource = &Bag{}
 	_ geneticSource = &Fruit{}
 	_ geneticSource = &FruitingChamber{}
@@ -45,20 +45,34 @@ type geneticSource interface {
 	SourceType() string
 	GeneticInfoAsParent() (GeneticParentInfo, error)
 	DbId() MainCollectionId
-	//setTransferParent(ctx context.Context, xfer Transfer) error
 	setTransferChild(ctx mongo.SessionContext, xfer Transfer, from geneticSource) error
 	generation() (sinceSpore *Generation, sinceSporeOrClone *Generation)
 	Permissioned
 	CanTransferTo(dst geneticSource) error
-	Innoculatable() bool
+	Innoculatable() error
 	CollectionItem
+	Disposable
 	SetPerms(AclField) // MUST be a pointer reciever
 }
 
-func setTransferParent(ctx mongo.SessionContext, parent geneticSource, xfer Transfer) error {
+func setTransferParent[T MainCollectionItem](ctx mongo.SessionContext, parent T, xfer Transfer, dispose bool) error {
 	coll := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(parent.CollectionName())
-	upd, err := NewMods().addTransferOut(xfer.Id).Finalized()
-	// TODO: if transfer has a fromPic on it, can we add it to the parent?
+	ctx, now := request.UnixTimeInTxn(ctx)
+	var temp any = parent // TODO: will this actually work with geneticSource rather than MainCollectionItem?
+	mods := &Mods{}
+	if xfer.FromImage != nil {
+		if parentWithPics, ok := temp.(HasPicsField); ok {
+			mods = xfer.PicsModsForParent(parentWithPics) // TODO: VALIDATE WORKS!
+		}
+	}
+
+	mods.addTransferOut(xfer.Id)
+	doDispose := dispose || parent.SourceType() == StasisTubeSourceType // TODO: Validate stasis tube source type ok here
+	if doDispose {
+		mods = mods.updateDisposedIfNeeded(DisposedField{Disposed: &now}, parent)
+	}
+
+	upd, err := mods.updateLastUpdatedIfNeeded().Finalized()
 	if err != nil {
 		return err
 	}
