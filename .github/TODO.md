@@ -1,5 +1,6 @@
 # TODOs found while using
 - [x] Lazy load display images
+  - [ ] ImageZoomer on normal images area, contams, and flushes
   - [ ] Add a "loading" spinner for images that are loading
   - [x] Normal images area (also flushes area)
   - [x] Contams area

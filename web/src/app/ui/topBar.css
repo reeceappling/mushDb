@@ -8,15 +8,15 @@
     & * {
         margin: auto;
     }
-    & .MuiButton-text {
-        /*color: var(--topBarTextColor);*/
-        /*&:hover {*/
-        /*    background-color: var(--topBarHoverColor);*/
-        /*}*/
-        /*&:active {*/
-        /*    background-color: var(--topBarClickColor);*/
-        /*}*/
-    }
+    /*& .MuiButton-text {*/
+    /*    !*color: var(--topBarTextColor);*!*/
+    /*    !*&:hover {*!*/
+    /*    !*    background-color: var(--topBarHoverColor);*!*/
+    /*    !*}*!*/
+    /*    !*&:active {*!*/
+    /*    !*    background-color: var(--topBarClickColor);*!*/
+    /*    !*}*!*/
+    /*}*/
 }
 .MuiPaper-root {
     background-color: var(--topBarSubmenuColor)!important; /* TODO: ew */

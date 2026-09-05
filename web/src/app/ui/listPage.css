@@ -1,6 +1,6 @@
 .listPageTable {
     width: 100%;
-    table-layout: auto; /* TODO: was fixed*/
+    table-layout: auto;
     & > tr.listPageTableRow {
         width: 100%;
         &.nonHeaderRow {
@@ -8,9 +8,6 @@
                 background-color: var(--clr-success-1);
             }
         }
-        /*&.headerRow {*/
-        /*    float: left;*/
-        /*}*/
         & > td, & > th {
             padding: 0.5rem;
             width: min-content;

@@ -8,24 +8,23 @@ div {
 }
 
 .ovcArea {
-    /* TODO: OnViewCreators!? */
-    &:nth-child(1) {
-        /* TODO: 2nd child should be the links table */
-    }
-    & .ovcCreatorBodyWrapper {
-        /* TODO: ALL INTERNALS HERE! */
-        & > div {
-            /*width: 100%;  TODO: ok?*/
-            /* TODO: should be the main body */
-        }
-        & > button {
-            /* TODO: should be only the close buttons for the creator body */
-        }
-    }
+    /*!* TODO: OnViewCreators!? *!*/
+    /*&:nth-child(1) {*/
+    /*    !* TODO: 2nd child should be the links table *!*/
+    /*}*/
+    /*& .ovcCreatorBodyWrapper {*/
+    /*    !* TODO: ALL INTERNALS HERE! *!*/
+    /*    & > div {*/
+    /*        !*width: 100%;  TODO: ok?*!*/
+    /*        !* TODO: should be the main body *!*/
+    /*    }*/
+    /*    & > button {*/
+    /*        !* TODO: should be only the close buttons for the creator body *!*/
+    /*    }*/
+    /*}*/
 }
 /* Top Bar*/
 .ovcBar {
-    /* TODO: OnViewCreators*/
     box-sizing: border-box;
     width: 100%;
     max-width: 100%;
@@ -42,31 +41,31 @@ div {
             background-color: var(--clr-info-1);
         }
     }
-    &.ovcBarQuad {
-        /* TODO: OnViewCreators*/
-    }
-    &.ovcBarTri {
-        /* TODO: OnViewCreators*/
-    }
+    /*&.ovcBarQuad {*/
+    /*    !* TODO: OnViewCreators*!*/
+    /*}*/
+    /*&.ovcBarTri {*/
+    /*    !* TODO: OnViewCreators*!*/
+    /*}*/
 }
-.ovcBarItem {
-    &.currentlyActive {
-        /* TODO: this */
-    }
-    &.selectable {
-        /* TODO: this */
-        &:hover {
-            /* TODO: hover?*/
-        }
-        /* TODO: click? any others?*/
-    }
-}
-table.ovcLinksTable tbody > tr {
-    &:first-child {
-        /* TODO: this */
-    }
-    /* TODO: all others */
-}
+/*.ovcBarItem {*/
+/*    &.currentlyActive {*/
+/*        !* TODO: this *!*/
+/*    }*/
+/*    &.selectable {*/
+/*        !* TODO: this *!*/
+/*        &:hover {*/
+/*            !* TODO: hover?*!*/
+/*        }*/
+/*        !* TODO: click? any others?*!*/
+/*    }*/
+/*}*/
+/*table.ovcLinksTable tbody > tr {*/
+/*    &:first-child {*/
+/*        !* TODO: this *!*/
+/*    }*/
+/*    !* TODO: all others *!*/
+/*}*/
 
 th.ovcCell {
     text-align: center;

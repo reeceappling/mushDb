@@ -33,6 +33,7 @@ import {DowelType} from "@/app/components/plugsServer";
 import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import * as React from "react";
+import {ImageLightbox} from "@/app/components/formSubcomponents/imageSelector";
 
 
 export function RemoveToggle({disabled, click, keptClass, removedClass, keptTxt, removedTxt}: {
@@ -440,9 +441,8 @@ export const PixRowExisting = (
     }
     const leftArea = () => {
         return <div className={"picLeft" + disabledClass()}>
-            {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
             {/*<Image className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>*/}
-            <img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"} loading={"lazy"/* TODO: ensure ok*/}/>
+            <ImageLightbox className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"} loading={"lazy"/* TODO: ensure ok*/}/>
             {!readonly &&
                 <button className={current.disabled ? "basicButtonSmall" : "removeButtonSmall"} onClick={(e) => {
                     e.stopPropagation();
@@ -487,7 +487,7 @@ export function MostRecentImageDisplay(
         <div className={"mriParent depthContainer depth" + depth}>
             <div>
                 {/*<Image className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>*/}
-                <img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"} loading={imgLoadStrategy}/>
+                <ImageLightbox className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"} loading={imgLoadStrategy}/>
             </div>
             <div className={"mriInfoHolder"}>
                 <DateArea pre={(showHeader ? mostRecentImageHeader : undefined)} when={data.time} readonly={true}/>

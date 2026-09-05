@@ -14,7 +14,7 @@ div {
     justify-content: space-between;
     align-items: flex-start;
     align-content: flex-start;
-    max-width: 100%; /* TODO: was width*/
+    max-width: 100%;
     & > * {
         flex: 1 0 auto;
         /*border: 1px solid rebeccapurple; TODO: any borders?*/

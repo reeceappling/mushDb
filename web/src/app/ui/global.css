@@ -28,7 +28,6 @@ div {
 }
 .depth0 {
     background-color: var(--color-surface-0);
-    /* TODO: widths, margins, paddings, edges/rounding, etc?*/
     &.subForm {
         & > * {
             margin-bottom: 1em;
@@ -38,21 +37,13 @@ div {
         text-align: center;
     }
     .depth1 {
-        /* TODO: depth1 stuff*/
-        background-color: var(--color-surface-tonal-0); /*TODO: ok?*/
-        /*background-color: #1a1a1a; TODO: ok?*/
-        /* TODO: widths, margins, paddings, edges/rounding, etc?*/
+        background-color: var(--color-surface-tonal-0);
         .depth2 {
-            background-color: var(--color-surface-tonal-1);/*TODO: ok?*/
-            /* TODO: widths, margins, paddings, edges/rounding, etc?*/
+            background-color: var(--color-surface-tonal-1);
             .depth3 {
-                /* TODO: depth3 stuff*/
-                background-color: var(--color-surface-tonal-2);/*TODO: ok?*/
-                /* TODO: widths, margins, paddings, edges/rounding, etc?*/
+                background-color: var(--color-surface-tonal-2);
                 .depth4 {
-                    /* TODO: depth4 stuff*/
-                    background-color: var(--color-surface-tonal-3);/*TODO: ok?*/
-                    /* TODO: widths, margins, paddings, edges/rounding, etc?*/
+                    background-color: var(--color-surface-tonal-3);
                 }
             }
         }
@@ -80,9 +71,7 @@ div {
     font-size: 1.9em
 }
 .idComponent {
-    /* TODO: this */
     &.topLevelId {
-        /* TODO: this */
         & > div.idTxt {
             font-size: 1.9em; /* TODO: ok? */
         }
@@ -91,7 +80,6 @@ div {
         }
     }
     &.nonTopLevelId {
-        /* TODO: this */
         & > div.idTxt {
             font-size: 1.5em;
         }
@@ -100,59 +88,59 @@ div {
         }
     }
     & > div { /* text+link and then possibly OpenMainPage component*/
-        display: inline-block;/* TODO: ok? */
-        &.idTxt {
-            /* TODO: this */
-            & > a {
-                /* TODO: this */
-                &:hover {
-                    /* TODO: this */
-                }
-                /* TODO: other pseudoSelectors */
-            }
-        }
-        &.openMainPageButton {
-            /* TODO: this */
-        }
+        display: inline-block;
+        /*&.idTxt {*/
+        /*    !* TODO: this *!*/
+        /*    & > a {*/
+        /*        !* TODO: this *!*/
+        /*        &:hover {*/
+        /*            !* TODO: this *!*/
+        /*        }*/
+        /*        !* TODO: other pseudoSelectors *!*/
+        /*    }*/
+        /*}*/
+        /*&.openMainPageButton {*/
+        /*    !* TODO: this *!*/
+        /*}*/
     }
-    & > a {
-        /* TODO: this */
-        /* TODO: this */
-    }
+    /*& > a {*/
+    /*    !* TODO: this *!*/
+    /*    !* TODO: this *!*/
+    /*}*/
 
-    /* TODO: THIS! */
-    & > a {
-        /* TODO: THIS! */
-        &:hover {
-            /* TODO: THIS! */
-        }
-        /* TODO: other pseudo-selectors! */
-    }
+    /*!* TODO: THIS! *!*/
+    /*& > a {*/
+    /*    !* TODO: THIS! *!*/
+    /*    &:hover {*/
+    /*        !* TODO: THIS! *!*/
+    /*    }*/
+    /*    !* TODO: other pseudo-selectors! *!*/
+    /*}*/
 }
 
-.formListArea {
-    & > button {/* add field button */
-        /* TODO: DO THIS! */
-    }
-    & .aSelector {
-        /* TODO: DO THIS? */
-    }
-    & > div { /* This is each field*/
-        /* TODO: DO THIS! */
-    }
-    & .exists {
-        /* TODO: DO THIS! */
-    }
-    & .new {
-        /* TODO: DO THIS! */
-    }
-    & .readonly {
-        /* TODO: DO THIS! */
-    }
-    & .editable {
-        /* TODO: DO THIS! */
-    }
-}
+/*.formListArea {*/
+/*    & > button {!* add field button *!*/
+/*        !* TODO: DO THIS! *!*/
+/*    }*/
+/*    & .aSelector {*/
+/*        !* TODO: DO THIS? *!*/
+/*    }*/
+/*    & > div { !* This is each field*!*/
+/*        !* TODO: DO THIS! *!*/
+/*    }*/
+/*    & .exists {*/
+/*        !* TODO: DO THIS! *!*/
+/*    }*/
+/*    & .new {*/
+/*        !* TODO: DO THIS! *!*/
+/*    }*/
+/*    & .readonly {*/
+/*        !* TODO: DO THIS! *!*/
+/*    }*/
+/*    & .editable {*/
+/*        !* TODO: DO THIS! *!*/
+/*    }*/
+/*}*/
 
 .dateHolder {
     & > * {

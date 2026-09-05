@@ -4,13 +4,14 @@
 import {AllEntries, Data, InitialToAllEntries, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {IsValidNote, Note, NotesFormAreaPics} from "@/app/components/formSubcomponents/notes";
 import {ImageLocationFor, PicWithNotesIncoming} from "@/app/components/formSubcomponents/picWithNotes";
-import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
+import ImageSelector, {ImageLightbox} from "@/app/components/formSubcomponents/imageSelector";
 import {OptionalArrayOfType, OptionalSimpleKey} from "@/app/components/common";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {useContext, useEffect, useState} from "react";
 import {DepthContext} from "@/app/components/formSubcomponents/depthContext/depth";
 import {RemoveToggle} from "@/app/components/formSubcomponents/commonClient";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import * as React from "react";
 
 export const ExampleImageLocation: string = "test.jpg"
 
@@ -205,11 +206,7 @@ export function ContamsRows({initial, updateParent, readonly}: {
                         // <Image className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
                         //      src={ImageLocationFor(ctm.data.location)}
                         //      alt={"existing contamination image " + i}/>
-                        <img className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
-                             src={ImageLocationFor(ctm.data.location)}
-                             alt={"existing contamination image " + i}
-                             loading={"lazy"}
-                        />
+                        <ImageLightbox className={"picDisplay"} src={ImageLocationFor(ctm.data.location)} alt={"existing contamination image " + i} loading={"lazy"}/>
                     }
                     {disableBtn}
                 </div>
