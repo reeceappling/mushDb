@@ -15,13 +15,23 @@ type LRU struct { // TODO: EXPAND USAGE OF LRU CACHE TO OTHER THINGS, OR CONSIDE
 	maxSize        int
 	m              sync.Map
 	newest, oldest *cacheNode
+	moveToFront    chan *cacheNode
 }
 
 func NewLRU(maxSize int) *LRU {
-	return &LRU{
-		maxSize: maxSize,
-		m:       sync.Map{},
+	frontChan := make(chan *cacheNode, maxSize) // TODO: chan size ok?
+	c := &LRU{
+		maxSize:     maxSize,
+		m:           sync.Map{},
+		moveToFront: frontChan,
+		// TODO: ENSURE CHANNEL GETS CLOSED WHEN WE WANT IT TO BE
 	}
+	go func() {
+		for item := range frontChan {
+			c.moveExistingToFront(item)
+		}
+	}()
+	return c
 }
 
 func (c *LRU) Get(key string) ([]byte, bool) {
@@ -32,7 +42,7 @@ func (c *LRU) getAndMoveToFront(key string) ([]byte, bool) {
 	val, exists := c.m.Load(key)
 	if exists {
 		node := val.(*cacheNode)
-		c.moveExistingToFront(node)
+		c.moveToFront <- node // TODO: used to be c.moveExistingToFront(node)
 		return node.value, true
 	}
 	return nil, false
@@ -40,7 +50,7 @@ func (c *LRU) getAndMoveToFront(key string) ([]byte, bool) {
 func (c *LRU) moveExistingToFront(node *cacheNode) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.removeNodeFromLLNoCountChange(node)
+	_ = c.removeNodeFromLLNoCountChange(node)
 	c.addToFrontNoCountChange(node)
 }
 func (c *LRU) Add(key string, value []byte) (overwritten bool) {
@@ -48,7 +58,7 @@ func (c *LRU) Add(key string, value []byte) (overwritten bool) {
 	if exists {
 		existingNode := val.(*cacheNode)
 		existingNode.value = value
-		c.moveExistingToFront(existingNode)
+		c.moveToFront <- existingNode // TODO: used to be c.moveExistingToFront(existingNode)
 		return true
 	}
 	node := &cacheNode{
@@ -57,7 +67,7 @@ func (c *LRU) Add(key string, value []byte) (overwritten bool) {
 	}
 
 	c.m.Store(key, node)
-	c.mu.Lock()
+	c.mu.Lock() // TODO: should this go before store?
 	defer c.mu.Unlock()
 	c.addToFront(node)
 	return false
@@ -104,49 +114,29 @@ func (c *LRU) addToFrontNoCountChange(node *cacheNode) {
 
 // removeNodeFromLL removes a node from the linked list ONLY
 func (c *LRU) removeNodeFromLL(node *cacheNode) (removed bool) {
-	if c == nil {
-		panic("lru cache is nil")
+	removed = c.removeNodeFromLLNoCountChange(node)
+	if removed {
+		c.ct--
 	}
-	if node == nil {
-		return false
-	}
-	if c.ct == 1 {
-		if node == c.oldest {
-			c.oldest, c.newest, c.ct = nil, nil, 0
-			return true
-		} else {
-			println("node was not in lru cache")
-			return false
-		}
-	}
-	older, newer := node.older, node.newer
-	setOlderNewerPair(older, newer)
-	switch node {
-	case c.oldest:
-		c.oldest = newer
-		break
-	case c.newest:
-		c.newest = older
-		break
-	default:
-		older.newer, newer.older = newer, older
-		break
-	}
-	c.ct--
-	return true
+	return removed
 }
-func (c *LRU) removeNodeFromLLNoCountChange(existingNode *cacheNode) {
+func (c *LRU) removeNodeFromLLNoCountChange(existingNode *cacheNode) (removed bool) {
 	if c == nil {
 		panic("lru cache is nil")
 	}
 	if existingNode == nil {
-		return
+		return false
+	}
+	if c.ct == 0 {
+		return false
 	}
 	if c.ct == 1 {
 		if existingNode == c.oldest {
 			c.oldest, c.newest = nil, nil
+			return true
 		} else {
 			println("node was not in lru cache")
+			return false
 		}
 		return
 	}
@@ -165,6 +155,7 @@ func (c *LRU) removeNodeFromLLNoCountChange(existingNode *cacheNode) {
 		// older.newer, newer.older = newer, older
 		break
 	}
+	return true
 }
 func (n *cacheNode) setNewer(node *cacheNode) {
 	if n == nil {
