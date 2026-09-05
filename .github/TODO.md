@@ -1,4 +1,11 @@
 # TODOs found while using
+- [x] Lazy load display images
+  - [ ] Add a "loading" spinner for images that are loading
+  - [x] Normal images area (also flushes area)
+  - [x] Contams area
+  - [ ] MostRecentImage
+    - [x] Set to lazy loaded initially
+    - [ ] (decide whether or not we want lazy or eager, lazy for now)
 - [ ] Upgrade uuid in web
 - [ ] Cloudflare cache only images. https://www.debugbear.com/docs/cloudflare-caching
 - [x] Adding a contam (mold+bact) to a plate succeeds but does not get handled properly on the client without a reload, fix.

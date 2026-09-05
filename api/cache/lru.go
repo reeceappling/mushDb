@@ -97,6 +97,9 @@ func (c *LRU) addToFront(node *cacheNode) {
 func (c *LRU) addToFrontNoCountChange(node *cacheNode) {
 	setOlderNewerPair(c.newest, node)
 	c.newest = node
+	if c.ct == 1 {
+		c.oldest = node
+	}
 }
 
 // removeNodeFromLL removes a node from the linked list ONLY
@@ -157,7 +160,9 @@ func (c *LRU) removeNodeFromLLNoCountChange(existingNode *cacheNode) {
 		c.newest = older
 		break
 	default:
-		older.newer, newer.older = newer, older
+		// Do nothing
+		// TODO: ensure we dont need next line. I think it is covered by setOlderNewerPair...
+		// older.newer, newer.older = newer, older
 		break
 	}
 }

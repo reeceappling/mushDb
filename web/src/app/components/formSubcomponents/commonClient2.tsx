@@ -15,7 +15,7 @@ function picRowsKey(items: PicWithNotesIncoming[]): string {
     ).join("||");
 }
 
-export function PixRows(
+export function PixRows( // For Rows of new pictures (not preexisting)
     {initial, updateParent, addButtonText}: {
         initial: PicWithNotesIncoming[],
         updateParent?: (d: NewPicWithNotesForm[]) => void,

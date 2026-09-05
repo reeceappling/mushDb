@@ -442,7 +442,7 @@ export const PixRowExisting = (
         return <div className={"picLeft" + disabledClass()}>
             {/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */}
             {/*<Image className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>*/}
-            <img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"}/>
+            <img className={"picDisplay"} src={ImageLocationFor(initial.location)} alt={"existing image"} loading={"lazy"/* TODO: ensure ok*/}/>
             {!readonly &&
                 <button className={current.disabled ? "basicButtonSmall" : "removeButtonSmall"} onClick={(e) => {
                     e.stopPropagation();
@@ -480,13 +480,14 @@ export function MostRecentImageDisplay(
     if (data === undefined) {
         return null
     }
+    const imgLoadStrategy: "lazy" | "eager" | undefined = "lazy" // TODO: ensure ok
     const mostRecentImageHeader = headerTxt || "Image Upload Date: "
     const depth = useContext(DepthContext)
     return <DepthProvider>
         <div className={"mriParent depthContainer depth" + depth}>
             <div>
                 {/*<Image className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>*/}
-                <img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"}/>
+                <img className={"picDisplay mri"} src={ImageLocationFor(data.location)} alt={"most recent image"} loading={imgLoadStrategy}/>
             </div>
             <div className={"mriInfoHolder"}>
                 <DateArea pre={(showHeader ? mostRecentImageHeader : undefined)} when={data.time} readonly={true}/>

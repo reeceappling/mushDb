@@ -207,7 +207,9 @@ export function ContamsRows({initial, updateParent, readonly}: {
                         //      alt={"existing contamination image " + i}/>
                         <img className={/* TODO: IMAGE AREA GROW/SHRINK ON CLICK */"picDisplay"}
                              src={ImageLocationFor(ctm.data.location)}
-                             alt={"existing contamination image " + i}/>
+                             alt={"existing contamination image " + i}
+                             loading={"lazy"}
+                        />
                     }
                     {disableBtn}
                 </div>

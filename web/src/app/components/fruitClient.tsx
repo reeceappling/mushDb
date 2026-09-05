@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useEffect, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
     AddCreatedQuadColFunction,
@@ -19,8 +19,8 @@ import {NewTransferArea, TransfersOutDisplay} from "@/app/components/transferCli
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
-    DoCreateRequest,
     DoCreateRequestMultipart,
+    DoMultipartImportRequest,
     DoUpdateMultipartRequest,
     ExistingRecentSelector,
     FlexedArea,
@@ -31,7 +31,6 @@ import {
     ListPageItems,
     ListPageTable,
     ListTableColumn,
-    DoMultipartImportRequest,
     NewColumn,
     NewEntryFormWrapper,
     NumberToDateStr,
@@ -39,13 +38,14 @@ import {
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
-    resolvePicsFormData, Subform, setFormFull, viewUrlFor, PopupApp, PopupInfo, DefaultPopupInfo,
+    resolvePicsFormData,
+    setFormFull,
+    Subform,
 } from "@/app/components/common";
 import {
     ErrorDisplay,
     GensFormDisplay,
     MostRecentImageDisplay,
-    NameArea,
     ParentDisplay,
     PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
@@ -54,15 +54,13 @@ import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
 import {EntryLinkIdWrapper, EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {NewSporePrintForm} from "@/app/components/sporePrintClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import ReaderWriterSelector, {ReadRFIDButton, WriteRfidOvcArea} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {
-    ExistingSpeciesSubspeciesSelector,
-    SpeciesSubspeciesArea
-} from "@/app/components/speciesClient";
-import TestAndValidate from "@/app/components/testing/untested";
+import ReaderWriterSelector, {
+    WriteRfidOvcArea
+} from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
+import {ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
 import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {ChildSwabArea, NewSporeSwabForm, SporeSwabSelectorTable} from "@/app/components/sporeSwabClient";
+import {ChildSwabArea, NewSporeSwabForm} from "@/app/components/sporeSwabClient";
 import {SporeSwabData} from "@/app/components/sporeSwabServer";
 import {SporePrintData} from "@/app/components/sporePrintServer";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
@@ -71,9 +69,7 @@ import {InitialNotesState} from "@/app/components/formSubcomponents/initialState
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {TransferData} from "@/app/components/transferServer";
 import {SelectorFor} from "@/app/components/selector";
-import {MssData} from "@/app/components/mssServer";
-import {MssSelectorTable} from "@/app/components/mssClient";
-import {Actions, ActionTypes, SetModalInfoAction, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertFruit(input: any): asserts input is FruitData {
     if (typeof input !== 'object') {
@@ -218,42 +214,50 @@ export default function FruitDisplay(
         } catch (caught: any) {
             const newErr = JSON.stringify(caught)
             setErr(newErr)
-            dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+            dispatch({
+                type: ActionTypes.SET_MODAL_INFO, payload: {
                     header: "Update Failed",
-                    text: "failed to set form values: "+newErr,
+                    text: "failed to set form values: " + newErr,
                     isErr: true
-                }})
+                }
+            })
             return
         }
         try {
             const resp = await DoUpdateMultipartRequest("fruit", initial._id, formData, AssertFruit, allCookies(cookies))
-                .catch(e=>{
-                    const newErr = "failed to make request: "+JSON.stringify(e)
+                .catch(e => {
+                    const newErr = "failed to make request: " + JSON.stringify(e)
                     setErr(newErr)
-                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                    dispatch({
+                        type: ActionTypes.SET_MODAL_INFO, payload: {
                             header: "Update Failed",
                             text: newErr,
                             isErr: true
-                        }})
+                        }
+                    })
                     throw newErr
                 })
             try {
                 const temp = new FruitData(resp)
                 updateInitial(temp)
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
                         header: "Update Success",
                         text: "entry updated successfully",
                         isErr: false
-                    }})
+                    }
+                })
                 return
-            } catch (e){
+            } catch (e) {
                 const newErr = "failed to parse response: " + JSON.stringify(e)
                 setErr(newErr)
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
-                    header: "Update Failed",
-                    text: newErr,
-                    isErr: true
-                }})
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
+                        header: "Update Failed",
+                        text: newErr,
+                        isErr: true
+                    }
+                })
                 return
             }
         } catch {
@@ -289,54 +293,68 @@ export default function FruitDisplay(
         //         })
         //     })
     }
-    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=>{
+    const ovcs: () => OnViewCreatorQuadCol[] = () => {
         const disp = initial.disposed !== undefined
-            return [...(!disp?[{
-            txt: "Clone Fruit", // TODO: ensure works as expected?
-            newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                return <NewTransferArea idFrom={data._id} typeFrom={"fruit"}
-                /*validTypesTo={["plate","slant","jar","stasisTube","bag","fruitingChamber" TODO: ensure comprehensive list]}*/
-                                        onCreated={(item: TransferData) => {
-                    setTransfersOut([...transfersOut, item._id]) // TODO: ok?
-                    onCreate([{
-                        typeText: "Transfer",
-                        node: <CreatedLinkFor linkId={item._id} typ={"transfer"}/>,
-                    }], false)
-                }}/>
+        return [...(!disp ? [
+            {
+                txt: "Clone Fruit", // TODO: ensure works as expected?
+                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                    return <NewTransferArea idFrom={data._id} typeFrom={"fruit"}
+                        /*validTypesTo={["plate","slant","jar","stasisTube","bag","fruitingChamber" TODO: ensure comprehensive list]}*/
+                                            onCreated={(item: TransferData) => {
+                                                setTransfersOut([...transfersOut, item._id]) // TODO: ok?
+                                                onCreate([{
+                                                    typeText: "Transfer",
+                                                    node: <CreatedLinkFor linkId={item._id} typ={"transfer"}/>,
+                                                }], false)
+                                            }}/>
+                },
+            }, {
+            //     // TODO: ENSURE ONLY ADMINS SEE THIS!
+            //     txt: "Clone fruit to unmarked plate", // TODO: MAKE THIS WORK!
+            //     newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+            //         return <NewTransferArea idFrom={data._id} typeFrom={"fruit"} // TODO: CREATE A NEW COMPONENT FOR THIS!
+            //             /*validTypesTo={["plate","slant","jar","stasisTube","bag","fruitingChamber" TODO: ensure comprehensive list]}*/
+            //                                 onCreated={(item: TransferData) => {
+            //                                     setTransfersOut([...transfersOut, item._id]) // TODO: ok?
+            //                                     onCreate([{
+            //                                         typeText: "Transfer",
+            //                                         node: <CreatedLinkFor linkId={item._id} typ={"transfer"}/>,
+            //                                     }], false)
+            //                                 }}/>
+            //     },
+            // }, {
+                txt: "Create Spore Swab",
+                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                    return <NewSporeSwabForm fruitIn={data} onCreate={(item: SporeSwabData) => {
+                        onCreate([{
+                            typeText: "Spore Swab",
+                            node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
+                        }], false)
+                    }}/>
+                },
+            }, {
+                txt: "Create Spore Print",
+                newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                    return <NewSporePrintForm parentId={data._id}
+                                              onCreate={(item: SporePrintData) => {
+                                                  setSporePrints([...(sporePrints || []), item._id])
+                                                  onCreate([{
+                                                      typeText: "Spore Print",
+                                                      node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
+                                                  }], false)
+                                              }}/>
+                },
             },
-        },
-        {
-            txt: "Create Spore Swab",
-            newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                return <NewSporeSwabForm fruitIn={data} onCreate={(item: SporeSwabData) => {
-                    onCreate([{
-                        typeText: "Spore Swab",
-                        node: <CreatedLinkFor linkId={item._id} typ={"sporeSwab"}/>,
-                    }], false)
-                }}/>
-            },
-        },
-        {
-            txt: "Create Spore Print",
-            newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
-                return <NewSporePrintForm parentId={data._id}
-                                          onCreate={(item: SporePrintData) => {
-                                              setSporePrints([...(sporePrints || []), item._id])
-                                              onCreate([{
-                                                  typeText: "Spore Print",
-                                                  node: <CreatedLinkFor linkId={item._id} typ={"sporePrint"}/>,
-                                              }], false)
-                                          }}/>
-            },
-        },
-        WriteRfidOvcArea(initial._id),
-        ]:[]),
+            WriteRfidOvcArea(initial._id),
+        ] : []),
 
-    ]}
+        ]
+    }
     return (
         <DisplayFormWrapper entryType={"fruit"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Fruit", entryType:"fruit", linkPage:false, allowOpenMainPage:false}}/>
+            <ID props={{id: data._id, txt: "Fruit", entryType: "fruit", linkPage: false, allowOpenMainPage: false}}/>
             <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
             <MostRecentImageDisplay data={initial.mostRecentImage}/>
             <FlexedArea>
@@ -370,14 +388,15 @@ export default function FruitDisplay(
     )
 }
 
-function FruitPrintsDisplay({prints}:{prints?:string[]}){
-    if (!prints || prints.length === 0){
+function FruitPrintsDisplay({prints}: { prints?: string[] }) {
+    if (!prints || prints.length === 0) {
         return null
     }
     return <Subform>
-        <div className={"text-lg areaHeader"}>{"Spore Prints:"}</div>{/* TODO: text-lg ok?*/}
+        <div className={"text-lg areaHeader"}>{"Spore Prints:"}</div>
+        {/* TODO: text-lg ok?*/}
         <div className={"flex flex-row flex-wrap justify-around items-center gap-2"}>
-            {prints.map(id=><EntryLinkIdWrapper key={id} props={{
+            {prints.map(id => <EntryLinkIdWrapper key={id} props={{
                 linkId: id,
                 entryType: "sporePrint",
                 openInNewTab: false,
@@ -436,22 +455,26 @@ export function NewFruitForm(
             }
         }
         DoCreateRequestMultipart("fruit", formData, AssertFruit, allCookies(cookies))
-            .then((v)=>{
+            .then((v) => {
                 onCreate(v)
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
                         header: "Creation succeeded",
                         text: "created",
                         isErr: false
-                    }})
+                    }
+                })
             })
             .catch(e => {
                 const newErr = JSON.stringify(e)
                 setErr(newErr)
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
                         header: "Creation failed",
                         text: newErr,
                         isErr: true
-                    }})
+                    }
+                })
             })
     }
     return (
@@ -463,7 +486,7 @@ export function NewFruitForm(
             }} headerLevel={headerLevel} readonly={false}/>
             <NewEntryNotes setNotes={setNotes}/>
             <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-            <button className={"greenButton"} onClick={e=>{
+            <button className={"greenButton"} onClick={e => {
                 e.stopPropagation()
                 newFruitSubmit()
             }}>{"Create Fruit"}</button>
@@ -505,19 +528,23 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         }
         formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
-        const dispatchUpdate = (isErr:boolean, text:string)=>{
-            if(isErr){
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+        const dispatchUpdate = (isErr: boolean, text: string) => {
+            if (isErr) {
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
                         header: "Creation failed",
                         text: text,
                         isErr: true
-                    }})
+                    }
+                })
             } else {
-                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
                         header: "Creation successful",
                         text: text,
                         isErr: false
-                    }})
+                    }
+                })
             }
         }
         DoMultipartImportRequest(formData, "fruit", AssertFruit, setErr, allCookies(cookies), dispatchUpdate)
@@ -527,7 +554,8 @@ export function FruitImportDisplay({headerLevel}: ImportDisplayInput) { // USE O
         {/* Required Fields */}
         <div className={"inlineChildren"}>
             <div>{"Source: "}</div>
-            <SelectorFor options={["", "store", "outside", "online"]} initial={""} updateParent={setParentType} disabled={false}/>
+            <SelectorFor options={["", "store", "outside", "online"]} initial={""} updateParent={setParentType}
+                         disabled={false}/>
         </div>
         <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         <ImageSelector updateParent={setImageFile}/>
