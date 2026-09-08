@@ -53,15 +53,16 @@ func SaveFile(ctx context.Context, bs []byte, prefixPath ...string) (string, err
 				err = os.WriteFile(whereToWrite, bs, 777) // TODO: 666 instead of 777?
 				if err != nil {
 					println("failed to write file", err.Error())
+				} else {
+					lruCache.Add(whereToWrite, bs)
 				}
-				lruCache.Add(whereToWrite, bs) // TODO: ensure this is ok for the LRU cache!
 				return fileNameWithPrefixPath, err
 			}
 			println("file exists already!", err.Error())
 			return "", err // TODO: PROBABLY CONTINUE INSTEAD OF RETURN HERE
 		} else {
-			println("file exists already!", err.Error()) // TODO: continue???
-			return "", err                               // TODO: PROBABLY CONTINUE INSTEAD OF RETURN HERE
+			println("file exists already?", "failed to stat file") // TODO: continue???
+			return "", errors.New("failed to stat file")           // TODO: PROBABLY CONTINUE INSTEAD OF RETURN HERE
 		}
 	}
 	return "", errors.New("failed to find a new fileName")

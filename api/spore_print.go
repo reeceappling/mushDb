@@ -256,7 +256,7 @@ func initializeSporePrints(ctx context.Context) error {
 	coll := DbFrom(ctx).Collection(SporePrintCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel, // This is print date
-		//newSimpleIndex("parent", "parent", false, false, false),
+		//newSimpleIndex("parent", "parent", false, false, false), // Fruits have a prints field on them.
 		//newSimpleIndex("color", "color", true, true, false),
 		//newSimpleIndex("density", "density", true, true, false),
 		newSimpleIndex("species", "species", false, false, false),

@@ -12,58 +12,55 @@ type Node struct {
 	Children []*Node
 }
 
-func TreeFromParentItem(ctx context.Context, rootItem api.MainCollectionItem) (*Node, error) {
-	root := &Node{Item: rootItem}
+func TreeFromParentItem(ctx context.Context, rootItem api.MainCollectionItem, maxDepth *int) (*Node, error) {
+	var nextMaxDepth *int = nil
+	if maxDepth != nil {
+		temp := *maxDepth - 1
+		nextMaxDepth = &temp
+	}
+	out := Node{Item: rootItem}
+	if maxDepth != nil && *maxDepth == 0 {
+		return &out, nil
+	}
 	children, err := rootItem.Children(ctx)
 	if err != nil {
 		return nil, err
 	}
-	// TODO: add max depth?
 	childNodes := make([]*Node, len(children))
 	for i, child := range children {
-		childNode, childErr := TreeFromParentItem(ctx, child)
+		childNode, childErr := TreeFromParentItem(ctx, child, nextMaxDepth)
 		if childErr != nil {
-			return root, err
+			return &out, err
 		}
 		childNodes[i] = childNode
 	}
-	return root, nil
+	return &out, nil
 }
-func LineageOf(ctx context.Context, childItem api.MainCollectionItem) iter.Seq2[api.MainCollectionItem, error] {
-	parentOfChild := func(thisItem api.MainCollectionItem) (api.MainCollectionItem, error) { // TODO: maybe not pointers?
-		return thisItem.Parent(ctx)
-	}
+
+var ErrNoParentItem = errors.New("no parent") // TODO: use for error checking?
+
+func LineageOf(ctx context.Context, childItem api.MainCollectionItem, maxNumParents *int) iter.Seq2[api.MainCollectionItem, error] {
 	return func(yield func(api.MainCollectionItem, error) bool) {
-		currentItem := childItem
+		ct := 0
 		var err error = nil
+		currentItem := childItem
 		for {
-			currentItem, err = parentOfChild(currentItem)
+			currentItem, err = currentItem.GetParent(ctx)
 			if err != nil {
 				yield(nil, err)
 				return
 			}
 			if currentItem == nil {
-				yield(nil, errors.New("no parent")) // TODO: put this somewhere as a var?
+				yield(nil, ErrNoParentItem)
 				return
 			}
 			if !yield(currentItem, nil) {
 				return
 			}
+			ct++
+			if maxNumParents != nil && ct == *maxNumParents {
+				return
+			}
 		}
 	}
 }
-
-//func (parent *Node) GetChildren(ctx context.Context) ([]api.MainCollectionItem, error) {
-//	return parent.Item.Children(ctx)
-//	// TODO: normally, check for fruit, as well as all transfersOut
-//	// TODO: fruits should not check for fruits, but should also check for spore prints and swabs, and also use all transfersOut
-//	// TODO: spore prints should not check for fruits, but should also check for spore swabs and MSS, and also use all transfersOut
-//	// TODO: if lc check for lcSyringe (if creation does not entail a transfer), and also use all transfersOut
-//	// TODO: should lcSyringe check for fruits? stasis tube should or should not check fruits?
-//	// TODO: water jar should check nothing
-//}
-//func (parent *Node) GetParent(ctx context.Context) (api.MainCollectionItem, error) { // Can be nil
-//	return parent.Item.Parent(ctx)
-//	// TODO: if fruit, check for spore prints and swabs
-//	// TODO: if not fruit, check for fruits, and also use all transfersOut
-//}

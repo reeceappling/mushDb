@@ -241,7 +241,7 @@ func (srv *AuthService) LogoutSession(sessId SessionId) error {
 	if res.Err != nil {
 		return res.Err
 	}
-	if res.Item.Data.Email == GuestEmail() {
+	if res.Item.Data.Email == GuestEmail() { // TODO: res.Item.Data.IsGuest instead?
 		if err := srv.deleteGuestSession(sessId); err != nil {
 			// TODO: handle error!
 			println("failed to delete guest session: " + err.Error())

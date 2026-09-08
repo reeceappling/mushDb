@@ -3,12 +3,14 @@ package api
 //go:generate goGenerator/buildAndGenerate.sh
 
 import (
+	""
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/disintegration/imageorient"
+	"github.com/gen2brain/webp"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request/unix"
@@ -60,7 +62,7 @@ var lastUpdatedIndexModel = mongo.IndexModel{
 var standardIndexModel = newSimpleIndex("standard", "standard", true, false, false)
 var projectsIndexModel = newSimpleIndex("projects", "acl.projects.$**", false, false, false) // TODO: ensure actually indexes the correct thing! // TODO: this is a wildcard index!!!!
 // var saleIndexModel = newSimpleIndex("sale", "sale", false, true, false) // TODO: del?
-var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false) // TODO: do we even need to use this?
+// var transfersOutIndexModel = newSimpleIndex("transfersOut", "transfersOut", false, true, false) // TODO: do we even need to use this?
 var creationDateIndexModel = newSimpleIndex("creationDate", "creationDate", true, false, false)
 
 // var disposedIndexModel = newSimpleIndex("disposed", "disposed", false, true, false) // TODO: USE?
@@ -692,8 +694,20 @@ func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, er
 	//	}
 	//}
 	buf := new(bytes.Buffer)
-	println("re-encoding as jpg")
-	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG?????? maybe webp?????
+	println("re-encoding as webp") // TODO: if this does not work, then make sure to revert it to just jpeg
+	opts := webp.Options{
+		Quality:  100.0,
+		Lossless: true,
+		Method:   6, // TODO: unsure... Default is 4, and 6 is the slowest but best
+		//Exact:      false, // TODO: unsure...
+		//AutoRotate: false, // TODO: unsure...
+	}
+	err = webp.Encode(buf, img, opts)
+	if err != nil {
+		println(fmt.Sprintf("Trying jpeg instead, failed to encode WebP: %v", err))
+		buf.Reset()                      // TODO: ensure ok
+		err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG?????? maybe webp????? See "github.com/gen2brain/webp"
+	}
 	if err != nil {
 		http.Error(w, "failed to encode image to save! "+err.Error(), http.StatusInternalServerError)
 		return nil, err

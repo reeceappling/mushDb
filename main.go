@@ -1395,15 +1395,15 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	bytes, err := pics.GetFile(ctx, imgSubPath)
-	//bytes, err := os.ReadFile(filepath.Join(pics.GetFilePath(ctx), imgSubPath))
-	//if err != nil {
-	//	if errors.Is(err, os.ErrNotExist) {
-	//		//println("file does not exist!") // TODO: fix
-	//		http.Error(w, "image not found", http.StatusNotFound)
-	//		return
-	//	}
-	//	http.Error(w, "Error retrieving image. "+err.Error(), http.StatusInternalServerError)
-	//}
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			//println("file does not exist!") // TODO: fix
+			http.Error(w, "image not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Error retrieving image. "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	_, err = w.Write(bytes)
 	if err != nil {
 		rfid.HandleHttpWriteError(err)
