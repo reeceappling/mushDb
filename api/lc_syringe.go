@@ -42,9 +42,16 @@ type LcSyringe struct {
 	AclField                          `bson:"inline"`
 }
 
-//func (lcs LcSyringe) Blank() CollectionItem {
-//	return &LcSyringe{}
-//}
+func (lcs LcSyringe) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	xfersOutChildren, err := lcs.getTransfersChildren(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, xfersOutChildren...)
+	// TODO: get fruits? do we want to?
+	return out, nil
+}
 
 func (lcs LcSyringe) Innoculatable() error {
 	return errors.New("lcSyringes never innoculatable")

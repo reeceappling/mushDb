@@ -44,6 +44,16 @@ func (M MSS) Innoculatable() error {
 	return errors.New("mss never innoculatable") // TODO: ensure ok
 }
 
+func (M MSS) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	xfersOutChildren, err := M.getTransfersChildren(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, xfersOutChildren...)
+	return out, nil
+}
+
 func (M MSS) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{PlateSourceType, SlantSourceType /*TODO: MSS?*/, StasisTubeSourceType}, dst.SourceType()) {
 		return errors.New("mss transfers cannot go to " + dst.SourceType())
@@ -238,7 +248,7 @@ func (req resolvedUpdateMssRequest) modsFor(existing *MSS, aclField AclField) (b
 		updateDisposedIfNeeded(req, existing).
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(aclField.ACL, existing.ACL).
-		updatePicsIfNeeded(req.Images, existing.Pics). // TODO: validate working!
+		updatePicsIfNeeded(req.Images, existing.Pics).                                               // TODO: validate working!
 		updateMostRecentImageIfNeeded(existing.MostRecentImage, loadMriPics(&req.Images, nil, nil)). // TODO: validate working!
 		updateLastUpdatedIfNeeded().
 		Finalized()

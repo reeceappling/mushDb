@@ -27,9 +27,13 @@ type WaterJar struct {
 	AclField              `bson:"inline"`
 }
 
-//func (wj WaterJar) Blank() CollectionItem {
-//	return &WaterJar{}
-//}
+func (wj WaterJar) Children(ctx context.Context) ([]MainCollectionItem, error) {
+	// TODO: return nothing???? maybe water jar shouldnt even be an option?
+	panic("water jar children tracking not implemented")
+}
+func (wj WaterJar) GetParent(ctx context.Context) (MainCollectionItem, error) {
+	return nil, errors.New("water jars cannot have parents")
+}
 
 func (wj WaterJar) GeneticInfoAsParent() (GeneticParentInfo, error) {
 	return GeneticParentInfo{}, errors.New("WaterJar has no genetic info")

@@ -39,9 +39,17 @@ type Fruit struct { // KnownFruitable is always true for this, // creation date 
 	AclField                          `bson:"inline"`
 }
 
-//func (f Fruit) Blank() CollectionItem {
-//	return &Fruit{}
-//}
+func (f Fruit) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	xfersOutChildren, err := f.getTransfersChildren(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, xfersOutChildren...)
+	// TODO: get sporePrints
+	// TODO: get sporeSwabs
+	return out, nil
+}
 
 func (f Fruit) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{PlateSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {

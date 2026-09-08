@@ -108,9 +108,16 @@ type Plate struct {
 	AclField                            `bson:"inline"`
 }
 
-//func (p Plate) Blank() CollectionItem {
-//	return &Plate{}
-//}
+func (p Plate) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	xfersOutChildren, err := p.getTransfersChildren(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, xfersOutChildren...)
+	// TODO: get fruits?
+	return out, nil
+}
 
 func (p Plate) IdValue() any {
 	return p.Id.dbIdStr() // TODO: ensure ok

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
@@ -110,8 +111,20 @@ func (field MainCollectionIdField) IdValue() any { return string(field.DbId()) }
 type MainCollectionOptionalParentField struct {
 	Parent *MainCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
 }
+
+func (optParent MainCollectionOptionalParentField) GetParent(ctx context.Context) (MainCollectionItem, error) {
+	if optParent.Parent == nil {
+		return nil, nil
+	}
+	return GetMainCollectionItemWithId(ctx, *optParent.Parent)
+}
+
 type MainCollectionParentField struct {
 	Parent MainCollectionId `bson:"parent,omitempty" json:"parent,omitempty"`
+}
+
+func (parent MainCollectionParentField) GetParent(ctx context.Context) (MainCollectionItem, error) {
+	return GetMainCollectionItemWithId(ctx, parent.Parent)
 }
 
 type NameIdField struct {

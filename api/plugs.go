@@ -42,9 +42,16 @@ type PlugsJar struct {
 	AclField                          `bson:"inline"`
 }
 
-//func (pl PlugsJar) Blank() CollectionItem {
-//	return &PlugsJar{}
-//}
+func (pl PlugsJar) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	xfersOutChildren, err := pl.getTransfersChildren(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, xfersOutChildren...)
+	// TODO: get fruits?
+	return out, nil
+}
 
 func (pl PlugsJar) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {

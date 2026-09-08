@@ -37,6 +37,8 @@ type MainCollectionItem interface {
 	geneticSource
 	EntryType() string
 	Permissioned
+	Children(context.Context) ([]MainCollectionItem, error) // TODO: this! partially done!
+	GetParent(context.Context) (MainCollectionItem, error)
 }
 
 func GetMainCollectionItemWithId(ctx context.Context, id MainCollectionId) (MainCollectionItem, error) {

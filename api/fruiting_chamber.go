@@ -46,9 +46,16 @@ type FruitingChamber struct { // TODO: SHOEBOX vs monotub!
 	AclField                          `bson:"inline"`
 }
 
-//func (f FruitingChamber) Blank() CollectionItem {
-//	return &FruitingChamber{}
-//}
+func (f FruitingChamber) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	xfersOutChildren, err := f.getTransfersChildren(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, xfersOutChildren...)
+	// TODO: get fruits?
+	return out, nil
+}
 
 func (f FruitingChamber) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{PlateSourceType, SlantSourceType, BagSourceType, FruitingChamberSourceType /*BagSourceType, GrainJarSourceType*/}, dst.SourceType()) {

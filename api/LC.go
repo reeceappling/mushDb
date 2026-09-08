@@ -44,9 +44,17 @@ type LiquidCulture struct {
 	AclField                          `bson:"inline"`
 }
 
-//func (l LiquidCulture) Blank() CollectionItem {
-//	return &LiquidCulture{}
-//}
+func (l LiquidCulture) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	xfersOutChildren, err := l.getTransfersChildren(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, xfersOutChildren...)
+	// TODO: get fruits?
+	// TODO: get lcSyringes? if we dont track transfers
+	return out, nil
+}
 
 func (l LiquidCulture) CanTransferTo(dst geneticSource) error {
 	canTransferTo := []string{GrainJarSourceType, PlateSourceType, SlantSourceType, StasisTubeSourceType, LcSourceType, BagSourceType}

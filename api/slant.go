@@ -42,9 +42,16 @@ type Slant struct {
 	AclField                          `bson:"inline"`
 }
 
-//func (s Slant) Blank() CollectionItem {
-//	return &Slant{}
-//}
+func (s Slant) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	xfersOutChildren, err := s.getTransfersChildren(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, xfersOutChildren...)
+	// TODO: get fruits?
+	return out, nil
+}
 
 func (s Slant) CanTransferTo(dst geneticSource) error {
 	if !slices.Contains([]string{BagSourceType, GrainJarSourceType, LcSourceType, PlateSourceType, PlugSourceType, SlantSourceType, StasisTubeSourceType}, dst.SourceType()) {

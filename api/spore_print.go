@@ -42,9 +42,17 @@ type SporePrint struct {
 	AclField                          `bson:"inline"`
 }
 
-//func (s SporePrint) Blank() CollectionItem {
-//	return &SporePrint{}
-//}
+func (sp SporePrint) Children(ctx context.Context) (out []MainCollectionItem, err error) {
+	out = []MainCollectionItem{}
+	//xfersOutChildren, err := sp.getTransfersChildren(ctx) // TODO: ADD TRANSFERS FIELD FOR print->plate?
+	//if err != nil {
+	//	return nil, err
+	//}
+	//out = append(out, xfersOutChildren...)
+	// TODO: check spore swabs
+	// TODO: check MSS
+	return out, nil
+}
 
 type SporePrintColor string
 

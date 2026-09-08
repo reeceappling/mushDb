@@ -80,9 +80,21 @@ type Transfer struct { // TODO: does not include multi-jar transfers from jars t
 	AclField                   `bson:"inline"`
 }
 
-//func (t Transfer) Blank() CollectionItem {
-//	return &Transfer{}
-//}
+func (xfersOut TransfersOutField) getTransfersChildren(ctx context.Context) (out []MainCollectionItem, err error) {
+	db := DbFrom(ctx)
+	out = make([]MainCollectionItem, len(xfersOut.TransfersOut))
+	for i, xferid := range xfersOut.TransfersOut {
+		var xfer Transfer
+		if err = db.Collection(TransfersCollName).FindOne(ctx, BsonFindFilter(IDfld, xferid)).Decode(&xfer); err != nil {
+			return nil, err
+		}
+		out[i], err = GetMainCollectionItemWithId(ctx, xfer.To)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
 
 func (t Transfer) PicsModsForChild(child HasPicsField) *Mods {
 	if t.ToImage == nil {
