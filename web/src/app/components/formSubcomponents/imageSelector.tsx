@@ -1,7 +1,6 @@
 'use client'
 
-import {useEffect, useState} from "react";
-import {ImageLocationFor} from "@/app/components/formSubcomponents/picWithNotes";
+import {useState} from "react";
 
 export function TopLevelImageSelector({updateParent, buttonText}:{buttonText?:string, updateParent: (f: File | undefined)=> void}) {
     return <div className={"centerH padContent topLevelImageSelector"}>
@@ -14,7 +13,7 @@ export function ImageLightbox({className,src,alt,loading}:{className?:string,src
     const toggleZoom = ()=>{
         setIsOpen(!isOpen);
     }
-    return <div>
+    return <div className={"imageLightboxContainer"}>
         {/* Small Image */}
         <img className={className} src={src} alt={alt} loading={loading} onClick={toggleZoom}/>
         {/* Fullscreen Overlay */}
