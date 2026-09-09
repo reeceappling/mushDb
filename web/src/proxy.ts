@@ -15,7 +15,7 @@ const corsOrigins =
         // Our origins
 
         ...withPortEntry(externalDomain,apiPort),
-        'localhost', // TODO: ensure ok (probably delete)
+        'localhost', // TODO: ensure ok (probably delete) // TODO: reenable if breaks things
         ...["web"].flatMap(withHttp).flatMap(v=>withPortEntry(v,3000)), // does not have https, not trailing slashes
         ...["api"].flatMap(withHttp).flatMap(v=>withPortEntry(v,8080)), // does not have https
         // Google login origins

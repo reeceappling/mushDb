@@ -10,12 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
-	google2 "github.com/markbates/goth/providers/google"
+	google3 "github.com/markbates/goth/providers/google"
 	"github.com/reeceappling/goUtils/v2/logging"
 	"github.com/reeceappling/goUtils/v2/utils"
+
 	rfid "github.com/reeceappling/mushDb/api"
 	"github.com/reeceappling/mushDb/api/env"
-	"github.com/reeceappling/mushDb/api/pics"
+	picsRfid "github.com/reeceappling/mushDb/api/pics"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions"
 	"github.com/reeceappling/pi-pn532-i2c-Ntag21x-ws/v2/websocketSessions/shared"
 	"github.com/ulule/limiter/v3"
@@ -24,7 +25,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
-	//"gopkg.in/DataDog/dd-trace-go.v1/ddtrace/tracer"
 	"io"
 	"net/http"
 	"net/url"
@@ -198,7 +198,7 @@ func main() {
 		}
 		os.Exit(42) // weird code so we can tell at a glance that we shut it down
 	}()
-	googleAuthProvider := google2.New(googId, googSecret, authCallbackUrlFor("google"), "email", "profile", "openid")
+	googleAuthProvider := google3.New(googId, googSecret, authCallbackUrlFor("google"), "email", "profile", "openid")
 	guestCallbackUrl := authCallbackUrlFor("guest")
 	guestAuthProvider := NewGuestProvider(guestCallbackUrl, "guest")
 	goth.UseProviders(googleAuthProvider, guestAuthProvider)
@@ -404,7 +404,7 @@ func setupPics(ctxIn context.Context) context.Context {
 	if picsPath == "" {
 		panic("env var missing for PICS_PATH")
 	}
-	return pics.SetFilePath(ctxIn, picsPath)
+	return picsRfid.SetFilePath(ctxIn, picsPath)
 }
 func resolveOtherSecrets(ctx context.Context) (rfidRegistrySecret, googId, googSecret, webHostName string, apiPort int) {
 	var err error = nil
@@ -669,7 +669,7 @@ func setupMiddlewares(ctxIn context.Context, mgr *websocketSessions.SessionManag
 	if picsPath == "" {
 		panic("env var missing for PICS_PATH")
 	}
-	ctx = pics.SetFilePath(ctxIn, picsPath)
+	ctx = picsRfid.SetFilePath(ctxIn, picsPath)
 	wrapWriter = func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			wrappedWriter := &WriterWrapper{
@@ -1380,7 +1380,7 @@ func newPassthroughHandler(config passthroughHandlerConfig) http.HandlerFunc {
 //func setupFilePathMiddleware(filePath string) func(next http.Handler) http.Handler {
 //	return func(next http.Handler) http.Handler {
 //		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-//			next.ServeHTTP(w, r.WithContext(pics.SetFilePath(r.Context(), filePath)))
+//			next.ServeHTTP(w, r.WithContext(picsRfid.SetFilePath(r.Context(), filePath)))
 //		})
 //	}
 //}
@@ -1394,7 +1394,7 @@ var getImageHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "image name must not be blank", http.StatusBadRequest)
 		return
 	}
-	bytes, err := pics.GetFile(ctx, imgSubPath)
+	bytes, err := picsRfid.GetFile(ctx, imgSubPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			//println("file does not exist!") // TODO: fix
@@ -1902,10 +1902,10 @@ var rfidReadHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-type writeTagRequest struct {
-	Secret string
-	Data   []byte // TODO: make sure we're ok with this being []byte? In-transit should be base58, but immediately become base2 in memory?
-}
+//type writeTagRequest struct {
+//	Secret string
+//	Data   []byte // TODO: make sure we're ok with this being []byte? In-transit should be base58, but immediately become base2 in memory?
+//}
 
 // TODO: consider moving to reader/internal side?
 var rfidWriteHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
@@ -2014,46 +2014,46 @@ var clearRfidTagHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.R
 
 // TODO: everything below this is for guest sessions, consider moving to its own file!
 
-func authUrlFor(providerName string) string {
-	return fmt.Sprintf(`%s/auth/%s`, baseApiUrl, providerName)
-}
+//	func authUrlFor(providerName string) string {
+//		return fmt.Sprintf(`%s/auth/%s`, baseApiUrl, providerName)
+//	}
 func authCallbackUrlFor(providerName string) string {
 	return fmt.Sprintf(`%s/auth/%s/callback`, baseApiUrl, providerName) // TODO: add state to the auth callback url to ensure we have destination params?
 }
 
-var _ goth.Provider = &guestLoginProvider{}
+var _ goth.Provider = &GuestLoginProvider{}
 var _ goth.Session = &guestSession{}
 
-func NewGuestProvider(callbackUrl string, providerName ...string) *guestLoginProvider {
+func NewGuestProvider(callbackUrl string, providerName ...string) *GuestLoginProvider {
 	name := "guest"
 	if len(providerName) > 0 {
 		name = providerName[0]
 	}
-	return &guestLoginProvider{
+	return &GuestLoginProvider{
 		CallbackUrl:  callbackUrl,
 		providerName: &name,
 	}
 }
 
-type guestLoginProvider struct { // TODO: USE THIS?
+type GuestLoginProvider struct { // TODO: USE THIS?
 	CallbackUrl  string
 	providerName *string
 	Config       oauth2.Config
 }
 
-func (p *guestLoginProvider) Name() string {
+func (p *GuestLoginProvider) Name() string {
 	if p.providerName != nil {
 		return *p.providerName // TODO: ok?
 	}
 	return "guestProvider"
 }
 
-func (p *guestLoginProvider) SetName(name string) {
+func (p *GuestLoginProvider) SetName(name string) {
 	newName := name
 	p.providerName = &newName
 }
 
-func (p *guestLoginProvider) BeginAuth(state string) (goth.Session, error) {
+func (p *GuestLoginProvider) BeginAuth(state string) (goth.Session, error) {
 	return &guestSession{
 		AuthURL:      p.Config.AuthCodeURL(state), // TODO: fix the state
 		AccessToken:  "",                          // TODO: fixme!
@@ -2063,14 +2063,14 @@ func (p *guestLoginProvider) BeginAuth(state string) (goth.Session, error) {
 	}, nil
 }
 
-func (p *guestLoginProvider) UnmarshalSession(data string) (goth.Session, error) {
+func (p *GuestLoginProvider) UnmarshalSession(data string) (goth.Session, error) {
 	// UnmarshalSession will unmarshal a JSON string into a session.
 	sess := &guestSession{}
 	err := json.NewDecoder(strings.NewReader(data)).Decode(sess)
 	return sess, err
 }
 
-func (p *guestLoginProvider) FetchUser(session goth.Session) (goth.User, error) {
+func (p *GuestLoginProvider) FetchUser(session goth.Session) (goth.User, error) {
 	sess, ok := session.(*guestSession)
 	if !ok {
 		return goth.User{}, errors.New("was not guest session")
@@ -2094,11 +2094,11 @@ func (p *guestLoginProvider) FetchUser(session goth.Session) (goth.User, error) 
 	return user, nil
 }
 
-func (p *guestLoginProvider) Debug(b bool) {
+func (p *GuestLoginProvider) Debug(_ bool) {
 	// No-op
 }
 
-func (p *guestLoginProvider) RefreshToken(refreshToken string) (*oauth2.Token, error) {
+func (p *GuestLoginProvider) RefreshToken(refreshToken string) (*oauth2.Token, error) {
 	token := &oauth2.Token{RefreshToken: refreshToken}
 	//ts := p.config.TokenSource(goth.ContextForClient(http.DefaultClient), token)
 	//newToken, err := ts.Token()
@@ -2110,7 +2110,7 @@ func (p *guestLoginProvider) RefreshToken(refreshToken string) (*oauth2.Token, e
 	return newToken, err
 }
 
-func (p *guestLoginProvider) RefreshTokenAvailable() bool {
+func (p *GuestLoginProvider) RefreshTokenAvailable() bool {
 	return true
 }
 
@@ -2153,35 +2153,35 @@ func (s *guestSession) Authorize(provider goth.Provider, params goth.Params) (st
 	return accessToken, nil
 }
 
-var corsAllowedOrigins = []string{
-	"https://mush.appli.ng",
-	"http://web", // TODO: ok?
-	"http://api", // TODO: likely don't need
-}
+//var corsAllowedOrigins = []string{
+//	"https://mush.appli.ng",
+//	"http://web", // TODO: ok?
+//	"http://api", // TODO: likely don't need
+//}
 
 // TODO: USE THIS WHERE NEEDED
-func enableCors(w *http.ResponseWriter, r *http.Request) {
-	origin := r.Header.Get("Origin")
-	if origin == "*" {
-		// TODO: what here?
-	} else if slices.Contains(corsAllowedOrigins, origin) {
-		(*w).Header().Set("Access-Control-Allow-Origin", origin)
-	}
-
-	(*w).Header().Set("Access-Control-Allow-Credentials", "true")
-	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS") // TODO: which
-	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Authorization")    // TODO: ok? probably need more
-	(*w).Header().Set("Access-Control-Max-Age", "Content-Type, Authorization")                  // Specifies how long preflight results can be cached            // TODO: ok? probably need more
-	(*w).Header().Set("Access-Control-Expose-Headers", "Accept, Content-Type, Authorization")   // Lists headers accessible to JavaScript            // TODO: fix
-	/*
-		Access-Control-Allow-Origin: Specifies allowed origins or *.
-		Access-Control-Allow-Methods: Lists allowed HTTP methods.
-		Access-Control-Allow-Headers: Lists allowed HTTP headers.
-		Access-Control-Allow-Credentials: Indicates if credentials are permitted.
-		Access-Control-Expose-Headers: Lists headers accessible to JavaScript.
-		Access-Control-Max-Age: Defines the preflight cache duration.
-	*/
-}
+//func enableCors(w *http.ResponseWriter, r *http.Request) {
+//	origin := r.Header.Get("Origin")
+//	if origin == "*" {
+//		// TODO: what here?
+//	} else if slices.Contains(corsAllowedOrigins, origin) {
+//		(*w).Header().Set("Access-Control-Allow-Origin", origin)
+//	}
+//
+//	(*w).Header().Set("Access-Control-Allow-Credentials", "true")
+//	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS") // TODO: which
+//	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Authorization")    // TODO: ok? probably need more
+//	(*w).Header().Set("Access-Control-Max-Age", "Content-Type, Authorization")                  // Specifies how long preflight results can be cached            // TODO: ok? probably need more
+//	(*w).Header().Set("Access-Control-Expose-Headers", "Accept, Content-Type, Authorization")   // Lists headers accessible to JavaScript            // TODO: fix
+//	/*
+//		Access-Control-Allow-Origin: Specifies allowed origins or *.
+//		Access-Control-Allow-Methods: Lists allowed HTTP methods.
+//		Access-Control-Allow-Headers: Lists allowed HTTP headers.
+//		Access-Control-Allow-Credentials: Indicates if credentials are permitted.
+//		Access-Control-Expose-Headers: Lists headers accessible to JavaScript.
+//		Access-Control-Max-Age: Defines the preflight cache duration.
+//	*/
+//}
 
 //var (
 //	webAuthn *webauthn.WebAuthn

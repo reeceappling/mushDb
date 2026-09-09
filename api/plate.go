@@ -1,7 +1,5 @@
 package api
 
-//go:generate goGenerator/buildAndGenerate.sh
-
 // TODO: newFromAgarBatch (post-PC) typical
 
 import (

@@ -1,16 +1,15 @@
 package api
 
-//go:generate goGenerator/buildAndGenerate.sh
+//REMOVE THISgo:generate goGenerator/buildAndGenerate.sh
 
 import (
-	""
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/disintegration/imageorient"
-	"github.com/gen2brain/webp"
+	//"github.com/gen2brain/webp"
 	"github.com/reeceappling/goUtils/v2/utils"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request/unix"
@@ -695,19 +694,19 @@ func multipartToImageBytes(p *multipart.Part, w http.ResponseWriter) ([]byte, er
 	//}
 	buf := new(bytes.Buffer)
 	println("re-encoding as webp") // TODO: if this does not work, then make sure to revert it to just jpeg
-	opts := webp.Options{
-		Quality:  100.0,
-		Lossless: true,
-		Method:   6, // TODO: unsure... Default is 4, and 6 is the slowest but best
-		//Exact:      false, // TODO: unsure...
-		//AutoRotate: false, // TODO: unsure...
-	}
-	err = webp.Encode(buf, img, opts)
-	if err != nil {
-		println(fmt.Sprintf("Trying jpeg instead, failed to encode WebP: %v", err))
-		buf.Reset()                      // TODO: ensure ok
-		err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG?????? maybe webp????? See "github.com/gen2brain/webp"
-	}
+	//opts := webp.Options{ // TODO: reenable
+	//	Quality:  100.0,
+	//	Lossless: true,
+	//	Method:   6, // TODO: unsure... Default is 4, and 6 is the slowest but best
+	//	//Exact:      false, // TODO: unsure...
+	//	//AutoRotate: false, // TODO: unsure...
+	//}
+	//err = webp.Encode(buf, img, opts)
+	//if err != nil {
+	//	println(fmt.Sprintf("Trying jpeg instead, failed to encode WebP: %v", err))
+	//	buf.Reset()                      // TODO: ensure ok
+	err = jpeg.Encode(buf, img, nil) // TODO: JPEG OR PNG?????? maybe webp????? See "github.com/gen2brain/webp"
+	//}
 	if err != nil {
 		http.Error(w, "failed to encode image to save! "+err.Error(), http.StatusInternalServerError)
 		return nil, err

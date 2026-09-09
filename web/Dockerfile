@@ -5,7 +5,6 @@ WORKDIR /app
 
 # Private Base API URL should use http and not https. Internal services in the cluster typically communicate over http, and the api service will handle TLS termination if needed. If we set this to https, the Next.js server will try to connect to the api service using https, which will fail since the api service is not configured for https.
 # Must be available at runtime, which is why it is built into all images during this build process.
-# TODO: consider moving to only the last one...
 ENV NEXT_PRIVATE_BASE_API_URL="http://api:8080"
 
 # Rebuild the source code only when needed
@@ -79,6 +78,5 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Uncomment the following line to disable telemetry at run time # TODO: this?
 # ENV NEXT_TELEMETRY_DISABLED 1
 
-# TODO: where does server.js come from? can we rename it?
 # TODO: port dynamic? -H=web dynamic?
 CMD ["node", "server.js", "-p", "3000", "-H", "web"]
