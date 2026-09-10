@@ -306,7 +306,6 @@ func (srv *AuthService) clearOldSessions() {
 }
 
 func (srv *AuthService) GetSession(id SessionId, refreshTTL bool) utils.Result[genericsessions.Session[ResolvedUserPerms]] {
-
 	srv.RLock()
 	sess, err := srv.store.GetSessionMap(id)
 	srv.RUnlock()

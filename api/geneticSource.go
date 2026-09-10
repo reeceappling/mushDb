@@ -58,7 +58,7 @@ type geneticSource interface {
 func setTransferParent[T MainCollectionItem](ctx mongo.SessionContext, parent T, xfer Transfer, dispose bool) error {
 	coll := mongo.SessionFromContext(ctx).Client().Database(dbName).Collection(parent.CollectionName())
 	ctx, now := request.UnixTimeInTxn(ctx)
-	var temp any = parent // TODO: will this actually work with geneticSource rather than MainCollectionItem?
+	var temp any = parent
 	mods := &Mods{}
 	if xfer.FromImage != nil {
 		if parentWithPics, ok := temp.(HasPicsField); ok {

@@ -20,9 +20,9 @@ import (
 type GrainBatch struct {
 	AlternateCollectionIdField `bson:"inline"`
 	// TODO: what of different grains that have different timings? think over this.
-	SoakTimeHours          *int            `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
-	BoilTimeMins           *int            `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
-	DryTimeHours           *int            `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
+	SoakTimeHours          *int `bson:"soakTimeHrs,omitempty" json:"soakTimeHrs,omitempty"`
+	BoilTimeMins           *int `bson:"boilTimeMins,omitempty" json:"boilTimeMins,omitempty"`
+	DryTimeHours           *int `bson:"dryTimeHours,omitempty" json:"dryTimeHours,omitempty"`
 	CreationDateField      `bson:"inline"` // Date of first hydration. also exists in the id
 	JarRecipeRequiredField `bson:"inline"`
 	NotesField             `bson:"inline"`
@@ -181,6 +181,11 @@ func updateGrainBatchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
+}
+
+type createGrainWaterJarRequest struct {
+	GrainBatchField
+	NotesField
 }
 
 //func deleteGrainBatchHandler(w http.ResponseWriter, r *http.Request) {

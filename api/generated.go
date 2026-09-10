@@ -44,6 +44,7 @@ const (
 	AgarBatchCollectionName        = "agarBatches"
 	AgarRecipesCollectionName      = "agarRecipes"
 	GrainBatchCollectionName       = "grainBatches"
+	GrainWaterJarCollectionName    = "gwJars"
 	LcRecipesCollectionName        = "lcRecipes"
 	PcRunCollectionName            = "pcRuns"
 	ProjectsCollectionName         = "Projects"
@@ -119,6 +120,7 @@ func initializeDb(ctx context.Context) error {
 		AgarBatchCollectionName,
 		AgarRecipesCollectionName,
 		GrainBatchCollectionName,
+		GrainWaterJarCollectionName,
 		LcRecipesCollectionName,
 		PcRunCollectionName,
 		ProjectsCollectionName,
@@ -498,6 +500,19 @@ func (batch GrainBatch) Decode(encoded *mongo.SingleResult) (CollectionItem, err
 
 func (batch *GrainBatch) SetPerms(field AclField) {
 	batch.AclField = field
+}
+
+func (wj GrainWaterJar) CollectionName() string {
+	return GrainWaterJarCollectionName
+}
+func (wj GrainWaterJar) Decode(encoded *mongo.SingleResult) (CollectionItem, error) {
+	out := &GrainWaterJar{}
+	err := decodeItem(out, encoded)
+	return out, err
+}
+
+func (wj *GrainWaterJar) SetPerms(field AclField) {
+
 }
 
 func (recipe LcRecipe) CollectionName() string {

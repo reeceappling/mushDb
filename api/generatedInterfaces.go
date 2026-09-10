@@ -35,6 +35,7 @@ var (
 	_ AltCollectionItem[AlternateCollectionId] = &AgarBatch{}
 	_ AltCollectionItem[AlternateCollectionId] = &AgarRecipe{}
 	_ AltCollectionItem[AlternateCollectionId] = &GrainBatch{}
+	_ AltCollectionItem[AlternateCollectionId] = &GrainWaterJar{}
 	_ AltCollectionItem[AlternateCollectionId] = &LcRecipe{}
 	_ AltCollectionItem[AlternateCollectionId] = &PCRun{}
 	_ AltCollectionItem[string]                = &Project{}

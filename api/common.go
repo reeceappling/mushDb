@@ -1,6 +1,6 @@
 package api
 
-//REMOVE THISgo:generate goGenerator/buildAndGenerate.sh
+//go:generate goGenerator/buildAndGenerate.sh
 
 import (
 	"bytes"
