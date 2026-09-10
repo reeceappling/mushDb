@@ -237,7 +237,7 @@ var (
 func (srv *AuthService) LogoutSession(sessId SessionId) error {
 	//srv.Lock()// TODO: fix
 	//defer srv.Unlock()// TODO: fix
-	res := srv.GetSession(sessId, false) // TODO: misuses lock!
+	res := srv.GetSession(sessId, false)
 	if res.Err != nil {
 		return res.Err
 	}

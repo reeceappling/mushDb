@@ -48,7 +48,6 @@ func listEntriesHandlerInternal[T CollectionItem, U any](ctx context.Context, up
 		bs, err = json.Marshal(latestEntries)
 	} else {
 		outObj := map[string][]T{"recent": latestEntries}
-		// TODO: do we want to also display repeats on standard entries? NO?
 		outObj["standard"], err = getStandardEntries(ctx, temp)
 		if err != nil {
 			if !errors.Is(err, mongo.ErrNoDocuments) {
@@ -361,10 +360,10 @@ var ListEntriesHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Re
 			return // already wrote
 		}
 		bs, err = listEntriesHandlerInternal[*User, string](r.Context(), true, maxResults, doStandardToo, &User{}, disposedFilter, startAfterEmail)
-	case "nonguest", "nonguests": // TODO: do we even want this?
-		// TODO: start after handler?
-		bs, err = ListUsersHandler(r.Context(), true) // TODO: validate working!
-		//bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
+	//case "nonguest", "nonguests": // TODO: do we even want this?
+	//	// TODO: start after handler?
+	//	bs, err = ListUsersHandler(r.Context(), true) // TODO: validate working!
+	//	//bs, err = listEntriesHandlerInternal[*User](r.Context(), true, maxResults, doStandardToo, &User{})
 	case "waterjar", "waterjars", "water jar", "water jars", "sterilizedwater", "sterilizedwaterjar", "sterilewater", "sterilewaterjar":
 		mcid, err := getMainCollId(startAfterParam, w)
 		if err != nil {

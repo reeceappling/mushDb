@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -18,8 +19,8 @@ type AgarRecipe struct {
 	AlternateCollectionIdField `bson:"inline"` // CreationDate is embedded?
 	NameField                  `bson:"inline"`
 	LiquidsField               `bson:"inline"`
-	Agar                       int             `bson:"agar" json:"agar"` // agar grams per 1L
-	StandardField              `bson:"inline"` // If this is a standard recipe
+	Agar                       int `bson:"agar" json:"agar"` // agar grams per 1L
+	StandardField              `bson:"inline"`               // If this is a standard recipe
 	NutrientsField             `bson:"inline"`
 	SugarsField                `bson:"inline"`
 	AdditivesField             `bson:"inline"`
@@ -276,7 +277,7 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err = errors.Join(
 		req.LiquidsField.Validate(),
-		// TODO: validate agar?
+		validateAgarRecipeCreationAgar(req.Agar),
 		req.NutrientsField.Validate(),
 		req.SugarsField.Validate(),
 		req.AdditivesField.Validate(),
@@ -301,6 +302,15 @@ func createAgarRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
+}
+func validateAgarRecipeCreationAgar(agar int) error { // TODO: ensure ok
+	if agar < 10 {
+		return fmt.Errorf("agar must be between 10 and 30")
+	}
+	if agar > 30 {
+		return fmt.Errorf("agar must be between 10 and 30")
+	}
+	return nil
 }
 
 //// TODO: USE! ALSO ONE FOR ALIAS????

@@ -141,7 +141,7 @@ func createSubstrateRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, db := Db(r)
 	coll := db.Collection(SubstrateRecipesCollectionName)
-	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil { // TODO: validate working!
+	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil {
 		http.Error(w, "aliases or name already in use: "+err.Error(), http.StatusBadRequest)
 		return
 	}

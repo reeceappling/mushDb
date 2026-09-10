@@ -337,7 +337,7 @@ export function NewSporeSwabForm(
 
     return <NewEntryFormWrapper entryType={"sporeSwab"} isTopLevel={false}>
         <ErrorDisplay err={err}/>
-        {(printIn || fruitIn) && <IdInput/>}
+        {(printIn || fruitIn) && <IdInput/>/* TODO: allow adding parent? Also account for other parent in? setParent?*/}
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>
         <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>

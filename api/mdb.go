@@ -562,7 +562,7 @@ func getLastNEntries[T CollectionItem, U any](ctx context.Context, updated bool,
 	findBson := bson.D{}
 	// Create search filter
 	if filterOutStandard {
-		findBson = BsonFindFilter("standard", false)
+		findBson = bson.D{bson.E{Key: "standard", Value: false}}
 	}
 	if startAfterId != nil {
 		// TODO: bson.D vs bson.M?

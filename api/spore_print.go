@@ -694,43 +694,101 @@ func importSporePrintHandler(w http.ResponseWriter, r *http.Request) {
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
-func deleteSporePrintHandler(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "not implemented", http.StatusNotImplemented)
-	return
-	//idStr := r.PathValue("id")
-	//if idStr == "" {
-	//	http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-	//	return
-	//}
-	//id, err := Base58Str(idStr).ToMainCollectionId()
-	//if err != nil {
-	//	http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	//// Validate not used in other places...
-	//ctx := r.Context()
-	//// ensure item does not have any transfers in or out
-	//item, err := GetMainCollectionItemSpecific[*SporePrint](ctx, id, &SporePrint{})
-	//if err != nil {
-	//	if errors.Is(err, mongo.ErrNoDocuments) {
-	//		http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
-	//	} else {
-	//		http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
-	//	}
-	//	return
-	//}
-	//// TODO: ENSURE NOT USED ANYWHERE!
-	//if item.Parent != nil {
-	//	// TODO: what if we want to remove it from the parent as well?
-	//	http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
-	//	return
-	//}
-	//// TODO: transfers out???? Spore prints can go to swabs, or mss!
-	////if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-	////	http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
-	////	return
-	////}
-	//
-	//// Delete if not found elsewhere!
-	//DeleteCollectionItem(ctx, item.CollectionName(), id, w)
-}
+//func deleteSporePrintHandler(w http.ResponseWriter, r *http.Request) {
+//	//http.Error(w, "not implemented", http.StatusNotImplemented)
+//	//return
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).ToMainCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	// ensure item does not have any transfers in or out
+//	item, err := GetMainCollectionItemSpecific[*SporePrint](ctx, id, &SporePrint{})
+//	if err != nil {
+//		if errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+//		} else {
+//			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//	_, err = newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
+//		db := mongo.SessionFromContext(sessCtx).Client().Database(dbName)
+//		findParentFilter := bson.M{"parent": id}
+//		er := db.Collection(MssCollectionName).FindOne(sessCtx, findParentFilter).Decode(&MSS{})
+//		if er == nil {
+//			e := errors.New("found child mss. Cannot delete items with children")
+//			http.Error(w, e.Error(), http.StatusInternalServerError)
+//			return nil, e
+//		}
+//		if !errors.Is(er, mongo.ErrNoDocuments) {
+//			e := errors.Join(errors.New("error finding mss, may still have children"), er)
+//			http.Error(w, e.Error(), http.StatusInternalServerError)
+//			return nil, e
+//		}
+//		// No child msses, continue
+//		er = db.Collection(SporeSwabCollectionName).FindOne(sessCtx, findParentFilter).Decode(&SporeSwab{})
+//		if er == nil {
+//			e := errors.New("found child swab. Cannot delete items with children")
+//			http.Error(w, e.Error(), http.StatusInternalServerError)
+//			return nil, e
+//		}
+//		if !errors.Is(er, mongo.ErrNoDocuments) {
+//			e := errors.Join(errors.New("error finding swab, may still have children"), er)
+//			http.Error(w, e.Error(), http.StatusInternalServerError)
+//			return nil, e
+//		}
+//		// TODO: ENSURE NOT USED ANYWHERE!
+//		if item.Parent != nil {
+//			// TODO: what if we want to remove it from the parent as well?
+//			parent, err := GetMainCollectionItemSpecific(ctx, *item.Parent, &Fruit{})
+//			if err != nil {
+//				e := errors.Join(errors.New("error finding parent"), er)
+//				http.Error(w, e.Error(), http.StatusInternalServerError)
+//				return nil, e
+//			}
+//			// TODO: check parent.TransfersOut!
+//			slices.FilterInPlace(parent.Prints, func(collectionId MainCollectionId) (keep bool) {
+//				return collectionId.AsBase58() != id.AsBase58()
+//			})
+//			upd, err := NewMods().Set("prints", parent.Prints).withLastUpdated(unix.Time(time.Now().UnixMilli())).Finalized()
+//			if err != nil {
+//				e := errors.Join(errors.New("error creating parent prints update"), er)
+//				http.Error(w, e.Error(), http.StatusInternalServerError)
+//				return nil, e
+//			}
+//			result, er := db.Collection(FruitsCollName).UpdateByID(sessCtx, parent.Id, upd)
+//			if er != nil {
+//				e := errors.Join(errors.New("failed to update parent"), er)
+//				http.Error(w, e.Error(), http.StatusInternalServerError)
+//				return nil, e
+//			}
+//			if result.ModifiedCount == 0 {
+//				e := errors.Join(errors.New("no parent modified"), er)
+//				http.Error(w, e.Error(), http.StatusInternalServerError)
+//				return nil, e
+//			}
+//			if result.ModifiedCount > 1 {
+//				e := errors.Join(errors.New("tried to modify too many parents"), er)
+//				http.Error(w, e.Error(), http.StatusInternalServerError)
+//				return nil, e
+//			}
+//		}
+//		// Delete if not found elsewhere!
+//		DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+//		return nil, nil
+//	})
+//	if err != nil {
+//		// Already wrote to output
+//		println("txn failure: " + err.Error())
+//		return
+//	}
+//
+//}

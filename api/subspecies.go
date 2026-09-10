@@ -305,7 +305,7 @@ func createSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate new aliases
 	ctx, db := Db(r)
 	coll := db.Collection(SubspeciesCollectionName)
-	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil { // TODO: validate working!
+	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil {
 		http.Error(w, "aliases or name already in use: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -379,7 +379,7 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	// TODO: ensure ok! updating perms to allow for creating user as well... UNSURE WHAT THE SECOND PART OF THIS IS REFERRING TO!
+	// TODO: ensure ok! updating perms to allow creating user to edit as well...
 	// User perms are checked against existing before writing later.
 	user, _ := GetAuthInfo(r.Context())
 	finalDefaultAcl, err := req.DefaultAcl.AclForUser(r.Context(), user)
@@ -409,47 +409,47 @@ func updateSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
 	finishStringIdAltCollItemUpdate(ctx, w, coll, req.modsFor, &existing, req.PermsOnRequest)
 }
 
-func deleteSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "subspecies deletion not implemented yet", http.StatusNotImplemented)
-	return
-	//// TODO: DELETE SUBSPECIES FROM SPECIES!!!!!
-	//sub := r.PathValue("id") // TODO: recipe by name?
-	//if idStr == "" {
-	//	http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-	//	return
-	//}
-	//id, err := Base58Str(idStr).toAltCollectionId()
-	//if err != nil {
-	//	http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	//// Validate not used in other places...
-	//ctx := r.Context()
-	//db := DbFrom(ctx)
-	//// ensure recipe not used by any batches first
-	//err = db.Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{"agarRecipe": id}).Err()
-	//if err != nil {
-	//	if !errors.Is(err, mongo.ErrNoDocuments) {
-	//		http.Error(w, "failed to check for agarRecipe usage in agarBatch collection. "+err.Error(), http.StatusInternalServerError)
-	//		return
-	//	}
-	//} else {
-	//	// At least one item exists, fail
-	//	http.Error(w, "at least one agarBatch utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
-	//	return
-	//}
-	//
-	//
-	//// Delete if not found elsewhere!
-	//deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
-	//if err != nil {
-	//	http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-	//if deleteResult.DeletedCount == 0 {
-	//	http.Error(w, "failed to delete id "+idStr+" from agar recipes. Id not found", http.StatusNotFound)
-	//	return
-	//}
-	//_, err = w.Write([]byte(idStr))
-	//handleWriteErr(err, w)
-}
+//func deleteSubspeciesHandler(w http.ResponseWriter, r *http.Request) {
+//	http.Error(w, "subspecies deletion not implemented yet", http.StatusNotImplemented)
+//	return
+//	//// TODO: DELETE SUBSPECIES FROM SPECIES!!!!!
+//	//sub := r.PathValue("id") // TODO: recipe by name?
+//	//if idStr == "" {
+//	//	http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//	//	return
+//	//}
+//	//id, err := Base58Str(idStr).toAltCollectionId()
+//	//if err != nil {
+//	//	http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//	//	return
+//	//}
+//	//// Validate not used in other places...
+//	//ctx := r.Context()
+//	//db := DbFrom(ctx)
+//	//// ensure recipe not used by any batches first
+//	//err = db.Collection(AgarBatchCollectionName).FindOne(ctx, bson.M{"agarRecipe": id}).Err()
+//	//if err != nil {
+//	//	if !errors.Is(err, mongo.ErrNoDocuments) {
+//	//		http.Error(w, "failed to check for agarRecipe usage in agarBatch collection. "+err.Error(), http.StatusInternalServerError)
+//	//		return
+//	//	}
+//	//} else {
+//	//	// At least one item exists, fail
+//	//	http.Error(w, "at least one agarBatch utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//	//	return
+//	//}
+//	//
+//	//
+//	//// Delete if not found elsewhere!
+//	//deleteResult, err := db.Collection(AgarRecipesCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
+//	//if err != nil {
+//	//	http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+//	//	return
+//	//}
+//	//if deleteResult.DeletedCount == 0 {
+//	//	http.Error(w, "failed to delete id "+idStr+" from agar recipes. Id not found", http.StatusNotFound)
+//	//	return
+//	//}
+//	//_, err = w.Write([]byte(idStr))
+//	//handleWriteErr(err, w)
+//}

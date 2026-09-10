@@ -15,8 +15,6 @@ import (
 	"slices"
 )
 
-// TODO: fromSporePrint,
-
 type SporeSwab struct {
 	MainCollectionIdField `bson:"inline"`
 	// Parent is always either sporePrint, fruit, or purchased
@@ -112,12 +110,9 @@ func initializeSporeSwabs(ctx context.Context) error {
 type createSporeSwabRequest struct {
 	MainCollectionParentField // required
 	// Parent type is retrieved
-	// TODO: HANDLE PICS, were pics added in ts?
 	NotesField
 	WriteTagToField
 }
-
-// TODO: multi-swab creation request?
 
 func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: TEST ALL BRANCHES!
 	data := createSporeSwabRequest{}
@@ -170,11 +165,11 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 			if e != nil {
 				return nil, e
 			}
-		case FruitSourceType:
+		case FruitSourceType: // Goes directly to swab
 			var ok bool
 			fr, ok = parentItem.(*Fruit)
 			if !ok {
-				return nil, errors.New("fruit is not a Fruit?")
+				return nil, errors.New("fruit is not a Fruit somehow")
 			}
 			swabOut, e = fr.createSporeSwabInTxn(sessCtx, data.NotesField, id)
 			if e != nil {
@@ -183,9 +178,15 @@ func createSporeSwabHandler(w http.ResponseWriter, r *http.Request) { // TODO: T
 		case SporePrintSourceType: // Goes directly to swab
 			parentPrint, ok := parentItem.(*SporePrint)
 			if !ok {
-				return nil, errors.New("print is not a print?")
+				return nil, errors.New("print is not a print somehow")
 			}
-			swabOut, e = parentPrint.createSporeSwabInTxn(sessCtx, data.NotesField, NotesField{}, id) // TODO: xferNotes
+			xferNotes := []Note{
+				//{
+				//	RequiredTimeField: RequiredTimeField{now},
+				//	Note:              "swabbed from print",
+				//},
+			}
+			swabOut, e = parentPrint.createSporeSwabInTxn(sessCtx, data.NotesField, NotesField{xferNotes}, id)
 			if e != nil {
 				return nil, e
 			}
@@ -313,22 +314,16 @@ type importSporeSwabRequest struct {
 	SpeciesField
 	SubspeciesOptionalField
 	NotesField
+	// Note: no pics
 	WriteTagToField
 }
 
-// TODO: consider adding pics to these imports!
 func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	data := importSporeSwabRequest{}
 	id := NextMainCollectionId()
 	if err := ReadSimpleStructuredBody(r, w, &data); err != nil {
 		return
 	}
-
-	// DECIDE: can anyone who is not a guest import? Guests are already denied
-	//if err = Data.Perms.ValidateUserCanWrite(r.Context()); err != nil {
-	//	http.Error(w, "email cannot write with these perms: "+err.Error(), http.StatusBadRequest)
-	//	return
-	//}
 
 	finalPerms, err := ImportFinalPerms(r.Context(), data.Species, data.Subspecies)
 	if err != nil {
@@ -354,42 +349,42 @@ func importSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
 	finishImportMainCollectionEntry(ctx, &toInsert, w)
 }
 
-func deleteSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
-		return
-	}
-	id, err := Base58Str(idStr).ToMainCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	// Validate not used in other places...
-	ctx := r.Context()
-	// ensure item does not have any transfers in or out
-	item, err := GetMainCollectionItemSpecific[*SporeSwab](ctx, id, &SporeSwab{})
-	if err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
-		} else {
-			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
-		}
-		return
-	}
-	if item.Parent != nil {
-		// TODO: what if we want to remove it from the parent as well?
-		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
-		return
-	}
-	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
-		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
-		return
-	}
-
-	// Delete if not found elsewhere!
-	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
-}
+//func deleteSporeSwabHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).ToMainCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	// ensure item does not have any transfers in or out
+//	item, err := GetMainCollectionItemSpecific[*SporeSwab](ctx, id, &SporeSwab{})
+//	if err != nil {
+//		if errors.Is(err, mongo.ErrNoDocuments) {
+//			http.Error(w, "Item to be deleted not found! Should never happen!: "+err.Error(), http.StatusNotFound)
+//		} else {
+//			http.Error(w, "Failed to retrieve item to be deleted: "+err.Error(), http.StatusInternalServerError)
+//		}
+//		return
+//	}
+//	if item.Parent != nil {
+//		// TODO: what if we want to remove it from the parent as well?
+//		http.Error(w, "Cannot delete innoculated items!", http.StatusExpectationFailed)
+//		return
+//	}
+//	if item.TransfersOut != nil && len(item.TransfersOut) > 0 {
+//		http.Error(w, "Cannot delete items with transfers out", http.StatusExpectationFailed)
+//		return
+//	}
+//
+//	// Delete if not found elsewhere!
+//	DeleteCollectionItem(ctx, item.CollectionName(), id, w)
+//}
 
 func DeleteCollectionItem[U CollectionId](ctx context.Context, collName string, id U, w http.ResponseWriter) {
 	idStr := string(id.AsBase58())

@@ -65,7 +65,7 @@ func initializeSpecies(ctx context.Context) error {
 	// Add test entry - Does not replace entries
 	return env.IfNotProd(ctx, func() error {
 		woodPelletsId := altCollIdForint(idWoodPellets)
-		defaultAcl := allCanWriteAcl().ACL // TODO: ensure correct...
+		defaultAcl := allCanWriteAcl().ACL
 		basicEntries := []*Species{
 			// King Oyster
 			{
@@ -117,7 +117,7 @@ func initializeSpecies(ctx context.Context) error {
 			{
 				NameIdField:       NameIdField{shiitakeName},
 				ScientificName:    shiitakeSciName,
-				AliasesField:      AliasesField{}, // TODO: FIX!
+				AliasesField:      AliasesField{},
 				StandardSubstrate: woodPelletsId,
 				Subspecies:        []string{},
 				NotesField:        shiitakeNotes,
@@ -220,7 +220,7 @@ func createSpeciesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Validate new aliases
 	ctx, db := Db(r)
-	coll := db.Collection(SpeciesCollectionName) // TODO: validate working!
+	coll := db.Collection(SpeciesCollectionName)
 	if err = validateAliasesNameUnused(ctx, coll, req.Name, req.Aliases); err != nil {
 		http.Error(w, "aliases or name already in use: "+err.Error(), http.StatusBadRequest)
 		return
