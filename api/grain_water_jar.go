@@ -19,6 +19,7 @@ type GrainWaterJar struct {
 	NotesField                 `bson:"inline"`
 	CreationDateField          `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
+	DisposedField              `bson:"inline"`
 	AclField                   `bson:"inline"`
 }
 
@@ -56,6 +57,7 @@ func initializeGrainWaterJars(ctx context.Context) error { // TODO: USE!
 	_, err := coll.Indexes().CreateMany(ctx, []mongo.IndexModel{
 		// Id index already exists
 		//Notes (no index unless tags)
+		// TODO: grain batch?
 		newSimpleIndex("creationDate", "creationDate", true, false, false),
 		lastUpdatedIndexModel,
 	})
@@ -80,12 +82,14 @@ func initializeGrainWaterJars(ctx context.Context) error { // TODO: USE!
 type updateGrainWaterJarRequest struct {
 	NotesUpdateField
 	PermsOnRequest `json:"acl"`
+	DisposedField
 }
 
 func (req updateGrainWaterJarRequest) modsFor(existing *GrainWaterJar, acl AclField) (bson.D, error) {
 	return NewMods().
 		updateNotesIfNeeded(req, existing).
 		updatePermsIfNeeded(acl.ACL, existing.ACL).
+		updateDisposedIfNeeded(req, existing).
 		updateLastUpdatedIfNeeded().
 		Finalized()
 }

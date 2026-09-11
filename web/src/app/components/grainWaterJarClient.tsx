@@ -24,7 +24,7 @@ import {
     OptionalArrayOfType,
     OptionalSimpleKey, RequiredKey
 } from "@/app/components/common";
-import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
+import {DisposedDisplay, ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 import {GrainBatchData} from "./grainBatchServer";
 import {JarRecipeArea, JarRecipeSelector} from "@/app/components/jarRecipeClient";
 import {NumericalArea} from "@/app/components/formSubcomponents/numericInput";
@@ -41,47 +41,37 @@ import {
 } from "@/app/components/accessControlClient";
 import { ACL } from "./accessControlServer";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {GrainWaterJarData} from "@/app/components/grainWaterJarServer";
+import {PcRunArea} from "@/app/components/pcRunClient";
+import {GrainBatchArea} from "@/app/components/grainBatchClient";
 
 // TODO: list users also not working (all of this as of 5/7/26)
 
-export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
+export function AssertGrainWaterJar(input: any): asserts input is GrainWaterJarData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
     const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
-        ['recipe', 'string'],
+        ['grainBatch', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
     for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
-            throw new Error('Grain Batch assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
+            throw new Error('Grain Water Jar assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
-
     // optional simple keys
     const optionalSimpleKeys = new Map<string, string>([
-        ['soakTimeHrs', 'number'],
-        ['boilTimeMins', 'number'],
-        ['dryTimeHours', 'number'],
+        ['disposed', 'number'],
     ])
     for (const [key, expType] of optionalSimpleKeys) {
-        if (!OptionalSimpleKey(key, input, expType)) {
-            throw new Error('Batch assertion failure: optional key ' + key + ' was not valid');
+        if ((key in input) && typeof input[key] !== expType) {
+            throw new Error('Grain Water Jar assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
-    // complex required keys
-    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        //['acl', IsValidAcl],
-    ])
-    for (const [key, validator] of complexRequiredKeys) {
-        if (!RequiredKey(key, input, validator)) {
-            throw new Error('GrainBatch assertion failure: required key ' + key + ' was not valid');
-        }
-    }
-
     // complex optional array keys
     const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
@@ -99,27 +89,23 @@ export function AssertGrainBatch(input: any): asserts input is GrainBatchData {
     return
 }
 
-export default function GrainBatchDisplay(
+export default function GrainWaterJarDisplay( // TODO; this whole thing!
     {
         readonly, data, headerLevel, isTopLevel
-    }: DisplayInput<GrainBatchData>) {
+    }: DisplayInput<GrainWaterJarData>) {
         const {dispatch} = useModalContext();
         const [initial, setInitial] = useState(data)
 
         const [err, setErr] = useState<string | undefined>()
 
-        // grain non-changeable (base grain)
-        // name non-changeable
-        const [soakTime, setSoakTime] = useState<number | undefined>(initial.soakTimeHrs)
-        const [boilTime, setBoilTime] = useState<number | undefined>(initial.boilTimeMins)
-        const [dryTime, setDryTime] = useState<number | undefined>(initial.dryTimeHours)
+        // grain batch non-changeable (base grain)
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+        const [disposed, setDisposed] = useState(initial.disposed)
         const [acl, setAcl] = useState<ACL>(initial.acl)
-        const updateInitial = (updated: GrainBatchData) => {
+        const updateInitial = (updated: GrainWaterJarData) => {
             setInitial(updated)
-            setSoakTime(updated.soakTimeHrs)
-            setBoilTime(updated.boilTimeMins)
-            setDryTime(updated.dryTimeHours)
+            // TODO: more here
+            setDisposed(updated.disposed)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
             setErr(undefined)
@@ -127,15 +113,13 @@ export default function GrainBatchDisplay(
         const cookies = useContext(CookiesContext)
         const submit = () => {
             const body: any = {
-                soakTimeHrs: soakTime,
-                boilTimeMins: boilTime,
-                dryTimeHrs: dryTime,
+                disposed: disposed,
                 notes: notes,
                 acl: MarshalAcl(acl),
             }
-            DoUpdateRequest("grainBatch", initial._id, body, AssertGrainBatch, allCookies(cookies))
+            DoUpdateRequest("grainWaterJar", initial._id, body, AssertGrainWaterJar, allCookies(cookies))
                 .then(v=>{
-                    updateInitial(new GrainBatchData(v))
+                    updateInitial(new GrainWaterJarData(v))
                     dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
                             header: "Update Success",
                             text: "entry updated successfully",
@@ -151,85 +135,36 @@ export default function GrainBatchDisplay(
                         }})
                 })
         }
-        const handleFormChangeBoil = (val?: string) => {
-            const n = Number(val)
-            if (Number.isNaN(n)) {
-                setErr("NaN input for boil time")
-            } else {
-                val && setBoilTime(n)
-                setErr(undefined)
-            }
-        }
-        const handleFormChangeDry = (val?: string) => {
-            const n = Number(val)
-            if (Number.isNaN(n)) {
-                setErr("NaN input for dry time")
-            } else {
-                val && setDryTime(n)
-                setErr(undefined)
-            }
-        }
-        const handleFormChangeSoak = (val?: string) => {
-            const n = Number(val)
-            if (Number.isNaN(n)) {
-                setErr("NaN input for soak time")
-            } else {
-                val && setSoakTime(n)
-                setErr(undefined)
-            }
-        }
         const ovcs: OnViewCreatorQuadCol[] = [
-            {
-                txt: "Create Jars From Batch",
-                // TODO: creates either PC-d or un-pc'd jars!
-                // TODO: does this creation need a pcRun??? Can we do it before the run?
-                // TODO: can items be added when creating a PC run?
-                newCreationArea: (onCreate: AddCreatedTriColFunction) => {
-                    return <NewJarForm grainBatchIn={initial} handlers={{
-                        onCreate: (newItem: JarData) => {
-                            return onCreate([{
-                                typeText: "Grain Jar",
-                                node: <CreatedLinkFor linkId={newItem._id} typ={"jar"}/>
-                            }], false)
-                        },
-                        isTopLevel: false,
-                    }}/>
-                },
-            }
+            // { // TODO: anything here?
+            //     txt: "Create Jars From Batch",
+            //     // TODO: creates either PC-d or un-pc'd jars!
+            //     // TODO: does this creation need a pcRun??? Can we do it before the run?
+            //     // TODO: can items be added when creating a PC run?
+            //     newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+            //         return <NewJarForm grainBatchIn={initial} handlers={{
+            //             onCreate: (newItem: JarData) => {
+            //                 return onCreate([{
+            //                     typeText: "Grain Jar",
+            //                     node: <CreatedLinkFor linkId={newItem._id} typ={"jar"}/>
+            //                 }], false)
+            //             },
+            //             isTopLevel: false,
+            //         }}/>
+            //     },
+            // }
         ]
-        return <DisplayFormWrapper entryType={"grainBatch"}>
+        return <DisplayFormWrapper entryType={"grainWaterJar"}>
             <ErrorDisplay err={err}/>
-            <ID props={{id:data._id, txt:"Grain Batch", entryType:"grainBatch", linkPage:false, allowOpenMainPage:false}}/>
+            <ID props={{id:data._id, txt:"Grain Water Jar", entryType:"grainWaterJar", linkPage:false, allowOpenMainPage:false}}/>
             <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
-                    <JarRecipeArea recipeId={data.recipe}/>
+                    <GrainBatchArea batchId={data.grainBatch}/>
                     <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <div>
-                        {"Soak time (hrs): "}{initial.soakTimeHrs ? <text>{initial.soakTimeHrs}</text> :
-                        <NumericalArea value={soakTime!==undefined ? soakTime.toString() : undefined}
-                                       onChange={handleFormChangeSoak} label="SoakTimeHrs" min={0} step={1}
-                                       errorMessage={'invalid amount'}
-                                       mode={"integer"} readonly={readonly}/>
-                        }
-
-                    </div>
-                    <div>
-                        {"Boil time (mins): "}{initial.boilTimeMins ? <text>{initial.boilTimeMins}</text> :
-                        <NumericalArea value={boilTime ? boilTime.toString() : undefined}
-                                       onChange={handleFormChangeBoil} label="BoilTimeMinutes" min={0} step={1}
-                                       errorMessage={'invalid amount'}
-                                       mode={"integer"} readonly={readonly}/>}
-                    </div>
-                    <div>
-                        {"Dry time (hrs): "}{initial.dryTimeHours ? <text>{initial.dryTimeHours}</text> :
-                        <NumericalArea value={dryTime ? dryTime.toString() : undefined}
-                                       onChange={handleFormChangeDry} label="DryTimeHours" min={0} step={1}
-                                       errorMessage={'invalid amount'}
-                                       mode={"integer"} readonly={readonly}/>}
-                    </div>
+                    <DisposedDisplay readonly={readonly} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
             </FlexedArea>
 
@@ -244,8 +179,8 @@ export default function GrainBatchDisplay(
         </DisplayFormWrapper>
 }
 
-export function NewGrainBatchForm({handlers, recipe}: {
-    handlers: NewEntryInput<GrainBatchData>,
+export function NewGrainWaterJarForm({handlers, recipe}: {
+    handlers: NewEntryInput<GrainWaterJarData>,
     recipe?: JarRecipeData
 }) {
     const {dispatch} = useModalContext();
@@ -267,9 +202,9 @@ export function NewGrainBatchForm({handlers, recipe}: {
             notes: notes,
             acl: MarshalAcl(acl),
         }
-        DoCreateRequest("grainBatch", body, AssertGrainBatch, allCookies(cookies))
+        DoCreateRequest("grainWaterJar", body, AssertGrainWaterJar, allCookies(cookies))
             .then(v=>{
-                handlers.onCreate ? handlers.onCreate(new GrainBatchData(v)) : console.log("no onCreate provided")
+                handlers.onCreate ? handlers.onCreate(new GrainWaterJarData(v)) : console.log("no onCreate provided")
                 dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
                         header: "Create Success",
                         text: "entry created successfully",
@@ -285,7 +220,7 @@ export function NewGrainBatchForm({handlers, recipe}: {
                     }})
             })
     }
-    return <NewEntryFormWrapper entryType={"grainBatch"} isTopLevel={handlers.isTopLevel}>
+    return <NewEntryFormWrapper entryType={"grainWaterJar"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
         {recipe === undefined &&
             <JarRecipeSelector doSelect={setJarRecipe} allowCreate={handlers.isTopLevel}
@@ -299,8 +234,8 @@ export function NewGrainBatchForm({handlers, recipe}: {
     </NewEntryFormWrapper>
 }
 
-export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems<GrainBatchData>) {
-    let cols: ListTableColumn<GrainBatchData>[] = [
+export function GrainWaterJarListPageTable({data, onClick, withLink}: ListPageItems<GrainWaterJarData>) {
+    let cols: ListTableColumn<GrainWaterJarData>[] = [
         NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
@@ -308,45 +243,37 @@ export function GrainBatchListPageTable({data, onClick, withLink}: ListPageItems
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
+        // TODO: add more! batch and stuff
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: GrainBatchData) => {
+        cols = [...cols, NewColumn("Link", (v: GrainWaterJarData) => {
             return <EntryLinkWrapper props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new GrainBatchData(v)}}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new GrainWaterJarData(v)}}/>
 }
 
-export function GrainBatchSelectorTable({data, onClick}: ListPageItems<GrainBatchData>) {
-    return <GrainBatchListPageTable data={data} onClick={onClick} withLink={true}/>
+export function GrainWaterJarSelectorTable({data, onClick}: ListPageItems<GrainWaterJarData>) {
+    return <GrainWaterJarListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
-export function GrainBatchSelector(
+export function GrainWaterJarSelector(
     {
         doSelect,
         allowCreate
     }: {
-        doSelect: (val: GrainBatchData | undefined) => void,
+        doSelect: (val: GrainWaterJarData | undefined) => void,
         allowCreate?: boolean,
     }) {
-    const table = (items: GrainBatchData[]): JSX.Element => {
-        return <GrainBatchSelectorTable data={items} onClick={doSelect}/>
+    const table = (items: GrainWaterJarData[]): JSX.Element => {
+        return <GrainWaterJarSelectorTable data={items} onClick={doSelect}/>
     }
 
-    return <ExistingRecentSelector entryType={"grainBatch"} entryTypes={"grainBatches"} doSelect={doSelect}
-                                   asserter={AssertGrainBatch}
+    return <ExistingRecentSelector entryType={"grainWaterJar"} entryTypes={"grainWaterJars"} doSelect={doSelect}
+                                   asserter={AssertGrainWaterJar}
                                    table={table}>
-        {allowCreate && <NewGrainBatchForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
+        {allowCreate && <NewGrainWaterJarForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
-}
-
-export function GrainBatchArea({batchId}: {
-    batchId: string,
-}) {
-    return <div className={"grainBatchArea"/* TODO: styling*/}>
-        <div>{"Grain Batch: "}</div>
-        <div><EntryLinkForId props={{linkId: batchId, entryType: "grainBatch", openInNewTab: false}}/></div>
-    </div>
 }
