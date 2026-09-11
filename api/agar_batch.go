@@ -26,11 +26,8 @@ type AgarBatch struct { // This is >=1 media bottles of the same recipe that wen
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
 	// TODO: also add list of grainwater jars used if any????
+	GrainWaterJarsField `bson:"inline"`
 }
-
-//func (ab AgarBatch) Blank() CollectionItem {
-//	return &AgarBatch{}
-//}
 
 type AgarBatchField struct {
 	AgarBatch *AlternateCollectionId `bson:"agarBatch,omitempty" json:"agarBatch,omitempty"`
@@ -126,6 +123,7 @@ type createAgarBatchRequest struct {
 	PcRunField
 	AgarRecipeField
 	NotesField
+	GrainWaterJarsField
 }
 
 func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
@@ -157,6 +155,18 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		dbErr(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	db := DbFrom(ctx)
+	if len(req.GrainWaterJars) > 0 {
+		for _, gwj := range req.GrainWaterJars {
+			err = db.Collection(GrainWaterJarCollectionName).FindOne(ctx, bson.M{
+				IDfld: gwj,
+			}).Err()
+			if err != nil {
+				dbErr(w, "Failed to get a grainwater jar: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+		}
+	}
 	ctx, now := request.UnixTime(ctx)
 	// create new batch
 	toInsert := &AgarBatch{
@@ -167,6 +177,7 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		NotesField:                 req.NotesField,
 		LastUpdatedField:           LastUpdatedField{now},
 		AclField:                   allCanWriteAcl(),
+		GrainWaterJarsField:        req.GrainWaterJarsField,
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }

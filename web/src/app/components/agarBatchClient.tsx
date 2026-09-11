@@ -16,7 +16,7 @@ import {
     DoCreateRequest,
     DoUpdateRequest,
     ExistingRecentSelector,
-    FlexedArea,
+    FlexedArea, FlexedSinglesGroup, IsString,
     ListPageItems,
     ListPageTable,
     ListTableColumn,
@@ -71,6 +71,17 @@ export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('agarBatch assertion failure: required key ' + key + ' was not valid');
+        }
+    }
+
+    // complex simple optional array keys
+    const simpleOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+        ['grainWaterJars', IsString],
+    ])
+    for (const [key, validator] of simpleOptionalArrayKeys) {
+        if (!OptionalArrayOfType(key, input, validator)) {
+            console.error('AgarRecipe assertion failure: optional array key ' + key + ' was not valid');
+            throw new Error('AgarRecipe assertion failure: optional array key ' + key + ' was not valid');
         }
     }
 
@@ -186,6 +197,13 @@ export default function AgarBatchDisplay(
                 <PcRunArea data-cy-id={"Run"} binaryId={data.pcRun}/>
                 <AgarRecipeArea data-cy-id={"Recipe"} agarRecipeBinId={initial.agarRecipe}/>
             </FlexedArea>
+            {/* TODO: grainWaterJars if present. Validate working properly*/(initial.grainWaterJars !==undefined && initial.grainWaterJars.length > 0) && <Subform>
+                {initial.grainWaterJars.map(gwj=>{
+                    return <div key={gwj}>
+                        <EntryLinkForId props={{entryType:"grainWaterJar",linkId:gwj,openInNewTab:false}}/>
+                    </div>
+                })}
+            </Subform>}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
@@ -208,6 +226,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     const {dispatch} = useModalContext();
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunInp)
     const [recipe, setRecipe] = useState<AgarRecipeData | undefined>(agarRecipeIn)
+    const [grainWaterJars, setGrainWaterJars] = useState<string[] | undefined>(undefined) // TODO: HANDLE THIS! Blacklist already-selected gwjs, but make a list!
     const [color, setColor] = useState<string>(defaultColor)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
@@ -227,6 +246,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             pcRun: pcRun._id,
             recipe: recipe._id,
             notes: notes,
+            grainWaterJars: grainWaterJars, // TODO: ensure undefined means left out
         }
         DoCreateRequest("agarBatch", body, AssertAgarBatch, allCookies(cookies))
             .then(v => {
@@ -264,6 +284,7 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
                     creatorInPage={false}/>
             </Subform>
         }
+        {/* TODO: area to add grainWaterJars if the recipe calls for grainWater*/}
         <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"bottomButton greenButton"} onClick={newAgarBatchSubmit}>{"Submit"}</button>

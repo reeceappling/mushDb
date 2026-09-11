@@ -163,3 +163,7 @@ func importGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TOD
 	}
 	finishCreateAlternateEntry(ctx, toInsert, w)
 }
+
+type GrainWaterJarsField struct {
+	GrainWaterJars []AlternateCollectionId `bson:"grainWaterJars,omitempty" json:"grainWaterJars,omitempty"`
+}
