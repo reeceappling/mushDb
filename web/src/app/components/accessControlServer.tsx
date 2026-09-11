@@ -3,3 +3,7 @@ export interface ACL {
     projects?: Map<string,boolean>
     blanketPerm?: boolean
 }
+
+export function TestAcl(){
+    return {blanketPerm: true}
+}

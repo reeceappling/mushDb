@@ -1,6 +1,9 @@
 package api
 
-import "time"
+import (
+	"github.com/reeceappling/mushDb/api/request/unix"
+	"time"
+)
 
 const ( // MainCollection test ints
 	idTestPlate = iota // Blanket write
@@ -16,8 +19,6 @@ const ( // MainCollection test ints
 	idTestSwab
 	idTestPlug
 	idTestPlateBlanketRead
-	idTestPlateUserWrite
-	idTestPlateUserRead
 	idTestPlateProjectWrite
 	idTestPlateProjectRead
 	idTestPlateUserWriteProjRead
@@ -26,7 +27,18 @@ const ( // MainCollection test ints
 	idTestWaterJar
 	idTestPlateEmpty
 	idTestLC2
+	idTestPlateBlanketWrite
+	idTestPlateAdminOnly // No blanket permission, no users, no projects
 )
+
+func init() { // TODO: remove this block!!!!!
+	if idTestPlateAdminOnly >= 255 {
+		panic("test values 1 go too high")
+	}
+	if idTestGrainBatch >= 255 {
+		panic("test values 2 go too high")
+	}
+}
 
 const (
 	idTestingOnly = iota
@@ -52,7 +64,7 @@ const (
 	idTestGrainBatch
 )
 
-var ogTime = unixTimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))
+var ogTime = unix.TimeFor(time.Date(2024, 12, 13, 20, 14, 0, 0, time.Local))
 
 func builtInNote(note string) Note {
 	return Note{
@@ -61,6 +73,16 @@ func builtInNote(note string) Note {
 	}
 }
 func altCollIdForint(i int) AlternateCollectionId { // TODO: FIX FOR uint8 overflow
+	//temp := i // TODO: switch and check if we start going above 255!
+	//out := [12]byte{0, 0, 0, 0, 0, 0, 0, 0}
+	//for j := 0; j<12; j++ {
+	//	out[12-j] = byte(temp % 8)
+	//	temp = temp/8
+	//	if temp == 0 {
+	//		return out
+	//	}
+	//}
+	//return out
 	return [12]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, uint8(i)}
 }
 
@@ -69,9 +91,15 @@ func altCollIdFieldForint(i int) AlternateCollectionIdField {
 }
 
 func mainCollIdForint(i int) MainCollectionId { // TODO: FIX FOR uint8 overflow
-	return [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)}
-}
-
-func mainCollIdFieldForint(i int) MainCollectionIdField {
-	return MainCollectionIdField{mainCollIdForint(i)}
+	//temp := i // TODO: switch and check if we start going above 255!
+	//out := [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, 0}
+	//for j := 0; j<RfidByteSize; j++ {
+	//	out[8-j] = byte(temp % 8)
+	//	temp = temp/8
+	//	if temp == 0 {
+	//		return out
+	//	}
+	//}
+	//return out
+	return [RfidByteSize]byte{0, 0, 0, 0, 0, 0, 0, uint8(i)} // TODO: reenable if the above does not work! TODO: ENSURE TO REENABLE IF NEEDED!
 }

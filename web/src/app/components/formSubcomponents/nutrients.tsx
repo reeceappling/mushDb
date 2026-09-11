@@ -9,21 +9,13 @@ import {getOptionsResponse} from "@/app/components/formSubcomponents/server";
 import TestAndValidate from "@/app/components/testing/untested";
 import {NutrientEntryForNew, RemoveButton} from "@/app/components/formSubcomponents/commonClient";
 import * as React from "react";
-
-interface NutrientsAreaProps {
-    readonly: boolean,
-    initialValues: NutrientData[],
-    updateParent: (entries: AllNutrients) => void,
-}
+import {useEffect, useState} from "react";
 
 export interface Nutrient {
     nutrient: string,
     amount: number,
     unit: string,
 }
-
-export const NutrientsList: string[] = ["PotatoFlakes", "LME", "other"]
-
 
 export function IsValidNutrient(input: any): boolean {
     return (
@@ -45,12 +37,12 @@ export type AllNutrients = {
 }
 
 
-export function NutrientTypeSelectorForNew( // TODO: USE THIS!!!!!
+export function NutrientTypeSelectorForNew(
     {current, onSelect, readonly, blacklist}:{
         readonly: boolean,
         current?: string,
         onSelect?: (ab?: string)=>void
-        blacklist?: string[], // TODO: use?
+        blacklist?: string[],
     }){
     if(readonly){
         return <div>{current || "FIXME"}</div> // TODO: div ok?
@@ -77,56 +69,96 @@ export function NutrientTypeSelectorForNew( // TODO: USE THIS!!!!!
 export default function NutrientsArea(props: AreaProps<Nutrient>){
     return FormListArea(NutrientEntriesGroup)(props)
 }
-
-export function NutrientsEntriesGroupForNew({currentEntries, updateParent}: {currentEntries: Nutrient[], updateParent: (l: Nutrient[])=>void}){
-    const handleSelectNutrient = (v: string) => {
-        let data = [...(currentEntries || []), {nutrient: v, amount: 0, unit: ""}];
-        updateParent(data)
+export function NutrientsAreaReadOnly({values}: {values?:Nutrient[]}) {
+    if (!values || values.length===0){
+        return null
     }
     return <div>
-        {currentEntries.length!==0 && <div className={"inputGrid inputGrid4 gap-8"}>
-        {currentEntries.map((n,i)=>{
-            return <div key={n.nutrient} className={"contentsOnly"}>
-                <NutrientEntryForNew currentValue={n} updateParent={(updated: Nutrient) => {
-                    updateParent([...(currentEntries || [])].map((existing) => {
-                        return existing.nutrient !== n.nutrient ? existing : updated
-                    }))
-                }}/>
-                <RemoveButton txt={"Remove"} click={()=>{
-                    updateParent([...(currentEntries || [])].filter((existing) => existing.nutrient !== n.nutrient))
-                }} />
-            </div>
+        {"Nutrients: "}
+        {values.map((v, i) => {
+            return <div key={v.nutrient}>{v.nutrient + " - " + v.amount + " " + v.unit}</div>
         })}
+    </div>
+}
+
+export function NutrientsEntriesGroupForNew({
+                                                initial,
+                                                updateParent,
+                                                // TODO: this! scaleFactor,
+                                            }: {
+    initial: Nutrient[],
+    updateParent: (l: Nutrient[]) => void,
+    // TODO: this! scaleFactor?: number,
+}) {
+    const [current, setCurrent] = useState<Nutrient[]>(initial)
+    // TODO: this! const [factor, setFactor] = useState(scaleFactor||1.0)
+
+    useEffect(() => {
+        setCurrent(initial)
+    }, [initial])
+
+    const doUpdate = (upd: Nutrient[]) => {
+        setCurrent(upd)
+        updateParent(upd)
+    }
+
+    const handleSelectNutrient = (v: string) => {
+        const data = [...current, { nutrient: v, amount: 1, unit: "g" }]
+        doUpdate(data)
+    }
+
+    return <div>
+        {current.length !== 0 && <div className={"inputGrid inputGrid4 gap-8"}>
+            {current.map((n, i) => {
+                return <div key={n.nutrient} className={"contentsOnly"}>
+                    <NutrientEntryForNew
+                        initial={n}
+                        updateParent={(updated: Nutrient) => {
+                            doUpdate(current.map((existing, idx) => idx === i ? updated : existing))
+                        }}
+                    />
+                    <RemoveButton
+                        txt={"Remove"}
+                        click={() => {
+                            doUpdate(current.filter((_, idx) => idx !== i))
+                        }}
+                    />
+                </div>
+            })}
         </div>}
-        <NutrientTypeSelectorForNew onSelect={(val)=>{val && handleSelectNutrient(val)}} blacklist={currentEntries.map((v)=>{return v.nutrient})} readonly={false} />
+        <NutrientTypeSelectorForNew
+            onSelect={(val) => { if (val) handleSelectNutrient(val) }}
+            blacklist={current.map((v) => v.nutrient)}
+            readonly={false}
+        />
     </div>
 }
 
 export function NutrientEntriesGroup({initialEntries, preexisting, readonly, updateParent}: GroupProps<Nutrient>){
     const handleFormChangeNutrient = (index: number, val: string) => {
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data[index].data.nutrient = val
         updateParent(data)
     }
     const handleFormChangeAmt = (index: number, val: number) => {
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data[index].data.amount = val
         updateParent(data)
     }
     const handleFormChangeUnit = (index: number, txt: string) => {
-        let data = [...(initialEntries || [])];
+        const data = [...(initialEntries || [])];
         data[index].data.unit = txt
         updateParent(data)
     }
     const addFields = (e: React.MouseEvent) => {
         e.preventDefault()
-        let data = [...(initialEntries || []), { data: {nutrient: "UNDEFINED", amount: 0.0, unit: 'UNDEFINED'}, disabled: false }] // TODO: FIX DEFAULT
+        const data = [...(initialEntries || []), { data: {nutrient: "UNDEFINED", amount: 0.0, unit: 'UNDEFINED'}, disabled: false }] // TODO: FIX DEFAULT
         updateParent(data)
     }
     const removeFields = (index: number) => {
         return (event: MouseEvent) => {
             event.preventDefault()
-            let data = [...(initialEntries || [])];
+            const data = [...(initialEntries || [])];
             data.splice(index, 1) // TODO: THIS WONT WORK PROPERLY WITH INDEX
             updateParent(data)
         }
@@ -134,7 +166,7 @@ export function NutrientEntriesGroup({initialEntries, preexisting, readonly, upd
     const disableField = (index: number) => {
         return (event: MouseEvent) => {
             event.preventDefault()
-            let data = [...(initialEntries || [])];
+            const data = [...(initialEntries || [])];
             data[index].disabled = !data[index].disabled
             updateParent(data)
         }

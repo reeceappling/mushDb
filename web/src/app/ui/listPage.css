@@ -1,19 +1,20 @@
 .listPageTable {
     width: 100%;
-    table-layout: fixed;
+    table-layout: auto;
     & > tr.listPageTableRow {
         width: 100%;
         &.nonHeaderRow {
             &:hover {
-                background-color: var(--clr-success-1); /* TODO: FIX!*/
+                background-color: var(--clr-success-1);
             }
         }
-        /*&.headerRow {*/
-        /*    float: left;*/
-        /*}*/
         & > td, & > th {
-            padding: 0.5rem;/* TODO: ensure ok!*/
-            width: min-content;/* TODO: ensure ok!*/
+            padding: 0.5rem;
+            width: min-content;
+            white-space: nowrap; /* Ensure text does not wrap */
+            &.fit {
+                width: max-content;
+            }
         }
     }
 }

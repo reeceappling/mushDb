@@ -6,21 +6,22 @@ import {Additive} from "@/app/components/formSubcomponents/additives";
 import CloseableSelector, {SelectorProps} from "@/app/components/selector";
 import {LcRecipeSelector, NewLcRecipeForm} from "@/app/components/lcRecipeClient";
 import {ACL} from "@/app/components/accessControlServer";
+import {CapitalizeFirstLetter} from "@/app/components/commonServer";
 
-export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
-    const a: LcRecipeData = {
-        _id: "(LC RECIPE ID HERE)",
-        name: "(LC RECIPE NAME HERE)",
-        liquids: [], //TODO: fixMe!
-        nutrients: [],  //TODO: fixMe!
-        standard: true,
-        sugars: [],  //TODO: fixMe!
-        additives: [], //TODO: fixMe!
-        notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-    }
-    return a
-}
+// export function TestLcRecipeOk() { // TODO: DELETEME // TODO: FIXME!
+//     return new LcRecipeData({
+//         _id: "(LC RECIPE ID HERE)",
+//         name: "(LC RECIPE NAME HERE)",
+//         liquids: [], //TODO: fixMe!
+//         nutrients: [],  //TODO: fixMe!
+//         standard: true,
+//         sugars: [],  //TODO: fixMe!
+//         additives: [], //TODO: fixMe!
+//         notes: [{time: Date.now(), note: "(TEST NOTE 1)"}, {time: Date.now() + 2000, note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(), // TODO: do we want?
+//     })
+// }
 
 export interface LcRecipeData {
     _id: string
@@ -32,10 +33,37 @@ export interface LcRecipeData {
     additives?: Additive[]
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
+}
+export class LcRecipeData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<LcRecipeData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
+    }
+
+    public getId(): string {
+        return this._id
+    }
+    public getIdUrlEncoded(): string {
+        return encodeURI(this.getId())
+    }
+    public entryType(): string {
+        return "lcRecipe"
+    }
+    public description(): string {
+        const standardPart = this.standard?`standard `:''
+        const firstSentence = CapitalizeFirstLetter(`${standardPart}LC recipe ${this.name}`)
+        const nuteSent = `${(this.nutrients===undefined||this.nutrients.length==0)?`no`:this.nutrients.length} nutrients`
+        const liqSent = (this.liquids.length==1)?`${this.liquids[0].name} based`:`${this.liquids.length} liquids`
+        const sugSent = `${(this.sugars===undefined||this.sugars.length==0)?`no`:this.sugars.length} sugars`
+        const addSent = `${(this.additives===undefined||this.additives.length==0)?`no`:this.additives.length} additives`
+        const lastSent = `Last updated on ${new Date(this.lastUpdated).toISOString()}`
+        return `${firstSentence}. ${nuteSent}. ${liqSent}. ${sugSent}. ${addSent}. ${lastSent}`
+    }
 }
 
-export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) { // TODO: use
+export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) {
     const doSel = (val?: LcRecipeData):void=>{
         if (!val){
             return
@@ -45,13 +73,11 @@ export function LcRecipeSelectorCloseable(sp: SelectorProps<LcRecipeData>) { // 
     return <CloseableSelector<LcRecipeData> props={{
         allowCreation: sp.allowCreation,
         doSelect: doSel, // For selecting normally
-        msgTxt: "", // TODO: ???
         closeTxt: "Close LC Recipe List",
         createTxt: "Create LC Recipe",
         lowercase: "lc recipe",
         creatorInPage: sp.creatorInPage,
         createEndpt: "lcRecipe",
-        getId: (v: LcRecipeData) => v._id,
         createSelector:(selHdl: (onSelect: LcRecipeData) => void)=>{
             return <LcRecipeSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
                 v && selHdl(v)

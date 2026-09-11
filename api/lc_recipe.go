@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
 	"net/http"
 )
 
-// TODO: needed for lc, lcSyringe
+// needed for lc, lcSyringe
 
 type LcRecipe struct {
 	AlternateCollectionIdField `bson:"inline"`
@@ -25,22 +27,26 @@ type LcRecipe struct {
 	AclField                   `bson:"inline"`
 }
 
+//func (l LcRecipe) Blank() CollectionItem {
+//	return &LcRecipe{}
+//}
+
 type LcRecipeField struct {
 	Recipe AlternateCollectionId `bson:"recipe" json:"recipe"`
 }
 
 func (field LcRecipeField) Get(ctx context.Context) (out LcRecipe, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcRecipesCollectionName).FindOne(ctx, bson.M{
-		"_id": field.Recipe,
+	err = DbFrom(ctx).Collection(LcRecipesCollectionName).FindOne(ctx, bson.M{
+		IDfld: field.Recipe,
 	}).Decode(&out)
 	return out, err
 }
 
 func initializeLcRecipes(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(LcRecipesCollectionName)
+	coll := DbFrom(ctx).Collection(LcRecipesCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
-		newSimpleIndex("name", "name", false, false, false),
+		newSimpleIndex("name", "name", false, false, false), // TODO: ok that these are not unique? multiple users may have the same names for their own recipes
 		//newSimpleIndex("liquids", "liquids.name", false, false, false),
 		//newSimpleIndex("nutrients", "nutrients.nutrient", false, false, false),
 		standardIndexModel,
@@ -72,7 +78,7 @@ func initializeLcRecipes(ctx context.Context) error {
 			NotesField: NotesField{[]Note{
 				builtInNote("0.667g nutes per pint jar"),
 			}},
-			AclField: allCanReadAcl(),
+			AclField: allCanReadAcl(nil),
 		},
 		{
 			AlternateCollectionIdField: AlternateCollectionIdField{altCollIdForint(idMeaSugLC)},
@@ -87,43 +93,45 @@ func initializeLcRecipes(ctx context.Context) error {
 			AdditivesField: AdditivesField{},
 			StandardField:  StandardField{true},
 			NotesField:     NotesField{[]Note{}},
-			AclField:       allCanReadAcl(),
+			AclField:       allCanReadAcl(nil),
 		},
 	}
 	err = addBasicAltEntries(ctx, basicEntries...)
 	if err != nil {
 		return err
 	}
-	// Add test entries
-	testItem := &LcRecipe{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
-		NameField:                  NameField{"testLcRecipeName"},
-		StandardField:              StandardField{false},
-		LiquidsField:               allWater,
-		NutrientsField: NutrientsField{[]NutrientMeasurement{
-			{
-				Nutrient: LME,
-				Amount:   1,
-				Unit:     "kg",
-			},
-			{
-				Nutrient: Potato,
-				Amount:   8,
-				Unit:     "ug",
-			},
-		}},
-		SugarsField: SugarsField{[]SugarMeasurement{
-			newSugarMeasurement(Honey, 1, "large drop per quart jar"),
-		}},
-		AdditivesField: AdditivesField{[]AdditiveMeasurement{
-			newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
-			newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
-		}},
-		NotesField:       NotesField{exampleNotes()},
-		LastUpdatedField: LastUpdatedField{exampleTime},
-		AclField:         allCanWriteAcl(),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error {
+		// Add test entries
+		testItem := &LcRecipe{
+			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+			NameField:                  NameField{"testLcRecipeName"},
+			StandardField:              StandardField{false},
+			LiquidsField:               allWater,
+			NutrientsField: NutrientsField{[]NutrientMeasurement{
+				{
+					Nutrient: LME,
+					Amount:   1,
+					Unit:     "kg",
+				},
+				{
+					Nutrient: Potato,
+					Amount:   8,
+					Unit:     "ug",
+				},
+			}},
+			SugarsField: SugarsField{[]SugarMeasurement{
+				newSugarMeasurement(Honey, 1, "large drop per quart jar"),
+			}},
+			AdditivesField: AdditivesField{[]AdditiveMeasurement{
+				newAdditiveMeasurement(Vermiculite, 0.25, "tsp"),
+				newAdditiveMeasurement(Gypsum, 0.7, "coverage of jar bottom"),
+			}},
+			NotesField:       NotesField{exampleNotes()},
+			LastUpdatedField: LastUpdatedField{exampleTime},
+			AclField:         allCanWriteAcl(),
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createLcRecipeRequest struct {
@@ -138,6 +146,7 @@ type createLcRecipeRequest struct {
 
 func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	ctx, now := request.UnixTime(r.Context())
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -156,8 +165,6 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	); err != nil {
 		http.Error(w, "invalid request: "+err.Error(), http.StatusBadRequest)
 	}
-	ctx, db := Db(r)
-	coll := db.Collection(LcRecipesCollectionName)
 	toInsert := LcRecipe{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
 		NameField:                  req.NameField,
@@ -167,17 +174,17 @@ func createLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 		SugarsField:                req.SugarsField,
 		AdditivesField:             req.AdditivesField,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanWriteAcl(),
+		LastUpdatedField:           LastUpdatedField{now},
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateLcRecipeRequest struct {
 	NameField
 	StandardField
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateLcRecipeRequest) modsFor(existing *LcRecipe, aclField AclField) (bson.D, error) {
@@ -192,11 +199,11 @@ func (req updateLcRecipeRequest) modsFor(existing *LcRecipe, aclField AclField) 
 
 func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	req := updateLcRecipeRequest{}
-	_, id, err := altCollIdFromRequest(r, w) // TODO: use this everywhere
+	_, id, err := altCollIdFromRequest(r, w)
 	if err != nil {
 		return
 	}
-	if err = ReadSimpleStructuredBody(r, w, &req); err != nil { // TODO: use this everywhere
+	if err = ReadSimpleStructuredBody(r, w, &req); err != nil {
 		return // Writes already if err
 	}
 
@@ -213,3 +220,35 @@ func updateLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
+
+//func deleteLcRecipeHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id") // recipe by name?
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	// ensure batch not used by any jars first
+//	for _, collName := range []string{LCCollectionName} {
+//		err = db.Collection(collName).FindOne(ctx, bson.M{"recipe": id}).Err()
+//		if err != nil {
+//			if !errors.Is(err, mongo.ErrNoDocuments) {
+//				http.Error(w, "failed to check for lc recipe usage in "+collName+" collection. "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//		} else {
+//			// At least one item exists, fail
+//			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//			return
+//		}
+//	}
+//
+//	DeleteCollectionItem(ctx, LcRecipesCollectionName, id, w)
+//}

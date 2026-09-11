@@ -1,10 +1,10 @@
 package api
 
-// TODO: needed directly for:
-// TODO: AgarBatch, Bag, Jar, LC, Plugs, Slant, StasisTube, WaterJar
+// needed directly for:
+// AgarBatch, Bag, Jar, LC, Plugs, Slant, StasisTube, WaterJar
 
-// TODO: needed for but provided from another:
-// TODO:  Plate, MSS,
+// needed for but provided from another:
+// Plate, MSS,
 
 // TODO: ? includeStasisTubes, includeAgarBatches, includePlugsJar
 // TODO: newAgarBatch (on agar batch page)
@@ -14,6 +14,8 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -22,20 +24,25 @@ import (
 
 type PCRun struct {
 	AlternateCollectionIdField `bson:"inline"`
-	CreationDateField          `bson:"inline"` //TODO: USED TO BE date, is now CreationDate
-	RunTimeMinutes             int             `bson:"runtimeMinutes" json:"runtimeMinutes"` // todo; used to just be runtime, also used to be string
+	CreationDateField          `bson:"inline"`
+	RunTimeMinutes             int `bson:"runtimeMinutes" json:"runtimeMinutes"`
 	NotesField                 `bson:"inline"`
 	LastUpdatedField           `bson:"inline"`
 	AclField                   `bson:"inline"`
 }
 
-func initializePCRun(ctx context.Context) error {
+//func (p PCRun) Blank() CollectionItem {
+//	return &PCRun{}
+//}
+
+var impPcRun = exAltId
+
+func initializePCRuns(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PcRunCollectionName)
+	coll := DbFrom(ctx).Collection(PcRunCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
-		// TODO: newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
-		//RunTime (likely no index)    string                `bson:"runtime" json:"runtime"`
+		// newSimpleIndex("runtimeMinutes","runtimeMinutes", true, false, false),
 		//Notes (no index unless tags)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
@@ -45,18 +52,20 @@ func initializePCRun(ctx context.Context) error {
 	}
 	// If test run does not exist, then create it
 	testItem := &PCRun{
-		AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
+		AlternateCollectionIdField: impPcRun.asIdField(),
 		CreationDateField:          CreationDateField{exampleTime},
-		RunTimeMinutes:             60,
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanReadAcl(),
+		RunTimeMinutes:             180,
+		NotesField: NotesField{[]Note{{
+			RequiredTimeField: RequiredTimeField{exampleTime},
+			Note:              "PC Run specified for Imports, also utilized for testing and development",
+		}}},
+		LastUpdatedField: LastUpdatedField{exampleTime},
+		AclField:         allCanReadAcl(nil),
 	}
 	return addTestAltEntries(ctx, testItem)
 }
 
 type createPcRunRequest struct {
-	CreationDateField
 	RunTimeMinutes int
 	NotesField
 }
@@ -78,22 +87,22 @@ func createPcRunHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "runtime must be greater than 10 minutes", http.StatusBadRequest)
 	}
 	id := newAlternateCollectionId()
-	ctx, db := Db(r)
-	coll := db.Collection(PcRunCollectionName)
+	ctx := r.Context()
+	ctx, now := request.UnixTime(r.Context())
 	toInsert := PCRun{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		CreationDateField:          req.CreationDateField,
+		CreationDateField:          CreationDateField{now},
 		RunTimeMinutes:             req.RunTimeMinutes,
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedField{unixTimeForNow()},
-		AclField:                   allCanWriteAcl(), // TODO: ? acl, err := newAlwaysReadableAcl(ctx, resolvedUserPerms, nil, nil)
+		LastUpdatedField:           LastUpdatedField{now},
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, coll, toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updatePcRunRequest struct {
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updatePcRunRequest) modsFor(existing *PCRun, aclField AclField) (bson.D, error) {
@@ -105,7 +114,10 @@ func (req updatePcRunRequest) modsFor(existing *PCRun, aclField AclField) (bson.
 }
 
 func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -116,11 +128,6 @@ func updatePcRunHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)
@@ -142,8 +149,8 @@ type PcRunField struct {
 }
 
 func (field PcRunField) Get(ctx context.Context) (out PCRun, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(PcRunCollectionName).FindOne(ctx, bson.M{
-		"_id": field.PcRun,
+	err = DbFrom(ctx).Collection(PcRunCollectionName).FindOne(ctx, bson.M{
+		IDfld: field.PcRun,
 	}).Decode(&out)
 	return out, err
 }
@@ -157,10 +164,17 @@ type PcRunOptionalField struct {
 }
 type pcRunOptional interface {
 	pcRunId() *AlternateCollectionId
+	HasPcRun() error
 }
 
 func (field PcRunOptionalField) pcRunId() *AlternateCollectionId {
 	return field.PcRun
+}
+func (field PcRunOptionalField) HasPcRun() error {
+	if field.PcRun == nil {
+		return errors.New("must have pc run")
+	}
+	return nil
 }
 
 func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) {
@@ -170,3 +184,35 @@ func (field PcRunOptionalField) Get(ctx context.Context) (out PCRun, err error) 
 	}
 	return PcRunField{*field.PcRun}.Get(ctx)
 }
+
+//func deletePcRunHandler(w http.ResponseWriter, r *http.Request) {
+//	idStr := r.PathValue("id")
+//	if idStr == "" {
+//		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+//		return
+//	}
+//	id, err := Base58Str(idStr).toAltCollectionId()
+//	if err != nil {
+//		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+//		return
+//	}
+//	// Validate not used in other places...
+//	ctx := r.Context()
+//	db := DbFrom(ctx)
+//	// ensure batch not used by any jars first
+//	for _, collName := range []string{AgarBatchCollectionName, BagsCollectionName, GrainJarCollectionName, LCCollectionName, PlugsCollectionName, StasisTubeCollectionName, WaterJarsCollectionName} {
+//		err = db.Collection(collName).FindOne(ctx, bson.M{"pcRun": id}).Err()
+//		if err != nil {
+//			if !errors.Is(err, mongo.ErrNoDocuments) {
+//				http.Error(w, "failed to check for pc run usage in "+collName+". "+err.Error(), http.StatusInternalServerError)
+//				return
+//			}
+//		} else {
+//			// At least one item exists, fail
+//			http.Error(w, "at least one "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+//			return
+//		}
+//	}
+//
+//	DeleteCollectionItem(ctx, PcRunCollectionName, id, w)
+//}

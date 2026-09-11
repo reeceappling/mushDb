@@ -1,8 +1,9 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
+    AddCreatedTriColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
     SplitAllEntries
@@ -19,21 +20,30 @@ import {
 import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient";
 import {
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateMultipartRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    DoMultipartImportRequest,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
     RequiredKey,
     resolveContamsFormData,
-    resolvePicsFormData, SelectorWrapper,
-    SendMultipartRequest,
-    setFormData,
-    setFormImages
+    resolvePicsFormData,
+    SelectorWrapper,
+    setFormFull,
 } from "@/app/components/common";
 import {
     DisposedDisplay,
@@ -49,7 +59,6 @@ import {
     ContaminationForm,
     ContamsDisplay,
     InitialContamState,
-    InitialNotesState,
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
@@ -58,44 +67,50 @@ import {TopLevelImageSelector} from "@/app/components/formSubcomponents/imageSel
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {SubstrateRecipeData} from "@/app/components/substrateRecipeServer";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
 import {PcRunData, PcRunSelectorCloseable} from "@/app/components/pcRunServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
+import {
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
 import {SubstrateBatchArea} from "@/app/components/substrateBatchClient";
-import WetnessSlider from "@/app/components/formSubcomponents/utils/slider";
+import WetnessSlider, {SliderOnlyIfUndefinedWithOpenButton} from "@/app/components/formSubcomponents/utils/slider";
 import {SubstrateBatchData, SubstrateBatchSelectorCloseable} from "@/app/components/substrateBatchServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea, OvcForNewFruit} from "@/app/components/formSubcomponents/ovc";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {useQuery} from "@tanstack/react-query";
+import {GetFilterSizes} from "@/app/components/formSubcomponents/server";
+import {SelectorFor} from "@/app/components/selector";
+import {PcRunArea} from "@/app/components/pcRunClient";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertBag(input: any): asserts input is BagData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['recipe', 'string'],
         ['filterSize', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Bag assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['pcRun', 'string'],
         ['genSpore', 'number'],
         ['genFruitOrSpore', 'number'],
@@ -111,34 +126,31 @@ export function AssertBag(input: any): asserts input is BagData {
         ['disposed', 'number'],
         ['wetness', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Bag assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex required keys
-    let complexRequiredKeys = new Map<string, (v: any) => boolean>([
-        // ['entryType', (inp: any) => {
-        //     return (typeof inp === 'string' && inp === "bag")
-        // }],
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        //['acl', IsValidAcl],
     ])
-    for (let [key, validator] of complexRequiredKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
         if (!RequiredKey(key, input, validator)) {
             throw new Error('Bag assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
         ['mostRecentImage', IsValidPicWithNotesIncoming],
-        ['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Bag assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -147,204 +159,222 @@ export function AssertBag(input: any): asserts input is BagData {
         ['flushes', IsValidPicWithNotesIncoming],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Bag assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
 export default function BagDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
-    }: DisplayInput) {
-    try {
-        AssertBag(data)
-        const [initial, setInitial] = useState(data)
+        readonly, data, headerLevel, isTopLevel
+    }: DisplayInput<BagData>) {
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
-        const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
-        const [sale, setSale] = useState(initial.sale)
-        const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
-        const [disposed, setDisposed] = useState(initial.disposed)
-        const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
-        const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
-        // ItemsWithPics
-        const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
-        const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
-        const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
-        const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
-        //const [newFruits, setNewFruits] = useState<FruitData[]>([]) // TODO: get rid of???
-        const filterSizeArea = (filterSize: string, headerLevel?: number) => {
-            return <div>
-                <div>{"Filter Size: " + filterSize}</div>
-            </div>
-        }
-        const updateInitial = (updated: BagData) => {
-            setInitial(updated)
-            setKnownFruitable(updated.knownFruitable)
-            setSale(updated.sale)
-            setTransfersOut(updated.transfersOut || [])
-            setDisposed(updated.disposed)
-            setNotes(InitialNotesState(updated.notes))
-            setPics(InitialPicsEntries(updated.pics))
-            setContams(InitialContamState(updated.contamination))
-            setFlushes(InitialPicsEntries(updated.flushes))
-            setAcl(updated.acl)
-        }
-        const bagSubmit = () => {
-            let body = new FormData()
-            let dataObj: any = {
-                knownFruitable: knownFruitable,
-                sale: sale, // TODO: how/when should sales be made?
-                notes: notes,
-                disposed: disposed,
-                writeTagTo: writeTagTo,
-                acl: MarshalAcl(acl),
-            }
-            try {
-                // Pics
-                let picsInfo = resolvePicsFormData(pics)
-                let newImages = picsInfo.images
-                dataObj.images = picsInfo.obj
-                // Contams
-                let contamsInfo = resolveContamsFormData(contams)
-                let newContams = contamsInfo.images
-                dataObj.contams = contamsInfo.obj
-                // Flushes
-                let flushesInfo = resolvePicsFormData(flushes)
-                let newFlushes = flushesInfo.images
-                dataObj.flushes = flushesInfo.obj
-                // Set data on form
-                setFormData(body, dataObj)
-                //body.set("data", JSON.stringify(dataObj))
-                setFormImages(body, "newPic", newImages)
-                setFormImages(body, "newContam", newContams)
-                setFormImages(body, "newFlush", newFlushes)
-            } catch (caught: any) {
-                setErr(JSON.stringify(caught))
-                return
-            }
-
-            SendMultipartRequest(BaseExternalUrl + "/db/update/bag/" + initial._id, cookies, body)
-                .then(HandleJsonResponse)
-                .then((newEntry) => {
-                    AssertBag(newEntry)
-                    updateInitial(newEntry)
-                })
-                .catch((er) => {
-                    setErr(JSON.stringify(er))
-                });
-        }
-        const ovcs: OnViewCreatorQuadCol[] = [
-            OvcForNewFruit(initial._id, "bag", cookies), // TODO: test heavily
-            WriteRfidOvcArea(initial._id),
-        ]
-        return (
-            <DisplayFormWrapper entryType={"bag"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"Bag"} entryType={"bag"}/>
-                <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>{/* TODO: where to put?*/}
-                <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel}/>
-                <FlexedArea>
-                    <FlexedSinglesGroup>
-                        <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Substrate recipe: "}/>
-                        <SubstrateBatchArea id={data.substrateBatch} txt={"Substrate batch: "} readonly={true}/>
-                        <SubstrateRecipeArea id={initial.recipe} headerLevel={headerLevel} readonly={true}/>
-                        {filterSizeArea(initial.filterSize)}
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <DateArea pre={"PC Date: "} readonly={true} when={initial.creationDate}/>
-                        <DateArea pre={"Seal Date: "} readonly={true} when={initial.sealDate}/>
-                        <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                        <DisposedDisplay disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <KnownFruitableArea initial={initial.knownFruitable} doSelect={setKnownFruitable}
-                                            readonly={readonly}
-                                            headerLevel={headerLevel}/>
-                        <SaleArea sale={initial.sale} setSale={setSale} readonly={readonly}
-                                  headerLevel={headerLevel} canCreateSale={true}/>
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <GensFormDisplay gensSinceSpore={initial.genSpore}
-                                         gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
-                        <WetnessDisplay value={initial.wetness}/>{/* TODO: FIX */}
-                    </FlexedSinglesGroup>
-                    <FlexedSinglesGroup>
-                        <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                        {/*<SpeciesSubspeciesFormArea species={initial.species} subspecies={initial.subspecies}/>*/}
-                        <ParentDisplay parent={initial.parent} parentType={initial.parentType}
-                                       headerLevel={headerLevel}/>
-                        <InnocDisplay innoc={initial.innoc}/>
-                    </FlexedSinglesGroup>
-                </FlexedArea>
-
-                <TransfersOutDisplay validTypesTo={["plate"]} thisId={initial._id} thisEntryType={"bag"}
-                                     transfersOut={initial.transfersOut}
-                                     allowNewTransferCreation={true}
-                                     cookies={cookies}/>
-                <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
-                {/* Flushes */}
-                <PicsDisplay pix={initial.flushes || []} readonly={readonly}
-                             updateParent={setFlushes} addButtonText={"Create New Flush"}
-                             sectionHeader={"Flushes: "}/>
-
-                <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
-                                readonly={readonly} headerLevel={headerLevel}/>
-                <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
-                </TogglableAreaWithDepth>
-                {/* Write tag area */}
-                {readonly ? null : <ReaderWriterSelector txt={"Writer to write to: "} onSelect={setWriteTagTo}
-                                                         headerLevel={headerLevel}/>}
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
-                    e.stopPropagation();
-                    bagSubmit()
-                }}>{"Update"}</button>}
-            </DisplayFormWrapper>
-        )
-    } catch (err) {
-        return <div>{"ERROR: Bag data format incorrect: " + err}</div>
+    const [knownFruitable, setKnownFruitable] = useState(initial.knownFruitable)
+    const [sale, setSale] = useState(initial.sale)
+    const [transfersOut, setTransfersOut] = useState(initial.transfersOut || [])
+    const [disposed, setDisposed] = useState(initial.disposed)
+    const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
+    const [wetness, setWetness] = useState(initial.wetness)
+    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
+    // ItemsWithPics
+    const [pics, setPics] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.pics))
+    const [contams, setContams] = useState<SplitAllEntries<ContaminationForm, NewContaminationForm>>(InitialContamState(initial.contamination))
+    const [flushes, setFlushes] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(initial.flushes))
+    const [err, setErr] = useState<string | undefined>()
+    const [acl, setAcl] = useState<ACL>(initial.acl)
+    const filterSizeArea = (filterSize: string, headerLevel?: number) => {
+        return <div>
+            <div>{"Filter Size: " + filterSize}</div>
+        </div>
     }
-}
-
-export function WetnessDisplay({value}: { value?: number }) {
-    return <TestAndValidate todos={["fix"]}>
-        <div>{"Wetness: " + (value ? value + "/10" : "unknown")}</div>
-    </TestAndValidate>
-}
-
-const filterSizeSelector = (setFilterSize: (f?: string) => void, filterSize?: string) => {
-    const possibleFilterSizes = ["5nm", "8nm", "unknown"]
-    return <div className={"centerH medGapTop"}>
-        {"Filter size: "}<select className={"tailwindSelector"} value={filterSize || ""} onChange={
-        (evt) => {
-            setFilterSize(evt.currentTarget.value === "" ? undefined : evt.currentTarget.value)
+    const updateInitial = (updated: BagData) => {
+        setInitial(updated)
+        setWetness(updated.wetness)
+        setKnownFruitable(updated.knownFruitable)
+        setSale(updated.sale)
+        setTransfersOut(updated.transfersOut || [])
+        setDisposed(updated.disposed)
+        setNotes(InitialNotesState(updated.notes))
+        setPics(InitialPicsEntries(updated.pics))
+        setContams(InitialContamState(updated.contamination))
+        setFlushes(InitialPicsEntries(updated.flushes))
+        setAcl(updated.acl)
+        setErr(undefined)
+    }
+    const cookies = useContext(CookiesContext)
+    const bagSubmit = () => {
+        const formData = new FormData()
+        const dataObj: any = {
+            wetness: wetness,
+            knownFruitable: knownFruitable,
+            disposed: disposed,
+            notes: notes,
+            writeTagTo: writeTagTo,
+            acl: MarshalAcl(acl),
         }
-    }>
-        {possibleFilterSizes.map(function (size, i) {
-            return <option value={size} key={i}>{size}</option>
-        })}
-    </select></div>
+        try {
+            // Pics
+            const picsInfo = resolvePicsFormData(pics)
+            const newImages = picsInfo.images
+            dataObj.images = picsInfo.obj
+            // Contams
+            const contamsInfo = resolveContamsFormData(contams)
+            const newContams = contamsInfo.images
+            dataObj.contams = contamsInfo.obj
+            // Flushes
+            const flushesInfo = resolvePicsFormData(flushes)
+            const newFlushes = flushesInfo.images
+            dataObj.flushes = flushesInfo.obj
+            // Set data on form
+            setFormFull(formData, dataObj, newImages, newContams, newFlushes)
+        } catch (caught: any) {
+            setErr(JSON.stringify(caught))
+            return
+        }
+        DoUpdateMultipartRequest("bag", initial._id, formData, AssertBag, allCookies(cookies))
+            .then(v => {
+                updateInitial(new BagData(v))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
+            })
+            .catch(e => {
+                setErr("failed to update initial: " + JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
+    }
+    const isInnoculated = ()=>{
+        return initial.species !== undefined
+    }
+    const ovcs:()=>OnViewCreatorQuadCol[] = ()=>{
+        const innoculated = isInnoculated()
+        const disp = initial.disposed !== undefined
+        return (!disp)?[
+            ...((innoculated)?[OvcForNewFruit(initial._id, "bag", allCookies(cookies))]:[]),
+            WriteRfidOvcArea(initial._id),
+            ...((innoculated)?[
+                {
+                    txt: "Create Spore Print (+fruit)",
+                    newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                        return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
+                            <div>{"Not yet implemented!"}</div>
+                        </TestAndValidate>
+                    },
+                    needsTesting: true,
+                },
+                {
+                    txt: "Create Spore Swab (+fruit)",
+                    newCreationArea: (onCreate: AddCreatedTriColFunction) => {
+                        return <TestAndValidate todos={["not implemented yet, should also create fruit!", "Do MUCH later. Shortcut"]}>
+                            <div>{"Not yet implemented!"}</div>
+                        </TestAndValidate>
+                    },
+                    needsTesting: true,
+                }
+            ]:[])
+        ]:[]
+    }
+    return (
+        <DisplayFormWrapper entryType={"bag"}>
+            <ErrorDisplay err={err}/>
+            <ID props={{id:data._id, txt:"Bag", entryType:"bag"}}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage}/>
+            <FlexedArea>
+                <FlexedSinglesGroup>
+                    <PcRunArea binaryId={initial.pcRun}/>
+                    <SubstrateRecipeArea id={data.recipe} readonly={true} txt={"Substrate recipe: "}/>{/* TODO: hover styling?*/}
+                    <SubstrateBatchArea id={data.substrateBatch} txt={"Substrate batch: "}/>{/* TODO: hover styling?*/}
+                    {filterSizeArea(initial.filterSize)}
+                </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <DateArea pre={"PC Date: "} readonly={true} when={initial.creationDate}/>
+                    <DateArea pre={"Seal Date: "} readonly={true} when={initial.sealDate}/>
+                    <DateArea pre={"Last Updated: "} readonly={true} when={initial.lastUpdated}/>
+                    <DisposedDisplay initial={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
+                </FlexedSinglesGroup>
+                {isInnoculated()&&<FlexedSinglesGroup>
+                    <KnownFruitableArea initial={initial.knownFruitable} doSelect={setKnownFruitable}
+                                        readonly={readonly}
+                                        headerLevel={headerLevel}/>
+                    <SaleArea sale={initial.sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
+                </FlexedSinglesGroup>}
+                <FlexedSinglesGroup>
+                    {isInnoculated()&&<GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>}
+                    {(initial.wetness||readonly) ? <WetnessDisplay data-testid="wetness-display" value={initial.wetness}/> : <SliderOnlyIfUndefinedWithOpenButton data-testid="wetness-display" text={"Wetness"} defaultValue={5} onChange={setWetness}/>}
+                </FlexedSinglesGroup>
+                {isInnoculated()&&<FlexedSinglesGroup>
+                    <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
+                    <InnocDisplay innoc={initial.innoc}/>
+                </FlexedSinglesGroup>}
+            </FlexedArea>
+
+            {isInnoculated()&&<TransfersOutDisplay thisId={initial._id} thisEntryType={"bag"} /*validTypesTo={["plate"]} TODO: on go side*/
+                                 transfersOut={initial.transfersOut} requireConfirmation={true/* TODO: ok?*/}
+                                 allowNewTransferCreation={true}/>}
+            <PicsDisplay pix={initial.pics || []} readonly={readonly} updateParent={setPics}/>{/* Pics */}
+            {/* Flushes */}
+            {isInnoculated()&&<PicsDisplay pix={initial.flushes || []} readonly={readonly}
+                         updateParent={setFlushes} addButtonText={"Create New Flush"}
+                         sectionHeader={"Flushes: "}/>}
+
+            <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
+                            readonly={readonly} headerLevel={headerLevel}/>
+            <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
+            <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
+                <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
+            </TogglableAreaWithDepth>
+            {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
+                e.stopPropagation();
+                bagSubmit()
+            }}>{"Update"}</button>}
+        </DisplayFormWrapper>
+    )
 }
+
+export function WetnessDisplay({value,text}: { value?: number, text?: string}) {
+    return <div data-testid="wetness-display" role={"status"}>{(text||"Wetness")+": " + (value ? value + "/10" : "unknown")}</div>
+}
+
+// const filterSizeSelector = (setFilterSize: (f?: string) => void, filterSize?: string) => {
+//     return <div className={"centerH medGapTop"}>
+//         {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize} current={filterSize}/>{/* TODO: ensure working!*/}
+//     </div>
+// }
 
 export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
     handlers: NewEntryInput<BagData>,
     pcRunIn?: PcRunData,
     substrateBatchIn?: SubstrateBatchData,
 }) {
+    const {dispatch} = useModalContext();
     // Required defined
     const [substrateBatch, setSubstrateBatch] = useState(substrateBatchIn)
-    const [wetness, setWetness] = useState<number | undefined>(undefined)
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunIn)
     const [filterSize, setFilterSize] = useState<string | undefined>()
     // Optional
+    const [wetness, setWetness] = useState<number | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
+    const cookies = useContext(CookiesContext)
     const newBagSubmit = () => {
         if (pcRun === undefined) {
             setErr("PC Run cannot be undefined!");
@@ -358,139 +388,143 @@ export function NewBagForm({handlers, substrateBatchIn, pcRunIn}: {
             setErr("Substrate batch cannot be undefined!");
             return
         }
-        let body: any = {
+        const body: any = {
+            substrateBatch: substrateBatch._id,
+            wetness: wetness,
             pcRun: pcRun._id,
             filterSize: filterSize,
-            wetness: wetness,
-            substrateBatch: substrateBatch._id,
-            writeTagTo: writeTagTo,
             notes: notes,
+            writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl + "/db/create/bag", {
-            method: 'Post',
-            body: JSON.stringify(body),
-            headers: {
-                credentials: 'include',
-                //'Cookie': cookies,
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                try {
-                    AssertBag(newEntry)
-                    handlers.onCreate && handlers.onCreate(newEntry)
-                } catch (er) {
-                    setErr("failed to decode response:")
-                }
+        DoCreateRequest("bag", body, AssertBag, allCookies(cookies))
+            .then(v => {
+                handlers.onCreate ? handlers.onCreate(new BagData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
-            .catch((er) => {
-                setErr(JSON.stringify(er))
-            });
+            .catch(e => {
+                setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
     }
     return (
-        <NewEntryFormWrapper entryType={"bag"}>
+        <NewEntryFormWrapper entryType={"bag"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
             <div>{"Creating Bag: "}</div>
             {substrateBatchIn !== undefined &&
-                <SubstrateBatchSelectorCloseable txt={"Substrate Batch (FIXME)"} doSelect={setSubstrateBatch} allowCreation={handlers.isTopLevel} creatorInPage={false} />}
-                {/*<SubstrateBatchSelector doSelect={setSubstrateBatch} allowCreate={handlers.isTopLevel}
-                                         creatorInPage={false}/> TODO: Closeable?*/}
-            <WetnessSlider defaultValue={5} onChange={(event: Event, value: number, activeThumb: number) => {
-                setWetness(value)
-            }}/>
-            {pcRunIn === undefined ||
+                <SubstrateBatchSelectorCloseable txt={"Substrate Batch"} doSelect={setSubstrateBatch}
+                                                 allowCreation={handlers.isTopLevel} creatorInPage={false}/>}
+            <SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/>
+            {pcRunIn === undefined && // TODO: Show pc run if already exists?
                 <PcRunSelectorCloseable doSelect={setPcRun} creatorInPage={true} allowCreation={true}/>}
-            {filterSizeSelector(setFilterSize, filterSize)}
+            <div className={"centerH medGapTop"}>
+                {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize}
+                                                     current={filterSize}/>
+            </div>
             <NewEntryNotes setNotes={setNotes}/>
             {/* Write tag area */}
-            <ReaderWriterSelector txt={"Writer to write to: "} onSelect={setWriteTagTo}/>
+            <ReaderWriterSelector txt={"Write to: "} onSelect={setWriteTagTo}/>
             {/* SUBMIT AREA */}
-            <input type="submit" value="Submit" className={"bottomButton"} onClick={newBagSubmit} onSubmit={(e) => {
-                e.preventDefault();
-            }}/>
+            <button className={"greenButton buttonFullWidth"} onClick={e=>{
+                e.stopPropagation()
+                newBagSubmit()
+            }}>{"Create New Bag"}</button>
         </NewEntryFormWrapper>
     )
 }
 
-export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { // TODO: USE
+export function BagImportDisplay({headerLevel}: ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     // Required
-    const [sealDate, setSealDate] = useState(Date.now())
+    const [sealDate, setSealDate] = useState<number>(0)
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
     const [recipe, setRecipe] = useState<SubstrateRecipeData | undefined>(undefined)
     const [filterSize, setFilterSize] = useState<string | undefined>(undefined)
     // Optional
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
+    const [wetness, setWetness] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
+    useEffect(()=>{
+        // Set initial seal date on first load
+        setSealDate(Date.now())
+    },[])
     const submitImportBag = () => {
         const reqd = new Map<string, any>([
             ['recipe', recipe],
             ['filterSize', filterSize],
-            ['species', species]
         ])
-        for (let [key, val] of reqd) {
-            if (val === undefined) {
+        for (const [key, val] of reqd) {
+            if (!val) {
                 setErr(key + " must be defined!");
                 return
             }
         }
-        let formData = new FormData()
-        let dataObj: any = {
-            sealDate: sealDate,
-            recipe: recipe?._id, // MUST EXIST TODO: validate on insert
+        const formData = new FormData()
+        const dataObj: any = {
+            creationDate: sealDate,
+            recipe: recipe?._id, // MUST EXIST
             filterSize: filterSize,
-            species: species?._id, // MUST EXIST TODO: validate on insert
+            // optional
+            species: species?._id,
+            subspecies: subspecies,
+            generation: generation,
+            knownFruitable: knownFruitable,
+            wetness: wetness,
+            notes: notes,
+            writeTagTo: writeTagTo,
         }
-
-        if (subspecies !== undefined) {
-            dataObj.subspecies = subspecies?._id
-        }
-        if (generation !== undefined) {
-            dataObj.generation = generation
-        }
-        if (knownFruitable !== undefined) {
-            dataObj.knownFruitable = knownFruitable
-        }
-        if (writeTagTo !== undefined) {
-            dataObj.rfidWriter = writeTagTo
-        }
-        setFormData(formData, dataObj)
-        //formData.set("data", JSON.stringify(dataObj))
+        formData.set("data", JSON.stringify(dataObj))
         imageFile && formData.set("img", imageFile, "img")
-        fetch(BaseExternalUrl + "/db/import/bag", {
-            method: 'Post',
-            body: formData,
-            headers: {
-                credentials: 'include',
-                'Content-type': "multipart/form-data"
-            },
-        })
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then((newBagId) => {
-                redirect(BaseExternalUrl + "/view/bag/" + newBagId)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "bag", AssertBag, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"bag"}>
         {/* Required Fields */}
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
-        <DateArea pre={"Seal Date: "} when={Date.now()} updateParent={setSealDate}/>
+        <ErrorDisplay err={err}/>
+        <DateArea pre={"Seal Date: "} when={sealDate} updateParent={setSealDate} readonly={false}/>
         <SelectorWrapper current={recipe} title={"Recipe"} nameFunc={(v: SubstrateRecipeData) => v._id}>
             <SubstrateRecipeSelector doSelect={setRecipe} allowCreate={false} creatorInPage={false}/>
         </SelectorWrapper>
-        {filterSizeSelector(setFilterSize, filterSize)}
-        <ExistingSpeciesSelector doSelect={setSpecies}/>
-
-        {/* Optional fields*/}
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
-        <GenerationInput updateParent={setGeneration}/>
-        <KnownFruitableArea doSelect={setKnownFruitable}/>
+        <div className={"centerH medGapTop"}>
+            {"Filter size: "}<FilterSizeSelector onSelect={setFilterSize}
+                                                 current={filterSize}/>{/* TODO: ensure working!*/}
+        </div>
+        <SliderOnlyIfUndefinedWithOpenButton defaultValue={5} onChange={setWetness}/>
+        <NewEntryNotes setNotes={setNotes}/>
+        {/* Species required, subspecies optional*/}
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/* Other Optional fields*/}
+        {species && <><GenerationInput updateParent={setGeneration}/>
+            <TestAndValidate todos={["default to unknown?"]}>
+                <KnownFruitableArea doSelect={setKnownFruitable}/>
+            </TestAndValidate></>}
 
         <TopLevelImageSelector updateParent={setImageFile} buttonText={"Upload image"}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
@@ -500,45 +534,70 @@ export function BagImportDisplay({headerLevel, cookies}: ImportDisplayInput) { /
 
 export function BagListPageTable({data, onClick, withLink}: ListPageItems<BagData>) {
     let cols: ListTableColumn<BagData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
+        }, true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
-        }),
-        NewColumn("Species", (v) => v.species || ""),
+        }, true),
+        NewColumn("Species", (v) => v.species || "", true),
         NewColumn("Subspec.", (v) => v.subspecies || ""),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: BagData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "bag", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    // TODO: expansion for everything else????
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new BagData(v)
+    }}/>
 }
 
 export function BagSelectorTable({data, onClick}: ListPageItems<BagData>) {
     return <BagListPageTable data={data} onClick={onClick} withLink={true}/>
 }
 
-export function BagSelector( // TODO: USE ELSEWHERE
+export function BagSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: BagData | undefined) => void,
         allowCreate?: boolean
+        hideDisposed?:boolean
     }) {
     const table = (items: BagData[]): JSX.Element => {
         return <BagSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"bag"} entryTypes={"bags"} doSelect={doSelect} asserter={AssertBag}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewBagForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
+}
+
+export function FilterSizeSelector(
+    {current, onSelect}: {
+        current?: string,
+        onSelect?: (ab?: string) => void
+    }) {
+    const {isPending, error, data} = useQuery({
+        queryKey: ['filterSizes'],
+        queryFn: GetFilterSizes,
+    })
+    if (isPending || error !== null) {
+        return <div>{isPending ? "FILTER SIZE SELECTOR LOADING" : "FILTER SIZE SELECTOR ERROR: " + error.message}</div>
+    }
+    return <SelectorFor disabled={onSelect === undefined} options={["", ...data.keys()]} initial={current || ""}
+                        updateParent={(s) => {
+                            if (s === "") {
+                                onSelect && onSelect(undefined)
+                            }
+                            onSelect && onSelect(s as string)
+                        }
+                        }/>
 }

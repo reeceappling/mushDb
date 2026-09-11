@@ -1,38 +1,49 @@
 'use client'
 
-import React, {JSX, useEffect, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorTriCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {
-    SubstrateRecipeData,
-    SubstrateRecipeSelectorCloseable
-} from "@/app/components/substrateRecipeServer";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {SubstrateRecipeData, SubstrateRecipeSelectorCloseable} from "@/app/components/substrateRecipeServer";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {
     CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey
+    DisplayInput,
+    DoCreateRequest,
+    DoUpdateRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
+    OptionalArrayOfType, RequiredKey
 } from "@/app/components/common";
 import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SubstrateBatchData} from "@/app/components/substrateBatchServer";
 import {SubstrateRecipeArea} from "@/app/components/substrateRecipeClient";
 import {NewBagForm} from "@/app/components/bagClient";
 import {BagData} from "@/app/components/bagServer";
 import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
 import {NewFruitingChamberForm} from "@/app/components/fruitingChamberClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {
+    AclDisplay,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
 export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatchData {
     if (typeof input !== 'object') {
@@ -40,35 +51,40 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['recipe', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+    // complex required keys
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        //['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Jar assertion failure: optional key ' + key + ' was not valid');
+    for (const [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Substrate Batch assertion failure: required key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 
 
@@ -76,42 +92,45 @@ export function AssertSubstrateBatch(input: any): asserts input is SubstrateBatc
 
 export default function SubstrateBatchDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
-    }: DisplayInput) {
-    try {
-        AssertSubstrateBatch(data)
-        const [initial, setInitial] = useState(data)
+        readonly, data, headerLevel, isTopLevel
+    }: DisplayInput<SubstrateBatchData>) {
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
         const [err, setErr] = useState<string | undefined>()
         const updateInitial = (updated: SubstrateBatchData) => {
             setInitial(updated)
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
+            setErr(undefined)
         }
+        const cookies = useContext(CookiesContext)
         const substrateSubmit = () => {
-            fetch(BaseExternalUrl + "/db/update/substrateBatch/" + initial._id, {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    notes: notes,
-                    acl: MarshalAcl(acl),
+            const body: any = {
+                notes: notes,
+                acl: MarshalAcl(acl),
+            }
+            DoUpdateRequest("substrateBatch", initial._id, body, AssertSubstrateBatch, allCookies(cookies))
+                .then(v=>{
+                    updateInitial(new SubstrateBatchData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSubstrateBatch(entry)
-                    updateInitial(entry)
+                .catch(e=>{
+                    setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
         }
-        const onViewCreators: OnViewCreatorTriCol[] = [
+        const ovcs: OnViewCreatorTriCol[] = [
             {
                 txt: "Create Bag",
                 newCreationArea: (onCreate: AddCreatedTriColFunction) => {
@@ -141,9 +160,9 @@ export default function SubstrateBatchDisplay(
         ]
         return (
             <DisplayFormWrapper entryType={"substrateBatch"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <ID id={data._id} txt={"Substrate Batch"} entryType={"substrateBatch"}/>
-                <OnViewCreatorsTriColArea OnViewCreators={onViewCreators} readonly={readonly}/>
+                <ErrorDisplay err={err}/>
+                <ID props={{id:data._id, txt:"Substrate Batch", entryType:"substrateBatch"}}/>
+                <OnViewCreatorsTriColArea OnViewCreators={ovcs} readonly={readonly}/>
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <DateArea pre={"Creation Date: "} when={initial.creationDate} readonly={true}/>
@@ -156,17 +175,14 @@ export default function SubstrateBatchDisplay(
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
                 <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"}
                                         closeTxt={"minimize perms area"}>
-                    <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                    <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
                 </TogglableAreaWithDepth>
-                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
+                {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e) => {
                     e.stopPropagation();
                     substrateSubmit()
                 }}>{"Update"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Substrate Batch data format incorrect: " + err}</div>
-    }
 }
 
 export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rework this whole thing
@@ -174,132 +190,104 @@ export function NewSubstrateBatchForm({handlers, recipe}: { // TODO: likely rewo
     recipe?: SubstrateRecipeData
 }) {
     // TODO: do we want the formOpen button outside of the component?
-    const [formOpen, setFormOpen] = useState(false)
+    const {dispatch} = useModalContext();
     const [selectedRecipe, setSelectedRecipe] = useState(recipe)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
+
+    const cookies = useContext(CookiesContext)
     const submit = () => {
         if (selectedRecipe === undefined) {
             setErr("a recipe must be selected")
             return
-        } else {
-            fetch(BaseExternalUrl + "/db/create/substrateBatch", {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    // TODO: may need 'Cookie': cookies,
-                    'Content-type': "application/json"
-                },
-                body: JSON.stringify({
-                    recipe: selectedRecipe._id,
-                    notes: notes
-                })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSubstrateBatch(entry)
-                    handlers.onCreate && handlers.onCreate(entry)
-                })
-                .catch((error) => {
-                    setErr(JSON.stringify(error))
-                });
         }
-    }
-    if (!formOpen) {
-        return <div>
-            <button className={"basicButton"} onClick={() => {
-                setFormOpen(true)
-            }}>{"Create new batch"}</button>
-        </div>
+        const body: any = {
+            recipe: selectedRecipe._id,
+            notes: notes,
+            // Initially created with readonly by all and write by owner
+        }
+        DoCreateRequest("substrateBatch", body, AssertSubstrateBatch, allCookies(cookies))
+            .then(v=>{
+                handlers.onCreate ? handlers.onCreate(new SubstrateBatchData(v)) : console.log("no onCreate provided")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
+            })
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
     }
     return (
-        <NewEntryFormWrapper entryType={"substrateBatch"}>
+        <NewEntryFormWrapper entryType={"substrateBatch"} isTopLevel={handlers.isTopLevel}>
             {/* button to open/close the creator*/}
-            <button className={"basicButton"} onClick={() => {
-                setFormOpen(false)
-            }}>{"Close batch creator"}</button>
             <ErrorDisplay err={err}/>
             <TestAndValidate todos={["ENSURE WORKS PROPERLY FOR BOTH EXISTING AND PICKING"]}>
                 {recipe === undefined ?
                     <SubstrateRecipeArea txt={"Substrate Recipe: "} readonly={true} id={selectedRecipe?._id}/> :
                     <SubstrateRecipeSelectorCloseable doSelect={setSelectedRecipe}
-                                             allowCreation={handlers.isTopLevel} creatorInPage={false/* TODO: false ok?*/}/>}{/* TODO: closeable vs not?*/}
+                                                      allowCreation={handlers.isTopLevel}
+                                                      creatorInPage={false}/>}
             </TestAndValidate>
             <NewEntryNotes setNotes={setNotes}/>
             {/* SUBMIT AREA */}
-            <button className={"bottomButton greenButton"} onClick={(e)=>{
+            <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
-            }}>{"Update"}</button>
+            }}>{"Create new batch"}</button>
         </NewEntryFormWrapper>
     )
 }
 
 
-
-export const SubstrateBatchArea = ({id, headerLevel, txt, readonly, onSelect}: {
+export const SubstrateBatchArea = ({id, txt}: {
     id?: string,
-    headerLevel?: number,
     txt?: string,
-    readonly: boolean,
-    onSelect?: (d?: SubstrateBatchData) => void
 }) => {
-    // TODO: FIX THIS WHOLE THING! Update id on prop id update! Store id internally!
-    const [open, setOpen] = useState(false)
-    const [val, setVal] = useState(id)
-    useEffect(()=>{
-        setVal(id)
-    },[id])
-    const updateId = (batch?: SubstrateBatchData) => {
-        setVal(batch?._id) // TODO: ensure ok
-        onSelect && onSelect(batch)
-    }
-    let linkArea = ()=>{
-        if (!val) {
-            return <div>{"unknown"}</div>
-        }
-        const tempLink = <EntryLink props={{displayedId: val, linkId: val, entryType: "substrateBatch"}}>{val}</EntryLink>
-        if (readonly) {
-            return tempLink
-        }
-        return <>
-            {tempLink}
-            <button className={"basicButton"} onClick={() => {
-                setOpen(!open)
-            }}>{(open?"Close Selector":"Select a new substrate batch")}</button>
-        </>
-    }
     return <div>
-        <div>
-            {txt ? txt : "Substrate Batch: "}{linkArea()}
+        <div className={"inlineChildren"}>
+            <div>{txt ? txt : "Substrate Batch: "}</div>
+            {id ? <div>
+                <EntryLinkForId
+                    props={{displayId: id, linkId: id, entryType: "substrateBatch", openInNewTab: false}}/>
+            </div> :
+                <div>{"unknown"}</div>}
         </div>
-        {open && <SubstrateBatchSelector doSelect={updateId}/>}{/* TODO: allow create?*/}
     </div>
 }
 
 export function SubstrateBatchListPageTable({data, onClick, withLink}: ListPageItems<SubstrateBatchData>) {
     let cols: ListTableColumn<SubstrateBatchData>[] = [
-        NewColumn("ID", (v)=>v._id),
-        NewColumn("Created", (v)=>{
+        NewColumn("ID", (v) => v._id, true),
+        NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Recipe", (v)=>v.recipe),
-        NewColumn("Updated", (v)=>{
+        }, true),
+        NewColumn("Recipe", (v) => v.recipe, true),
+        NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: SubstrateBatchData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"substrateBatch",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: SubstrateBatchData) => {
+            return <EntryLinkWrapper
+                props={{entry:v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SubstrateBatchData(v)}}/>
 }
+
 export function SubstrateBatchSelectorTable({data, onClick}: ListPageItems<SubstrateBatchData>) {
-    return <SubstrateBatchListPageTable data={data} onClick={onClick} withLink={true} />
+    return <SubstrateBatchListPageTable data={data} onClick={onClick} withLink={true}/>
 }
+
 export function SubstrateBatchSelector(
     {
         doSelect,
@@ -310,13 +298,14 @@ export function SubstrateBatchSelector(
         allowCreate?: boolean
         creatorInPage?: boolean,
     }) {
-    const table = (items: SubstrateBatchData[]):JSX.Element=>{
+    const table = (items: SubstrateBatchData[]): JSX.Element => {
         return <SubstrateBatchSelectorTable data={items} onClick={doSelect}/>
     }
 
-    return <ExistingRecentSelector entryType={"substrateBatch"} entryTypes={"substrateBatches"} doSelect={doSelect} asserter={AssertSubstrateBatch}
+    return <ExistingRecentSelector entryType={"substrateBatch"} entryTypes={"substrateBatches"} doSelect={doSelect}
+                                   asserter={AssertSubstrateBatch}
                                    table={table}>
-        {allowCreate && (creatorInPage?<NewSubstrateBatchForm handlers={{onCreate: doSelect,isTopLevel: false}}/>:
+        {allowCreate && (creatorInPage ? <NewSubstrateBatchForm handlers={{onCreate: doSelect, isTopLevel: false}}/> :
             <div>{"LINK TO CREATOR HERE FIXME"}</div>)}
     </ExistingRecentSelector>
 }

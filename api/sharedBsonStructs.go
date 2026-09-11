@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/reeceappling/goUtils/v2/utils"
 	sliceutils "github.com/reeceappling/goUtils/v2/utils/slices"
+	"github.com/reeceappling/mushDb/api/request/unix"
 	"go.mongodb.org/mongo-driver/bson"
 	"net/http"
 	"os"
@@ -26,18 +27,6 @@ func init() {
 }
 
 type ImageLocation string
-type UnixTime int64 // unixMilli!
-
-func unixTimeFor(t time.Time) UnixTime {
-	return UnixTime(t.UnixMilli())
-}
-func unixTimeForNow() UnixTime {
-	return unixTimeFor(time.Now())
-}
-
-func (t UnixTime) asCreationDate() CreationDateField {
-	return CreationDateField{t}
-}
 
 var (
 	_ subdocWithImage = PicWithNotes{}
@@ -49,27 +38,44 @@ type subdocWithImage interface {
 	getPicWithNotes() *PicWithNotes
 }
 
-// TODO: USE
-func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes { // TODO: use?
-	var out *PicWithNotes = nil
-	latestTime := UnixTime(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
-	for _, subdoc := range possibleSubdocs {
-		pwn := subdoc.getPicWithNotes()
-		if pwn.Time > latestTime {
-			latestTime = pwn.Time
-			out = pwn
-		}
-	}
-	return out
+//	func getLatestExistingImage(possibleSubdocs ...subdocWithImage) *PicWithNotes {
+//		var out *PicWithNotes = nil
+//		latestTime := unix.Time(time.Date(1995, 12, 29, 0, 0, 0, 0, nil).UnixMilli())
+//		for _, subdoc := range possibleSubdocs {
+//			pwn := subdoc.getPicWithNotes()
+//			if pwn.Time > latestTime {
+//				latestTime = pwn.Time
+//				out = pwn
+//			}
+//		}
+//		return out
+//	}
+type HasPicsField interface {
+	currentPics() PicsField
+	addPic(newPic PicWithNotes) PicsField
 }
 
 type PicsField struct {
 	Pics []PicWithNotes `bson:"pics,omitempty" json:"pics,omitempty"`
 }
 
+func (pics PicsField) currentPics() PicsField {
+	return pics
+}
+
+func (pics PicsField) addPic(newPic PicWithNotes) PicsField {
+	if pics.Pics == nil {
+		return PicsField{Pics: []PicWithNotes{newPic}}
+	}
+	newPics := make([]PicWithNotes, 0, len(pics.Pics)+1)
+	newPics = append(newPics, pics.Pics...)
+	newPics = append(newPics, newPic)
+	return PicsField{Pics: newPics}
+}
+
 func (pics PicsField) getLatestPicFromPicsField() *PicWithNotes {
 	var out *PicWithNotes = nil
-	var latest UnixTime = 0
+	var latest unix.Time = 0
 	for _, pic := range pics.Pics {
 		if pic.Time > latest {
 			latest = pic.Time
@@ -92,14 +98,21 @@ type PicWithNotes struct {
 	Location                 ImageLocation `bson:"location" json:"location"`
 }
 
-func newPicWithNotes(tim UnixTime, notes []Note, location ImageLocation) PicWithNotes {
+func (pwn PicWithNotes) EqualTo(other PicWithNotes) bool {
+	if pwn.Location != other.Location || pwn.Time != other.Time {
+		return false
+	}
+	return pwn.NotesField.EqualTo(other.NotesField)
+}
+
+func newPicWithNotes(tim unix.Time, notes []Note, location ImageLocation) PicWithNotes {
 	return PicWithNotes{
 		PicWithNotesLessLocation: newPicWithNotesLessLocation(tim, notes),
 		Location:                 location,
 	}
 }
 
-func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes {
+func picsWithoutNotes(inp []PicWithNotes) []PicWithNotes { // TODO: use?
 	out := make([]PicWithNotes, len(inp))
 	for i, pic := range inp {
 		out[i] = PicWithNotes{
@@ -121,10 +134,10 @@ func (pwn PicWithNotes) withoutNotes() PicWithNotes {
 }
 
 type RequiredTimeField struct {
-	Time UnixTime `bson:"time" json:"time"`
+	Time unix.Time `bson:"time" json:"time"`
 }
 
-func newRequiredTimeField(t UnixTime) RequiredTimeField {
+func newRequiredTimeField(t unix.Time) RequiredTimeField {
 	return RequiredTimeField{t}
 }
 
@@ -133,7 +146,7 @@ type PicWithNotesLessLocation struct {
 	NotesField        `bson:"inline"`
 }
 
-func newPicWithNotesLessLocation(t UnixTime, notes []Note) PicWithNotesLessLocation {
+func newPicWithNotesLessLocation(t unix.Time, notes []Note) PicWithNotesLessLocation {
 	return PicWithNotesLessLocation{
 		RequiredTimeField: newRequiredTimeField(t),
 		NotesField:        NotesField{notes},
@@ -163,7 +176,7 @@ type ContaminationsField struct {
 
 func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 	var out *Contamination = nil
-	var latest UnixTime = 0
+	var latest unix.Time = 0
 	for _, contam := range contams.Contaminations {
 		if contam.Location != nil && contam.Time > latest {
 			latest = contam.Time
@@ -174,15 +187,15 @@ func (contams ContaminationsField) getContamsLatestImage() *Contamination {
 }
 
 type Contamination struct {
-	ContaminationLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Location                  *ImageLocation  `bson:"location,omitempty" json:"location,omitempty"`
+	ContaminationLessLocation `bson:"inline"`
+	Location                  *ImageLocation `bson:"location,omitempty" json:"location,omitempty"`
 }
 
 type ContaminationLessLocation struct {
-	PicWithNotesLessLocation `bson:"inline"` // TODO: new, ensure ok
-	Confirmed                bool            `bson:"confirmed" json:"confirmed"`
-	Bacteria                 bool            `bson:"bacteria" json:"bacteria"`
-	Mold                     bool            `bson:"mold" json:"mold"`
+	PicWithNotesLessLocation `bson:"inline"`
+	Confirmed                bool `bson:"confirmed" json:"confirmed"`
+	Bacteria                 bool `bson:"bacteria" json:"bacteria"`
+	Mold                     bool `bson:"mold" json:"mold"`
 }
 
 func (c ContaminationLessLocation) asContamination(location *ImageLocation) Contamination {
@@ -234,13 +247,16 @@ func (l Liquid) withPct(pct float64) Liquid {
 
 type Fluid string
 
-var fluids = []Fluid{Water, DistilledWater, GrainWater}
-
-// TODO: add all of these to autogenned
+var fluids = []Fluid{ // TODO: remove once autogen has been run again
+	Water,
+	DistilledWater,
+	GrainWater,
+}
 var (
 	Water          = Fluid("water")
 	DistilledWater = Fluid("distilledWater")
 	GrainWater     = Fluid("grain water")
+	// TODO: any more?
 )
 
 func (f Fluid) AsLiquid(pct ...float64) Liquid {
@@ -262,7 +278,14 @@ type Note struct {
 	Note              string `bson:"note" json:"note"`
 }
 
-func newNote(tim UnixTime, txt string) Note {
+func (n Note) EqualTo(other Note) bool {
+	if n.Time != other.Time || n.Note != other.Note {
+		return false
+	}
+	return true
+}
+
+func newNote(tim unix.Time, txt string) Note {
 	return Note{
 		RequiredTimeField: RequiredTimeField{tim},
 		Note:              txt,
@@ -305,11 +328,18 @@ type NutrientMeasurement struct {
 
 type Nutrient string
 
+var nutrients = []Nutrient{
+	LME,
+	Potato,
+	BRF,
+}
+
 // TODO: add all of these to autogenned
-var nutrients = []Nutrient{LME, Potato}
 var (
 	LME    Nutrient = "LME"
 	Potato Nutrient = "potato flakes"
+	BRF    Nutrient = "Brown rice flour"
+	// TODO: any more?
 )
 
 // TODO: add all of these to autogenned
@@ -321,8 +351,6 @@ type SugarMeasurement struct {
 
 type Sugar string
 
-var sugars = []Sugar{Dextrose, Honey, MapleSyrup}
-
 func newSugarMeasurement(add Sugar, amount float64, unit string) SugarMeasurement {
 	return SugarMeasurement{
 		Type:   add,
@@ -331,11 +359,21 @@ func newSugarMeasurement(add Sugar, amount float64, unit string) SugarMeasuremen
 	}
 }
 
+var sugars = []Sugar{
+	Dextrose,
+	Honey,
+	MapleSyrup,
+	//Sucrose,
+}
+
 // TODO: add all of these to autogenned
 var (
-	Dextrose   Sugar = "dextrose" // This is corn syrup
+	Dextrose   Sugar = "dextrose" // This is corn syrup (Karo), or pure dextrose
 	Honey      Sugar = "honey"
 	MapleSyrup Sugar = "maple syrup"
+	//Sucrose Sugar = "sucrose (table sugar)" // TODO: enable? // Not commonly used (does mycelium not process it well?)
+	// TODO: fructose?
+	// TODO: Molasses? // Provides trace minerals and micronutrients, though darker variants should be used sparingly because it can darken agar
 )
 
 type Grain string
@@ -357,6 +395,7 @@ var (
 	Oats     Grain = "oats"
 	Popcorn  Grain = "popcorn"
 	BirdSeed Grain = "birdseed"
+	// TODO: any more?
 )
 
 func writeAsJson(w http.ResponseWriter, obj any) {
@@ -385,7 +424,7 @@ func newAdditiveMeasurement(add Additive, amount float64, unit string) AdditiveM
 
 type Colorant string
 
-var colorants = []Colorant{clearColor, black, blue, yellow, orange, red}
+var colorants = []Colorant{clearColor, black, blue, green, yellow, orange, red, purple}
 
 // TODO: add all of these to autogenned
 var (
@@ -396,47 +435,67 @@ var (
 	yellow     Colorant = "Yellow"
 	orange     Colorant = "Orange"
 	red        Colorant = "Red" // MOST REDS ARE FUNGICIDAL
+	purple     Colorant = "Purple"
 )
 
-var colors = map[string]Colorant{
-	string(clearColor): clearColor,
-	string(black):      black,
-	string(blue):       blue,
-	string(green):      green,
-	string(yellow):     yellow,
-	string(orange):     orange,
-}
+// TODO: reference this?
+var colors = sliceutils.MapToMap(colorants, func(inp Colorant) (string, Colorant) {
+	return string(inp), inp
+})
 
 func ValidColor(c Colorant) bool {
-	_, ok := colors[string(c)]
-	return ok
+	return slices.Contains(colorants, c)
+	// TODO: if len(colorants)>10, use the following:
+	// _, ok := colors[string(c)]
+	// return ok
 }
 
-type Additive string // TODO: ACCOUNT FOR THIS EVERYWHERE!
-var additives = []Additive{Vermiculite, Perlite, Gypsum}
+type Additive string
+
+var additives = []Additive{Vermiculite, Perlite, Gypsum, YeastNutrient, CoffeeGrounds, Mica}
 
 // TODO: add all of these to autogenned
 var (
-	Vermiculite Additive = "vermiculite"
-	Perlite     Additive = "perlite"
-	Gypsum      Additive = "gypsum"
+	Vermiculite   Additive = "vermiculite"
+	Perlite       Additive = "perlite"
+	Gypsum        Additive = "gypsum"
+	YeastNutrient Additive = "yeast nutrient"
+	CoffeeGrounds Additive = "Coffee Grounds"
+	Mica          Additive = "Mica" // TODO: different colors?
 )
 
 type Antibiotic string
 
 // TODO: add all of these to autogenned
-var antibiotics = []Antibiotic{HydrogenPeroxide, Doxycycline}
-
 var (
 	HydrogenPeroxide Antibiotic = "HydrogenPeroxide"
+	Cefazolin        Antibiotic = "Cefazolin"       // RX only, not available normally
+	Chloramphenicol  Antibiotic = "Chloramphenicol" // Minimal if any degradation under sterilization conditions // TODO: unknown how to get
+	Ciprofloxacin    Antibiotic = "Ciprofloxacin"   // TODO: unknown how to get
 	Doxycycline      Antibiotic = "Doxycycline"
+	Gentamicin       Antibiotic = "Gentamicin"   // TODO: unknown how to get
+	Penicillin       Antibiotic = "Penicillin"   // Frequently combined with Streptomycin (Pen-Strep) to target gram-positive bacteria // TODO: unknown how to get
+	Streptomycin     Antibiotic = "Streptomycin" // Frequently used in environmental or agricultural fungal isolation to suppress general bacterial flora // TODO: unknown how to get
 )
 
-// TODO: use
-var antibioticDosages = map[Antibiotic]string{ // TODO: USE THIS!
-	Doxycycline:      "unknown as of right now", // TODO: figure out measurements
-	HydrogenPeroxide: "unknown as of right now", // TODO: figure out measurements
+var antibioticsWithDosages = []Tuple[Antibiotic, string]{
+	newTuple(HydrogenPeroxide, "unknown as of right now"), // TODO: figure out measurements
+	newTuple(Cefazolin, "unknown as of right now"),        // TODO: figure out measurements
+	newTuple(Chloramphenicol, "unknown as of right now"),  // TODO: figure out measurements
+	newTuple(Ciprofloxacin, "unknown as of right now"),    // TODO: figure out measurements
+	newTuple(Doxycycline, "unknown as of right now"),      // TODO: figure out measurements
+	newTuple(Gentamicin, "unknown as of right now"),       // TODO: figure out measurements
+	newTuple(Penicillin, "unknown as of right now"),       // TODO: figure out measurements
+	newTuple(Streptomycin, "unknown as of right now"),     // TODO: figure out measurements
 }
+var antibiotics = sliceutils.Map(antibioticsWithDosages, func(awd Tuple[Antibiotic, string]) Antibiotic {
+	return awd.a
+})
+
+//// TODO: use next line?
+//var antibioticDosages = sliceutils.Map(antibioticsWithDosages, func(awd Tuple[Antibiotic, string]) string {
+//	return awd.b
+//})
 
 type Generation int
 
@@ -462,6 +521,7 @@ func NewMods() *Mods {
 }
 
 type Mods struct {
+	// TODO: what is the ordering on these?
 	err    error    // SKIP WHEN THIS IS NON-NIL
 	unsets []bson.E // Key, "" // TODO: ?
 	sets   []bson.E // Key, value
@@ -485,51 +545,45 @@ func (upd *Mods) Add(sets, unsets, pushes, pulls []bson.E) *Mods {
 	return upd
 }
 
-func (upd *Mods) Set(key string, value interface{}) *Mods { // TODO: interface ok?
+func (upd *Mods) Set(key string, value interface{}) *Mods {
 	upd.sets = append(upd.sets, bson.E{Key: key, Value: value})
 	return upd
 }
-func (upd *Mods) SetNew(key string, value interface{}) { // TODO: interface ok?
-	upd.sets = append(upd.sets, bson.E{Key: key, Value: value})
-}
 
-//func (upd *Mods) UpdatePointerIfNeeded(key string, future, current *interface{}) *Mods {
-//	return updatePointerIfNeeded(upd, key, future, current)
-//}
-
+// TODO: ensure ok
 func (upd *Mods) UpdateValueIfNeeded(key string, future, current interface{}) *Mods { // TODO: interface ok?
 	return updateValueIfNeeded(upd, key, future, current)
 }
 
-func (upd *Mods) Unset(key string) *Mods {
+func (upd *Mods) Unset(key string) *Mods { // TODO: ensure works
 	upd.unsets = append(upd.unsets, bson.E{Key: key, Value: ""}) // TODO: "" ok here?
 	return upd
 }
 
-func (upd *Mods) Push(key string, value interface{}) *Mods { // TODO: interface ok? or slice?
+func (upd *Mods) Push(key string, value interface{}) *Mods { // TODO: interface ok, or should be slice?
 	upd.pushes = append(upd.pushes, bson.E{Key: key, Value: value})
 	return upd
 }
 
-// TODO: write what this actually does here!
-func (upd *Mods) pushBson(pushValues ...bson.E) *Mods { // TODO: make sure ok
-	if len(pushValues) == 0 {
-		return upd
-	}
-	upd.pushes = append(upd.pushes, pushValues...)
-	return upd
-}
+//// TODO: write what this actually does here!
+//func (upd *Mods) pushBson(pushValues ...bson.E) *Mods {
+//	if len(pushValues) == 0 {
+//		return upd
+//	}
+//	upd.pushes = append(upd.pushes, pushValues...)
+//	return upd
+//}
 
-func (upd *Mods) Pull(key string, value interface{}) *Mods { // TODO: interface ok? or slice?
-	upd.pulls = append(upd.pulls, bson.E{Key: key, Value: value})
-	return upd
-}
+//func (upd *Mods) Pull(key string, value interface{}) *Mods { // TODO: interface ok? or slice?
+//	upd.pulls = append(upd.pulls, bson.E{Key: key, Value: value})
+//	return upd
+//}
 
 func (upd *Mods) IsEmpty() bool {
 	return upd == nil || len(upd.sets)+len(upd.unsets)+len(upd.pushes)+len(upd.pulls) == 0
 }
 
-func (upd *Mods) Finalized() (bson.D, error) { // TODO: validate this works as intended (is bson.D ok?)
+func (upd *Mods) Finalized() (bson.D, error) {
 	if upd.err != nil {
 		return nil, upd.err
 	}
@@ -553,14 +607,14 @@ func (upd *Mods) addTransferOut(xferId AlternateCollectionId) *Mods {
 	return upd.Push("transfersOut", xferId) // TODO: will this work for nonexisting field?
 }
 
-func (upd *Mods) addSaleToSales(saleId AlternateCollectionId, currentSales []AlternateCollectionId) *Mods { // TODO; USE!
-	// TODO: ENSURE NOT ALREADY EXISTS
-	return upd.Push("sales", saleId) // TODO: will this work for nonexisting field?
-}
-func (upd *Mods) addOnlySale(saleId AlternateCollectionId) *Mods { // TODO; USE!
-	// TODO: ensure the sale did not already exist first
-	return upd.Push("sale", saleId) // TODO: will this work for nonexisting field?
-}
+//func (upd *Mods) addSaleToSales(saleId AlternateCollectionId, currentSales []AlternateCollectionId) *Mods { // TODO; USE!
+//	// TODO: ENSURE NOT ALREADY EXISTS
+//	return upd.Push("sales", saleId) // TODO: will this work for nonexisting field?
+//}
+//func (upd *Mods) addOnlySale(saleId AlternateCollectionId) *Mods { // TODO; USE!
+//	// TODO: ensure the sale did not already exist first
+//	return upd.Push("sale", saleId) // TODO: will this work for nonexisting field?
+//}
 
 func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 	futureIsEmpty := future == nil || len(future) == 0
@@ -579,22 +633,17 @@ func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 	if len(future) != len(existing) {
 		x := utils.Set[string]{}
 		x.Add(future...)
-		if len(x) != len(future) {
-			// TODO: validate no repeats in future
-			upd.err = errors.New("aliases cannot contain replica values")
-			return upd
-		}
-		return upd.Set("aliases", future)
+		return upd.Set("aliases", x.ToSlice())
 	}
 	return upd
 }
 
 func (upd *Mods) updateDisposedIfNeeded(future, existing Disposable) *Mods {
-	existingDisposal := existing.DisposalInfo()
-	if existingDisposal != nil { // Only update if previously was not disposed, and now is
-		return upd
+	exist, fut := existing.DisposalInfo(), future.DisposalInfo()
+	if exist == nil && fut != nil {
+		upd.Set("disposed", *fut)
 	}
-	return updatePointerIfNeeded(upd, "disposed", future.DisposalInfo(), existingDisposal)
+	return upd
 }
 
 func (upd *Mods) updatePcRunIfNeeded(next, current pcRunOptional) *Mods {
@@ -606,62 +655,94 @@ func (upd *Mods) updatePcRunIfNeeded(next, current pcRunOptional) *Mods {
 }
 
 func (upd *Mods) updateKnownFruitableIfNeeded(future, existing hasKnownFruitableField) *Mods {
-	return updatePointerIfNeeded(upd, "knownFruitable", future.knownToBeFruitable(), existing.knownToBeFruitable())
+	ex := existing.knownToBeFruitable()
+	return updatePointerIfNeeded(upd, "knownFruitable", future.knownToBeFruitable(), ex)
+}
+func (upd *Mods) updateWetnessIfNeeded(future, existing *int) *Mods {
+	if existing == nil && future != nil {
+		if *future < 0 || *future > 10 { // TODO: validate
+			upd.err = errors.New("wetness must be 1-10") // TODO: validate range ok
+			return upd
+		}
+		return upd.Set("wetness", *future)
+	}
+	return upd
+}
+func (upd *Mods) updateBurstGrainsIfNeeded(future, existing *int) *Mods {
+	if existing == nil && future != nil {
+		if *future < 0 || *future > 10 { // TODO: validate
+			upd.err = errors.New("burst grains must be 0-10") // TODO: validate range ok
+			return upd
+		}
+		return upd.Set("burstGrains", *future)
+	}
+	return upd
 }
 func (upd *Mods) updateCondensationCoverageIfNeeded(future, existing hasCondensCov) *Mods {
-	return updatePointerIfNeeded(upd, "condensationCoverageAtSealTime", future.condensationCoverage(), existing.condensationCoverage())
+	exist, fut := existing.condensationCoverage(), future.condensationCoverage()
+	if exist != nil {
+		if fut == nil || *fut != *exist {
+			upd.err = errors.New("condensationConverage mismatch")
+		}
+		return upd
+	} else {
+		if exist == fut { // Still empty
+			return upd
+		}
+	}
+	return updatePointerIfNeeded(upd, "condensationCoverageAtSealTime", fut, exist)
 }
 func (upd *Mods) updatePourCoverageIfNeeded(future, existing hasPourCoverage) *Mods {
-	if existing.pourCoverage() != nil {
-		if future.pourCoverage() == nil || *future.pourCoverage() != *existing.pourCoverage() {
+	exist, fut := existing.pourCoverage(), future.pourCoverage()
+	if exist != nil {
+		if fut == nil || *fut != *exist {
 			upd.err = errors.New("pourCoverage mismatch")
+		}
+		return upd
+	} else {
+		if exist == fut { // Still empty
 			return upd
 		}
 	}
-	return updatePointerIfNeeded(upd, "pourCoverage", future.pourCoverage(), existing.pourCoverage())
+	return updatePointerIfNeeded(upd, "pourCoverage", fut, exist)
 }
 func (upd *Mods) updateWetAtCooledTimeIfNeeded(future, existing hasWact) *Mods {
-	if existing.wetAtCool() != nil {
-		if future.wetAtCool() == nil || *future.wetAtCool() != *existing.wetAtCool() {
-			upd.err = errors.New("wetAtCooledTime mismatch")
-			return upd
-		}
+	// Only update if existing value is nil and new value is not
+	exist, fut := existing.wetAtCool(), future.wetAtCool()
+	if exist == nil && fut != exist {
+		return updatePointerIfNeeded(upd, "wetAtCooledTime", fut, exist)
 	}
-	return updatePointerIfNeeded(upd, "wetAtCooledTime", future.wetAtCool(), existing.wetAtCool())
+	return upd
 }
 func (upd *Mods) updateAgarOnOutsideAtPourTimeIfNeeded(future, existing hasAgarOutside) *Mods {
-	if existing.agarOutside() != nil {
-		if future.agarOutside() == nil || *future.agarOutside() != *existing.agarOutside() {
-			upd.err = errors.New("agarOutside mismatch")
-			return upd
-		}
+	// Only update if existing value is nil and new value is not
+	exist, fut := existing.agarOutside(), future.agarOutside()
+	if exist == nil && fut != exist {
+		return updatePointerIfNeeded(upd, "agarOnOutsideAtPourTime", fut, exist)
 	}
-	return updatePointerIfNeeded(upd, "agarOnOutsideAtPourTime", future.agarOutside(), existing.agarOutside())
+	return upd
 }
 
 func (upd *Mods) updateConfirmedCleanIfNeeded(future, existing *bool) *Mods {
 	return updatePointerIfNeeded(upd, "confirmedClean", future, existing)
 }
 
-func (upd *Mods) updateProjectCompletedIfNeeded(future, existing *UnixTime) *Mods {
+func (upd *Mods) updateProjectCompletedIfNeeded(future, existing *unix.Time) *Mods {
 	return updatePointerIfNeeded(upd, "completed", future, existing)
+}
+
+func (upd *Mods) updateProjectPrivateIfNeeded(future, existing bool) *Mods {
+	if future == existing {
+		return upd
+	}
+	return updateValueIfNeeded(upd, "private", future, existing)
 }
 
 func (upd *Mods) updateProjectPermsIfNeeded(future, existing ProjectPerms) *Mods {
 	if future.Equal(existing) { // TODO: validate works
 		return upd
 	}
-	// TODO: THIS IS NOT WORKING PROPERLY!!!!!
-	bs, err := json.MarshalIndent(existing, "", " ") // TODO: del
-	if err != nil {                                  // TODO: del
-		panic(err) // TODO; del // TODO: del
-	} // TODO: del
-	println("existing", string(bs))               // TODO: del
-	bs, err = json.MarshalIndent(future, "", " ") // TODO: del
-	if err != nil {                               // TODO: del
-		panic(err) // TODO; del
-	} // TODO: del
-	println("final", string(bs)) // TODO: del
+	// TODO: THIS IS NOT WORKING PROPERLY!!!!! (may be working properly 7/22/26)
 	return upd.Set("perms", future)
 }
 
@@ -669,18 +750,18 @@ func (upd *Mods) updateLastUpdatedIfNeeded() *Mods {
 	if upd.IsEmpty() {
 		return upd
 	}
-	return upd.Set("lastUpdated", unixTimeFor(time.Now()))
+	return upd.Set("lastUpdated", unix.TimeFor(time.Now()))
 }
 
-func (upd *Mods) updatePermsIfNeeded(next, current *ACL) *Mods {
+func (upd *Mods) updatePermsIfNeeded(next, current ACL) *Mods {
 	if current.Equivalent(next) {
 		return upd
 	}
 	return upd.Set("acl", next)
 }
 
-func (upd *Mods) updateDefaultEntryPermsIfNeeded(nextReq PermsOnRequest, current *ACL) *Mods {
-	next := nextReq.DefaultAcl()
+func (upd *Mods) updateDefaultAclIfNeeded(nextReq PermsOnRequest, current ACL) *Mods {
+	next := nextReq.AsACL()
 	if current.Equivalent(next) {
 		return upd
 	}
@@ -693,7 +774,6 @@ func (upd *Mods) updateNameIfNeeded(future, existing string) *Mods {
 
 func notesWereModified(existing []Note, updated AllEntries[Note]) (hasChanged bool) {
 	if len(updated.New) > 0 {
-		println("NOTES WERE ADDED") // TODO: del
 		return true
 	}
 	for i, finalExisting := range updated.Existing {
@@ -703,9 +783,10 @@ func notesWereModified(existing []Note, updated AllEntries[Note]) (hasChanged bo
 		if finalExisting.Data.Note != existing[i].Note {
 			return true
 		}
-		if finalExisting.Data.Time != existing[i].Time { // TODO: do we even want this?
-			return true
-		}
+		// If only the time changed, we probably don't want to modify it
+		//if finalExisting.Data.Time != existing[i].Time {
+		//	return true
+		//}
 	}
 	return false
 }
@@ -716,8 +797,8 @@ func picsWereModified(existing []PicWithNotes, updated SplitEntries[picWithNotes
 	}
 	for i, finalExisting := range updated.Existing {
 		if finalExisting.Disabled ||
-			finalExisting.Data.Img != string(existing[i].Location) || // TODO: ensure ok
-			finalExisting.Data.Time != existing[i].Time || // TODO: do we even want this?
+			finalExisting.Data.Img != string(existing[i].Location) ||
+			// Probably dont want to modify if only time was changed... finalExisting.Data.Time != existing[i].Time ||
 			notesWereModified(existing[i].Notes, finalExisting.Data.Notes) {
 			return true
 		}
@@ -732,7 +813,7 @@ func contamsWereModified(existing []Contamination, updated SplitEntries[contamFo
 	}
 	for i, finalExisting := range updated.Existing {
 		if finalExisting.Disabled ||
-			finalExisting.Data.Time != existing[i].Time || // TODO: do we even want this?
+			// Probably dont want to modify i only times were changed... finalExisting.Data.Time != existing[i].Time ||
 			finalExisting.Data.Mold != existing[i].Mold ||
 			finalExisting.Data.Bacteria != existing[i].Bacteria ||
 			finalExisting.Data.Confirmed != existing[i].Confirmed ||
@@ -757,72 +838,120 @@ func PrettyPrintJson(prefix string, toPrint any) {
 	println(prefix, string(outBs))
 }
 
-func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesField) *Mods { // TODO: make sure this always works the way we want it to!!! // TODO: lower-down notes?
+func (upd *Mods) updateNotesIfNeeded(updatedIn NoteMods, existingIn HasNotesField) *Mods {
 	if upd.err != nil {
 		return upd
 	}
+	println("updating notes if needed")
 	existing := existingIn.GetNotes()
 	updated := updatedIn.NoteChanges()
 	if len(updated.Existing) != len(existing) {
 		upd.err = errors.Join(errors.New("length of existing notes must match"), upd.err)
-		exNotesBs, err := json.Marshal(existing) // TODO: delete later
-		if err != nil {
-			println("failed to get bytes for existing notes")
-			return upd
-		}
-		upNotesBs, err := json.Marshal(updated.Existing)
-		if err != nil {
-			println("failed to get bytes for updated notes")
-			return upd
-		}
-		toOutput := struct {
-			Existing string
-			Updated  string
-		}{
-			Existing: string(exNotesBs),
-			Updated:  string(upNotesBs),
-		}
-		PrettyPrintJson("noteUpdDiscrepancy", toOutput) // TODO: delete later
+		//exNotesBs, err := json.Marshal(existing) // TODO: delete later
+		//if err != nil {
+		//	println("failed to get bytes for existing notes")
+		//	return upd
+		//}
+		//upNotesBs, err := json.Marshal(updated.Existing)
+		//if err != nil {
+		//	println("failed to get bytes for updated notes")
+		//	return upd
+		//}
+		//toOutput := struct {
+		//	Existing string
+		//	Updated  string
+		//}{
+		//	Existing: string(exNotesBs),
+		//	Updated:  string(upNotesBs),
+		//}
+		//PrettyPrintJson("noteUpdDiscrepancy", toOutput) // TODO: delete later
 		return upd
 	}
 	if !notesWereModified(existing, updated) {
 		return upd
 	}
-	finalNotes := make([]Note, 0, len(existing)+len(updated.New))
+	finalNotes := []Note{}
 	for _, final := range updated.Existing {
 		if !final.Disabled {
 			finalNotes = append(finalNotes, final.Data)
 		}
 	}
-	for _, final := range updated.New {
-		finalNotes = append(finalNotes, final.Data)
-	}
+	finalNotes = append(finalNotes, sliceutils.Map(updated.New, func(nt Data[Note]) Note { return nt.Data })...)
 	// Set notes
-	PrettyPrintJson("finalNotes", finalNotes) // TODO: delete later
-	return upd.Set("notes", finalNotes)       // TODO: ensure ok
+	return upd.Set("notes", finalNotes)
 }
 
-func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+func (upd *Mods) updateTimeIfNoLongerNil(fieldName string, updated *int, existing *int) *Mods {
+	if updated == nil {
+		return upd
+	}
+	if *updated < 0 {
+		upd.err = errors.New("time cannot be negative")
+		return upd
+	}
+	return updateTimeIfWasNil(upd, fieldName, updated, existing)
+}
+
+func (upd *Mods) updatePicsIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods {
 	return upd.updatePwnIfNeeded("pics", updatedEntries, existing)
 }
 
-func (upd *Mods) updateFlushesIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+// Flatten takes a 2D slice and returns a flattened 1D slice
+func Flatten[T any](lists [][]T) []T {
+	var res []T
+	for _, list := range lists {
+		res = append(res, list...) // The ... unpacks the inner slice
+	}
+	return res
+}
+
+// TODO: ADD TO ALL PLACES!
+func (upd *Mods) updateMostRecentImageIfNeeded(existing *PicWithNotes, updatedPicsGroups ...[]PicWithNotes) *Mods { // TODO: make sure this works as anticipated!
+	// TODO: CONSIDER USING getItemLatestImage from common.go
+	updatedPics := Flatten(updatedPicsGroups)
+	if len(updatedPics) == 0 {
+		if existing != nil {
+			// if pic already exists, remove it
+			return upd.withMostRecentImage(nil)
+		}
+		return upd
+	}
+
+	getLatestPic := func(updated []PicWithNotes) PicWithNotes {
+		var latestPic PicWithNotes = updated[0]
+		for i := 1; i < len(updated); i++ {
+			candidate := updated[i]
+			if latestPic.Time < candidate.Time {
+				latestPic = candidate
+			}
+		}
+		return latestPic
+	}
+	latestPic := getLatestPic(updatedPics)
+	if existing != nil {
+		if existing.EqualTo(latestPic) {
+			return upd
+		}
+	}
+	return upd.withMostRecentImage(&latestPic)
+}
+
+func (upd *Mods) updateFlushesIfNeeded(updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods {
 	return upd.updatePwnIfNeeded("flushes", updatedEntries, existing)
 }
 
-func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods { // TODO: make sure this works as anticipated
+func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries[picWithNotesForm, PicWithNotes], existing []PicWithNotes) *Mods {
 	if upd.err != nil {
 		return upd
 	}
 	if len(updatedEntries.Existing) != len(existing) {
-		// TODO: print this out????
 		upd.err = errors.Join(errors.New("length of existing "+fieldName+" must match"), upd.err)
 		return upd
 	}
 	if !picsWereModified(existing, updatedEntries) {
 		return upd
 	}
-	// TODO: THIS IS NOT WORKING????
+	// TODO: THIS IS NOT WORKING???? I think this is working as of 7/11/26
 	finalPics := make([]PicWithNotes, 0, len(existing)+len(updatedEntries.New))
 	for _, final := range updatedEntries.Existing {
 		if !final.Disabled {
@@ -831,7 +960,7 @@ func (upd *Mods) updatePwnIfNeeded(fieldName string, updatedEntries SplitEntries
 	}
 	finalPics = append(finalPics, updatedEntries.New...)
 	// Set field
-	return upd.Set(fieldName, finalPics) // TODO: ensure ok
+	return upd.Set(fieldName, finalPics)
 
 }
 
@@ -854,7 +983,7 @@ func (upd *Mods) updateContamsIfNeeded(updatedEntries SplitEntries[contamForm, C
 	}
 	finalEntries = append(finalEntries, updatedEntries.New...)
 	// Set field
-	return upd.Set("contamination", finalEntries) // TODO: ensure ok
+	return upd.Set("contamination", finalEntries)
 }
 
 func (upd *Mods) updateSaleIfNeeded(future, existing *AlternateCollectionId) *Mods {
@@ -900,7 +1029,7 @@ func (upd *Mods) withInnoc(xfer Transfer) *Mods {
 func (upd *Mods) withKnownFruitable(knownFruitable *bool) *Mods {
 	return setPointerIfNonNil(upd, "knownFruitable", knownFruitable)
 }
-func (upd *Mods) withLastUpdated(lastUpdatedTime UnixTime) *Mods {
+func (upd *Mods) withLastUpdated(lastUpdatedTime unix.Time) *Mods {
 	return upd.Set("lastUpdated", lastUpdatedTime)
 }
 func (upd *Mods) withMostRecentImage(parentType *PicWithNotes) *Mods {
@@ -912,8 +1041,8 @@ func (upd *Mods) withParentType(parentType *string) *Mods {
 func (upd *Mods) withParent(parentId *MainCollectionId) *Mods {
 	return setPointerIfNonNil(upd, "parent", parentId)
 }
-func (upd *Mods) withPerms(acl *ACL) *Mods {
-	return setPointerIfNonNil(upd, "acl", acl)
+func (upd *Mods) withPerms(acl ACL) *Mods {
+	return upd.Set("acl", acl)
 }
 func (upd *Mods) withPics(pics []PicWithNotes) *Mods {
 	if len(pics) == 0 {
@@ -925,7 +1054,7 @@ func (upd *Mods) withSpecies(species *string) *Mods {
 	return setPointerIfNonNil(upd, "species", species)
 }
 func (upd *Mods) withSubspecies(subsp *string) *Mods {
-	return setPointerIfNonNil(upd, "subspecies", subsp) // TODO: make sure string is correct!!!
+	return setPointerIfNonNil(upd, "subspecies", subsp)
 }
 
 func setPointerIfNonNil[T any](upd *Mods, fieldName string, val *T) *Mods {
@@ -957,6 +1086,21 @@ func updatePointerIfNeeded[T comparable](upd *Mods, fieldName string, future, ex
 	}
 	return updateValueIfNeeded(upd, fieldName, *future, *existing)
 }
+func updateTimeIfWasNil[T comparable](upd *Mods, fieldName string, future, existing *T) *Mods {
+	if upd.err != nil {
+		return upd
+	}
+	if existing != nil {
+		if *existing != *future {
+			upd.err = errors.New(fieldName + "was already set to a different value. Cannot change value once set")
+		}
+		return upd
+	}
+	if future == nil {
+		return upd
+	}
+	return upd.Set(fieldName, *future)
+}
 func updatePointerIfNeededNew[T comparable](upd *Mods, fieldName string, future, existing *T) *Mods {
 	if upd.err != nil {
 		return upd
@@ -977,47 +1121,47 @@ func updatePointerIfNeededNew[T comparable](upd *Mods, fieldName string, future,
 
 var GetOptionsHandler http.HandlerFunc = func(w http.ResponseWriter, r *http.Request) {
 	opt := r.PathValue("optionsType")
-	var toWrite any
 	switch strings.ToLower(opt) {
 	case "additives", "additive":
-		toWrite = additives
-		break
+		writeAsJson(w, additives)
+		return
 	case "antibiotics", "antibiotic":
-		toWrite = antibiotics
-		break
+		writeAsJson(w, antibiotics)
+		return
+	case strings.ToLower("bagFilterSizes"):
+		writeAsJson(w, bagFilterSizes)
+		return
 	case "colors", "color",
 		"colorants", "colorant":
-		toWrite = colorants
-		break
+		writeAsJson(w, colorants)
+		return
 	case "grains", "grain":
-		toWrite = grains
-		break
+		writeAsJson(w, grains)
+		return
 	case "liquids", "liquid",
 		"fluids", "fluid":
-		toWrite = fluids
-		break
+		writeAsJson(w, fluids)
+		return
 	case "nutrients", "nutrient":
-		toWrite = nutrients
-		break
-	case "sporePrintColors", "sporePrintColor":
-		toWrite = sporePrintColors // TODO: Make this just strings???
-		break
-	case "sporePrintDensities", "sporePrintDensity":
-		toWrite = sporePrintDensities // TODO: Make this just strings???
-		break
+		writeAsJson(w, nutrients)
+		return
+	case strings.ToLower("sporePrintColors"), strings.ToLower("sporePrintColor"):
+		writeAsJson(w, sporePrintColors)
+		return
+	case strings.ToLower("sporePrintDensities"), strings.ToLower("sporePrintDensity"):
+		writeAsJson(w, sporePrintDensities)
+		return
 	case "sugars", "sugar":
-		toWrite = sugars
-		break
-	case "transferreasons", "transferreason":
-		toWrite = transferReasons
-		break
+		writeAsJson(w, sugars)
+		return
+	case strings.ToLower("transferReasons"), strings.ToLower("transferReason"):
+		writeAsJson(w, transferReasons)
+		return
 	case "woods", "wood":
-		toWrite = woods
-		break
-		// TODO: any other cases???
+		writeAsJson(w, woods)
+		return
 	default:
-		http.Error(w, fmt.Sprintf(`invalid option provided: "%s" is not one of [color,liquid,nutrient,sugar,grain,additive,transferReason]`, opt), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf(`invalid option provided: "%s" is not one of [bagFilterSizes, color,liquid,nutrient,sugar,grain,additive,transferReason]`, opt), http.StatusBadRequest)
 		return
 	}
-	writeAsJson(w, toWrite)
 }

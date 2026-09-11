@@ -2,7 +2,8 @@
 import React, {useState} from "react";
 import {NewPlateForm} from "@/app/components/plateClient";
 import {NewAgarBatchForm} from "@/app/components/agarBatchClient";
-import {Dictaphone, SayString} from "@/app/components/common";
+import {AgarBatchData} from "@/app/components/agarBatchServer";
+// import {Dictaphone, SayString} from "@/app/components/common";
 
 export function Closeable(props:React.PropsWithChildren<{title:string}>) {
     const [open,setOpen]=useState(false);
@@ -24,25 +25,25 @@ export function Closeable(props:React.PropsWithChildren<{title:string}>) {
 }
 
 export function TestNewPlate(){
-    return <NewPlateForm agarBatchIn={{_id:"agarBatchId",agarRecipe:"recipeId",color:"aColor",pcRun:"runId",lastUpdated:1000000}} handlers={{isTopLevel:true,onCreate:(pl)=>console.log("created plate")}}  />
+    return <NewPlateForm agarBatchIn={new AgarBatchData({_id:"agarBatchId",agarRecipe:"recipeId",color:"aColor",pcRun:"runId",lastUpdated:1000000})} handlers={{isTopLevel:true,onCreate:(pl)=>console.log("created plate")}}  />
 }
 export function TestNewAgarBatch(){
     return <NewAgarBatchForm handlers={{isTopLevel:true,onCreate:(item)=>console.log("created agar batch")}}  />
 }
-export function TextToSpeech(){
-    return <div>
-        <button className={"buttonFullWidth greenButton"} onClick={e=>{
-            e.preventDefault();
-            e.stopPropagation();
-            const utterance = new SpeechSynthesisUtterance("Hello World")
-            window.speechSynthesis.speak(utterance)
-        }}>{"Say 'Hello World'"}</button>
-    </div>
-}
-export function SpeechToText(){
-    return <div>
-        <Dictaphone createNoteHandler={n=>{
-            SayString("note created: "+n)
-        }}/>
-    </div>
-}
+// export function TextToSpeech(){
+//     return <div>
+//         <button className={"buttonFullWidth greenButton"} onClick={e=>{
+//             e.preventDefault();
+//             e.stopPropagation();
+//             const utterance = new SpeechSynthesisUtterance("Hello World")
+//             window.speechSynthesis.speak(utterance)
+//         }}>{"Say 'Hello World'"}</button>
+//     </div>
+// }
+// export function SpeechToText(){
+//     return <div>
+//         <Dictaphone createNoteHandler={n=>{
+//             SayString("note created: "+n)
+//         }}/>
+//     </div>
+// }

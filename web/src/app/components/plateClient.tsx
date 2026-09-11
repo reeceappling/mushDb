@@ -1,8 +1,9 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {
+    AddCreatedQuadColFunction,
     AllEntries,
     OnViewCreatorQuadCol,
     SplitAllEntries
@@ -21,79 +22,88 @@ import {InnocDisplay, TransfersOutDisplay} from "@/app/components/transferClient
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
+    CreatedLinkFor,
     DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse,
-    HandleTxtResponse,
-    ImportDisplayInput, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
-    NewEntryInput, NumberToDateStr,
+    DisplayInput,
+    DoCreateRequest,
+    DoMultipartImportRequest,
+    DoUpdateMultipartRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ImportDisplayInput,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NewEntryInput,
+    NumberToDateStr,
     OptionalArrayOfType,
     OptionalKey,
     OptionalSimpleKey,
+    RequiredKey,
     resolveContamsFormData,
     resolvePicsFormData,
-    SendMultipartRequest,
-    setFormData,
-    setFormImages,
+    setFormFull,
     YesNoSelector,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {
-    DisposedDisplay,
     ErrorDisplay,
     GensFormDisplay,
     MostRecentImageDisplay,
     ParentDisplay,
     PicsDisplay
 } from "@/app/components/formSubcomponents/commonClient";
-import {
-    AgarBatchArea,
-} from "@/app/components/agarBatchClient";
+import {AgarBatchArea,} from "@/app/components/agarBatchClient";
 import {
     ContaminationForm,
     ContamsDisplay,
     InitialContamState,
-    InitialNotesState,
     IsValidContamination,
     NewContaminationForm
 } from "@/app/components/formSubcomponents/contaminations";
 import {AgarBatchData, AgarBatchSelectorCloseable} from "@/app/components/agarBatchServer";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {SaleArea} from "@/app/components/saleClient";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import {ExistingSpeciesSubspeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
+import {AclDisplay, MarshalAcl, TogglableAreaWithDepth, UnmarshalAcl} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {InputNumberWithSmallTitle} from "@/app/components/formSubcomponents/numericInput";
+import {InputNumber} from "@/app/components/formSubcomponents/numericInput";
 import Box from "@mui/material/Box";
 import Slider from "@mui/material/Slider";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {NewSporePrintForm} from "@/app/components/sporePrintClient";
+import {SporePrintData} from "@/app/components/sporePrintServer";
+import {NewSporeSwabForm} from "@/app/components/sporeSwabClient";
+import {SporeSwabData} from "@/app/components/sporeSwabServer";
 
 export function AssertPlate(input: any): asserts input is PlateData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Plate assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['agarBatch', 'string'],
         ['species', 'string'],
         ['subspecies', 'string'],
@@ -110,23 +120,31 @@ export function AssertPlate(input: any): asserts input is PlateData {
         ['wetAtCooledTime', 'boolean'],
         ['agarOnOutsideAtPourTime', 'boolean'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        ['mostRecentImage', IsValidPicWithNotesIncoming],
-        ['acl', IsValidAcl]
+    // complex required keys
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        //['acl', IsValidAcl],
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('Plate assertion failure: required key ' + key + ' was not valid');
+        }
+    }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
             throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
@@ -134,11 +152,17 @@ export function AssertPlate(input: any): asserts input is PlateData {
         ['contamination', IsValidContamination],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Plate assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
@@ -149,6 +173,7 @@ export function PourCoverageSelector({value, setPourCoverage}: {
     return <OptionalSliderSelector txt={"Pour Coverage"} label={"Pour Coverage (%)"} initial={value} min={0} def={100}
                                    max={100} updateParent={setPourCoverage}/>
 }
+
 export function PourCoverageSelectorRequired({value, setPourCoverage}: {
     value?: number,
     setPourCoverage: (value?: number) => void,
@@ -162,8 +187,9 @@ export function PourCoverageSelectorRequired({value, setPourCoverage}: {
 
 export default function PlateDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
-    }: DisplayInput) {
+        readonly, data, headerLevel, isTopLevel
+    }: DisplayInput<PlateData>) {
+    const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data as PlateData)
 
     const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
@@ -176,13 +202,17 @@ export default function PlateDisplay(
     const [sale, setSale] = useState<string | undefined>(data.sale)
     const [disposed, setDisposed] = useState<number | undefined>(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
-    const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
+    const [acl, setAcl] = useState<ACL>(initial.acl)
     // Helper states
     const [transfersOut, setTransfersOut] = useState<string[]>(data.transfersOut || [])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
     const [err, setErr] = useState<string | undefined>()
     const updateInitial = (updated: PlateData) => {
         setInitial(updated)
+        setPourCoveragePct(updated.pourCoverage)
+        setCondensationCoveragePct(updated.condensationCoverageAtSealTime)
+        setWetAtCoolTime(updated.wetAtCooledTime)
+        setAgarOnOutsideAtPourTime(updated.agarOnOutsideAtPourTime)
         setImages(InitialPicsEntries(updated.pics))
         setContams(InitialContamState(updated.contamination))
         setKnownFruitable(updated.knownFruitable)
@@ -191,105 +221,162 @@ export default function PlateDisplay(
         setNotes(InitialNotesState(updated.notes))
         setTransfersOut(updated.transfersOut || [])
         setAcl(updated.acl)
+        setErr(undefined)
     }
+    const cookies = useContext(CookiesContext)
     const submit = () => {
-        console.log("submitting update request")
-        let body = new FormData()
-        let dataObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             knownFruitable: knownFruitable,
             sale: sale,
             disposed: disposed,
             notes: notes,
             writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
-            pourCoverage: pourCoveragePct, // TODO: ensure covered by go
-            condensationCoverageAtSealTime: condensationCoveragePct, // TODO: ensure covered by go
-            wetAtCooledTime: wetAtCooledTime, // TODO: ensure covered by go
-            agarOnOutsideAtPourTime: agarOnOutsideAtPourTime // TODO: ensure covered by go
+            pourCoverage: pourCoveragePct, // TODO: only allow setting if originally undefined
+            condensationCoverageAtSealTime: condensationCoveragePct,  // TODO: only allow setting if originally undefined
+            wetAtCooledTime: wetAtCooledTime,
+            agarOnOutsideAtPourTime: agarOnOutsideAtPourTime,
         }
 
         try {
+
             // Pics
-            let picsInfo = resolvePicsFormData(images)
-            let newImages = picsInfo.images
+            const picsInfo = resolvePicsFormData(images)
+            const newImages = picsInfo.images
             dataObj.images = picsInfo.obj
-            // Contams
-            let contamsInfo = resolveContamsFormData(contams)
-            let newContams = contamsInfo.images
-            dataObj.contams = contamsInfo.obj
             // Set data on form
-            setFormData(body, dataObj)
-            setFormImages(body, "newPic", newImages)
-            setFormImages(body, "newContam", newContams)
+            // Contams
+            const contamsInfo = resolveContamsFormData(contams)
+            const newContams = contamsInfo.images
+            dataObj.contams = contamsInfo.obj
+            setFormFull(formData, dataObj, newImages, newContams, undefined)
+            // formData.set("data", JSON.stringify(dataObj))
+            // setFormImages("newPic", formData, picsInfo.images)
+            // setFormImages("newContam", formData, contamsInfo.images)
+
         } catch (caught: any) {
             console.log("error in submit")
             setErr(JSON.stringify(caught))
             return
         }
-        SendMultipartRequest(BaseExternalUrl + "/db/update/plate/" + initial._id, cookies, body)
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertPlate(entry)
-                updateInitial(entry)
-            }).catch((er) => {
-            console.log("error in getting response: " + JSON.stringify(er))
-            setErr(JSON.stringify(er))
-        });
+        console.log("submitting update request")
+        DoUpdateMultipartRequest("plate", initial._id, formData, AssertPlate, allCookies(cookies))
+            .then(v => {
+                updateInitial(new PlateData(v))
+                console.log("updated initial state")
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }
+                })
+            })
+            .catch(e => {
+                setErr("Error in parsing updated plate: " + JSON.stringify(e))
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }
+                })
+            })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        WriteRfidOvcArea(initial._id),
-    ]
+    const ovcs: () => OnViewCreatorQuadCol[] = () => {
+        const innoculated = initial.species !== undefined
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            ...(innoculated ? [
+                /*{TODO: new fruit?????},*/
+                {
+                    txt: "New Spore Print", // TODO: FULLY TEST! New on 8/26/26
+                    newCreationArea: (onCreate: AddCreatedQuadColFunction) => { // TODO: for print and swab OVCs, make a convenience function....
+                        return <NewSporePrintForm parentId={initial._id} onCreate={(sp: SporePrintData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                            onCreate([{
+                                typeText: "Spore Print",
+                                node: <CreatedLinkFor linkId={sp._id} typ={"sporePrint"}/>,
+                            }], false)
+                        }}/>
+                    },
+                }, {
+                    txt: "New Spore Swab", // TODO: FULLY TEST! New on 8/26/26
+                    newCreationArea: (onCreate: AddCreatedQuadColFunction) => {
+                        return <NewSporeSwabForm otherParentIn={initial._id} onCreate={(sp: SporeSwabData) => { // TODO: should swap to handler={{}} format rather than direct onCreate
+                            onCreate([{
+                                typeText: "Spore Swab",
+                                node: <CreatedLinkFor linkId={sp._id} typ={"sporeSwab"}/>,
+                            }], false)
+                        }}/>
+                    },
+                }] : []),
+            WriteRfidOvcArea(initial._id),
+        ] : []
+    }
+
+    const isInnoculated = () => {
+        return initial.species !== undefined
+    }
     return (
         <DisplayFormWrapper entryType={"plate"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
-            <ID txt={"Plate"} id={initial._id} entryType={"plate"} linkPage={false}/>
-            <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
-            <MostRecentImageDisplay data={initial.mostRecentImage} headerLevel={headerLevel} showHeader={false}/>
+            <ErrorDisplay err={err}/>
+            <ID props={{id: data._id, txt: "Plate", entryType: "plate", linkPage: false}}/>
+            <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
+            <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                                disposed={disposed}
+                                                initialDisposed={initial.disposed}
                                                 readonly={readonly} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
                 <FlexedSinglesGroup>
-                    <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>
+                    {isInnoculated() &&
+                        <SpeciesSubspeciesArea subspecies={initial.subspecies} species={initial.species}/>}
                     <AgarBatchArea agarBatchId={initial.agarBatch} headerLevel={headerLevel}/>
                 </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                {isInnoculated() && <FlexedSinglesGroup>
                     <InnocDisplay innoc={initial.innoc}/>
-                    <ParentDisplay parent={initial.parent} parentType={initial.parentType} headerLevel={headerLevel}/>
+                    <ParentDisplay parent={initial.parent} parentType={initial.parentType}/>
                     <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}/>
-                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} headerLevel={headerLevel}
-                              canCreateSale={true}/>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
+                    <SaleArea sale={sale} setSale={setSale} readonly={readonly} canCreateSale={true}/>
+                </FlexedSinglesGroup>}
+                {isInnoculated() && <FlexedSinglesGroup>
                     <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
-                </FlexedSinglesGroup>
+                </FlexedSinglesGroup>}
                 <FlexedSinglesGroup>
                     {/* TODO: SIZING ON ENTRY FIELDS*/}
-                    <PourCoverageFieldDisplay pourCoveragePct={pourCoveragePct} updateParent={setPourCoveragePct}/>
-                    <CondensationCoverageFieldDisplay coverage={condensationCoveragePct}
-                                                      updateParent={setCondensationCoveragePct}/>
-                    <YesNoSelector pre={"Wet at cooled time: "} initial={initial.wetAtCooledTime}
-                                   updateParent={setWetAtCoolTime}/>
-                    <YesNoSelector pre={"Agar on outside at pour time: "} initial={initial.agarOnOutsideAtPourTime}
-                                   updateParent={setAgarOnOutsideAtPourTime}/>
+                    <PourCoverageFieldDisplay initial={initial.pourCoverage} updateParent={setPourCoveragePct}/>
+                    <div>{"Condensation Coverage at pour time: " + (initial.condensationCoverageAtPourTime ? initial.condensationCoverageAtPourTime + "%" : "unknown")}</div>
+                    {isInnoculated() && <CondensationCoverageFieldDisplay
+                        initial={initial.condensationCoverageAtSealTime/* TODO: STATIC IF PRE-SET*/}
+                        updateParent={setCondensationCoveragePct}/>}
+                    {initial.wetAtCooledTime ? <div>
+                        {"Wet at cooled time: " + (initial.wetAtCooledTime ? "Yes" : "No")}
+                    </div> : <YesNoSelector pre={"Wet at cooled time: "} initial={initial.wetAtCooledTime}
+                                            updateParent={setWetAtCoolTime}/>}
+                    {initial.agarOnOutsideAtPourTime !== undefined ? (!initial.agarOnOutsideAtPourTime ? null : <div>
+                            {"Agar on outside at pour time: " + (initial.agarOnOutsideAtPourTime ? "Yes" : "No")}
+                        </div>) :
+                        <YesNoSelector pre={"Agar on outside at pour time: "} initial={initial.agarOnOutsideAtPourTime}
+                                       updateParent={setAgarOnOutsideAtPourTime}/>}
                 </FlexedSinglesGroup>
             </FlexedArea>
-            <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
-                                 transfersOut={transfersOut}
-                                 allowNewTransferCreation={!readonly} cookies={cookies}/>{/* TODO: have this rely on dictation as well to figure out if we want it open on the screen*/}
-            <PicsDisplay pix={initial.pics || []} readonly={readonly}
+            {isInnoculated() &&
+                <TransfersOutDisplay headerTxt={"Transfers"} thisId={initial._id} thisEntryType={"plate"}
+                                     transfersOut={transfersOut}
+                                     allowNewTransferCreation={!readonly}/>}{/* TODO: have this rely on dictation as well to figure out if we want it open on the screen*/}
+            <PicsDisplay pix={initial.pics} readonly={readonly}
                          headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
             <ContamsDisplay initial={initial.contamination || []} updateParent={setContams}
                             readonly={readonly} headerLevel={headerLevel}/>
             {/* TODO: SOMEHOW SHOVE THE DICTAPHONE INTO THE NotesFormArea*/}
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-                <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl}/>
+                <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>
+                {/* TODO: removing users is not autoupdating in the UI (the removed user is re-added on submit...). Make sure those changes are shown immediately...*/}
             </TogglableAreaWithDepth>
 
-            {readonly || <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
             {readonly || <button className={"bottomButton greenButton"} onClick={(e) => {
                 e.stopPropagation();
                 submit()
@@ -299,38 +386,81 @@ export default function PlateDisplay(
     )
 }
 
-function PourCoverageFieldDisplay({pourCoveragePct, updateParent}: {
-    pourCoveragePct?: number,
+function PourCoverageFieldDisplay({initial, updateParent}: {
+    initial?: number,
     updateParent?: (cov: number) => void
 }) {
     const header = "Pour Coverage: "
-    if (!pourCoveragePct) {
-        return <div>{header + (pourCoveragePct ? pourCoveragePct + "%" : "unknown")}</div>
+    const [pourCoverage, setPourCoverage] = useState(initial)
+    const [open, setOpen] = useState(false)
+    if (initial) {
+        return <div>{header + initial + "%"}</div>
     }
-    const [pourCoverage, setPourCoverage] = useState(pourCoveragePct)
-    return <div>{header}<InputNumberWithSmallTitle value={"" + pourCoverage} readonly={false} min={0} max={100} step={1}
-                                                   mode={"integer"} onChange={(s) => {
-        const temp = Number(s)
-        updateParent && updateParent(temp) // TODO: ensure ok
-        setPourCoverage(temp)
-    }}/>{"%"}</div>
+    if (!open) {
+        return <div className={"inlineChildren"}>
+            <div>{header}</div>
+            <button onClick={e => {
+                e.stopPropagation()
+                setOpen(true)
+            }}>{"Set"}</button>
+        </div>
+    }
+    return <div className={"inlineChildren"}>
+        <div>{header}</div>
+        <div>
+            <InputNumber value={"" + pourCoverage} readonly={false} min={0} max={100} step={1}
+                         mode={"integer"} onChange={(s) => {
+                const temp = Number(s)
+                updateParent ? updateParent(temp) : console.warn("pourCoverage has no updateParent prop")
+                setPourCoverage(temp)
+            }}/>{"%"}
+        </div>
+        <button className={'basicButtonSmall'} onClick={e => {
+            e.stopPropagation()
+            setOpen(false)
+            setPourCoverage(undefined)
+        }}>{"Unset"}</button>
+    </div>
 }
 
-function CondensationCoverageFieldDisplay({coverage, updateParent}: {
-    coverage?: number,
+function CondensationCoverageFieldDisplay({initial, updateParent}: { // TODO: validate working
+    initial?: number,
     updateParent?: (cov: number) => void
 }) {
     const header = "Condensation Coverage: "
-    if (!coverage) {
-        return <div>{header + (coverage ? coverage + "%" : "unknown")}</div>
+    const [cov, setCov] = useState(initial)
+    const [open, setOpen] = useState(false)
+    useEffect(() => {
+        setCov(initial)
+    }, [initial])
+    if (initial) {
+        return <div>{header + initial + "%"}</div>
     }
-    const [val, setVal] = useState(coverage)
-    return <div>{header}<InputNumberWithSmallTitle value={"" + val} readonly={false} min={0} max={100} step={1}
-                                                   mode={"integer"} onChange={(s) => {
-        const temp = Number(s)
-        updateParent && updateParent(temp)
-        setVal(temp)
-    }}/>{"%"}</div>
+    if (!open) {
+        return <div className={"inlineChildren"}>
+            <div>{header}</div>
+            <button className={'basicButtonSmall'} onClick={e => {
+                e.stopPropagation()
+                setOpen(true)
+            }}>{"Set"}</button>
+        </div>
+    }
+    return <div className={"inlineChildren"}>
+        <div>{header}</div>
+        <div>
+            <InputNumber value={"" + cov} readonly={false} min={0} max={100} step={1}
+                         mode={"integer"} onChange={(s) => {
+                const temp = Number(s)
+                updateParent ? updateParent(temp) : console.warn("condensationCoverage has no updateParent prop")
+                setCov(temp)
+            }}/>{"%"}
+        </div>
+        <button onClick={e => {
+            e.stopPropagation()
+            setOpen(false)
+            setCov(undefined)
+        }}>{"Unset"}</button>
+    </div>
 }
 
 // TODO: USE?
@@ -372,12 +502,6 @@ export function NumberSlider({min, max, label, defaultValue, onChange}:
                 onChange={onChange}
             />
         </Box>
-        // <div>
-        //     <div className={"inline"}>{"Wetness"}</div>
-        //     <div className={"inline"}>
-        //
-        //     </div>
-        // </div>
     );
 }
 
@@ -418,156 +542,175 @@ function OptionalSliderSelector({txt, label, initial, min, max, updateParent, de
     </div>
 }
 
-export function PlateImportDisplay({cookies}: ImportDisplayInput) {
-    // TODO: condensationCoverageAtSealTime?: number
-    // TODO: pourCoverage?: number
-    // TODO: wetAtCooledTime?: boolean
-    // TODO: agarOnOutsideAtPourTime?: boolean
+export function PlateImportDisplay({}: ImportDisplayInput) {
+    const {dispatch} = useModalContext();
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
     const [pourCoverage, setPourCoverage] = useState<number | undefined>(undefined)
+    const [condensationCoverage, setCondensationCoverage] = useState<number | undefined>(undefined)
     const [imageFile, setImageFile] = useState<File | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const ImportPlate = () => {
-        if (species === undefined) {
-            setErr("Species must be set!")
-            return
-        }
-        let formData = new FormData()
-        let dataObj: any = {
-            created: created,
-            species: species._id,
-            //perms: perms,
+        const formData = new FormData()
+        const dataObj: any = {
+            creationDate: created,
             // Optionals
-            subspecies: subspecies?._id,
+            species: species?._id,
+            subspecies: subspecies,
             knownFruitable: knownFruitable,
             generation: generation,
             pourCoverage: pourCoverage,
-
+            condensationCoverageAtPourTime: condensationCoverage,
+            writeTagTo: writeTagTo,
         }
+        formData.set("data", JSON.stringify(dataObj))
         if (imageFile !== undefined) {
-            formData.set("image", imageFile, "image")
+            formData.set("image", imageFile, "img")
         }
-        writeTagTo && (dataObj.writeTagTo = writeTagTo)
-        setFormData(formData, dataObj)
-        SendMultipartRequest(BaseExternalUrl + "/db/import/plate", cookies, formData)
-            .then(HandleTxtResponse) // TODO: change to json for reasons
-            .then((newId) => {
-                redirect(BaseExternalUrl + "/view/plate/" + newId)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        const dispatchUpdate = (isErr: boolean, text: string) => {
+            if (isErr) {
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }
+                })
+            } else {
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }
+                })
+            }
+        }
+        DoMultipartImportRequest(formData, "plate", AssertPlate, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"plate"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <div className={"centerH"}>
-            <ExistingSpeciesSelector initialSpecies={species?._id}
-                                     doSelect={(spec?: SpeciesData) => {
-                                         setSpecies(spec)
-                                         setSubspecies(undefined)
-                                     }/*cookies={cookies}*/}/>
-        </div>
-        {species !== undefined ? <div className={"centerH"}>
-            <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies/*cookies={cookies}*/}/>
-        </div> : null}
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
         <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
-        {/* TODO: Test coverage slider */}
-        <PourCoverageSelectorRequired value={pourCoverage} setPourCoverage={setPourCoverage}/>
-        <div className={"centerH"}>
+        <div className={"inlineChildren"}>
+            <div>{"Pour Coverage: "}</div>
+            <div>
+                <PourCoverageSelectorRequired value={pourCoverage} setPourCoverage={setPourCoverage}/>
+            </div>
+        </div>
+
+        <CondensationCoverageSelector coverage={condensationCoverage} updateParent={setCondensationCoverage}/>
+        <div className={"centerH mt-2"}>
             <ImageSelector updateParent={setImageFile}/>
         </div>
 
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"bottomButton"} onClick={ImportPlate}>{"Import Plate"}</button>
+        <button className={"greenButton buttonFullWidth"} onClick={ImportPlate}>{"Import Plate"}</button>
     </ImportEntryFormWrapper>
 }
 
 export function NewPlateForm(
-    {handlers}: { handlers: NewEntryInput<PlateData>, agarBatchIn?: AgarBatchData }
+    {handlers, agarBatchIn}: { handlers: NewEntryInput<PlateData>, agarBatchIn?: AgarBatchData }
 ) {
-    const [agarBatch, setAgarBatch] = useState<AgarBatchData | undefined>(undefined)
-    const [condensationCoverageAtSealTime, setCondensationCoverageAtSealTime] = useState<number | undefined>(undefined)
+    const {dispatch} = useModalContext();
+    const [agarBatch, setAgarBatch] = useState<AgarBatchData | undefined>(agarBatchIn)
+    const [condensationCoverageAtPourTime, setCondensationCoverageAtPourTime] = useState<number | undefined>(undefined)
     const [pourCoverage, setPourCoverage] = useState<number | undefined>(undefined)
     const [wetAtCooledTime, setWetAtCooledTime] = useState<boolean | undefined>(undefined)
     const [agarOnOutsideAtPourTime, setAgarOnOutsideAtPourTime] = useState<boolean | undefined>(undefined)
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
+
+    const cookies = useContext(CookiesContext)
     const createPlate = (e: React.MouseEvent) => {
         e.preventDefault()
         if (agarBatch === undefined) {
             setErr("An agar batch must be selected")
             return
         }
-        // TODO: FIC THIS WHOLE FUNC BELOW THIS POINT
-        let body: any = {
-            agarBatch: agarBatch,
+        const body: any = {
+            agarBatch: agarBatch._id,
+            condensationCoverageAtPourTime: condensationCoverageAtPourTime,
+            pourCoverage: pourCoverage,
+            wetAtCooledTime: wetAtCooledTime,
+            agarOnOutsideAtPourTime: agarOnOutsideAtPourTime,
+            notes: notes,
             writeTagTo: writeTagTo,
         }
-        fetch(BaseExternalUrl + "/db/create/plate", {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify({
-                agarBatch: agarBatch,
-                notes: notes,
-                writeTagTo: writeTagTo,
+        DoCreateRequest("plate", body, AssertPlate, allCookies(cookies))
+            .then(v => {
+                handlers.onCreate ? handlers.onCreate(new PlateData(v)) : console.log("no onCreate provided")
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }
+                })
             })
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertPlate(entry)
-                handlers.onCreate && handlers.onCreate(entry)
+            .catch(e => {
+                setErr(JSON.stringify(e))
+                dispatch({
+                    type: ActionTypes.SET_MODAL_INFO, payload: {
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }
+                })
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
     }
-    return <NewEntryFormWrapper entryType={"plate"}>
+    const sliderClasses = "mt-10 mb-10"//{/* TODO: ensure ok! Change from 10!*/}
+    return <NewEntryFormWrapper entryType={"plate"} isTopLevel={handlers.isTopLevel}>
         <ErrorDisplay err={err}/>
-        <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true} creatorInPage={true}/>{/* TODO: is true ok for both?*/}
-        <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
-        <CondensationCoverageSelector coverage={condensationCoverageAtSealTime}
-                                      updateParent={setCondensationCoverageAtSealTime}/>
+        {agarBatchIn === undefined && <AgarBatchSelectorCloseable doSelect={setAgarBatch} allowCreation={true}
+                                                                  creatorInPage={true}/>}
+        <div className={sliderClasses}>
+            <PourCoverageSelector value={pourCoverage} setPourCoverage={setPourCoverage}/>
+        </div>
+        <div className={sliderClasses}>
+            <CondensationCoverageSelector coverage={condensationCoverageAtPourTime}
+                                          updateParent={setCondensationCoverageAtPourTime}/>
+        </div>
         <YesNoSelector pre={"Wet at cooled time: "} initial={undefined} updateParent={setWetAtCooledTime}
                        className={"inlineChildren"}/>
         <YesNoSelector pre={"Agar on outside at pour time: "} initial={undefined}
                        updateParent={setAgarOnOutsideAtPourTime} className={"inlineChildren"}/>
         <NewEntryNotes setNotes={setNotes}/>
         <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"bottomButton"} onClick={createPlate}>{"Create"}</button>
+        <button className={"bottomButton greenButton"} onClick={createPlate}>{"Create"}</button>
     </NewEntryFormWrapper>
 }
 
 export function PlateListPageTable({data, onClick, withLink}: ListPageItems<PlateData>) {
     let cols: ListTableColumn<PlateData>[] = [
-        NewColumn("ID", (v) => v._id),
+        NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v) => v.species || ""),
-        NewColumn("Subspec", v => v.subspecies || ""),
+        }, true),
+        NewColumn("Spec", (v) => v.species || "", true),
+        NewColumn("Subspec", v => v.subspecies || "", true),
         NewColumn("Updated", (v) => {
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: PlateData) => {
-            return <EntryLinkWrapper props={{linkId: encodeURI(v._id), entryType: "plate", openInNewTab: true}}>
+            return <EntryLinkWrapper props={{entry: v, openInNewTab: true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v => {
+        return new PlateData(v)
+    }}/>
 }
 
 export function PlateSelectorTable({data, onClick}: ListPageItems<PlateData>) {
@@ -577,17 +720,19 @@ export function PlateSelectorTable({data, onClick}: ListPageItems<PlateData>) {
 export function PlateSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        hideDisposed
     }: {
         doSelect: (val: PlateData | undefined) => void,
         allowCreate?: boolean
+        hideDisposed?: boolean
     }) {
     const table = (items: PlateData[]): JSX.Element => {
         return <PlateSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"plate"} entryTypes={"plates"} doSelect={doSelect} asserter={AssertPlate}
-                                   table={table}>
+                                   table={table} hideDisposed={hideDisposed}>
         {allowCreate && <NewPlateForm handlers={{onCreate: doSelect, isTopLevel: false}}/>}
     </ExistingRecentSelector>
 }

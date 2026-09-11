@@ -8,50 +8,43 @@ import {
     ExampleContaminations,
     ExamplePicsWithNotesIncoming
 } from "@/app/components/formSubcomponents/contaminations";
-import CloseableSelector, {SelectorProps} from "@/app/components/selector";
-import {EntryPerms} from "@/app/components/perms";
 import {ACL} from "@/app/components/accessControlServer";
-import {ChannelTextNewAgarBatch} from "@/app/components/agarBatchServer";
-import {FruitingChamberSelector} from "@/app/components/fruitingChamberClient";
-import {FruitingChamberData} from "@/app/components/fruitingChamberServer";
-import {JarSelector} from "@/app/components/jarClient";
 
-export function TestJarOK(){
-    const a: JarData = {
-        _id: "(JAR ID HERE)",
-        sizeCups: 4,
-        recipe: "(JAR RECIPE ID)",
-        // grainBatch: "(GRAIN_BATCH_ID)",
-        wetness: 5,
-        burstGrains: 1,
-        pcRun: "(PC RUN ID)",
-        creationDate: Date.now()-2000,
-        species: "(SPECIES NAME)",
-        subspecies: "(SUBSPECIES NAME)",
-        innoc: "(Innoc transfer id!)",
-        genSpore: 7,
-        genFruitOrSpore: 3,
-        transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
-        parentType: "plate",
-        parent: "(PARENT ID)",
-        pics: ExamplePicsWithNotesIncoming,
-        contamination: ExampleContaminations,
-        knownFruitable: true,
-        sale: "SALE_ID_HERE",
-        disposed: Date.now()+40000,
-        mostRecentImage: ExamplePicWithNotesIncoming,
-        notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
-        lastUpdated: 789,
-        //perms: {userPerms: {ids:[{id:"userCollId",val:"userName"}],canWrite:[true]},projectPerms: {ids:["proj1","proj2"],canWrite:[true, false]}, blanketPerms: 1},
-    }
-    return a
-}
+// export function TestJarOK(){
+//     return new JarData({
+//         _id: "(JAR ID HERE)",
+//         sizeCups: 4,
+//         recipe: "(JAR RECIPE ID)",
+//         // grainBatch: "(GRAIN_BATCH_ID)",
+//         wetness: 5,
+//         burstGrains: 1,
+//         pcRun: "(PC RUN ID)",
+//         creationDate: Date.now()-2000,
+//         species: "(SPECIES NAME)",
+//         subspecies: "(SUBSPECIES NAME)",
+//         innoc: "(Innoc transfer id!)",
+//         genSpore: 7,
+//         genFruitOrSpore: 3,
+//         transfersOut: ["(TRANSFER 1)","(TRANSFER 2)"],
+//         parentType: "plate",
+//         parent: "(PARENT ID)",
+//         pics: ExamplePicsWithNotesIncoming,
+//         contamination: ExampleContaminations,
+//         knownFruitable: true,
+//         sale: "SALE_ID_HERE",
+//         disposed: Date.now()+40000,
+//         mostRecentImage: ExamplePicWithNotesIncoming,
+//         notes: [{time: Date.now(),note: "(TEST NOTE 1)"},{time: Date.now()+2000,note: "(TEST NOTE 2)"}],
+//         lastUpdated: 789,
+//         acl: TestAcl(),
+//     })
+// }
 
 export interface JarData {
     _id: string
-    recipe: string // TODO: may not exist for imported jars?
-    wetness?: number // TODO: handle everywhere
-    burstGrains?: number // TODO: handle everywhere
+    recipe: string
+    wetness?: number
+    burstGrains?: number
     sizeCups: number
     pcRun?: string
     creationDate: number
@@ -71,34 +64,30 @@ export interface JarData {
     mostRecentImage?: PicWithNotesIncoming
     notes?: Note[]
     lastUpdated: number
-    acl?: ACL
+    acl: ACL
 }
-
-export function JarSelectorCloseable(sp: SelectorProps<JarData>) { // TODO: use
-    const doSel = (val?: JarData):void=>{
-        if (!val){
-            return
-        }
-        sp.doSelect(val)
+export class JarData {
+    // Accept a single object containing the fields
+    constructor(init?: Partial<JarData>) {
+        // Dynamically map the object fields onto the class instance
+        Object.assign(this, init);
     }
-    return <CloseableSelector<JarData> props={{
-        allowCreation: sp.allowCreation,
-        doSelect: doSel, // For selecting normally
-        msgTxt: ChannelTextNewAgarBatch, // TODO: ???
-        closeTxt: "Close Jar List",
-        //createTxt: "Create Bag",// TODO: ???
-        lowercase: "jar",
-        //creatorInPage: sp.creatorInPage,// TODO: ???
-        //createEndpt: "bag",// TODO: ???
-        getId: (v: JarData) => v._id,
-        createSelector:(selHdl: (onSelect: JarData) => void)=>{
-            return <JarSelector allowCreate={sp.allowCreation} doSelect={(v)=>{
-                v && selHdl(v)
-            }}/>
-        },
-        // TODO: ok?
-        // createCreator:(selHdl: (onSelect: FruitingChamberData) => void)=>{
-        //     return <NewFruitingChamberForm handlers={{onCreate: selHdl, isTopLevel: false}}/>
-        // },
-    }}/>
+
+    public getId(): string {
+        return this._id
+    }
+    public entryType(): string {
+        return "jar"
+    }
+    public description(): string {
+        if(this.species !== undefined){
+            const kfSent = this.knownFruitable!==undefined?"":(this.knownFruitable?"Known fruitable.":"Nonfruitable")
+            const contamsSent = (this.contamination!==undefined&&this.contamination.length!==0)?`${this.contamination.length} contam notes.`:"Not noted as contaminated."
+            return `Jar ${this._id}. Species: ${this.species}. ${this.subspecies!==undefined&&`Subspecies: ${this.subspecies}`}. ${kfSent}. ${contamsSent} Created on ${new Date(this.creationDate).toISOString()}. Last updated on ${new Date(this.lastUpdated).toISOString()}` // TODO: KF, FilterSize, flushes, contams, disposal date, etc?
+        }
+        if(this.disposed !== undefined){
+            return `Jar ${this._id}. Disposed on ${new Date(this.disposed).toISOString()}.`
+        }
+        return `Jar ${this._id}. Not innoculated. Created on ${new Date(this.creationDate).toISOString()}.`
+     }
 }

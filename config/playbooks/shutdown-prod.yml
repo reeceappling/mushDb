@@ -1,0 +1,15 @@
+# TODO: create backup playbook
+# TODO: create restart playbook
+
+- name: Shut Down Docker Compose Project
+  hosts: mainServer
+  become: true
+  vars:
+    project_path: /opt/my_project # TODO: fix!
+
+  tasks:
+    - name: Tear down and stop Docker Compose services
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_path }}"
+        state: absent
+        remove_volumes: true # TODO: only true if you want to remove any anonymous volumes!

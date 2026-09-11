@@ -1,7 +1,8 @@
 // TODO: From: https://dev.to/morewings/lets-create-a-better-number-input-with-react-1j0m
 
-import type {ChangeEvent, FC, KeyboardEvent} from 'react';
+import {ChangeEvent, FC, KeyboardEvent, useEffect, useState} from 'react';
 import {useCallback, useId} from 'react';
+import * as React from "react";
 
 // List of available numeric modes
 export enum Modes {
@@ -22,9 +23,6 @@ export interface Labelled {
 }
 
 export interface NumericAreaProps extends ReadOnly, NumericInputProps {
-}
-
-export interface NumericAreaProps2 extends ReadOnly, NumericInputProps2 {
 }
 
 export interface NumericInputProps extends Labelled, NumericInputOnlyProps {
@@ -68,12 +66,13 @@ export type TextInputOnlyProps = {
     placeholder?: string;
     /** Provide an error hint for the user*/
     errorMessage?: string;
+    onBlur?: () => void;
 };
 
 const patternMapping = {
     [Modes.natural]: '(?:0|[1-9]\\d*)',
     [Modes.integer]: '[+\\-]?(?:0|[1-9]\\d*)',
-    [Modes.floating]: '[+\\-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?',
+    [Modes.floating]: '[+\\-]?(?:0|[1-9]\\d*)(?:\\.\\d*)?',
     [Modes.scientific]: '[+\\-]?(?:0|[1-9]\\d*)(?:\\.\\d+)?(?:[eE][+\\-]?\\d+)?',
 };
 
@@ -115,7 +114,7 @@ export const DisplayNumerical: FC<NumericInputProps> = ({
                                                             errorMessage = 'error!',
                                                         }) => {
     const id = useId();
-    const handleChange = useCallback( // TODO: ????
+    const handleChange = useCallback(
         (event: ChangeEvent<HTMLInputElement>) => {
             onChange(event.target.value);
         },
@@ -128,7 +127,7 @@ export const DisplayNumerical: FC<NumericInputProps> = ({
                 htmlFor={id}
                 className={labelClassAbsolute}
             >{label}</label>
-            <input // TODO: USE SOMETHING OTHER THAN INPUT!!!!
+            <input
                 inputMode="decimal"
                 autoComplete="off"
                 pattern={pattern}
@@ -142,7 +141,7 @@ export const DisplayNumerical: FC<NumericInputProps> = ({
             />
             <div
                 className={errClassName}
-                id={`${id}-helper-text`} // TODO: ?????????????
+                id={`${id}-helper-text`}
             >{errorMessage}</div>
         </fieldset>
     );
@@ -161,7 +160,7 @@ export const DisplayNumerical2: FC<NumericInputProps> = ({
     key
                                                          }) => {
     const id = useId();
-    const handleChange = useCallback( // TODO: ????
+    const handleChange = useCallback(
         (event: ChangeEvent<HTMLInputElement>) => {
             onChange(event.target.value);
         },
@@ -188,13 +187,12 @@ export const DisplayNumerical2: FC<NumericInputProps> = ({
                 />
                 <div
                     className={errClassName2}
-                    id={`${id}-helper-text`} // TODO: ?????????????
+                    id={`${id}-helper-text`}
                 >{errorMessage}</div>
             </div>
         </>
     );
 };
-// TODO: the next one is the functional component we'll be using
 export const InputNumerical: FC<NumericInputProps> = (
     {
         readonly = false,
@@ -325,11 +323,40 @@ export const InputNumerical2: FC<NumericInputProps> = (
             />
             <div
                 className={errClassName2}
-                id={`${id}-helper-text`} // TODO: ?????????????
+                id={`${id}-helper-text`}
             >{errorMessage}</div>
         </div>
     )
         ;
+};
+export function InputDecimal({initial,label,min,max,updateParent}:{initial:number,label:string,min?:number,max?:number,updateParent:(n:number)=>void}){
+    const [radiusDraft, setRadiusDraft] = useState(initial.toString())
+    const [err, setErr] = useState<string | undefined>(undefined)
+    useEffect(() => {
+        setRadiusDraft(initial.toString())
+    }, [initial])
+    return <NumericalAreaWithAbsolutes label={label} mode="floating" min={min||0.0} max={max||1000.0} readonly={false}
+                                       errorMessage={err} value={radiusDraft}
+                                       onChange={(val?: string) => {
+                                           const next = val ?? ""
+                                           setRadiusDraft(next)
+                                           // allow in-progress values like "1."
+                                           if (next === "" || next.endsWith(".")) {
+                                               setErr(undefined)
+                                               return
+                                           }
+                                           try {
+                                               const n = Number(val)
+                                               if (!Number.isNaN(n)) {
+                                                   val && updateParent(n)
+                                                   setErr(undefined)
+                                               } else {
+                                                   setErr("NaN decimal input")
+                                               }
+                                           } catch (e) {
+                                               setErr("failed to set decimal state: "+JSON.stringify(e))
+                                           }
+                                       }}/>
 };
 
 export const InputTextWithSmallTitle: FC<TextInputProps> = (
@@ -369,7 +396,7 @@ export const InputTextInlineTitle: FC<TextInputProps> = (
         errorMessage = 'error!',
     }) => {
     const id = useId();
-    const handleChange = useCallback(
+    const handleChange = useCallback( // TODO: use?
         (event: ChangeEvent<HTMLInputElement>) => {
             onChange(event.target.value);
         },
@@ -391,6 +418,7 @@ export const InputText: FC<TextInputOnlyProps> = (
         },
         placeholder, // placeholder text
         errorMessage = 'error!',
+        onBlur,
     }) => {
     const id = useId();
     const handleChange = useCallback(
@@ -411,42 +439,13 @@ export const InputText: FC<TextInputOnlyProps> = (
                 className={numInputClassName}
                 placeholder={placeholder}
                 aria-describedby={`${id}-helper-text`}
+                onBlur={e=>{onBlur && onBlur()}}
             />
             <div
                 className={errClassName2}
-                id={`${id}-helper-text`} // TODO: ?????????????
+                id={`${id}-helper-text`}
             >{errorMessage}</div>
     </>
-};
-
-export const InputNumberWithSmallTitle: FC<NumericInputProps> = (
-    {
-        readonly = false,
-        value,
-        step = 1,
-        max = Infinity,
-        min = -Infinity,
-        onChange = () => {
-        },
-        label = "input number",
-        mode = Modes.floating,
-        placeholder, // placeholder number
-        errorMessage = 'error!',
-    }) => {
-    const id = useId();
-    const handleChange = useCallback(
-        (event: ChangeEvent<HTMLInputElement>) => {
-            onChange(event.target.value);
-        },
-        [onChange]
-    );
-    return <div className={"relative"}>
-        <label
-            htmlFor={id}
-            className={labelClassAbsolute}
-        >{label}</label>
-        <InputNumber max={max} mode={mode} min={min} step={step} placeholder={placeholder} value={value} onChange={onChange} readonly={readonly} errorMessage={errorMessage}/>
-    </div>
 };
 
 export const InputNumber: FC<NumericInputOnlyProps> = (
@@ -505,7 +504,7 @@ export const InputNumber: FC<NumericInputOnlyProps> = (
         />
         <div
             className={errClassName2}
-            id={`${id}-helper-text`} // TODO: ?????????????
+            id={`${id}-helper-text`}
         >{errorMessage}</div>
     </>
 };
@@ -566,7 +565,7 @@ export const InputNumber2: FC<NumericInputOnlyProps> = (
         />
         <div
             className={errClassName2}
-            id={`${id}-helper-text`} // TODO: ?????????????
+            id={`${id}-helper-text`}
         >{errorMessage}</div>
     </>
 };
@@ -627,7 +626,7 @@ export const InputNumber4: FC<NumericInputOnlyProps> = (
         />
         <div
             className={errClassName2}
-            id={`${id}-helper-text`} // TODO: ?????????????
+            id={`${id}-helper-text`}
         >{errorMessage}</div>
     </>
 };

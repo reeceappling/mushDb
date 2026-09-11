@@ -1,152 +1,163 @@
 'use client'
 
-import React, {JSX, useEffect, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AllEntries} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
 import DateArea from "@/app/components/formSubcomponents/date";
 import {SubspeciesData} from "@/app/components/subspeciesServer";
 import {
-    AssertArrayResult,
+    AssertArrayResult, clientPostRequestHeaders,
     CreateNewEntryButton, DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
+    DisplayInput, DoCreateRequest, DoUpdateRequest, ErrHandler, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
     HandleJsonResponse,
     IsString, ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper,
     NewEntryInput, NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey, Subform,
+    OptionalArrayOfType, Subform,
 } from "@/app/components/common";
 import {AliasesArea, ErrorDisplay, NameArea} from "@/app/components/formSubcomponents/commonClient";
 import {BaseExternalUrl} from "@/app/components/Constants";
-import {ExistingSpeciesSelector} from "@/app/components/speciesClient";
+import { ExistingSpeciesSelector} from "@/app/components/speciesClient";
 import {
     AclDefaultAclDisplay,
-    IsValidAcl
+    MarshalAcl, UnmarshalAcl
 } from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
 import TestAndValidate from "@/app/components/testing/untested";
-import {HandleErr} from "@/app/components/userClient";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {JarRecipeData} from "@/app/components/jarRecipeServer";
 
 export function AssertSubspecies(input: any): asserts input is SubspeciesData {
     if (typeof input !== 'object') {
-        throw new Error('Input is not an object! Input is ' + typeof input);
+        throw 'Input is not an object! Input is ' + typeof input
     }
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
-            throw new Error('Subspecies assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
+            throw 'Subspecies assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key])
         }
     }
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl],
-        ['defaultAcl', IsValidAcl]
-    ])
-    for (let [key, validator] of complexOptionalKeys) {
-        if (!OptionalKey(key, input, validator)) {
-            throw new Error('Subspecies assertion failure: optional key ' + key + ' was not valid: ');
-        }
-    }
+    // // complex required keys
+    // const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+    //     // ['acl', IsValidAcl],
+    //     // ['defaultAcl', IsValidAcl]
+    // ])
+    // for (const [key, validator] of complexRequiredKeys) {
+    //     if (!RequiredKey(key, input, validator)) {
+    //         throw 'Subspecies assertion failure: required key ' + key + ' was not valid: '
+    //     }
+    // }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['notes', IsValidNote],
         ['aliases', IsString],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
-            throw new Error('Subspecies assertion failure: optional array key ' + key + ' was not valid');
+            throw 'Subspecies assertion failure: optional array key ' + key + ' was not valid'
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
+    // Unmarshal Default ACL
+    if (!('defaultAcl' in input)) {
+        throw 'Default Acl missing from input in asserter'
+    }
+    input.defaultAcl = UnmarshalAcl(input.defaultAcl)
     return
 }
 
 export default function SubspeciesDisplay(
     {
-        id, readonly, data, headerLevel
-    }: DisplayInput) {
-    try {
-        AssertSubspecies(data)
-        const [initial, setInitial] = useState(data)
+        readonly, data, headerLevel
+    }: DisplayInput<SubspeciesData>) {
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
 
         const [aliases, setAliases] = useState(data.aliases || [])
         const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(initial.notes))
         const [err, setErr] = useState<string | undefined>()
-        const [acl, setAcl] = useState<ACL | undefined>(initial.acl)
-        const [defaultAcl, setDefaultAcl] = useState<ACL | undefined>(initial.defaultAcl)
+        const [acl, setAcl] = useState<ACL>(initial.acl)
+        const [defaultAcl, setDefaultAcl] = useState<ACL>(initial.defaultAcl)
         const updateInitial = (updated: SubspeciesData) => {
             setInitial(updated)
             setAliases(updated.aliases || [])
             setNotes(InitialNotesState(updated.notes))
             setAcl(updated.acl)
             setDefaultAcl(updated.defaultAcl)
+            setErr(undefined)
         }
+        const cookies = useContext(CookiesContext)
         const update = () => {
-            fetch(BaseExternalUrl + "/db/update/subspecies/"+encodeURI(initial._id), {
-                method: "POST",
-                headers: {
-                    credentials: 'include',
-                    'Content-type': 'application/json'
-                },
-                body: JSON.stringify({
-                    aliases: aliases,
-                    notes: notes,
-                    acl: acl,
-                    defaultAcl: defaultAcl,
+            const body: any = {
+                aliases: aliases,
+                notes: notes,
+                acl: MarshalAcl(acl),
+                defaultAcl: MarshalAcl(defaultAcl),
+            }
+            DoUpdateRequest("subspecies",encodeURIComponent(initial._id), body, AssertSubspecies, allCookies(cookies))
+                .then(v=>{
+                    updateInitial(new SubspeciesData(v))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Success",
+                            text: "entry updated successfully",
+                            isErr: false
+                        }})
                 })
-            })
-                .then(HandleJsonResponse)
-                .then((entry) => {
-                    AssertSubspecies(entry)
-                    updateInitial(entry)
+                .catch(e=>{
+                    setErr("failed to update initial: "+JSON.stringify(e))
+                    dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Update Failed",
+                            text: "failed to update: " + JSON.stringify(e),
+                            isErr: true
+                        }})
                 })
-                .catch((error) => {
-                    HandleErr(error, setErr)
-                });
         }
         return (
             <DisplayFormWrapper entryType={"subspecies"}>
-                <ErrorDisplay err={err} headerLevel={headerLevel}/>
-                <TestAndValidate todos={["Species up here too?"]}>
-                    <ID id={data._id} txt={"Subspecies"} entryType={"subspecies"} />
-                </TestAndValidate>
+                <ErrorDisplay err={err}/>
+                <ID props={{id:data._id, txt:"Subspecies", entryType:"subspecies"}}/>
+                <ID props={{id:data.species, txt:"Species", entryType:"species"}}/> {/* TODO: link not working!*/}
                 <FlexedArea>
                     <FlexedSinglesGroup>
                         <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
                     </FlexedSinglesGroup>
                 </FlexedArea>
-                <AliasesArea aliases={aliases} readonly={readonly} headerLevel={headerLevel} updateParent={setAliases}/>
+                <AliasesArea initial={initial.aliases} readonly={readonly} updateParent={setAliases}/>
                 <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
-                <AclDefaultAclDisplay ACL={acl} defaultACL={defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl} readonly={readonly}/>
+                <AclDefaultAclDisplay ACL={initial.acl} defaultACL={initial.defaultAcl} updateAcl={setAcl} updateDefaultAcl={setDefaultAcl} readonly={readonly}/>
                 {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
                     e.stopPropagation();
                     update()
                 }}>{"Update Subspecies"}</button>}
             </DisplayFormWrapper>
         )
-    } catch (err) {
-        return <div>{"ERROR: Subspecies data format incorrect: " + err}</div>
-    }
-
 }
 
 export function NewSubspeciesForm({handlers, species}: {
     handlers: NewEntryInput<SubspeciesData>,
     species?: SpeciesData
 }) {
-    const {onCreate} = handlers
+    const {dispatch} = useModalContext();
     const [name, setName] = useState<string | undefined>()
     const [selectedSpecies, setSelectedSpecies] = useState(species)
     const [aliases, setAliases] = useState<string[]>([])
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>(undefined)
+
+    const cookies = useContext(CookiesContext)
     const submitNewSubspecies = () => {
         if (!name) {
             setErr("Name must note be blank")
@@ -156,38 +167,48 @@ export function NewSubspeciesForm({handlers, species}: {
             setErr("Species must be selected")
             return
         }
-        fetch(BaseExternalUrl + "/db/create/subspecies", {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify({
+        const body: any = {
                 name: name,
-                species: selectedSpecies,
+                species: selectedSpecies._id,
                 aliases: aliases,
                 notes: notes,
+                // ACL/DefaultACL are initially inherited from parent species
+            }
+        DoCreateRequest("subspecies", body, AssertSubspecies, allCookies(cookies))
+            .then(v=>{
+                if(handlers.onCreate!==undefined){
+                    handlers.onCreate(new SubspeciesData(v))
+                    handlers.isTopLevel && dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                            header: "Create Success",
+                            text: "entry created successfully",
+                            isErr: false
+                        }})
+                } else {
+                    console.log("no onCreate provided")
+                }
             })
-        })
-            .then(HandleJsonResponse)
-            .then((entry) => {
-                AssertSubspecies(entry)
-                onCreate && onCreate(entry)
+            .catch(e=>{
+                console.error("onCreate failed: "+JSON.stringify(e)) // TODO: del
+                setErr("onCreate failed: "+JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
     }
     return (
-        <NewEntryFormWrapper entryType={"subspecies"}>
+        <NewEntryFormWrapper entryType={"subspecies"} isTopLevel={handlers.isTopLevel}>
             <ErrorDisplay err={err}/>
-            {species === undefined && <ExistingSpeciesSelector initialSpecies={species} doSelect={s => {
-                setSelectedSpecies(s)
-            }} />}
+            {species === undefined && <ExistingSpeciesSelector initialSpecies={species} doSelect={setSelectedSpecies} />}
+            <Subform>
             {/* NAME (ID) */}
             <NameArea classNames={"inlineChildren"} currentName={name} headerTxt={"New Subspecies Name: "} setName={setName} readonly={false}/>
-            {/* Aliases */}
-            <AliasesArea aliases={aliases} readonly={false} updateParent={setAliases}/>
+            </Subform>
+            <Subform>
+                {/* Aliases */}
+            <AliasesArea readonly={false} updateParent={setAliases}/>
+            </Subform>
             {/* Notes */}
             <NewEntryNotes setNotes={setNotes}/>
             <CreateNewEntryButton onSubmit={submitNewSubspecies}/>
@@ -218,12 +239,9 @@ export function ExistingSubSpeciesSelector(
         }
         setSelected(undefined)
         setLoaded(false)
-        fetch(BaseExternalUrl + "/subspeciesFor/" + encodeURI(species), { // TODO: ensure endpoint ok
+        fetch(BaseExternalUrl + "/db/subspeciesFor/" + encodeURI(species), { // TODO: ensure endpoint ok
             method: "GET",
-            headers: {
-                credentials: 'include',
-                'Accept': 'application/json',
-            },
+            headers: clientPostRequestHeaders,
         })
             .then(HandleJsonResponse)
             .then((data) => {
@@ -233,12 +251,10 @@ export function ExistingSubSpeciesSelector(
                 setSelectable(species !== undefined)
                 setErr(undefined)
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(ErrHandler(setErr));
     }, [species]);
-    let errArea = () => {
-        return <ErrorDisplay err={err} headerLevel={headerLevel}/>
+    const errArea = () => {
+        return <ErrorDisplay err={err}/>
     }
     const toggleButton = () => {
         return <div>
@@ -246,6 +262,9 @@ export function ExistingSubSpeciesSelector(
                 setSelectorOpen(!selectorOpen)
             }}>{selectorOpen ? "Close subspecies selector" : (selected ? "Choose a different subspecies" : "Select a subspecies")}</button>
         </div>
+    }
+    if (!species){
+        return null
     }
     if (!selectable) {
         return null
@@ -258,13 +277,13 @@ export function ExistingSubSpeciesSelector(
     }
     if (!isLoaded) {
         return <div className={"centerHChildren gapTop gapBottom"}>
-            <ErrorDisplay err={err} headerLevel={headerLevel}/>
+            <ErrorDisplay err={err}/>
             <div>{"loading subspecies selector"}</div>
         </div>
     }
     if (subspeciesList.length == 0) {
         return <div className={"centerHChildren gapTop gapBottom"}>
-            <ErrorDisplay err={"No Subspecies Found for species: " + (species && species)} headerLevel={headerLevel}/>
+            <ErrorDisplay err={"No Subspecies Found for species: " + (species && species)}/>
             <TestAndValidate todos={["do this"]}>
                 <div>{"CREATE SUBSPECIES LINK"}</div>
             </TestAndValidate>
@@ -292,28 +311,27 @@ export function ExistingSubSpeciesSelector(
     </div>
 }
 
-export function SubspeciesFormArea({subspecies}:{
-    subspecies: string,
-}){
-    return <EntryLinkWrapper props={{entryType:"subspecies",linkId:encodeURI(subspecies)}}><div>{"Subspecies: "+subspecies}</div></EntryLinkWrapper>
-}
-
 export function SubspeciesListPageTable({data, onClick, withLink}: ListPageItems<SubspeciesData>) {
     let cols: ListTableColumn<SubspeciesData>[] = [
-        NewColumn("Subspecies", (v)=>v._id),
-        NewColumn("Species", (v)=>v.species),
+        NewColumn("Species", (v)=>v.species, true),
+        NewColumn("Subspecies", (v)=>v._id, true),
+        NewColumn("Aliases", (v) => <div>
+            {v.aliases && v.aliases.map((a, i) => {
+                return <div key={a + i}>{a}</div>
+            })}
+        </div>, true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
         cols = [...cols, NewColumn("Link", (v: SubspeciesData)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"subspecies",openInNewTab:true}}>
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new SubspeciesData(v)}}/>
 }
 export function SubspeciesSelectorTable({data, onClick}: ListPageItems<SubspeciesData>) {
     return <SubspeciesListPageTable data={data} onClick={onClick} withLink={true} />
@@ -322,17 +340,13 @@ export function SubspeciesSelectorTable({data, onClick}: ListPageItems<Subspecie
 // SubspeciesSelector is a selector between ALL subspecies, not just those of a single species
 export function SubspeciesSelector(
     {
-        doSelect,
-        allowCreate
+        doSelect
     }: {
-        doSelect: (val: SubspeciesData | undefined) => void,
-        allowCreate?: boolean
+        doSelect: (val: SubspeciesData | undefined) => void
     }) {
     const table = (items: SubspeciesData[]):JSX.Element=>{
         return <SubspeciesSelectorTable data={items} onClick={doSelect}/>
     }
-
     return <ExistingRecentSelector entryType={"subspecies"} entryTypes={"subspecies"} doSelect={doSelect} asserter={AssertSubspecies}
-                                   table={table}>
-    </ExistingRecentSelector>
+                                   table={table}/>
 }

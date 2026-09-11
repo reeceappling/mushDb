@@ -1,67 +1,92 @@
 'use client'
 
-import React, {JSX, useState} from "react";
+import React, {JSX, useContext, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import DateArea from "@/app/components/formSubcomponents/date";
-import {LcData} from "@/app/components/lcServer";
+import {LcData, LcSelectorCloseable} from "@/app/components/lcServer";
 import {KnownFruitableArea} from "@/app/components/formSubcomponents/knownFruitableArea";
 import {GenerationInput} from "@/app/components/formSubcomponents/generationInput";
 import {
     ConfirmedCleanArea,
-    ConfirmedCleanSelector, DisplayFormWrapper,
-    DisplayInput, ExistingRecentSelector, FlexedArea, FlexedSinglesGroup,
-    HandleJsonResponse, ImportEntryFormWrapper,
-    ListPageItems, ListPageTable, ListTableColumn, NewColumn, NewEntryFormWrapper, NumberToDateStr,
-    OptionalArrayOfType,
-    OptionalKey,
+    ConfirmedCleanSelector,
+    DisplayFormWrapper,
+    DisplayInput,
+    DoCreateRequest,
+    DoGetRequest, DoMultipartImportRequest, DoUpdateMultipartRequest,
+    ExistingRecentSelector,
+    FlexedArea,
+    FlexedSinglesGroup,
+    ImportEntryFormWrapper,
+    ListPageItems,
+    ListPageTable,
+    ListTableColumn,
+    NewColumn,
+    NewEntryFormWrapper,
+    NumberToDateStr,
+    OptionalArrayOfType, OptionalKey,
     OptionalSimpleKey,
+    RequiredKey, resolvePicsFormData, setFormFull,
 } from "@/app/components/common";
 import ReaderWriterSelector, {
+    ReadRFIDButton,
     WriteRfidOvcArea
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
-import {redirect} from "next/navigation";
 import {
     ErrorDisplay,
-    GensFormDisplay,
-    ParentDisplay,
+    GensFormDisplay, MostRecentImageDisplay,
+    ParentDisplay, PicsDisplay,
 } from "@/app/components/formSubcomponents/commonClient";
-import {BaseExternalUrl} from "@/app/components/Constants";
 import {SpeciesData} from "@/app/components/speciesServer";
-import {SubspeciesData} from "@/app/components/subspeciesServer";
 import ID from "@/app/components/formSubcomponents/id";
-import {ExistingSpeciesSelector, SpeciesSubspeciesArea} from "@/app/components/speciesClient";
-import {ExistingSubSpeciesSelector} from "@/app/components/subspeciesClient";
-import {LcSyringe} from "@/app/components/lcSyringeServer";
-import {AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
+import {
+    ExistingSpeciesSubspeciesSelector,
+    SpeciesSubspeciesArea
+} from "@/app/components/speciesClient";
+import {LcSyringeData} from "@/app/components/lcSyringeServer";
+import {AllEntries, OnViewCreatorQuadCol, SplitAllEntries} from "@/app/components/formSubcomponents/shared";
 import {TransfersOutDisplay} from "@/app/components/transferClient";
-import EntryLink, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
-import TestAndValidate from "@/app/components/testing/untested";
-import {AclDisplay, IsValidAcl, MarshalAcl, TogglableAreaWithDepth} from "@/app/components/accessControlClient";
+import EntryLinkForId, {EntryLinkWrapper} from "@/app/components/formSubcomponents/entryLink";
+import {
+    AclDisplay,
+    MarshalAcl,
+    TogglableAreaWithDepth,
+    UnmarshalAcl
+} from "@/app/components/accessControlClient";
 import {ACL} from "@/app/components/accessControlServer";
-import {InitialNotesState} from "@/app/components/formSubcomponents/contaminations";
 import {OnViewCreatorsQuadColArea} from "@/app/components/formSubcomponents/ovc";
 import {CreatedUpdatedDisposedArea} from "@/app/components/commonServer";
+import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
+import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
+import {AssertLc} from "@/app/components/lcClient";
+import {
+    InitialPicsEntries,
+    IsValidPicWithNotesIncoming,
+    NewPicWithNotesForm,
+    PicWithNotesForm
+} from "@/app/components/formSubcomponents/picWithNotes";
+import ImageSelector from "@/app/components/formSubcomponents/imageSelector";
+import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
 
-export function AssertLcSyringe(input: any): asserts input is LcSyringe {
+export function AssertLcSyringe(input: any): asserts input is LcSyringeData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
 
     // required simple keys
-    let requiredSimpleKeys = new Map<string, string>([
+    const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
         ['creationDate', 'number'],
         ['species', 'string'],
         ['lastUpdated', 'number'],
     ])
-    for (let [key, expType] of requiredSimpleKeys) {
+    for (const [key, expType] of requiredSimpleKeys) {
         if (!(key in input && typeof input[key] === expType)) {
             throw new Error('Lc syringe assertion failure: ' + key + 'was not type ' + expType + '. Was ' + (typeof input[key]));
         }
     }
 
     // optional simple keys
-    let optionalSimpleKeys = new Map<string, string>([
+    const optionalSimpleKeys = new Map<string, string>([
         ['parent', 'string'],
         ['sale', 'string'],
         ['genSpore', 'number'],
@@ -70,203 +95,257 @@ export function AssertLcSyringe(input: any): asserts input is LcSyringe {
         ['knownFruitable', 'boolean'],
         ['disposed', 'number'],
     ])
-    for (let [key, expType] of optionalSimpleKeys) {
+    for (const [key, expType] of optionalSimpleKeys) {
         if (!OptionalSimpleKey(key, input, expType)) {
             throw new Error('Lc syringe assertion failure: optional key ' + key + ' was not valid');
         }
     }
 
-    // complex optional keys
-    let complexOptionalKeys = new Map<string, (v: any) => boolean>([
-        ['acl', IsValidAcl]
+    // complex required keys
+    const complexRequiredKeys = new Map<string, (v: any) => boolean>([
+        //['acl', IsValidAcl]
     ])
-    for (let [key, validator] of complexOptionalKeys) {
+    for (const [key, validator] of complexRequiredKeys) {
+        if (!RequiredKey(key, input, validator)) {
+            throw new Error('LcSyringe assertion failure: required key ' + key + ' was not valid');
+        }
+    }
+    // complex optional keys
+    const complexOptionalKeys = new Map<string, (v: any) => boolean>([
+        ['mostRecentImage', IsValidPicWithNotesIncoming],
+    ])
+    for (const [key, validator] of complexOptionalKeys) {
         if (!OptionalKey(key, input, validator)) {
-            throw new Error('Jar assertion failure: optional key ' + key + ' was not valid');
+            throw new Error('Plate assertion failure: optional key ' + key + ' was not valid');
         }
     }
     // complex optional array keys
-    let complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
+    const complexOptionalArrayKeys = new Map<string, (v: any) => boolean>([
         ['transfersOut', (item) => {
             return typeof item === 'string'
         }],
+        ['pics', IsValidPicWithNotesIncoming],
         ['notes', IsValidNote],
     ])
-    for (let [key, validator] of complexOptionalArrayKeys) {
+    for (const [key, validator] of complexOptionalArrayKeys) {
         if (!OptionalArrayOfType(key, input, validator)) {
             throw new Error('Lc syringe assertion failure: optional array key ' + key + ' was not valid');
         }
     }
+    // Unmarshal ACL
+    if (!('acl' in input)) {
+        throw 'ACL missing from input in asserter'
+    }
+    input.acl = UnmarshalAcl(input.acl)
     return
 }
 
-export function LcSyringeImportDisplay({cookies}: {cookies: string }) {
+export function LcSyringeImportDisplay() {
+    const {dispatch} = useModalContext();
+    // const cookies = useContext(CookiesContext)
     const [created, setCreated] = useState<number>(Date.now())
     const [species, setSpecies] = useState<SpeciesData | undefined>(undefined)
-    const [subspecies, setSubspecies] = useState<SubspeciesData | undefined>(undefined)
+    const [subspecies, setSubspecies] = useState<string | undefined>(undefined)
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(undefined)
     const [knownFruitable, setKnownFruitable] = useState<boolean | undefined>(undefined)
-    const [generation, setGeneration] = useState<number | undefined>(undefined)
+    const [generation, setGeneration] = useState<number | undefined>(1)
+    const [imageFile, setImageFile] = useState<File | undefined>(undefined)
+    const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
+    const cookies = useContext(CookiesContext)
     const ImportLcSyringe = () => {
         if (species === undefined) {
             setErr("Species must be set!")
             return
         }
-        let dataObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             creationDate: created,
             species: species._id,
-            subspecies: subspecies?._id,
+            subspecies: subspecies,
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             generation: generation,
+            notes: notes,
             writeTagTo: writeTagTo,
         }
-
-        fetch(BaseExternalUrl + "/db/import/lcSyringe", {
-            method: 'Post',
-            body: JSON.stringify(dataObj),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((newLcSyringe) => {
-                AssertLcSyringe(newLcSyringe)
-                redirect(BaseExternalUrl + "/view/lcSyringe/" + newLcSyringe._id)
-            })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+        formData.set("data", JSON.stringify(dataObj))
+        if (imageFile !== undefined) {
+            formData.set("image", imageFile, "img")
+        }
+        const dispatchUpdate = (isErr:boolean, text:string)=>{
+            if(isErr){
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation failed",
+                        text: text,
+                        isErr: true
+                    }})
+            } else {
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Creation successful",
+                        text: text,
+                        isErr: false
+                    }})
+            }
+        }
+        DoMultipartImportRequest(formData, "lcSyringe", AssertLcSyringe, setErr, allCookies(cookies), dispatchUpdate)
     }
     return <ImportEntryFormWrapper entryType={"lcSyringe"}>
         {err != undefined && <div>{"Error: " + err}</div>}
         <DateArea pre={"Created: "} when={created} readonly={false} updateParent={setCreated}/>
-        <ExistingSpeciesSelector doSelect={setSpecies}/>
-        <ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>
+        <ExistingSpeciesSubspeciesSelector doSelectSpecies={setSpecies} doSelectSubspecies={setSubspecies}/>
+        {/*<ExistingSpeciesSelector doSelect={setSpecies}/>*/}
+        {/*<ExistingSubSpeciesSelector species={species?._id} doSelect={setSubspecies}/>*/}
         <ConfirmedCleanSelector updateParent={setConfirmedClean}/>
         <KnownFruitableArea doSelect={setKnownFruitable}/>
         <GenerationInput updateParent={setGeneration}/>
-        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
-        <button className={"greenButton bottomButton"} onClick={ImportLcSyringe}>{"Submit"}</button>
+        <NewEntryNotes setNotes={setNotes}/>
+        <div className={"centerH mt-2"}>
+            <ImageSelector updateParent={setImageFile}/>
+        </div>
+
+        <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>        <button className={"greenButton bottomButton"} onClick={ImportLcSyringe}>{"Submit"}</button>
     </ImportEntryFormWrapper>
 }
 
 export default function LcSyringeDisplay(
     {
-        id, readonly, data, headerLevel, isTopLevel, cookies
-    }: DisplayInput) {
-    try {
-        AssertLcSyringe(data)
-    } catch (err) {
-        return <div>{"ERROR: Liquid Culture Syringe data format incorrect: " + JSON.stringify(err)}</div>
-    }
+        readonly, data, headerLevel, isTopLevel
+    }: DisplayInput<LcSyringeData>) {
+    const {dispatch} = useModalContext();
+    const [initial, setInitial] = useState(data)
+    const [images, setImages] = useState<SplitAllEntries<PicWithNotesForm, NewPicWithNotesForm>>(InitialPicsEntries(data.pics))
+
     const [transfersOut, setTransfersOut] = useState<string[]>(data.transfersOut || [])
     const [confirmedClean, setConfirmedClean] = useState<boolean | undefined>(data.confirmedClean)
     const [knownFruitable, setKnownFruitable] = useState(data.knownFruitable)
     const [disposed, setDisposed] = useState(data.disposed)
     const [notes, setNotes] = useState<AllEntries<Note>>(InitialNotesState(data.notes))
-    const [writeTagTo, setWriteTagTo] = useState<string | undefined>()
-    const [acl, setAcl] = useState<ACL | undefined>(data.acl)
+    const [acl, setAcl] = useState<ACL>(data.acl)
     const [err, setErr] = useState<string | undefined>()
-    // TODO: THIS WHOLE FUNC???
-    const [initial, setInitial] = useState(data)
-    const updateInitial = (updated: LcSyringe) => {
+
+    const updateInitial = (updated: LcSyringeData) => {
         setInitial(updated)
         setTransfersOut(updated.transfersOut || [])
         setConfirmedClean(updated.confirmedClean)
         setKnownFruitable(updated.knownFruitable)
         setDisposed(updated.disposed)
+        setImages(InitialPicsEntries(updated.pics))
         setNotes(InitialNotesState(updated.notes))
         setAcl(updated.acl)
+        setErr(undefined)
     }
 
-
+    const cookies = useContext(CookiesContext)
     const lcSyringeSubmit = () => {
-        let bodyObj: any = {
+        const formData = new FormData()
+        const dataObj: any = {
             confirmedClean: confirmedClean,
             knownFruitable: knownFruitable,
             disposed: disposed,
+            //sale: initial.sale, // TODO: this!?
             notes: notes,
-            writeTagTo: writeTagTo,
             acl: MarshalAcl(acl),
         }
-
-        fetch(BaseExternalUrl + "/db/update/lcSyringe/" + initial._id, {
-            method: 'Post',
-            body: JSON.stringify(bodyObj),
-            headers: {
-                credentials: 'include',
-                'Content-type': "application/json"
-            },
-        })
-            .then(HandleJsonResponse)
-            .then((updatedEntry) => {
-                AssertLcSyringe(updatedEntry)
-                updateInitial(updatedEntry)
+        try {
+            // Pics
+            const picsInfo = resolvePicsFormData(images)
+            const newImages = picsInfo.images
+            dataObj.images = picsInfo.obj
+            // Set data on form
+            setFormFull(formData, dataObj, newImages, undefined, undefined)
+        } catch (caught: any) {
+            console.log("error in submit")
+            setErr(JSON.stringify(caught))
+            return
+        }
+        console.log("submitting update request")
+        DoUpdateMultipartRequest("lcSyringe",initial._id, formData, AssertLcSyringe, allCookies(cookies))
+            .then(v=>{
+                updateInitial(new LcSyringeData(v))
+                console.log("updated initial state")
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Success",
+                        text: "entry updated successfully",
+                        isErr: false
+                    }})
             })
-            .catch((err) => {
-                setErr(JSON.stringify(err))
-            });
+            .catch(e=>{
+                setErr("Error in parsing updated lcSyringe: "+JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Update Failed",
+                        text: "failed to update: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
+        // DoUpdateRequest("lcSyringe",initial._id, dataObj, AssertLcSyringe, allCookies(cookies))
+        //     .then(v=>{
+        //         updateInitial(new LcSyringeData(v))
+        //     })
+        //     .catch(e=>{
+        //         setErr(JSON.stringify(e))
+        //     })
     }
-    const ovcs: OnViewCreatorQuadCol[] = [
-        WriteRfidOvcArea(initial._id),
-    ]
+    const ovcs: ()=>OnViewCreatorQuadCol[] = ()=> {
+        const disp = initial.disposed !== undefined
+        return !disp ? [
+            WriteRfidOvcArea(initial._id),
+        ]:[]
+    }
     return <DisplayFormWrapper entryType={"lcSyringe"}>
-        <ErrorDisplay err={err} headerLevel={headerLevel}/>
-        <ID id={data._id} txt={"Liquid Culture Syringe"} entryType={"lcSyringe"}/>
-        <OnViewCreatorsQuadColArea OnViewCreators={ovcs} readonly={readonly}/>
+        <ErrorDisplay err={err}/>
+        <ID props={{id:data._id, txt:"Liquid Culture Syringe", entryType:"lcSyringe"}}/>
+        <OnViewCreatorsQuadColArea OnViewCreators={ovcs()} readonly={readonly}/>
+        <MostRecentImageDisplay data={initial.mostRecentImage} showHeader={false}/>
         <FlexedArea>
             <FlexedSinglesGroup>
                 <CreatedUpdatedDisposedArea created={initial.creationDate} updated={initial.lastUpdated}
-                                            disposed={disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
+                                            initialDisposed={initial.disposed} setDisposedOnParent={setDisposed} readonly={readonly}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
                 <SpeciesSubspeciesArea species={initial.species} subspecies={initial.subspecies}/>
-                <ParentDisplay parent={initial.parent} parentType={"lc"} headerLevel={headerLevel}/>
+                <ParentDisplay parent={initial.parent} parentType={"lc"}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
-                <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}
-                                 headerLevel={headerLevel}/>
+                <GensFormDisplay gensSinceSpore={initial.genSpore} gensSinceFruitOrSpore={initial.genFruitOrSpore}/>
             </FlexedSinglesGroup>
             <FlexedSinglesGroup>
-                <KnownFruitableArea initial={knownFruitable} doSelect={setKnownFruitable} readonly={readonly}
+                <KnownFruitableArea initial={initial.knownFruitable} doSelect={setKnownFruitable} readonly={readonly}
                                     headerLevel={headerLevel}/>
-                <ConfirmedCleanArea onSelect={setConfirmedClean} readonly={readonly} initial={confirmedClean}
+                <ConfirmedCleanArea onSelect={setConfirmedClean} readonly={readonly} initial={initial.confirmedClean}
                                     headerLevel={headerLevel}/>
             </FlexedSinglesGroup>
         </FlexedArea>
-        <TransfersOutDisplay thisId={initial._id} thisEntryType={"plate"} transfersOut={transfersOut}
-                             allowNewTransferCreation={!readonly}
-                             cookies={cookies}/>
+        <TransfersOutDisplay thisId={initial._id} thisEntryType={"lcSyringe"} transfersOut={transfersOut}
+                             allowNewTransferCreation={!readonly}/>
+        <PicsDisplay pix={initial.pics} readonly={readonly}
+                     headerLevel={headerLevel} updateParent={setImages}/>{/* Pics */}
         <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
         <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
-            <AclDisplay ACL={acl} readonly={readonly} updateParent={setAcl} />
+            <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl} />
         </TogglableAreaWithDepth>
-        {readonly ? null : <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>}
         {readonly ? null : <button className={"bottomButton greenButton"} onClick={(e)=>{
             e.stopPropagation();
+            e.preventDefault()
             lcSyringeSubmit()
         }}>{"Update"}</button>}
     </DisplayFormWrapper>
 
 }
 
-export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
+export function NewLcSyringeForm({parentLc, onCreate, txt}: {
     parentLc?: LcData,
-    onCreate?: (newItem: LcSyringe) => void,
-    cookies: string
+    onCreate?: (newItem: LcSyringeData) => void,
     txt: string
 }) {
-    // TODO: THIS WHOLE FUNC?
+    const {dispatch} = useModalContext();
+    const cookies = useContext(CookiesContext)
     const [itemsCreated, setItemsCreated] = useState<string[]>([])
-    const [parent, setParent] = useState<LcData | undefined>(parentLc) // TODO: this ok to not call set??
+    const [parent, setParent] = useState<LcData | undefined>(parentLc)
     const [notes, setNotes] = useState<Note[]>([])
     const [writeTagTo, setWriteTagTo] = useState<string | undefined>(undefined)
     const [err, setErr] = useState<string | undefined>(undefined)
-    // //const [cookies, setCookie, removeCookie] = useCookies(['SessionId']);
     const createdItemsDiv = () => {
         if (itemsCreated.length === 0) {
             return null
@@ -275,103 +354,98 @@ export function NewLcSyringeForm({parentLc, onCreate, cookies, txt}: {
             <div>
                 <div>{"Lc syringes Created:"}</div>
             </div>
-            {itemsCreated.map((createdLc) => {
-                const b58id = createdLc
-                return <EntryLink props={{displayedId: b58id, linkId: b58id, entryType: "lcSyringe"}}>
-                    <div>{b58id}</div>
-                </EntryLink>
+            {itemsCreated.map((item) => {
+                const b58id = item
+                return <EntryLinkForId key={item} props={{displayId: b58id, linkId: b58id, entryType: "lcSyringe", openInNewTab: false /* TODO: ok?*/}}/>
             })}
         </div>
     }
+
     const createEntry = (e: React.MouseEvent) => {
         e.preventDefault()
         if (!parent) {
             setErr("A parent must be selected")
             return
         }
-        let body: any = {
+        const body: any = {
             writeTagTo: writeTagTo,
-            parent: parent,
+            parent: parent._id,
             notes: notes,
         }
-        fetch(BaseExternalUrl + "/db/create/lcSyringe", {
-            method: "POST",
-            headers: {
-                credentials: 'include',
-                'Content-type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        })
-            .then(HandleJsonResponse)
-            .then((newEntry) => {
-                try {
-                    AssertLcSyringe(newEntry)
-                    onCreate && onCreate(newEntry)
-                    setItemsCreated([...itemsCreated, newEntry._id]) // TODO: ok?
-                } catch (e) {
-                    setErr(JSON.stringify(e))
-                }
+        DoCreateRequest("lcSyringe", body, AssertLcSyringe, allCookies(cookies))
+            .then(v=>{
+                onCreate ? onCreate(v) : console.log("no onCreate function provided")
+                setItemsCreated([...itemsCreated, v._id])
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Success",
+                        text: "entry created successfully",
+                        isErr: false
+                    }})
             })
-            .catch((error) => {
-                setErr(JSON.stringify(error))
-            });
+            .catch(e=>{
+                setErr(JSON.stringify(e))
+                dispatch({type: ActionTypes.SET_MODAL_INFO, payload:{
+                        header: "Create Failure",
+                        text: "entry failed to create: " + JSON.stringify(e),
+                        isErr: true
+                    }})
+            })
     }
 
-    return <NewEntryFormWrapper entryType={"lcSyringe"}>
-        <TestAndValidate todos={["fix and test this area"]}>
+    return <NewEntryFormWrapper entryType={"lcSyringe"} isTopLevel={false}>
             <div>{txt}</div>
             {createdItemsDiv()}
             <ErrorDisplay err={err}/>
-            {!parent && <TestAndValidate todos={["SELECT LC RECIPE"]}>
-                <div>{"LC SElECTOR HERE"}</div>
-            </TestAndValidate>}
+        {!parent && <div>
+            <LcSelectorCloseable doSelect={setParent} hideDisposed={true}/>
+            <ReadRFIDButton handleTagRead={(val)=>{
+                DoGetRequest("lc", val, AssertLc, setErr).then(setParent)
+            }} txt={"Or read parent LC's RFID tag"}/>
+        </div>}
             <NewEntryNotes setNotes={setNotes}/>
             <ReaderWriterSelector txt={"Write to: "} defaultOption={"none"} onSelect={setWriteTagTo}/>
             <button className={"greenButton"} onClick={createEntry}>{"Create"}</button>
-        </TestAndValidate>
     </NewEntryFormWrapper>
 }
 
-export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<LcSyringe>) {
-    let cols: ListTableColumn<LcSyringe>[] = [
-        NewColumn("ID", (v)=>v._id),
+export function LcSyringeListPageTable({data, onClick, withLink}: ListPageItems<LcSyringeData>) {
+    let cols: ListTableColumn<LcSyringeData>[] = [
+        NewColumn("ID", (v)=>v._id, true),
         NewColumn("Created", (v)=>{
             return NumberToDateStr(v.creationDate)
-        }),
-        NewColumn("Spec", (v)=>v.species||""),
-        NewColumn("Subspec", v=>v.subspecies||"" ),
-        NewColumn("Clean",v=>v.confirmedClean?(v.confirmedClean?"clean":"dirty"):"?"),
+        }, true),
+        NewColumn("Spec", (v)=>v.species||"", true),
+        NewColumn("Subspec", v=>v.subspecies||"", true),
+        NewColumn("Clean",v=>v.confirmedClean?(v.confirmedClean?"clean":"dirty"):"?", true),
         NewColumn("Updated", (v)=>{
             return NumberToDateStr(v.lastUpdated)
         }),
     ]
     if (withLink) {
-        cols = [...cols, NewColumn("Link", (v: LcSyringe)=>{
-            return <EntryLinkWrapper props={{linkId:encodeURI(v._id),entryType:"lcSyringe",openInNewTab:true}}>
+        cols = [...cols, NewColumn("Link", (v: LcSyringeData)=>{
+            return <EntryLinkWrapper props={{entry:v,openInNewTab:true}}>
                 <button className={"basicButtonSmall"}>{"View"}</button>
             </EntryLinkWrapper>
         })]
     }
-    return <ListPageTable cols={cols} data={data} onClick={onClick}/>
+    return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new LcSyringeData(v)}}/>
 }
-export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringe>) {
+export function LcSyringeSelectorTable({data, onClick}: ListPageItems<LcSyringeData>) {
     return <LcSyringeListPageTable data={data} onClick={onClick} withLink={true} />
 }
 
 export function LcSyringeSelector(
     {
         doSelect,
-        // TODO: allowCreate
+        hideDisposed = false
     }: {
-        doSelect: (val: LcSyringe | undefined) => void,
-        // TODO: allowCreate?: boolean
+        doSelect: (val?: LcSyringeData) => void,
+        hideDisposed?: boolean
     }) {
-    const table = (items: LcSyringe[]):JSX.Element=>{
+    const table = (items: LcSyringeData[]):JSX.Element=>{
         return <LcSyringeSelectorTable data={items} onClick={doSelect}/>
     }
 
     return <ExistingRecentSelector entryType={"lcSyringe"} entryTypes={"lcSyringes"} doSelect={doSelect} asserter={AssertLcSyringe}
-                                   table={table}>
-        {/* TODO: ok? allowCreate && <NewLcSyringeForm handlers={{onCreate: doSelect,isTopLevel: false}}/>*/}
-    </ExistingRecentSelector>
+                                   table={table} hideDisposed={hideDisposed}/>
 }

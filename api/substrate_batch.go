@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/reeceappling/mushDb/api/env"
+	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"io"
@@ -22,12 +24,16 @@ type SubstrateBatch struct {
 	AclField             `bson:"inline"`
 }
 
+//func (s SubstrateBatch) Blank() CollectionItem {
+//	return &SubstrateBatch{}
+//}
+
 func initializeSubstrateBatches(ctx context.Context) error {
 	// Indices
-	coll := ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateBatchCollectionName)
+	coll := DbFrom(ctx).Collection(SubstrateBatchCollectionName)
 	err := createIndexes(ctx, coll, []mongo.IndexModel{
 		creationDateIndexModel,
-		newSimpleIndex("recipe", "recipe", false, false, true),
+		newSimpleIndex("recipe", "recipe", false, false, false),
 		//Notes (no index unless tags)
 		projectsIndexModel,
 		lastUpdatedIndexModel,
@@ -36,41 +42,43 @@ func initializeSubstrateBatches(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	createdDate := CreationDateField{exampleTime}
-	err = addTestAltEntries(ctx, []SubstrateBatch{
-		// Coir
-		{
-			AlternateCollectionIdField: altCollIdFieldForint(idCoir),
-			CreationDateField:          createdDate,
-			SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idCoir)},
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "test coir batch"),
-			}},
-			AclField:         allCanWriteAcl(),
-			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
-		},
-		// HWFP
-		{
-			AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
-			CreationDateField:          createdDate,
-			SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idWoodPellets)},
-			NotesField: NotesField{[]Note{
-				newNote(ogTime, "test hwfp batch"),
-			}},
-			AclField:         allCanWriteAcl(),
-			LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
-		},
-	}...)
-	// Add test entry
-	testItem := SubstrateBatch{
-		AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
-		CreationDateField:          CreationDateField{exampleTime},
-		SubstrateRecipeField:       SubstrateRecipeField{altCollIdForint(idTestingOnly)},
-		NotesField:                 NotesField{exampleNotes()},
-		LastUpdatedField:           LastUpdatedField{exampleTime},
-		AclField:                   allCanWriteAcl(),
-	}
-	return addTestAltEntries(ctx, testItem)
+	return env.IfNotProd(ctx, func() error {
+		createdDate := CreationDateField{exampleTime}
+		err = addTestAltEntries(ctx, []SubstrateBatch{
+			// Coir
+			{
+				AlternateCollectionIdField: altCollIdFieldForint(idCoir),
+				CreationDateField:          createdDate,
+				SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idCoir)},
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "test coir batch"),
+				}},
+				AclField:         allCanReadAcl(nil),
+				LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
+			},
+			// HWFP
+			{
+				AlternateCollectionIdField: altCollIdFieldForint(idWoodPellets),
+				CreationDateField:          createdDate,
+				SubstrateRecipeField:       SubstrateRecipeField{Substrate: altCollIdForint(idWoodPellets)},
+				NotesField: NotesField{[]Note{
+					newNote(ogTime, "test hwfp batch"),
+				}},
+				AclField:         allCanReadAcl(nil),
+				LastUpdatedField: LastUpdatedField{LastUpdated: ogTime},
+			},
+		}...)
+		// Add test entry
+		testItem := SubstrateBatch{
+			AlternateCollectionIdField: altCollIdFieldForint(idTestingOnly),
+			CreationDateField:          CreationDateField{exampleTime},
+			SubstrateRecipeField:       SubstrateRecipeField{altCollIdForint(idTestingOnly)},
+			NotesField:                 NotesField{exampleNotes()},
+			LastUpdatedField:           LastUpdatedField{exampleTime},
+			AclField:                   allCanWriteAcl(),
+		}
+		return addTestAltEntries(ctx, testItem)
+	})
 }
 
 type createSubstrateBatchRequest struct {
@@ -96,31 +104,22 @@ func createSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id := newAlternateCollectionId()
 
-	ctx, db := Db(r)
-	coll := db.Collection(SubstrateRecipesCollectionName)
-	// all can read but only user can write perms
-	resolvedUserPerms, err := GetAuthInfo(r.Context())
-	if err != nil {
-		http.Error(w, "Failed to get auth info", http.StatusUnauthorized)
-		return
-	}
-	acl := allCanReadAcl()
-	acl.ACL.Users[resolvedUserPerms.Email] = true
+	ctx, now := request.UnixTime(r.Context())
 	// Create entry to insert
-	toInsert := SubstrateBatch{
+	toInsert := &SubstrateBatch{
 		AlternateCollectionIdField: AlternateCollectionIdField{id},
-		CreationDateField:          CreationDateField{CreationDate: unixTimeForNow()},
+		CreationDateField:          CreationDateField{now},
 		SubstrateRecipeField:       SubstrateRecipeField{Substrate: req.Substrate},
 		NotesField:                 req.NotesField,
-		LastUpdatedField:           LastUpdatedFieldForNow(),
-		AclField:                   acl,
+		LastUpdatedField:           LastUpdatedField{now},
+		AclField:                   allCanReadAcl(GetUserEmailPtr(ctx)),
 	}
-	finishCreateAlternateEntry(ctx, coll, &toInsert, w)
+	finishCreateAlternateEntry(ctx, toInsert, w)
 }
 
 type updateSubstrateBatchRequest struct {
 	NotesUpdateField
-	PermsOnRequest
+	PermsOnRequest `json:"acl"`
 }
 
 func (req updateSubstrateBatchRequest) modsFor(existing *SubstrateBatch, aclField AclField) (bson.D, error) {
@@ -132,7 +131,10 @@ func (req updateSubstrateBatchRequest) modsFor(existing *SubstrateBatch, aclFiel
 }
 
 func updateSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
-	b58Id := Base58Str(r.PathValue("id"))
+	_, id, err := altCollIdFromRequest(r, w)
+	if err != nil {
+		return
+	}
 	defer r.Body.Close()
 	bs, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -143,11 +145,6 @@ func updateSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bs, &req)
 	if err != nil {
 		http.Error(w, "failed to unmarshal body: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-	id, err := b58Id.toAltCollectionId()
-	if err != nil {
-		http.Error(w, "Invalid id! "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	ctx, db := Db(r)
@@ -169,8 +166,8 @@ type SubstrateBatchField struct {
 }
 
 func (field SubstrateBatchField) Get(ctx context.Context) (out SubstrateBatch, err error) {
-	err = ctx.Value(mongoClientContextKey).(*mongo.Client).Database(dbName).Collection(SubstrateBatchCollectionName).FindOne(ctx, bson.M{
-		"_id": field.SubstrateBatch,
+	err = DbFrom(ctx).Collection(SubstrateBatchCollectionName).FindOne(ctx, bson.M{
+		IDfld: field.SubstrateBatch,
 	}).Decode(&out)
 	return out, err
 }
@@ -181,4 +178,63 @@ func (field SubstrateBatchField) asOptional() SubstrateBatchOptionalField {
 
 type SubstrateBatchOptionalField struct {
 	SubstrateBatch *AlternateCollectionId `bson:"substrateBatch,omitempty" json:"substrateBatch,omitempty"`
+}
+
+func deleteSubstrateBatchHandler(w http.ResponseWriter, r *http.Request) {
+	// used in batch, species, box, bag!
+	idStr := r.PathValue("id") // recipe by name?
+	if idStr == "" {
+		http.Error(w, "Empty id for delete request", http.StatusBadRequest)
+		return
+	}
+	id, err := Base58Str(idStr).toAltCollectionId()
+	if err != nil {
+		http.Error(w, "Invalid ID to delete: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Validate not used in other places...
+	ctx := r.Context()
+	db := DbFrom(ctx)
+	// ensure recipe not used by any batches first
+	// Ensure not used as a standard substrate for a species
+	err = db.Collection(SpeciesCollectionName).FindOne(ctx, bson.M{"standardSubstrate": id}).Err()
+	if err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			http.Error(w, "failed to check for substrate recipe usage in species. "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// At least one item exists, fail
+		http.Error(w, "at least one species utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+		return
+	}
+	for _, collName := range []string{
+		BagsCollectionName,
+		FruitingChamberCollectionName,
+	} {
+		err = db.Collection(collName).FindOne(ctx, bson.M{"substrateBatch": id}).Err()
+		if err != nil {
+			if !errors.Is(err, mongo.ErrNoDocuments) {
+				http.Error(w, "failed to check for substrate batch usage in "+collName+". "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			// At least one item exists, fail
+			http.Error(w, "at least one of "+collName+" utilizes the item you are attempting to delete.", http.StatusExpectationFailed)
+			return
+		}
+	}
+
+	// Delete if not found elsewhere!
+	deleteResult, err := db.Collection(SubstrateBatchCollectionName).DeleteOne(ctx, bson.M{IDfld: id})
+	if err != nil {
+		http.Error(w, "failed to delete: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if deleteResult.DeletedCount == 0 {
+		http.Error(w, "failed to delete id "+idStr+" from substrate recipes. Id not found", http.StatusNotFound)
+		return
+	}
+	_, err = w.Write([]byte(idStr))
+	handleWriteErr(err, w)
 }

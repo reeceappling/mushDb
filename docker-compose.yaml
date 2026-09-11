@@ -1,8 +1,8 @@
-version: '3.8'
+version: '3.8'#TODO: REMOVE, DEPRECATED
 include:
   - docker-compose-web-prod.yaml
-  # TODO: Use the next line instead to run the dev version
-  # - docker-compose-web-dev.yaml
+  # TODO: Use the next line instead to run the dev version instead of the prod webserver version. This is useful for local development and testing.
+  #- docker-compose-web-dev.yaml
 services:
   # Service to maintain cloudflare tunnel (because homelab is behind CGNAT)
   cloudflared:
@@ -25,25 +25,27 @@ services:
       dockerfile: ./DockerfileApi
       tags:
         - "mush-api:latest"
+    secrets:
+      - SESSION_SECRET
+      - MONGO_INITDB_PASSWORD
+      - MONGO_INITDB_SETUP_PASSWORD
+      - GOOGLE_CLIENT_ID
+      - GOOGLE_CLIENT_SECRET
+      - RFID_SECRET
     environment:
-      # TODO: ENVIRONMENT: "prod"
-      SESSION_SECRET: ${GOTHIC_SESSION_SECRET:?error}
+      ENVIRONMENT: ${ENVIRONMENT:?error}
+      SESSION_SECRET: ${GOTHIC_SESSION_SECRET:-https} # Must be in ENV for goth to work
       PICS_PATH: "/images"
       MAIN_API_EXTERNAL_PROTOCOL: ${MAIN_API_EXTERNAL_PROTOCOL:-https}
       MAIN_API_EXTERNAL_HOST: ${MAIN_API_EXTERNAL_HOST:-localhost}
       MONGO_INITDB_SETUP_USERNAME: ${MONGO_INITDB_SETUP_USERNAME:?error}
-      MONGO_INITDB_SETUP_PASSWORD: ${MONGO_INITDB_SETUP_PASSWORD:?error}
       MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
-      MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
       ADMIN_GMAIL: ${ADMIN_GMAIL:?error}
-      RFID_SECRET: ${RFID_SECRET:?error}
       DB_HOST_PORT: "27017"
       DB_HOST_NAME: "mushdb"
       WEB_HOST_INTERNAL: "web" # TODO: use this in typescript?
       WEB_HOST_INTERNAL_PORT: "3000" # TODO: use this in typescript?
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:?error}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:?error}
     volumes:
       - pictures:/images
     networks:
@@ -56,36 +58,44 @@ services:
     image: mongo:4.4
     restart: unless-stopped
     environment:
+      # TODO: secrets instead of env vars?
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?error}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?error}
       MONGO_INITDB_SETUP_USERNAME: ${MONGO_INITDB_SETUP_USERNAME:?error}
       MONGO_INITDB_SETUP_PASSWORD: ${MONGO_INITDB_SETUP_PASSWORD:?error}
+      MONGO_INITDB_BACKUP_USERNAME: ${MONGO_INITDB_BACKUP_USERNAME:?error}
+      MONGO_INITDB_BACKUP_PASSWORD: ${MONGO_INITDB_BACKUP_PASSWORD:?error}
       MONGO_INITDB_USERNAME: ${MONGO_INITDB_USERNAME:?error}
       MONGO_INITDB_PASSWORD: ${MONGO_INITDB_PASSWORD:?error}
       MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:?error}
-
     command: ["mongod", "--replSet", "rs0", "--keyFile", "/etc/mongodb.key", "--bind_ip_all"]
     healthcheck:
       # Automatically initiates the replica set if it isn't already active
       test: >
         mongo --username ${MONGO_INITDB_ROOT_USERNAME:?error} --password ${MONGO_INITDB_ROOT_PASSWORD:?error} --authenticationDatabase admin --quiet 
         --eval "rs.status().ok || rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mushdb:27017' }] })"
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 5
     volumes:
-      # TODO: ensure key exists next to docker-compose file. If not:
-      # openssl rand -base64 741 > mongodb.key
-      # chmod 666 mongodb.key
-      # chown mongodb:mongodb mongodb.key
       - mongodb-data:/data/db
       - ./initDB:/docker-entrypoint-initdb.d
-#      - ./etc:/etc:ro
       - ./etc/mongodb.key:/etc/mongodb.key:ro
     networks:
       - mushNet
-
-  # grafana service
+#  salesdb:
+#    image: postgres:16-alpine
+#    container_name: postgres_db
+#    restart: always
+#    environment:
+#      POSTGRES_USER: myuser # TODO: FIX!
+#      POSTGRES_PASSWORD: mysecretpassword # TODO: FIX!
+#      POSTGRES_DB: mydatabase # TODO: FIX!
+#    ports:
+#      - "5432:5432" # TODO: FIX!
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+# grafana service
 #  grafana:
 #    image: grafana/grafana:latest
 #    restart: unless-stopped
@@ -106,23 +116,49 @@ services:
 networks:
   mushNet:
     name: mushNet
+secrets:
+    SESSION_SECRET:
+        environment: GOTHIC_SESSION_SECRET
+    MONGO_INITDB_PASSWORD:
+        environment: MONGO_INITDB_PASSWORD
+    MONGO_INITDB_SETUP_PASSWORD:
+        environment: MONGO_INITDB_SETUP_PASSWORD
+    GOOGLE_CLIENT_ID:
+        environment: GOOGLE_CLIENT_ID
+    GOOGLE_CLIENT_SECRET:
+        environment: GOOGLE_CLIENT_SECRET
+    RFID_SECRET:
+        environment: RFID_SECRET
 volumes:
-#  mongo_repl_config:
   pictures:
     labels:
+      # TODO: different label key?
       com.example.description: "Persistent volume for images"
-      # TODO: Figure out how to properly mount this from the fileSystem
-#    driver: local
-#    driver_opts:
-#      type: none
-#      device: ${LOCAL_IMAGES_DIR:?error}
-#      o: bind
-
+    driver: local
+    driver_opts:
+      type: none
+      device: ${LOCAL_IMAGES_DIR:?error}
+      o: bind
   mongodb-data:
+    driver: local
+    # TODO: labels for volume description?
+    driver_opts:
+      type: none
+      device: ${LOCAL_DB_DIR:?error}
+      o: bind
+  backups:
+    # TODO: consider removing backups volume!
+    driver: local
+    # TODO: labels for volume description?
+    driver_opts:
+      type: none
+      device: ${LOCAL_DB_BACKUPS_DIR:?error}
+      o: bind
+#  postgres_data:
 #    driver: local
 #    driver_opts:
 #      type: none
-#      device: ${LOCAL_DB_DIR:?error}
+#      device: ${LOCAL_POSTGRES_DIR:?error}
 #      o: bind
 #  grafana-data: # TODO: REENABLE
 #    driver: local

@@ -2,7 +2,6 @@
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Binaries for programs and plugins
-noCommit-*
 *.exe
 *.exe~
 *.dll
@@ -14,6 +13,9 @@ noCommit-*
 generateCode
 # (non-example) env vars
 env/.env.*
+# Generic noCommit stuff
+noCommit-*
+noCommit_*
 
 # Code coverage profiles and other test artifacts
 *.out
@@ -73,6 +75,7 @@ letsencrypt
 
 # noCommit
 noCommit/*
+testBackups/*
 
 
 

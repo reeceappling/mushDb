@@ -1,7 +1,9 @@
 "use client"
 
 import ReaderWriterSelector, {
-    ReadTagFunc,
+    ClearRFIDButton,
+    ReadRfidTag,
+    ReadTagFunc, rfidSelectorProps,
 } from "@/app/components/formSubcomponents/readerWriterButtons/readerSelector";
 import {
     ActionTypes,
@@ -13,8 +15,8 @@ import Button from "@mui/material/Button"
 import Menu from "@mui/material/Menu"
 import MenuItem from "@mui/material/MenuItem"
 import TextBox from "@/app/components/formSubcomponents/textbox";
-import {getPathFor} from "@/app/components/common";
-import {BaseExternalUrl} from "@/app/components/Constants";
+import {getPathFor, webUrl} from "@/app/components/common";
+import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 
 
 const buttonProps = {
@@ -49,12 +51,13 @@ export function TopBarCreateMenu() {
     const handleClose = () => {
         setAnchorEl(null)
     }
-    const menuItem = (entryType:string, txt:string):JSX.Element => {
-        return <MenuItem href={"/new/"+entryType} onClick={handleClose} component={"a"} sx={sublistItemProps}>{txt}</MenuItem>
+    const menuItem = (entryType: string, txt: string): JSX.Element => {
+        return <MenuItem role={menuItemRole} href={"/new/" + entryType} onClick={handleClose} component={"a"}
+                         sx={sublistItemProps}>{txt}</MenuItem>
     }
-    return <div>
+    return <div role={listMenuDivRole}>
         <Button
-            id={"topBarCreateButton"}
+            id={"topBarCreateButton"} role={listMenuButtonRole}
             sx={buttonProps}
             aria-controls={open ? 'topBarCreateMenu' : undefined}
             aria-haspopup={true}
@@ -62,7 +65,7 @@ export function TopBarCreateMenu() {
             onClick={handleClick}>
             {"Create"}
         </Button>
-        <Menu id={"topBarCreateMenu"}
+        <Menu id={"topBarCreateMenu"} role={listMenuMenuRole}
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
@@ -72,8 +75,9 @@ export function TopBarCreateMenu() {
             {menuItem("agarRecipe", "Agar Recipe")}
             {menuItem("jarRecipe", "Jar Recipe")}
             {menuItem("lcRecipe", "LC Recipe")}
-            {menuItem("pcRun", "PC Run")}{/* TODO: PC RUN??? */}
-            {menuItem("project", "Project")}{/* TODO: maybe just create this in each form? */}
+            {menuItem("pcRun", "PC Run")}
+            {menuItem("plugs", "Plugs")}
+            {menuItem("project", "Project")}
             {menuItem("species", "Species")}
             {menuItem("subspecies", "Subspecies")}
             {menuItem("substrateRecipe", "Substrate Recipe")}
@@ -83,58 +87,65 @@ export function TopBarCreateMenu() {
 }
 
 export default function TopBar() {
-    // TODO: RECENTS FOR ALL ENTRIES?????
     const {dispatch} = useRfidReaderContext()
     const onReaderSelect = (s: string | undefined) => {
-        let session = "" // TODO: fix session
-        ReadTagFunc(dispatch, session, s).then(id=>{
+        const session = "" // TODO: fix session!!!
+        ReadTagFunc(dispatch, session, s).then(id => {
+            // TODO: do we really want to read the tag here???
             // todo: do nothing with id result
-        },err=>{
+        }, err => {
             console.error(err) // TODO: ok?
         })
     }
-    return <div id={"topBar"}>
+    return <div id={"topBar"} role={"menubar"}>
         <TopBarListMenu/>
-        <TopBarViewMenu/> {/* TODO: ENSURE LINKS ARE CORRECT!!!*/}
+        <TopBarViewMenu/>
         <TopBarImportMenu/>
         <TopBarCreateMenu/>
-        <div id={"rfidTopArea"}>
-            <LastReadTag/>
-            <ReadTagButton/>
-            <ReaderWriterSelector onSelect={onReaderSelect}/>
-        </div>
+        <RfidTopArea onSelect={onReaderSelect}/>
     </div>
 }
 
-// function CopyLatestReadTagButton() {
-//     const {state, dispatch} = useRfidReaderContext()
-//     if (state.lastReadTag == undefined) {
-//         return null
-//     }
-//     const onClick = () => {
-//         if (state.lastReadTag != undefined) {
-//             navigator.clipboard.writeText(state.lastReadTag).catch((err) => {
-//                 let toWrite = "failed to copy tag value to clipboard: " + err
-//                 console.error(toWrite)
-//                 dispatch({
-//                     type: ActionTypes.SET_ERROR,
-//                     payload: toWrite,
-//                 })
-//             })
-//         }
-//     }
-//     return <button className={"basicButtonSmall"} onClick={onClick}>{"Copy last read tag value"}</button>
-// }
+export function RfidTopArea(props:rfidSelectorProps){
+    const {state} = useRfidReaderContext()
+    const [err, setErr] = React.useState<string | undefined>(undefined);
+    return <div id={"rfidTopArea"} role={"menuitem"}>
+        <LastReadTag/>
+        <ReadTagButton/>
+        <ReaderWriterSelector onSelect={props.onSelect}/>
+        <ErrorDisplay err={err} />
+        {state.selected && <ClearRFIDButton props={{
+            handleTagClear:()=>{setErr(undefined)},
+            handleTagClearError:setErr,
+            handleTagClearCancel:()=>{setErr(undefined)}
+        }}/>}
+    </div>
+}
 
 function LastReadTag() {
     const {state} = useRfidReaderContext()
+    const [isCopied, setIsCopied] = useState(false);
+    const handleCopy = async () => {
+        try {
+            // Use the native Clipboard API to copy text
+            state.lastReadTag && await navigator.clipboard.writeText(state.lastReadTag)
+            setIsCopied(true);
+
+            // Revert the icon back to the copy symbol after 2 seconds
+            setTimeout(() => {
+                setIsCopied(false);
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+        }
+    };
     if (state.lastReadTag !== undefined) {
         return <div>
-            <div className={"centerH"}>{"Last read tag value: "}</div>
+            <div className={"centerH"}>{"Last read: "}</div>
             <div className={"centerH"}>{state.lastReadTag}
-                <button className={"basicButtonSmall"} onClick={() => {
-                    state.lastReadTag && navigator.clipboard.writeText(state.lastReadTag)
-                }}>{"Copy"}</button>
+                <button className={"basicButtonSmall"}
+                        aria-label={isCopied ? "Copied!" : "Copy to clipboard"}
+                        onClick={handleCopy}>{isCopied ? '✅' : '📋'}</button>
             </div>
         </div>
     }
@@ -143,36 +154,19 @@ function LastReadTag() {
     </div>
 }
 
-export function Makeid(length: number) { // TODO: DELETEME
-    let result = '';
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const charactersLength = characters.length;
-    let counter = 0;
-    while (counter < length) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-        counter += 1;
-    }
-    return result;
-}
-
-function UseLatestReadTagButton({onClick}: { onClick: (id?: string) => void }) {
-    const {state, dispatch} = useRfidReaderContext()
-    const onButtonClick = () => {
+export function UseLatestReadTagButton({onClick}: { onClick: (id?: string) => void }) {
+    const {state} = useRfidReaderContext()
+    return <button className={"basicButtonSmall"} onClick={() => {
         onClick(state.lastReadTag)
-    }
-    return <button className={"basicButtonSmall"} onClick={onButtonClick}>{"Use latest read tag"}</button>
+    }}>{"Use latest read tag"}</button>
 }
 
 
-function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
+export function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
     const {state, dispatch} = useRfidReaderContext()
     const onClick = () => {
         if (state.selected != undefined) {
-            //const a = ReadRfidTag(state.selected) // TODO: REENABLE IF/WHEN WE CAN!
-            const a = new Promise<string>((accept) => {// TODO: DELETE
-                accept(Makeid(5))
-            })
-            a.then((tagVal) => {
+            ReadRfidTag(state.selected).then(tagVal => {
                 onResult && onResult(tagVal)
                 dispatch({
                     type: ActionTypes.SET_LAST_READ_TAG,
@@ -184,24 +178,24 @@ function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
                 })
 
             }, (err) => {
-                let toWrite = "failed to read tag: " + err
-                console.error(toWrite)
+                const newErr = "failed to read tag: " + err
+                console.error(newErr)
                 dispatch({
                     type: ActionTypes.SET_ERROR,
-                    payload: toWrite,
+                    payload: newErr,
                 })
             })
         } else {
-            let toWrite = "cannot read tag without knowing which reader to use!"
-            console.error(toWrite)
+            const newErr = "cannot read tag without knowing which reader to use!"
+            console.error(newErr)
             dispatch({
                 type: ActionTypes.SET_ERROR,
-                payload: toWrite,
+                payload: newErr,
             })
         }
 
     }
-    return <button className={"basicButtonSmall"} onClick={e=>{
+    return <button className={"basicButtonSmall"} onClick={e => {
         e.stopPropagation();
         onClick();
     }}>{"Read Tag"}</button>
@@ -219,20 +213,21 @@ export function TopBarViewMenu() {
     }
     const handleViewById = () => {
         getPathFor(id).then((path) => {
-            location.assign(BaseExternalUrl + "/view/" + path)
+            location.assign(webUrl("/view/" + path))
         }).catch((err) => {
-            // TODO: handle the error!
-            console.log("failed to get path for id: "+JSON.stringify(err))
+            // TODO: handle the error?!
+            console.log("failed to get path for id: " + JSON.stringify(err))
         })
     }
     const {state} = useRfidReaderContext()
-    const redirectForId = (redirectToId:string)=>{
+    const redirectForId = (redirectToId: string) => {
         setId(redirectToId)
         handleViewById()
     }
-    return <div>
+    return <div role={listMenuDivRole}>
         <Button
             id={"topBarViewButton"}
+            role={listMenuButtonRole}
             sx={buttonProps}
             aria-controls={open ? 'topBarViewMenu' : undefined}
             aria-haspopup={true}
@@ -240,15 +235,15 @@ export function TopBarViewMenu() {
             onClick={handleClick}>
             {"View"}
         </Button>
-        <Menu id={"topBarViewMenu"}
+        <Menu id={"topBarViewMenu"} role={listMenuMenuRole}
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
               slotProps={{
                   list: {'aria-labelledby': 'topBarViewButton'}
               }}>
-            <MenuItem onClick={(e) => {
-                e.preventDefault(); // TODO: ensure ok
+            <MenuItem role={menuItemRole} onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
             }}>
                 <div>
@@ -259,37 +254,42 @@ export function TopBarViewMenu() {
                     {state.lastReadTag && <UseLatestReadTagButton onClick={(v) => {
                         v && setId(v)
                     }}/>}
-                    {id !== "" && <button className={"greenButton buttonSmall"} onClick={e=>{
+                    {id !== "" && <button className={"greenButton buttonSmall"} onClick={e => {
                         e.stopPropagation();
                         handleViewById()
                     }}> {"go to this id"}</button>}
                 </div>
-            </MenuItem> {/* TODO: ENSURE EACH LINK WORKS*/}
-            <MenuItem href={"/testpage"} onClick={handleClose}
+            </MenuItem>
+            <MenuItem role={menuItemRole} href={"/testpage"} onClick={handleClose}
                       component={"a"} sx={sublistItemProps}>{"TEST PAGE"}</MenuItem>{/*TODO: DELETE ME*/}
-            <MenuItem href={"/view/agarBatch/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Agar Batch"}</MenuItem>
-            <MenuItem href={"/view/agarRecipe/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Agar Recipe"}</MenuItem>
-            <MenuItem href={"/view/jarRecipe/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Jar Recipe"}</MenuItem>
-            <MenuItem href={"/view/lcRecipe/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Liquid Culture Recipe"}</MenuItem>
-            <MenuItem href={"/view/pcRun/"+id} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"PC Run"}</MenuItem>
-            <MenuItem href={"/view/project/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Project"}</MenuItem>
-            <MenuItem href={"/view/sale/"+id} onClick={handleClose} component={"a"} sx={sublistItemProps}>{"Sale"}</MenuItem>
-            <MenuItem href={"/view/species/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Species"}</MenuItem>
-            <MenuItem href={"/view/subspecies/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Subspecies"}</MenuItem>
-            <MenuItem href={"/view/substrateBatch/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Substrate Batch"}</MenuItem>
-            <MenuItem href={"/view/substrateRecipe/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Substrate Recipe"}</MenuItem>
-            <MenuItem href={"/view/transfer/"+id} onClick={handleClose}
-                       component={"a"} sx={sublistItemProps}>{"Transfer"}</MenuItem>
-            <MenuItem href={"/view/user/"+id} onClick={handleClose} component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"User"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/agarBatch/" + id} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{"Agar Batch"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/agarRecipe/" + id} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Agar Recipe"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/jarRecipe/" + id} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Jar Recipe"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/lcRecipe/" + id} onClick={handleClose}
+                      component={"a"}
+                      sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Liquid Culture Recipe"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/pcRun/" + id} onClick={handleClose} component={"a"}
+                      sx={sublistItemProps}>{"PC Run"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/project/" + id} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Project"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/sale/" + id} onClick={handleClose} component={"a"}
+                      sx={sublistItemProps}>{"Sale"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/species/" + id} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Species"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/subspecies/" + id} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Subspecies"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/substrateBatch/" + id} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{"Substrate Batch"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/substrateRecipe/" + id} onClick={handleClose}
+                      component={"a"}
+                      sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"Substrate Recipe"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/transfer/" + id} onClick={handleClose}
+                      component={"a"} sx={sublistItemProps}>{"Transfer"}</MenuItem>
+            <MenuItem role={menuItemRole} href={"/view/user/" + id} onClick={handleClose} component={"a"}
+                      sx={sublistItemProps}>{/* TODO: BY NAME? urlencode???*/"User"}</MenuItem>
         </Menu>
     </div>
 }
@@ -303,12 +303,13 @@ export function TopBarImportMenu() {
     const handleClose = () => {
         setAnchorEl(null)
     }
-    const menuItem = (path: string, txt: string):JSX.Element => {
-        return <MenuItem onClick={handleClose} component={"a"} sx={sublistItemProps} href={path} >{txt}</MenuItem>
+    const menuItem = (path: string, txt: string): JSX.Element => {
+        return <MenuItem role={menuItemRole} onClick={handleClose} component={"a"} sx={sublistItemProps} href={path}>{txt}</MenuItem>
     }
-    return <div>
+    return <div role={listMenuDivRole}>
         <Button
             id={"topBarImportButton"}
+            role={listMenuButtonRole}
             sx={buttonProps}
             aria-controls={open ? 'topBarImportMenu' : undefined}
             aria-haspopup={true}
@@ -317,6 +318,7 @@ export function TopBarImportMenu() {
             {"Import"}
         </Button>
         <Menu id={"topBarImportMenu"}
+              role={listMenuMenuRole}
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
@@ -334,11 +336,17 @@ export function TopBarImportMenu() {
             {menuItem("/import/plugs", "Plugs")}
             {menuItem("/import/slant", "Slant")}
             {menuItem("/import/sporePrint", "Spore Print")}
+            {menuItem("/import/sporeSwab", "Spore Swab")}
             {menuItem("/import/stasisTube", "Stasis Tube")}
-            {/* TODO: ?menuItem("/import/waterJar", "Water Jar")*/}
+            {menuItem("/import/waterJar", "Water Jar")}
         </Menu>
     </div>
 }
+
+const listMenuDivRole = "menu"
+const listMenuButtonRole = "menuItem"
+const listMenuMenuRole = "menu"
+const menuItemRole = "menuitem"
 
 export function TopBarListMenu() {
     const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
@@ -349,12 +357,14 @@ export function TopBarListMenu() {
     const handleClose = () => {
         setAnchorEl(null)
     }
-    const menuItem = (entryType: string, txt: string):JSX.Element => {
-        return <MenuItem href={"/list/"+entryType} onClick={handleClose} component={"a"} sx={sublistItemProps}>{txt}</MenuItem>
+    const menuItem = (entryType: string, txt: string): JSX.Element => {
+        return <MenuItem role={menuItemRole} href={"/list/" + entryType} onClick={handleClose} component={"a"}
+                         sx={sublistItemProps}>{txt}</MenuItem>
     }
-    return <div>
+    return <div role={listMenuDivRole}>
         <Button
             id={"topBarListButton"}
+            role={listMenuButtonRole}
             sx={buttonProps}
             aria-controls={open ? 'topBarListMenu' : undefined}
             aria-haspopup={true}
@@ -363,6 +373,7 @@ export function TopBarListMenu() {
             {"List"}
         </Button>
         <Menu id={"topBarListMenu"}
+              role={listMenuMenuRole}
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
