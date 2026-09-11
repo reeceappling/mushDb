@@ -23,6 +23,7 @@ export interface AgarBatchData {
     color: string
     pcRun: string
     agarRecipe: string
+    // TODO: also add list of grainwater jars used if any????
     notes?: Note[]
     lastUpdated: number
     acl: ACL

@@ -45,7 +45,7 @@ import {GrainWaterJarData} from "@/app/components/grainWaterJarServer";
 import {PcRunArea} from "@/app/components/pcRunClient";
 import {GrainBatchArea} from "@/app/components/grainBatchClient";
 
-// TODO: list users also not working (all of this as of 5/7/26)
+// TODO: may want to link grainwater to agar batches. Notes on this left in the agar batch go struct.
 
 export function AssertGrainWaterJar(input: any): asserts input is GrainWaterJarData {
     if (typeof input !== 'object') {
@@ -161,13 +161,13 @@ export default function GrainWaterJarDisplay( // TODO; this whole thing!
             <FlexedArea>
                 <FlexedSinglesGroup>
                     <GrainBatchArea batchId={data.grainBatch}/>
-                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
-                </FlexedSinglesGroup>
-                <FlexedSinglesGroup>
                     <DisposedDisplay readonly={readonly} initial={initial.disposed} setDisposedOnParent={setDisposed}/>
                 </FlexedSinglesGroup>
+                <FlexedSinglesGroup>
+                    <DateArea pre={"Created: "} when={initial.creationDate} readonly={true}/>
+                    <DateArea pre={"Last Updated: "} when={initial.lastUpdated} readonly={true}/>
+                </FlexedSinglesGroup>
             </FlexedArea>
-
             <NotesFormArea readonly={readonly} initial={initial.notes} updateParent={setNotes}/>
             <TogglableAreaWithDepth startOpen={false} openTxt={"view permissions"} closeTxt={"minimize perms area"}>
                 <AclDisplay initial={initial.acl} readonly={readonly} updateParent={setAcl}/>

@@ -25,6 +25,7 @@ type AgarBatch struct { // This is >=1 media bottles of the same recipe that wen
 	NotesField       `bson:"inline"`
 	LastUpdatedField `bson:"inline"`
 	AclField         `bson:"inline"`
+	// TODO: also add list of grainwater jars used if any????
 }
 
 //func (ab AgarBatch) Blank() CollectionItem {
