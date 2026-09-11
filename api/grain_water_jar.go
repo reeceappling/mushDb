@@ -120,3 +120,42 @@ func updateGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	finishAltCollItemUpdate(ctx, w, coll, req.modsFor, existing, req.PermsOnRequest)
 }
+
+type importGrainWaterJarRequest struct {
+	GrainBatchOptionalField
+	NotesField
+}
+
+func importGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TODO: USE!
+	defer r.Body.Close()
+	ctx, now := request.UnixTime(r.Context())
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	req := importGrainWaterJarRequest{}
+	err = json.Unmarshal(body, &req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	if req.GrainBatch == nil {
+		// Use the default batch
+		req.GrainBatch = &exAltId
+	} else {
+		if _, err = req.GrainBatchOptionalField.Get(ctx); err != nil { // TODO; ensure ok
+			http.Error(w, "failed to validate grain batch: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
+	id := newAlternateCollectionId()
+	toInsert := &GrainWaterJar{
+		AlternateCollectionIdField: AlternateCollectionIdField{id},
+		GrainBatchField:            GrainBatchField{GrainBatch: *req.GrainBatch},
+		NotesField:                 req.NotesField,
+		CreationDateField:          CreationDateField{now},
+		LastUpdatedField:           LastUpdatedField{now},
+		AclField:                   allCanWriteAcl(),
+	}
+	finishCreateAlternateEntry(ctx, toInsert, w)
+}

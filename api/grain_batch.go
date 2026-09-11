@@ -54,6 +54,18 @@ type GrainBatchOptionalField struct {
 	GrainBatch *AlternateCollectionId `bson:"grainBatch,omitempty" json:"grainBatch,omitempty"`
 }
 
+func (field GrainBatchOptionalField) Get(ctx context.Context) (out GrainBatch, err error) {
+	if field.GrainBatch == nil {
+		err = ErrMissingOptionalField
+		return
+	}
+	var result GrainBatch
+	err = DbFrom(ctx).Collection(GrainBatchCollectionName).FindOne(ctx, bson.M{
+		IDfld: *field.GrainBatch,
+	}).Decode(&result)
+	return result, err
+}
+
 func initializeGrainBatches(ctx context.Context) error {
 	// Indices
 	coll := DbFrom(ctx).Collection(GrainBatchCollectionName)
@@ -68,8 +80,8 @@ func initializeGrainBatches(ctx context.Context) error {
 		return err
 	}
 
+	// TODO: ENSURE THIS BATCH IS PRESENT AS THE DEFAULT!
 	return env.IfNotProd(ctx, func() error {
-
 		testItem := GrainBatch{
 			AlternateCollectionIdField: AlternateCollectionIdField{exAltId},
 			SoakTimeHours:              utils.Pointer(8),
@@ -77,8 +89,11 @@ func initializeGrainBatches(ctx context.Context) error {
 			DryTimeHours:               utils.Pointer(4),
 			CreationDateField:          CreationDateField{},
 			JarRecipeRequiredField:     JarRecipeRequiredField{Recipe: exAltId},
-			NotesField:                 NotesField{exampleNotes()},
-			LastUpdatedField:           LastUpdatedField{exampleTime},
+			NotesField: NotesField{Notes: []Note{{
+				RequiredTimeField: RequiredTimeField{},
+				Note:              "Placeholder default grain batch",
+			}}},
+			LastUpdatedField: LastUpdatedField{exampleTime},
 		}
 		println("test Grain Batch:", exAltId.AsBase58())
 		return addTestAltEntries(ctx, testItem)
