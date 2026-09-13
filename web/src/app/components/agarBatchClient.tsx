@@ -285,15 +285,17 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
         {agarRecipeIn ? <AgarRecipeArea agarRecipe={agarRecipeIn}/> :
             <Subform>
                 <AgarRecipeSelectorCloseable
-                    doSelect={setRecipe}
+                    doSelect={rec=>{
+                        // TODO: ensure if recipe changes to not have grainWater, that grainWater states are cleared
+                        setRecipe(rec)
+                    }}
                     txt={"Agar Recipe: "}
                     allowCreation={true}
                     creatorInPage={false}/>
             </Subform>
         }
-
-        {/* TODO: TEST THIS LINE AND WHAT IT DOES ON THE SERVER THOROUGHLY!*/(recipe !== undefined && recipe.liquids.find(l => l.name === "grainWater") !== undefined) && <GrainWaterJarsSelectionList updateParent={setGrainJarInfo}/>}
         <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
+        {/* TODO: TEST THIS LINE AND WHAT IT DOES ON THE SERVER THOROUGHLY!*/(recipe !== undefined && recipe.liquids.find(l => l.name === "grain water") !== undefined) && <GrainWaterJarsSelectionList updateParent={setGrainJarInfo}/>}
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"bottomButton greenButton"} onClick={newAgarBatchSubmit}>{"Submit"}</button>
     </NewEntryFormWrapper>
