@@ -205,6 +205,24 @@ func newTxn(ctx context.Context, transact func(mongo.SessionContext) (any, error
 		return out, nil
 	}, txnOptions)
 }
+func newTxnNoInterface(ctx context.Context, transact func(mongo.SessionContext) error) error {
+	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (interface{}, error) {
+		return nil, transact(sessCtx)
+	})
+	return err
+}
+
+// TODO: consider using
+func newTxnReturnsStatus(ctx context.Context, transact func(mongo.SessionContext) (int, error)) (statusCode int, err error) {
+	transactWrapped := func(sctx mongo.SessionContext) (interface{}, error) {
+		return transact(sctx)
+	}
+	sc, err := newTxn(ctx, transactWrapped) // TODO: cant transact not return interface?
+	if err != nil {
+		statusCode = sc.(int)
+	}
+	return
+}
 
 func multipartReaderInitialize[T any](ctx context.Context, w http.ResponseWriter, r *http.Request, data *T) (*multipart.Reader, error) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxMultipartRequestSize)

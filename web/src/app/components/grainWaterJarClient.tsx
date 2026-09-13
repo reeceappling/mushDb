@@ -1,6 +1,6 @@
 'use client'
 
-import React, {JSX, useContext, useState} from "react";
+import React, {JSX, useContext, useEffect, useState} from "react";
 import {IsValidNote, NewEntryNotes, Note, NotesFormArea} from "@/app/components/formSubcomponents/notes";
 import {AddCreatedTriColFunction, AllEntries, OnViewCreatorQuadCol} from "@/app/components/formSubcomponents/shared";
 import ID from "@/app/components/formSubcomponents/id";
@@ -234,7 +234,11 @@ export function NewGrainWaterJarForm({handlers, recipe}: {
     </NewEntryFormWrapper>
 }
 
-export function GrainWaterJarListPageTable({data, onClick, withLink}: ListPageItems<GrainWaterJarData>) {
+export function GrainWaterJarListPageTable({data, onClick, withLink, showDisposed, blacklist}: ListPageItems<GrainWaterJarData>) {
+    const [hide, setHide] = useState<string[]>(blacklist || [])
+    useEffect(()=>{
+        setHide(blacklist || [])
+    },[blacklist])
     let cols: ListTableColumn<GrainWaterJarData>[] = [
         NewColumn("ID", (v) => v._id, true),
         NewColumn("Created", (v) => {
@@ -255,20 +259,24 @@ export function GrainWaterJarListPageTable({data, onClick, withLink}: ListPageIt
     return <ListPageTable cols={cols} data={data} onClick={onClick} newClass={v=>{return new GrainWaterJarData(v)}}/>
 }
 
-export function GrainWaterJarSelectorTable({data, onClick}: ListPageItems<GrainWaterJarData>) {
-    return <GrainWaterJarListPageTable data={data} onClick={onClick} withLink={true}/>
+export function GrainWaterJarSelectorTable({data, onClick, showDisposed, blacklist}: ListPageItems<GrainWaterJarData>) {
+    return <GrainWaterJarListPageTable data={data} onClick={onClick} withLink={true} blacklist={blacklist} showDisposed={showDisposed}/>
 }
 
 export function GrainWaterJarSelector(
     {
         doSelect,
-        allowCreate
+        allowCreate,
+        showDisposed,
+        blacklist,
     }: {
         doSelect: (val: GrainWaterJarData | undefined) => void,
         allowCreate?: boolean,
+        showDisposed?: boolean,
+        blacklist?: string[]
     }) {
     const table = (items: GrainWaterJarData[]): JSX.Element => {
-        return <GrainWaterJarSelectorTable data={items} onClick={doSelect}/>
+        return <GrainWaterJarSelectorTable data={items} onClick={doSelect} blacklist={blacklist} showDisposed={showDisposed}/>
     }
 
     return <ExistingRecentSelector entryType={"grainWaterJar"} entryTypes={"grainWaterJars"} doSelect={doSelect}

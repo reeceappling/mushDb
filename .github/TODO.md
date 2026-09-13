@@ -191,6 +191,10 @@
 # Random links
 - [ ] https://medium.com/@mfsilv/kubernetes-a-gentle-introduction-9d23de7f00e0
 # Wishlist
+- [ ] Multi-mainCollItem disposal
+  - [ ] Endpoint
+  - [ ] Page
+    - [ ] Ensure perms are checked properly 
 - [ ] Be able to procedurally generate graph data structures describing lineage
   - [ ] Max depth from root
   - [ ] Max width/depth from leaf

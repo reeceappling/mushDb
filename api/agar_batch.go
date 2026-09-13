@@ -123,10 +123,10 @@ type createAgarBatchRequest struct {
 	PcRunField
 	AgarRecipeField
 	NotesField
-	GrainWaterJarsField
+	GrainWaterJarsDisposableField // TODO: impl in ts
 }
 
-func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
+func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) { // TODO: validate working! made lots of changes!
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -147,25 +147,21 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate fields
 	_, err = req.PcRunField.Get(ctx)
 	if err != nil {
-		dbErr(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "PcRun validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	_, err = req.AgarRecipeField.Get(ctx)
+	recipe, err := req.AgarRecipeField.Get(ctx)
 	if err != nil {
-		dbErr(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
+		http.Error(w, "Agar recipe validation failure: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	db := DbFrom(ctx)
-	if len(req.GrainWaterJars) > 0 {
-		for _, gwj := range req.GrainWaterJars {
-			err = db.Collection(GrainWaterJarCollectionName).FindOne(ctx, bson.M{
-				IDfld: gwj,
-			}).Err()
-			if err != nil {
-				dbErr(w, "Failed to get a grainwater jar: "+err.Error(), http.StatusBadRequest)
-				return
-			}
-		}
+	requestHasGrainWater := req.GrainWaterJars != nil && len(req.GrainWaterJars) > 0
+	if recipe.LiquidsField.ContainsGrainWater() != requestHasGrainWater {
+		dbErr(w, "Recipes with grainwater must be utilized with grainwater, and vise versa", http.StatusBadRequest)
+		return
+	}
+	if err = req.GrainWaterJarsField.EnsureExist(ctx, w); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 	ctx, now := request.UnixTime(ctx)
 	// create new batch
@@ -179,7 +175,18 @@ func createAgarBatchHandler(w http.ResponseWriter, r *http.Request) {
 		AclField:                   allCanWriteAcl(),
 		GrainWaterJarsField:        req.GrainWaterJarsField,
 	}
-	finishCreateAlternateEntry(ctx, toInsert, w)
+	if status, err := newTxnReturnsStatus(ctx, func(sessCtx mongo.SessionContext) (int, error) { // TODO: for any other creates that use transactions, do it this way!
+		status, er := req.GrainWaterJarsDisposableField.Dispose(sessCtx)
+		if er != nil {
+			return status, errors.Join(errors.New("failed to create update for multi-grainWaterJar disposal"), er)
+		}
+		return finishCreateAlternateEntryNoWrite(sessCtx, toInsert)
+	}); err != nil {
+		println("txn error in createAgarBatch: " + err.Error()) // TODO: del?
+		http.Error(w, err.Error(), status)
+	} else {
+		writeEntryAsResponseOrFailSilently(w, toInsert)
+	}
 }
 
 //func deleteAgarBatchHandler(w http.ResponseWriter, r *http.Request) {

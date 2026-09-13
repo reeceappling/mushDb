@@ -514,21 +514,30 @@ func altCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58S
 	return
 }
 
-func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) {
-	coll := DbFrom(ctx).Collection(toInsert.CollectionName())
-	_, err := coll.InsertOne(ctx, toInsert)
+// finishCreateAlternateEntry should only error in cases where the creation did not write to the db
+func finishCreateAlternateEntry[T CollectionItem](ctx context.Context, toInsert T, w http.ResponseWriter) error { // TODO: error is new, handle
+	status, err := finishCreateAlternateEntryNoWrite(ctx, toInsert)
 	if err != nil {
-		http.Error(w, "failed to insert one: "+err.Error(), http.StatusInternalServerError)
-		return
+		http.Error(w, "failed to insert one: "+err.Error(), status)
 	}
-	bsOut, err := json.Marshal(toInsert)
+	writeEntryAsResponseOrFailSilently(w, toInsert)
+	return nil
+}
+func writeEntryAsResponseOrFailSilently[T CollectionItem](w http.ResponseWriter, item T) {
+	bsOut, err := json.Marshal(item)
 	if err != nil {
 		return
 	}
 	_, err = w.Write(bsOut)
+	handleWriteErr(err, w)
+}
+func finishCreateAlternateEntryNoWrite[T CollectionItem](ctx context.Context, toInsert T) (statusCode int, err error) { // TODO: error is new, handle
+	coll := DbFrom(ctx).Collection(toInsert.CollectionName())
+	_, err = coll.InsertOne(ctx, toInsert)
 	if err != nil {
-		handleWriteErr(err, w)
+		return http.StatusInternalServerError, errors.Join(errors.New("failed to insert one"), err)
 	}
+	return http.StatusOK, nil
 }
 
 func finishImportMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {

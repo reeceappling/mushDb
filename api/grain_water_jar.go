@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/reeceappling/mushDb/api/env"
 	"github.com/reeceappling/mushDb/api/request"
 	"go.mongodb.org/mongo-driver/bson"
@@ -167,3 +169,87 @@ func importGrainWaterJarHandler(w http.ResponseWriter, r *http.Request) { // TOD
 type GrainWaterJarsField struct {
 	GrainWaterJars []AlternateCollectionId `bson:"grainWaterJars,omitempty" json:"grainWaterJars,omitempty"`
 }
+
+func (gwjs GrainWaterJarsField) EnsureExist(ctx context.Context, w http.ResponseWriter) error {
+	if gwjs.GrainWaterJars == nil || len(gwjs.GrainWaterJars) == 0 {
+		return nil
+	}
+	return ensureIdsExist(ctx, w, GrainWaterJarCollectionName, gwjs.GrainWaterJars)
+}
+
+// TODO: validate works, and use it everywhere necessary
+func ensureIdsExist[T CollectionId](ctx context.Context, w http.ResponseWriter, collectionName string, ids []T) error {
+	db := DbFrom(ctx)
+	nExisting, err := db.Collection(collectionName).CountDocuments(ctx, bson.M{IDfld: bson.M{"$in": ids}})
+	if err != nil {
+		err = errors.Join(errors.New("failed to check ids in collection "+collectionName), err)
+		dbErr(w, err.Error(), http.StatusInternalServerError)
+		return err
+	}
+	if int(nExisting) != len(ids) {
+		err = errors.New("not all IDs provided were found in " + collectionName)
+		dbErr(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	//for _, gwj := range ids { // TODO: this will work if we cant check them all at once
+	//	err = db.Collection(GrainWaterJarCollectionName).FindOne(ctx, bson.M{
+	//		IDfld: gwj,
+	//	}).Err()
+	//	if err != nil {
+	//		err = errors.Join(errors.New("failed to get collection "+collectionName+" id "+string(gwj.AsBase58())), err)
+	//		dbErr(w, err.Error(), http.StatusBadRequest)
+	//		return err
+	//	}
+	//}
+	return nil
+}
+
+type GrainWaterJarsDisposableField struct {
+	GrainWaterJarsField
+	GrainWaterJarsDisposed []bool `json:"grainWaterJarsDisposed,omitempty"`
+}
+
+func (f GrainWaterJarsDisposableField) Dispose(ctx mongo.SessionContext) (int, error) {
+	db := DbFrom(ctx)
+	_, now := request.UnixTime(ctx)
+	toDispose := make([]AlternateCollectionId, 0, len(f.GrainWaterJars))
+	for i := 0; i < len(f.GrainWaterJars); i++ {
+		if f.GrainWaterJarsDisposed[i] {
+			toDispose = append(toDispose, f.GrainWaterJars[i])
+		}
+	}
+	upd, err := NewMods().
+		setDisposedTo(now).    // TODO; ensure ok
+		setLastUpdatedTo(now). // TODO; ensure ok
+		Finalized()
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	updateResult, err := db.Collection(GrainWaterJarCollectionName).UpdateMany(ctx, bson.M{
+		IDfld: bson.M{"$in": toDispose}}, upd)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	if int(updateResult.MatchedCount) != len(toDispose) {
+		// TODO: 404 ok here?
+		return http.StatusNotFound, fmt.Errorf(`tried to dispose %d but only matched %d`, len(toDispose), int(updateResult.MatchedCount))
+	}
+	return http.StatusOK, nil
+}
+
+/// TODO: use next func?
+//func unstatusTxnFunc(f func(ctx mongo.SessionContext)(int,error))func(ctx mongo.SessionContext)(error){
+//	return func(sess mongo.SessionContext)(error){
+//		_,err := f(sess)
+//		return err
+//	}
+//}
+//func withStatus(f func(mongo.SessionContext)error, errorStatusCode int) func(mongo.SessionContext)(int,error){
+//	return func(ctx mongo.SessionContext)(int,error){
+//		if err := f(ctx); err != nil {
+//			return errorStatusCode,err
+//		}
+//		return 200, nil
+//	}
+//}

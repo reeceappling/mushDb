@@ -44,6 +44,7 @@ import {OnViewCreatorsTriColArea} from "@/app/components/formSubcomponents/ovc";
 import {InitialNotesState} from "@/app/components/formSubcomponents/initialState";
 import {allCookies, CookiesContext} from "@/app/components/formSubcomponents/cookiesContext/cookies";
 import {ActionTypes, useModalContext} from "@/app/components/formSubcomponents/modalContext/modal";
+import {GrainWaterJarData, GrainWaterJarsSelectionList} from "@/app/components/grainWaterJarServer";
 
 export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     if (typeof input !== 'object') {
@@ -226,10 +227,11 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
     const {dispatch} = useModalContext();
     const [pcRun, setPcRun] = useState<PcRunData | undefined>(pcRunInp)
     const [recipe, setRecipe] = useState<AgarRecipeData | undefined>(agarRecipeIn)
-    const [grainWaterJars, setGrainWaterJars] = useState<string[] | undefined>(undefined) // TODO: HANDLE THIS! Blacklist already-selected gwjs, but make a list!
     const [color, setColor] = useState<string>(defaultColor)
     const [notes, setNotes] = useState<Note[]>([])
     const [err, setErr] = useState<string | undefined>()
+    const [grainWaterJars, setGrainWaterJars] = useState<GrainWaterJarData[]>([])
+    const [grainWaterJarsDisposed, setGrainWaterJarsDisposed] = useState<boolean[]>([])
     const cookies = useContext(CookiesContext)
     const newAgarBatchSubmit = () => {
         // pcRun, recipe must exist
@@ -246,7 +248,8 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
             pcRun: pcRun._id,
             recipe: recipe._id,
             notes: notes,
-            grainWaterJars: grainWaterJars, // TODO: ensure undefined means left out
+            grainWaterJars: grainWaterJars.map(v=>{return v._id}), // TODO: ensure undefined means left out
+            grainWaterJarsDisposed: grainWaterJarsDisposed,
         }
         DoCreateRequest("agarBatch", body, AssertAgarBatch, allCookies(cookies))
             .then(v => {
@@ -266,6 +269,10 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
                     }})
             })
     }
+    const setGrainJarInfo = (grainWaterJars:GrainWaterJarData[],grainWaterJarsDisposed:boolean[])=>{
+        setGrainWaterJars(grainWaterJars)
+        setGrainWaterJarsDisposed(grainWaterJarsDisposed)
+    }
     return <NewEntryFormWrapper entryType={"agarBatch"} isTopLevel={handlers.isTopLevel}>
         <div data-cy-id="Header">{"Creating a new agar batch"}</div>
         <ErrorDisplay data-cy-id="Error" err={err}/>
@@ -284,7 +291,8 @@ export function NewAgarBatchForm({handlers, agarRecipeIn, pcRunInp}: {
                     creatorInPage={false}/>
             </Subform>
         }
-        {/* TODO: area to add grainWaterJars if the recipe calls for grainWater*/}
+
+        {/* TODO: TEST THIS LINE AND WHAT IT DOES ON THE SERVER THOROUGHLY!*/(recipe !== undefined && recipe.liquids.find(l => l.name === "grainWater") !== undefined) && <GrainWaterJarsSelectionList updateParent={setGrainJarInfo}/>}
         <AgarColorArea data-cy-id={"Color"} initial={defaultColor} onSelect={setColor}/>
         <NewEntryNotes setNotes={setNotes}/>
         <button className={"bottomButton greenButton"} onClick={newAgarBatchSubmit}>{"Submit"}</button>

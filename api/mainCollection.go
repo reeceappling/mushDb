@@ -134,13 +134,22 @@ func mainCollIdFromRequest(r *http.Request, w http.ResponseWriter) (b58id Base58
 	b58id, id = mainCollId.AsBase58(), *mainCollId
 	return
 }
-
-func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter) {
-	_, err := newTxn(ctx, func(sessCtx mongo.SessionContext) (any, error) {
-		return nil, createMainCollectionEntryInTxn(sessCtx, toInsert)
+func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectionItem, w http.ResponseWriter, otherTxnFuncs ...func(sessionContext mongo.SessionContext) (int, error)) {
+	statCode, err := newTxnReturnsStatus(ctx, func(sessCtx mongo.SessionContext) (int, error) { // TODO: ensure this is ok! Are there any cases where the txn would start before this?
+		e := createMainCollectionEntryInTxn(sessCtx, toInsert)
+		if e != nil {
+			return http.StatusInternalServerError, errors.Join(errors.New("failed to create main collection entry in txn"), e)
+		}
+		for _, fn := range otherTxnFuncs {
+			status, er := fn(sessCtx)
+			if er != nil {
+				return status, er
+			}
+		}
+		return 0, nil
 	})
 	if err != nil {
-		http.Error(w, "failed to create main collection entry in txn:"+err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), statCode)
 		return
 	}
 
@@ -150,9 +159,7 @@ func finishCreateMainCollectionEntry(ctx context.Context, toInsert MainCollectio
 		return
 	}
 	_, err = w.Write(bsOut)
-	if err != nil {
-		handleWriteErr(err, w)
-	}
+	handleWriteErr(err, w)
 }
 
 func createMainCollectionEntryInTxn(ctx mongo.SessionContext, toInsert MainCollectionItem) error {

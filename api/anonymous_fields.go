@@ -99,6 +99,18 @@ func (field LiquidsField) Validate() error {
 	return nil
 }
 
+func (field LiquidsField) ContainsGrainWater() bool {
+	if field.Liquids == nil || len(field.Liquids) == 0 {
+		return false
+	}
+	for _, liquid := range field.Liquids {
+		if liquid.Name == GrainWater {
+			return true
+		}
+	}
+	return false
+}
+
 type MainCollectionIdField struct {
 	Id MainCollectionId `bson:"_id" json:"_id"`
 }

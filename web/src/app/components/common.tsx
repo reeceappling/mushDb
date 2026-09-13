@@ -321,10 +321,16 @@ export function IsBool(item: any): boolean {
 //     return lvl || defaultHeaderLevel
 // }
 
-export interface ListPageItems<T> {
+export interface ListPageItems<T extends hasId> {
     data: T[],
     onClick?: (v: T) => void
     withLink?: boolean,
+    blacklist?: string[]
+    showDisposed?: boolean
+}
+
+export interface hasId {
+    _id: string
 }
 
 // export interface InlineProps<T> {
@@ -724,18 +730,29 @@ export function NewColumn<T>(key:string,f:(v:T)=>any,fit?:boolean):ListTableColu
     return {key:key,f:f,fit:fit||false}
 }
 
-export function ListPageTable<T extends Entry>({data, onClick, cols,className, newClass}: {
+export function ListPageTable<T extends Entry>({data, onClick, cols,className, newClass, disposed, blacklist}: {
     data: T[],
     onClick?: (v: T) => void,
     cols: ListTableColumn<T>[],
     className?: string,
     newClass: (inp: any)=>T,
+    disposed?: boolean,
+    blacklist?: string[],
+    // TODO: allow blacklisting and disposed
     // TODO: give this a reload button????
 }){
+    const [disposedDisplayStatus, setDisposedDisplayStatus] = useState(disposed) // TODO: use!
+    const [blacklistInternal, setBlacklistInternal] = useState<string[]>(blacklist || []) // TODO: use!
     //const [hidden, setHidden] = useState<boolean[]>(data.map(d=>false))
     const classes = cols.map(c=>{
         return "text-left"+(c.fit ? " fit" : "")
     })
+    useEffect(()=>{
+        if ((blacklistInternal === undefined || blacklistInternal.length === 0)&&(blacklist ===undefined || blacklist.length === 0)){
+          return
+        }
+        setBlacklistInternal(blacklist || [])
+    },[blacklist])
     return <table className={"listPageTable"}>
         <tr className={"listPageTableRow headerRow"}>
             {cols.map((col,i)=>{
@@ -746,6 +763,10 @@ export function ListPageTable<T extends Entry>({data, onClick, cols,className, n
             })}
         </tr>
         {data.map(newClass).map((item,i) => {
+            // TODO: handle show if disposed and stuff
+            if (blacklistInternal.includes(item.getId()) || ((disposedDisplayStatus !== undefined)&&(disposedDisplayStatus?("disposed" in item/*disposed only*/):(!("disposed" in item)/*undisposed only*/)))){
+                return null // TODO: ensure working
+            }
             return <ListPageTableRow className={className} key={i} data={item} onClick={(v)=>{onClick && onClick(v)}}>{/* TODO: ADD EXPANSION???*/}
                 {cols.map((col,i)=>{
                     // if (hidden[i]) {

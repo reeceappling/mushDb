@@ -641,9 +641,12 @@ func (upd *Mods) updateAliasesIfNeeded(future, existing []string) *Mods {
 func (upd *Mods) updateDisposedIfNeeded(future, existing Disposable) *Mods {
 	exist, fut := existing.DisposalInfo(), future.DisposalInfo()
 	if exist == nil && fut != nil {
-		upd.Set("disposed", *fut)
+		upd.setDisposedTo(*fut)
 	}
 	return upd
+}
+func (upd *Mods) setDisposedTo(t unix.Time) *Mods {
+	return upd.Set("disposed", t)
 }
 
 func (upd *Mods) updatePcRunIfNeeded(next, current pcRunOptional) *Mods {
@@ -750,7 +753,13 @@ func (upd *Mods) updateLastUpdatedIfNeeded() *Mods {
 	if upd.IsEmpty() {
 		return upd
 	}
-	return upd.Set("lastUpdated", unix.TimeFor(time.Now()))
+	return upd.setLastUpdatedTo(unix.TimeFor(time.Now()))
+}
+func (upd *Mods) setLastUpdatedTo(t unix.Time) *Mods {
+	if upd.IsEmpty() {
+		return upd
+	}
+	return upd.Set("lastUpdated", t)
 }
 
 func (upd *Mods) updatePermsIfNeeded(next, current ACL) *Mods {
