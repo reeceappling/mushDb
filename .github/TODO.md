@@ -195,6 +195,10 @@
   - [x] Add Google Analytics to all pages
     - [ ] Validate working
   - [ ] Google tag? see what this is
+- [ ] Legal Pages
+  - [ ] Policies links page
+  - [ ] Privacy Policy
+  - [ ] Cookies Policy
 - [ ] GDPR cookie consent banner, such as with https://github.com/kriegcc/react-cookie-consent, or probably https://github.com/hypershiphq/react-cookie-manager
   - [ ] Privacy policy page
   - [ ] Classify all cookies used

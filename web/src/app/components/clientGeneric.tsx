@@ -28,7 +28,7 @@ export default function PageWrapper(
         props, children
     }: {
         props: {
-            readers: string[]
+            readers: string[] // TODO: remove readers from other pages if this works
             pageType: string
         },
         children: ReactNode,
@@ -41,8 +41,8 @@ export default function PageWrapper(
             },
         },
     })
-    return <ReaderOptionsContextProvider initialState={{options: props.readers, selected: undefined}}>
-            <GoogleOAuthProvider clientId={GoogleApiClient}>
+    // TODO: return <ReaderOptionsContextProvider initialState={{options: props.readers, selected: undefined}}>
+            return <GoogleOAuthProvider clientId={GoogleApiClient}>
                 <QueryClientProvider client={queryClient}>
                     <FullPage>
                             <TopBar/>
@@ -53,7 +53,7 @@ export default function PageWrapper(
                     {/* TODO: del? </PageTypeProvider>*/}
                 </QueryClientProvider>
             </GoogleOAuthProvider>
-    </ReaderOptionsContextProvider>
+    //</ReaderOptionsContextProvider>
 }
 
 export function Footer() {

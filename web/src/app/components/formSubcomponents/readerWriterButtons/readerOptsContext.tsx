@@ -1,6 +1,8 @@
 'use client'
 
 import {createContext, ReactNode, useContext, useReducer} from 'react';
+import { useCookieConsent } from "react-cookie-manager";
+import { useCookies } from 'react-cookie';
 
 export type ModalInfo = {
     modalType: string
@@ -75,15 +77,43 @@ export type Actions =
 
 // Reducer function
 const reducer = (state: readerSelectorContext, action: Actions) => {
+    const {detailedConsent}= useCookieConsent() // TODO: remove if not works
+    const [cookies, setCookie] = useCookies(['mostRecentRfidReader']);
     switch (action.type) {
         case ActionTypes.SET_READER:
+            // SeT VALUES IN STORAGE OR COOKIES IF AVAILABLE
+            if (detailedConsent!==null && state.selected !== action.payload && action.payload !== undefined) {
+                if (detailedConsent.FunctionalCookies.consented) {
+                    setCookie('mostRecentRfidReader', action.payload, {
+
+                        path: '/',               // Accessible across your entire site
+                        maxAge: 604800,          // Cookie expires in 7 days (in seconds)
+                        secure: true,            // Transmitted only over HTTPS
+                        sameSite: 'lax'          // Protection against CSRF attacks // TODO: fix? was lax, could need to be strict?
+                        // TODO: DO THIS? expires?: Date;
+                        // TODO: DO THIS? domain?: string;
+                        // TODO: DO THIS? httpOnly?: boolean;
+                        // TODO: DO THIS? partitioned?: boolean;
+                    })
+                }
+                if (typeof window !== 'undefined') {
+                    // Local storage
+                    if (detailedConsent.FunctionalLocalStorage.consented) {
+                        localStorage.setItem('mostRecentRfidReader', action.payload)
+                    }
+                    // Session Storage
+                    if (detailedConsent.FunctionalSessionStorage.consented) {
+                        sessionStorage.setItem('mostRecentRfidReader', action.payload)
+                    }
+                }
+            }
             return {...state, selected: action.payload};
         case ActionTypes.SET_LAST_READ_TAG:
             return {...state, lastReadTag: action.payload}
         case ActionTypes.SET_ERROR:
             return {...state, lastError: action.payload}
         case ActionTypes.SET_LAST_READER:
-            return {...state, lastReaderUsed: action.payload}
+            return {...state, lastReaderUsed: action.payload} // TODO: UNUSED
         case ActionTypes.CLEAR_ERROR:
             return {...state, lastError: undefined}
         default:
@@ -108,12 +138,57 @@ export const ReaderOptionsContextProvider = ({children, initialState}:ReaderOpti
 
 export function useRfidReaderContext() {
     const context = useContext(ReaderOptionsContext);
-
+    const [cookies] = useCookies(['mostRecentRfidReader']);
+    const {detailedConsent}= useCookieConsent()
     if (!context) {
         throw new Error(
             'The ReaderOptionsContext must be used within an ReaderOptionsContextProvider'
         );
     }
-
+    // try to set the most recently used reader on spin-up?
+    const getUserMostRecentlyUsedReader = new Promise<string>((accept,reject)=>{
+        if (detailedConsent === null || detailedConsent === undefined) {
+            reject("No consent for functional storage provided")
+            return
+        } else {
+            if (detailedConsent.FunctionalCookies.consented) {
+                const c:string |undefined|null= cookies.mostRecentRfidReader
+                if (!(c===null||c===undefined||c==="")){
+                    accept(c)
+                    return
+                }
+            }
+            if (detailedConsent.FunctionalLocalStorage.consented) {
+                // Check Local storage
+                if (typeof window !== 'undefined') {
+                    let val = localStorage.getItem('mostRecentRfidReader')
+                    if (val!==null){
+                        accept(val)
+                        return
+                    }
+                }
+            }
+            if (detailedConsent.FunctionalSessionStorage.consented) {
+                // Check Session Storage
+                if (typeof window !== 'undefined') {
+                    let val = sessionStorage.getItem('mostRecentRfidReader')
+                    if (val!==null){
+                        accept(val)
+                        return
+                    }
+                }
+            }
+            reject("nothing found in storage or not allowed")
+            return
+        }
+    })
+    getUserMostRecentlyUsedReader.then((reader)=>{ // TODO: validate works
+        context.dispatch({
+            type: ActionTypes.SET_READER,
+            payload: reader,
+        });
+    }).catch((e)=>{
+        console.error(JSON.stringify(e));
+    })
     return context;
 }

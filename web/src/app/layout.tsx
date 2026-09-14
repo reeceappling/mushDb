@@ -9,11 +9,12 @@ import "@/app/ui/onViewCreators.css"
 import "@/app/ui/transferDisplay.css"
 import "@/app/ui/listPage.css"
 import "@/app/ui/project.css"
-import {CookiesProvider} from "react-cookie";
 import { Geist, Geist_Mono } from "next/font/google";
 import {GoogleAnalytics} from "@next/third-parties/google" // TODO: ensure works
-import {GoogleAnalyticsId} from "@/app/components/Constants";
+import {BaseExternalUrl, GoogleAnalyticsId} from "@/app/components/Constants";
 import { CookieManager } from "react-cookie-manager";
+import {ReaderOptionsContextProvider} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
+import {GetReaderWriterNames} from "@/app/components/serverActions";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -156,16 +157,26 @@ function GoogleAnalyticsComponent(){
 function GdprCookieManager({children}: {children: React.ReactNode}){
   return <CookieManager
       translations={{
-        title: "Would You Like A Cookie? 🍪",
+        title: "What cookies and storage do you want to allow?",
         message:
             "We value your privacy. Choose which cookies you want to allow. Essential cookies are always enabled as they are necessary for the website to function properly.",
         buttonText: "Accept All",
-        declineButtonText: "Decline All",
+        declineButtonText: "Decline Non-Essential", // TODO:
         manageButtonText: "Manage Cookies",
         privacyPolicyText: "Privacy Policy",
       }}
+      categories={[
+        // Override a built-in's copy (optional):
+        { id: "Analytics", description: "Helps us improve the product" },
+        { id: "Social", description: "Helps us improve the product" },
+        { id: "Advertising", description: "Helps us improve the product" },
+        // Add custom categories:
+        { id: "FunctionalCookies", title: "Functional Cookies", description: "Remember your settings with cookies",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
+        { id: "FunctionalSessionStorage", title: "Functional Cookies", description: "Remember your settings using short-term session storage",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
+        { id: "FunctionalLocalStorage", title: "Functional Local Storage", description: "Remember your settings using long-term local storage",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
+      ]}
       showManageButton={true}
-      privacyPolicyUrl="https://example.com/privacy"
+      privacyPolicyUrl={BaseExternalUrl+"/policies/privacy"}
       theme="light"
       displayType="popup"
       onManage={(preferences) => {
@@ -185,9 +196,13 @@ function GdprCookieManager({children}: {children: React.ReactNode}){
     {children}
   </CookieManager>
 }
-function Providers({children}: {children: React.ReactNode}){
+async function Providers({children}: {children: React.ReactNode}){
+  const readers = await GetReaderWriterNames() // Done on the server
   return <GdprCookieManager>
+    {/* TODO: user initial reader state based off of most recent?*/}
+    <ReaderOptionsContextProvider initialState={{options: readers, selected: undefined}}>{/* TODO: if not work, reenable everywhere else and delete this*/}
       {children}
+    </ReaderOptionsContextProvider>
   </GdprCookieManager>
 }
 
