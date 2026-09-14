@@ -33,6 +33,6 @@ export default async function Page({
     return <PageWrapper props={{pageType:"policies",readers: readers}}>
         <h1>{"Cookies Policy"}</h1>
         <ErrorDisplay err={err}/>
-        <p>{"Cookies policy here!"}</p>
+        <p>{"Cookies policy here! Not implemented yet!"}</p>
     </PageWrapper>
 }

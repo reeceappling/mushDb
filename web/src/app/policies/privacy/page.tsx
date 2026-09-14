@@ -31,9 +31,9 @@ export default async function Page({
     } catch (e) {
         err = "Failed to load page wrapper component: "+JSON.stringify(e)
     }
-    return <PageWrapper props={{pageType:"login",readers: readers}}>
+    return <PageWrapper props={{pageType:"policies",readers: readers}}>
         <h1>{"Privacy Policy"}</h1>
         <ErrorDisplay err={err}/>
-        <p>{"Privacy policy here!"}</p>
+        <p>{"Privacy policy here! Not implemented yet!"}</p>
     </PageWrapper>
 }
