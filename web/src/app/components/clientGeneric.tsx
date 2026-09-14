@@ -4,7 +4,6 @@ import React, {ReactNode} from "react";
 import {GoogleApiClient} from "@/app/components/Constants";
 import TopBar from "@/app/components/TopBar";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
-import {CookiesProvider} from "react-cookie";
 import {GoogleOAuthProvider} from "@react-oauth/google";
 import styles from "@/app/page.module.css";
 import Image from "next/image";
@@ -43,7 +42,6 @@ export default function PageWrapper(
         },
     })
     return <ReaderOptionsContextProvider initialState={{options: props.readers, selected: undefined}}>
-        <CookiesProvider>{/* TODO: unsure if needed, we have a separate cookies provider already...*/}
             <GoogleOAuthProvider clientId={GoogleApiClient}>
                 <QueryClientProvider client={queryClient}>
                     <FullPage>
@@ -51,13 +49,10 @@ export default function PageWrapper(
                             {children}
                             <Footer/>
                     </FullPage>
-
                     {/* TODO: del? <PageTypeProvider pageType={props.pageType}>*/}
-
                     {/* TODO: del? </PageTypeProvider>*/}
                 </QueryClientProvider>
             </GoogleOAuthProvider>
-        </CookiesProvider>
     </ReaderOptionsContextProvider>
 }
 

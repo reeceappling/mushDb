@@ -33,7 +33,7 @@ export default async function Page({
     const session = cookieStore.get('_gothic_session')
     return <PageWrapper props={{pageType:"import",readers: readers}}>
         <Suspense fallback={<p>{"Loading..."}</p>}>
-            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}>
+            <CookiesProvider cookies={cookieStore.getAll()} session={session?.value}>{/* TODO: try moving this to layout.tsx?*/}
                     <ImportArea itemType={itemType} />
             </CookiesProvider>
         </Suspense>

@@ -3,6 +3,7 @@ export const BaseExternalPort= process.env.NEXT_PUBLIC_PORT || "443" // TODO: US
 export const BaseApiInternalPort= 8080 // TODO: USE?
 export const BaseExternalUrl= process.env.NEXT_PUBLIC_BASE_API_URL
 export const GoogleApiClient= process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "badClientId"
+export const GoogleAnalyticsId= process.env.NEXT_PRIVATE_GOOGLE_ANALYTICS_ID || "none" // TODO: can this be made private?
 export const TopPageHeaderLevel = 1 // TODO: probably unnecessary
 export const mushDbTitle = "mushDb"
 const ChannelName = "Mushrooms" // TODO: probably unnecessary

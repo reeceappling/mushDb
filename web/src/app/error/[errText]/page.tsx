@@ -15,6 +15,7 @@ export default async function Page({
         errText: string
     }>
 }) {
+    // TODO: make it look like a normal page???
     const props = await params
-    return <h1>{"ERROR: "+props.errText}</h1>
+    return <h1>{"ERROR: "+props.errText}</h1>// TODO: if logged in allow them to interact with the rfid stuff?
 }

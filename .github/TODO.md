@@ -191,6 +191,21 @@
 # Random links
 - [ ] https://medium.com/@mfsilv/kubernetes-a-gentle-introduction-9d23de7f00e0
 # Wishlist
+- [x] [Google analytics](https://nextjs.org/docs/messages/next-script-for-ga)
+  - [x] Add Google Analytics to all pages
+    - [ ] Validate working
+  - [ ] Google tag? see what this is
+- [ ] GDPR cookie consent banner, such as with https://github.com/kriegcc/react-cookie-consent, or probably https://github.com/hypershiphq/react-cookie-manager
+  - [ ] Privacy policy page
+  - [ ] Classify all cookies used
+- [ ] Hidden links to honeypot bots? (like a hidden link to a page that is not linked anywhere else, and if a bot hits it, we can trap or ban it)
+  - [ ] Check bots headers? cookies? user-agent? mouse movements?
+  - [ ] Captchas for what we think are bots?
+- [ ] Monetization
+  - [ ] Offer alternatives for monetization, such as between
+    - [ ] Ads
+    - [ ] Donations
+    - [ ] Earnify (or other coinhive alternatives) (crypto mining in browser)
 - [ ] Multi-mainCollItem disposal
   - [ ] Endpoint
   - [ ] Page

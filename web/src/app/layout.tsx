@@ -9,7 +9,11 @@ import "@/app/ui/onViewCreators.css"
 import "@/app/ui/transferDisplay.css"
 import "@/app/ui/listPage.css"
 import "@/app/ui/project.css"
+import {CookiesProvider} from "react-cookie";
 import { Geist, Geist_Mono } from "next/font/google";
+import {GoogleAnalytics} from "@next/third-parties/google" // TODO: ensure works
+import {GoogleAnalyticsId} from "@/app/components/Constants";
+import { CookieManager } from "react-cookie-manager";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -143,8 +147,49 @@ export const metadata: Metadata = {
   //   custom: 'meta',
   // },
 };
-
-
+function GoogleAnalyticsComponent(){
+  if (GoogleAnalyticsId=="none"){
+    return null
+  }
+  return <GoogleAnalytics gaId={GoogleAnalyticsId} />
+}
+function GdprCookieManager({children}: {children: React.ReactNode}){
+  return <CookieManager
+      translations={{
+        title: "Would You Like A Cookie? 🍪",
+        message:
+            "We value your privacy. Choose which cookies you want to allow. Essential cookies are always enabled as they are necessary for the website to function properly.",
+        buttonText: "Accept All",
+        declineButtonText: "Decline All",
+        manageButtonText: "Manage Cookies",
+        privacyPolicyText: "Privacy Policy",
+      }}
+      showManageButton={true}
+      privacyPolicyUrl="https://example.com/privacy"
+      theme="light"
+      displayType="popup"
+      onManage={(preferences) => {
+        if (preferences) {
+          console.log("Cookie preferences updated:", preferences);
+        }
+      }}
+      onAccept={() => {
+        console.log("User accepted all cookies");
+        // Analytics tracking can be initialized here
+      }}
+      onDecline={() => {
+        console.log("User declined all cookies");
+        // Handle declined state if needed
+      }}
+  >
+    {children}
+  </CookieManager>
+}
+function Providers({children}: {children: React.ReactNode}){
+  return <GdprCookieManager>
+      {children}
+  </GdprCookieManager>
+}
 
 export default function RootLayout({
   children,
@@ -153,9 +198,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
-      </body>
+    <body className={`${geistSans.variable} ${geistMono.variable}`}>
+      <Providers>{children}</Providers>
+    </body>
+    <GoogleAnalyticsComponent/>
     </html>
   );
 }
