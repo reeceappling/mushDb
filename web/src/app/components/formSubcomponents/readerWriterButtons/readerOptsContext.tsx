@@ -90,7 +90,6 @@ const reducer = (state: readerSelectorContext, action: Actions) => {
                         maxAge: 60*60*24*7,          // Cookie expires in 7 days (in seconds)
                         secure: true,            // Transmitted only over HTTPS
                         sameSite: 'lax'          // Protection against CSRF attacks // TODO: fix? was lax, could need to be strict?
-                        // TODO: DO THIS? expires?: Date;
                         // TODO: DO THIS? domain?: string;
                         // TODO: DO THIS? httpOnly?: boolean;
                         // TODO: DO THIS? partitioned?: boolean;
@@ -184,10 +183,15 @@ export function useRfidReaderContext() {
         }
     })
     getUserMostRecentlyUsedReader.then((reader)=>{ // TODO: validate works
-        context.dispatch({
-            type: ActionTypes.SET_READER,
-            payload: reader,
-        });
+        // TODO: ensure value is in options
+        if (context.state.options.includes(reader)){
+            context.dispatch({
+                type: ActionTypes.SET_READER,
+                payload: reader,
+            });
+        } else {
+            throw "users historical reader ("+reader+") not an option"
+        }
     }).catch((e)=>{
         console.error(JSON.stringify(e));
     })

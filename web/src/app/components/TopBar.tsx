@@ -165,6 +165,7 @@ export function ReadTagButton({onResult}: { onResult?: (id: string) => void }) {
     const {state, dispatch} = useRfidReaderContext()
     const onClick = () => {
         if (state.selected != undefined) {
+            // TODO: ensure selected is in options
             ReadRfidTag(state.selected).then(tagVal => {
                 onResult && onResult(tagVal)
                 dispatch({
