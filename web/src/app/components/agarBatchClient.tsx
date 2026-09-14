@@ -16,7 +16,7 @@ import {
     DoCreateRequest,
     DoUpdateRequest,
     ExistingRecentSelector,
-    FlexedArea, FlexedSinglesGroup, IsString,
+    FlexedArea, IsString,
     ListPageItems,
     ListPageTable,
     ListTableColumn,
@@ -50,7 +50,6 @@ export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
     if (typeof input !== 'object') {
         throw new Error('Input is not an object! Input is ' + typeof input);
     }
-
     // required simple keys
     const requiredSimpleKeys = new Map<string, string>([
         ['_id', 'string'],
@@ -105,7 +104,7 @@ export function AssertAgarBatch(input: any): asserts input is AgarBatchData {
 
 export default function AgarBatchDisplay(
     {
-        readonly, data, headerLevel, isTopLevel
+        readonly, data,
     }: DisplayInput<AgarBatchData>) {
     const {dispatch} = useModalContext();
     const [initial, setInitial] = useState(data)
