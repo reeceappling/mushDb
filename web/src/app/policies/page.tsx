@@ -17,21 +17,7 @@ export const metadata: Metadata = {
     description: "Privacy Policy",
 };
 
-export default async function Page({
-                                       params,
-                                   }: {
-    params: Promise<{
-        nextUrl: string,
-    }>,
-}) {
-    const {nextUrl} = await params
-    const body = <>
-        <h1>{"Policies"}</h1>
-        <ul>
-            <li><a href={"/cookies"}>{"Cookies Policy"}</a></li>
-            <li><a href={"/privacy"}>{"Privacy Policy"}</a></li>
-        </ul>
-    </>
+export default async function Page() {
     let err: string | undefined = undefined
     let readers: string[] = []
     try {
@@ -39,8 +25,17 @@ export default async function Page({
     } catch (e) {
         err = "Failed to load page wrapper component: "+JSON.stringify(e)
     }
-    return <PageWrapper props={{pageType: "policies", readers: readers}}>
+    const body = <>
+        <h1>{"Policies"}</h1>
         <ErrorDisplay err={err}/>
-        {body}
+        <ul>
+            <li><a href={"/cookies"}>{"Cookies Policy"}</a></li>
+            <li><a href={"/privacy"}>{"Privacy Policy"}</a></li>
+        </ul>
+    </>
+    return <PageWrapper props={{pageType: "policies", readers: readers}}>
+        <Suspense fallback={body}>
+            {body}
+        </Suspense>
     </PageWrapper>
 }

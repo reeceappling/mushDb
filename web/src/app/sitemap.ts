@@ -80,5 +80,6 @@ export default async function sitemap(props: {
             }
         })
         // TODO: view pages?
+        // TODO: policies pages (cookies, privacy)
     ]
 }

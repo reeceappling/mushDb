@@ -3,6 +3,8 @@ import PageWrapper from "@/app/components/clientGeneric";
 import AuthArea from "@/app/components/authClient";
 import {Metadata} from "next";
 import {mushDbTitle} from "@/app/components/Constants";
+import {GetReaderWriterNames} from "@/app/components/serverActions";
+import {ErrorDisplay} from "@/app/components/formSubcomponents/commonClient";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -20,10 +22,18 @@ export default async function Page({
         nextUrl: string,
     }>,
 }) {
+
     const {nextUrl} = await params
-    return <PageWrapper props={{pageType:"login",readers: []}}>
-        <p>
-            {"PRIVACY POLICY HERE!"}
-        </p>
+    let err: string | undefined = undefined
+    let readers: string[] = []
+    try {
+        readers = await GetReaderWriterNames() // Done on the server
+    } catch (e) {
+        err = "Failed to load page wrapper component: "+JSON.stringify(e)
+    }
+    return <PageWrapper props={{pageType:"login",readers: readers}}>
+        <h1>{"Privacy Policy"}</h1>
+        <ErrorDisplay err={err}/>
+        <p>{"Privacy policy here!"}</p>
     </PageWrapper>
 }
