@@ -10,11 +10,6 @@ import "@/app/ui/transferDisplay.css"
 import "@/app/ui/listPage.css"
 import "@/app/ui/project.css"
 import { Geist, Geist_Mono } from "next/font/google";
-import {GoogleAnalytics} from "@next/third-parties/google" // TODO: ensure works
-import {BaseExternalUrl, GoogleAnalyticsId} from "@/app/components/Constants";
-import { CookieManager } from "react-cookie-manager";
-import {ReaderOptionsContextProvider} from "@/app/components/formSubcomponents/readerWriterButtons/readerOptsContext";
-import {GetReaderWriterNames} from "@/app/components/serverActions";
 
 // TODO: Cache Components adoption. Refactor this route so this opt-out can be removed.
 // See: https://nextjs.org/docs/app/guides/migrating-to-cache-components
@@ -148,63 +143,63 @@ export const metadata: Metadata = {
   //   custom: 'meta',
   // },
 };
-function GoogleAnalyticsComponent(){
-  if (GoogleAnalyticsId=="none"){
-    return null
-  }
-  return <GoogleAnalytics gaId={GoogleAnalyticsId} />
-}
-function GdprCookieManager({children}: {children: React.ReactNode}){
-  return <CookieManager
-      translations={{
-        title: "What cookies and storage do you want to allow?",
-        message:
-            "We value your privacy. Choose which cookies you want to allow. Essential cookies are always enabled as they are necessary for the website to function properly.",
-        buttonText: "Accept All",
-        declineButtonText: "Decline Non-Essential", // TODO:
-        manageButtonText: "Manage Cookies",
-        privacyPolicyText: "Privacy Policy",
-      }}
-      categories={[
-        // Override a built-in's copy (optional):
-        { id: "Analytics", description: "Helps us improve the product" },
-        { id: "Social", description: "Helps us improve the product" },
-        { id: "Advertising", description: "Helps us improve the product" },
-        // Add custom categories:
-        { id: "FunctionalCookies", title: "Functional Cookies", description: "Remember your settings with cookies",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
-        { id: "FunctionalSessionStorage", title: "Functional Cookies", description: "Remember your settings using short-term session storage",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
-        { id: "FunctionalLocalStorage", title: "Functional Local Storage", description: "Remember your settings using long-term local storage",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
-      ]}
-      showManageButton={true}
-      privacyPolicyUrl={BaseExternalUrl+"/policies/privacy"}
-      theme="light"
-      displayType="popup"
-      onManage={(preferences) => {
-        if (preferences) {
-          console.log("Cookie preferences updated:", preferences);
-        }
-      }}
-      onAccept={() => {
-        console.log("User accepted all cookies");
-        // Analytics tracking can be initialized here
-      }}
-      onDecline={() => {
-        console.log("User declined all cookies");
-        // Handle declined state if needed
-      }}
-  >
-    {children}
-  </CookieManager>
-}
-async function Providers({children}: {children: React.ReactNode}){
-  const readers = await GetReaderWriterNames() // Done on the server
-  return <GdprCookieManager>
-    {/* TODO: user initial reader state based off of most recent?*/}
-    <ReaderOptionsContextProvider initialState={{options: readers, selected: undefined}}>{/* TODO: if not work, reenable everywhere else and delete this*/}
-      {children}
-    </ReaderOptionsContextProvider>
-  </GdprCookieManager>
-}
+// function GoogleAnalyticsComponent(){
+//   if (GoogleAnalyticsId=="none"){
+//     return null
+//   }
+//   return <GoogleAnalytics gaId={GoogleAnalyticsId} />
+// }
+// function GdprCookieManager({children}: {children: React.ReactNode}){
+//   return <CookieManager
+//       translations={{
+//         title: "What cookies and storage do you want to allow?",
+//         message:
+//             "We value your privacy. Choose which cookies you want to allow. Essential cookies are always enabled as they are necessary for the website to function properly.",
+//         buttonText: "Accept All",
+//         declineButtonText: "Decline Non-Essential", // TODO:
+//         manageButtonText: "Manage Cookies",
+//         privacyPolicyText: "Privacy Policy",
+//       }}
+//       categories={[
+//         // Override a built-in's copy (optional):
+//         { id: "Analytics", description: "Helps us improve the product" },
+//         { id: "Social", description: "Helps us improve the product" },
+//         { id: "Advertising", description: "Helps us improve the product" },
+//         // Add custom categories:
+//         { id: "FunctionalCookies", title: "Functional Cookies", description: "Remember your settings with cookies",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
+//         { id: "FunctionalSessionStorage", title: "Functional Cookies", description: "Remember your settings using short-term session storage",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
+//         { id: "FunctionalLocalStorage", title: "Functional Local Storage", description: "Remember your settings using long-term local storage",defaultConsent: true, trackerDomains: ["ads.example.com", "track.partner.com"]},
+//       ]}
+//       showManageButton={true}
+//       privacyPolicyUrl={BaseExternalUrl+"/policies/privacy"}
+//       theme="light"
+//       displayType="popup"
+//       onManage={(preferences) => {
+//         if (preferences) {
+//           console.log("Cookie preferences updated:", preferences);
+//         }
+//       }}
+//       onAccept={() => {
+//         console.log("User accepted all cookies");
+//         // Analytics tracking can be initialized here
+//       }}
+//       onDecline={() => {
+//         console.log("User declined all cookies");
+//         // Handle declined state if needed
+//       }}
+//   >
+//     {children}
+//   </CookieManager>
+// }
+// async function Providers({children}: {children: React.ReactNode}){
+//   // const readers = await GetReaderWriterNames() // Done on the server
+//   return <GdprCookieManager>
+//     {/* TODO: user initial reader state based off of most recent?*/}
+//     {/*<ReaderOptionsContextProvider initialState={{options: readers, selected: undefined}}>/!* TODO: if not work, reenable everywhere else and delete this*!/*/}
+//       {children}
+//     {/*</ReaderOptionsContextProvider>*/}
+//   </GdprCookieManager>
+// }
 
 export default function RootLayout({
   children,
@@ -214,9 +209,11 @@ export default function RootLayout({
   return (
     <html lang="en">
     <body className={`${geistSans.variable} ${geistMono.variable}`}>
-      <Providers>{children}</Providers>
+    {/*<GdprCookieManager>*/}
+      {children}
+    {/*</GdprCookieManager>*/}
     </body>
-    <GoogleAnalyticsComponent/>
+    {/*<GoogleAnalyticsComponent/>*/}
     </html>
   );
 }

@@ -41,8 +41,8 @@ export default function PageWrapper(
             },
         },
     })
-    // TODO: return <ReaderOptionsContextProvider initialState={{options: props.readers, selected: undefined}}>
-            return <GoogleOAuthProvider clientId={GoogleApiClient}>
+    return <ReaderOptionsContextProvider initialState={{options: props.readers, selected: undefined}}>
+            <GoogleOAuthProvider clientId={GoogleApiClient}>
                 <QueryClientProvider client={queryClient}>
                     <FullPage>
                             <TopBar/>
@@ -53,7 +53,7 @@ export default function PageWrapper(
                     {/* TODO: del? </PageTypeProvider>*/}
                 </QueryClientProvider>
             </GoogleOAuthProvider>
-    //</ReaderOptionsContextProvider>
+    </ReaderOptionsContextProvider>
 }
 
 export function Footer() {

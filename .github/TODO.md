@@ -198,7 +198,9 @@
 - [ ] Legal Pages
   - [ ] Policies links page
   - [ ] Privacy Policy
+    - [ ] Finish page
   - [ ] Cookies Policy
+    - [ ] Finish page
 - [ ] GDPR cookie consent banner, such as with https://github.com/kriegcc/react-cookie-consent, or probably https://github.com/hypershiphq/react-cookie-manager
   - [ ] Privacy policy page
   - [ ] Classify all cookies used
