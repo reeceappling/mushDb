@@ -97,7 +97,7 @@ export function MainCollectionInputOrRead({label, placeholder, onIdSelected, cop
         {/*         updateTextHandler={updateId} readonly={false}/>*/}
         {/* BUTTON TO READ MAIN COLL ID */}
         <ReaderWriterSelector txt={"select rfid reader"} onSelect={(wr) => { // TODO: wr ok here or state.selected?
-            ReadTagFunc(dispatch, undefined, wr).then(updateId)
+            ReadTagFunc(dispatch, wr).then(updateId)
         }}/>
         {/*<RfidSelectorWithReadButton handleTagRead={updateId} readButtonTxt={"read from current tag reader"}*/}
         {/*                            readerWriterTxt={"select rfid reader"} onWriterSelect={(wr)=>{*/}

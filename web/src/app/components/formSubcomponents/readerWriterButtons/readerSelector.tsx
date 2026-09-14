@@ -82,7 +82,7 @@ export function WriteTagFunc(dispatch: React.Dispatch<Actions>, id: string, sele
     })
 }
 
-export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, selectedReader?: string): Promise<string> {
+export function ReadTagFunc(dispatch: React.Dispatch<Actions>, selectedReader?: string): Promise<string> {
     return new Promise((resolve, reject) => {
         if (!selectedReader) {
             const toWrite = "no rfid reader selected"
@@ -94,28 +94,7 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, se
             return
         }
         const readerName = selectedReader
-        console.log("current reader name: "+readerName)// TODO: del!
-        if (readerName === "goodTestRfid"){ // TODO: comment out
-            const tagVal = "4Wj8HxCMmcs" // TODO: Test empty plate id
-            dispatch({
-                type: ActionTypes.SET_LAST_READ_TAG,
-                payload: tagVal,
-            })
-            dispatch({
-                type: ActionTypes.SET_LAST_READER,
-                payload: readerName,
-            })
-            dispatch({
-                type: ActionTypes.CLEAR_ERROR,
-            })
-            resolve(tagVal)
-            return
-        } else if (readerName === "" || readerName === "none"){
-            reject("no reader selected...")
-            return
-        }
         ReadRfidTag(readerName).then((id)=>{
-            // console.log("got tag id: "+id) // TODO: del
             dispatch({
                 type: ActionTypes.SET_LAST_READ_TAG,
                 payload: id,
@@ -130,6 +109,10 @@ export function ReadTagFunc(dispatch: React.Dispatch<Actions>, sess?: string, se
             resolve(id)
         },(err)=>{
             console.log("failed to read tag id: "+JSON.stringify(err)) // TODO: del
+            dispatch({
+                type: ActionTypes.SET_ERROR,
+                payload: "failed to read tag id: "+JSON.stringify(err),
+            })
             reject(err)
         })
     })
@@ -177,7 +160,18 @@ export function ClearTagFunc(dispatch: React.Dispatch<Actions>, readerName?: str
 
 export function ReadRfidTag(readerName?: string):Promise<string> { // TODO: USE ME!!!
     if (!readerName) {
-        throw "NO RFID READER SELECTED!"
+        return new Promise((a,r)=>{
+            r("NO RFID READER SELECTED!")
+        })
+    }
+    if (readerName === "goodTestRfid") { // TODO: comment out
+        return new Promise((a,r)=>{
+            a("4Wj8HxCMmcs") // TODO: Test empty plate id
+        })
+    } else if (readerName === "" || readerName === "none"){
+        return new Promise((a,r)=>{
+            r("no reader selected...")
+        })
     }
     return fetch(BaseExternalUrl + '/rfid/read/' + readerName, {
         method: 'GET',
@@ -251,26 +245,26 @@ export type selectReaderResult = {
     payload?: string;
 };
 
-export function SelectReaderFunc(dispatch: React.Dispatch<Actions>, doRead: boolean, session?: string, reader?: string): Promise<selectReaderResult> {
-    const out:selectReaderResult = {didRead: doRead}
-    return new Promise<selectReaderResult>((resolve, reject) => {
-        dispatch({
-            type: ActionTypes.SET_READER,
-            payload: reader,
-        })
-        if (!doRead) {
-            ReadTagFunc(dispatch, session, reader).then(id => {
-                resolve({didRead: true, payload: id})
-                return
-            }, err => {
-                reject(err)
-                return
-            })
-        } else {
-            resolve({didRead: false})
-        }
-    })
-}
+// export function SelectReaderFunc(dispatch: React.Dispatch<Actions>, doRead: boolean, session?: string, reader?: string): Promise<selectReaderResult> {
+//     const out:selectReaderResult = {didRead: doRead}
+//     return new Promise<selectReaderResult>((resolve, reject) => {
+//         dispatch({
+//             type: ActionTypes.SET_READER,
+//             payload: reader,
+//         })
+//         if (!doRead) {
+//             ReadTagFunc(dispatch, reader).then(id => {
+//                 resolve({didRead: true, payload: id})
+//                 return
+//             }, err => {
+//                 reject(err)
+//                 return
+//             })
+//         } else {
+//             resolve({didRead: false})
+//         }
+//     })
+// }
 
 export function ReadRFIDButton(
     {
@@ -282,7 +276,7 @@ export function ReadRFIDButton(
     }) {
     const {state, dispatch} = useRfidReaderContext()
     return <button className={"basicButtonSmall"} onClick={()=>{
-        ReadTagFunc(dispatch, session, state.selected).then(handleTagRead)
+        ReadTagFunc(dispatch, state.selected).then(handleTagRead)
     }}>{txt || "Read ID from RFID Reader"}</button>
 }
 
@@ -373,23 +367,23 @@ export function IdInput({initial}:{initial?:string}){
 </div>
 }
 
-export function RfidSelectorWithReadButton( // TODO: use????
-    {
-        defaultReaderOption, readerWriterTxt, onWriterSelect, readButtonTxt, handleTagRead, headerLevel,autoRead
-    }:{
-        defaultReaderOption?: string,
-        readerWriterTxt?: string,
-        onWriterSelect?: (s?: string) => void,
-        headerLevel?: number,
-        readButtonTxt?:string,
-        handleTagRead:(id: string)=>void,
-        autoRead?:boolean,
-    }){
-    return <div>
-        <ReaderWriterSelector txt={readerWriterTxt} headerLevel={headerLevel} defaultOption={defaultReaderOption} onSelect={onWriterSelect} />
-        <ReadRFIDButton handleTagRead={handleTagRead} txt={readButtonTxt} />
-    </div>
-}
+// export function RfidSelectorWithReadButton( // TODO: use????
+//     {
+//         defaultReaderOption, readerWriterTxt, onWriterSelect, readButtonTxt, handleTagRead, headerLevel,autoRead
+//     }:{
+//         defaultReaderOption?: string,
+//         readerWriterTxt?: string,
+//         onWriterSelect?: (s?: string) => void,
+//         headerLevel?: number,
+//         readButtonTxt?:string,
+//         handleTagRead:(id: string)=>void,
+//         autoRead?:boolean,
+//     }){
+//     return <div>
+//         <ReaderWriterSelector txt={readerWriterTxt} headerLevel={headerLevel} defaultOption={defaultReaderOption} onSelect={onWriterSelect} />
+//         <ReadRFIDButton handleTagRead={handleTagRead} txt={readButtonTxt} />
+//     </div>
+// }
 
 // export function RfidSelectorSplitFromStateWithAutoread( // TODO: use????
 //     {

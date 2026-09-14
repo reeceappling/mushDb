@@ -87,7 +87,7 @@ const reducer = (state: readerSelectorContext, action: Actions) => {
                     setCookie('mostRecentRfidReader', action.payload, {
 
                         path: '/',               // Accessible across your entire site
-                        maxAge: 604800,          // Cookie expires in 7 days (in seconds)
+                        maxAge: 60*60*24*7,          // Cookie expires in 7 days (in seconds)
                         secure: true,            // Transmitted only over HTTPS
                         sameSite: 'lax'          // Protection against CSRF attacks // TODO: fix? was lax, could need to be strict?
                         // TODO: DO THIS? expires?: Date;
@@ -139,6 +139,7 @@ export const ReaderOptionsContextProvider = ({children, initialState}:ReaderOpti
 export function useRfidReaderContext() {
     const context = useContext(ReaderOptionsContext);
     const [cookies] = useCookies(['mostRecentRfidReader']);
+    // TODO: consider using useState in here instead of the reducer stuff????
     const {detailedConsent}= useCookieConsent()
     if (!context) {
         throw new Error(

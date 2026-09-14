@@ -89,8 +89,7 @@ export function TopBarCreateMenu() {
 export default function TopBar() {
     const {dispatch} = useRfidReaderContext()
     const onReaderSelect = (s: string | undefined) => {
-        const session = "" // TODO: fix session!!!
-        ReadTagFunc(dispatch, session, s).then(id => {
+        ReadTagFunc(dispatch, s).then(id => {
             // TODO: do we really want to read the tag here???
             // todo: do nothing with id result
         }, err => {
